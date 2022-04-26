@@ -46,6 +46,9 @@
 #if defined(USE_OLED_I2C) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(HAS_TFT_SCREEN)
 #define HAS_SCREEN
 #endif
+#if defined(GPIO_PIN_SPI_VTX_NSS)
+#define HAS_VTX_SPI
+#endif
 
 #ifndef USE_TX_BACKPACK
 #define OPT_USE_TX_BACKPACK false
@@ -153,6 +156,11 @@
 #define GPIO_PIN_BACKPACK_BOOT UNDEF_PIN
 #endif
 
+#ifndef GPIO_PIN_SPI_VTX_NSS
+#define GPIO_PIN_SPI_VTX_NSS UNDEF_PIN
+#endif
+
+
 #if defined(TARGET_TX)
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 #ifndef GPIO_PIN_DEBUG_RX
@@ -189,6 +197,16 @@
 #endif
 #endif
 
+#if defined(TARGET_UBER_RX)
+#define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN)
+#else
+#if defined(CRSF_RCVR_NO_SERIAL)
+#define OPT_CRSF_RCVR_NO_SERIAL true
+#else
+#define OPT_CRSF_RCVR_NO_SERIAL false
+#endif
+#endif
+
 #if defined(USE_ANALOG_VBAT) && !defined(GPIO_ANALOG_VBAT)
 #define GPIO_ANALOG_VBAT        A0
 #if !defined(ANALOG_VBAT_SCALE)
@@ -217,6 +235,6 @@
 #error "Either RADIO_SX127X or RADIO_SX128X must be defined!"
 #endif
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
 #include "hardware.h"
 #endif

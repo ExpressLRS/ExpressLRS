@@ -20,6 +20,10 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
+#if defined(TARGET_UBER_RX)
+#include <FS.h>
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -49,7 +53,7 @@ device_affinity_t ui_devices[] = {
   {&VTxSPI_device, 0},
 #endif
 #ifdef USE_ANALOG_VBAT
-    {&AnalogVbat_device, 0},
+  {&AnalogVbat_device, 0},
 #endif
 };
 
@@ -62,6 +66,7 @@ GENERIC_CRC14 ota_crc(ELRS_CRC14_POLY);
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
+Stream *SerialLogger;
 
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
@@ -70,9 +75,15 @@ extern bool webserverPreventAutoStart;
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 #include <Servo.h>
+#if defined(TARGET_UBER_RX)
+uint8_t SERVO_COUNT = 0;
+uint8_t SERVO_PINS[MAX_SERVOS];
+static Servo *Servos[MAX_SERVOS];
+#else
 static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-static Servo *Servos[SERVO_COUNT];
+uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+static Servo *Servos[ARRAY_SIZE(SERVO_PINS)];
+#endif
 static bool newChannelsAvailable;
 #endif
 
@@ -652,10 +663,15 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     if (connectionHasModelMatch)
     {
         #if defined(GPIO_PIN_PWM_OUTPUTS)
-        newChannelsAvailable = true;
-        #else
-        crsf.sendRCFrameToFC();
+        if (SERVO_COUNT != 0)
+        {
+            newChannelsAvailable = true;
+        }
+        else
         #endif
+        {
+            crsf.sendRCFrameToFC();
+        }
         #if defined(DEBUG_RCVR_LINKSTATS)
         debugRcvrLinkstatsPending = true;
         #endif
@@ -885,13 +901,17 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 static void setupSerial()
 {
-#if defined(CRSF_RCVR_NO_SERIAL)
-    // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
-    #if defined(DEBUG_LOG)
-    Serial.begin(firmwareOptions.uart_baud);
-    #endif
-    return;
-#endif
+    if (OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
+        #if defined(DEBUG_LOG)
+        Serial.begin(firmwareOptions.uart_baud);
+        SerialLogger = &Serial;
+        #else
+        SerialLogger = new NullStream();
+        #endif
+        return;
+    }
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
@@ -936,6 +956,7 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
+    SerialLogger = &Serial;
     Serial.begin(firmwareOptions.uart_baud);
     if (firmwareOptions.invert_tx)
     {
@@ -1027,7 +1048,10 @@ static void setupBindingFromConfig()
 
 static void HandleUARTin()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+    if (OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        return;
+    }
     while (CRSF_RX_SERIAL.available())
     {
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
@@ -1052,7 +1076,6 @@ static void HandleUARTin()
             crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
-#endif
 }
 
 static void setupRadio()
@@ -1126,6 +1149,10 @@ static void cycleRfMode(unsigned long now)
 static void servosUpdate(unsigned long now)
 {
 #if defined(GPIO_PIN_PWM_OUTPUTS)
+    if (SERVO_COUNT == 0)
+    {
+        return;
+    }
     // The ESP waveform generator is nice because it doesn't change the value
     // mid-cycle, but it does busywait if there's already a change queued.
     // Updating every 20ms minimizes the amount of waiting (0-800us cycling
@@ -1290,37 +1317,71 @@ RF_PRE_INIT()
 
 void setup()
 {
-    initUID();
-    setupTarget();
-    // serial setup must be done before anything as some libs write
-    // to the serial port and they'll block if the buffer fills
-    setupSerial();
-    // Init EEPROM and load config, checking powerup count
-    setupConfigAndPocCheck();
-
-    INFOLN("ExpressLRS Module Booting...");
-
-    devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
-    devicesInit();
-
-    setupBindingFromConfig();
-
-    FHSSrandomiseFHSSsequence(uidMacSeedGet());
-
-    setupRadio();
-
-    if (connectionState != radioFailed)
+    bool hardware_success = true;
+    #if defined(TARGET_UBER_RX)
+    Serial.begin(420000);
+    SerialLogger = &Serial;
+    SPIFFS.begin();
+    hardware_success = options_init();
+    if (!hardware_success)
     {
-        // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
-        // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
+        // Register the WiFi with the framework
+        static device_affinity_t wifi_device[] = {
+            {&WIFI_device, 1}
+        };
+        devicesRegister(wifi_device, ARRAY_SIZE(wifi_device));
+        devicesInit();
 
-        hwTimer.callbackTock = &HWtimerCallbackTock;
-        hwTimer.callbackTick = &HWtimerCallbackTick;
+        connectionState = hardwareUndefined;
+    }
+    else
+    {
+        const int16_t *pins = GPIO_PIN_PWM_OUTPUTS;
+        if (pins != nullptr)
+        {
+            for (int i=0 ; pins[i] != -1 ; i++)
+            {
+                SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
+                SERVO_COUNT++;
+            }
+        }
+    }
+    #endif
 
-        MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
-        Radio.RXnb();
-        crsf.Begin();
-        hwTimer.init();
+    if (hardware_success)
+    {
+        initUID();
+        setupTarget();
+        // serial setup must be done before anything as some libs write
+        // to the serial port and they'll block if the buffer fills
+        setupSerial();
+        // Init EEPROM and load config, checking powerup count
+        setupConfigAndPocCheck();
+
+        INFOLN("ExpressLRS Module Booting...");
+
+        devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+        devicesInit();
+
+        setupBindingFromConfig();
+
+        FHSSrandomiseFHSSsequence(uidMacSeedGet());
+
+        setupRadio();
+
+        if (connectionState != radioFailed)
+        {
+            // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
+            // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
+
+            hwTimer.callbackTock = &HWtimerCallbackTock;
+            hwTimer.callbackTick = &HWtimerCallbackTick;
+
+            MspReceiver.SetDataToReceive(ELRS_MSP_BUFFER, MspData, ELRS_MSP_BYTES_PER_CALL);
+            Radio.RXnb();
+            crsf.Begin();
+            hwTimer.init();
+        }
     }
 
     devicesStart();

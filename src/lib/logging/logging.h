@@ -25,14 +25,15 @@
 extern Stream *LoggingBackpack;
 #define LOGGING_UART (*LoggingBackpack)
 #else
-#define LOGGING_UART Serial
+extern Stream *SerialLogger;
+#define LOGGING_UART (*SerialLogger)
 #endif
 
 // #define LOG_USE_PROGMEM
 
 extern void debugPrintf(const char* fmt, ...);
 
-#if defined(CRITICAL_FLASH) || ((defined(CRSF_RCVR_NO_SERIAL) || defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
+#if defined(CRITICAL_FLASH) || ((defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
   #define INFOLN(msg, ...)
   #define ERRLN(msg)
 #else

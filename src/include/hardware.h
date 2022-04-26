@@ -95,20 +95,23 @@ typedef enum {
     HARDWARE_gsensor_stk8xxx,
     HARDWARE_thermal_lm75a,
 
-    HARDWARE_LAST
-
-    /*
     // PWM
-    GPIO_PIN_PWM_OUTPUTS
+    HARDWARE_pwm_outputs,
+
+    // VBAT
+    HARDWARE_vbat,
+    HARDWARE_vbat_offset,
+    HARDWARE_vbat_scale,
 
     // VTX
-    GPIO_PIN_RF_AMP_PWM
-    GPIO_PIN_RF_AMP_VPD
-    GPIO_PIN_RF_AMP_VREF
-    GPIO_PIN_SPI_VTX_NSS
-    VPD_VALUES_100MW
-    VPD_VALUES_25MW
-    */
+    HARDWARE_rf_amp_pwm,
+    HARDWARE_rf_amp_vpd,
+    HARDWARE_rf_amp_vref,
+    HARDWARE_spi_vtx_nss,
+    HARDWARE_vpd_25mW,
+    HARDWARE_vpd_100mW,
+
+    HARDWARE_LAST
 } nameType;
 
 bool hardware_init();

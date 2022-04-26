@@ -51,7 +51,7 @@ typedef struct _options {
 #endif
 } __attribute__((packed)) firmware_options_t;
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
 extern firmware_options_t firmwareOptions;
 extern char device_name[];
 extern bool options_init();

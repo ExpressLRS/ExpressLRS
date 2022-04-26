@@ -842,91 +842,101 @@ bool CRSF::UARTwdt()
 bool CRSF::RXhandleUARTout()
 {
     bool retVal = false;
-#if !defined(CRSF_RCVR_NO_SERIAL)
-    // don't write more than 128 bytes at a time to avoid RX buffer overflow
-    const int maxBytesPerCall = 128;
-    uint32_t bytesWritten = 0;
-    #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
-        while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
+    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        // don't write more than 128 bytes at a time to avoid RX buffer overflow
+        const int maxBytesPerCall = 128;
+        uint32_t bytesWritten = 0;
+        #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+            while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
+            {
+                uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+                uint8_t OutData[OutPktLen];
+                msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+                this->_dev->write(OutData, OutPktLen); // write the packet out
+                bytesWritten += OutPktLen;
+                retVal = true;
+            }
+        #endif
+
+        while (SerialOutFIFO.size() > SerialOutFIFO.peek() && (bytesWritten + SerialOutFIFO.peek()) < maxBytesPerCall)
         {
-            uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+            noInterrupts();
+            uint8_t OutPktLen = SerialOutFIFO.pop();
             uint8_t OutData[OutPktLen];
-            msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+            SerialOutFIFO.popBytes(OutData, OutPktLen);
+            interrupts();
             this->_dev->write(OutData, OutPktLen); // write the packet out
             bytesWritten += OutPktLen;
             retVal = true;
         }
-    #endif
-
-    while (SerialOutFIFO.size() > SerialOutFIFO.peek() && (bytesWritten + SerialOutFIFO.peek()) < maxBytesPerCall)
-    {
-        noInterrupts();
-        uint8_t OutPktLen = SerialOutFIFO.pop();
-        uint8_t OutData[OutPktLen];
-        SerialOutFIFO.popBytes(OutData, OutPktLen);
-        interrupts();
-        this->_dev->write(OutData, OutPktLen); // write the packet out
-        bytesWritten += OutPktLen;
-        retVal = true;
     }
-#endif // CRSF_RCVR_NO_SERIAL
     return retVal;
 }
 
 void CRSF::sendLinkStatisticsToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
-    constexpr uint8_t outBuffer[4] = {
-        LinkStatisticsFrameLength + 4,
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        LinkStatisticsFrameLength + 2,
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
+#if !defined(DEBUG_CRSF_NO_OUTPUT)
+    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        constexpr uint8_t outBuffer[4] = {
+            LinkStatisticsFrameLength + 4,
+            CRSF_ADDRESS_FLIGHT_CONTROLLER,
+            LinkStatisticsFrameLength + 2,
+            CRSF_FRAMETYPE_LINK_STATISTICS
+        };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
+        uint8_t crc = crsf_crc.calc(outBuffer[3]);
+        crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-    if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-        SerialOutFIFO.push(crc);
+        if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
+            SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
+            SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
+            SerialOutFIFO.push(crc);
+        }
+
+        //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
     }
-
-    //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
-#endif // CRSF_RCVR_NO_SERIAL
+#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
-    constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        RCframeLength + 2,
-        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-    };
+#if !defined(DEBUG_CRSF_NO_OUTPUT)
+    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        constexpr uint8_t outBuffer[] = {
+            // No need for length prefix as we aren't using the FIFO
+            CRSF_ADDRESS_FLIGHT_CONTROLLER,
+            RCframeLength + 2,
+            CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+        };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+        uint8_t crc = crsf_crc.calc(outBuffer[2]);
+        crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-    //SerialOutFIFO.push(RCframeLength + 4);
-    //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-    this->_dev->write(outBuffer, sizeof(outBuffer));
-    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
-    this->_dev->write(crc);
-#endif // CRSF_RCVR_NO_SERIAL
+        //SerialOutFIFO.push(RCframeLength + 4);
+        //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
+        this->_dev->write(outBuffer, sizeof(outBuffer));
+        this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+        this->_dev->write(crc);
+    }
+#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(CRSF_RCVR_NO_SERIAL) && !defined(DEBUG_CRSF_NO_OUTPUT)
-    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
-    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+#if !defined(DEBUG_CRSF_NO_OUTPUT)
+    if (!OPT_CRSF_RCVR_NO_SERIAL)
     {
-        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-        this->_dev->write(data, totalBufferLen);
+        const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+        if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+        {
+            data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+            this->_dev->write(data, totalBufferLen);
+        }
     }
-#endif // CRSF_RCVR_NO_SERIAL
+#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 /**
@@ -989,4 +999,3 @@ void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t fr
     header->orig_addr = senderAddr;
     SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
-

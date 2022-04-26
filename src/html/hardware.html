@@ -183,6 +183,22 @@
 					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td></tr>
 					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='input'/></td></tr>
 					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td></tr>
+
+					<tr><td colspan='2'><b>PWM</td></tr>
+					<tr><td></td><td>PWM output pins</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text'/></td></tr>
+
+					<tr><td colspan='2'><b>VBat</td></tr>
+					<tr><td></td><td>VBat pin</td><td><input size='3' id='vbat' name='vbat' type='text'/></td></tr>
+					<tr><td></td><td>VBat offset</td><td><input size='7' id='vbat_offset' name='vbat_offset' type='text'/></td></tr>
+					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td></tr>
+
+					<tr><td colspan='2'><b>SPI VTX</td></tr>
+					<tr><td></td><td>RF amp PWM pin</td><td><input size='3' id='rf_amp_pwm' name='rf_amp_pwm' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='rf_amp_vpd' name='rf_amp_vpd' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='rf_amp_vref' name='rf_amp_vref' type='text'/></td></tr>
+					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='spi_vtx_nss' name='spi_vtx_nss' type='checkbox'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_25mW' name='vpd_25mW' type='input'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_100mW' name='vpd_100mW' type='checkbox'/></td></tr>
 				</table>
 				<input type='button' value='Save Target Configuration' class='mui-btn mui-btn--primary' onclick="submitHardwareSettings()"/>
 			</form>

@@ -1,8 +1,13 @@
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
 
 #include "targets.h"
 #include "helpers.h"
+#include "logging.h"
+#if defined(TARGET_UBER_RX)
+#include <FS.h>
+#else
 #include <SPIFFS.h>
+#endif
 #include <ArduinoJson.h>
 
 typedef enum {
@@ -85,6 +90,16 @@ static const struct {
     {HARDWARE_misc_fan_en, "misc_fan_en", INT},
     {HARDWARE_gsensor_stk8xxx, "gsensor_stk8xxx", BOOL},
     {HARDWARE_thermal_lm75a, "thermal_lm75a", BOOL},
+    {HARDWARE_pwm_outputs, "pwm_outputs", ARRAY},
+    {HARDWARE_vbat, "vbat", INT},
+    {HARDWARE_vbat_offset, "vbat_offset", INT},
+    {HARDWARE_vbat_scale, "vbat_scale", INT},
+    {HARDWARE_rf_amp_pwm, "rf_amp_pwm", INT},
+    {HARDWARE_rf_amp_vpd, "rf_amp_vpd", INT},
+    {HARDWARE_rf_amp_vref, "rf_amp_vref", INT},
+    {HARDWARE_spi_vtx_nss, "spi_vtx_nss", INT},
+    {HARDWARE_vpd_25mW, "vpd_25mW", ARRAY},
+    {HARDWARE_vpd_100mW, "vpd_100mW", ARRAY},
 };
 
 typedef union {
@@ -118,7 +133,10 @@ bool hardware_init(uint32_t *config)
     DynamicJsonDocument doc(2048);
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
-        file.close();
+        if (file)
+        {
+            file.close();
+        }
         if (config[0] == 0xFFFFFFFF)
         {
             return false;
@@ -131,13 +149,13 @@ bool hardware_init(uint32_t *config)
     else
     {
         DeserializationError error = deserializeJson(doc, file);
+        file.close();
         if (error) {
-            file.close();
             return false;
         }
     }
 
-    for (int i=0 ; i<ARRAY_SIZE(fields) ; i++) {
+    for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
         if (doc.containsKey(fields[i].name)) {
             switch (fields[i].type) {
                 case INT:
@@ -158,7 +176,6 @@ bool hardware_init(uint32_t *config)
         }
     }
 
-    file.close();
     return true;
 }
 

@@ -2,9 +2,13 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
 #include <ArduinoJson.h>
+#if defined(TARGET_UBER_RX)
+#include <FS.h>
+#else
 #include <SPIFFS.h>
+#endif
 #endif
 
 #if defined(PLATFORM_ESP32)
@@ -155,7 +159,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   }
   force_update = request->hasArg("force");
   AsyncWebServerResponse *response;
-  #if defined(TARGET_UBER_TX)
+  #if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
   if (connectionState == hardwareUndefined)
   {
     response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
@@ -173,8 +177,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+extern uint8_t SERVO_COUNT;
 
 static String WebGetPwmStr()
 {
@@ -218,7 +221,7 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 }
 #endif
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
@@ -689,7 +692,7 @@ static void startServices()
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
   #endif
-  #if defined(TARGET_UBER_TX)
+  #if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
     server.on("/hardware.html", WebUpdateSendContent);
     server.on("/hardware.js", WebUpdateSendContent);
     server.on("/options.html", WebUpdateSendContent);

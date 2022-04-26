@@ -1,5 +1,6 @@
 #include "targets.h"
 #include "options.h"
+#include "helpers.h"
 
 #include "logging.h"
 
@@ -20,7 +21,7 @@ const char *wifi_ap_ssid = "ExpressLRS RX";
 const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
-#if !defined(TARGET_UBER_TX)
+#if !defined(TARGET_UBER_TX) && !defined(TARGET_UBER_RX)
 const char device_name[] = DEVICE_NAME;
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
@@ -215,12 +216,18 @@ const char PROGMEM compile_options[] = {
     #endif
 #endif
 };
-#else // TARGET_UBER_TX
+#else // TARGET_UBER_TX || TARGET_UBER_RX
 
 #include <ArduinoJson.h>
+#if defined(TARGET_UBER_RX)
+#include <FS.h>
+#else
 #include <SPIFFS.h>
+#endif
+#if defined(PLATFORM_ESP32)
 #include <esp_partition.h>
 #include "esp_ota_ops.h"
+#endif
 
 char device_name[17];
 
@@ -229,14 +236,47 @@ firmware_options_t firmwareOptions;
 
 extern bool hardware_init(uint32_t *config);
 
+static uint32_t buf[2048];
+
+#if defined(PLATFORM_ESP8266)
+// We need our own function on ESP8266 because the builtin crashes!
+uint32_t myGetSketchSize()
+{
+    uint32_t result = 0;
+    image_header_t &image_header = *(image_header_t *)buf;
+    uint32_t pos = APP_START_OFFSET;
+    if (spi_flash_read(pos, (uint32_t*) &image_header, sizeof(image_header)) != SPI_FLASH_RESULT_OK) {
+        return 0;
+    }
+    pos += sizeof(image_header);
+    int segments = image_header.num_segments;
+    for (uint32_t section_index = 0; section_index < segments; ++section_index)
+    {
+        section_header_t &section_header = *(section_header_t *)buf;
+        if (spi_flash_read(pos, (uint32_t*) &section_header, sizeof(section_header)) != SPI_FLASH_RESULT_OK) {
+            return 0;
+        }
+        pos += sizeof(section_header);
+        pos += section_header.size;
+    }
+    result = (pos + 16) & ~15;
+    return result;
+}
+#endif
+
 bool options_init()
 {
-    uint32_t buf[1024];
+    uint32_t partition_start = 0;
+    #if defined(PLATFORM_ESP32)
     const esp_partition_t *running = esp_ota_get_running_partition();
     if (running) {
-        uint32_t location = running->address + ESP.getSketchSize();
-        ESP.flashRead(location, buf, sizeof(buf));
+        partition_start = running->address;
     }
+    uint32_t location = partition_start + ESP.getSketchSize();
+    #else
+    uint32_t location = partition_start + myGetSketchSize();
+    #endif
+    ESP.flashRead(location, buf, 2048);
 
     bool hardware_inited = hardware_init(buf);
 
@@ -249,13 +289,21 @@ bool options_init()
         }
         else
         {
+            #if defined(TARGET_UBER_RX)
+            strcpy(device_name, "UBER RX");
+            #else
             strcpy(device_name, "UBER TX");
+            #endif
         }
     }
     else
     {
         int pos = file.readBytesUntil('\n', device_name, sizeof(device_name)-1);
         device_name[pos] = 0;
+    }
+    if (file)
+    {
+        file.close();
     }
 
     DynamicJsonDocument doc(1024);
@@ -272,7 +320,6 @@ bool options_init()
             DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16);
             if (error)
             {
-                file.close();
                 return false;
             }
         }
@@ -281,24 +328,29 @@ bool options_init()
             firmwareOptions.wifi_auto_on_interval = 60 * 1000;
             strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
             strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
+	        #if defined(TARGET_UBER_TX)
             firmwareOptions.tlm_report_interval = 320U;
             firmwareOptions.fan_min_runtime = 30;
             firmwareOptions.no_sync_on_arm = false;
             firmwareOptions.uart_inverted = true;
             firmwareOptions.unlock_higher_power = false;
+	        #else
+            firmwareOptions.uart_baud = 420000;
+            firmwareOptions.invert_tx = false;
+            firmwareOptions.lock_on_first_connection = true;
+            #endif
             return hardware_inited;
         }
     }
     else
     {
         DeserializationError error = deserializeJson(doc, file);
+        file.close();
         if (error)
         {
-            file.close();
             return false;
         }
     }
-
 
     if (doc["uid"].is<JsonArray>())
     {
@@ -312,13 +364,18 @@ bool options_init()
     firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 60) * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
+    #if defined(TARGET_UBER_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
+    #else
+    firmwareOptions.uart_baud = doc["uart-baud"] | 420000;
+    firmwareOptions.invert_tx = doc["invert-tx"] | false;
+    firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
+    #endif
 
-    file.close();
     return hardware_inited;
 }
 

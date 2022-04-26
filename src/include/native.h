@@ -35,6 +35,14 @@ public:
     // Print methods
     virtual size_t write(uint8_t c) = 0;
     virtual size_t write(uint8_t *s, int l) = 0;
+
+    int print(const char *s) {return 0;}
+    int print(uint8_t s) {return 0;}
+    int print(uint8_t s, int radix) {return 0;}
+    int println() {return 0;}
+    int println(const char *s) {return 0;}
+    int println(uint8_t s) {return 0;}
+    int println(uint8_t s, int radix) {return 0;}
 };
 
 class HardwareSerial: public Stream {
@@ -63,6 +71,7 @@ public:
 };
 
 static HardwareSerial Serial;
+static Stream *SerialLogger = &Serial;
 
 inline void interrupts() {}
 inline void noInterrupts() {}
