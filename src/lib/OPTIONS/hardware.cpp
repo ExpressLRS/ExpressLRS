@@ -98,6 +98,23 @@ static data_holder_t hardware[HARDWARE_LAST];
 
 bool hardware_init()
 {
+    for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
+        switch (fields[i].type) {
+            case INT:
+                hardware[fields[i].position].int_value = -1;
+                break;
+            case BOOL:
+                hardware[fields[i].position].bool_value = false;
+                break;
+            case FLOAT:
+                hardware[fields[i].position].float_value = 0.0;
+                break;
+            case ARRAY:
+                hardware[fields[i].position].array_value = nullptr;
+                break;
+        }
+    }
+
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         return false;
@@ -128,22 +145,6 @@ bool hardware_init()
                     copyArray(doc[fields[i].name], hardware[fields[i].position].array_value, array.size());
                     break;
             }
-        } else {
-            switch (fields[i].type) {
-                case INT:
-                    hardware[fields[i].position].int_value = -1;
-                    break;
-                case BOOL:
-                    hardware[fields[i].position].bool_value = false;
-                    break;
-                case FLOAT:
-                    hardware[fields[i].position].float_value = 0.0;
-                    break;
-                case ARRAY:
-                    hardware[fields[i].position].array_value = nullptr;
-                    break;
-            }
-
         }
     }
 
