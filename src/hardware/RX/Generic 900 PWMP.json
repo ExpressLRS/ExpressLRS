@@ -1,0 +1,16 @@
+{
+    "radio_dio0": 4,
+    "radio_miso": 12,
+    "radio_mosi": 13,
+    "radio_nss": 15,
+    "radio_rst": 2,
+    "radio_sck": 14,
+    "power_min": 0,
+    "power_high": 0,
+    "power_max": 0,
+    "power_default": 0,
+    "power_control": 0,
+    "power_values": 15,
+    "led_red": 16,
+    "pwm_outputs": [0,1,3,5,9,10]
+}
