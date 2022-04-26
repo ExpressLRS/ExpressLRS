@@ -79,7 +79,7 @@
 // #define POWER_OUTPUT_ANALOG (hardware_int(HARDWARE_power_control)==1)   // frsky only
 // #define POWER_OUTPUT_DAC (hardware_int(HARDWARE_power_control)==2)  // stm32 only
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
-#define POWER_OUTPUT_FIXED hardware_int(HARDWARE_power_values)
+#define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 
 // Input
