@@ -128,6 +128,11 @@ static void initialize()
             pinMode(GPIO_PIN_LED_RED, OUTPUT);
             digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
         }
+        if (GPIO_PIN_LED != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_LED, OUTPUT);
+            digitalWrite(GPIO_PIN_LED, LOW ^ GPIO_LED_RED_INVERTED);
+        }
     #endif
 }
 
