@@ -102,6 +102,18 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
+    //this block is just for forcing SPI mode on SX1280 modules, that (nobody knows why) defaults into UART mode
+    digitalWrite(GPIO_PIN_NSS, LOW);
+
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[3];
+
+    OutBuffer[0] = (uint8_t)SX1280_RADIO_GET_STATUS;
+    OutBuffer[1] = 0x00;
+    OutBuffer[2] = 0x00;
+    SPI.transfer(OutBuffer, 3);
+
+    digitalWrite(GPIO_PIN_NSS, HIGH);
+
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }
@@ -117,23 +129,13 @@ void SX1280Hal::reset(void)
     digitalWrite(GPIO_PIN_RST, LOW);
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
+    delay(50);
 #endif
 
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    // if the module is not responding or reporting a busy status, this will somehow reset it, and clear the status
-    uint8_t status = 0;
-    ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1);
-
-    DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
-    while (digitalRead(GPIO_PIN_BUSY) == HIGH) // wait for busy
-    {
-        #ifdef PLATFORM_STM32
-        __NOP();
-        #elif PLATFORM_ESP32
-        _NOP();
-        #elif PLATFORM_ESP8266
-        _NOP();
-        #endif
+    // this is non blocking now, and will exit the reset loop after 1000LU with this warning.
+    if (!WaitOnBusy()) {
+        DBGLN("WARNING SX1280 busy didn't go low after reset\n\r");
     }
 #else
     delay(10); // typically 2ms observed
@@ -296,7 +298,7 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy()
     {
         if ((micros() - startTime) > wtimeoutUS)
         {
-            //DBGLN("TO");
+            DBGLN("Busy timeout reached!");
             return false;
         }
         else

@@ -61,12 +61,13 @@ void SX1280Driver::End()
 
 bool SX1280Driver::Begin()
 {
+    DBGLN("SX1280 Begin");
+
     hal.init();
     hal.IsrCallback = &SX1280Driver::IsrCallback;
 
     hal.reset();
-    DBGLN("SX1280 Begin");
-    delay(100);
+    
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
     DBGLN("Read Vers: %d", firmwareRev);
     if ((firmwareRev == 0) || (firmwareRev == 65535))
