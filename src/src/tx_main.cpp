@@ -992,7 +992,7 @@ void setup()
   LoggingBackpack = new HardwareSerial(0);
   ((HardwareSerial *)LoggingBackpack)->begin(420000, SERIAL_8N1);
   SPIFFS.begin();
-  hardware_success = options_init() && hardware_init();
+  hardware_success = options_init();
   if (!hardware_success)
   {
     // Register the WiFi with the framework

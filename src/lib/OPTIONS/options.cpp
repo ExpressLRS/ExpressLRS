@@ -219,18 +219,38 @@ const char PROGMEM compile_options[] = {
 
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
+#include <esp_partition.h>
+#include "esp_ota_ops.h"
 
 char device_name[17];
 
 const char PROGMEM compile_options[] = "";
 firmware_options_t firmwareOptions;
 
+extern bool hardware_init(uint32_t *config);
+
 bool options_init()
 {
+    uint32_t buf[1024];
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    if (running) {
+        uint32_t location = running->address + ESP.getSketchSize();
+        ESP.flashRead(location, buf, sizeof(buf));
+    }
+
+    bool hardware_inited = hardware_init(buf);
+
     File file = SPIFFS.open("/device.ini", "r");
     if (!file || file.isDirectory())
     {
-        strcpy(device_name, "UBER TX");
+        if (buf[0] != 0xFFFFFFFF)
+        {
+            strlcpy(device_name, (const char *)buf, sizeof(device_name));
+        }
+        else
+        {
+            strcpy(device_name, "UBER TX");
+        }
     }
     else
     {
@@ -238,31 +258,47 @@ bool options_init()
         device_name[pos] = 0;
     }
 
+    DynamicJsonDocument doc(1024);
     file = SPIFFS.open("/options.json", "r");
     if (!file || file.isDirectory())
     {
-        firmwareOptions.wifi_auto_on_interval = 30 * 1000;
-        strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
-        strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
-        firmwareOptions.tlm_report_interval = 320U;
-        firmwareOptions.fan_min_runtime = 30;
-        firmwareOptions.no_sync_on_arm = false;
-        firmwareOptions.uart_inverted = true;
-        firmwareOptions.unlock_higher_power = false;
-
-        if (file) {
+        if (file)
+        {
             file.close();
         }
-        return true;
+        // Try JSON at the end of the firmware
+        if (buf[0] != 0xFFFFFFFF)
+        {
+            DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16);
+            if (error)
+            {
+                file.close();
+                return false;
+            }
+        }
+        else
+        {
+            firmwareOptions.wifi_auto_on_interval = 30 * 1000;
+            strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
+            strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
+            firmwareOptions.tlm_report_interval = 320U;
+            firmwareOptions.fan_min_runtime = 30;
+            firmwareOptions.no_sync_on_arm = false;
+            firmwareOptions.uart_inverted = true;
+            firmwareOptions.unlock_higher_power = false;
+            return hardware_inited;
+        }
+    }
+    else
+    {
+        DeserializationError error = deserializeJson(doc, file);
+        if (error)
+        {
+            file.close();
+            return false;
+        }
     }
 
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, file);
-    if (error)
-    {
-        file.close();
-        return false;
-    }
 
     if (doc["uid"].is<JsonArray>())
     {
@@ -283,7 +319,7 @@ bool options_init()
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
 
     file.close();
-    return true;
+    return hardware_inited;
 }
 
 #endif

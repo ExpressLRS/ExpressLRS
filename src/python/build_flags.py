@@ -6,7 +6,6 @@ import hashlib
 import fnmatch
 import time
 import re
-import json
 import melodyparser
 import elrs_helpers
 
@@ -16,7 +15,6 @@ json_flags['uart-inverted'] = False
 UIDbytes = ""
 define = ""
 target_name = env.get('PIOENV', '').upper()
-device_name = ""
 
 def print_error(error):
     time.sleep(1)
@@ -80,7 +78,7 @@ def process_build_flag(define):
         if "DEVICE_NAME=" in define:
             parts = re.search("(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
-                device_name = parts.group(2)
+                env['DEVICE_NAME'] = parts.group(2)
         if not define in build_flags:
             build_flags.append(define)
 
@@ -148,17 +146,9 @@ if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
 
+env['OPTIONS_JSON']=json_flags
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
-
-# create data directory and stuff the options.json in there
-if not os.path.exists('data'):
-    os.mkdir('data')
-
-with open('data/options.json', 'w') as file:
-    json.dump(json_flags, file)
-with open('data/device.ini', 'w') as file:
-    file.write(device_name)
 
 if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")

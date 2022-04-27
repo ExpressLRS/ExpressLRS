@@ -96,7 +96,7 @@ typedef union {
 
 static data_holder_t hardware[HARDWARE_LAST];
 
-bool hardware_init()
+bool hardware_init(uint32_t *config)
 {
     for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
         switch (fields[i].type) {
@@ -115,16 +115,26 @@ bool hardware_init()
         }
     }
 
+    DynamicJsonDocument doc(2048);
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
-        return false;
-    }
-
-    DynamicJsonDocument doc(2048);
-    DeserializationError error = deserializeJson(doc, file);
-    if (error) {
         file.close();
-        return false;
+        if (config[0] == 0xFFFFFFFF)
+        {
+            return false;
+        }
+        DeserializationError error = deserializeJson(doc, ((const char *)config) + 16 + 512);
+        if (error) {
+            return false;
+        }
+    }
+    else
+    {
+        DeserializationError error = deserializeJson(doc, file);
+        if (error) {
+            file.close();
+            return false;
+        }
     }
 
     for (int i=0 ; i<ARRAY_SIZE(fields) ; i++) {

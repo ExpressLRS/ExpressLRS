@@ -5,6 +5,7 @@ import opentx
 import upload_via_esp8266_backpack
 import esp_compress
 import ETXinitPassthrough
+import UberConfiguration
 
 def add_target_uploadoption(name: str, desc: str) -> None:
     # Add an upload target 'uploadforce' that forces update if target mismatch
@@ -96,3 +97,6 @@ if "_WIFI" in target_name:
 
 if platform != 'native':
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
+
+if "UBER" in target_name:
+    env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UberConfiguration.appendConfiguration)
