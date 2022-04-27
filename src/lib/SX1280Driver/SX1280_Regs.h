@@ -15,6 +15,13 @@
 
 typedef enum
 {
+    SX1280_Radio_1 = 0x00,
+    SX1280_Radio_2,
+    SX1280_Radio_All,
+} SX1280_Radio_Number_t;
+
+typedef enum
+{
     SX1280_RF_IDLE = 0x00, //!< The radio is idle
     SX1280_RF_RX_RUNNING,  //!< The radio is in reception state
     SX1280_RF_TX_RUNNING,  //!< The radio is in transmission state

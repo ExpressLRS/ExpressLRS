@@ -885,6 +885,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     }
 
     // Store the LQ/RSSI/Antenna
+    Radio.GetLastPacketStats();
     getRFlinkInfo();
     // Received a packet, that's the definition of LQ
     LQCalc.add();
