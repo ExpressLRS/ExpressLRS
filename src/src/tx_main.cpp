@@ -987,7 +987,7 @@ static void setupTarget()
 
 void setup()
 {
-  bool hardware_success = false;
+  bool hardware_success = true;
   #if defined(TARGET_UBER_TX)
   LoggingBackpack = new HardwareSerial(0);
   ((HardwareSerial *)LoggingBackpack)->begin(420000, SERIAL_8N1);
