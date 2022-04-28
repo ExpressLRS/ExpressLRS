@@ -15,7 +15,7 @@ function load_data() {
     };
     xmlhttp.open("GET", json_url, true);
     xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    // xmlhttp.send();
+    xmlhttp.send();
 }
 
 function submitHardwareSettings() {
@@ -23,7 +23,8 @@ function submitHardwareSettings() {
     xhr.open('POST','/hardware.json')
     xhr.setRequestHeader("Content-Type", "application/json");
     var formData = new FormData(_("upload_hardware"));
-    xhr.send(JSON.stringify(Object.fromEntries(formData)));
+    var json = JSON.stringify(Object.fromEntries(formData), function(k, v){ return v === "" ? undefined : v; });
+    xhr.send(json);
     xhr.onreadystatechange = function() {};
     return false;
 }

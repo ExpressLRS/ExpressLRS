@@ -220,9 +220,14 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 #if defined(TARGET_UBER_TX)
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
-  File file = SPIFFS.open(request->url(), "w");
+  static File file;
+  if (!file || request->url() != file.name()) {
+    file = SPIFFS.open(request->url(), "w");
+  }
   file.write(data, len);
-  file.close();
+  if (file.size() == total) {
+    file.close();
+  }
 }
 
 static void getFile(AsyncWebServerRequest *request)
