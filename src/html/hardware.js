@@ -103,3 +103,5 @@ function Init() {
 if (window.File && window.FileList && window.FileReader) {
     Init();
 }
+
+@@include("libs.js")

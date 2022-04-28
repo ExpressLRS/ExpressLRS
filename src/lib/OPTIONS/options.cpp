@@ -264,6 +264,23 @@ uint32_t myGetSketchSize()
 }
 #endif
 
+static String builtinOptions;
+String& getOptions()
+{
+    File file = SPIFFS.open("/options.json", "r");
+    if (!file || file.isDirectory())
+    {
+        if (file)
+        {
+            file.close();
+        }
+        // Try JSON at the end of the firmware
+        return builtinOptions;
+    }
+    builtinOptions = file.readString();
+    return builtinOptions;
+}
+
 bool options_init()
 {
     uint32_t partition_start = 0;
@@ -315,32 +332,13 @@ bool options_init()
             file.close();
         }
         // Try JSON at the end of the firmware
-        if (buf[0] != 0xFFFFFFFF)
+        builtinOptions.clear();
+        DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16, strnlen(((const char *)buf) + 16, 512));
+        if (error)
         {
-            DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16);
-            if (error)
-            {
-                return false;
-            }
+            return false;
         }
-        else
-        {
-            firmwareOptions.wifi_auto_on_interval = 60 * 1000;
-            strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
-            strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
-	        #if defined(TARGET_UBER_TX)
-            firmwareOptions.tlm_report_interval = 320U;
-            firmwareOptions.fan_min_runtime = 30;
-            firmwareOptions.no_sync_on_arm = false;
-            firmwareOptions.uart_inverted = true;
-            firmwareOptions.unlock_higher_power = false;
-	        #else
-            firmwareOptions.uart_baud = 420000;
-            firmwareOptions.invert_tx = false;
-            firmwareOptions.lock_on_first_connection = true;
-            #endif
-            return hardware_inited;
-        }
+        serializeJson(doc, builtinOptions);
     }
     else
     {

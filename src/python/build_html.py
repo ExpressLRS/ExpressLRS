@@ -7,6 +7,9 @@ import filecmp
 import shutil
 import gzip
 from external.minify import (html_minifier, rcssmin, rjsmin)
+from external.wheezy.template.engine import Engine
+from external.wheezy.template.ext.core import CoreExtension
+from external.wheezy.template.loader import FileLoader
 
 
 def get_version(env):
@@ -24,11 +27,19 @@ def compress(data):
         f.write(data)
     return buf.getvalue()
 
-def build_html(mainfile, var, out, env):
-    with open('html/%s' % mainfile, 'r') as file:
-        data = file.read()
+def build_html(mainfile, var, out, env, isTX=False):
+    engine = Engine(
+        loader=FileLoader(["html"]),
+        extensions=[CoreExtension("@@")]
+    )
+    template = engine.get_template(mainfile)
+    data = template.render({
+            'VERSION': get_version(env),
+            'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
+            'isTX': isTX
+        })
     if mainfile.endswith('.html'):
-        data = html_minifier.html_minify(data).replace('@VERSION@', get_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
+        data = html_minifier.html_minify(data)
     if mainfile.endswith('.css'):
         data = rcssmin.cssmin(data)
     if mainfile.endswith('.js'):
@@ -42,18 +53,15 @@ def build_common(env, mainfile, isTX):
     try:
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
-            build_html(mainfile, "INDEX_HTML", out, env)
-            build_html("libs.js", "LIBS_JS", out, env)
+            build_html(mainfile, "INDEX_HTML", out, env, isTX)
             build_html("scan.js", "SCAN_JS", out, env)
             build_html("main.css", "MAIN_CSS", out, env)
             build_html("logo.svg", "LOGO_SVG", out, env)
             build_html("elrs.css", "ELRS_CSS", out, env)
-            build_html("hardware.html", "HARDWARE_HTML", out, env)
+            build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)
             build_html("hardware.js", "HARDWARE_JS", out, env)
-            build_html("options.html", "OPTIONS_HTML", out, env)
+            build_html("options.html", "OPTIONS_HTML", out, env, isTX)
             build_html("options.js", "OPTIONS_JS", out, env)
-            build_html("mui.css", "MUI_CSS", out, env)
-            build_html("mui.js", "MUI_JS", out, env)
 
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):

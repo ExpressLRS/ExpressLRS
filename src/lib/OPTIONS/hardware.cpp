@@ -110,6 +110,23 @@ typedef union {
 } data_holder_t;
 
 static data_holder_t hardware[HARDWARE_LAST];
+static String builtinHardwareConfig;
+
+String& getHardware()
+{
+    File file = SPIFFS.open("/hardware.json", "r");
+    if (!file || file.isDirectory())
+    {
+        if (file)
+        {
+            file.close();
+        }
+        // Try JSON at the end of the firmware
+        return builtinHardwareConfig;
+    }
+    builtinHardwareConfig = file.readString();
+    return builtinHardwareConfig;
+}
 
 bool hardware_init(uint32_t *config)
 {
@@ -141,10 +158,12 @@ bool hardware_init(uint32_t *config)
         {
             return false;
         }
-        DeserializationError error = deserializeJson(doc, ((const char *)config) + 16 + 512);
+        builtinHardwareConfig.clear();
+        DeserializationError error = deserializeJson(doc, ((const char *)config) + 16 + 512, strnlen(((const char *)config) + 16 + 512, 2048));
         if (error) {
             return false;
         }
+        serializeJson(doc, builtinHardwareConfig);
     }
     else
     {

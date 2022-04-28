@@ -176,3 +176,5 @@ function initBindingPhraseGen() {
   phrase.addEventListener("input", updateValue);
   setOutput("");
 }
+
+@@include("libs.js")

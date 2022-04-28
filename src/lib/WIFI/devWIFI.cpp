@@ -126,11 +126,8 @@ static struct {
   {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-  {"/libs.js", "text/javascript", (uint8_t *)LIBS_JS, sizeof(LIBS_JS)},
 #if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
-  {"/mui.css", "text/css", (uint8_t *)MUI_CSS, sizeof(MUI_CSS)},
-  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
   {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
@@ -236,7 +233,15 @@ static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 
 static void getFile(AsyncWebServerRequest *request)
 {
-  request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+  if (request->url() == "/options.json") {
+    request->send(200, "application/json", getOptions());
+  } else if (request->url() == "/hardware.json") {
+    request->send(200, "application/json", getHardware());
+  } else if (request->url() == "/device.ini") {
+    request->send(200, "tex/plain", device_name);
+  } else {
+    request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+  }
 }
 
 static void HandleReboot(AsyncWebServerRequest *request)
@@ -662,7 +667,6 @@ static void startServices()
 
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendContent);
-  server.on("/libs.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
   server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
@@ -698,8 +702,6 @@ static void startServices()
     server.on("/options.html", WebUpdateSendContent);
     server.on("/options.js", WebUpdateSendContent);
     server.on("/elrs.css", WebUpdateSendContent);
-    server.on("/mui.css", WebUpdateSendContent);
-    server.on("/mui.js", WebUpdateSendContent);
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
     server.on("/device.ini", getFile).onBody(putFile);

@@ -1,1 +1,2172 @@
-!function r(s,a,l){function u(e,t){if(!a[e]){if(!s[e]){var i="function"==typeof require&&require;if(!t&&i)return i(e,!0);if(c)return c(e,!0);var n=new Error("Cannot find module '"+e+"'");throw n.code="MODULE_NOT_FOUND",n}var o=a[e]={exports:{}};s[e][0].call(o.exports,function(t){return u(s[e][1][t]||t)},o,o.exports,r,s,a,l)}return a[e].exports}for(var c="function"==typeof require&&require,t=0;t<l.length;t++)u(l[t]);return u}({1:[function(l,t,e){!function(t){"use strict";if(!t._muiLoadedJS){t._muiLoadedJS=!0;var e=l("src/js/lib/jqLite"),i=l("src/js/dropdown"),n=l("src/js/overlay"),o=l("src/js/ripple"),r=l("src/js/select"),s=l("src/js/tabs"),a=l("src/js/textfield");t.mui={overlay:n,tabs:s.api},e.ready(function(){a.initListeners(),r.initListeners(),o.initListeners(),i.initListeners(),s.initListeners()})}}(window)},{"src/js/dropdown":3,"src/js/lib/jqLite":6,"src/js/overlay":8,"src/js/ripple":9,"src/js/select":10,"src/js/tabs":11,"src/js/textfield":12}],2:[function(t,e,i){e.exports={debug:!0}},{}],3:[function(t,e,i){"use strict";var l=t("./lib/jqLite"),u=t("./lib/util"),n=t("./lib/animationHelpers"),c="mui--is-open",d="mui-dropdown__menu",m="mui-dropdown--up",f="mui-dropdown--right",p="mui-dropdown--left",h="mui-dropdown__menu--bottom";function o(t){if(!0!==t._muiDropdown){t._muiDropdown=!0;var e=t.tagName;"INPUT"!==e&&"BUTTON"!==e||t.hasAttribute("type")||(t.type="button"),l.on(t,"click",r)}}function r(t){if(0===t.button){null===this.getAttribute("disabled")&&function(i){var n=i.parentNode,o=i.nextElementSibling,r=n.ownerDocument;if(!o||!l.hasClass(o,d))return u.raiseError("Dropdown menu element not found");function s(){l.removeClass(o,c),l.off(r,"click",s),l.off(r,"keydown",a)}function a(t){var e=t.key;"Escape"!==e&&"Esc"!==e||s()}(l.hasClass(o,c)?s:function(){var t=n.getBoundingClientRect(),e=i.getBoundingClientRect();l.hasClass(n,m)?l.css(o,{bottom:e.height+e.top-t.top+"px"}):l.hasClass(n,f)?l.css(o,{left:e.width+"px",top:e.top-t.top+"px"}):l.hasClass(n,p)?l.css(o,{right:e.width+"px",top:e.top-t.top+"px"}):l.css(o,{top:e.top-t.top+e.height+"px"}),l.hasClass(o,h)&&l.css(o,{top:"auto",bottom:e.top-t.top+"px"}),l.addClass(o,c),setTimeout(function(){l.on(r,"click",s),l.on(r,"keydown",a)},0)})()}(this)}}e.exports={initListeners:function(){for(var t=document.querySelectorAll('[data-mui-toggle="dropdown"]'),e=t.length;e--;)o(t[e]);n.onAnimationStart("mui-dropdown-inserted",function(t){o(t.target)})}}},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],4:[function(t,e,i){"use strict";var n=t("./jqLite"),r=t("./util"),o="animationstart mozAnimationStart webkitAnimationStart",s={};function a(t){var e=s[t.animationName]||[],i=e.length;if(i)for(t.stopImmediatePropagation();i--;)e[i](t)}e.exports={animationEvents:o,onAnimationStart:function(t,e){var i=s[t];(i=i||(s[t]=[])).push(e),this.init||(function(){for(var t,e=[[".mui-btn","mui-btn-inserted"],['[data-mui-toggle="dropdown"]',"mui-dropdown-inserted"],['.mui-btn[data-mui-toggle="dropdown"]',"mui-btn-inserted,mui-dropdown-inserted"],['[data-mui-toggle="tab"]',"mui-tab-inserted"],[".mui-textfield > input","mui-textfield-inserted"],[".mui-textfield > textarea","mui-textfield-inserted"],[".mui-select > select","mui-select-inserted"],[".mui-select > select ~ .mui-event-trigger","mui-node-inserted"],[".mui-select > select:disabled ~ .mui-event-trigger","mui-node-disabled"]],i="",n=0,o=e.length;n<o;n++)i+="@keyframes "+(t=e[n])[1],i+="{from{transform:none;}to{transform:none;}}",i+=t[0],i+="{animation-duration:0.0001s;animation-name:"+t[1]+";}";r.loadStyle(i)}(),n.on(document,o,a,!0),this.init=!0)}}},{"./jqLite":6,"./util":7}],5:[function(t,e,i){"use strict";var v=t("./jqLite");e.exports={getMenuPositionalCSS:function(t,e,i){var n,o,r,s,a=document.documentElement.clientHeight,l=e.children.length,u=parseInt(e.offsetHeight),c=Math.min(u,a),d=parseInt(v.css(e,"padding-top")),m=(u-2*d)/l;o=-1*i*m,s=a-c+(r=-1*t.getBoundingClientRect().top),n=Math.min(Math.max(o,r),s);var f,p,h=0;return a<u&&(f=n+d+i*m,p=l*m+2*d-c,h=Math.min(f,p)),{height:c+"px",top:n+"px",scrollTop:h}}}},{"./jqLite":6}],6:[function(t,e,i){"use strict";function l(t){if(void 0===t)return"undefined";var e=Object.prototype.toString.call(t);if(0===e.indexOf("[object "))return e.slice(8,-1).toLowerCase();throw new Error("MUI: Could not understand type: "+e)}function s(e,t,i,n){n=void 0!==n&&n;var o=e._muiEventCache=e._muiEventCache||{};t.split(" ").map(function(t){e.addEventListener(t,i,n),o[t]=o[t]||[],o[t].push([i,n])})}function a(e,t,i,n){n=void 0!==n&&n;var o,r,s,a=e._muiEventCache=e._muiEventCache||{};t.split(" ").map(function(t){for(s=(o=a[t]||[]).length;s--;)r=o[s],(void 0===i||r[0]===i&&r[1]===n)&&(o.splice(s,1),e.removeEventListener(t,r[0],r[1]))})}function r(t,e){var i=window;if(void 0===e){if(t!==i)return t.scrollLeft;var n=document.documentElement;return(i.pageXOffset||n.scrollLeft)-(n.clientLeft||0)}t===i?i.scrollTo(e,u(i)):t.scrollLeft=e}function u(t,e){var i=window;if(void 0===e){if(t!==i)return t.scrollTop;var n=document.documentElement;return(i.pageYOffset||n.scrollTop)-(n.clientTop||0)}t===i?i.scrollTo(r(i),e):t.scrollTop=e}var n=/([\:\-\_]+(.))/g,o=/^moz([A-Z])/;function c(t){return" "+(t.getAttribute("class")||"").replace(/[\n\t]/g,"")+" "}function d(t){return t.replace(n,function(t,e,i,n){return n?i.toUpperCase():i}).replace(o,"Moz$1")}function m(t,e,i){var n;return""!==(n=i.getPropertyValue(e))||t.ownerDocument||(n=t.style[d(e)]),n}e.exports={addClass:function(t,e){if(e&&t.setAttribute){for(var i,n=c(t),o=e.split(" "),r=0;r<o.length;r++)i=o[r].trim(),-1===n.indexOf(" "+i+" ")&&(n+=i+" ");t.setAttribute("class",n.trim())}},css:function(t,e,i){if(void 0===e)return getComputedStyle(t);var n=l(e);if("object"!==n){"string"===n&&void 0!==i&&(t.style[d(e)]=i);var o=getComputedStyle(t);if(!("array"===l(e)))return m(t,e,o);for(var r={},s=0;s<e.length;s++)r[a=e[s]]=m(t,a,o);return r}for(var a in e)t.style[d(a)]=e[a]},hasClass:function(t,e){return!(!e||!t.getAttribute)&&-1<c(t).indexOf(" "+e+" ")},off:a,offset:function(t){var e=window,i=t.getBoundingClientRect(),n=u(e),o=r(e);return{top:i.top+n,left:i.left+o,height:i.height,width:i.width}},on:s,one:function(n,t,o,r){t.split(" ").map(function(i){s(n,i,function t(e){o&&o.apply(this,arguments),a(n,i,t,r)},r)})},ready:function(e){var i=!1,t=!0,n=document,o=n.defaultView,r=n.documentElement,s=n.addEventListener?"addEventListener":"attachEvent",a=n.addEventListener?"removeEventListener":"detachEvent",l=n.addEventListener?"":"on",u=function(t){"readystatechange"==t.type&&"complete"!=n.readyState||(("load"==t.type?o:n)[a](l+t.type,u,!1),!i&&(i=!0)&&e.call(o,t.type||t))},c=function(){try{r.doScroll("left")}catch(t){return void setTimeout(c,50)}u("poll")};if("complete"==n.readyState)e.call(o,"lazy");else{if(n.createEventObject&&r.doScroll){try{t=!o.frameElement}catch(t){}t&&c()}n[s](l+"DOMContentLoaded",u,!1),n[s](l+"readystatechange",u,!1),o[s](l+"load",u,!1)}},removeClass:function(t,e){if(e&&t.setAttribute){for(var i,n=c(t),o=e.split(" "),r=0;r<o.length;r++)for(i=o[r].trim();0<=n.indexOf(" "+i+" ");)n=n.replace(" "+i+" "," ");t.setAttribute("class",n.trim())}},type:l,scrollLeft:r,scrollTop:u}},{}],7:[function(t,e,i){"use strict";var l,u,c,d,n,o=t("../config"),m=t("./jqLite"),f=0,p="mui-scroll-lock";function h(t){var e,i=document;e=i.head||i.getElementsByTagName("head")[0]||i.documentElement;var n=i.createElement("style");return n.type="text/css",n.styleSheet?n.styleSheet.cssText=t:n.appendChild(i.createTextNode(t)),e.insertBefore(n,e.firstChild),n}c=function(t){t.target.tagName||t.stopImmediatePropagation()};e.exports={callback:function(t,e){return function(){t[e].apply(t,arguments)}},classNames:function(t){var e="";for(var i in t)e+=t[i]?i+" ":"";return e.trim()},disableScrollLock:function(t){0!==f&&0===--f&&(m.removeClass(document.body,p),t&&window.scrollTo(l.left,l.top),m.off(window,"scroll",c,!0),setTimeout(function(){u.parentNode.removeChild(u)},0))},dispatchEvent:function(t,e,i,n,o){var r,s=document.createEvent("HTMLEvents");if(i=void 0===i||i,n=void 0===n||n,s.initEvent(e,i,n),o)for(r in o)s[r]=o[r];return t&&t.dispatchEvent(s),s},enableScrollLock:function(){if(1===(f+=1)){var t,e,i,n=document,o=window,r=n.documentElement,s=n.body,a=function(){if(d!==undefined)return d;var t=document,e=t.body,i=t.createElement("div");return i.innerHTML='<div style="width:50px;height:50px;position:absolute;left:-50px;top:-50px;overflow:auto;"><div style="width:1px;height:100px;"></div></div>',i=i.firstChild,e.appendChild(i),d=i.offsetWidth-i.clientWidth,e.removeChild(i),d}();t=["overflow:hidden"],a&&(r.scrollHeight>r.clientHeight&&(i=parseInt(m.css(s,"padding-right"))+a,t.push("padding-right:"+i+"px")),r.scrollWidth>r.clientWidth&&(i=parseInt(m.css(s,"padding-bottom"))+a,t.push("padding-bottom:"+i+"px"))),e="."+p+"{",e+=t.join(" !important;")+" !important;}",u=h(e),m.on(o,"scroll",c,!0),l={left:m.scrollLeft(o),top:m.scrollTop(o)},m.addClass(s,p)}},log:function(){var e=window;if(o.debug&&void 0!==e.console)try{e.console.log.apply(e.console,arguments)}catch(t){var i=Array.prototype.slice.call(arguments);e.console.log(i.join("\n"))}},loadStyle:h,raiseError:function(t,e){if(!e)throw new Error("MUI: "+t);"undefined"!=typeof console&&console.warn("MUI Warning: "+t)},requestAnimationFrame:function(t){var e=window.requestAnimationFrame;e?e(t):setTimeout(t,0)},supportsPointerEvents:function(){if(void 0!==n)return n;var t=document.createElement("x");return t.style.cssText="pointer-events:auto",n="auto"===t.style.pointerEvents}}},{"../config":2,"./jqLite":6}],8:[function(t,e,i){"use strict";var s,a=t("./lib/util"),l=t("./lib/jqLite"),u="mui-overlay",c=/(iPad|iPhone|iPod)/g;function d(){var t,e=document.getElementById(u);if(e){for(;e.firstChild;)e.removeChild(e.firstChild);e.parentNode.removeChild(e),t=e.muiOptions.onclose,p(e)}return a.disableScrollLock(),m(),s&&s.focus(),t&&t(),e}function m(){l.off(document,"keyup",f)}function f(t){27===t.keyCode&&d()}function p(t){l.off(t,"click",h)}function h(t){t.target.id===u&&d()}e.exports=function(t){var e;if("on"===t){for(var i,n,o,r=arguments.length-1;0<r;r--)i=arguments[r],"object"===l.type(i)&&(n=i),i instanceof Element&&1===i.nodeType&&(o=i);void 0===(n=n||{}).keyboard&&(n.keyboard=!0),void 0===n.static&&(n.static=!1),e=function(t,e){var i=document,n=i.body,o=i.getElementById(u);i.activeElement&&(s=i.activeElement);if(a.enableScrollLock(),o){for(;o.firstChild;)o.removeChild(o.firstChild);e&&o.appendChild(e)}else(o=i.createElement("div")).setAttribute("id",u),o.setAttribute("tabindex","-1"),e&&o.appendChild(e),n.appendChild(o);c.test(navigator.userAgent)&&l.css(o,"cursor","pointer");t.keyboard?l.on(document,"keyup",f):m();(t.static?p:function(t){l.on(t,"click",h)})(o);return o.muiOptions=t,o.focus(),o}(n,o)}else"off"===t?e=d():a.raiseError("Expecting 'on' or 'off'");return e}},{"./lib/jqLite":6,"./lib/util":7}],9:[function(t,e,i){"use strict";var l=t("./lib/jqLite"),u=t("./lib/util"),n=t("./lib/animationHelpers"),o="ontouchstart"in document.documentElement,r=o?"touchstart":"mousedown",c=o?"touchend":"mouseup mouseleave";function s(t){!0!==t._muiRipple&&(t._muiRipple=!0,"INPUT"!==t.tagName&&l.on(t,r,a))}function a(t){if("mousedown"!==t.type||0===t.button){var e=this,i=e._rippleEl;if(!e.disabled){if(!i){var n=document.createElement("span");n.className="mui-btn__ripple-container",n.innerHTML='<span class="mui-ripple"></span>',e.appendChild(n),i=e._rippleEl=n.children[0],l.on(e,c,d)}var o,r,s=l.offset(e),a="touchstart"===t.type?t.touches[0]:t;r=2*(o=Math.sqrt(s.height*s.height+s.width*s.width))+"px",l.css(i,{width:r,height:r,top:Math.round(a.pageY-s.top-o)+"px",left:Math.round(a.pageX-s.left-o)+"px"}),l.removeClass(i,"mui--is-animating"),l.addClass(i,"mui--is-visible"),u.requestAnimationFrame(function(){l.addClass(i,"mui--is-animating")})}}}function d(t){var e=this._rippleEl;u.requestAnimationFrame(function(){l.removeClass(e,"mui--is-visible")})}e.exports={initListeners:function(){for(var t=document.getElementsByClassName("mui-btn"),e=t.length;e--;)s(t[e]);n.onAnimationStart("mui-btn-inserted",function(t){s(t.target)})}}},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],10:[function(t,e,i){"use strict";var y=t("./lib/jqLite"),l=t("./lib/util"),n=t("./lib/animationHelpers"),u=t("./lib/forms"),C="mui--is-selected",E=document,c=window;function o(t){if(!0!==t._muiSelect&&(t._muiSelect=!0,!("ontouchstart"in E.documentElement))){var e=t.parentNode;if(!y.hasClass(e,"mui-select--use-default")){e._selectEl=t,e._menu=null,e._q="",e._qTimeout=null,t.disabled||(e.tabIndex=0),t.tabIndex=-1,y.on(t,"mousedown",r),y.on(e,"click",m),y.on(e,"blur focus",s),y.on(e,"keydown",a),y.on(e,"keypress",d);var i=document.createElement("div");i.className="mui-event-trigger",e.appendChild(i),y.on(i,n.animationEvents,function(t){var e=t.target.parentNode;t.stopPropagation(),"mui-node-disabled"===t.animationName?e.removeAttribute("tabIndex"):e.tabIndex=0})}}}function r(t){0===t.button&&t.preventDefault()}function s(t){l.dispatchEvent(this._selectEl,t.type,!1,!1)}function a(t){if(!t.defaultPrevented){var e=t.keyCode,i=this._menu;if(i){if(9===e)return i.destroy();27!==e&&40!==e&&38!==e&&13!==e||t.preventDefault(),27===e?i.destroy():40===e?i.increment():38===e?i.decrement():13===e&&(i.selectCurrent(),i.destroy())}else 32!==e&&38!==e&&40!==e||(t.preventDefault(),f(this))}}function d(t){var e=this._menu;if(!t.defaultPrevented&&e){var i=this;clearTimeout(this._qTimeout),this._q+=t.key,this._qTimeout=setTimeout(function(){i._q=""},300);var n,o=new RegExp("^"+this._q,"i"),r=e.itemArray;for(n in r)if(o.test(r[n].innerText)){e.selectPos(n);break}}}function m(t){0!==t.button||this._selectEl.disabled||(this.focus(),f(this))}function f(t){t._menu||(t._menu=new p(t,t._selectEl,function(){t._menu=null,t.focus()}))}function p(t,e,i){l.enableScrollLock(),this.itemArray=[],this.origPos=null,this.currentPos=null,this.selectEl=e,this.wrapperEl=t;var n=this._createMenuEl(t,e),o=this.menuEl=n[0],r=l.callback;this.onClickCB=r(this,"onClick"),this.destroyCB=r(this,"destroy"),this.wrapperCallbackFn=i,t.appendChild(this.menuEl);var s=u.getMenuPositionalCSS(t,o,n[1]);y.css(o,s),y.scrollTop(o,s.scrollTop);var a=this.destroyCB;y.on(o,"click",this.onClickCB),y.on(c,"resize",a),setTimeout(function(){y.on(E,"click",a)},0)}p.prototype._createMenuEl=function(t,e){var i,n,o,r,s,a,l,u,c=E.createElement("div"),d=e.children,m=this.itemArray,f=0,p=-1,h=0,v=0,g=0,b=document.createDocumentFragment();for(c.className="mui-select__menu",s=0,a=d.length;s<a;s++)for(l=0,u=(o="OPTGROUP"===(i=d[s]).tagName?((n=E.createElement("div")).textContent=i.label,n.className="mui-optgroup__label",b.appendChild(n),r=!0,i.children):(r=!1,[i])).length;l<u;l++)i=o[l],(n=E.createElement("div")).textContent=i.textContent,r&&y.addClass(n,"mui-optgroup__option"),i.hidden||(i.disabled?y.addClass(n,"mui--is-disabled"):(n._muiIndex=i.index,n._muiPos=f,i.selected&&(v=g,h=p=f),m.push(n),f+=1),b.appendChild(n),g+=1);return c.appendChild(b),this.origPos=p,this.currentPos=h,m.length&&y.addClass(m[h],C),[c,v]},p.prototype.onClick=function(t){t.stopPropagation();var e=t.target;void 0!==e._muiIndex&&(this.currentPos=e._muiPos,this.selectCurrent(),this.destroy())},p.prototype.increment=function(){this.currentPos!==this.itemArray.length-1&&(y.removeClass(this.itemArray[this.currentPos],C),this.currentPos+=1,y.addClass(this.itemArray[this.currentPos],C))},p.prototype.decrement=function(){0!==this.currentPos&&(y.removeClass(this.itemArray[this.currentPos],C),--this.currentPos,y.addClass(this.itemArray[this.currentPos],C))},p.prototype.selectCurrent=function(){this.currentPos!==this.origPos&&(this.selectEl.selectedIndex=this.itemArray[this.currentPos]._muiIndex,l.dispatchEvent(this.selectEl,"change",!0,!1),l.dispatchEvent(this.selectEl,"input",!0,!1))},p.prototype.selectPos=function(t){y.removeClass(this.itemArray[this.currentPos],C),this.currentPos=t;var e=this.itemArray[t];y.addClass(e,C);var i=this.menuEl,n=e.getBoundingClientRect();n.top<0?i.scrollTop=i.scrollTop+n.top-5:n.top>window.innerHeight&&(i.scrollTop=i.scrollTop+(n.top+n.height-window.innerHeight)+5)},p.prototype.destroy=function(){l.disableScrollLock(!0),y.off(this.menuEl,"click",this.clickCallbackFn),y.off(E,"click",this.destroyCB),y.off(c,"resize",this.destroyCB);var t=this.menuEl.parentNode;t&&(t.removeChild(this.menuEl),this.wrapperCallbackFn())},e.exports={initListeners:function(){for(var t=E.querySelectorAll(".mui-select > select"),e=t.length;e--;)o(t[e]);n.onAnimationStart("mui-select-inserted",function(t){o(t.target)})}}},{"./lib/animationHelpers":4,"./lib/forms":5,"./lib/jqLite":6,"./lib/util":7}],11:[function(t,e,i){"use strict";var f=t("./lib/jqLite"),p=t("./lib/util"),n=t("./lib/animationHelpers"),h="data-mui-controls",v="mui--is-active",g="mui.tabs.showstart",b="mui.tabs.showend",y="mui.tabs.hidestart",C="mui.tabs.hideend";function o(t){!0!==t._muiTabs&&(t._muiTabs=!0,f.on(t,"click",r))}function r(t){if(0===t.button){null===this.getAttribute("disabled")&&s(this)}}function s(t){var e,i,n,o,r,s,a,l,u,c=t.parentNode,d=t.getAttribute(h),m=document.getElementById(d);f.hasClass(c,v)||(m||p.raiseError('Tab pane "'+d+'" not found'),(i=function(t){var e,i=t.parentNode.children,n=i.length,o=null;for(;n--&&!o;)(e=i[n])!==t&&f.hasClass(e,v)&&(o=e);return o}(m))&&(n=i.id,u="["+h+'="'+n+'"]',o=document.querySelectorAll(u)[0],e=o.parentNode),r={paneId:d,relatedPaneId:n},s={paneId:n,relatedPaneId:d},a=p.dispatchEvent(o,y,!0,!0,s),l=p.dispatchEvent(t,g,!0,!0,r),setTimeout(function(){a.defaultPrevented||l.defaultPrevented||(e&&f.removeClass(e,v),i&&f.removeClass(i,v),f.addClass(c,v),f.addClass(m,v),p.dispatchEvent(o,C,!0,!1,s),p.dispatchEvent(t,b,!0,!1,r))},0))}e.exports={initListeners:function(){for(var t=document.querySelectorAll('[data-mui-toggle="tab"]'),e=t.length;e--;)o(t[e]);n.onAnimationStart("mui-tab-inserted",function(t){o(t.target)})},api:{activate:function(t){var e="["+h+"="+t+"]",i=document.querySelectorAll(e);i.length||p.raiseError('Tab control for pane "'+t+'" not found'),s(i[0])}}}},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],12:[function(t,e,i){"use strict";var n=t("./lib/jqLite"),o=t("./lib/util"),r=t("./lib/animationHelpers"),s="mui--is-untouched",a="mui--is-pristine",l="mui--is-empty",u="mui--is-not-empty";function c(e){!0!==e._muiTextfield&&(e._muiTextfield=!0,e.value.length?n.addClass(e,u):n.addClass(e,l),n.addClass(e,s+" "+a),n.on(e,"blur",function t(){document.activeElement!==e&&(n.removeClass(e,s),n.addClass(e,"mui--is-touched"),n.off(e,"blur",t))}),n.one(e,"input change",function(){n.removeClass(e,a),n.addClass(e,"mui--is-dirty")}),n.on(e,"input change",d))}function d(){var t=this;t.value.length?(n.removeClass(t,l),n.addClass(t,u)):(n.removeClass(t,u),n.addClass(t,l))}e.exports={initialize:c,initListeners:function(){for(var t=document,e=t.querySelectorAll(".mui-textfield > input, .mui-textfield > textarea"),i=e.length;i--;)c(e[i]);r.onAnimationStart("mui-textfield-inserted",function(t){c(t.target)}),setTimeout(function(){var t=".mui-textfield.mui-textfield--float-label > label {"+["-webkit-transition","-moz-transition","-o-transition","transition",""].join(":all .15s ease-out;")+"}";o.loadStyle(t)},150),!1===o.supportsPointerEvents()&&n.on(t,"click",function(t){var e=t.target;if("LABEL"===e.tagName&&n.hasClass(e.parentNode,"mui-textfield--float-label")){var i=e.previousElementSibling;i&&i.focus()}})}}},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}]},{},[1]);
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+/**
+ * MUI CSS/JS main module
+ * @module main
+ */
+
+(function(win) {
+  'use strict';
+
+  // return if library has been loaded already
+  if (win._muiLoadedJS) return;
+  else win._muiLoadedJS = true;
+  
+  // load dependencies
+  var jqLite = require('src/js/lib/jqLite'),
+      dropdown = require('src/js/dropdown'),
+      overlay = require('src/js/overlay'),
+      ripple = require('src/js/ripple'),      
+      select = require('src/js/select'),
+      tabs = require('src/js/tabs'),
+      textfield = require('src/js/textfield');
+
+  // expose api
+  win.mui = {
+    overlay: overlay,
+    tabs: tabs.api
+  };
+  
+  // init libraries
+  jqLite.ready(function() {
+    textfield.initListeners();
+    select.initListeners();
+    ripple.initListeners();
+    dropdown.initListeners();
+    tabs.initListeners();
+  });
+})(window);
+
+},{"src/js/dropdown":3,"src/js/lib/jqLite":6,"src/js/overlay":8,"src/js/ripple":9,"src/js/select":10,"src/js/tabs":11,"src/js/textfield":12}],2:[function(require,module,exports){
+/**
+ * MUI config module
+ * @module config
+ */
+
+/** Define module API */
+module.exports = {
+  /** Use debug mode */
+  debug: true
+};
+
+},{}],3:[function(require,module,exports){
+/**
+ * MUI CSS/JS dropdown module
+ * @module dropdowns
+ */
+
+'use strict';
+
+
+var jqLite = require('./lib/jqLite'),
+    util = require('./lib/util'),
+    animationHelpers = require('./lib/animationHelpers'),
+    attrKey = 'data-mui-toggle',
+    attrSelector = '[data-mui-toggle="dropdown"]',
+    openClass = 'mui--is-open',
+    menuClass = 'mui-dropdown__menu',
+    upClass = 'mui-dropdown--up',
+    rightClass = 'mui-dropdown--right',
+    leftClass = 'mui-dropdown--left',
+    bottomClass = 'mui-dropdown__menu--bottom';
+
+
+/**
+ * Initialize toggle element.
+ * @param {Element} toggleEl - The toggle element.
+ */
+function initialize(toggleEl) {
+  // check flag
+  if (toggleEl._muiDropdown === true) return;
+  else toggleEl._muiDropdown = true;
+
+  // use type "button" to prevent form submission by default
+  var tagName = toggleEl.tagName;
+  if ((tagName === 'INPUT' || tagName === 'BUTTON')
+      && !toggleEl.hasAttribute('type')) {
+    toggleEl.type = 'button';
+  }
+
+  // attach click handler
+  jqLite.on(toggleEl, 'click', clickHandler);
+}
+
+
+/**
+ * Handle click events on dropdown toggle element.
+ * @param {Event} ev - The DOM event
+ */
+function clickHandler(ev) {
+  // only left clicks
+  if (ev.button !== 0) return;
+
+  var toggleEl = this;
+  
+  // exit if toggle button is disabled
+  if (toggleEl.getAttribute('disabled') !== null) return;
+
+  // toggle dropdown
+  toggleDropdown(toggleEl);
+}
+
+
+/**
+ * Toggle the dropdown.
+ * @param {Element} toggleEl - The dropdown toggle element.
+ */
+function toggleDropdown(toggleEl) {
+  var wrapperEl = toggleEl.parentNode,
+      menuEl = toggleEl.nextElementSibling,
+      doc = wrapperEl.ownerDocument;
+
+  // exit if no menu element
+  if (!menuEl || !jqLite.hasClass(menuEl, menuClass)) {
+    return util.raiseError('Dropdown menu element not found');
+  }
+
+  // method to close dropdown
+  function closeDropdownFn() {
+    jqLite.removeClass(menuEl, openClass);
+      
+    // remove event handlers
+    jqLite.off(doc, 'click', closeDropdownFn);
+    jqLite.off(doc, 'keydown', handleKeyDownFn);
+  }
+
+  // close dropdown on escape key press
+  function handleKeyDownFn(ev) {
+    var key = ev.key;
+    if (key === 'Escape' || key === 'Esc') closeDropdownFn();
+  }
+
+  // method to open dropdown
+  function openDropdownFn() {
+    // position menu element below toggle button
+    var wrapperRect = wrapperEl.getBoundingClientRect(),
+        toggleRect = toggleEl.getBoundingClientRect();
+
+    // menu position
+    if (jqLite.hasClass(wrapperEl, upClass)) {
+      // up
+      jqLite.css(menuEl, {
+        'bottom': toggleRect.height + toggleRect.top - wrapperRect.top + 'px'
+      });
+    } else if (jqLite.hasClass(wrapperEl, rightClass)) {
+      // right
+      jqLite.css(menuEl, {
+        'left': toggleRect.width + 'px',
+        'top': toggleRect.top - wrapperRect.top + 'px'
+      });
+    } else if (jqLite.hasClass(wrapperEl, leftClass)) {
+      // left
+      jqLite.css(menuEl, {
+        'right': toggleRect.width + 'px',
+        'top': toggleRect.top - wrapperRect.top + 'px'
+      });
+    } else {
+      // down
+      jqLite.css(menuEl, {
+        'top': toggleRect.top - wrapperRect.top + toggleRect.height + 'px'
+      });
+    }
+
+    // menu alignment
+    if (jqLite.hasClass(menuEl, bottomClass)) {
+      jqLite.css(menuEl, {
+        'top': 'auto',
+        'bottom': toggleRect.top - wrapperRect.top + 'px'
+      });
+    }
+    
+    // add open class to wrapper
+    jqLite.addClass(menuEl, openClass);
+
+    setTimeout(function() {
+      // close dropdown when user clicks outside of menu or hits escape key
+      jqLite.on(doc, 'click', closeDropdownFn);
+      jqLite.on(doc, 'keydown', handleKeyDownFn);
+    }, 0);
+  }
+
+  // toggle dropdown
+  if (jqLite.hasClass(menuEl, openClass)) closeDropdownFn();
+  else openDropdownFn();
+}
+
+  
+/** Define module API */
+module.exports = {
+  /** Initialize module listeners */
+  initListeners: function() {
+    // markup elements available when method is called
+    var elList = document.querySelectorAll(attrSelector),
+        i = elList.length;
+    while (i--) {initialize(elList[i]);}
+
+    // listen for new elements
+    animationHelpers.onAnimationStart('mui-dropdown-inserted', function(ev) {
+      initialize(ev.target);
+    });
+  }
+};
+
+},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],4:[function(require,module,exports){
+/**
+ * MUI CSS/JS animation helper module
+ * @module lib/animationHelpers
+ */
+
+'use strict';
+
+var jqLite = require('./jqLite'),
+    util = require('./util'),
+    animationEvents = 'animationstart mozAnimationStart webkitAnimationStart',
+    animationCallbacks = {};
+
+
+/**
+ * Register callbacks
+ * @param {String} name - The animation name
+ * @param {Function} callbackFn = The callback function
+ */
+function onAnimationStartFn(name, callbackFn) {
+  // get/set callback function
+  var callbacks = animationCallbacks[name];
+  if (!callbacks) callbacks = animationCallbacks[name] = [];
+  callbacks.push(callbackFn);
+
+  // initialize listeners
+  if (!this.init) {
+    // add css classes
+    loadCss();
+
+    // add listener
+    jqLite.on(document, animationEvents, animationStartHandler, true);
+
+    // set flag
+    this.init = true;
+  }
+}
+
+
+/**
+ * Animation start handler
+ * @param {Event} ev - The DOM event
+ */
+function animationStartHandler(ev) {
+  var callbacks = animationCallbacks[ev.animationName] || [],
+      i = callbacks.length;
+
+  // exit if a callback hasn't been registered
+  if (!i) return;
+  
+  // stop other callbacks from firing
+  ev.stopImmediatePropagation();
+
+  // iterate through callbacks
+  while (i--) callbacks[i](ev);
+}
+
+
+/**
+ * Load animation css
+ */
+function loadCss() {
+  // define rules
+  var rules = [
+    ['.mui-btn', 'mui-btn-inserted'],
+    ['[data-mui-toggle="dropdown"]', 'mui-dropdown-inserted'],
+    [
+      '.mui-btn[data-mui-toggle="dropdown"]',
+      'mui-btn-inserted,mui-dropdown-inserted'
+    ],
+    ['[data-mui-toggle="tab"]', 'mui-tab-inserted'],
+    ['.mui-textfield > input', 'mui-textfield-inserted'],
+    ['.mui-textfield > textarea', 'mui-textfield-inserted'],
+    ['.mui-select > select', 'mui-select-inserted'],
+    ['.mui-select > select ~ .mui-event-trigger', 'mui-node-inserted'],
+    ['.mui-select > select:disabled ~ .mui-event-trigger', 'mui-node-disabled']
+  ];
+
+  // build css
+  var css = '',
+      rule;
+
+  for (var i=0, m=rules.length; i < m; i++) {
+    rule = rules[i];
+    css += '@keyframes ' + rule[1];
+    css += '{from{transform:none;}to{transform:none;}}';
+    css += rule[0];
+    css += '{animation-duration:0.0001s;animation-name:' + rule[1] + ';}';
+  }
+  
+  // add CSS to DOM
+  util.loadStyle(css);
+}
+
+
+/**
+ * Define module API
+ */
+module.exports = {
+  animationEvents: animationEvents,
+  onAnimationStart: onAnimationStartFn
+}
+
+},{"./jqLite":6,"./util":7}],5:[function(require,module,exports){
+/**
+ * MUI CSS/JS form helpers module
+ * @module lib/forms.py
+ */
+
+'use strict';
+
+var jqLite = require('./jqLite');
+
+
+/**
+ * Menu position/size/scroll helper
+ * @returns {Object} Object with keys 'height', 'top', 'scrollTop'
+ */
+function getMenuPositionalCSSFn(wrapperEl, menuEl, selectedRow) {
+  var viewHeight = document.documentElement.clientHeight,
+      numRows = menuEl.children.length;
+
+  // determine menu height
+  var h = parseInt(menuEl.offsetHeight),
+      height = Math.min(h, viewHeight);
+
+  // determine row height
+  var p = parseInt(jqLite.css(menuEl, 'padding-top')),
+      rowHeight = (h - 2 * p) / numRows;
+
+  // determine 'top'
+  var top, initTop, minTop, maxTop;
+
+  initTop = -1 * selectedRow * rowHeight;
+  minTop = -1 * wrapperEl.getBoundingClientRect().top;
+  maxTop = (viewHeight - height) + minTop;
+
+  top = Math.min(Math.max(initTop, minTop), maxTop);
+
+  // determine 'scrollTop'
+  var scrollTop = 0,
+      scrollIdeal,
+      scrollMax;
+
+  if (h > viewHeight) {
+    scrollIdeal = top + p + selectedRow * rowHeight;
+    scrollMax = numRows * rowHeight + 2 * p - height;
+    scrollTop = Math.min(scrollIdeal, scrollMax);
+  }
+
+  return {
+    'height': height + 'px',
+    'top': top + 'px',
+    'scrollTop': scrollTop
+  };
+}
+
+
+/** Define module API */
+module.exports = {
+  getMenuPositionalCSS: getMenuPositionalCSSFn
+};
+
+},{"./jqLite":6}],6:[function(require,module,exports){
+/**
+ * MUI CSS/JS jqLite module
+ * @module lib/jqLite
+ */
+
+'use strict';
+
+
+/**
+ * Add a class to an element.
+ * @param {Element} element - The DOM element.
+ * @param {string} cssClasses - Space separated list of class names.
+ */
+function jqLiteAddClass(element, cssClasses) {
+  if (!cssClasses || !element.setAttribute) return;
+
+  var existingClasses = _getExistingClasses(element),
+      splitClasses = cssClasses.split(' '),
+      cssClass;
+
+  for (var i=0; i < splitClasses.length; i++) {
+    cssClass = splitClasses[i].trim();
+    if (existingClasses.indexOf(' ' + cssClass + ' ') === -1) {
+      existingClasses += cssClass + ' ';
+    }
+  }
+  
+  element.setAttribute('class', existingClasses.trim());
+}
+
+
+/**
+ * Get or set CSS properties.
+ * @param {Element} element - The DOM element.
+ * @param {string} [name] - The property name.
+ * @param {string} [value] - The property value.
+ */
+function jqLiteCss(element, name, value) {
+  // Return full style object
+  if (name === undefined) {
+    return getComputedStyle(element);
+  }
+
+  var nameType = jqLiteType(name);
+
+  // Set multiple values
+  if (nameType === 'object') {
+    for (var key in name) element.style[_camelCase(key)] = name[key];
+    return;
+  }
+
+  // Set a single value
+  if (nameType === 'string' && value !== undefined) {
+    element.style[_camelCase(name)] = value;
+  }
+
+  var styleObj = getComputedStyle(element),
+      isArray = (jqLiteType(name) === 'array');
+
+  // Read single value
+  if (!isArray) return _getCurrCssProp(element, name, styleObj);
+
+  // Read multiple values
+  var outObj = {},
+      key;
+
+  for (var i=0; i < name.length; i++) {
+    key = name[i];
+    outObj[key] = _getCurrCssProp(element, key, styleObj);
+  }
+
+  return outObj;
+}
+
+
+/**
+ * Check if element has class.
+ * @param {Element} element - The DOM element.
+ * @param {string} cls - The class name string.
+ */
+function jqLiteHasClass(element, cls) {
+  if (!cls || !element.getAttribute) return false;
+  return (_getExistingClasses(element).indexOf(' ' + cls + ' ') > -1);
+}
+
+
+/**
+ * Return the type of a variable.
+ * @param {} somevar - The JavaScript variable.
+ */
+function jqLiteType(somevar) {
+  // handle undefined
+  if (somevar === undefined) return 'undefined';
+
+  // handle others (of type [object <Type>])
+  var typeStr = Object.prototype.toString.call(somevar);
+  if (typeStr.indexOf('[object ') === 0) {
+    return typeStr.slice(8, -1).toLowerCase();
+  } else {
+    throw new Error("MUI: Could not understand type: " + typeStr);
+  }    
+}
+
+
+/**
+ * Attach an event handler to a DOM element
+ * @param {Element} element - The DOM element.
+ * @param {string} events - Space separated event names.
+ * @param {Function} callback - The callback function.
+ * @param {Boolean} useCapture - Use capture flag.
+ */
+function jqLiteOn(element, events, callback, useCapture) {
+  useCapture = (useCapture === undefined) ? false : useCapture;
+
+  var cache = element._muiEventCache = element._muiEventCache || {};  
+
+  events.split(' ').map(function(event) {
+    // add to DOM
+    element.addEventListener(event, callback, useCapture);
+
+    // add to cache
+    cache[event] = cache[event] || [];
+    cache[event].push([callback, useCapture]);
+  });
+}
+
+
+/**
+ * Remove an event handler from a DOM element
+ * @param {Element} element - The DOM element.
+ * @param {string} events - Space separated event names.
+ * @param {Function} callback - The callback function.
+ * @param {Boolean} useCapture - Use capture flag.
+ */
+function jqLiteOff(element, events, callback, useCapture) {
+  useCapture = (useCapture === undefined) ? false : useCapture;
+
+  // remove from cache
+  var cache = element._muiEventCache = element._muiEventCache || {},
+      argsList,
+      args,
+      i;
+
+  events.split(' ').map(function(event) {
+    argsList = cache[event] || [];
+
+    i = argsList.length;
+    while (i--) {
+      args = argsList[i];
+
+      // remove all events if callback is undefined
+      if (callback === undefined ||
+          (args[0] === callback && args[1] === useCapture)) {
+
+        // remove from cache
+        argsList.splice(i, 1);
+        
+        // remove from DOM
+        element.removeEventListener(event, args[0], args[1]);
+      }
+    }
+  });
+}
+
+
+/**
+ * Attach an event hander which will only execute once per element per event
+ * @param {Element} element - The DOM element.
+ * @param {string} events - Space separated event names.
+ * @param {Function} callback - The callback function.
+ * @param {Boolean} useCapture - Use capture flag.
+ */
+function jqLiteOne(element, events, callback, useCapture) {
+  events.split(' ').map(function(event) {
+    jqLiteOn(element, event, function onFn(ev) {
+      // execute callback
+      if (callback) callback.apply(this, arguments);
+
+      // remove wrapper
+      jqLiteOff(element, event, onFn, useCapture);
+    }, useCapture);
+  });
+}
+
+
+/**
+ * Get or set horizontal scroll position
+ * @param {Element} element - The DOM element
+ * @param {number} [value] - The scroll position
+ */
+function jqLiteScrollLeft(element, value) {
+  var win = window;
+
+  // get
+  if (value === undefined) {
+    if (element === win) {
+      var docEl = document.documentElement;
+      return (win.pageXOffset || docEl.scrollLeft) - (docEl.clientLeft || 0);
+    } else {
+      return element.scrollLeft;
+    }
+  }
+
+  // set
+  if (element === win) win.scrollTo(value, jqLiteScrollTop(win));
+  else element.scrollLeft = value;
+}
+
+
+/**
+ * Get or set vertical scroll position
+ * @param {Element} element - The DOM element
+ * @param {number} value - The scroll position
+ */
+function jqLiteScrollTop(element, value) {
+  var win = window;
+
+  // get
+  if (value === undefined) {
+    if (element === win) {
+      var docEl = document.documentElement;
+      return (win.pageYOffset || docEl.scrollTop) - (docEl.clientTop || 0);
+    } else {
+      return element.scrollTop;
+    }
+  }
+
+  // set
+  if (element === win) win.scrollTo(jqLiteScrollLeft(win), value);
+  else element.scrollTop = value;
+}
+
+
+/**
+ * Return object representing top/left offset and element height/width.
+ * @param {Element} element - The DOM element.
+ */
+function jqLiteOffset(element) {
+  var win = window,
+      rect = element.getBoundingClientRect(),
+      scrollTop = jqLiteScrollTop(win),
+      scrollLeft = jqLiteScrollLeft(win);
+
+  return {
+    top: rect.top + scrollTop,
+    left: rect.left + scrollLeft,
+    height: rect.height,
+    width: rect.width
+  };
+}
+
+
+/**
+ * Attach a callback to the DOM ready event listener
+ * @param {Function} fn - The callback function.
+ */
+function jqLiteReady(fn) {
+  var done = false,
+      top = true,
+      doc = document,
+      win = doc.defaultView,
+      root = doc.documentElement,
+      add = doc.addEventListener ? 'addEventListener' : 'attachEvent',
+      rem = doc.addEventListener ? 'removeEventListener' : 'detachEvent',
+      pre = doc.addEventListener ? '' : 'on';
+
+  var init = function(e) {
+    if (e.type == 'readystatechange' && doc.readyState != 'complete') {
+      return;
+    }
+
+    (e.type == 'load' ? win : doc)[rem](pre + e.type, init, false);
+    if (!done && (done = true)) fn.call(win, e.type || e);
+  };
+
+  var poll = function() {
+    try { root.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+    init('poll');
+  };
+
+  if (doc.readyState == 'complete') {
+    fn.call(win, 'lazy');
+  } else {
+    if (doc.createEventObject && root.doScroll) {
+      try { top = !win.frameElement; } catch(e) { }
+      if (top) poll();
+    }
+    doc[add](pre + 'DOMContentLoaded', init, false);
+    doc[add](pre + 'readystatechange', init, false);
+    win[add](pre + 'load', init, false);
+  }
+}
+
+
+/**
+ * Remove classes from a DOM element
+ * @param {Element} element - The DOM element.
+ * @param {string} cssClasses - Space separated list of class names.
+ */
+function jqLiteRemoveClass(element, cssClasses) {
+  if (!cssClasses || !element.setAttribute) return;
+
+  var existingClasses = _getExistingClasses(element),
+      splitClasses = cssClasses.split(' '),
+      cssClass;
+  
+  for (var i=0; i < splitClasses.length; i++) {
+    cssClass = splitClasses[i].trim();
+    while (existingClasses.indexOf(' ' + cssClass + ' ') >= 0) {
+      existingClasses = existingClasses.replace(' ' + cssClass + ' ', ' ');
+    }
+  }
+
+  element.setAttribute('class', existingClasses.trim());
+}
+
+
+// ------------------------------
+// Utilities
+// ------------------------------
+var SPECIAL_CHARS_REGEXP = /([\:\-\_]+(.))/g,
+    MOZ_HACK_REGEXP = /^moz([A-Z])/,
+    ESCAPE_REGEXP = /([.*+?^=!:${}()|\[\]\/\\])/g;
+
+
+function _getExistingClasses(element) {
+  var classes = (element.getAttribute('class') || '').replace(/[\n\t]/g, '');
+  return ' ' + classes + ' ';
+}
+
+
+function _camelCase(name) {
+  return name.
+    replace(SPECIAL_CHARS_REGEXP, function(_, separator, letter, offset) {
+      return offset ? letter.toUpperCase() : letter;
+    }).
+    replace(MOZ_HACK_REGEXP, 'Moz$1');
+}
+
+
+function _escapeRegExp(string) {
+  return string.replace(ESCAPE_REGEXP, "\\$1");
+}
+
+
+function _getCurrCssProp(elem, name, computed) {
+  var ret;
+
+  // try computed style
+  ret = computed.getPropertyValue(name);
+
+  // try style attribute (if element is not attached to document)
+  if (ret === '' && !elem.ownerDocument) ret = elem.style[_camelCase(name)];
+
+  return ret;
+}
+
+
+/**
+ * Module API
+ */
+module.exports = {
+  /** Add classes */
+  addClass: jqLiteAddClass,
+
+  /** Get or set CSS properties */
+  css: jqLiteCss,
+
+  /** Check for class */
+  hasClass: jqLiteHasClass,
+
+  /** Remove event handlers */
+  off: jqLiteOff,
+
+  /** Return offset values */
+  offset: jqLiteOffset,
+
+  /** Add event handlers */
+  on: jqLiteOn,
+
+  /** Add an execute-once event handler */
+  one: jqLiteOne,
+
+  /** DOM ready event handler */
+  ready: jqLiteReady,
+
+  /** Remove classes */
+  removeClass: jqLiteRemoveClass,
+
+  /** Check JavaScript variable instance type */
+  type: jqLiteType,
+
+  /** Get or set horizontal scroll position */
+  scrollLeft: jqLiteScrollLeft,
+
+  /** Get or set vertical scroll position */
+  scrollTop: jqLiteScrollTop
+};
+
+},{}],7:[function(require,module,exports){
+/**
+ * MUI CSS/JS utilities module
+ * @module lib/util
+ */
+
+'use strict';
+
+
+var config = require('../config'),
+    jqLite = require('./jqLite'),
+    scrollLock = 0,
+    scrollLockCls = 'mui-scroll-lock',
+    scrollLockPos,
+    scrollStyleEl,
+    scrollEventHandler,
+    _scrollBarWidth,
+    _supportsPointerEvents;
+
+
+scrollEventHandler = function(ev) {
+  // stop propagation on window scroll events
+  if (!ev.target.tagName) ev.stopImmediatePropagation();
+}
+
+
+/**
+ * Logging function
+ */
+function logFn() {
+  var win = window;
+  
+  if (config.debug && typeof win.console !== "undefined") {
+    try {
+      win.console.log.apply(win.console, arguments);
+    } catch (a) {
+      var e = Array.prototype.slice.call(arguments);
+      win.console.log(e.join("\n"));
+    }
+  }
+}
+
+
+/**
+ * Load CSS text in new stylesheet
+ * @param {string} cssText - The css text.
+ */
+function loadStyleFn(cssText) {
+  var doc = document,
+      head;
+  
+  // copied from jQuery 
+  head = doc.head ||
+    doc.getElementsByTagName('head')[0] ||
+    doc.documentElement;
+  
+  var e = doc.createElement('style');
+  e.type = 'text/css';
+  
+  if (e.styleSheet) e.styleSheet.cssText = cssText;
+  else e.appendChild(doc.createTextNode(cssText));
+  
+  // add to document
+  head.insertBefore(e, head.firstChild);
+  
+  return e;
+}
+
+
+/**
+ * Raise an error
+ * @param {string} msg - The error message.
+ */
+function raiseErrorFn(msg, useConsole) {
+  if (useConsole) {
+    if (typeof console !== 'undefined') console.warn('MUI Warning: ' + msg);
+  } else {
+    throw new Error('MUI: ' + msg);
+  }
+}
+
+
+/**
+ * Convert Classname object, with class as key and true/false as value, to an
+ * class string.
+ * @param  {Object} classes The classes
+ * @return {String}         class string
+ */
+function classNamesFn(classes) {
+  var cs = '';
+  for (var i in classes) {
+    cs += (classes[i]) ? i + ' ' : '';
+  }
+  return cs.trim();
+}
+
+
+/**
+ * Check if client supports pointer events.
+ */
+function supportsPointerEventsFn() {
+  // check cache
+  if (_supportsPointerEvents !== undefined) return _supportsPointerEvents;
+  
+  var element = document.createElement('x');
+  element.style.cssText = 'pointer-events:auto';
+  _supportsPointerEvents = (element.style.pointerEvents === 'auto');
+  return _supportsPointerEvents;
+}
+
+
+/**
+ * Create callback closure.
+ * @param {Object} instance - The object instance.
+ * @param {String} funcName - The name of the callback function.
+ */
+function callbackFn(instance, funcName) {
+  return function() {instance[funcName].apply(instance, arguments);};
+}
+
+
+/**
+ * Dispatch event.
+ * @param {Element} element - The DOM element.
+ * @param {String} eventType - The event type.
+ * @param {Boolean} bubbles=true - If true, event bubbles.
+ * @param {Boolean} cancelable=true = If true, event is cancelable
+ * @param {Object} [data] - Data to add to event object
+ */
+function dispatchEventFn(element, eventType, bubbles, cancelable, data) {
+  var ev = document.createEvent('HTMLEvents'),
+      bubbles = (bubbles !== undefined) ? bubbles : true,
+      cancelable = (cancelable !== undefined) ? cancelable : true,
+      k;
+
+  ev.initEvent(eventType, bubbles, cancelable);
+  
+  // add data to event object
+  if (data) for (k in data) ev[k] = data[k];
+  
+  // dispatch
+  if (element) element.dispatchEvent(ev);
+  
+  return ev;
+}
+
+
+/**
+ * Turn on window scroll lock.
+ */
+function enableScrollLockFn() {
+  // increment counter
+  scrollLock += 1;
+  
+  // add lock
+  if (scrollLock === 1) {
+    var doc = document,
+        win = window,
+        htmlEl = doc.documentElement,
+        bodyEl = doc.body,
+        scrollBarWidth = getScrollBarWidth(),
+        cssProps,
+        cssStr,
+        x;
+
+    // define scroll lock class dynamically
+    cssProps = ['overflow:hidden'];
+
+    if (scrollBarWidth) {
+      // scrollbar-y
+      if (htmlEl.scrollHeight > htmlEl.clientHeight) {
+        x = parseInt(jqLite.css(bodyEl, 'padding-right')) + scrollBarWidth;
+        cssProps.push('padding-right:' + x + 'px');
+      }
+    
+      // scrollbar-x
+      if (htmlEl.scrollWidth > htmlEl.clientWidth) {
+        x = parseInt(jqLite.css(bodyEl, 'padding-bottom')) + scrollBarWidth;
+        cssProps.push('padding-bottom:' + x + 'px');
+      }
+    }
+
+    // define css class dynamically
+    cssStr = '.' + scrollLockCls + '{';
+    cssStr += cssProps.join(' !important;') + ' !important;}';
+    scrollStyleEl = loadStyleFn(cssStr);
+
+    // cancel 'scroll' event listener callbacks
+    jqLite.on(win, 'scroll', scrollEventHandler, true);
+
+    // add scroll lock
+    scrollLockPos = {left: jqLite.scrollLeft(win), top: jqLite.scrollTop(win)};
+    jqLite.addClass(bodyEl, scrollLockCls);
+  }
+}
+
+
+/**
+ * Turn off window scroll lock.
+ * @param {Boolean} resetPos - Reset scroll position to original value.
+ */
+function disableScrollLockFn(resetPos) {
+  // ignore
+  if (scrollLock === 0) return;
+
+  // decrement counter
+  scrollLock -= 1;
+
+  // remove lock 
+  if (scrollLock === 0) {
+    // remove scroll lock and delete style element
+    jqLite.removeClass(document.body, scrollLockCls);
+
+    // restore scroll position
+    if (resetPos) window.scrollTo(scrollLockPos.left, scrollLockPos.top);
+
+    // restore scroll event listeners
+    jqLite.off(window, 'scroll', scrollEventHandler, true);
+
+    // delete style element (deferred for Firefox Quantum bugfix)
+    setTimeout(function() {
+      scrollStyleEl.parentNode.removeChild(scrollStyleEl);      
+    }, 0);
+  }
+}
+
+/**
+ * Return scroll bar width.
+ */
+var getScrollBarWidth = function() {
+  // check cache
+  if (_scrollBarWidth !== undefined) return _scrollBarWidth;
+  
+  // calculate scroll bar width
+  var doc = document,
+      bodyEl = doc.body,
+      el = doc.createElement('div');
+
+  el.innerHTML = '<div style="width:50px;height:50px;position:absolute;' + 
+    'left:-50px;top:-50px;overflow:auto;"><div style="width:1px;' + 
+    'height:100px;"></div></div>';
+  el = el.firstChild;
+  bodyEl.appendChild(el);
+  _scrollBarWidth = el.offsetWidth - el.clientWidth;
+  bodyEl.removeChild(el);
+
+  return _scrollBarWidth;
+}
+
+
+/**
+ * requestAnimationFrame polyfilled
+ * @param {Function} callback - The callback function
+ */
+function requestAnimationFrameFn(callback) {
+  var fn = window.requestAnimationFrame;
+  if (fn) fn(callback);
+  else setTimeout(callback, 0);
+}
+
+
+/**
+ * Define the module API
+ */
+module.exports = {
+  /** Create callback closures */
+  callback: callbackFn,
+  
+  /** Classnames object to string */
+  classNames: classNamesFn,
+
+  /** Disable scroll lock */
+  disableScrollLock: disableScrollLockFn,
+
+  /** Dispatch event */
+  dispatchEvent: dispatchEventFn,
+  
+  /** Enable scroll lock */
+  enableScrollLock: enableScrollLockFn,
+
+  /** Log messages to the console when debug is turned on */
+  log: logFn,
+
+  /** Load CSS text as new stylesheet */
+  loadStyle: loadStyleFn,
+
+  /** Raise MUI error */
+  raiseError: raiseErrorFn,
+
+  /** Request animation frame */
+  requestAnimationFrame: requestAnimationFrameFn,
+
+  /** Support Pointer Events check */
+  supportsPointerEvents: supportsPointerEventsFn
+};
+
+},{"../config":2,"./jqLite":6}],8:[function(require,module,exports){
+/**
+ * MUI CSS/JS overlay module
+ * @module overlay
+ */
+
+'use strict';
+
+
+var util = require('./lib/util'),
+    jqLite = require('./lib/jqLite'),
+    overlayId = 'mui-overlay',
+    bodyClass = 'mui--overflow-hidden',
+    iosRegex = /(iPad|iPhone|iPod)/g,
+    activeElement;
+
+
+/**
+ * Turn overlay on/off.
+ * @param {string} action - Turn overlay "on"/"off".
+ * @param {object} [options]
+ * @config {boolean} [keyboard] - If true, close when escape key is pressed.
+ * @config {boolean} [static] - If false, close when backdrop is clicked.
+ * @config {Function} [onclose] - Callback function to execute on close
+ * @param {Element} [childElement] - Child element to add to overlay.
+ */
+function overlayFn(action) {
+  var overlayEl;
+  
+  if (action === 'on') {
+    // extract arguments
+    var arg, options, childElement;
+    
+    // pull options and childElement from arguments
+    for (var i=arguments.length - 1; i > 0; i--) {
+      arg = arguments[i];
+
+      if (jqLite.type(arg) === 'object') options = arg;
+      if (arg instanceof Element && arg.nodeType === 1) childElement = arg;
+    }
+
+    // option defaults
+    options = options || {};
+    if (options.keyboard === undefined) options.keyboard = true;
+    if (options.static === undefined) options.static = false;
+    
+    // execute method
+    overlayEl = overlayOn(options, childElement);
+    
+  } else if (action === 'off') {
+    overlayEl = overlayOff();
+
+  } else {
+    // raise error
+    util.raiseError("Expecting 'on' or 'off'");
+
+  }
+
+  return overlayEl;
+}
+
+
+/**
+ * Turn on overlay.
+ * @param {object} options - Overlay options.
+ * @param {Element} childElement - The child element.
+ */
+function overlayOn(options, childElement) {
+  var doc = document,
+      bodyEl = doc.body,
+      overlayEl = doc.getElementById(overlayId);
+
+  // cache activeElement
+  if (doc.activeElement) activeElement = doc.activeElement;
+
+  // add overlay
+  util.enableScrollLock();
+
+  if (!overlayEl) {
+    // create overlayEl
+    overlayEl = doc.createElement('div');
+    overlayEl.setAttribute('id', overlayId);
+    overlayEl.setAttribute('tabindex', '-1');
+    
+    // add child element
+    if (childElement) overlayEl.appendChild(childElement);
+
+    bodyEl.appendChild(overlayEl);
+    
+  } else {
+    // remove existing children
+    while (overlayEl.firstChild) overlayEl.removeChild(overlayEl.firstChild);
+    
+    // add child element
+    if (childElement) overlayEl.appendChild(childElement);
+  }
+
+  // iOS bugfix
+  if (iosRegex.test(navigator.userAgent)) {
+    jqLite.css(overlayEl, 'cursor', 'pointer');
+  }
+
+  // handle options
+  if (options.keyboard) addKeyupHandler();
+  else removeKeyupHandler();
+
+  if (options.static) removeClickHandler(overlayEl);
+  else addClickHandler(overlayEl);
+
+  // attach options
+  overlayEl.muiOptions = options;
+
+  // focus overlay element
+  overlayEl.focus();
+
+  return overlayEl;
+}
+
+
+/**
+ * Turn off overlay.
+ */
+function overlayOff() {
+  var overlayEl = document.getElementById(overlayId),
+      callbackFn;
+
+  if (overlayEl) {
+    // remove children
+    while (overlayEl.firstChild) overlayEl.removeChild(overlayEl.firstChild);
+
+    // remove overlay element
+    overlayEl.parentNode.removeChild(overlayEl);
+
+    // callback reference
+    callbackFn = overlayEl.muiOptions.onclose;
+
+    // remove click handler
+    removeClickHandler(overlayEl);
+  }
+
+  util.disableScrollLock();
+
+  // remove keyup handler
+  removeKeyupHandler();
+
+  // return focus to activeElement
+  if (activeElement) activeElement.focus();
+
+  // execute callback
+  if (callbackFn) callbackFn();
+
+  return overlayEl;
+}
+
+
+/**
+ * Add keyup handler.
+ */
+function addKeyupHandler() {
+  jqLite.on(document, 'keyup', onKeyup);
+}
+
+
+/**
+ * Remove keyup handler.
+ */
+function removeKeyupHandler() {
+  jqLite.off(document, 'keyup', onKeyup);
+}
+
+
+/**
+ * Teardown overlay when escape key is pressed.
+ */
+function onKeyup(ev) {
+  if (ev.keyCode === 27) overlayOff();
+}
+
+
+/**
+ * Add click handler.
+ */
+function addClickHandler(overlayEl) {
+  jqLite.on(overlayEl, 'click', onClick);
+}
+
+
+/**
+ * Remove click handler.
+ */
+function removeClickHandler(overlayEl) {
+  jqLite.off(overlayEl, 'click', onClick);
+}
+
+
+/**
+ * Teardown overlay when backdrop is clicked.
+ */
+function onClick(ev) {
+  if (ev.target.id === overlayId) overlayOff();
+}
+
+
+/** Define module API */
+module.exports = overlayFn;
+
+},{"./lib/jqLite":6,"./lib/util":7}],9:[function(require,module,exports){
+/**
+ * MUI CSS/JS ripple module
+ * @module ripple
+ */
+
+'use strict';
+
+
+var jqLite = require('./lib/jqLite'),
+    util = require('./lib/util'),
+    animationHelpers = require('./lib/animationHelpers'),
+    supportsTouch = 'ontouchstart' in document.documentElement,
+    mouseDownEvents = (supportsTouch) ? 'touchstart' : 'mousedown',
+    mouseUpEvents = (supportsTouch) ? 'touchend' : 'mouseup mouseleave';
+
+
+/**
+ * Add ripple effects to button element.
+ * @param {Element} buttonEl - The button element.
+ */
+function initialize(buttonEl) {
+  // check flag
+  if (buttonEl._muiRipple === true) return;
+  else buttonEl._muiRipple = true;
+
+  // exit if element is INPUT (doesn't support absolute positioned children)
+  if (buttonEl.tagName === 'INPUT') return;
+
+  // attach event handler
+  jqLite.on(buttonEl, mouseDownEvents, mouseDownHandler);
+}
+
+
+/**
+ * MouseDown Event handler.
+ * @param {Event} ev - The DOM event
+ */
+function mouseDownHandler(ev) {
+  // only left clicks
+  if (ev.type === 'mousedown' && ev.button !== 0) return;
+
+  var buttonEl = this,
+      rippleEl = buttonEl._rippleEl;
+
+  // exit if button is disabled
+  if (buttonEl.disabled) return;
+
+  if (!rippleEl) {
+    // add ripple container (to avoid https://github.com/muicss/mui/issues/169)
+    var el = document.createElement('span');
+    el.className = 'mui-btn__ripple-container';
+    el.innerHTML = '<span class="mui-ripple"></span>';
+    buttonEl.appendChild(el);
+
+    // cache reference to ripple element
+    rippleEl = buttonEl._rippleEl = el.children[0];
+
+    // add mouseup handler on first-click
+    jqLite.on(buttonEl, mouseUpEvents, mouseUpHandler);
+  }
+
+  // get ripple element offset values and (x, y) position of click
+  var offset = jqLite.offset(buttonEl),
+      clickEv = (ev.type === 'touchstart') ? ev.touches[0] : ev,
+      radius,
+      diameter;
+
+  // calculate radius
+  radius = Math.sqrt(offset.height * offset.height + 
+                     offset.width * offset.width);
+
+  diameter = radius * 2 + 'px';
+
+  // set position and dimensions
+  jqLite.css(rippleEl, {
+    width: diameter,
+    height: diameter,
+    top: Math.round(clickEv.pageY - offset.top - radius) + 'px',
+    left: Math.round(clickEv.pageX - offset.left - radius) + 'px'
+  });
+
+  jqLite.removeClass(rippleEl, 'mui--is-animating');
+  jqLite.addClass(rippleEl, 'mui--is-visible');
+
+  // start animation
+  util.requestAnimationFrame(function() {
+    jqLite.addClass(rippleEl, 'mui--is-animating');
+  });
+}
+
+
+/**
+ * MouseUp event handler.
+ * @param {Event} ev - The DOM event
+ */
+function mouseUpHandler(ev) {
+  // get ripple element
+  var rippleEl = this._rippleEl;
+
+  // allow a repaint to occur before removing class so animation shows for
+  // tap events
+  util.requestAnimationFrame(function() {
+    jqLite.removeClass(rippleEl, 'mui--is-visible');
+  });
+}
+
+
+/** Define module API */
+module.exports = {
+  /** Initialize module listeners */
+  initListeners: function() {
+    // markup elements available when method is called
+    var elList = document.getElementsByClassName('mui-btn'),
+        i = elList.length;
+    while (i--) initialize(elList[i]);
+
+    // listen for new elements
+    animationHelpers.onAnimationStart('mui-btn-inserted', function(ev) {
+      initialize(ev.target);
+    });
+  }
+};
+
+},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],10:[function(require,module,exports){
+/**
+ * MUI CSS/JS select module
+ * @module forms/select
+ */
+
+'use strict';
+
+
+var jqLite = require('./lib/jqLite'),
+    util = require('./lib/util'),
+    animationHelpers = require('./lib/animationHelpers'),
+    formlib = require('./lib/forms'),
+    wrapperClass = 'mui-select',
+    cssSelector = '.mui-select > select',
+    menuClass = 'mui-select__menu',
+    selectedClass = 'mui--is-selected',
+    disabledClass = 'mui--is-disabled',
+    doc = document,
+    win = window;
+
+
+/**
+ * Initialize select element.
+ * @param {Element} selectEl - The select element.
+ */
+function initialize(selectEl) {
+  // check flag
+  if (selectEl._muiSelect === true) return;
+  else selectEl._muiSelect = true;
+
+  // use default behavior on touch devices
+  if ('ontouchstart' in doc.documentElement) return;
+
+  // NOTE: To get around cross-browser issues with <select> behavior we will
+  //       defer focus to the parent element and handle events there
+
+  var wrapperEl = selectEl.parentNode;
+
+  // exit if use-default
+  if (jqLite.hasClass(wrapperEl, 'mui-select--use-default')) return;
+
+  // initialize variables
+  wrapperEl._selectEl = selectEl;
+  wrapperEl._menu = null;
+  wrapperEl._q = '';
+  wrapperEl._qTimeout = null;
+
+  // make wrapper tab focusable, remove tab focus from <select>
+  if (!selectEl.disabled) wrapperEl.tabIndex = 0;
+  selectEl.tabIndex = -1;
+
+  // prevent built-in menu from opening on <select>
+  jqLite.on(selectEl, 'mousedown', onInnerMouseDown);
+
+  // attach event listeners for custom menu
+  jqLite.on(wrapperEl, 'click', onWrapperClick);
+  jqLite.on(wrapperEl, 'blur focus', onWrapperBlurOrFocus);
+  jqLite.on(wrapperEl, 'keydown', onWrapperKeyDown);
+  jqLite.on(wrapperEl, 'keypress', onWrapperKeyPress);
+
+  // add element to detect 'disabled' change (using sister element due to 
+  // IE/Firefox issue
+  var el = document.createElement('div');
+  el.className = 'mui-event-trigger';
+  wrapperEl.appendChild(el);
+
+  // handle 'disabled' add/remove
+  jqLite.on(el, animationHelpers.animationEvents, function(ev) {
+    var parentEl = ev.target.parentNode;
+
+    // no need to propagate
+    ev.stopPropagation();
+
+    if (ev.animationName === 'mui-node-disabled') {
+      parentEl.removeAttribute('tabIndex');
+    } else {
+      parentEl.tabIndex = 0;
+    }    
+  });
+}
+
+
+/**
+ * Disable default dropdown on mousedown.
+ * @param {Event} ev - The DOM event
+ */
+function onInnerMouseDown(ev) {
+  // only left clicks
+  if (ev.button !== 0) return;
+  
+  // prevent built-in menu from opening
+  ev.preventDefault();
+}
+
+
+/**
+ * Dispatch focus and blur events on inner <select> element.
+ * @param {Event} ev - The DOM event
+ */
+function onWrapperBlurOrFocus(ev) {
+  util.dispatchEvent(this._selectEl, ev.type, false, false);
+}
+
+
+/**
+ * Handle keydown events when wrapper is focused
+ **/
+function onWrapperKeyDown(ev) {
+  if (ev.defaultPrevented) return;
+
+  var keyCode = ev.keyCode,
+      menu = this._menu;
+
+  if (!menu) {
+    // spacebar, down, up
+    if (keyCode === 32 || keyCode === 38 || keyCode === 40) {
+      ev.preventDefault();
+
+      // open custom menu
+      renderMenu(this);
+    }
+
+  } else {
+    // tab
+    if (keyCode === 9) return menu.destroy();
+  
+    // escape | up | down | enter
+    if (keyCode === 27 || keyCode === 40 || keyCode === 38 || keyCode === 13) {
+      ev.preventDefault();
+    }
+
+    if (keyCode === 27) {
+      // escape
+      menu.destroy();
+    } else if (keyCode === 40) {
+      // up
+      menu.increment();
+    } else if (keyCode === 38) {
+      // down
+      menu.decrement();
+    } else if (keyCode === 13) {
+      // enter
+      menu.selectCurrent();
+      menu.destroy();
+    }
+  }
+}
+
+
+/**
+ *
+ */
+function onWrapperKeyPress(ev) {
+  var menu = this._menu;
+
+  // exit if default prevented or menu is closed
+  if (ev.defaultPrevented || !menu) return;
+
+  // handle query timer
+  var self = this;
+  clearTimeout(this._qTimeout);
+  this._q += ev.key;
+  this._qTimeout = setTimeout(function() {self._q = '';}, 300);
+
+  // select first match alphabetically
+  var prefixRegex = new RegExp('^' + this._q, 'i'),
+      itemArray = menu.itemArray,
+      pos;
+
+  for (pos in itemArray) {
+    if (prefixRegex.test(itemArray[pos].innerText)) {
+      menu.selectPos(pos);
+      break;
+    }
+  }
+}
+
+
+/**
+ * Handle click events on wrapper element.
+ * @param {Event} ev - The DOM event
+ */
+function onWrapperClick(ev) {
+  // only left clicks, check default and disabled flags
+  if (ev.button !== 0 || this._selectEl.disabled) return;
+
+  // focus wrapper
+  this.focus();
+
+  // open menu
+  renderMenu(this);
+}
+
+
+/**
+ * Render options menu
+ */
+function renderMenu(wrapperEl) {
+  // check instance
+  if (wrapperEl._menu) return;
+
+  // render custom menu
+  wrapperEl._menu = new Menu(wrapperEl, wrapperEl._selectEl, function() {
+    wrapperEl._menu = null;  // de-reference instance
+    wrapperEl.focus();
+  });
+}
+
+
+/**
+ * Creates a new Menu
+ * @class
+ */
+function Menu(wrapperEl, selectEl, wrapperCallbackFn) {
+  // add scroll lock
+  util.enableScrollLock();
+
+  // instance variables
+  this.itemArray = [];
+  this.origPos = null;
+  this.currentPos = null;
+  this.selectEl = selectEl;
+  this.wrapperEl = wrapperEl;
+
+  var res = this._createMenuEl(wrapperEl, selectEl),
+      menuEl = this.menuEl = res[0];
+
+  var cb = util.callback;
+
+  this.onClickCB = cb(this, 'onClick');
+  this.destroyCB = cb(this, 'destroy');
+  this.wrapperCallbackFn = wrapperCallbackFn;
+
+  // add to DOM
+  wrapperEl.appendChild(this.menuEl);
+
+  // set position
+  var props = formlib.getMenuPositionalCSS(
+    wrapperEl,
+    menuEl,
+    res[1]
+  );
+  
+  jqLite.css(menuEl, props);
+  jqLite.scrollTop(menuEl, props.scrollTop);
+
+  // attach event handlers
+  var destroyCB = this.destroyCB;
+  jqLite.on(menuEl, 'click', this.onClickCB);
+  jqLite.on(win, 'resize', destroyCB);
+
+  // attach event handler after current event loop exits
+  setTimeout(function() {jqLite.on(doc, 'click', destroyCB);}, 0);
+}
+
+
+/**
+ * Create menu element
+ * @param {Element} selectEl - The select element
+ */
+Menu.prototype._createMenuEl = function(wrapperEl, selectEl) {
+  var menuEl = doc.createElement('div'),
+      childEls = selectEl.children,
+      itemArray = this.itemArray,
+      itemPos = 0,
+      origPos = -1,
+      selectedPos = 0,
+      selectedRow = 0,
+      numRows = 0,
+      docFrag = document.createDocumentFragment(),  // for speed
+      loopEl,
+      rowEl,
+      optionEls,
+      inGroup,
+      i,
+      iMax,
+      j,
+      jMax;
+
+  menuEl.className = menuClass;
+
+  for (i=0, iMax=childEls.length; i < iMax; i++) {
+    loopEl = childEls[i];
+
+    if (loopEl.tagName === 'OPTGROUP') {
+      // add row item to menu
+      rowEl = doc.createElement('div');
+      rowEl.textContent = loopEl.label;
+      rowEl.className = 'mui-optgroup__label';
+      docFrag.appendChild(rowEl);
+
+      inGroup = true;
+      optionEls = loopEl.children;
+    } else {
+      inGroup = false;
+      optionEls = [loopEl];
+    }
+
+    // loop through option elements
+    for (j=0, jMax=optionEls.length; j < jMax; j++) {
+      loopEl = optionEls[j];
+
+      // add row item to menu
+      rowEl = doc.createElement('div');
+      rowEl.textContent = loopEl.textContent;
+
+      // handle optgroup options
+      if (inGroup) jqLite.addClass(rowEl, 'mui-optgroup__option');
+
+      if (loopEl.hidden) {
+        continue;
+      } else if (loopEl.disabled) {
+        // do not attach muiIndex to disable <option> elements to make them
+        // unselectable.
+        jqLite.addClass(rowEl, disabledClass);
+      } else {
+        rowEl._muiIndex = loopEl.index;
+        rowEl._muiPos = itemPos;
+
+        // handle selected options
+        if (loopEl.selected) {
+          selectedRow = numRows;
+          origPos = itemPos;
+          selectedPos = itemPos;
+        }
+
+        // add to item array
+        itemArray.push(rowEl);
+        itemPos += 1;
+      }
+
+      docFrag.appendChild(rowEl);
+      numRows += 1;
+    }
+  }
+
+  // add rows to menu
+  menuEl.appendChild(docFrag);
+
+  // save indices
+  this.origPos = origPos;
+  this.currentPos = selectedPos;
+
+  // paint selectedPos
+  if (itemArray.length) jqLite.addClass(itemArray[selectedPos], selectedClass);
+
+  return [menuEl, selectedRow];
+}
+
+
+/**
+ * Handle click events on menu element.
+ * @param {Event} ev - The DOM event
+ */
+Menu.prototype.onClick = function(ev) {
+  // don't allow events to bubble
+  ev.stopPropagation();
+
+  var item = ev.target,
+      index = item._muiIndex;
+
+  // ignore clicks on non-items                                               
+  if (index === undefined) return;
+
+  // select option
+  this.currentPos = item._muiPos;
+  this.selectCurrent();
+
+  // destroy menu
+  this.destroy();
+}
+
+
+/**
+ * Increment selected item
+ */
+Menu.prototype.increment = function() {
+  if (this.currentPos === this.itemArray.length - 1) return;
+
+  // un-select old row
+  jqLite.removeClass(this.itemArray[this.currentPos], selectedClass);
+
+  // select new row
+  this.currentPos += 1;
+  jqLite.addClass(this.itemArray[this.currentPos], selectedClass);
+}
+
+
+/**
+ * Decrement selected item
+ */
+Menu.prototype.decrement = function() {
+  if (this.currentPos === 0) return;
+
+  // un-select old row
+  jqLite.removeClass(this.itemArray[this.currentPos], selectedClass);
+
+  // select new row
+  this.currentPos -= 1;
+  jqLite.addClass(this.itemArray[this.currentPos], selectedClass);
+}
+
+
+/**
+ * Select current item
+ */
+Menu.prototype.selectCurrent = function() {
+  if (this.currentPos !== this.origPos) {
+    this.selectEl.selectedIndex = this.itemArray[this.currentPos]._muiIndex;
+
+    // trigger change and input events
+    util.dispatchEvent(this.selectEl, 'change', true, false);
+    util.dispatchEvent(this.selectEl, 'input', true, false);
+  }
+}
+
+
+/**
+ * Select item at position
+ */
+Menu.prototype.selectPos = function(pos) {
+  // un-select old row                                                      
+  jqLite.removeClass(this.itemArray[this.currentPos], selectedClass);
+
+  // select new row
+  this.currentPos = pos;
+  var itemEl = this.itemArray[pos];
+  jqLite.addClass(itemEl, selectedClass);
+
+  // scroll (if necessary)
+  var menuEl = this.menuEl,
+      itemRect = itemEl.getBoundingClientRect();
+
+  if (itemRect.top < 0) {
+    // menu item is hidden above visible window
+    menuEl.scrollTop = menuEl.scrollTop + itemRect.top - 5;
+  } else if (itemRect.top > window.innerHeight) {
+    // menu item is hidden below visible window
+    menuEl.scrollTop = menuEl.scrollTop + 
+      (itemRect.top + itemRect.height - window.innerHeight) + 5;
+  }
+}
+
+
+/**
+ * Destroy menu and detach event handlers
+ */
+Menu.prototype.destroy = function() {
+  // remove scroll lock
+  util.disableScrollLock(true);
+
+  // remove event handlers
+  jqLite.off(this.menuEl, 'click', this.clickCallbackFn);
+  jqLite.off(doc, 'click', this.destroyCB);
+  jqLite.off(win, 'resize', this.destroyCB);
+
+  // remove element and execute wrapper callback
+  var parentNode = this.menuEl.parentNode;
+  if (parentNode) {
+    parentNode.removeChild(this.menuEl);
+    this.wrapperCallbackFn();
+  }
+}
+
+
+/** Define module API */
+module.exports = {
+  /** Initialize module listeners */
+  initListeners: function() {
+    // markup elements available when method is called
+    var elList = doc.querySelectorAll(cssSelector),
+        i = elList.length;
+    while (i--) initialize(elList[i]);
+
+    // listen for mui-node-inserted events
+    animationHelpers.onAnimationStart('mui-select-inserted', function(ev) {
+      initialize(ev.target);
+    });
+  }
+};
+
+},{"./lib/animationHelpers":4,"./lib/forms":5,"./lib/jqLite":6,"./lib/util":7}],11:[function(require,module,exports){
+/**
+ * MUI CSS/JS tabs module
+ * @module tabs
+ */
+
+'use strict';
+
+
+var jqLite = require('./lib/jqLite'),
+    util = require('./lib/util'),
+    animationHelpers = require('./lib/animationHelpers'),
+    attrKey = 'data-mui-toggle',
+    attrSelector = '[' + attrKey + '="tab"]',
+    controlsAttrKey = 'data-mui-controls',
+    activeClass = 'mui--is-active',
+    showstartKey = 'mui.tabs.showstart',
+    showendKey = 'mui.tabs.showend',
+    hidestartKey = 'mui.tabs.hidestart',
+    hideendKey = 'mui.tabs.hideend';
+
+
+/**
+ * Initialize the toggle element
+ * @param {Element} toggleEl - The toggle element.
+ */
+function initialize(toggleEl) {
+  // check flag
+  if (toggleEl._muiTabs === true) return;
+  else toggleEl._muiTabs = true;
+
+  // attach click handler
+  jqLite.on(toggleEl, 'click', clickHandler);
+}
+
+
+/**
+ * Handle clicks on the toggle element.
+ * @param {Event} ev - The DOM event.
+ */
+function clickHandler(ev) {
+  // only left clicks
+  if (ev.button !== 0) return;
+
+  var toggleEl = this;
+
+  // exit if toggle element is disabled
+  if (toggleEl.getAttribute('disabled') !== null) return;
+
+  activateTab(toggleEl);
+}
+
+
+/**
+ * Activate the tab controlled by the toggle element.
+ * @param {Element} toggleEl - The toggle element.
+ */
+function activateTab(currToggleEl) {
+  var currTabEl = currToggleEl.parentNode,
+      currPaneId = currToggleEl.getAttribute(controlsAttrKey),
+      currPaneEl = document.getElementById(currPaneId),
+      prevTabEl,
+      prevPaneEl,
+      prevPaneId,
+      prevToggleEl,
+      currData,
+      prevData,
+      ev1,
+      ev2,
+      cssSelector;
+
+  // exit if already active
+  if (jqLite.hasClass(currTabEl, activeClass)) return;
+
+  // raise error if pane doesn't exist
+  if (!currPaneEl) util.raiseError('Tab pane "' + currPaneId + '" not found');
+
+  // get previous pane
+  prevPaneEl = getActiveSibling(currPaneEl);
+
+  if (prevPaneEl) {
+    prevPaneId = prevPaneEl.id;
+
+    // get previous toggle and tab elements
+    cssSelector = '[' + controlsAttrKey + '="' + prevPaneId + '"]';
+    prevToggleEl = document.querySelectorAll(cssSelector)[0];
+    prevTabEl = prevToggleEl.parentNode;
+  }
+  
+  // define event data
+  currData = {paneId: currPaneId, relatedPaneId: prevPaneId};
+  prevData = {paneId: prevPaneId, relatedPaneId: currPaneId};
+
+  // dispatch 'hidestart', 'showstart' events
+  ev1 = util.dispatchEvent(prevToggleEl, hidestartKey, true, true, prevData);
+  ev2 = util.dispatchEvent(currToggleEl, showstartKey, true, true, currData);
+
+  // let events bubble
+  setTimeout(function() {
+    // exit if either event was canceled
+    if (ev1.defaultPrevented || ev2.defaultPrevented) return;
+
+    // de-activate previous
+    if (prevTabEl) jqLite.removeClass(prevTabEl, activeClass);
+    if (prevPaneEl) jqLite.removeClass(prevPaneEl, activeClass);
+
+    // activate current
+    jqLite.addClass(currTabEl, activeClass);
+    jqLite.addClass(currPaneEl, activeClass);
+
+    // dispatch 'hideend', 'showend' events
+    util.dispatchEvent(prevToggleEl, hideendKey, true, false, prevData);
+    util.dispatchEvent(currToggleEl, showendKey, true, false, currData);
+  }, 0);
+}
+
+
+/** 
+ * Get previous active sibling.
+ * @param {Element} el - The anchor element.
+ */
+function getActiveSibling(el) {
+  var elList = el.parentNode.children,
+      q = elList.length,
+      activeEl = null,
+      tmpEl;
+
+  while (q-- && !activeEl) {
+    tmpEl = elList[q];
+    if (tmpEl !== el && jqLite.hasClass(tmpEl, activeClass)) activeEl = tmpEl
+  }
+
+  return activeEl;
+}
+
+
+/** Define module API */
+module.exports = {
+  /** Initialize module listeners */
+  initListeners: function() {
+    // markup elements available when method is called
+    var elList = document.querySelectorAll(attrSelector),
+        i = elList.length;
+    while (i--) {initialize(elList[i]);}
+    
+    animationHelpers.onAnimationStart('mui-tab-inserted', function(ev) {
+      initialize(ev.target);
+    });
+  },
+  
+  /** External API */
+  api: {
+    activate: function(paneId) {
+      var cssSelector = '[' + controlsAttrKey + '=' + paneId + ']',
+          toggleEl = document.querySelectorAll(cssSelector);
+
+      if (!toggleEl.length) {
+        util.raiseError('Tab control for pane "' + paneId + '" not found');
+      }
+
+      activateTab(toggleEl[0]);
+    }
+  }
+};
+
+},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}],12:[function(require,module,exports){
+/**
+ * MUI CSS/JS form-control module
+ * @module forms/form-control
+ */
+
+'use strict';
+
+
+var jqLite = require('./lib/jqLite'),
+    util = require('./lib/util'),
+    animlib = require('./lib/animationHelpers'),
+    cssSelector = '.mui-textfield > input, .mui-textfield > textarea',
+    floatingLabelClass = 'mui-textfield--float-label';
+
+
+var touchedClass = 'mui--is-touched',  // hasn't lost focus yet
+    untouchedClass = 'mui--is-untouched',
+    pristineClass = 'mui--is-pristine',  // user hasn't interacted yet 
+    dirtyClass = 'mui--is-dirty',
+    emptyClass = 'mui--is-empty',  // control is empty
+    notEmptyClass = 'mui--is-not-empty';
+
+
+/**
+ * Initialize input element.
+ * @param {Element} inputEl - The input element.
+ */
+function initialize(inputEl) {
+  // check flag
+  if (inputEl._muiTextfield === true) return;
+  else inputEl._muiTextfield = true;
+
+  // add initial control state classes
+  if (inputEl.value.length) jqLite.addClass(inputEl, notEmptyClass);
+  else jqLite.addClass(inputEl, emptyClass);
+
+  jqLite.addClass(inputEl, untouchedClass + ' ' + pristineClass);
+
+  // replace `untouched` with `touched` when control loses focus
+  jqLite.on(inputEl, 'blur', function blurHandler () {
+    // ignore if event is a window blur
+    if (document.activeElement === inputEl) return;
+
+    // replace class and remove event handler
+    jqLite.removeClass(inputEl, untouchedClass);
+    jqLite.addClass(inputEl, touchedClass);
+    jqLite.off(inputEl, 'blur', blurHandler);
+  });
+
+  // replace `pristine` with `dirty` when user interacts with control
+  jqLite.one(inputEl, 'input change', function() {
+    jqLite.removeClass(inputEl, pristineClass);
+    jqLite.addClass(inputEl, dirtyClass);
+  });
+
+  // add change handler
+  jqLite.on(inputEl, 'input change', inputHandler);
+}
+
+
+/**
+ * Handle input events.
+ */
+function inputHandler() {
+  var inputEl = this;
+
+  if (inputEl.value.length) {
+    jqLite.removeClass(inputEl, emptyClass);
+    jqLite.addClass(inputEl, notEmptyClass);
+  } else {
+    jqLite.removeClass(inputEl, notEmptyClass);
+    jqLite.addClass(inputEl, emptyClass)
+  }
+}
+
+
+/** Define module API */
+module.exports = {
+  /** Initialize input elements */
+  initialize: initialize,
+  
+  /** Initialize module listeners */
+  initListeners: function() {
+    var doc = document;
+    
+    // markup elements available when method is called
+    var elList = doc.querySelectorAll(cssSelector),
+        i = elList.length;
+    while (i--) initialize(elList[i]);
+
+    // listen for new elements
+    animlib.onAnimationStart('mui-textfield-inserted', function(ev) {
+      initialize(ev.target);
+    });
+
+    // add transition css for floating labels
+    setTimeout(function() {
+      var css = '.mui-textfield.mui-textfield--float-label > label {' + [
+        '-webkit-transition',
+        '-moz-transition',
+        '-o-transition',
+        'transition',
+        ''
+      ].join(':all .15s ease-out;') + '}';
+      
+      util.loadStyle(css);
+    }, 150);
+
+    // pointer-events shim for floating labels
+    if (util.supportsPointerEvents() === false) {
+      jqLite.on(doc, 'click', function(ev) {
+        var targetEl = ev.target;
+
+        if (targetEl.tagName === 'LABEL' &&
+            jqLite.hasClass(targetEl.parentNode, floatingLabelClass)) {
+          var inputEl = targetEl.previousElementSibling;
+          if (inputEl) inputEl.focus();
+        }
+      });
+    }
+  }
+};
+
+},{"./lib/animationHelpers":4,"./lib/jqLite":6,"./lib/util":7}]},{},[1]);

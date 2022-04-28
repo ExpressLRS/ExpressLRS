@@ -1,3 +1,4 @@
+@@require(PLATFORM, VERSION)
 <!DOCTYPE HTML>
 <html>
 
@@ -14,9 +15,9 @@
 			<img src="logo.svg" height="250" width="250" style="padding:20px;"></a>
 			<h1>Welcome to your <b>ExpressLRS</b><br /> update page<br />
 			</h1>
-			<p>From here you can update your <b>Transmitter</b> module with <b>@PLATFORM@</b> firmware</p>
+			<p>From here you can update your <b>Transmitter</b> module with <b>@@{PLATFORM}</b> firmware</p>
 			<p>
-				<b>Firmware Rev. </b><a href="firmware.bin" title="Click to download firmware"><var>@VERSION@</var></a>
+				<b>Firmware Rev. </b><a href="firmware.bin" title="Click to download firmware"><var>@@{VERSION}</var></a>
 			</p>
 		</div>
 	</section>
@@ -35,7 +36,7 @@
 
 			<div align="left">
 				<fieldset>
-					Choose a file to update module firmware. Select the correct .bin file for @PLATFORM@ otherwise a bad flash may occur.
+					Choose a file to update module firmware. Select the correct .bin file for @@{PLATFORM} otherwise a bad flash may occur.
 					If this happens you will need to recover via USB/Serial. You may also download the
 					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br><br>
@@ -92,6 +93,5 @@
 		</div>
 	</section>
 </body>
-<script src="libs.js"></script>
 <script src="scan.js"></script>
 </html>

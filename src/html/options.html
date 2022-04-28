@@ -1,3 +1,4 @@
+@@require(isTX)
 <!DOCTYPE HTML>
 <html>
 
@@ -5,7 +6,7 @@
 	<title>Welcome to your ExpressLRS System</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="stylesheet" href="mui.css" />
+	<link rel="stylesheet" href="elrs.css" />
 </head>
 
 <body>
@@ -31,22 +32,22 @@
 						</div>
 					</td></tr>
 					<tr><td>Home WiFi password</td><td><input size='64' id='wifi-password' name='wifi-password' type='text'/></td></tr>
-
+@@if isTX:
                     <tr><td>TLM report interval (ms)</td><td><input size='5' id='tlm-interval' name='tlm-interval' type='text'/></td></tr>
 					<tr><td>Fan runtime (s)</td><td><input size='3' id='fan-runtime' name='fan-runtime' type='text'/></td></tr>
 					<tr><td>No sync on arm</td><td><input size='3' id='no-sync-on-arm' name='no-sync-on-arm' type='checkbox'/></td></tr>
 					<tr><td>UART inverted</td><td><input size='3' id='uart-inverted' name='uart-inverted' type='checkbox'/></td></tr>
 					<tr><td>Unlock higher power</td><td><input size='3' id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/></td></tr>
-
+@@else:
 					<tr><td>UART baud</td><td><input size='7' id='uart-baud' name='uart-baud' type='text'/></td></tr>
 					<tr><td>Invert TX pin</td><td><input size='3' id='invert-tx' name='invert-tx' type='checkbox'/></td></tr>
 					<tr><td>Lock on first conenction</td><td><input size='3' id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/></td></tr>
+@@end
 				</table>
 				<input id='submit-options' type='button' value='Save User Defines' class="mui-btn mui-btn--primary">
 			</form>
 		</div>
 	</div>
 </body>
-<script src="libs.js"></script>
 <script src="options.js"></script>
 </html>

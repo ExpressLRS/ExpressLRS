@@ -55,6 +55,8 @@ typedef struct _options {
 extern firmware_options_t firmwareOptions;
 extern char device_name[];
 extern bool options_init();
+extern String& getOptions();
+extern String& getHardware();
 #else
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];

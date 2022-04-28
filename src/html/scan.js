@@ -292,3 +292,5 @@ if (_('modelmatch') != undefined) {
     _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model",
         () => { return new FormData(_('modelmatch')); }));
 }
+
+@@include("libs.js")
