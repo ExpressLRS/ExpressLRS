@@ -340,7 +340,11 @@ end
 
 local function fieldTextSelectionDisplay_color(field, y, attr)
   lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
-  lcd.drawText(COL2 + (lcd.sizeText(field.values[field.value+1])), y, field.unit, 0)
+  if (lcd.sizeText ~= nil) then
+    lcd.drawText(COL2 + (lcd.sizeText(field.values[field.value+1])), y, field.unit, 0)
+  else
+    lcd.drawText(COL2 + 10*string.len(field.values[field.value+1]), y, field.unit, 0)
+  end	
 end
 
 local function fieldTextSelectionDisplay_bw(field, y, attr)
