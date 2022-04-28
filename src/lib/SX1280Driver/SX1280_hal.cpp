@@ -102,18 +102,6 @@ void SX1280Hal::init()
     SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
-    //this block is just for forcing SPI mode on SX1280 modules, that (nobody knows why) defaults into UART mode
-    digitalWrite(GPIO_PIN_NSS, LOW);
-
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[3];
-
-    OutBuffer[0] = (uint8_t)SX1280_RADIO_GET_STATUS;
-    OutBuffer[1] = 0x00;
-    OutBuffer[2] = 0x00;
-    SPI.transfer(OutBuffer, 3);
-
-    digitalWrite(GPIO_PIN_NSS, HIGH);
-
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
 }

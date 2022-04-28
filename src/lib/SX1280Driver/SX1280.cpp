@@ -66,6 +66,12 @@ bool SX1280Driver::Begin()
     hal.init();
     hal.IsrCallback = &SX1280Driver::IsrCallback;
 
+    //if the module cant initialize, this ensures the correct clock and resets the fault state
+    SetMode(SX1280_MODE_STDBY_RC);                                                                                                //Put in STDBY_RC mode
+
+    //this should return 'Status: 2, 1, 1'
+    GetStatus();
+
     hal.reset();
     
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
@@ -76,7 +82,6 @@ bool SX1280Driver::Begin()
         return false;
     }
 
-    SetMode(SX1280_MODE_STDBY_RC);                                                                                                //Put in STDBY_RC mode
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);                                                       //Set packet type to LoRa
     ConfigModParamsLoRa(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7);                                                //Configure Modulation Params
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                                                                              //Enable auto FS
