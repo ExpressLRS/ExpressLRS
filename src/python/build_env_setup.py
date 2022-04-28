@@ -98,5 +98,4 @@ if "_WIFI" in target_name:
 if platform != 'native':
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
 
-if "UBER" in target_name:
-    env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UberConfiguration.appendConfiguration)
+env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UberConfiguration.appendConfiguration)
