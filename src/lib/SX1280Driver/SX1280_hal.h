@@ -53,7 +53,7 @@ public:
     void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber); // Writes and Reads to FIFO
     void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber);
 
-    bool ICACHE_RAM_ATTR WaitOnBusy();
+    bool ICACHE_RAM_ATTR WaitOnBusy(SX1280_Radio_Number_t radioNumber);
 
     void ICACHE_RAM_ATTR TXenable();
     void ICACHE_RAM_ATTR RXenable();
