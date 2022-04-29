@@ -7,7 +7,8 @@
 
 static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
 static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-static Servo *Servos[SERVO_COUNT];
+static ServoMgr_8266 servoMgr(20000U);
+// true when the RX has a new channels packet
 static bool newChannelsAvailable;
 
 void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
@@ -21,25 +22,19 @@ static void servosFailsafe()
     {
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
         uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
-        if (Servos[ch])
-            Servos[ch]->writeMicroseconds(us);
+        // Always write the failsafe position even if the servo never has been started,
+        // so all the servos go to their expected position
+        servoMgr.writeMicroseconds(SERVO_PINS[ch], us);
     }
 }
 
 static int servosUpdate(unsigned long now)
 {
-    // The ESP waveform generator is nice because it doesn't change the value
-    // mid-cycle, but it does busywait if there's already a change queued.
-    // Updating every 20ms minimizes the amount of waiting (0-800us cycling
-    // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
     static uint32_t lastUpdate;
-    const uint32_t elapsed = now - lastUpdate;
-    if (elapsed < 20)
-        return DURATION_IMMEDIATELY;
-
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
+        lastUpdate = now;
         for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -47,31 +42,22 @@ static int servosUpdate(unsigned long now)
             if (chConfig->val.inverted)
                 us = 3000U - us;
 
-            if (Servos[ch])
-                Servos[ch]->writeMicroseconds(us);
-            else if (us >= 988U && us <= 2012U)
+            if (us >= 988U && us <= 2012U)
             {
                 // us might be out of bounds if this is a switch channel and it has not been
                 // received yet. Delay initializing the servo until the channel is valid
-                Servo *servo = new Servo();
-                Servos[ch] = servo;
-                servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
+                servoMgr.writeMicroseconds(SERVO_PINS[ch], us);
             }
         } /* for each servo */
     } /* if newChannelsAvailable */
 
-    else if (elapsed > 1000U && connectionState == connected)
+    else if (lastUpdate && (now - lastUpdate) > 1000U && connectionState == connected)
     {
         // No update for 1s, go to failsafe
         servosFailsafe();
+        lastUpdate = 0;
     }
 
-    else
-        return DURATION_IMMEDIATELY; // prevent updating lastUpdate
-
-    // need to sample actual millis at the end to account for any
-    // waiting that happened in Servo::writeMicroseconds()
-    lastUpdate = millis();
     return DURATION_IMMEDIATELY;
 }
 
@@ -79,10 +65,7 @@ static void initialize()
 {
     // Initialize all servos to low ASAP
     for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-    {
-        pinMode(SERVO_PINS[ch], OUTPUT);
-        digitalWrite(SERVO_PINS[ch], LOW);
-    }
+        servoMgr.init(SERVO_PINS[ch]);
 }
 
 static int start()
@@ -92,6 +75,7 @@ static int start()
 
 static int event()
 {
+    // Disconnected should come after failsafe so it is safe to shut down when disconnected
     if (connectionState == disconnected)
         return DURATION_NEVER;
     else

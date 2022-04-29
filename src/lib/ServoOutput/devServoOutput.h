@@ -2,7 +2,7 @@
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 #include "device.h"
-#include <Servo.h>
+#include "ServoMgr_8266.h"
 
 extern device_t ServoOut_device;
 #define HAS_SERVO_OUTPUT
