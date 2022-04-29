@@ -7,6 +7,7 @@ class ServoMgr_8266
 {
 public:
     ServoMgr_8266(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
+    ~ServoMgr_8266() { delete [] _refreshInterval; }
 
     // Initialize the pins for output
     void initialize();
