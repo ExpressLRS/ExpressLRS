@@ -6,20 +6,26 @@
 class ServoMgr_8266
 {
 public:
-    ServoMgr_8266(uint32_t interval = 20000U)
-        : _activePins(0), _refreshInterval(interval)
-        {}
+    ServoMgr_8266(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
 
-    void init(uint8_t pin);
-    uint32_t getRefreshInterval() const { return _refreshInterval; }
-    void setRefreshInterval(uint32_t intervalUs);
-    bool isActive(uint8_t pin) const { return _activePins & (1 << pin); }
-    bool isAnyActive() const { return _activePins; }
-    void writeMicroseconds(uint8_t pin, uint16_t value);
+    // Initialize the pins for output
+    void initialize();
+    // Start/Update PWM
+    void writeMicroseconds(uint8_t ch, uint16_t valueUs);
+    // Stop PWM
+    void stopPwm(uint8_t ch);
+
+    uint16_t getRefreshInterval(uint8_t ch) const { return _refreshInterval[ch]; }
+    void setRefreshInterval(uint8_t ch, uint16_t intervalUs);
+    bool isActive(uint8_t ch) const { return _activeChannels & (1 << ch); }
+    bool isAnyActive() const { return _activeChannels; }
+    uint8_t getOutputCnt() const { return _outputCnt; }
 
 private:
-    uint32_t _activePins;
-    uint32_t _refreshInterval;
+    const uint8_t * const _pins;
+    const uint8_t _outputCnt;
+    uint16_t *_refreshInterval;
+    uint32_t _activeChannels;
 };
 
 #endif
