@@ -16,5 +16,5 @@
     "power_default": 0,
     "power_control": 0,
     "power_values": [13],
-    "led_red": 16
+    "led": 16
 }

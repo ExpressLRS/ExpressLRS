@@ -15,5 +15,6 @@
     "power_max": 3,
     "power_default": 3,
     "power_control": 0,
-    "power_values": [-15,-10,-7,3]
+    "power_values": [-15,-10,-7,3],
+    "led": 16
 }

@@ -104,6 +104,7 @@
 
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS hardware_i16_array(HARDWARE_pwm_outputs)
+#define GPIO_PIN_PWM_OUTPUTS_COUNT hardware_int(HARDWARE_pwm_outputs_count)
 
 // VBat
 #define USE_ANALOG_VBAT

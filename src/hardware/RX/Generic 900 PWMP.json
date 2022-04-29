@@ -10,7 +10,7 @@
     "power_max": 0,
     "power_default": 0,
     "power_control": 0,
-    "power_values": 15,
-    "led_red": 16,
+    "power_values": [15],
+    "led": 16,
     "pwm_outputs": [0,1,3,5,9,10]
 }

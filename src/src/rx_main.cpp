@@ -1336,15 +1336,14 @@ void setup()
     }
     else
     {
-        const int16_t *pins = GPIO_PIN_PWM_OUTPUTS;
-        if (pins != nullptr)
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
+        SERVO_COUNT = GPIO_PIN_PWM_OUTPUTS_COUNT;
+        DBGLN("%d servos");
+        for (int i=0 ; i<SERVO_COUNT ; i++)
         {
-            for (int i=0 ; pins[i] != -1 ; i++)
-            {
-                SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
-                SERVO_COUNT++;
-            }
+            SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
         }
+        #endif
     }
     #endif
 

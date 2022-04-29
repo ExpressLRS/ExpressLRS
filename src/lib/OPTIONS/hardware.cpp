@@ -14,7 +14,8 @@ typedef enum {
     INT,
     BOOL,
     FLOAT,
-    ARRAY
+    ARRAY,
+    COUNT
 } datatype_t;
 
 static const struct {
@@ -91,6 +92,7 @@ static const struct {
     {HARDWARE_gsensor_stk8xxx, "gsensor_stk8xxx", BOOL},
     {HARDWARE_thermal_lm75a, "thermal_lm75a", BOOL},
     {HARDWARE_pwm_outputs, "pwm_outputs", ARRAY},
+    {HARDWARE_pwm_outputs_count, "pwm_outputs", COUNT},
     {HARDWARE_vbat, "vbat", INT},
     {HARDWARE_vbat_offset, "vbat_offset", INT},
     {HARDWARE_vbat_scale, "vbat_scale", INT},
@@ -144,6 +146,9 @@ bool hardware_init(uint32_t *config)
             case ARRAY:
                 hardware[fields[i].position].array_value = nullptr;
                 break;
+            case COUNT:
+                hardware[fields[i].position].int_value = 0;
+                break;
         }
     }
 
@@ -187,9 +192,17 @@ bool hardware_init(uint32_t *config)
                     hardware[fields[i].position].float_value = doc[fields[i].name];
                     break;
                 case ARRAY:
-                    JsonArray array = doc[fields[i].name].as<JsonArray>();
-                    hardware[fields[i].position].array_value = new int16_t[array.size()];
-                    copyArray(doc[fields[i].name], hardware[fields[i].position].array_value, array.size());
+                    {
+                        JsonArray array = doc[fields[i].name].as<JsonArray>();
+                        hardware[fields[i].position].array_value = new int16_t[array.size()];
+                        copyArray(doc[fields[i].name], hardware[fields[i].position].array_value, array.size());
+                    }
+                    break;
+                case COUNT:
+                    {
+                        JsonArray array = doc[fields[i].name].as<JsonArray>();
+                        hardware[fields[i].position].int_value = array.size();
+                    }
                     break;
             }
         }
