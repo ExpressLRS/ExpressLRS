@@ -278,7 +278,7 @@ bool options_init()
         }
         else
         {
-            firmwareOptions.wifi_auto_on_interval = 30 * 1000;
+            firmwareOptions.wifi_auto_on_interval = 60 * 1000;
             strlcpy(firmwareOptions.home_wifi_ssid, "", sizeof(firmwareOptions.home_wifi_ssid));
             strlcpy(firmwareOptions.home_wifi_password, "", sizeof(firmwareOptions.home_wifi_password));
             firmwareOptions.tlm_report_interval = 320U;
@@ -309,7 +309,7 @@ bool options_init()
     {
         firmwareOptions.hasUID = false;
     }
-    firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 30) * 1000;
+    firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 60) * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
