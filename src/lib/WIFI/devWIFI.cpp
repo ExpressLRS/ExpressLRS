@@ -179,7 +179,7 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
   uint8_t channel = 0;
   while (token != nullptr && channel < SERVO_COUNT)
   {
-    uint16_t val = atoi(token);
+    uint32_t val = atoi(token);
     DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
     ++channel;

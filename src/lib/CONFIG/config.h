@@ -110,16 +110,18 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
-constexpr uint8_t PWM_MAX_CHANNELS = 8;
+constexpr uint8_t PWM_MAX_CHANNELS = 12;
 
 typedef union {
     struct {
-        uint16_t failsafe:10; // us output during failsafe +988 (e.g. 512 here would be 1500us)
-        uint8_t inputChannel:4; // 0-based input channel
-        uint8_t inverted:1; // invert channel output
-        uint8_t unused:1;
+        unsigned failsafe:10;   // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        unsigned inputChannel:4; // 0-based input channel
+        unsigned inverted:1;     // invert channel output
+        unsigned mode:4;         // Output mode (eServoOutputMode)
+        unsigned narrow:1;       // Narrow output mode (half pulse width)
+        unsigned unused:13;
     } val;
-    uint16_t raw;
+    uint32_t raw;
 } rx_config_pwm_t;
 
 typedef struct {
@@ -180,8 +182,8 @@ public:
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted);
-    void SetPwmChannelRaw(uint8_t ch, uint16_t raw);
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
+    void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
 
 private:

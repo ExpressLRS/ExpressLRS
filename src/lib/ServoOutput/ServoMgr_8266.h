@@ -14,18 +14,20 @@ public:
     void writeMicroseconds(uint8_t ch, uint16_t valueUs);
     // Stop PWM
     void stopPwm(uint8_t ch);
+    // Set a pin high/low (will stopPwm first if active)
+    void writeDigital(uint8_t ch, bool value);
 
     uint16_t getRefreshInterval(uint8_t ch) const { return _refreshInterval[ch]; }
     void setRefreshInterval(uint8_t ch, uint16_t intervalUs);
-    bool isActive(uint8_t ch) const { return _activeChannels & (1 << ch); }
-    bool isAnyActive() const { return _activeChannels; }
+    bool isPwmActive(uint8_t ch) const { return _activePwmChannels & (1 << ch); }
+    bool isAnyPwmActive() const { return _activePwmChannels; }
     uint8_t getOutputCnt() const { return _outputCnt; }
 
 private:
     const uint8_t * const _pins;
     const uint8_t _outputCnt;
     uint16_t *_refreshInterval;
-    uint32_t _activeChannels;
+    uint32_t _activePwmChannels;
 };
 
 #endif
