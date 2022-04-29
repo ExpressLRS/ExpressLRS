@@ -42,6 +42,17 @@ void ServoMgr_8266::stopPwm(uint8_t ch)
     stopWaveform8266(pin);
 }
 
+void ServoMgr_8266::stopAllPwm()
+{
+    for (uint8_t ch=0; ch<_outputCnt; ++ch)
+    {
+        stopPwm(ch);
+        const uint8_t pin = _pins[ch];
+        digitalWrite(pin, LOW);
+    }
+    _activePwmChannels = 0;
+}
+
 void ServoMgr_8266::writeDigital(uint8_t ch, bool value)
 {
     const uint8_t pin = _pins[ch];

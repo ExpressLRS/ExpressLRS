@@ -104,6 +104,11 @@ static int event()
     // Disconnected should come after failsafe so it is safe to shut down when disconnected
     if (connectionState == disconnected)
         return DURATION_NEVER;
+    else if (connectionState == wifiUpdate)
+    {
+        servoMgr.stopAllPwm();
+        return DURATION_NEVER;
+    }
     else
         return DURATION_IMMEDIATELY;
 }

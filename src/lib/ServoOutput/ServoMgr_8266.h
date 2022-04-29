@@ -14,6 +14,8 @@ public:
     void writeMicroseconds(uint8_t ch, uint16_t valueUs);
     // Stop PWM
     void stopPwm(uint8_t ch);
+    // Stop any active PWM channels (and set LOW)
+    void stopAllPwm();
     // Set a pin high/low (will stopPwm first if active)
     void writeDigital(uint8_t ch, bool value);
 
