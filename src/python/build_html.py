@@ -43,6 +43,7 @@ def build_common(env, mainfile, isTX):
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
             build_html(mainfile, "INDEX_HTML", out, env)
+            build_html("libs.js", "LIBS_JS", out, env)
             build_html("scan.js", "SCAN_JS", out, env)
             build_html("main.css", "MAIN_CSS", out, env)
             build_html("logo.svg", "LOGO_SVG", out, env)

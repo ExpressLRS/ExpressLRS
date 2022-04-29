@@ -122,7 +122,8 @@ static struct {
   {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-#if defined(TARGET_UBER_TX)
+  {"/libs.js", "text/javascript", (uint8_t *)LIBS_JS, sizeof(LIBS_JS)},
+#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/mui.css", "text/css", (uint8_t *)MUI_CSS, sizeof(MUI_CSS)},
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
@@ -658,6 +659,7 @@ static void startServices()
 
   server.on("/", WebUpdateHandleRoot);
   server.on("/main.css", WebUpdateSendContent);
+  server.on("/libs.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
   server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);

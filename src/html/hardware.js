@@ -23,9 +23,26 @@ function submitHardwareSettings() {
     xhr.open('POST','/hardware.json')
     xhr.setRequestHeader("Content-Type", "application/json");
     var formData = new FormData(_("upload_hardware"));
-    var json = JSON.stringify(Object.fromEntries(formData), function(k, v){ return v === "" ? undefined : v; });
-    xhr.send(json);
-    xhr.onreadystatechange = function() {};
+    xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v){ return v === "" ? undefined : (isNaN(v) ? v : +v); }));
+    xhr.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            cuteAlert({
+                type: 'question',
+                title: "Upload Succeeded",
+                message: "Reboot to take effect",
+                confirmText: "Reboot",
+                cancelText: "Close"
+            }).then((e) => {
+                if (e == "confirm") {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/reboot')
+                    xhr.setRequestHeader("Content-Type", "application/json");
+                    xhr.onreadystatechange = function () {}
+                    xhr.send();
+                }
+            });
+        }
+    };
     return false;
 }
 
