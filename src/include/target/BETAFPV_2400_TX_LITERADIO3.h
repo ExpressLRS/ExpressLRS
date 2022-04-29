@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "BETAFPV LtRadio"
+#define DEVICE_NAME "BETAFPV LR3 Pro"
 #endif
 
 // Any device features
