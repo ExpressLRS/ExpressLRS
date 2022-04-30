@@ -38,7 +38,7 @@ public:
     void RXnb();
 
     uint16_t GetIrqStatus(SX1280_Radio_Number_t radioNumber);
-    void ClearIrqStatus(uint16_t irqMask);
+    void ClearIrqStatus(uint16_t irqMask, SX1280_Radio_Number_t radioNumber);
 
     void GetStatus(SX1280_Radio_Number_t radioNumber);
 
@@ -46,11 +46,16 @@ public:
     int8_t GetRssiInst();
     void GetLastPacketStats();
 
+    void setGotPacketThisInterval();
+    void clearGotPacketThisInterval();
+
 private:
     SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
     uint8_t packet_mode;
     bool modeSupportsFei;
+    SX1280_Radio_Number_t processingPacketRadio;
     SX1280_Radio_Number_t lastSuccessfulPacketRadio = SX1280_Radio_1;
+    bool gotPacketThisInterval = false;
 
     void SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Number_t radioNumber);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
@@ -74,8 +79,9 @@ private:
                          uint16_t dio2Mask=SX1280_IRQ_RADIO_NONE,
                          uint16_t dio3Mask=SX1280_IRQ_RADIO_NONE);
 
-
-    static void IsrCallback();
+    static void IsrCallback_1();
+    static void IsrCallback_2();
+    static void IsrCallback(SX1280_Radio_Number_t radioNumber);
     void RXnbISR(uint16_t irqStatus, SX1280_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
 };

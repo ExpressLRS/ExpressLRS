@@ -59,8 +59,10 @@ public:
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
 
-    static ICACHE_RAM_ATTR void dioISR();
-    void (*IsrCallback)(); //function pointer for callback
+    static ICACHE_RAM_ATTR void dioISR_1();
+    static ICACHE_RAM_ATTR void dioISR_2();
+    void (*IsrCallback_1)(); //function pointer for callback
+    void (*IsrCallback_2)(); //function pointer for callback
 
     uint32_t BusyDelayStart;
     uint32_t BusyDelayDuration;

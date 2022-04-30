@@ -9,9 +9,10 @@ public:
     typedef uint8_t rx_status;
     enum
     {
-        SX12XX_RX_OK        = 0,
-        SX12XX_RX_CRC_FAIL  = 1 << 0,
-        SX12XX_RX_TIMEOUT   = 1 << 1,
+        SX12XX_RX_OK             = 0,
+        SX12XX_RX_CRC_FAIL       = 1 << 0,
+        SX12XX_RX_TIMEOUT        = 1 << 1,
+        SX12XX_RX_SYNCWORD_ERROR = 1 << 2,
     };
 
     SX12xxDriverCommon():

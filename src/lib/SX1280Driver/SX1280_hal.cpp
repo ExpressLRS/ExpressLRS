@@ -33,8 +33,12 @@ void SX1280Hal::end()
 {
     TXRXdisable(); // make sure the RX/TX amp pins are disabled
     detachInterrupt(GPIO_PIN_DIO1);
+#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    detachInterrupt(GPIO_PIN_DIO1_2);
+#endif
     SPI.end();
-    IsrCallback = nullptr; // remove callbacks
+    IsrCallback_1 = nullptr; // remove callbacks
+    IsrCallback_2 = nullptr; // remove callbacks
 }
 
 void SX1280Hal::init()
@@ -48,6 +52,9 @@ void SX1280Hal::init()
 #endif
 
     pinMode(GPIO_PIN_DIO1, INPUT);
+#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    pinMode(GPIO_PIN_DIO1_2, INPUT);
+#endif
 
     pinMode(GPIO_PIN_NSS, OUTPUT);
 #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
@@ -98,7 +105,10 @@ void SX1280Hal::init()
 #endif
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
-    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
+#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1_2), this->dioISR_2, RISING);
+#endif
 }
 
 void SX1280Hal::NssHigh(SX1280_Radio_Number_t radioNumber)
@@ -308,46 +318,45 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
 {
-    if (GPIO_PIN_BUSY != UNDEF_PIN)
+#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
+    if (BusyDelayDuration)
     {
-        constexpr uint32_t wtimeoutUS = 1000U;
-        uint32_t startTime = micros();
-
-    while ((micros() - startTime) < wtimeoutUS) // wait untill not busy or until wtimeoutUS
-    {
-        if (radioNumber == SX1280_Radio_1)
+        while ((micros() - BusyDelayStart) < 2 * BusyDelayDuration)
         {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+            if (radioNumber == SX1280_Radio_1)
+            {
+                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+            }
+    #if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+            else
+            if (radioNumber == SX1280_Radio_2)
+            {
+                if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+            }
+    #endif
+            else
+            if (radioNumber == SX1280_Radio_All)
+            {
+    #if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+                if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+    #else
+                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+    #endif
+            }
+            else
+            {
+                #ifdef PLATFORM_STM32
+                __NOP();
+                #elif PLATFORM_ESP32
+                _NOP();
+                #elif PLATFORM_ESP8266
+                _NOP();
+                #endif
+            }
         }
-#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-        else
-        if (radioNumber == SX1280_Radio_2)
-        {
-            if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-        }
-#endif
-        else
-        if (radioNumber == SX1280_Radio_All)
-        {
-#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-            if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-#else
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-#endif
-        }
-        else
-        {
-            #ifdef PLATFORM_STM32
-            __NOP();
-            #elif PLATFORM_ESP32
-            _NOP();
-            #elif PLATFORM_ESP8266
-            _NOP();
-            #endif
-        }
+        return false; // timeout
     }
-
-    return false;
+    return true;
 #else
     // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
     // and state transitions require extra time depending on prior state
@@ -373,10 +382,16 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
 #endif
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::dioISR()
+void ICACHE_RAM_ATTR SX1280Hal::dioISR_1()
 {
-    if (instance->IsrCallback)
-        instance->IsrCallback();
+    if (instance->IsrCallback_1)
+        instance->IsrCallback_1();
+}
+
+void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
+{
+    if (instance->IsrCallback_2)
+        instance->IsrCallback_2();
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable()

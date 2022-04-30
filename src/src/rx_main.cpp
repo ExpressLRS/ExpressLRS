@@ -885,6 +885,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     getRFlinkInfo();
     // Received a packet, that's the definition of LQ
     LQCalc.add();
+    Radio.setGotPacketThisInterval();
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
