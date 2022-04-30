@@ -12,7 +12,7 @@
     #error "JOY_ADC_VALUES requires GPIO_PIN_JOYSTICK defined too"
 #endif
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UNIFIED_TX)
 uint16_t FiveWayButton::joyAdcValues[] = {0};
 #else
 uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
@@ -36,7 +36,7 @@ uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
  */
 void FiveWayButton::calcFuzzValues()
 {
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UNIFIED_TX)
     memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
 #endif
     for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)

@@ -170,7 +170,7 @@
 #define GPIO_PIN_DEBUG_TX       1
 #endif
 #endif
-#if !defined(TARGET_UBER_TX)
+#if !defined(TARGET_UNIFIED_TX)
 #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE) || defined(USE_TX_BACKPACK)
 #if GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_TX || GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_RX
 #error "Cannot debug out the RC signal port!"
@@ -197,7 +197,7 @@
 #endif
 #endif
 
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 #define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN)
 #else
 #if defined(CRSF_RCVR_NO_SERIAL)
@@ -235,6 +235,6 @@
 #error "Either RADIO_SX127X or RADIO_SX128X must be defined!"
 #endif
 
-#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 #include "hardware.h"
 #endif

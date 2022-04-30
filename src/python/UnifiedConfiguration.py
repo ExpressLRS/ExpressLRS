@@ -4,7 +4,7 @@ import re
 def appendConfiguration(source, target, env):
     config = env.GetProjectOption('hardware_config', 'data/hardware.json')
     target_name = env.get('PIOENV', '').upper()
-    if 'UBER' in target_name or config is not None:
+    if 'Unified_' in target_name or config is not None:
         parts = re.search('(.*)_VIA_.*', target_name)
         if parts and parts.group(1):
             target_name = parts.group(1).replace('_', ' ')

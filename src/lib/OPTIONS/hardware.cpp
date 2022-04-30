@@ -1,9 +1,9 @@
-#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 
 #include "targets.h"
 #include "helpers.h"
 #include "logging.h"
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 #include <FS.h>
 #else
 #include <SPIFFS.h>

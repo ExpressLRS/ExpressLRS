@@ -2,9 +2,9 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
-#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 #include <ArduinoJson.h>
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
@@ -126,7 +126,7 @@ static struct {
   {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
@@ -156,7 +156,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   }
   force_update = request->hasArg("force");
   AsyncWebServerResponse *response;
-  #if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   if (connectionState == hardwareUndefined)
   {
     response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
@@ -218,7 +218,7 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 }
 #endif
 
-#if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
@@ -696,7 +696,7 @@ static void startServices()
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
   #endif
-  #if defined(TARGET_UBER_TX) || defined(TARGET_UBER_RX)
+  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     server.on("/hardware.html", WebUpdateSendContent);
     server.on("/hardware.js", WebUpdateSendContent);
     server.on("/options.html", WebUpdateSendContent);

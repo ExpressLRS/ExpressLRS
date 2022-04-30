@@ -51,7 +51,7 @@ static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
 #define VPD_SETPOINT_YOLO_MW                    1500
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 const uint16_t *VpdSetPointArray25mW = nullptr;
 const uint16_t *VpdSetPointArray100mW = nullptr;
 #else
@@ -223,7 +223,7 @@ static void checkOutputPower()
 
 static void initialize()
 {
-    #if defined(TARGET_UBER_RX)
+    #if defined(TARGET_UNIFIED_RX)
     VpdSetPointArray25mW = VPD_VALUES_25MW;
     VpdSetPointArray100mW = VPD_VALUES_100MW;
     #endif

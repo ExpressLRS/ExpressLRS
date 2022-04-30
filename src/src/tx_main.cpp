@@ -20,7 +20,7 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
-#if defined(TARGET_UBER_TX)
+#if defined(TARGET_UNIFIED_TX)
 #include <SPIFFS.h>
 #endif
 
@@ -988,7 +988,7 @@ static void setupTarget()
 void setup()
 {
   bool hardware_success = true;
-  #if defined(TARGET_UBER_TX)
+  #if defined(TARGET_UNIFIED_TX)
   LoggingBackpack = new HardwareSerial(0);
   ((HardwareSerial *)LoggingBackpack)->begin(420000, SERIAL_8N1);
   SPIFFS.begin();

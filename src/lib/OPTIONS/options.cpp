@@ -21,7 +21,7 @@ const char *wifi_ap_ssid = "ExpressLRS RX";
 const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
-#if !defined(TARGET_UBER_TX) && !defined(TARGET_UBER_RX)
+#if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 const char device_name[] = DEVICE_NAME;
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
@@ -216,10 +216,10 @@ const char PROGMEM compile_options[] = {
     #endif
 #endif
 };
-#else // TARGET_UBER_TX || TARGET_UBER_RX
+#else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
 #include <ArduinoJson.h>
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
@@ -306,10 +306,10 @@ bool options_init()
         }
         else
         {
-            #if defined(TARGET_UBER_RX)
-            strcpy(device_name, "UBER RX");
+            #if defined(TARGET_UNIFIED_RX)
+            strcpy(device_name, "Unified RX");
             #else
-            strcpy(device_name, "UBER TX");
+            strcpy(device_name, "Unified TX");
             #endif
         }
     }
@@ -362,7 +362,7 @@ bool options_init()
     firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 60) * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
-    #if defined(TARGET_UBER_TX)
+    #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;

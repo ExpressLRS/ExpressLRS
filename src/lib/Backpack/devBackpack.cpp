@@ -14,7 +14,7 @@ bool VRxBackpackWiFiReadyToSend = false;
 
 #if defined(GPIO_PIN_BACKPACK_EN)
 
-#if !defined(TARGET_UBER_TX)
+#if !defined(TARGET_UNIFIED_TX)
 #if BACKPACK_LOGGING_BAUD != 460800
 #error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
 #endif

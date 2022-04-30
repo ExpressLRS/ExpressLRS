@@ -20,7 +20,7 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 #include <FS.h>
 #endif
 
@@ -75,7 +75,7 @@ extern bool webserverPreventAutoStart;
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 #include <Servo.h>
-#if defined(TARGET_UBER_RX)
+#if defined(TARGET_UNIFIED_RX)
 uint8_t SERVO_COUNT = 0;
 uint8_t SERVO_PINS[MAX_SERVOS];
 static Servo *Servos[MAX_SERVOS];
@@ -1318,7 +1318,7 @@ RF_PRE_INIT()
 void setup()
 {
     bool hardware_success = true;
-    #if defined(TARGET_UBER_RX)
+    #if defined(TARGET_UNIFIED_RX)
     Serial.begin(420000);
     SerialLogger = &Serial;
     SPIFFS.begin();
