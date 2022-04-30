@@ -147,6 +147,7 @@
 #define GPIO_PIN_BACKPACK_EN hardware_pin(HARDWARE_backpack_en)
 
 // I2C
+#define USE_I2C
 #define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)
 #define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
 
