@@ -15,9 +15,9 @@
 
 typedef enum
 {
-    SX1280_Radio_1 = 0x00,
-    SX1280_Radio_2,
-    SX1280_Radio_All,
+    SX1280_Radio_1 = 1 << 0,
+    SX1280_Radio_2 = 1 << 1,
+    SX1280_Radio_All = 0xFF,
 } SX1280_Radio_Number_t;
 
 typedef enum

@@ -113,44 +113,18 @@ void SX1280Hal::init()
 
 void SX1280Hal::NssHigh(SX1280_Radio_Number_t radioNumber)
 {
-    switch (radioNumber)
-    {
-    case SX1280_Radio_1:
-        digitalWrite(GPIO_PIN_NSS, HIGH);
-        break;
-    case SX1280_Radio_2:
-    #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-        digitalWrite(GPIO_PIN_NSS_2, HIGH);
-    #endif
-        break;
-    case SX1280_Radio_All:
-        digitalWrite(GPIO_PIN_NSS, HIGH);
-    #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-        digitalWrite(GPIO_PIN_NSS_2, HIGH);
-    #endif
-        break;
-    }
+    if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, HIGH);
+#if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (radioNumber & SX1280_Radio_2) digitalWrite(GPIO_PIN_NSS_2, HIGH);
+#endif
 }
 
 void SX1280Hal::NssLow(SX1280_Radio_Number_t radioNumber)
 {
-    switch (radioNumber)
-    {
-    case SX1280_Radio_1:
-        digitalWrite(GPIO_PIN_NSS, LOW);
-        break;
-    case SX1280_Radio_2:
-    #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-        digitalWrite(GPIO_PIN_NSS_2, LOW);
-    #endif
-        break;
-    case SX1280_Radio_All:
-        digitalWrite(GPIO_PIN_NSS, LOW);
-    #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-        digitalWrite(GPIO_PIN_NSS_2, LOW);
-    #endif
-        break;
-    }
+    if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, LOW);
+#if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (radioNumber & SX1280_Radio_2) digitalWrite(GPIO_PIN_NSS_2, LOW);
+#endif
 }
 
 void SX1280Hal::reset(void)
