@@ -779,7 +779,7 @@ uint32_t CRSF::autobaud()
     uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
     uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
 
-     if (state == MEASURED) {
+    if (state == MEASURED) {
         UARTinverted = !UARTinverted;
         state = INVERTED;
         return UARTrequestedBaud;
@@ -801,9 +801,10 @@ uint32_t CRSF::autobaud()
     *autobaud_reg = (4 << 8) | 0;
 
     DBGLN("autobaud: low %d, high %d", low_period, high_period);
-    // tech ref says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
-    // add 2 based on testing for lowest deviation
-    int32_t calulatedBaud = 80000000 / (min(low_period, high_period) + 2);
+    // sample code at https://github.com/espressif/esp-idf/issues/3336
+    // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
+    // Based on testing use max and add 2 for lowest deviation
+    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 2);
     int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
     for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
     {
