@@ -294,6 +294,11 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     uint8_t modresultTLM = (NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
 
+    if (modresultTLM != 0 || ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) // if we are about to send a tlm response don't bother going back to rx
+    {
+        Radio.RXnb();
+    }
+
     return true;
 }
 
