@@ -84,6 +84,7 @@ static const struct {
     {HARDWARE_debug_backpack_tx, "debug_backpack_tx", INT},
     {HARDWARE_backpack_boot, "backpack_boot", INT},
     {HARDWARE_backpack_en, "backpack_en", INT},
+    {HARDWARE_passthrough_baud, "passthrough_baud", INT},
     {HARDWARE_i2c_scl, "i2c_scl", INT},
     {HARDWARE_i2c_sda, "i2c_sda", INT},
     {HARDWARE_misc_gsensor_int, "misc_gsensor_int", INT},

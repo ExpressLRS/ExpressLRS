@@ -85,6 +85,7 @@ typedef enum {
     HARDWARE_debug_backpack_tx,
     HARDWARE_backpack_boot,
     HARDWARE_backpack_en,
+    HARDWARE_passthrough_baud,
 
     // I2C & Misc devices
     HARDWARE_i2c_scl,

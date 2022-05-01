@@ -145,6 +145,7 @@
 #define GPIO_PIN_DEBUG_TX hardware_pin(HARDWARE_debug_backpack_tx)
 #define GPIO_PIN_BACKPACK_BOOT hardware_pin(HARDWARE_backpack_boot)
 #define GPIO_PIN_BACKPACK_EN hardware_pin(HARDWARE_backpack_en)
+#define PASSTHROUGH_BAUD hardware_int(HARDWARE_passthrough_baud)
 
 // I2C
 #define USE_I2C
