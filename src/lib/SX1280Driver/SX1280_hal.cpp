@@ -293,64 +293,49 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
 {
 #if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    if (BusyDelayDuration)
+    constexpr uint32_t wtimeoutUS = 1000U;
+    uint32_t startTime = 0;
+    uint32_t now = 0;
+
+    while (true)
     {
-        while ((micros() - BusyDelayStart) < 2 * BusyDelayDuration)
+        if (radioNumber == SX1280_Radio_1)
         {
-            if (radioNumber == SX1280_Radio_1)
-            {
-                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-            }
-    #if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-            else
-            if (radioNumber == SX1280_Radio_2)
-            {
-                if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-            }
-    #endif
-            else
-            if (radioNumber == SX1280_Radio_All)
-            {
-    #if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-                if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-    #else
-                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-    #endif
-            }
-            else
-            {
-                #ifdef PLATFORM_STM32
-                __NOP();
-                #elif PLATFORM_ESP32
-                _NOP();
-                #elif PLATFORM_ESP8266
-                _NOP();
-                #endif
-            }
+            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
         }
-        return false; // timeout
+#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+        else
+        if (radioNumber == SX1280_Radio_2)
+        {
+            if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+        }
+#endif
+        else
+        if (radioNumber == SX1280_Radio_All)
+        {
+#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+            if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+#else
+            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+#endif
+        }
+        else
+        {
+            // Use this time to call micros().
+            now = micros();
+            if (startTime == 0) startTime = now;
+            if ((now - startTime) > wtimeoutUS) return false;
+        }
     }
-    return true;
 #else
     // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
     // and state transitions require extra time depending on prior state
     if (BusyDelayDuration)
     {
-        // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
-        // and state transitions require extra time depending on prior state
-        if (BusyDelayDuration)
-        {
-            while ((micros() - BusyDelayStart) < BusyDelayDuration)
-                #ifdef PLATFORM_STM32
-                __NOP();
-                #elif PLATFORM_ESP32
-                _NOP();
-                #elif PLATFORM_ESP8266
-                _NOP();
-                #endif
-            BusyDelayDuration = 0;
-        }
-        // delayMicroseconds(80);
+        uint32_t now = micros();
+        while ((now - BusyDelayStart) < BusyDelayDuration)
+            now = micros();
+        BusyDelayDuration = 0;
     }
     return true;
 #endif
