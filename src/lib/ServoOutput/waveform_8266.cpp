@@ -1,3 +1,4 @@
+#if defined(PLATFORM_ESP8266)
 /***
  * Slimmed-down version of esp8266_waveform for the ExpressLRS project
  * 2022-04-27 Created by CapnBry
@@ -318,3 +319,4 @@ static IRAM_ATTR void timer1Interrupt() {
   T1L = nextEventCycles >> (turbo ? 1 : 0);
 }
 
+#endif
