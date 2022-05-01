@@ -165,6 +165,10 @@ void SX1280Driver::SetOutputPower(int8_t power)
 
 void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Number_t radioNumber)
 {
+    /*
+    Comment out since it is difficult to keep track of dual radios.
+    When checking SPI it is also useful to see every possible SPI transaction to make sure it fits when required.
+    */
     // if (OPmode == currOpmode)
     // {
     //    return;
