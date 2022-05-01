@@ -31,7 +31,7 @@ public:
     volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
 
     ///////////Radio Variables////////
-    uint32_t currFreq;
+    uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
     uint8_t PayloadLength;
     bool IQinverted;
 

@@ -62,7 +62,7 @@ void SX1280Driver::End()
     SetMode(SX1280_MODE_SLEEP, SX1280_Radio_All);
     hal.end();
     RemoveCallbacks();
-    currFreq = 2400000000;
+    currFreq = (uint32_t)((double)2400000000 / (double)FREQ_STEP);
     PayloadLength = 8; // Dummy default value which is overwritten during setup.
 }
 
@@ -104,7 +104,7 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
+void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
@@ -136,7 +136,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType,
                             _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
     }
-    SetFrequencyReg(freq);
+    SetFrequencyReg(regfreq);
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, irqs);
     SetRxTimeoutUs(interval);
 }
@@ -315,24 +315,22 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
 
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq)
 {
-    uint32_t reqfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
+    uint32_t regfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
 
-    SetFrequencyReg(reqfreq);
-
-    currFreq = freq;
+    SetFrequencyReg(regfreq);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t reqfreq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
-    buf[0] = (uint8_t)((reqfreq >> 16) & 0xFF);
-    buf[1] = (uint8_t)((reqfreq >> 8) & 0xFF);
-    buf[2] = (uint8_t)(reqfreq & 0xFF);
+    buf[0] = (uint8_t)((regfreq >> 16) & 0xFF);
+    buf[1] = (uint8_t)((regfreq >> 8) & 0xFF);
+    buf[2] = (uint8_t)(regfreq & 0xFF);
 
     hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf), SX1280_Radio_All);
 
-    currFreq = (double)FREQ_STEP * reqfreq;
+    currFreq = regfreq;
 }
 
 void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
