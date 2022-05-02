@@ -78,6 +78,9 @@
 #ifndef GPIO_PIN_BUFFER_OE
 #define GPIO_PIN_BUFFER_OE UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_SCK
+#define GPIO_PIN_SCK UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
 #endif

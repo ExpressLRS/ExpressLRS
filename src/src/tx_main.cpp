@@ -1038,10 +1038,19 @@ void setup()
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
     #endif
-    bool init_success = Radio.Begin();
-
+    bool init_success;
     #if defined(USE_BLE_JOYSTICK)
-      init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
+    init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.
+    #else
+    if (GPIO_PIN_SCK != UNDEF_PIN)
+    {
+      init_success = Radio.Begin();
+    }
+    else
+    {
+      // Assume BLE Joystick mode if no radio SCK pin
+      init_success = true;
+    }
     #endif
 
     if (!init_success)
