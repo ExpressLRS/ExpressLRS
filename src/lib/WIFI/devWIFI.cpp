@@ -266,7 +266,9 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   s += ",\"modelid\":" + String(config.GetModelId());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
-  s += WebGetPwmStr();
+  if (SERVO_COUNT > 0) {
+    s += WebGetPwmStr();
+  }
   #endif
   s += "}";
   request->send(200, "application/json", s);
