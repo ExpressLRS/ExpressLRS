@@ -61,9 +61,7 @@ void ServoMgr_8266::writeDigital(uint8_t ch, bool value)
         stopPwm(ch);
         // Wait for the last edge, which is at most 1 cycle from now
         delay((_refreshInterval[ch] / 1000U) + 1);
-        Serial.println("OFF");
     }
-    Serial.write('0' + (char)value);
     digitalWrite(pin, value);
 }
 
