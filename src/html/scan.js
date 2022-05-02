@@ -47,8 +47,8 @@ function updatePwmSettings(arPwm)
 {
     if (arPwm === undefined)
         return;
-    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, Mode 0 (50Hz PWM)
-    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Mode</th><th>Input</th><th>Invert?</th><th>Narrow?</th><th>Failsafe</th></tr>'];
+    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
+    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Mode</th><th>Input</th><th>Invert?</th><th>750us?</th><th>Failsafe</th></tr>'];
     arPwm.forEach((item, index) => {
         let failsafe = (item & 1023) + 988; // 10 bits
         let ch = (item >> 10) & 15; // 4 bits
@@ -62,11 +62,12 @@ function updatePwmSettings(arPwm)
         htmlFields.push(`<tr><th>${index+1}</th>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
-        <td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
-        <td><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></td>
-        <td><input id="pwm_${index}_fs" value="${failsafe}" size="4"/></td></tr>`);
+            <td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
+            <td><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></td>
+            <td><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></td></tr>`
+        );
     });
-    htmlFields.push('<tr><td colspan="4"><input type="submit" value="Set PWM Output"></td></tr></table>');
+    htmlFields.push('<tr><td colspan="6"><input type="submit" value="Set PWM Output"></td></tr></table>');
 
     let grp = document.createElement('DIV');
     grp.setAttribute('class', 'group');

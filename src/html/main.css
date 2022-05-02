@@ -1170,6 +1170,8 @@ th {
   .pwmtbl th {
 	text-align: center;
 	font-weight: bold;
+	padding-left: 2px;
+	padding-right: 2px;
   }
   .pwmtbl td {
 	text-align: center;
