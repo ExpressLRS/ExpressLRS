@@ -1,8 +1,8 @@
 {
     "serial_rx": 3,
     "serial_tx": 1,
-    "radio_busy": 4,
-    "radio_dio1": 5,
+    "radio_busy": 5,
+    "radio_dio1": 4,
     "radio_miso": 12,
     "radio_mosi": 13,
     "radio_nss": 15,
