@@ -331,6 +331,8 @@ TxConfig::SetDefaults()
     SetVtxPower(0);
     SetVtxPitmode(0);
     SetPowerFanThreshold(PWR_250mW);
+    SetFanMode(0);
+    SetMotionMode(0);
     Commit();
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
@@ -341,8 +343,6 @@ TxConfig::SetDefaults()
         SetBoostChannel(0);
         SetSwitchMode((uint8_t)smHybrid);
         SetModelMatch(false);
-        SetFanMode(0);
-        SetMotionMode(0);
         Commit();
     }
 

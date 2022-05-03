@@ -50,7 +50,7 @@ static int timeout()
 {
     static unsigned long lastIdleCheckMs = 0;
     unsigned long now = millis();
-    if (gsensor.hasTriggered(now) && (now - lastBumpCommand) > BUMP_COMMAND_IDLE_TIME)
+    if (config.GetMotionMode() == 1 && gsensor.hasTriggered(now) && (now - lastBumpCommand) > BUMP_COMMAND_IDLE_TIME)
     {
         lastBumpTime = now;
         bumps++;
