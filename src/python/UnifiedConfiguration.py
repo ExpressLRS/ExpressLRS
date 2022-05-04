@@ -2,13 +2,13 @@ import json
 import re
 
 def appendConfiguration(source, target, env):
-    config = env.GetProjectOption('hardware_config', 'data/hardware.json')
+    config = env.GetProjectOption('board_hardware', 'data/hardware.json')
     target_name = env.get('PIOENV', '').upper()
     if 'Unified_' in target_name or config is not None:
         parts = re.search('(.*)_VIA_.*', target_name)
         if parts and parts.group(1):
             target_name = parts.group(1).replace('_', ' ')
-        device = env.GetProjectOption('device_name', target_name)
+        device = env.GetProjectOption('board_lua_name', target_name)
         with open(str(target[0]), 'a+b') as f:
             dev = (env.get('DEVICE_NAME', device).encode() + (b'\0' * 16))[0:16]
             f.write(dev)
