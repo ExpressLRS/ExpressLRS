@@ -416,7 +416,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 #endif
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
 {
     rx_status const fail =
         ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) +
@@ -436,7 +436,7 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radi
         hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength, radioNumber);
     }
 
-    RXdoneCallback(fail);
+    return RXdoneCallback(fail);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::RXnb()
@@ -497,16 +497,6 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     LastPacketRSSI += negOffset;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::setGotPacketThisInterval()
-{
-    instance->gotPacketThisInterval = true;
-}
-
-void ICACHE_RAM_ATTR SX1280Driver::clearGotPacketThisInterval()
-{
-    instance->gotPacketThisInterval = false;
-}
-
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
 {
     instance->IsrCallback(SX1280_Radio_1);
@@ -532,9 +522,7 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber
     else
     if (irqStatus & (SX1280_IRQ_RX_DONE | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT))
     {
-        instance->RXnbISR(irqStatus, radioNumber);
-
-        if (instance->gotPacketThisInterval)
+        if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
             instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All); // Packet received so clear all radios and dont spend extra time retrieving data.

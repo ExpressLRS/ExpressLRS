@@ -260,12 +260,12 @@ void DynamicPower_Update()
   dynamic_power_rssi_n = 0;
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
     DBGLN("TLM HW CRC error");
-    return;
+    return false;
   }
   uint16_t const inCRC = (((uint16_t)Radio.RXdataBuffer[0] & 0b11111100) << 6) | Radio.RXdataBuffer[7];
 
@@ -278,13 +278,13 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   if ((inCRC != calculatedCRC))
   {
     DBGLN("TLM crc error");
-    return;
+    return false;
   }
 
   if (type != TLM_PACKET)
   {
     DBGLN("TLM type error %d", type);
-    return;
+    return false;
   }
 
   LastTLMpacketRecvMillis = millis();
@@ -318,6 +318,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
             break;
     }
+
+  return true;
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -687,10 +689,11 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  ProcessTLMpacket(status);
+  bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
+  return packetSuccessful;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()

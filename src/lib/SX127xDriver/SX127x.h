@@ -67,9 +67,6 @@ public:
     int8_t GetCurrRSSI();
     void GetLastPacketStats();
 
-    void setGotPacketThisInterval(){};
-    void clearGotPacketThisInterval(){};
-
     ////////////Non-blocking TX related Functions/////////////////
     void TXnb();
     /////////////Non-blocking RX related Functions///////////////

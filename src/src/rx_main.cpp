@@ -820,7 +820,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     return false;
 }
 
-void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 {
     if (status != SX12xxDriverCommon::SX12XX_RX_OK)
     {
@@ -828,7 +828,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         #if defined(DEBUG_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
-        return;
+        return false;
     }
     uint32_t const beginProcessing = micros();
     uint16_t const inCRC = (((uint16_t)(Radio.RXdataBuffer[0] & 0b11111100)) << 6) | Radio.RXdataBuffer[7];
@@ -858,7 +858,7 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         #if defined(DEBUG_RX_SCOREBOARD)
             lastPacketCrcError = true;
         #endif
-        return;
+        return false;
     }
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
@@ -890,7 +890,6 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     getRFlinkInfo();
     // Received a packet, that's the definition of LQ
     LQCalc.add();
-    Radio.setGotPacketThisInterval();
     // Extend sync duration since we've received a packet at this rate
     // but do not extend it indefinitely
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow;
@@ -900,11 +899,13 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately
+
+    return true;
 }
 
-void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-    ProcessRFPacket(status);
+    return ProcessRFPacket(status);
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()

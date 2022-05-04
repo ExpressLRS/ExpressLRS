@@ -19,11 +19,11 @@ public:
         RXdoneCallback(nullCallbackRx),
         TXdoneCallback(nullCallbackTx) {}
 
-    static void ICACHE_RAM_ATTR nullCallbackRx(rx_status) {}
+    static bool ICACHE_RAM_ATTR nullCallbackRx(rx_status) {return false;}
     static void ICACHE_RAM_ATTR nullCallbackTx() {}
 
     ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(rx_status crcFail); //function pointer for callback
+    bool (*RXdoneCallback)(rx_status crcFail); //function pointer for callback
     void (*TXdoneCallback)(); //function pointer for callback
 
     #define TXRXBuffSize 16
