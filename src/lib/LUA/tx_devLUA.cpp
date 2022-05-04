@@ -130,7 +130,6 @@ static struct luaItem_command luaRxWebUpdate = {
     emptySpace
 };
 
-#if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
     lcsIdle, // step
@@ -142,7 +141,6 @@ static struct luaItem_command luaVRxBackpackUpdate = {
     lcsIdle, // step
     emptySpace
 };
-#endif // USE_TX_BACKPACK
 //---------------------------- WiFi -----------------------------
 
 #if defined(PLATFORM_ESP32)
@@ -597,7 +595,6 @@ static void registerLuaParameters()
     registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
     registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
   }
-
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
