@@ -127,10 +127,10 @@ static void initialize()
 
 static int start()
 {
-#ifdef GPIO_PIN_BACKPACK_EN
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
+    {
         return DURATION_IMMEDIATELY;
-#endif
+    }
     return DURATION_NEVER;
 }
 
