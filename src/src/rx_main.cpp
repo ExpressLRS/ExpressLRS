@@ -956,7 +956,6 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    SerialLogger = &Serial;
     Serial.begin(firmwareOptions.uart_baud);
     if (firmwareOptions.invert_tx)
     {
@@ -964,6 +963,7 @@ static void setupSerial()
     }
 #endif
 
+    SerialLogger = &Serial;
 }
 
 static void setupConfigAndPocCheck()
