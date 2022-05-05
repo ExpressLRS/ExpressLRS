@@ -15,8 +15,6 @@
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
-static const char thisCommit[] = {LATEST_COMMIT, 0};
-static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 static char modelString[] = "000";
 
@@ -51,8 +49,8 @@ static struct luaItem_string luaModelNumber = {
 };
 
 static struct luaItem_string luaELRSversion = {
-    {thisVersion, CRSF_INFO},
-    thisCommit
+    {version, CRSF_INFO},
+    commit
 };
 
 //----------------------------Info-----------------------------------

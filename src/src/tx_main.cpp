@@ -605,6 +605,8 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
   // Resume the timer, will take one hop for the radio to be on the right frequency if we missed a hop
   hwTimer.callbackTock = &timerCallbackNormal;
+  // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
+  luadevUpdateFolderNames();
   devicesTriggerEvent();
 }
 
