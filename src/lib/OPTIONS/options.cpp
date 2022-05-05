@@ -283,7 +283,6 @@ String& getOptions()
 
 bool options_init()
 {
-    SPIFFS.begin(true);
     uint32_t partition_start = 0;
     #if defined(PLATFORM_ESP32)
     const esp_partition_t *running = esp_ota_get_running_partition();
