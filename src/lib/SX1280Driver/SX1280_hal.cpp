@@ -138,6 +138,7 @@ void SX1280Hal::reset(void)
     digitalWrite(GPIO_PIN_RST, LOW);
     delay(50);
     digitalWrite(GPIO_PIN_RST, HIGH);
+    delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
 #endif
 
     BusyDelay(10000); // 10ms delay if GPIO_PIN_BUSY is undefined
