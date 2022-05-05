@@ -16,6 +16,27 @@ CRSF crsf(&ss);
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
 
+void test_ver_to_u32(void)
+{
+    constexpr struct tagVerItem {
+        const char verStr[128];
+        const uint32_t verU32;
+    } VERSION_STRINGS[] = {
+        {{108,117,97,45,102,111,108,100,101,114,45,117,112,100,97,116,101,32,73,83,77,50,71,52,0}, 0}, // lua-folder-update ISM2G4
+        {{0x32, 0x2e, 0x32, 0x2e, 0x31, 0x35, 32,73,83,77,50,71,52,0}, 0x0002020f}, // 2.2.15 ISM2G4
+        {{0x31, 0x2e, 0x32, 0x2e, 0x33, 0x2e, 0x34, 32,73,83,77,50,71,52,0}, 0x01020304}, // 1.2.3.4 ISM2G4
+        {{0x31, 0x30, 0x30, 0x2e, 0x32, 0x35, 0x35, 32,0}, 0x000064ff}, // 100.255(space)
+        {{0}, 0},
+    };
+
+    const struct tagVerItem *ver = VERSION_STRINGS;
+    while (ver->verStr[0])
+    {
+        TEST_ASSERT_EQUAL_HEX32(ver->verU32, CRSF::VersionStrToU32(ver->verStr));
+        ++ver;
+    }
+}
+
 void test_device_info(void)
 {
     uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
@@ -50,6 +71,7 @@ void test_device_info(void)
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_ver_to_u32);
     RUN_TEST(test_device_info);
     UNITY_END();
 
