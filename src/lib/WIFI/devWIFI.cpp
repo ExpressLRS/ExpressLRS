@@ -222,11 +222,14 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
+  static size_t bytes;
   if (!file || request->url() != file.name()) {
     file = SPIFFS.open(request->url(), "w");
+    bytes = 0;
   }
   file.write(data, len);
-  if (file.size() == total) {
+  bytes += len;
+  if (bytes == total) {
     file.close();
   }
 }

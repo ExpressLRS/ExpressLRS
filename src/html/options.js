@@ -47,8 +47,20 @@ function submitOptions(e) {
   xhr.open('POST', '/options.json')
   xhr.setRequestHeader("Content-Type", "application/json");
   var formData = new FormData(_("upload_options"));
-  xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v){ return v === "" ? undefined : (isNaN(v) ? v : +v); }));
-  xhr.onreadystatechange = function () {
+  xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v){
+    if (v === '') return undefined;
+    if (_(k) && _(k).type == 'checkbox') {
+        return v == 'on' ? true : false;
+    }
+    if (k.endsWith('_values')) {
+        const arr = v.split(',').map(element => {
+            return Number(element);
+        });
+        return arr.length == 0 ? undefined : arr;
+    }
+    return isNaN(v) ? v : +v;
+}));
+xhr.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
       cuteAlert({
         type: 'question',
