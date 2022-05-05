@@ -202,9 +202,6 @@ const char PROGMEM compile_options[] = {
     #ifdef AUTO_WIFI_ON_INTERVAL
         "-DAUTO_WIFI_ON_INTERVAL=" STR(AUTO_WIFI_ON_INTERVAL) " "
     #endif
-    #ifdef USE_DIVERSITY
-        "-DUSE_DIVERSITY "
-    #endif
     #ifdef RCVR_UART_BAUD
         "-DRCVR_UART_BAUD=" STR(RCVR_UART_BAUD) " "
     #endif

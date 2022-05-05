@@ -474,76 +474,79 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 // no-op if GPIO_PIN_ANTENNA_SELECT not defined
 static inline void switchAntenna()
 {
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    if(config.GetAntennaMode() == 2){
-    //0 and 1 is use for gpio_antenna_select
-    // 2 is diversity
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN && config.GetAntennaMode() == 2)
+    {
+        // 0 and 1 is use for gpio_antenna_select
+        // 2 is diversity
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
     }
-#endif
 }
 
 static void ICACHE_RAM_ATTR updateDiversity()
 {
 
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    if(config.GetAntennaMode() == 2){
-    //0 and 1 is use for gpio_antenna_select
-    // 2 is diversity
-        static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
-        static int32_t antennaLQDropTrigger;
-        static int32_t antennaRSSIDropTrigger;
-        int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.value() : LPF_UplinkRSSI1.value();
-        int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.value() : LPF_UplinkRSSI0.value();
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    {
+        if(config.GetAntennaMode() == 2)
+        {
+            // 0 and 1 is use for gpio_antenna_select
+            // 2 is diversity
+            static int32_t prevRSSI;        // saved rssi so that we can compare if switching made things better or worse
+            static int32_t antennaLQDropTrigger;
+            static int32_t antennaRSSIDropTrigger;
+            int32_t rssi = (antenna == 0) ? LPF_UplinkRSSI0.value() : LPF_UplinkRSSI1.value();
+            int32_t otherRSSI = (antenna == 0) ? LPF_UplinkRSSI1.value() : LPF_UplinkRSSI0.value();
 
-        //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
-        if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER)) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
-        {
-            switchAntenna();
-            antennaLQDropTrigger = 1;
-            antennaRSSIDropTrigger = 0;
-        }
-        else if (rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL)
-        {
-            prevRSSI = rssi;
-            antennaRSSIDropTrigger++;
-        }
-
-        // if we didn't get a packet switch the antenna
-        if (!LQCalc.currentIsSet() && antennaLQDropTrigger == 0)
-        {
-            switchAntenna();
-            antennaLQDropTrigger = 1;
-            antennaRSSIDropTrigger = 0;
-        }
-        else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
-        {
-            // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
-            // We can compare the rssi values and see if we made things better or worse when we switched
-            if (rssi < otherRSSI)
+            //if rssi dropped by the amount of DIVERSITY_ANTENNA_RSSI_TRIGGER
+            if ((rssi < (prevRSSI - DIVERSITY_ANTENNA_RSSI_TRIGGER)) && antennaRSSIDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
             {
-                // things got worse when we switched, so change back.
                 switchAntenna();
                 antennaLQDropTrigger = 1;
                 antennaRSSIDropTrigger = 0;
             }
-            else
+            else if (rssi > prevRSSI || antennaRSSIDropTrigger < DIVERSITY_ANTENNA_INTERVAL)
             {
-                // all good, we can stay on the current antenna. Clear the flag.
-                antennaLQDropTrigger = 0;
+                prevRSSI = rssi;
+                antennaRSSIDropTrigger++;
+            }
+
+            // if we didn't get a packet switch the antenna
+            if (!LQCalc.currentIsSet() && antennaLQDropTrigger == 0)
+            {
+                switchAntenna();
+                antennaLQDropTrigger = 1;
+                antennaRSSIDropTrigger = 0;
+            }
+            else if (antennaLQDropTrigger >= DIVERSITY_ANTENNA_INTERVAL)
+            {
+                // We switched antenna on the previous packet, so we now have relatively fresh rssi info for both antennas.
+                // We can compare the rssi values and see if we made things better or worse when we switched
+                if (rssi < otherRSSI)
+                {
+                    // things got worse when we switched, so change back.
+                    switchAntenna();
+                    antennaLQDropTrigger = 1;
+                    antennaRSSIDropTrigger = 0;
+                }
+                else
+                {
+                    // all good, we can stay on the current antenna. Clear the flag.
+                    antennaLQDropTrigger = 0;
+                }
+            }
+            else if (antennaLQDropTrigger > 0)
+            {
+                antennaLQDropTrigger ++;
             }
         }
-        else if (antennaLQDropTrigger > 0)
+        else
         {
-            antennaLQDropTrigger ++;
+            digitalWrite(GPIO_PIN_ANTENNA_SELECT, config.GetAntennaMode());
+            antenna = config.GetAntennaMode();
         }
-    }else {
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, config.GetAntennaMode());
-        antenna = config.GetAntennaMode();
     }
-#endif
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
