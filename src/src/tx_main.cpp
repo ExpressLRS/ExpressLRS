@@ -991,7 +991,6 @@ void setup()
   #if defined(TARGET_UNIFIED_TX)
   LoggingBackpack = new HardwareSerial(1);
   ((HardwareSerial *)LoggingBackpack)->begin(420000, SERIAL_8N1, 3, 1);
-  SPIFFS.begin();
   hardware_success = options_init();
   if (!hardware_success)
   {
