@@ -1,0 +1,430 @@
+{
+    "axis": {
+        "tx_2400": {
+            "thor": {
+                "product_name": "AXIS Thor 2.4GHz TX",
+                "lua_name": "AXIS THOR 2400TX",
+                "layout_file": "AXIS Thor 2400.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "thor": {
+                "product_name": "AXIS Thor 2.4GHz RX",
+                "lua_name": "AXIS THOR 2400RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "betafpv": {
+        "tx_900": {
+            "nano900": {
+                "product_name": "BETAFPV 900MHz Nano TX",
+                "lua_name": "BETAFPV 900Nano",
+                "layout_file": "BETAFPV 900 Nano.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "micro900": {
+                "product_name": "BETAFPV 900MHz Micro TX",
+                "lua_name": "BETAFPV 900Micro",
+                "layout_file": "BETAFPV 900 Micro.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "BETAFPV 900MHz RX",
+                "lua_name": "BETAFPV 900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "nano2g4": {
+                "product_name": "BETAFPV 2.4GHz Nano TX",
+                "lua_name": "BETAFPV 2G4Nano",
+                "layout_file": "BETAFPV 2400 Nano.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "micro2g4": {
+                "product_name": "BETAFPV 2.4GHz Micro TX",
+                "lua_name": "BETAFPV2G4Micro",
+                "layout_file": "BETAFPV 2400 Micro.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "micro1w": {
+                "product_name": "BETAFPV 2.4GHz 1W Micro TX",
+                "lua_name": "BFPV 2G4Micro1W",
+                "layout_file": "BETAFPV 2400 Micro 1W.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "nano": {
+                "product_name": "BETAFPV 2.4GHz Nano RX",
+                "lua_name": "BFPV Nano 2G4RX",
+                "layout_file": "BETAFPV Nano 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "diy": {
+        "tx_900": {
+            "ttgov1": {
+                "product_name": "DIY TTGO V1 900MHz TX",
+                "lua_name": "DIY900 TTGO V1",
+                "layout_file": "DIY 900 TTGO V1.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "ttgov2": {
+                "product_name": "DIY TTGO V2 900MHz TX",
+                "lua_name": "DIY900 TTGO V2",
+                "layout_file": "DIY 900 TTGO V2.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "e19": {
+                "product_name": "DIY ESP32 + E19 900MHz TX",
+                "lua_name": "DIY900 E19",
+                "layout_file": "DIY 900 E19.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "rfm95": {
+                "product_name": "DIY ESP32 + RFM95 900MHz TX",
+                "lua_name": "DIY900 RFM95",
+                "layout_file": "DIY 900 RFM95.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_900": {
+            "huzzah": {
+                "product_name": "DIY Huzzah + RFM95 900MHz TX",
+                "lua_name": "ELRS RFM95 900RX",
+                "layout_file": "DIY Huzzah RFM95.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "mini": {
+                "product_name": "DIY Mini ESP32 + SX1280 2.4GHz TX",
+                "lua_name": "DIY2400 Mini",
+                "layout_file": "DIY 2400 Mini.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "e28": {
+                "product_name": "DIY ESP32 + E28 2.4GHz TX",
+                "lua_name": "DIY2400 E28",
+                "layout_file": "DIY 2400 E28.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "f27": {
+                "product_name": "DIY ESP32 + F27 2.4GHz TX",
+                "lua_name": "DIY2400 F27",
+                "layout_file": "DIY 2400 F27.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "ble": {
+                "product_name": "DIY ESP32 BLE Joystick TX",
+                "lua_name": "DIY BLE Joystick",
+                "layout_file": "DIY 2400 BLE Joystick.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "generic": {
+        "rx_900": {
+            "plain": {
+                "product_name": "Generic ESP8285 + SX127x 900MHz RX",
+                "lua_name": "ELRS 900RX",
+                "layout_file": ".json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "pwmp": {
+                "product_name": "Generic ESP8285 + SX127x with PWM 900MHz RX",
+                "lua_name": "ELRS PWMP 900RX",
+                "layout_file": "Generic 900 PWMP.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "dupletx": {
+                "product_name": "Generic Full-duplex 2.4GHz TX",
+                "lua_name": "DupleTX",
+                "layout_file": "DIY 2400 DupleTX.json",
+                "upload_methods": ["uart", "wifi", "etx"]
+            }
+        },
+        "rx_2400": {
+            "plain": {
+                "product_name": "Generic ESP8285 2.4Ghz RX",
+                "lua_name": "ELRS 2400RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "vtx": {
+                "product_name": "Generic ESP8285 + VTx 2.4Ghz RX",
+                "lua_name": "ELRS+VTx 2400RX",
+                "layout_file": "Generic 2400 VTX.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "pwm5": {
+                "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
+                "lua_name": "ELRS+PWM 2400RX",
+                "layout_file": "Generic 2400 PWMP5.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "pwm6": {
+                "product_name": "Generic ESP8285 + 6xPWM 2.4Ghz RX",
+                "lua_name": "ELRS+PWM 2400RX",
+                "layout_file": "Generic 2400 PWMP6.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "pwm7": {
+                "product_name": "Generic ESP8285 + 7xPWM 2.4Ghz RX",
+                "lua_name": "ELRS+PWM 2400RX",
+                "layout_file": "Generic 2400 PWMP7.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "happymodel": {
+        "tx_900": {
+            "es900": {
+                "product_name": "HappyModel ES900 TX",
+                "lua_name": "HM ES900TX",
+                "layout_file": "HappyModel ES900.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_900": {
+            "es900": {
+                "product_name": "HappyModel ES900 RX",
+                "lua_name": "HM ES900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "es24": {
+                "product_name": "HappyModel ES24 2.4GHz TX",
+                "lua_name": "HM ES24TX",
+                "layout_file": "HappyModel ES24.json",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "es24pro": {
+                "product_name": "HappyModel ES24 Pro 2.4GHz TX",
+                "lua_name": "HM ES24TX Pro",
+                "layout_file": "HappyModel ES24 Pro.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "ep": {
+                "product_name": "HappyModel EP1/2 2.4GHz RX",
+                "lua_name": "HM EP 2400",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "hglrc": {
+        "rx_900": {
+            "hermes": {
+                "product_name": "HGLRC Hermes 900MHz RX",
+                "lua_name": "HGLRC Hermes 900",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "target": {
+                "product_name": "HGLRC Hermes 2.4GHz TX",
+                "lua_name": "HGLRC Hermes",
+                "layout_file": "HGLRC Hermes 2400.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "hermes": {
+                "product_name": "HGLRC Hermes 2.4GHz RX",
+                "lua_name": "HGLRC Hermes 2G4",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "iflight": {
+        "tx_900": {
+            "plain": {
+                "product_name": "iFlight 900MHz TX",
+                "lua_name": "iFlight 900TX",
+                "layout_file": "iFlight 900.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "iFlight 900MHz RX",
+                "lua_name": "iFlight 900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "plain": {
+                "product_name": "iFlight 2.4GHz TX",
+                "lua_name": "iFlight 2400TX",
+                "layout_file": "iFlight 2400.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "plain": {
+                "product_name": "iFlight 2.4GHz RX",
+                "lua_name": "iFlight 2400RX",
+                "layout_file": "iFlight 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "jumper": {
+        "tx_2400": {
+            "t-pro": {
+                "product_name": "Jumper AION T-Pro 2.4GHz TX",
+                "lua_name": "AION T-Pro TX",
+                "layout_file": "Jumper T-Pro.json",
+                "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "nano": {
+                "product_name": "Jumper AION Nano 2.4GHz TX",
+                "lua_name": "AION 2G4NANO TX",
+                "layout_file": "Jumper AION Nano.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "matek": {
+        "rx_2400": {
+            "r24d": {
+                "product_name": "MATEK R24-D 2.4GHz RX",
+                "lua_name": "MATEK R24-D",
+                "layout_file": "MATEK 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "r24s": {
+                "product_name": "MATEK R24-S 2.4GHz RX",
+                "lua_name": "MATEK R24-S",
+                "layout_file": "MATEK 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "r24p": {
+                "product_name": "MATEK R24-P PWM 2.4GHz RX",
+                "lua_name": "MATEK R24-P",
+                "layout_file": "Generic 2400 PWMP5.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "namimnorc": {
+        "tx_900": {
+            "voyager": {
+                "product_name": "NamimnoRC Voyager 900MHz TX",
+                "lua_name": "NM Voyager OLED",
+                "layout_file": "Namimno Voyager OLED.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_900": {
+            "voyager": {
+                "product_name": "NamimnoRC Voyager 900MHz RX",
+                "lua_name": "Namimno 900RX",
+                "layout_file": "Namimno VOYAGER 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "tx_2400": {
+            "flash": {
+                "product_name": "NamimnoRC Flash 2.4GHz TX",
+                "lua_name": "NM Flash OLED",
+                "layout_file": "Namimno Flash OLED.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "flash": {
+                "product_name": "NamimnoRC Flash 2.4GHz RX",
+                "lua_name": "Namimno 2400RX",
+                "layout_file": "Namimno FLASH 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "flash-pa": {
+                "product_name": "NamimnoRC Flash 100mW 2.4GHz RX",
+                "lua_name": "Namimno 2400RX",
+                "layout_file": "Namimno FLASH 2400 PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "neutronrc": {
+        "rx_900": {
+            "plain": {
+                "product_name": "NeutronRC 900MHz RX",
+                "lua_name": "NeutronRC 900",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "quadkopters": {
+        "tx_2400": {
+            "jr": {
+                "product_name": "QuadKopters JR 2.4GHz TX",
+                "lua_name": "QuadKopters 2G4",
+                "layout_file": "QuadKopters JR 2400.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "nano": {
+                "product_name": "QuadKopters Nano 2.4GHz RX",
+                "lua_name": "QuadKopters 2G4",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
+    "radiomaster": {
+        "tx_2400": {
+            "zorro": {
+                "product_name": "RadioMaster Zorro 2.4GHz TX",
+                "lua_name": "RadioMstr Zorro",
+                "layout_file": "Radiomaster Zorro.json",
+                "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "tx16s": {
+                "product_name": "RadioMaster TX16S Internal 2.4GHz TX",
+                "lua_name": "RadioMstr TX16S",
+                "layout_file": "Radiomaster TX16S 2400.json",
+                "upload_methods": ["uart", "wifi", "etx"]
+            }
+        }
+    },
+    "vantac": {
+        "tx_2400": {
+            "lite": {
+                "product_name": "Vantac Lite 2.4GHz TX",
+                "lua_name": "Vantac Lite 2G4",
+                "layout_file": "Vantac Lite.json",
+                "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx_2400": {
+            "plain": {
+                "product_name": "Vantac 2.4GHz RX",
+                "lua_name": "Vantac 2400 RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    }
+}
