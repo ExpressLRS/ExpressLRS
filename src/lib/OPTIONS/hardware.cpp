@@ -133,6 +133,8 @@ String& getHardware()
 
 bool hardware_init(uint32_t *config)
 {
+    constexpr size_t hardwareConfigOffset = 128 + 16 + 512;
+
     for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
         switch (fields[i].type) {
             case INT:
@@ -165,7 +167,7 @@ bool hardware_init(uint32_t *config)
             return false;
         }
         builtinHardwareConfig.clear();
-        DeserializationError error = deserializeJson(doc, ((const char *)config) + 16 + 512, strnlen(((const char *)config) + 16 + 512, 2048));
+        DeserializationError error = deserializeJson(doc, ((const char *)config) + hardwareConfigOffset, strnlen(((const char *)config) + hardwareConfigOffset, 2048));
         if (error) {
             return false;
         }

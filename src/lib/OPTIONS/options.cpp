@@ -23,6 +23,7 @@ const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 const char device_name[] = DEVICE_NAME;
+const char *product_name = (const char *)(target_name+4);
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
@@ -226,6 +227,7 @@ const char PROGMEM compile_options[] = {
 #include "esp_ota_ops.h"
 #endif
 
+char product_name[129];
 char device_name[17];
 
 const char PROGMEM compile_options[] = "";
@@ -294,34 +296,24 @@ bool options_init()
 
     bool hardware_inited = hardware_init(buf);
 
-    File file = SPIFFS.open("/device.ini", "r");
-    if (!file || file.isDirectory())
+    if (buf[0] != 0xFFFFFFFF)
     {
-        if (buf[0] != 0xFFFFFFFF)
-        {
-            strlcpy(device_name, (const char *)buf, sizeof(device_name));
-        }
-        else
-        {
-            #if defined(TARGET_UNIFIED_RX)
-            strcpy(device_name, "Unified RX");
-            #else
-            strcpy(device_name, "Unified TX");
-            #endif
-        }
+        strlcpy(product_name, (const char *)buf, sizeof(product_name));
+        strlcpy(device_name, (const char *)buf + 128, sizeof(device_name));
     }
     else
     {
-        int pos = file.readBytesUntil('\n', device_name, sizeof(device_name)-1);
-        device_name[pos] = 0;
-    }
-    if (file)
-    {
-        file.close();
+        #if defined(TARGET_UNIFIED_RX)
+        strcpy(product_name, "Unified RX");
+        strcpy(device_name, "Unified RX");
+        #else
+        strcpy(product_name, "Unified TX");
+        strcpy(device_name, "Unified TX");
+        #endif
     }
 
     DynamicJsonDocument doc(1024);
-    file = SPIFFS.open("/options.json", "r");
+    File file = SPIFFS.open("/options.json", "r");
     if (!file || file.isDirectory())
     {
         if (file)
@@ -330,7 +322,7 @@ bool options_init()
         }
         // Try JSON at the end of the firmware
         builtinOptions.clear();
-        DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16, strnlen(((const char *)buf) + 16, 512));
+        DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16 + 128, strnlen(((const char *)buf) + 16 + 128, 512));
         if (error)
         {
             return false;

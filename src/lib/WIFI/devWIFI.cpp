@@ -240,8 +240,6 @@ static void getFile(AsyncWebServerRequest *request)
     request->send(200, "application/json", getOptions());
   } else if (request->url() == "/hardware.json") {
     request->send(200, "application/json", getHardware());
-  } else if (request->url() == "/device.ini") {
-    request->send(200, "tex/plain", device_name);
   } else {
     request->send(SPIFFS, request->url().c_str(), "text/plain", true);
   }
@@ -273,13 +271,19 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
     s += WebGetPwmStr();
   }
   #endif
+  s += ",\"product_name\": \"" + String(product_name) + "\"";
+  s += ",\"lua_name\": \"" + String(device_name) + "\"";
   s += "}";
   request->send(200, "application/json", s);
 }
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
+  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\"" +
+    ",\"version\": \"" + VERSION + "\"" +
+    ",\"product_name\": \"" + product_name + "\"" +
+    ",\"lua_name\": \"" + device_name + "\"" +
+    "}";
   request->send(200, "application/json", s);
 }
 
@@ -709,7 +713,6 @@ static void startServices()
     server.on("/elrs.css", WebUpdateSendContent);
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
-    server.on("/device.ini", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
   #endif
 

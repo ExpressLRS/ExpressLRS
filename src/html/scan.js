@@ -88,6 +88,8 @@ function get_mode() {
             }
             if (data.modelid !== undefined)
                 _('modelid').value = data.modelid;
+            if (data.product_name !== undefined)
+                _('product_name').textContent = data.product_name;
             updatePwmSettings(data.pwm);
         }
     };

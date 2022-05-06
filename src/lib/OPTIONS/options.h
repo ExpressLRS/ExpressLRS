@@ -53,6 +53,7 @@ typedef struct _options {
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 extern firmware_options_t firmwareOptions;
+extern char product_name[];
 extern char device_name[];
 extern bool options_init();
 extern String& getOptions();
@@ -60,4 +61,5 @@ extern String& getHardware();
 #else
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];
+extern const char *product_name;
 #endif
