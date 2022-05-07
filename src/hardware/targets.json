@@ -187,6 +187,24 @@
             }
         }
     },
+    "geprc": {
+        "rx_900": {
+            "nano": {
+                "product_name": "GEPRC Nano 900MHz RX",
+                "lua_name": "GEPRC Nano RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "rx_2400": {
+            "nano": {
+                "product_name": "GEPRC Nano(SE) 2.4GHz RX",
+                "lua_name": "GEPRC Nano RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        }
+    },
     "happymodel": {
         "tx_900": {
             "es900": {
