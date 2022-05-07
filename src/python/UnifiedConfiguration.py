@@ -18,15 +18,22 @@ def appendToFirmware(firmware_file, product_name, lua_name, options, layout_file
                     hardware = json.load(h)
                     f.write(json.JSONEncoder().encode(hardware).encode())
             except EnvironmentError:
-                None
+                sys.stderr.write(f'Error opening file "{layout_file}"\n')
+                exit(1)
         f.write(b'\0')
 
 
 def appendConfiguration(source, target, env):
     target_name = env.get('PIOENV', '').upper()
-    moduletype = 'tx' if '_TX_' in target_name else 'rx'
-    frequency = '2400' if '_2400_' in target_name else '900'
     config = env.GetProjectOption('board_config', None)
+    moduletype = ''
+    frequency = ''
+    if config is not None:
+        moduletype = 'tx' if '.tx_' in config else 'rx'
+        frequency = '2400' if '_2400.' in config else '900'
+    else:
+        moduletype = 'tx' if '_TX_' in target_name else 'rx'
+        frequency = '2400' if '_2400_' in target_name else '900'
 
     if 'UNIFIED_' not in target_name and config is None:
         return

@@ -136,7 +136,7 @@
             "plain": {
                 "product_name": "Generic ESP8285 + SX127x 900MHz RX",
                 "lua_name": "ELRS 900RX",
-                "layout_file": ".json",
+                "layout_file": "Generic 900.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "pwmp": {
