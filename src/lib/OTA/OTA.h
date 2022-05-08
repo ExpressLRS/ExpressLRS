@@ -30,10 +30,9 @@ typedef struct {
         struct {
             uint8_t fhssIndex;
             uint8_t nonce;
-            uint8_t free:1,
-                    switchEncMode:2,
+            uint8_t switchEncMode:2,
                     newTlmRatio:3,
-                    rateIndex:2;
+                    rateIndex:3;
             uint8_t UID3;
             uint8_t UID4;
             uint8_t UID5;

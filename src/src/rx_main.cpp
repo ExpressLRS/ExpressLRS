@@ -813,7 +813,10 @@ void ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     {
         otaPktPtr->crcHigh = NonceRX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
     }
-    otaPktPtr->crcHigh = 0; // Clear received CRC
+    else
+    {
+        otaPktPtr->crcHigh = 0; // Clear received CRC
+    }
     uint16_t const calculatedCRC =
         ota_crc.calc((uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
 
