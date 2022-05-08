@@ -35,6 +35,9 @@ extern RxConfig config;
 #endif
 extern unsigned long rebootTime;
 
+static char station_ssid[33];
+static char station_password[65];
+
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
@@ -48,6 +51,13 @@ static const byte DNS_PORT = 53;
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
+
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#include "tcpsocket.h"
+TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
+#include "CRSF.h"
+extern CRSF crsf;
+#endif
 
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
@@ -182,7 +192,7 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
-  String s = String("{\"ssid\":\"") + config.GetSSID() + "\",\"mode\":\"";
+  String s = String("{\"ssid\":\"") + station_ssid + "\",\"mode\":\"";
   if (wifiMode == WIFI_STA) {
     s += "STA\"";
   } else {
@@ -246,7 +256,7 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
-  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
+  String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
@@ -257,9 +267,14 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String password = request->arg("password");
 
   DBGLN("Setting home network %s", ssid.c_str());
-  config.SetSSID(ssid.c_str());
-  config.SetPassword(password.c_str());
-  config.Commit();
+  strcpy(station_ssid, ssid.c_str());
+  strcpy(station_password, password.c_str());
+  // Only save to config if we don't have a flashed wifi network
+  if (home_wifi_ssid[0] == 0) {
+    config.SetSSID(ssid.c_str());
+    config.SetPassword(password.c_str());
+    config.Commit();
+  }
   WebUpdateConnect(request);
 }
 
@@ -269,8 +284,19 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetSSID("");
   config.SetPassword("");
   config.Commit();
-  String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
-  sendResponse(request, msg, WIFI_AP);
+  // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
+  if (home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, home_wifi_ssid);
+    strcpy(station_password, home_wifi_password);
+    String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
+    sendResponse(request, msg, WIFI_STA);
+  }
+  else {
+    station_ssid[0] = 0;
+    station_password[0] = 0;
+    String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
+    sendResponse(request, msg, WIFI_AP);
+  }
 }
 
 #if defined(TARGET_RX)
@@ -329,7 +355,13 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to resume blinking before disconnecting power.\"}");
+      String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
+      #if defined(TARGET_RX)
+        success += "Please wait for the LED to resume blinking before disconnecting power.\"}";
+      #else
+        success += "Please wait for a few seconds while the device reboots.\"}";
+      #endif
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
@@ -413,7 +445,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
     if (Update.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn resume blinking before disconnecting power", totalSize);
+      DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
     } else {
       Update.printError(LOGGING_UART);
     }
@@ -498,15 +530,19 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
-    config.SetSSID(home_wifi_ssid);
-    config.SetPassword(home_wifi_password);
-    config.Commit();
+  if (home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, home_wifi_ssid);
+    strcpy(station_password, home_wifi_password);
   }
-  if (config.GetSSID()[0]==0) {
+  else {
+    strcpy(station_ssid, config.GetSSID());
+    strcpy(station_password, config.GetPassword());
+  }
+  if (station_ssid[0] == 0) {
     changeTime = now;
     changeMode = WIFI_AP;
-  } else {
+  }
+  else {
     changeTime = now;
     changeMode = WIFI_STA;
   }
@@ -607,6 +643,9 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
+  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  wifi2tcp.begin();
+  #endif
 }
 
 static void HandleWebUpdate()
@@ -653,12 +692,12 @@ static void HandleWebUpdate()
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", config.GetSSID());
+        DBGLN("Connecting to home network '%s'", station_ssid);
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
         changeTime = now;
-        WiFi.begin(config.GetSSID(), config.GetPassword());
+        WiFi.begin(station_ssid, station_password);
         startServices();
       default:
         break;
@@ -680,6 +719,31 @@ static void HandleWebUpdate()
     if (!Update.isRunning())
       delay(1);
   }
+}
+
+void HandleMSP2WIFI()
+{
+  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  // check is there is any data to write out
+  if (crsf.crsf2msp.FIFOout.peekSize() > 0)
+  {
+    const uint16_t len = crsf.crsf2msp.FIFOout.popSize();
+    uint8_t data[len];
+    crsf.crsf2msp.FIFOout.popBytes(data, len);
+    wifi2tcp.write(data, len);
+  }
+
+  // check if there is any data to read in
+  const uint16_t bytesReady = wifi2tcp.bytesReady();
+  if (bytesReady > 0)
+  {
+    uint8_t data[bytesReady];
+    wifi2tcp.read(data);
+    crsf.msp2crsf.parse(data, bytesReady);
+  }
+
+  wifi2tcp.handle();
+  #endif
 }
 
 static int start()
@@ -710,6 +774,7 @@ static int timeout()
   if (wifiStarted)
   {
     HandleWebUpdate();
+    HandleMSP2WIFI();
     return DURATION_IMMEDIATELY;
   }
 

@@ -7,9 +7,14 @@
 #include "msp.h"
 #include "logging.h"
 
-extern bool ICACHE_RAM_ATTR IsArmed();
+#define PITMODE_OFF     0
+#define PITMODE_ON      1
+
 extern CRSF crsf;
 extern Stream *LoggingBackpack;
+uint8_t pitmodeAuxState = 0;
+
+extern bool ICACHE_RAM_ATTR IsArmed();
 
 static enum VtxSendState_e
 {
@@ -23,6 +28,24 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     devicesTriggerEvent();
+}
+
+void VtxPitmodeSwitchUpdate()
+{
+    if (config.GetVtxPitmode() == PITMODE_OFF)
+    {
+        return;
+    }
+
+    uint8_t auxInverted = config.GetVtxPitmode() % 2;
+    uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
+    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelDataIn[auxNumber]) ^ auxInverted;
+
+    if (pitmodeAuxState != currentPitmodeAuxState)
+    {
+        pitmodeAuxState = currentPitmodeAuxState;
+        VtxTriggerSend();
+    }
 }
 
 static void eepromWriteToMSPOut()
@@ -47,11 +70,23 @@ static void VtxConfigToMSPOut()
     packet.addByte(0);
     if (config.GetVtxPower()) {
         packet.addByte(config.GetVtxPower());
-        packet.addByte(config.GetVtxPitmode());
+
+        if (config.GetVtxPitmode() == PITMODE_OFF || config.GetVtxPitmode() == PITMODE_ON)
+        {
+            packet.addByte(config.GetVtxPitmode());
+        }
+        else
+        {
+            packet.addByte(pitmodeAuxState);
+        }
     }
 
     crsf.AddMspMessage(&packet);
-    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
+
+    if (!IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    {
+        MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
+    }
 }
 
 static int event()
@@ -72,8 +107,7 @@ static int event()
 static int timeout()
 {
     // 0 = off in the lua Band field
-    // Do not send while armed
-    if (config.GetVtxBand() == 0 || IsArmed())
+    if (config.GetVtxBand() == 0)
     {
         VtxSendState = VTXSS_CONFIRMED;
         return DURATION_NEVER;

@@ -50,6 +50,11 @@ typedef struct {
             uint8_t switches;
         } rc;
         struct {
+            uint32_t packetNum;
+            uint8_t free1;
+            uint8_t free2;
+        } PACKED dbg_linkstats;
+        struct {
             uint8_t packageIndex;
             uint8_t payload[ELRS_TELEMETRY_BYTES_PER_CALL];
         } msp_ul;
@@ -90,6 +95,10 @@ void OtaSetHybrid8NextSwitchIndex(uint8_t idx);
 #if defined(TARGET_RX) || defined(UNIT_TEST)
 typedef std::function<bool (OTA_Packet_s const * const otaPktPtr, CRSF * const crsf, uint8_t nonce, uint8_t tlmDenom)> UnpackChannelData_t;
 extern UnpackChannelData_t UnpackChannelData;
+#endif
+
+#if defined(DEBUG_RCVR_LINKSTATS)
+extern uint32_t debugRcvrLinkstatsPacketId;
 #endif
 
 #endif // H_OTA

@@ -1,23 +1,11 @@
-#include "targets.h"
-#include "common.h"
+#include "rxtx_common.h"
 
-#include "LBT.h"
-#include "CRSF.h"
 #include "lua.h"
-
-#include "FHSS.h"
-#include "logging.h"
-#include "POWERMGNT.h"
 #include "msp.h"
-#include <OTA.h>
-#include "config.h"
-#include "hwTimer.h"
-#include "LQCALC.h"
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
-#include "helpers.h"
 #include "devCRSF.h"
 #include "devLED.h"
 #include "devScreen.h"
@@ -74,7 +62,6 @@ LQCALC<10> LQCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
-volatile bool connectionHasModelMatch = true;
 
 bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
@@ -171,9 +158,27 @@ bool ICACHE_RAM_ATTR IsArmed()
 // Assume this function is called inside loop(). Heavy functions goes here.
 void DynamicPower_Update()
 {
+  bool doUpdate = dynamic_power_updated;
+  dynamic_power_updated = false;
+
+  // Get the RSSI from the selected antenna.
+  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
+
+  if (doUpdate && (rssi >= -5)) { // power is too strong and saturate the RX LNA
+    DBGVLN("Power decrease due to the power blast");
+    POWERMGNT.decPower();
+  }
+
+  // When not using dynamic power, return here
   if (!config.GetDynamicPower()) {
+    // if RSSI is dropped enough, inc power back to the configured power
+    if (doUpdate && (rssi <= -20)) {
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
     return;
   }
+
+  // The rest of the codes should be executeded only if dynamic power config is enabled
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
@@ -187,9 +192,8 @@ void DynamicPower_Update()
   }
 
   // if telemetry is not arrived, quick return.
-  if (!dynamic_power_updated)
+  if (!doUpdate)
     return;
-  dynamic_power_updated = false;
 
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
@@ -210,10 +214,6 @@ void DynamicPower_Update()
 
   // =============  RSSI-based power adjustment ==============
   // It is working slowly, suitable for a general long-range flights.
-
-  // Get the RSSI from the selected antenna.
-  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
-
   dynamic_power_rssi_sum += rssi;
   dynamic_power_rssi_n++;
 
@@ -235,7 +235,7 @@ void DynamicPower_Update()
     POWERMGNT.incPower();
   }
   if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
-    DBGVLN("Power decrease"); // Note: Verbose debug only - to prevent spamming when on a high telemetry ratio.
+    DBGVLN("Power decrease");  // Print this on verbose only, to prevent spamming when on a high telemetry ratio
     dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
     POWERMGNT.decPower();
   }
@@ -244,14 +244,19 @@ void DynamicPower_Update()
   dynamic_power_rssi_n = 0;
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket()
+void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
+  if (status != SX12xxDriverCommon::SX12XX_RX_OK)
+  {
+    DBGLN("TLM HW CRC error");
+    return;
+  }
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s*)&Radio.RXdataBuffer[0];
   uint16_t const inCRC = ((uint16_t)otaPktPtr->crcHigh << 8) + otaPktPtr->crcLow;
 
   otaPktPtr->crcHigh = 0;
   uint16_t const calculatedCRC =
-      ota_crc.calc((uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
+    ota_crc.calc((uint8_t*)otaPktPtr, OTA_CRC_CALC_LEN, CRCInitializer);
 
   if ((inCRC != calculatedCRC))
   {
@@ -330,21 +335,21 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Packet_s * const syncPktPtr)
   }
 }
 
-uint8_t adjustPacketRateForBaud(uint8_t rate)
+uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
-  #if defined(Regulatory_Domain_ISM_2400)
+  #if defined(RADIO_SX128X)
     // Packet rate limited to 250Hz if we are on 115k baud
     if (crsf.GetCurrentBaudRate() == 115200) {
-      while(rate < RATE_MAX) {
-        expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
-        if (ModParams->enum_rate >= RATE_250HZ) {
+      while (rateIndex < RATE_MAX) {
+        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
+        if (ModParams->enum_rate <= RATE_LORA_250HZ) {
           break;
         }
-        rate++;
+        rateIndex++;
       }
     }
   #endif
-  return rate;
+  return rateIndex;
 }
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
@@ -359,15 +364,23 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     return;
 
   DBGLN("set rate %u", index);
-  hwTimer.updateInterval(ModParams->interval);
+  uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+  interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+  hwTimer.updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval);
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+#if defined(RADIO_SX128X)
+               , uidMacSeedGet(), CRCInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
+#endif
+               );
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-  crsf.LinkStatistics.rf_Mode = (uint8_t)RATE_4HZ - (uint8_t)ExpressLRS_currAirRate_Modparams->enum_rate;
+  crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(ModParams->interval);
+  crsf.setSyncParams(interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }
@@ -586,6 +599,8 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
   // Resume the timer, will take one hop for the radio to be on the right frequency if we missed a hop
   hwTimer.callbackTock = &timerCallbackNormal;
+  // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
+  luadevUpdateFolderNames();
   devicesTriggerEvent();
 }
 
@@ -632,9 +647,9 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR()
+void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  ProcessTLMpacket();
+  ProcessTLMpacket(status);
   busyTransmitting = false;
 }
 
@@ -717,9 +732,9 @@ void OnRFModePacket(mspPacket_t *packet)
 
   switch (rfMode)
   {
-  case RATE_200HZ:
-  case RATE_100HZ:
-  case RATE_50HZ:
+  case RATE_LORA_200HZ:
+  case RATE_LORA_100HZ:
+  case RATE_LORA_50HZ:
     SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
     break;
   default:
@@ -791,10 +806,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
+  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
   BindingSendCount = 0;
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
@@ -814,12 +826,7 @@ void EnterBindingMode()
   SendUIDOverMSP();
 
   // Set UID to special binding values
-  UID[0] = BindingUID[0];
-  UID[1] = BindingUID[1];
-  UID[2] = BindingUID[2];
-  UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
+  memcpy(UID, BindingUID, UID_LEN);
 
   CRCInitializer = 0;
   NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
@@ -844,12 +851,7 @@ void ExitBindingMode()
   }
 
   // Reset UID to defined values
-  UID[0] = MasterUID[0];
-  UID[1] = MasterUID[1];
-  UID[2] = MasterUID[2];
-  UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
+  memcpy(UID, MasterUID, UID_LEN);
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 
@@ -957,12 +959,11 @@ static void setupTarget()
 #if defined(TARGET_TX_FM30_MINI)
   pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+  pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+  digitalWrite(GPIO_PIN_ANT_CTRL, LOW); // LEFT antenna
 #endif
 
-#if defined(GPIO_PIN_SDA) && GPIO_PIN_SDA != UNDEF_PIN
-  Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-#endif
-
+  setupTargetCommon();
   setupLoggingBackpack();
 }
 
@@ -990,7 +991,7 @@ void setup()
   config.Load(); // Load the stored values from eeprom
 
   Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-  #if !defined(Regulatory_Domain_ISM_2400)
+  #if defined(RADIO_SX127X)
   //Radio.currSyncWord = UID[3];
   #endif
   bool init_success = Radio.Begin();
@@ -1056,6 +1057,7 @@ void loop()
   CheckReadyToSend();
   CheckConfigChangePending();
   DynamicPower_Update();
+  VtxPitmodeSwitchUpdate();
 
   if (LoggingBackpack->available())
   {
@@ -1071,7 +1073,6 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(TLM_REPORT_INTERVAL_MS + TLMpacketReported))) {
-    crsf.LinkStatistics.uplink_TX_Power = POWERMGNT.powerToCrsfPower(POWERMGNT.currPower());
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }

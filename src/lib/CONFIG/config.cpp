@@ -485,6 +485,26 @@ RxConfig::SetUID(uint8_t* uid)
 }
 
 void
+RxConfig::SetOnLoan(bool isLoaned)
+{
+    if (m_config.onLoan != isLoaned)
+    {
+        m_config.onLoan = isLoaned;
+        m_modified = true;
+    }
+}
+
+void
+RxConfig::SetOnLoanUID(uint8_t* uid)
+{
+    for (uint8_t i = 0; i < UID_LEN; ++i)
+    {
+        m_config.loanUID[i] = uid[i];
+    }
+    m_modified = true;
+}
+
+void
 RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 {
     if (m_config.powerOnCounter != powerOnCounter)
@@ -505,12 +525,41 @@ RxConfig::SetModelId(uint8_t modelId)
 }
 
 void
+RxConfig::SetPower(uint8_t power)
+{
+    if (m_config.power != power)
+    {
+        m_config.power = power;
+        m_modified = true;
+    }
+}
+
+
+void
+RxConfig::SetAntennaMode(uint8_t antennaMode)
+{
+    //0 and 1 is use for gpio_antenna_select
+    // 2 is diversity
+    if (m_config.antennaMode != antennaMode)
+    {
+        m_config.antennaMode = antennaMode;
+        m_modified = true;
+    }
+}
+
+void
 RxConfig::SetDefaults()
 {
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     SetIsBound(false);
     SetPowerOnCounter(0);
     SetModelId(0xFF);
+    SetPower(POWERMGNT::getDefaultPower());
+#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+    SetAntennaMode(2); //2 is diversity
+#else
+    SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
+#endif
     SetSSID("");
     SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -518,6 +567,7 @@ RxConfig::SetDefaults()
         SetPwmChannel(ch, 512, ch, false);
     SetPwmChannel(2, 0, 2, false); // ch2 is throttle, failsafe it to 988
 #endif
+    SetOnLoan(false);
     Commit();
 }
 

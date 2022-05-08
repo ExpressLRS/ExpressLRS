@@ -56,6 +56,8 @@
 
 #define CRSF_TELEMETRY_LENGTH_INDEX 1
 #define CRSF_TELEMETRY_TYPE_INDEX 2
+#define CRSF_TELEMETRY_FIELD_ID_INDEX 5
+#define CRSF_TELEMETRY_FIELD_CHUNK_INDEX 6
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
@@ -71,14 +73,6 @@
 #define CRSF_MSP_REQ_PAYLOAD_SIZE 8
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
-
-static const unsigned int VTXtable[6][8] =
-    {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
-     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866},  /* Band B */
-     {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945},  /* Band E */
-     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880},  /* Ariwave */
-     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917},  /* Race */
-     {5621, 5584, 5547, 5510, 5473, 5436, 5399, 5362}}; /* LO Race */
 
 typedef enum
 {
@@ -190,6 +184,8 @@ typedef struct crsf_header_s
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     uint8_t type;        // from crsf_frame_type_e
 } PACKED crsf_header_t;
+
+#define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
 
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_ext_header_s

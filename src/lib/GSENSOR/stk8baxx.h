@@ -1,7 +1,6 @@
 #pragma once
 
 #include "targets.h"
-#include "Wire.h"
 
 class STK8xxx
 {

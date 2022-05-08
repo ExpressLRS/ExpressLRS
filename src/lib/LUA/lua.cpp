@@ -1,23 +1,37 @@
-#ifdef TARGET_TX
-
 #include "lua.h"
+#include "common.h"
 #include "CRSF.h"
 #include "logging.h"
 
+#ifdef TARGET_RX
+#include "telemetry.h"
+#endif
+
 extern CRSF crsf;
+extern bool IsArmed();
+
+#ifdef TARGET_RX
+extern Telemetry telemetry;
+#endif
 
 static volatile bool UpdateParamReq = false;
 
 //LUA VARIABLES//
+
+#ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
+static void (*devicePingCallback)() = nullptr;
+#endif
 
 #define LUA_MAX_PARAMS 32
-static const void *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
+static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
-static void (*populateHandler)() = 0;
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
+
+static uint32_t startDeferredTime = 0;
+static uint32_t deferredTimeout = 0;
+static std::function<void()> deferredFunction = nullptr;
 
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
@@ -32,6 +46,38 @@ static uint8_t luaSelectionOptionMax(const char *strOptions)
     else if (c == '\0')
       return retVal;
   }
+}
+
+uint8_t getLabelLength(char *text, char separator){
+  char *c = (char*)text;
+  //get label length up to null or lua separator ;
+  while(*c != separator && *c != '\0'){
+    c++;
+  }
+  return c-text;
+}
+
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value)
+{
+  const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
+  char *c = (char *)p1->options;
+  uint8_t count = 0;
+  while (*c != '\0'){
+    //if count is equal to the parameter value, print out the label to the array
+    if(count == value){
+      uint8_t labelLength = getLabelLength(c,';');
+      //write label to destination array
+      strlcpy(outarray, c, labelLength+1);
+      strlcpy(outarray + labelLength, p1->units, strlen(p1->units)+1);
+      return strlen(outarray);
+    }
+    //increment the count until value is found
+    if(*c == ';'){
+      count++;
+    }
+    c++;
+  }
+  return 0;
 }
 
 static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *next)
@@ -77,7 +123,15 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
-
+static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
+{
+  const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
+  if(p1->dyn_name != NULL){
+    return (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
+  } else {
+    return (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
+  }
+}
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
@@ -89,15 +143,21 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
   chunkBuffer[2] = luaData->parent;
   chunkBuffer[3] = dataType;
+#ifdef TARGET_TX
   // Set the hidden flag
   chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
   if (crsf.elrsLUAmode) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
+#else
+  chunkBuffer[3] |= luaData->type;
+  uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
+#endif
+
   // Copy the name to the buffer starting at chunkBuffer[4]
   uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
-
   uint8_t *dataEnd;
+
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
       dataEnd = luaTextSelectionStructToArray(luaData, chunkStart);
@@ -118,8 +178,10 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      // Nothing to do, the name is all there is
-      // but subtract 1 because dataSize expects the end to not include the null
+      // re-fetch the lua data name, because luaFolderStructToArray will decide whether
+      //to return the fixed name or dynamic name.
+      chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
+      // subtract 1 because dataSize expects the end to not include the null
       // which is already accounted for in chunkStart
       dataEnd = chunkStart - 1;
       break;
@@ -136,7 +198,11 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // Maximum number of chunked bytes that can be sent in one response
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
+#ifdef TARGET_TX
   uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 6 - 2;
+#else
+  uint8_t chunkMax = CRSF_MAX_PACKET_LEN - 6 - 2;
+#endif
   // How many chunks needed to send this field (rounded up)
   uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
@@ -146,8 +212,15 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
+#ifdef TARGET_TX
   CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+#else
+  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
+  crsf.SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+
+  telemetry.AppendTelemetryPackage(paramInformation);
+#endif
   return chunkCnt - (fieldChunk+1);
 }
 
@@ -160,19 +233,22 @@ static void pushResponseChunk(struct luaItem_command *cmd) {
   }
 }
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message) {
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
   cmd->step = step;
   cmd->info = message;
   nextStatusChunk = 0;
   pushResponseChunk(cmd);
 }
 
-void suppressCurrentLuaWarning(void){ //flip all the current warning bits, so that the warning check (getLuaWarningFlags()) returns 0
-                                      //only flip 3 Most significant bit, they are the critical warning that blocks lua
-  suppressedLuaWarningFlags = ~luaWarningFlags | 0b00011111;
+#ifdef TARGET_TX
+static void luaSupressCriticalErrors()
+{
+  // clear the critical error bits of the warning flags
+  luaWarningFlags &= 0b00011111;
 }
 
-void setLuaWarningFlag(lua_Flags flag, bool value){
+void setLuaWarningFlag(lua_Flags flag, bool value)
+{
   if (value)
   {
     luaWarningFlags |= 1 << (uint8_t)flag;
@@ -183,8 +259,11 @@ void setLuaWarningFlag(lua_Flags flag, bool value){
   }
 }
 
-uint8_t getLuaWarningFlags(void){ //return an unsppressed warning flag
-  return luaWarningFlags & suppressedLuaWarningFlags;
+static void updateElrsFlags()
+{
+  setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setLuaWarningFlag(LUA_FLAG_ISARMED, IsArmed());
 }
 
 void sendELRSstatus()
@@ -193,9 +272,9 @@ void sendELRSstatus()
     "",                   //status2 = connected status
     "",                   //status1, reserved for future use
     "Model Mismatch",     //warning3, model mismatch
-    "",           //warning2, reserved for future use
+    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
-    "",  //critical warning3, reserved for future use
+    "Not while connected",  //critical warning3, trying to change a protected value while connected
     "",  //critical warning2, reserved for future use
     ""   //critical warning1, reserved for future use
   };
@@ -203,7 +282,7 @@ void sendELRSstatus()
 
   for (int i=7 ; i>=0 ; i--)
   {
-      if(getLuaWarningFlags() & (1<<i))
+      if (luaWarningFlags & (1<<i))
       {
           warningInfo = messages[i];
           break;
@@ -214,12 +293,19 @@ void sendELRSstatus()
 
   params->pktsBad = crsf.BadPktsCountResult;
   params->pktsGood = htobe16(crsf.GoodPktsCountResult);
-  params->flags = getLuaWarningFlags();
+  params->flags = luaWarningFlags;
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
+
+void luaRegisterDevicePingCallback(void (*callback)())
+{
+  devicePingCallback = callback;
+}
+
+#endif
 
 void ICACHE_RAM_ATTR luaParamUpdateReq()
 {
@@ -228,20 +314,20 @@ void ICACHE_RAM_ATTR luaParamUpdateReq()
 
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
-  if (definition == NULL)
+  if (definition == nullptr)
   {
     static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
         {(const char *)agentLiteFolder, CRSF_FOLDER},
     };
 
-    paramDefinitions[0] = &luaAgentLite;
+    paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
     paramCallbacks[0] = 0;
     uint8_t *pos = agentLiteFolder + 4;
     for (int i=1;i<=lastLuaField;i++)
     {
-      struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)paramDefinitions[i];
-      if (p->parent == 0) {
+      if (paramDefinitions[i]->parent == 0)
+      {
         *pos++ = i;
       }
     }
@@ -249,22 +335,29 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
     *pos++ = 0;
     return;
   }
+
   struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
-  paramDefinitions[p->id] = definition;
-  paramCallbacks[p->id] = callback;
+  paramDefinitions[lastLuaField] = p;
+  paramCallbacks[lastLuaField] = callback;
 }
 
-void registerLUAPopulateParams(void (*populate)())
+void deferExecution(uint32_t ms, std::function<void()> f)
 {
-  populateHandler = populate;
-  populate();
+  startDeferredTime = millis();
+  deferredTimeout = ms;
+  deferredFunction = f;
 }
 
 bool luaHandleUpdateParameter()
 {
+  if (deferredFunction!=nullptr && (millis() - startDeferredTime) > deferredTimeout)
+  {
+    deferredFunction();
+    deferredFunction = nullptr;
+  }
   if (UpdateParamReq == false)
   {
     return false;
@@ -276,28 +369,36 @@ bool luaHandleUpdateParameter()
       if (crsf.ParameterUpdateData[1] == 0)
       {
         // special case for elrs linkstat request
+#ifdef TARGET_TX
         DBGVLN("ELRS status request");
+        updateElrsFlags();
         sendELRSstatus();
       } else if (crsf.ParameterUpdateData[1] == 0x2E) {
-        suppressCurrentLuaWarning();
+        luaSupressCriticalErrors();
+#endif
       } else {
         uint8_t id = crsf.ParameterUpdateData[1];
         uint8_t arg = crsf.ParameterUpdateData[2];
-        // All paramDefinitions are not luaItem_command but the common part is the same
-        struct luaItem_command *p = (struct luaItem_command *)paramDefinitions[id];
-        DBGLN("Set Lua [%s]=%u", p->common.name, arg);
+        struct luaPropertiesCommon *p = paramDefinitions[id];
+        DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
-          if (arg == 6 && nextStatusChunk != 0) {
-            pushResponseChunk(p);
+          // While the command is executing, the handset will send `WRITE state=lcsQuery`.
+          // paramCallbacks will set the value when nextStatusChunk == 0, or send any
+          // remaining chunks when nextStatusChunk != 0
+          if (arg == lcsQuery && nextStatusChunk != 0) {
+            pushResponseChunk((struct luaItem_command *)p);
           } else {
-            paramCallbacks[id](id, arg);
+            paramCallbacks[id](p, arg);
           }
         }
       }
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        populateHandler();
+#ifdef TARGET_TX
+        devicePingCallback();
+        luaSupressCriticalErrors();
+#endif
         sendLuaDevicePacket();
         break;
 
@@ -313,7 +414,7 @@ bool luaHandleUpdateParameter()
           // On first chunk of a command, reset the step/info of the command
           if (dataType == CRSF_COMMAND && fieldChunk == 0)
           {
-            field->step = 0;
+            field->step = lcsIdle;
             field->info = "";
           }
           sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
@@ -334,7 +435,10 @@ void sendLuaDevicePacket(void)
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   crsf.GetDeviceInformation(deviceInformation, lastLuaField);
   // does append header + crc again so substract size from length
-  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_LENGTH - sizeof(crsf_ext_header_t) - 1);
-}
-
+#ifdef TARGET_TX
+  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
+#else
+  crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
+}

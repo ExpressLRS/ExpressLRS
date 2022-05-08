@@ -62,4 +62,6 @@ public:
         SmoothDataINT = Indata;
         SmoothDataFP = SmoothDataINT << FP_Shift;
     }
+
+    int32_t value() const { return SmoothDataINT; }
 };

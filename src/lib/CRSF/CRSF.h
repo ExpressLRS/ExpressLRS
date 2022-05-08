@@ -3,6 +3,10 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
+#include "crsf2msp.h"
+#include "msp2crsf.h"
+#endif
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
@@ -31,7 +35,13 @@ public:
     }
 
     CRSF(Stream &dev) : _dev(&dev) {}
+
+    #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+    static CROSSFIRE2MSP crsf2msp;
+    static MSP2CROSSFIRE msp2crsf;
     #endif
+    #endif
+
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
@@ -39,6 +49,9 @@ public:
     static volatile uint16_t ChannelDataIn[16];
 
     /////Variables/////
+
+
+    static volatile uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
     static void inline nullCallback(void);
@@ -53,7 +66,6 @@ public:
     // The model ID as received from the Transmitter
     static uint8_t modelId;
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
-    static volatile uint8_t ParameterUpdateData[3];
     static volatile bool elrsLUAmode;
 
     /// UART Handling ///
@@ -72,7 +84,9 @@ public:
     static void End(); //stop timers etc
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+    static uint32_t VersionStrToU32(const char *verStr);
 
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -114,7 +128,6 @@ public:
     void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
     #endif
-
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;

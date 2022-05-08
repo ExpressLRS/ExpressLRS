@@ -17,6 +17,8 @@ def add_target_uploadoption(name: str, desc: str) -> None:
         actions=env['UPLOADCMD']
     )
 
+def get_version(env):
+    return '%s (%s) %s' % (env.get('GIT_VERSION'), env.get('GIT_SHA'), env.get('REG_DOMAIN'))
 
 platform = env.get('PIOPLATFORM', '')
 stm = platform in ['ststm32']
@@ -24,6 +26,7 @@ stm = platform in ['ststm32']
 target_name = env['PIOENV'].upper()
 print("PLATFORM : '%s'" % platform)
 print("BUILD ENV: '%s'" % target_name)
+print("build version: %s\n\n" % get_version(env))
 
 # don't overwrite if custom command defined
 if stm and "$UPLOADER $UPLOADERFLAGS" in env.get('UPLOADCMD', '$UPLOADER $UPLOADERFLAGS'):

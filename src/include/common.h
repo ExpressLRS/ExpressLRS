@@ -3,9 +3,9 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868)  || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
-#elif defined(Regulatory_Domain_ISM_2400)
+#elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
 #error "Radio configuration is not valid!"
@@ -65,7 +65,7 @@ typedef enum
 } RXtimerState_e;
 
 extern connectionState_e connectionState;
-extern connectionState_e connectionStatePrev;
+extern bool connectionHasModelMatch;
 
 typedef enum
 {
@@ -76,15 +76,16 @@ typedef enum
 
 typedef enum
 {
-    RATE_500HZ = 0,
-    RATE_250HZ = 1,
-    RATE_200HZ = 2,
-    RATE_150HZ = 3,
-    RATE_100HZ = 4,
-    RATE_50HZ = 5,
-    RATE_25HZ = 6,
-    RATE_4HZ = 7,
-    RATE_ENUM_MAX = 8
+    RATE_LORA_4HZ = 0,
+    RATE_LORA_25HZ,
+    RATE_LORA_50HZ,
+    RATE_LORA_100HZ,
+    RATE_LORA_150HZ,
+    RATE_LORA_200HZ,
+    RATE_LORA_250HZ,
+    RATE_LORA_500HZ,
+    RATE_FLRC_500HZ,
+    RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
@@ -122,17 +123,17 @@ typedef struct expresslrs_mod_settings_s
 } expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
-#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#if defined(RADIO_SX127X)
 #define RATE_MAX 4
 #define RATE_DEFAULT 0
 #define RATE_BINDING 2 // 50Hz bind mode
 
 extern SX127xDriver Radio;
 
-#elif defined(Regulatory_Domain_ISM_2400)
-#define RATE_MAX 4
-#define RATE_DEFAULT 0
-#define RATE_BINDING 2  // 50Hz bind mode
+#elif defined(RADIO_SX128X)
+#define RATE_MAX 6      // 2xFLRC + 4xLoRa
+#define RATE_DEFAULT 0  // Default to FLRC 1000Hz
+#define RATE_BINDING 5  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
@@ -141,13 +142,14 @@ extern SX1280Driver Radio;
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 
-uint8_t TLMratioEnumToValue(uint8_t enumval);
-uint16_t RateEnumToHz(uint8_t eRate);
+uint8_t TLMratioEnumToValue(uint8_t const enumval);
+uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
+uint16_t RateEnumToHz(uint8_t const eRate);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
-uint8_t enumRatetoIndex(expresslrs_RFrates_e rate);
+uint8_t enumRatetoIndex(uint8_t rate);
 
 #endif // UNIT_TEST
 

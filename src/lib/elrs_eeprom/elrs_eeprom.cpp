@@ -2,10 +2,9 @@
 #include "targets.h"
 #include "logging.h"
 
+#if !defined(TARGET_NATIVE)
 #if defined(PLATFORM_STM32)
-    #if defined(TARGET_USE_EEPROM) && \
-            defined(GPIO_PIN_SDA) && (GPIO_PIN_SDA != UNDEF_PIN) && \
-            defined(GPIO_PIN_SCL) && (GPIO_PIN_SCL != UNDEF_PIN)
+    #if defined(TARGET_USE_EEPROM) && defined(USE_I2C)
         #if !defined(TARGET_EEPROM_ADDR)
             #define TARGET_EEPROM_ADDR 0x51
             #warning "!! Using default EEPROM address (0x51) !!"
@@ -29,10 +28,9 @@ ELRS_EEPROM::Begin()
     #if defined(STM32_USE_FLASH)
         eeprom_buffer_fill();
     #else // !STM32_USE_FLASH
-        /* Initialize I2C */
-        Wire.setSDA(GPIO_PIN_SDA);
-        Wire.setSCL(GPIO_PIN_SCL);
-        Wire.begin();
+        // I2C initialization is the responsibility of the caller
+        // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+
         /* Initialize EEPROM */
         #if defined(TARGET_EEPROM_400K)
             EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);
@@ -91,3 +89,5 @@ ELRS_EEPROM::Commit()
     eeprom_buffer_flush();
 #endif
 }
+
+#endif /* !TARGET_NATIVE */

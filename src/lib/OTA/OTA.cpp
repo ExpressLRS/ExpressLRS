@@ -33,6 +33,14 @@ PackChannelData_t PackChannelData;
 static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet_s * const otaPktPtr, CRSF const * const crsf)
 {
     otaPktPtr->type = RC_DATA_PACKET;
+#if defined(DEBUG_RCVR_LINKSTATS)
+    // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
+    static uint32_t packetCnt;
+    otaPktPtr->dbg_linkstats.packetNum = htobe32(packetCnt);
+    otaPktPtr->dbg_linkstats.free1 = 0;
+    otaPktPtr->dbg_linkstats.free2 = 0;
+    ++packetCnt;
+#else
     // CRSF input is 11bit and OTA will carry only 10b => LSB is dropped
     otaPktPtr->rc.ch0High = ((crsf->ChannelDataIn[0]) >> 3);
     otaPktPtr->rc.ch0Low  = crsf->ChannelDataIn[0] >> 1;
@@ -42,6 +50,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet_s * const ota
     otaPktPtr->rc.ch2Low  = crsf->ChannelDataIn[2] >> 1;
     otaPktPtr->rc.ch3High = ((crsf->ChannelDataIn[3]) >> 3);
     otaPktPtr->rc.ch3Low  = crsf->ChannelDataIn[3] >> 1;
+#endif /* !DEBUG_RCVR_LINKSTATS */
 }
 
 /**
@@ -173,13 +182,22 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t UnpackChannelData;
 
+#if defined(DEBUG_RCVR_LINKSTATS)
+// Sequential PacketID from the TX
+uint32_t debugRcvrLinkstatsPacketId;
+#endif
+
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet_s const * const otaPktPtr, CRSF * const crsf)
 {
     // The analog channels
+#if defined(DEBUG_RCVR_LINKSTATS)
+    debugRcvrLinkstatsPacketId = be32toh(otaPktPtr->dbg_linkstats.packetNum);
+#else
     crsf->PackedRCdataOut.ch0 = ((uint16_t)otaPktPtr->rc.ch0High << 3) + ((uint16_t)otaPktPtr->rc.ch0Low << 1);
     crsf->PackedRCdataOut.ch1 = ((uint16_t)otaPktPtr->rc.ch1High << 3) + ((uint16_t)otaPktPtr->rc.ch1Low << 1);
     crsf->PackedRCdataOut.ch2 = ((uint16_t)otaPktPtr->rc.ch2High << 3) + ((uint16_t)otaPktPtr->rc.ch2Low << 1);
     crsf->PackedRCdataOut.ch3 = ((uint16_t)otaPktPtr->rc.ch3High << 3) + ((uint16_t)otaPktPtr->rc.ch3Low << 1);
+#endif
 }
 
 /**

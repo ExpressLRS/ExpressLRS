@@ -32,7 +32,7 @@
 #define GPIO_PIN_RCSIGNAL_TX        PA2 // UART2 NOTE: Not the "OUT" pinheader pad
 #if defined(RX_AS_TX)
     #define GPIO_PIN_RCSIGNAL_RX    PA2 // UART2 (half duplex)
-    #define GPIO_PIN_ANT_CTRL_2     PA8 // Low for left, high for right
+    #define GPIO_PIN_ANT_CTRL       PA8 // Low for left, high for right
 #else
     #define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2
     #define GPIO_PIN_ANTENNA_SELECT PA8 // Low for left, high for right
@@ -41,17 +41,10 @@
 #define GPIO_PIN_UART1TX_INVERT PF6
 
 // Power output
-#if defined(RX_AS_TX)
-    #define MinPower                PWR_10mW
-    #define HighPower               PWR_100mW
-    #define MaxPower                PWR_250mW
-    #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
-#else
-    #ifdef UNLOCK_HIGHER_POWER
-        #define POWER_OUTPUT_FIXED 6  // 250mW (uses values as above)
-    #else
-        #define POWER_OUTPUT_FIXED -1 // 100mW (uses values as above)
-    #endif
+#define MinPower                PWR_10mW
+#define HighPower               PWR_100mW
+#define MaxPower                PWR_250mW
+#define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
+#if !defined(RX_AS_TX)
+    #define DefaultPower        PWR_100mW
 #endif
-
-#define Regulatory_Domain_ISM_2400 1

@@ -3,8 +3,8 @@
 #endif
 
 // Any device features
-#define USE_TX_BACKPACK
 #define USE_SX1280_DCDC
+#define USE_TX_BACKPACK
 #define WS2812_IS_GRB
 
 // GPIO pin definitions
@@ -26,5 +26,3 @@
 #define MinPower PWR_25mW
 #define MaxPower PWR_1000mW
 #define POWER_OUTPUT_VALUES {-18,-15,-12,-7,-4,2}
-
-#define Regulatory_Domain_ISM_2400 1

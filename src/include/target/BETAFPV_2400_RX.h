@@ -1,5 +1,5 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "BETAFPV 2G4RX"
+#define DEVICE_NAME "BFPV Nano 2G4RX"
 #endif
 
 #define USE_SX1280_DCDC
@@ -19,6 +19,7 @@
 #define GPIO_PIN_TX_ENABLE      10
 
 // Output Power
-#define POWER_OUTPUT_FIXED      1 // -10=10mW, -6=25mW, -3=50mW, 1=100mW
-
-#define Regulatory_Domain_ISM_2400 1
+#define MinPower            PWR_10mW
+#define MaxPower            PWR_100mW
+#define DefaultPower        PWR_100mW
+#define POWER_OUTPUT_VALUES {-10,-6,-3,1} //has PA, use Power array
