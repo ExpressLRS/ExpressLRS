@@ -529,11 +529,8 @@ static void registerLuaParameters()
     // the pack and unpack functions are matched
     if (connectionState == disconnected)
     {
-      // +1 to the mode because 1-bit was mode 0 and has been removed
-      // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-      uint32_t newSwitchMode = (arg + 1) & 0b11;
-      config.SetSwitchMode(newSwitchMode);
-      OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
+      config.SetSwitchMode(arg);
+      OtaSetSwitchMode((OtaSwitchMode_e)arg);
     }
     else
       setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
@@ -614,7 +611,7 @@ static int event()
     uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
     setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
     setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-    setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+    setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
     luadevUpdateModelID();
     setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
     setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

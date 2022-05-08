@@ -50,6 +50,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet_s * const ota
     otaPktPtr->rc.ch2Low  = crsf->ChannelDataIn[2] >> 1;
     otaPktPtr->rc.ch3High = ((crsf->ChannelDataIn[3]) >> 3);
     otaPktPtr->rc.ch3Low  = crsf->ChannelDataIn[3] >> 1;
+    otaPktPtr->rc.ch4 = CRSF_to_BIT(crsf->ChannelDataIn[4]);
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
 
@@ -104,9 +105,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
     } // If not 16-pos
 
     otaPktPtr->rc.switches =
-        TelemetryStatus << 7 |
-        // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
-        CRSF_to_BIT(crsf->ChannelDataIn[4]) << 6 |
+        TelemetryStatus << 6 |
         // tell the receiver which switch index this is
         bitclearedSwitchIndex << 3 |
         // include the switch value
@@ -168,11 +167,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
             value |= telemBit;
     }
 
-    otaPktPtr->rc.switches =
-        // switch 0 is one bit sent on every packet - intended for low latency arm/disarm
-        CRSF_to_BIT(crsf->ChannelDataIn[4]) << 7 |
-        // include the switch value
-        value;
+    otaPktPtr->rc.switches = value;
 }
 #endif
 
@@ -197,6 +192,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet_s const * c
     crsf->PackedRCdataOut.ch1 = ((uint16_t)otaPktPtr->rc.ch1High << 3) + ((uint16_t)otaPktPtr->rc.ch1Low << 1);
     crsf->PackedRCdataOut.ch2 = ((uint16_t)otaPktPtr->rc.ch2High << 3) + ((uint16_t)otaPktPtr->rc.ch2Low << 1);
     crsf->PackedRCdataOut.ch3 = ((uint16_t)otaPktPtr->rc.ch3High << 3) + ((uint16_t)otaPktPtr->rc.ch3Low << 1);
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(otaPktPtr->rc.ch4);
 #endif
 }
 
@@ -217,15 +213,12 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
     (void)nonce;
     (void)tlmDenom;
 
-    const uint8_t switchByte = otaPktPtr->rc.switches;
     UnpackChannelDataHybridCommon(otaPktPtr, crsf);
-
-    // The low latency switch
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((switchByte & 0b01000000) >> 6);
 
     // The round-robin switch, switchIndex is actually index-1
     // to leave the low bit open for switch 7 (sent as 0b11x)
     // where x is the high bit of switch 7
+    const uint8_t switchByte = otaPktPtr->rc.switches;
     uint8_t switchIndex = (switchByte & 0b111000) >> 3;
     uint16_t switchValue = SWITCH3b_to_CRSF(switchByte & 0b111);
 
@@ -255,7 +248,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
     }
 
     // TelemetryStatus bit
-    return switchByte & (1 << 7);
+    return switchByte & (1 << 6);
 }
 
 /**
@@ -274,15 +267,13 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
                                                  uint8_t const nonce, uint8_t const tlmDenom)
 {
     static bool TelemetryStatus = false;
-    const uint8_t switchByte = otaPktPtr->rc.switches;
+
     UnpackChannelDataHybridCommon(otaPktPtr, crsf);
 
-    // The low latency switch (AUX1)
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF((switchByte & 0b10000000) >> 7);
-
     // The round-robin switch, 6-7 bits with the switch index implied by the nonce
-    uint8_t switchIndex = HybridWideNonceToSwitchIndex(nonce);
+    const uint8_t switchByte = otaPktPtr->rc.switches;
     bool telemInEveryPacket = (tlmDenom < 8);
+    uint8_t switchIndex = HybridWideNonceToSwitchIndex(nonce);
     if (telemInEveryPacket || switchIndex == 7)
           TelemetryStatus = (switchByte & 0b01000000) >> 6;
     if (switchIndex == 7)
@@ -339,7 +330,6 @@ void OtaSetSwitchMode(OtaSwitchMode_e const switchMode)
 {
     switch(switchMode)
     {
-    case sm1Bit:
     case smHybrid:
     default:
         #if defined(TARGET_TX) || defined(UNIT_TEST)

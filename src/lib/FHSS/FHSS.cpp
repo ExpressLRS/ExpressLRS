@@ -287,7 +287,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     DBGLN("Number of FHSS frequencies = %u", FHSS_FREQ_CNT);
 
-    sync_channel = FHSS_FREQ_CNT / 2;
+    sync_channel = (FHSS_FREQ_CNT / 2) + 1;
     DBGLN("Sync channel = %u", sync_channel);
 
     // reset the pointer (otherwise the tests fail)

@@ -30,9 +30,9 @@ typedef struct {
         struct {
             uint8_t fhssIndex;
             uint8_t nonce;
-            uint8_t switchEncMode:2,
+            uint8_t switchEncMode:1,
                     newTlmRatio:3,
-                    rateIndex:3;
+                    rateIndex:4;
             uint8_t UID3;
             uint8_t UID4;
             uint8_t UID5;
@@ -46,7 +46,8 @@ typedef struct {
                     ch2Low:2,
                     ch1Low:2,
                     ch0Low:2;
-            uint8_t switches;
+            uint8_t ch4:1,
+                    switches:7;
         } rc;
         struct {
             uint32_t packetNum;
@@ -79,7 +80,7 @@ typedef struct {
 } PACKED OTA_Packet_s;
 
 
-enum OtaSwitchMode_e { sm1Bit, smHybrid, smHybridWide };
+enum OtaSwitchMode_e { smHybrid = 0, smHybridWide = 1 };
 void OtaSetSwitchMode(OtaSwitchMode_e mode);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 

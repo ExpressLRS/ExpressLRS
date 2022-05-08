@@ -12,16 +12,16 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   5
+#define TX_CONFIG_VERSION   6
 #define RX_CONFIG_VERSION   5
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
 typedef struct {
-    uint8_t     rate:3;
+    uint8_t     rate:4;
     uint8_t     tlm:3;
     uint8_t     power:3;
-    uint8_t     switchMode:2;
+    uint8_t     switchMode:1;
     uint8_t     modelMatch:1;
     uint8_t     dynamicPower:1;
     uint8_t     boostChannel:3;
