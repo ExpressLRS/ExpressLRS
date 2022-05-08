@@ -411,7 +411,25 @@ static inline uint16_t htobe16(uint16_t val)
 #endif
 }
 
+static inline uint16_t be16toh(uint16_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap16(val);
+#endif
+}
+
 static inline uint32_t htobe32(uint32_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap32(val);
+#endif
+}
+
+static inline uint32_t be32toh(uint32_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;
