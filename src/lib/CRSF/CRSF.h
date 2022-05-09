@@ -46,7 +46,7 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static volatile uint16_t ChannelDataIn[16];
+    static uint32_t ChannelDataIn[16];
 
     /////Variables/////
 
@@ -113,7 +113,7 @@ public:
     static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
-    static volatile uint32_t OpenTXsyncLastSent;
+    static uint32_t OpenTXsyncLastSent;
     static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
 

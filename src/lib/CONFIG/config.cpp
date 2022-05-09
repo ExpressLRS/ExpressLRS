@@ -339,7 +339,7 @@ TxConfig::SetDefaults()
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
+        SetSwitchMode((uint8_t)smWideOr12ch);
         SetModelMatch(false);
         SetFanMode(0);
         SetMotionMode(0);
@@ -396,7 +396,7 @@ TxConfig::UpgradeEepromV1ToV4()
         SetPower(v1Config.power);
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
+        SetSwitchMode((uint8_t)smWideOr12ch);
         SetModelMatch(false);
         SetFanMode(0);
         SetMotionMode(0);

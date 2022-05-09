@@ -39,7 +39,7 @@ MSP2CROSSFIRE CRSF::msp2crsf;
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
-volatile uint16_t CRSF::ChannelDataIn[16] = {0};
+uint32_t CRSF::ChannelDataIn[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
 
@@ -74,7 +74,7 @@ bool CRSF::ForwardDevicePings = false;
 volatile bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
-volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
+uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
@@ -962,7 +962,7 @@ uint32_t CRSF::VersionStrToU32(const char *verStr)
 #if !defined(FORCE_NO_DEVICE_VERSION)
     uint8_t accumulator = 0;
     char c;
-    while (c = *verStr)
+    while ((c = *verStr))
     {
         ++verStr;
         // A decimal indicates moving to a new version field

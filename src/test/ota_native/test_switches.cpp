@@ -11,11 +11,12 @@
 #include <unity.h>
 
 #include "targets.h"
-// #include "common.h"
+#include "common.h"
 #include "CRSF.h"
 #include <OTA.h>
 
 CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
+uint8_t UID[6] = {1,2,3,4,5,6};
 
 void test_crsfToBit()
 {
@@ -66,17 +67,31 @@ void test_encodingHybrid8(bool highResChannel)
 {
     constexpr uint8_t N_SWITCHES = 8;
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t expected;
     uint8_t TXdataBuffer[8] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
 
     // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    // 4 channels of 11-bit analog data
+    crsf.ChannelDataIn[0] = 0x0123 & 0b11111111111;
+    crsf.ChannelDataIn[1] = 0x4567 & 0b11111111111;
+    crsf.ChannelDataIn[2] = 0x89AB & 0b11111111111;
+    crsf.ChannelDataIn[3] = 0xCDEF & 0b11111111111;
 
+    OTA_Packet8_s ota;
+    OTA_Channels_4x10 ch;
+    switch (OtaNonce)
+    {
+        case sizeof(ota.rc):
+        break;
+        case 13:
+        break;
+        case 17:
+        break;
+        case sizeof(ch):
+        break;
+        case 8:
+        break;
+    }
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
         constexpr int CHANNELS[] =
@@ -91,29 +106,25 @@ void test_encodingHybrid8(bool highResChannel)
         OtaSetHybrid8NextSwitchIndex(3-1);
 
     // encode it
-    OtaSetSwitchMode(smHybrid);
-    PackChannelData(otaPktPtr, &crsf, false, 0, 0);
+    OtaUpdateSerializers(smHybridOr8ch, RATE_LORA_500HZ);
+    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
 
     // check it looks right
     // 1st byte is CRC & packet type
-    uint8_t header = RC_DATA_PACKET;
+    uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
-    for(int i = 0; i < 4; i++) {
-        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
-    }
-
-    // byte 5 is bits 1 and 2 of each analog channel
-    expected = 0;
-    for(int i = 0; i < 4; i++) {
-        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
-    }
-    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
+    uint8_t expected[5];
+    expected[0] = ((crsf.ChannelDataIn[0] >> 1) >> 0);
+    expected[1] = ((crsf.ChannelDataIn[0] >> 1) >> 8) | ((crsf.ChannelDataIn[1] >> 1) << 2);
+    expected[2] = ((crsf.ChannelDataIn[1] >> 1) >> 6) | ((crsf.ChannelDataIn[2] >> 1) << 4);
+    expected[3] = ((crsf.ChannelDataIn[2] >> 1) >> 4) | ((crsf.ChannelDataIn[3] >> 1) << 6);
+    expected[4] = ((crsf.ChannelDataIn[3] >> 1) >> 2);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
-    TEST_ASSERT_EQUAL(CRSF_to_BIT(crsf.ChannelDataIn[4+0]), (TXdataBuffer[6] & 0b0100000)>>6);
+    TEST_ASSERT_EQUAL(CRSF_to_BIT(crsf.ChannelDataIn[4+0]), TXdataBuffer[6] >> 7);
     // top bit is undefined
     // expect switch 0 in bit 6
     // index-1 in 3-5
@@ -151,11 +162,11 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     // uint8_t expected;
 
     // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    // 4 channels of 11-bit analog data
+    crsf.ChannelDataIn[0] = 0x0123 & 0b11111111111;
+    crsf.ChannelDataIn[1] = 0x4567 & 0b11111111111;
+    crsf.ChannelDataIn[2] = 0x89AB & 0b11111111111;
+    crsf.ChannelDataIn[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
@@ -177,11 +188,11 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         OtaSetHybrid8NextSwitchIndex(forceSwitch-1);
 
     // use the encoding method to pack it into TXdataBuffer
-    OtaSetSwitchMode(smHybrid);
-    PackChannelData(otaPktPtr, &crsf, false, 0, 0);
+    OtaUpdateSerializers(smHybridOr8ch, RATE_LORA_500HZ);
+    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    UnpackChannelData(otaPktPtr, &crsf, 0, 0);
+    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits
@@ -230,21 +241,20 @@ void test_decodingHybrid8_all()
 void test_encodingHybridWide(bool highRes, uint8_t nonce)
 {
     uint8_t UID[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE};
-    uint8_t expected;
     uint8_t TXdataBuffer[8] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
 
     // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    // 4 channels of 11-bit analog data
+    crsf.ChannelDataIn[0] = 0x0123 & 0b11111111111;
+    crsf.ChannelDataIn[1] = 0x4567 & 0b11111111111;
+    crsf.ChannelDataIn[2] = 0x89AB & 0b11111111111;
+    crsf.ChannelDataIn[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     constexpr int N_SWITCHES = 8;
     for(int i = 0; i < N_SWITCHES; i++) {
-        constexpr int CHANNELS[] =
+        constexpr unsigned CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
         crsf.ChannelDataIn[4+i] = CHANNELS[i % 3];
     }
@@ -254,26 +264,23 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
 
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
-    OtaSetSwitchMode(smHybridWide);
-    PackChannelData(otaPktPtr, &crsf, nonce % 2, nonce, tlmDenom);
+    OtaUpdateSerializers(smWideOr12ch, RATE_LORA_500HZ);
+    OtaNonce = nonce;
+    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
 
     // check it looks right
     // 1st byte is CRC & packet type
-    uint8_t header = RC_DATA_PACKET;
+    uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
     // bytes 1 through 5 are 10 bit packed analog channels
-    for(int i = 0; i < 4; i++) {
-        expected = crsf.ChannelDataIn[i] >> 3; // most significant 8 bits
-        TEST_ASSERT_EQUAL(expected, TXdataBuffer[i + 1]);
-    }
-
-    // byte 5 is bits 1 and 2 of each analog channel
-    expected = 0;
-    for(int i = 0; i < 4; i++) {
-        expected = (expected <<2) | ((crsf.ChannelDataIn[i] >> 1) & 0b11);
-    }
-    TEST_ASSERT_EQUAL(expected, TXdataBuffer[5]);
+    uint8_t expected[5];
+    expected[0] = ((crsf.ChannelDataIn[0] >> 1) >> 0);
+    expected[1] = ((crsf.ChannelDataIn[0] >> 1) >> 8) | ((crsf.ChannelDataIn[1] >> 1) << 2);
+    expected[2] = ((crsf.ChannelDataIn[1] >> 1) >> 6) | ((crsf.ChannelDataIn[2] >> 1) << 4);
+    expected[3] = ((crsf.ChannelDataIn[2] >> 1) >> 4) | ((crsf.ChannelDataIn[3] >> 1) << 6);
+    expected[4] = ((crsf.ChannelDataIn[3] >> 1) >> 2);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switches encoded
     uint8_t switches = TXdataBuffer[6];
@@ -322,16 +329,16 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     // uint8_t expected;
 
     // Define the input data
-    // 4 channels of analog data
-    crsf.ChannelDataIn[0] = 0x0123;
-    crsf.ChannelDataIn[1] = 0x4567;
-    crsf.ChannelDataIn[2] = 0x89AB;
-    crsf.ChannelDataIn[3] = 0xCDEF;
+    // 4 channels of 11-bit analog data
+    crsf.ChannelDataIn[0] = 0x0123 & 0b11111111111;
+    crsf.ChannelDataIn[1] = 0x4567 & 0b11111111111;
+    crsf.ChannelDataIn[2] = 0x89AB & 0b11111111111;
+    crsf.ChannelDataIn[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     constexpr int N_SWITCHES = 8;
     for(int i = 0; i < N_SWITCHES; i++) {
-        constexpr int CHANNELS[] =
+        constexpr unsigned CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
         if (i == forceSwitch)
             crsf.ChannelDataIn[4+i] = forceVal;
@@ -344,14 +351,15 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
 
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
-    OtaSetSwitchMode(smHybridWide);
-    PackChannelData(otaPktPtr, &crsf, nonce % 2, nonce, tlmDenom);
+    OtaUpdateSerializers(smWideOr12ch, RATE_LORA_500HZ);
+    OtaNonce = nonce;
+    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
     crsf.LinkStatistics.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
-    bool telemResult = UnpackChannelData(otaPktPtr, &crsf, nonce, tlmDenom);
+    bool telemResult = OtaUnpackChannelData(otaPktPtr, &crsf, tlmDenom);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(crsf.ChannelDataIn[0] & 0b11111111110, crsf.PackedRCdataOut.ch0); // analog channels are truncated to 10 bits

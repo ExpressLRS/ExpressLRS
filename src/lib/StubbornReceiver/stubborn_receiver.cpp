@@ -1,19 +1,27 @@
 #include <cstdint>
+#include <algorithm>
 #include "stubborn_receiver.h"
 
-StubbornReceiver::StubbornReceiver(uint8_t maxPackageIndex)
+StubbornReceiver::StubbornReceiver()
 {
-    this->maxPackageIndex = maxPackageIndex;
-    this->ResetState();
+    ResetState();
+    data = nullptr;
+    length = 0;
+}
+
+void StubbornReceiver::setMaxPackageIndex(uint8_t maxPackageIndex)
+{
+    if (this->maxPackageIndex != maxPackageIndex)
+    {
+        this->maxPackageIndex = maxPackageIndex;
+        ResetState();
+    }
 }
 
 void StubbornReceiver::ResetState()
 {
-    data = 0;
-    bytesPerCall = 1;
     currentOffset = 0;
     currentPackage = 0;
-    length = 0;
     telemetryConfirm = false;
 }
 
@@ -22,17 +30,16 @@ bool StubbornReceiver::GetCurrentConfirm()
     return telemetryConfirm;
 }
 
-void StubbornReceiver::SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive, uint8_t bytesPerCall)
+void StubbornReceiver::SetDataToReceive(uint8_t* dataToReceive, uint8_t maxLength)
 {
     length = maxLength;
     data = dataToReceive;
     currentPackage = 1;
     currentOffset = 0;
     finishedData = false;
-    this->bytesPerCall = bytesPerCall;
 }
 
-void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData)
+void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData, uint8_t dataLen)
 {
     if  (packageIndex == 0 && currentPackage > 1)
     {
@@ -57,9 +64,10 @@ void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * c
 
     if (packageIndex == currentPackage)
     {
-        for (uint8_t i = 0; i < bytesPerCall; i++)
+        uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
+        for (uint8_t i = 0; i < len; i++)
         {
-            data[currentOffset++] = *(receiveData + i);
+            data[currentOffset++] = receiveData[i];
         }
 
         currentPackage++;

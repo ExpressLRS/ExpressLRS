@@ -212,6 +212,8 @@ constexpr uint8_t rate_hue[RATE_MAX] =
 #if defined(RADIO_SX128X)
     208,     // FLRC 1000 Hz - purple
     64,      // FLRC  500 Hz - yellow
+    64,      // TODO: Full res modes?!
+    64,      // TODO: Full res modes?!
 #endif
     170,     // LoRa 500/200 Hz - blue
     85,      // LoRa 250/100 Hz - green

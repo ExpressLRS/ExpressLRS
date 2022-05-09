@@ -26,7 +26,7 @@ public:
     void (*TXdoneCallback)(); //function pointer for callback
 
     #define RXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
+    WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
 
     ///////////Radio Variables////////
     uint32_t currFreq;

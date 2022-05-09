@@ -1,6 +1,6 @@
 #include "devBLE.h"
 
-#if defined(PLATFORM_ESP32)
+#if 0 && defined(PLATFORM_ESP32)
 
 #include "common.h"
 #include "CRSF.h"
