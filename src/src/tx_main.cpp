@@ -35,7 +35,7 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-Stream *LoggingBackpack;
+Stream *TxBackpack;
 
 volatile uint8_t NonceTX;
 
@@ -814,6 +814,7 @@ void SendUIDOverMSP()
   MSPDataPackage[0] = MSP_ELRS_BIND;
   memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
   BindingSendCount = 0;
+  MspSender.ResetState();
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
 
@@ -913,7 +914,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
-static void setupLoggingBackpack()
+static void setupTxBackpack()
 {  /*
    * Setup the logging/backpack serial port.
    * This is always done because we need a place to send data even if there is no backpack!
@@ -939,7 +940,7 @@ static void setupLoggingBackpack()
 #else
   Stream *serialPort = new NullStream();
 #endif
-  LoggingBackpack = serialPort;
+  TxBackpack = serialPort;
 }
 
 /**
@@ -970,7 +971,7 @@ static void setupTarget()
 #endif
 
   setupTargetCommon();
-  setupLoggingBackpack();
+  setupTxBackpack();
 }
 
 void setup()
@@ -1065,9 +1066,9 @@ void loop()
   DynamicPower_Update();
   VtxPitmodeSwitchUpdate();
 
-  if (LoggingBackpack->available())
+  if (TxBackpack->available())
   {
-    if (msp.processReceivedByte(LoggingBackpack->read()))
+    if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());

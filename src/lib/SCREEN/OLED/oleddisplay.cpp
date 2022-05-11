@@ -93,7 +93,7 @@ void Display::doScreenBackLight(screen_backlight_t state)
 
 void Display::printScreenshot()
 {
-    u8g2.writeBufferXBM(*LoggingBackpack);
+    u8g2.writeBufferXBM(*TxBackpack);
 }
 
 void Display::displaySplashScreen()
