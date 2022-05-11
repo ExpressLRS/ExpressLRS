@@ -132,6 +132,33 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
     }
 }
 
+/***
+ * @brief: Calculate number of 'burst' telemetry frames for the specified air rate and tlm ratio
+ *
+ * When attempting to send a LinkStats telemetry frame at most every TELEM_MIN_LINK_INTERVAL_MS,
+ * calculate the number of sequential advanced telemetry frames before another LinkStats is due.
+ ****/
+uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
+{
+    // Maximum ms between LINK_STATISTICS packets for determining burst max
+    constexpr uint32_t TELEM_MIN_LINK_INTERVAL_MS = 512U;
+
+    // telemInterval = 1000 / (hz / ratiodiv);
+    // burst = TELEM_MIN_LINK_INTERVAL_MS / telemInterval;
+    // This ^^^ rearranged to preserve precision vvv
+    uint8_t retVal = TELEM_MIN_LINK_INTERVAL_MS * rateHz / ratioDiv / 1000U;
+
+    // Reserve one slot for LINK telemetry
+    if (retVal > 1)
+        --retVal;
+    else
+        retVal = 1;
+    //DBGLN("TLMburst: %d", retVal);
+
+    return retVal;
+}
+
+
 uint16_t RateEnumToHz(uint8_t const eRate)
 {
     switch(eRate)

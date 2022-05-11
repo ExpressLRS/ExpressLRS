@@ -79,7 +79,7 @@ uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'nor
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
@@ -371,7 +371,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelDataIn[13] = (rcChannels->ch13);
     ChannelDataIn[14] = (rcChannels->ch14);
     ChannelDataIn[15] = (rcChannels->ch15);
-        
+
     #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
     {
@@ -950,6 +950,43 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 
 #endif // CRSF_RX_MODULE
 
+/***
+ * @brief: Convert `version` (string) to a integer version representation
+ * e.g. "2.2.15 ISM24G" => 0x0002020f
+ * Assumes all version fields are < 256, the number portion
+ * MUST be followed by a space to correctly be parsed
+ ***/
+uint32_t CRSF::VersionStrToU32(const char *verStr)
+{
+    uint32_t retVal = 0;
+#if !defined(FORCE_NO_DEVICE_VERSION)
+    uint8_t accumulator = 0;
+    char c;
+    while (c = *verStr)
+    {
+        ++verStr;
+        // A decimal indicates moving to a new version field
+        // and the space after the version ends that field
+        if (c == '.' || c == ' ')
+        {
+            retVal = (retVal << 8) | accumulator;
+            accumulator = 0;
+        }
+        // Else if this is a number add it up
+        else if (c >= '0' && c <= '9')
+        {
+            accumulator = (accumulator * 10) + (c - '0');
+        }
+        // Anything except [0-9. ] ends the parsing
+        else
+        {
+            break;
+        }
+    }
+#endif
+    return retVal;
+}
+
 void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 {
     deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + device_name_size);
@@ -958,20 +995,27 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-    device->softwareVer = 0; // unused currently by us, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
+}
+
+void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
+{
+    crsf_header_t *header = (crsf_header_t *)frame;
+    header->device_addr = destAddr;
+    header->frame_size = frameSize;
+    header->type = frameType;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], frameSize - 1, 0);
+    frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
 
 void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
 {
     crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
     header->dest_addr = destAddr;
-    header->device_addr = destAddr;
-    header->type = frameType;
     header->orig_addr = senderAddr;
-    header->frame_size = frameSize;
-
-    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], header->frame_size - 1, 0);
-    frame[header->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+    SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
+

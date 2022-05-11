@@ -20,7 +20,7 @@ static volatile bool UpdateParamReq = false;
 
 #ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static void (*populateHandler)() = 0;
+static void (*devicePingCallback)() = nullptr;
 #endif
 
 #define LUA_MAX_PARAMS 32
@@ -71,7 +71,7 @@ uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t val
     if(*c == ';'){
       count++;
     }
-    c++;  
+    c++;
   }
   return 0;
 }
@@ -296,10 +296,9 @@ void sendELRSstatus()
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
-void registerLUAPopulateParams(void (*populate)())
+void luaRegisterDevicePingCallback(void (*callback)())
 {
-  populateHandler = populate;
-  populate();
+  devicePingCallback = callback;
 }
 
 #endif
@@ -381,7 +380,7 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_DEVICE_PING:
 #ifdef TARGET_TX
-        populateHandler();
+        devicePingCallback();
         luaSupressCriticalErrors();
 #endif
         sendLuaDevicePacket();

@@ -123,12 +123,12 @@ static void setupValueIndex(bool init)
     case STATE_POWERSAVE:
         values_min = 0;
         values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
-        values_index = config.GetFanMode();
+        values_index = config.GetMotionMode();
         break;
     case STATE_SMARTFAN:
         values_min = 0;
         values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
-        values_index = config.GetMotionMode();
+        values_index = config.GetFanMode();
         break;
 
     case STATE_POWER_MAX:
@@ -492,10 +492,10 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_PACKET, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_POWER, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
     {STATE_TELEMETRY, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-#ifdef HAS_THERMAL
+#ifdef HAS_GSENSOR
     {STATE_POWERSAVE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
-#ifdef HAS_GSENSOR
+#ifdef HAS_THERMAL
     {STATE_SMARTFAN, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
     {STATE_VTX, displayMenuScreen, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
