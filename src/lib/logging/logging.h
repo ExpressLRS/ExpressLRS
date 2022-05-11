@@ -22,8 +22,8 @@
 #endif
 
 #if defined(TARGET_TX)
-extern Stream *LoggingBackpack;
-#define LOGGING_UART (*LoggingBackpack)
+extern Stream *TxBackpack;
+#define LOGGING_UART (*TxBackpack)
 #else
 #define LOGGING_UART Serial
 #endif
