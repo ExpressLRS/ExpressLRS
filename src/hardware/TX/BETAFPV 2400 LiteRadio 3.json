@@ -16,15 +16,10 @@
     "power_high": 4,
     "power_max": 4,
     "power_default": 2,
-    "power_pdet": 35,
-    "power_pdet_intercept": 2.4,
-    "power_pdet_slope": 0.031,
     "power_control": 0,
-    "power_values": [-17,-13,-9,-6,-2],
-    "use_backpack": true,
+    "power_values": [-17,-14,-10,-7,-2],
+    "use_backpack": false,
     "debug_backpack_baud": 460800,
     "debug_backpack_rx": 16,
-    "debug_backpack_tx": 17,
-    "backpack_boot": 15,
-    "backpack_en": 25
+    "debug_backpack_tx": 17
 }

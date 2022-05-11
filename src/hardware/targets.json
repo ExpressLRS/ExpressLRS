@@ -58,6 +58,12 @@
                 "lua_name": "BFPV 2G4Micro1W",
                 "layout_file": "BETAFPV 2400 Micro 1W.json",
                 "upload_methods": ["uart", "wifi"]
+            },
+            "literadio3": {
+                "product_name": "BETAFPV 2.4GHz LiteRadio 3",
+                "lua_name": "BETAFPV LR3 Pro",
+                "layout_file": "BETAFPV 2400 LiteRadio 3.json",
+                "upload_methods": ["uart", "wifi", "etx"]
             }
         },
         "rx_2400": {

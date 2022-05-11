@@ -148,6 +148,7 @@ function uploadFile() {
     ajax.addEventListener("error", errorHandler, false);
     ajax.addEventListener("abort", abortHandler, false);
     ajax.open("POST", "/update");
+    ajax.setRequestHeader("X-FileSize", file.size);
     ajax.send(formdata);
 }
 

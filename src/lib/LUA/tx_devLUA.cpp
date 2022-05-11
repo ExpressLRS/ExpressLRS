@@ -204,6 +204,30 @@ struct luaItem_selection luaBluetoothTelem = {
 };
 #endif
 
+//---------------------------- BACKPACK ------------------
+static struct luaItem_folder luaBackpackFolder = {
+    {"Backpack", CRSF_FOLDER},
+};
+
+static struct luaItem_selection luaDvrAux = {
+    {"DVR AUX", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;AUX1;!AUX1;AUX2;!AUX2;AUX3;!AUX3;AUX4;!AUX4;AUX5;!AUX5;AUX6;!AUX6;AUX7;!AUX7;AUX8;!AUX8;AUX9;!AUX9;AUX10;!AUX10",
+    emptySpace};
+
+static struct luaItem_selection luaDvrStartDelay = {
+    {"DVR Srt Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace};
+
+static struct luaItem_selection luaDvrStopDelay = {
+    {"DVR Stp Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace};
+
+//---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
 
@@ -605,11 +629,30 @@ static void registerLuaParameters()
   #endif
   if (HAS_RADIO) {
     registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
+    
+    if (OPT_USE_TX_BACKPACK) {
+      registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+      registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+      // Backpack folder
+      registerLUAParameter(&luaBackpackFolder);
+      registerLUAParameter(
+          &luaDvrAux, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrAux(arg);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaDvrStartDelay, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrStartDelay(arg);
+          },
+          luaBackpackFolder.common.id); 
+      registerLUAParameter(
+          &luaDvrStopDelay, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrStopDelay(arg);
+          },
+          luaBackpackFolder.common.id);
+    }
   }
-  if (OPT_USE_TX_BACKPACK) {
-    registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
-    registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
-  }
+
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
@@ -633,16 +676,17 @@ static void registerLuaParameters()
 
 static int event()
 {
-    uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-    setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
-    setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-    setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-    luadevUpdateModelID();
-    setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
-    setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
-#if defined(GPIO_PIN_FAN_EN)
-  setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
-#endif
+  uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  luadevUpdateModelID();
+  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+  if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
+  }
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower, dynamic);
@@ -651,9 +695,15 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
-  #if defined(TARGET_TX_FM30)
-    setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
-  #endif
+  if (OPT_USE_TX_BACKPACK)
+  {
+    setLuaTextSelectionValue(&luaDvrAux, config.GetDvrAux());
+    setLuaTextSelectionValue(&luaDvrStartDelay, config.GetDvrStartDelay());
+    setLuaTextSelectionValue(&luaDvrStopDelay, config.GetDvrStopDelay());
+  }
+#if defined(TARGET_TX_FM30)
+  setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
+#endif
   return DURATION_IMMEDIATELY;
 }
 
