@@ -1,14 +1,9 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "RadioMstr Zorro"
+#define DEVICE_NAME "BETAFPV LR3 Pro"
 #endif
-// Copied from DupleTX
 
 // Any device features
 #define USE_SX1280_DCDC
-#define USE_SKY85321
-#define SKY85321_PDET_SLOPE     0.031
-#define SKY85321_PDET_INTERCEPT 2.4
-#define USE_TX_BACKPACK
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            5
@@ -24,15 +19,13 @@
 #define GPIO_PIN_RCSIGNAL_RX    3
 #define GPIO_PIN_RCSIGNAL_TX    1
 
-#define GPIO_PIN_PA_PDET        35
-
 // Backpack pins
 #define GPIO_PIN_DEBUG_RX       16
 #define GPIO_PIN_DEBUG_TX       17
-#define GPIO_PIN_BACKPACK_EN    25
-#define GPIO_PIN_BACKPACK_BOOT  15
 
 // Output Power
 #define MinPower PWR_10mW
 #define MaxPower PWR_250mW
-#define POWER_OUTPUT_VALUES {-17,-13,-9,-6,-2}
+#define POWER_OUTPUT_VALUES {-17,-14,-10,-7,-2}
+
+#define Regulatory_Domain_ISM_2400 1

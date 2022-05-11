@@ -59,6 +59,14 @@ TxConfig::Load()
         uint8_t value8;
         nvs_get_u8(handle, "fanthresh", &value8);
         m_config.powerFanThreshold = value8;
+
+        nvs_get_u8(handle, "dvraux", &value8);
+        m_config.dvrAux = value8;
+        nvs_get_u8(handle, "dvrstartdelay", &value8);
+        m_config.dvrStartDelay = value8;
+        nvs_get_u8(handle, "dvrstopdelay", &value8);
+        m_config.dvrStopDelay = value8;
+
         for(int i=0 ; i<64 ; i++)
         {
             char model[10] = "model";
@@ -70,7 +78,7 @@ TxConfig::Load()
     }
     else
     {
-        if(!UpgradeEepromV1ToV4())
+        if(!UpgradeEepromV5ToV6())
         {
             // If not, revert to defaults for this version
             DBGLN("EEPROM version mismatch! Resetting to defaults...");
@@ -86,18 +94,20 @@ TxConfig::Load()
 void
 TxConfig::Load()
 {
-    UpgradeEepromV1ToV4();
-
     m_eeprom->Get(0, m_config);
     m_modified = 0;
 
     // Check if version number matches
     if (m_config.version != (uint32_t)(TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
-        // If not, revert to defaults for this version
-        DBGLN("EEPROM version mismatch! Resetting to defaults...");
-        SetDefaults();
-        Commit();
+        // Check if we can update the config
+        if (!UpgradeEepromV5ToV6())
+        {
+            // If not, revert to defaults for this version
+            DBGLN("EEPROM version mismatch! Resetting to defaults...");
+            SetDefaults();
+            Commit();
+        }
     }
 }
 #endif
@@ -145,6 +155,10 @@ TxConfig::Commit()
     if (m_modified & MAIN_CHANGED)
     {
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
+
+        nvs_set_u8(handle, "dvraux", m_config.dvrAux);
+        nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
+        nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
     }
     nvs_commit(handle);
 #else
@@ -320,6 +334,36 @@ TxConfig::SetMotionMode(uint8_t motionMode)
 }
 
 void
+TxConfig::SetDvrAux(uint8_t dvrAux)
+{
+    if (GetDvrAux() != dvrAux)
+    {
+        m_config.dvrAux = dvrAux;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetDvrStartDelay(uint8_t dvrStartDelay)
+{
+    if (GetDvrStartDelay() != dvrStartDelay)
+    {
+        m_config.dvrStartDelay = dvrStartDelay;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
+{
+    if (GetDvrStopDelay() != dvrStopDelay)
+    {
+        m_config.dvrStopDelay = dvrStopDelay;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
 TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
@@ -331,6 +375,9 @@ TxConfig::SetDefaults()
     SetVtxPower(0);
     SetVtxPitmode(0);
     SetPowerFanThreshold(PWR_250mW);
+    SetDvrAux(0);
+    SetDvrStartDelay(0);
+    SetDvrStopDelay(0);
     Commit();
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
@@ -350,60 +397,94 @@ TxConfig::SetDefaults()
 }
 
 bool
-TxConfig::UpgradeEepromV1ToV4()
+TxConfig::UpgradeEepromV5ToV6()
 {
-    // Define a config struct based on the v1 EEPROM schema
-    struct Version1Config {
-        uint32_t    version;
-        uint32_t    rate;
-        uint32_t    tlm;
-        uint32_t    power;
-    };
+    #define PREV_TX_CONFIG_VERSION 5
 
-    Version1Config v1Config;
+    #if defined(PLATFORM_ESP32)
+        uint32_t version;
+        if (nvs_get_u32(handle, "tx_version", &version) != ESP_ERR_NVS_NOT_FOUND
+        && version != (uint32_t)(PREV_TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
+        {
+            // Cannot support an upgrade from this version
+            return false;
+        }
 
-    // Populate the v1 struct from eeprom
-    m_eeprom->Get(0, v1Config);
-    if (v1Config.version != 1)
-    {
-        return false;
-    }
+        // Populate the named values that should exist from prev config
+        uint32_t value;
+        nvs_get_u32(handle, "vtx", &value);
+        m_config.vtxBand = value >> 24;
+        m_config.vtxChannel = value >> 16;
+        m_config.vtxPower = value >> 8;
+        m_config.vtxPitmode = value;
 
-    DBGLN("EEPROM version 1 is out of date... upgrading to version %u", TX_CONFIG_VERSION);
+        nvs_get_u32(handle, "fan", &value);
+        m_config.fanMode = value;
 
-    v1Config.version = 0;
-    m_eeprom->Put(0, v1Config);
-    m_eeprom->Commit();
+        nvs_get_u32(handle, "motion", &value);
+        m_config.motionMode = value;
 
-    // Set new config to old values, or defaults if they are new variables
+        value = sizeof(m_config.ssid);
+        nvs_get_str(handle, "ssid", m_config.ssid, &value);
+        value = sizeof(m_config.password);
+        nvs_get_str(handle, "password", m_config.password, &value);
+        uint8_t value8;
+        nvs_get_u8(handle, "fanthresh", &value8);
+        m_config.powerFanThreshold = value8;
+
+        for(int i=0 ; i<64 ; i++)
+        {
+            char model[10] = "model";
+            model_config_t value;
+            itoa(i, model+5, 10);
+            nvs_get_u32(handle, model, (uint32_t*)&value);
+            m_config.model_config[i] = value;
+        }
+    #else // STM32
+        // Define config struct based on the prev EEPROM schema
+        typedef struct {
+            uint32_t        version;
+            char            ssid[33];
+            char            password[33];
+            uint8_t         vtxBand;
+            uint8_t         vtxChannel;
+            uint8_t         vtxPower;
+            uint8_t         vtxPitmode;
+            uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+            model_config_t  model_config[64];
+            uint8_t         fanMode;
+            uint8_t         motionMode;
+        } v5_tx_config_t;
+
+        v5_tx_config_t v5Config;
+
+        // Populate the prev version struct from eeprom
+        m_eeprom->Get(0, v5Config);
+        if (v5Config.version != (uint32_t)(PREV_TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
+        {
+            // Cannot support an upgrade from this version
+            return false;
+        }
+
+        // Copy prev values to current config struct
+        memcpy(&m_config, &v5Config, sizeof(v5Config));
+    #endif
+
+    DBGLN("EEPROM version %u is out of date... upgrading to version %u", PREV_TX_CONFIG_VERSION, TX_CONFIG_VERSION);
+
+    // Update the version param
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
 
-    SetSSID("");
-    SetPassword("");
+    // V6 config is the same as V5, with the addition of 3 new
+    // fields in the tx_config_t struct. Set defaults for new
+    // fields, and write changes to EEPROM
+    SetDvrAux(0);
+    SetDvrStartDelay(0);
+    SetDvrStopDelay(0);
+    m_modified |= MAIN_CHANGED; // force write the default DVR AUX settings
 
-    SetVtxBand(0);
-    SetVtxChannel(0);
-    SetVtxPower(0);
-    SetVtxPitmode(0);
-    SetPowerFanThreshold(PWR_250mW);
     Commit();
 
-    for (int i = 0; i < 64; ++i)
-    {
-        SetModelId(i);
-        SetRate(v1Config.rate);
-        SetTlm(v1Config.tlm);
-        SetPower(v1Config.power);
-        SetDynamicPower(0);
-        SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
-        SetModelMatch(false);
-        SetFanMode(0);
-        SetMotionMode(0);
-        Commit();
-    }
-
-    SetModelId(0);
     return true;
 }
 

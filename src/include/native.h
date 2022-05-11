@@ -84,6 +84,7 @@ inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", valu
 
 const char device_name[] = "testing";
 const uint8_t device_name_size = sizeof(device_name);
+const char version[] = "native"; // should resolve to 0x00000000
 
 #ifdef _WIN32
 #define random rand
