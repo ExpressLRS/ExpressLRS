@@ -89,8 +89,12 @@ uint32_t CRSF::UARTwdtLastChecked;
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
+uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
+uint32_t CRSF::UARTrequestedBaud = 400000;
+#if defined(PLATFORM_ESP32)
+bool CRSF::UARTinverted = false;
+#endif
 
 bool CRSF::CRSFstate = false;
 
@@ -114,6 +118,7 @@ void CRSF::Begin()
 
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
+    UARTinverted = firmwareOptions.uart_inverted;
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
@@ -702,7 +707,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
     if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     {
         ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-        if (firmwareOptions.uart_inverted)
+        if (UARTinverted)
         {
             gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
             gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
@@ -732,7 +737,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
     {
         ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
         ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-        if (firmwareOptions.uart_inverted)
+        if (UARTinverted)
         {
             ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
             ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
@@ -761,7 +766,6 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 
 void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
-    uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
     maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
     maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
@@ -770,6 +774,57 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
+
+#if defined(PLATFORM_ESP32)
+uint32_t CRSF::autobaud()
+{
+    static enum { INIT, MEASURED, INVERTED } state;
+
+    uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
+    uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
+
+    if (state == MEASURED) {
+        UARTinverted = !UARTinverted;
+        state = INVERTED;
+        return UARTrequestedBaud;
+    } else if (state == INVERTED) {
+        UARTinverted = !UARTinverted;
+        state = INIT;
+    }
+
+    if ((*autobaud_reg & 1) == 0) {
+        *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
+        return 400000;
+    } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
+        return 400000;
+
+    state = MEASURED;
+
+    uint32_t low_period  = *(uint32_t *)UART_LOWPULSE_REG(0);
+    uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
+    *autobaud_reg = (4 << 8) | 0;
+
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    // sample code at https://github.com/espressif/esp-idf/issues/3336
+    // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
+    // Based on testing use max and add 2 for lowest deviation
+    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 2);
+    int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
+    for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
+    {
+        if (abs(calulatedBaud - bestBaud) > abs(calulatedBaud - (int32_t)TxToHandsetBauds[i]))
+        {
+            bestBaud = (int32_t)TxToHandsetBauds[i];
+        }
+    }
+    return bestBaud;
+}
+#else
+uint32_t CRSF::autobaud() {
+    UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
+    return TxToHandsetBauds[UARTcurrentBaudIdx];
+}
+#endif
 
 bool CRSF::UARTwdt()
 {
@@ -789,8 +844,8 @@ bool CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
-            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
+            UARTrequestedBaud = autobaud();
+
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
             adjustMaxPacketSize();
