@@ -44,6 +44,7 @@ local deviceIsELRS_TX = nil
 local linkstatTimeout = 100
 local titleShowWarn = nil
 local titleShowWarnTimeout = 100
+local reloadFolder = nil
 
 local COL2
 local maxLineIndex
@@ -337,8 +338,18 @@ local function fieldTextSelectionSave(field)
   crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.value })
 end
 
-local function fieldTextSelectionDisplay(field, y, attr)
-  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR") .. field.unit, attr)
+local function fieldTextSelectionDisplay_color(field, y, attr)
+  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
+  if (lcd.sizeText ~= nil) then
+    lcd.drawText(COL2 + (lcd.sizeText(field.values[field.value+1])), y, field.unit, 0)
+  else
+    lcd.drawText(COL2 + 10*string.len(field.values[field.value+1]), y, field.unit, 0)
+  end	
+end
+
+local function fieldTextSelectionDisplay_bw(field, y, attr)
+  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
+  lcd.drawText((lcd.getLastPos()), y, field.unit, 0)
 end
 
 -- STRING
@@ -493,7 +504,7 @@ local functions = {
   nil,
   nil,
   { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay }, --9 FLOAT(8)
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display=fieldTextSelectionDisplay }, --10 SELECT(9)
+  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display = nil }, --10 SELECT(9)
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11 STRING(10)
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
   { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --13 INFO(12)
@@ -511,6 +522,9 @@ local function parseParameterInfoMessage(data)
   end
   if #fieldData == 0 then
     expectedChunks = -1
+  end
+  if fieldId == reloadFolder then --if we finally receive the folder id, reset the pending reload folder flag
+    reloadFolder = nil
   end
   local field = fields[fieldId]
   local chunks = data[4]
@@ -545,6 +559,7 @@ local function parseParameterInfoMessage(data)
     field.parent = parent
     field.type = type
     field.hidden = hidden
+    field.unit = nil
     field.name, offset = fieldGetString(fieldData, 3, field.name)
     if functions[field.type+1].load then
       functions[field.type+1].load(field, fieldData, offset)
@@ -553,19 +568,23 @@ local function parseParameterInfoMessage(data)
     if field.max == 0 then field.max = nil end
 
     if not fieldPopup then
-      if fieldId == fields_count then
+      if fieldId == fields_count then --if we have loaded all params
         allParamsLoaded = 1
         fieldId = 1
-        createDeviceFields()
+        createDeviceFields()  -- start querying the "other devices"
       elseif allParamsLoaded == 0 then
         -- advance to the next field if doing a full load
         fieldId = 1 + (fieldId % (#fields-1))
+      elseif reloadFolder ~= nil then --if we still have to reload the folder name
+        fieldId, fieldChunk, statusComplete = reloadFolder, 0, 0
       end
       fieldTimeout = getTime() + 200
     else
       fieldTimeout = getTime() + fieldPopup.timeout
     end
-    statusComplete = 1
+    if reloadFolder == nil then
+      statusComplete = 1  --status is not complete, we got to reload the folder
+    end
     fieldData = {}
   end
 end
@@ -774,6 +793,11 @@ local function handleDevicePageEvent(event)
             -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
             fieldId, fieldChunk, statusComplete = field.id, 0, 0
+            if field.parent then
+              -- if it is inside a folder, then we reload the folder
+              reloadFolder = field.parent
+              fields[field.parent].name = nil
+            end
             fieldData = {}
           end
           functions[field.type+1].save(field)
@@ -877,11 +901,20 @@ local function loadSymbolChars()
 end
 
 local function setLCDvar()
-  -- Set the title function depending on if LCD is color, and free the other function
-  lcd_title = (lcd.RGB ~= nil) and lcd_title_color or lcd_title_bw
+  -- Set the title function depending on if LCD is color, and free the other function and
+  -- set textselection unit function, use GetLastPost or sizeText
+  if (lcd.RGB ~= nil) then
+    lcd_title = lcd_title_color
+    functions[10].display=fieldTextSelectionDisplay_color
+  else
+    lcd_title = lcd_title_bw
+    functions[10].display=fieldTextSelectionDisplay_bw
+  end
   lcd_title_color = nil
   lcd_title_bw = nil
-  -- Determine if popupConfirmation takes 3 arguments or 2
+  fieldTextSelectionDisplay_bw = nil
+  fieldTextSelectionDisplay_color = nil
+    -- Determine if popupConfirmation takes 3 arguments or 2
   -- if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
   -- major 1 is assumed to be FreedomTX
   local ver, radio, major = getVersion()

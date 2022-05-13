@@ -12,7 +12,7 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   5
+#define TX_CONFIG_VERSION   6
 #define RX_CONFIG_VERSION   5
 #define UID_LEN             6
 
@@ -39,6 +39,9 @@ typedef struct {
     model_config_t  model_config[64];
     uint8_t         fanMode;
     uint8_t         motionMode;
+    uint8_t         dvrAux:5;
+    uint8_t         dvrStartDelay:3;
+    uint8_t         dvrStopDelay:3;
 } tx_config_t;
 
 class TxConfig
@@ -66,6 +69,9 @@ public:
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
     uint8_t  GetFanMode() const { return m_config.fanMode; }
     uint8_t  GetMotionMode() const { return m_config.motionMode; }
+    uint8_t  GetDvrAux() const { return m_config.dvrAux; }
+    uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
+    uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -86,12 +92,15 @@ public:
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
     void SetFanMode(uint8_t fanMode);
     void SetMotionMode(uint8_t motionMode);
+    void SetDvrAux(uint8_t dvrAux);
+    void SetDvrStartDelay(uint8_t dvrStartDelay);
+    void SetDvrStopDelay(uint8_t dvrStopDelay);
 
     // State setters
     bool SetModelId(uint8_t modelId);
 
 private:
-    bool UpgradeEepromV1ToV4();
+    bool UpgradeEepromV5ToV6();
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -126,6 +135,8 @@ typedef struct {
     uint32_t    version;
     bool        isBound;
     uint8_t     uid[UID_LEN];
+    bool        onLoan;
+    uint8_t     loanUID[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
     uint8_t     power;
@@ -151,6 +162,8 @@ public:
         #endif
     }
     const uint8_t* GetUID() const { return m_config.uid; }
+    bool GetOnLoan() const { return m_config.onLoan; }
+    const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
@@ -165,6 +178,8 @@ public:
     // Setters
     void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
+    void SetOnLoan(bool loaned);
+    void SetOnLoanUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);

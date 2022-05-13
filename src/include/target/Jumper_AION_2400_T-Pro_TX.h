@@ -19,8 +19,8 @@
 #define GPIO_PIN_RCSIGNAL_TX    1
 
 // Backpack pins
-#define GPIO_PIN_DEBUG_RX       13
-#define GPIO_PIN_DEBUG_TX       12
+#define GPIO_PIN_DEBUG_RX       12
+#define GPIO_PIN_DEBUG_TX       13
 
 // Output Power
 #define MinPower                PWR_25mW

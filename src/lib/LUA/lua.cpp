@@ -20,8 +20,7 @@ static volatile bool UpdateParamReq = false;
 
 #ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
-static uint8_t suppressedLuaWarningFlags = 0xFF; //8 flag, 1 bit for each flag. set the bit to 0 to suppress specific warning
-static void (*populateHandler)() = 0;
+static void (*devicePingCallback)() = nullptr;
 #endif
 
 #define LUA_MAX_PARAMS 32
@@ -47,6 +46,38 @@ static uint8_t luaSelectionOptionMax(const char *strOptions)
     else if (c == '\0')
       return retVal;
   }
+}
+
+uint8_t getLabelLength(char *text, char separator){
+  char *c = (char*)text;
+  //get label length up to null or lua separator ;
+  while(*c != separator && *c != '\0'){
+    c++;
+  }
+  return c-text;
+}
+
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value)
+{
+  const struct luaItem_selection *p1 = (const struct luaItem_selection *)luaStruct;
+  char *c = (char *)p1->options;
+  uint8_t count = 0;
+  while (*c != '\0'){
+    //if count is equal to the parameter value, print out the label to the array
+    if(count == value){
+      uint8_t labelLength = getLabelLength(c,';');
+      //write label to destination array
+      strlcpy(outarray, c, labelLength+1);
+      strlcpy(outarray + labelLength, p1->units, strlen(p1->units)+1);
+      return strlen(outarray);
+    }
+    //increment the count until value is found
+    if(*c == ';'){
+      count++;
+    }
+    c++;
+  }
+  return 0;
 }
 
 static uint8_t *luaTextSelectionStructToArray(const void *luaStruct, uint8_t *next)
@@ -92,7 +123,15 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
-
+static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
+{
+  const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
+  if(p1->dyn_name != NULL){
+    return (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
+  } else {
+    return (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
+  }
+}
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
@@ -117,8 +156,8 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 
   // Copy the name to the buffer starting at chunkBuffer[4]
   uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
-
   uint8_t *dataEnd;
+
   switch(dataType) {
     case CRSF_TEXT_SELECTION:
       dataEnd = luaTextSelectionStructToArray(luaData, chunkStart);
@@ -139,8 +178,10 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
-      // Nothing to do, the name is all there is
-      // but subtract 1 because dataSize expects the end to not include the null
+      // re-fetch the lua data name, because luaFolderStructToArray will decide whether
+      //to return the fixed name or dynamic name.
+      chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
+      // subtract 1 because dataSize expects the end to not include the null
       // which is already accounted for in chunkStart
       dataEnd = chunkStart - 1;
       break;
@@ -259,10 +300,9 @@ void sendELRSstatus()
   crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
-void registerLUAPopulateParams(void (*populate)())
+void luaRegisterDevicePingCallback(void (*callback)())
 {
-  populateHandler = populate;
-  populate();
+  devicePingCallback = callback;
 }
 
 #endif
@@ -356,7 +396,7 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_DEVICE_PING:
 #ifdef TARGET_TX
-        populateHandler();
+        devicePingCallback();
         luaSupressCriticalErrors();
 #endif
         sendLuaDevicePacket();

@@ -35,7 +35,7 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-Stream *LoggingBackpack;
+Stream *TxBackpack;
 
 volatile uint8_t NonceTX;
 
@@ -194,7 +194,7 @@ void DynamicPower_Update()
   // if telemetry is not arrived, quick return.
   if (!doUpdate)
     return;
-  
+
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
@@ -371,7 +371,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     return;
 
   DBGLN("set rate %u", index);
-  hwTimer.updateInterval(ModParams->interval);
+  uint32_t interval = ModParams->interval;
+#if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
+  interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
+#endif
+  hwTimer.updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
 #if defined(RADIO_SX128X)
@@ -383,7 +387,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_RFperfParams = RFperf;
   crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(ModParams->interval);
+  crsf.setSyncParams(interval);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }
@@ -601,6 +605,8 @@ static void ConfigChangeCommit()
   ChangeRadioParams();
   // Resume the timer, will take one hop for the radio to be on the right frequency if we missed a hop
   hwTimer.callbackTock = &timerCallbackNormal;
+  // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
+  luadevUpdateFolderNames();
   devicesTriggerEvent();
 }
 
@@ -806,11 +812,9 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  MSPDataPackage[1] = MasterUID[2];
-  MSPDataPackage[2] = MasterUID[3];
-  MSPDataPackage[3] = MasterUID[4];
-  MSPDataPackage[4] = MasterUID[5];
+  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
   BindingSendCount = 0;
+  MspSender.ResetState();
   MspSender.SetDataToTransmit(5, MSPDataPackage, ELRS_MSP_BYTES_PER_CALL);
 }
 
@@ -829,12 +833,7 @@ void EnterBindingMode()
   SendUIDOverMSP();
 
   // Set UID to special binding values
-  UID[0] = BindingUID[0];
-  UID[1] = BindingUID[1];
-  UID[2] = BindingUID[2];
-  UID[3] = BindingUID[3];
-  UID[4] = BindingUID[4];
-  UID[5] = BindingUID[5];
+  memcpy(UID, BindingUID, UID_LEN);
 
   CRCInitializer = 0;
   NonceTX = 0; // Lock the NonceTX to prevent syncspam packets
@@ -859,12 +858,7 @@ void ExitBindingMode()
   }
 
   // Reset UID to defined values
-  UID[0] = MasterUID[0];
-  UID[1] = MasterUID[1];
-  UID[2] = MasterUID[2];
-  UID[3] = MasterUID[3];
-  UID[4] = MasterUID[4];
-  UID[5] = MasterUID[5];
+  memcpy(UID, MasterUID, UID_LEN);
 
   CRCInitializer = (UID[4] << 8) | UID[5];
 
@@ -920,7 +914,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
-static void setupLoggingBackpack()
+static void setupTxBackpack()
 {  /*
    * Setup the logging/backpack serial port.
    * This is always done because we need a place to send data even if there is no backpack!
@@ -946,7 +940,7 @@ static void setupLoggingBackpack()
 #else
   Stream *serialPort = new NullStream();
 #endif
-  LoggingBackpack = serialPort;
+  TxBackpack = serialPort;
 }
 
 /**
@@ -977,7 +971,7 @@ static void setupTarget()
 #endif
 
   setupTargetCommon();
-  setupLoggingBackpack();
+  setupTxBackpack();
 }
 
 void setup()
@@ -1072,9 +1066,9 @@ void loop()
   DynamicPower_Update();
   VtxPitmodeSwitchUpdate();
 
-  if (LoggingBackpack->available())
+  if (TxBackpack->available())
   {
-    if (msp.processReceivedByte(LoggingBackpack->read()))
+    if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(msp.getReceivedPacket());
