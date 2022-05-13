@@ -47,7 +47,12 @@
 #define HAS_SCREEN
 #endif
 #if defined(GPIO_PIN_SPI_VTX_NSS)
+#if !defined(HAS_VTX_SPI)
 #define HAS_VTX_SPI
+#define OPT_HAS_VTX_SPI true
+#endif
+#else
+#define OPT_HAS_VTX_SPI false
 #endif
 
 #ifndef USE_TX_BACKPACK
