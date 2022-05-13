@@ -114,6 +114,7 @@
 
 // VTX
 #define HAS_VTX_SPI
+#define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_spi_vtx_nss) != UNDEF_PIN)
 #define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_rf_amp_pwm)
 #define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_rf_amp_vpd)
 #define GPIO_PIN_RF_AMP_VREF hardware_pin(HARDWARE_rf_amp_vref)

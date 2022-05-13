@@ -696,8 +696,7 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
-#if defined(HAS_VTX_SPI)
-    else if (MspData[7] == MSP_SET_VTX_CONFIG)
+    else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
     {
         vtxSPIBandChannelIdx = MspData[8];
         if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
@@ -707,7 +706,6 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         }
         devicesTriggerEvent();
     }
-#endif
     else
     {
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
