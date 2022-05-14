@@ -36,7 +36,8 @@ def build_html(mainfile, var, out, env, isTX=False):
     data = template.render({
             'VERSION': get_version(env),
             'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
-            'isTX': isTX
+            'isTX': isTX,
+            'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
         })
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data)

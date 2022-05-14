@@ -629,7 +629,7 @@ static void registerLuaParameters()
   #endif
   if (HAS_RADIO) {
     registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
-    
+
     if (OPT_USE_TX_BACKPACK) {
       registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
       registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
@@ -644,7 +644,7 @@ static void registerLuaParameters()
           &luaDvrStartDelay, [](luaPropertiesCommon *item, uint8_t arg) {
               config.SetDvrStartDelay(arg);
           },
-          luaBackpackFolder.common.id); 
+          luaBackpackFolder.common.id);
       registerLUAParameter(
           &luaDvrStopDelay, [](luaPropertiesCommon *item, uint8_t arg) {
               config.SetDvrStopDelay(arg);
@@ -669,7 +669,7 @@ static void registerLuaParameters()
     strlcpy(version_domain, version, 18);
     strlcat(version_domain, "... ", sizeof(version_domain));
   }
-  strlcat(version_domain, FHSSconfig.domain, sizeof(version_domain));
+  strlcat(version_domain, FHSSconfig->domain, sizeof(version_domain));
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }

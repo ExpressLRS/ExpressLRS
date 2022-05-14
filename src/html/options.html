@@ -1,4 +1,4 @@
-@@require(isTX)
+@@require(isTX, sx127x)
 <!DOCTYPE HTML>
 <html>
 
@@ -27,6 +27,18 @@
 			<form id='upload_options' method='POST' action="/options">
 				<table>
 					<tr><td>UID</td><td><input size='40' id='uid' name='uid' type='text'/></td></tr>
+@@if sx127x:
+					<tr><td>Regulatory domain</td><td>
+						<select id='domain' name='domain'>
+							<option value='0'>AU915</option>
+							<option value='1'>FCC915</option>
+							<option value='2'>EU868</option>
+							<option value='3'>IN866</option>
+							<option value='4'>AU433</option>
+							<option value='5'>EU433</option>
+						</select>
+					</td></tr>
+@@end
 					<tr><td>WiFi "auto on" interval (s)</td><td><input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text'/></td></tr>
 					<tr><td>Home WiFi SSID</td><td>
 						<div class="autocomplete">
