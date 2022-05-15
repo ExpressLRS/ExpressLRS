@@ -1,4 +1,4 @@
-#if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+#if defined(GPIO_PIN_SPI_VTX_NSS)
 
 #include "targets.h"
 #include "common.h"
@@ -61,8 +61,14 @@ static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
 #define VPD_SETPOINT_YOLO_MW                    1500
+#if defined(TARGET_UNIFIED_RX)
+const uint16_t *VpdSetPointArray25mW = nullptr;
+const uint16_t *VpdSetPointArray100mW = nullptr;
+#else
 uint16_t VpdSetPointArray25mW[] = VPD_VALUES_25MW;
 uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
+#endif
+
 uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
@@ -75,25 +81,30 @@ static const uint16_t freqTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
-#if defined(GPIO_PIN_SPI_VTX_SCK) && GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN
-static SPIClass vtxSPI = SPIClass();
+static SPIClass *vtxSPI;
+static void rtc6705WriteRegister(uint32_t regData)
+{
+    // When sharing the SPI Bus control of the NSS pin is done by us
+    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    {
+        vtxSPI->setBitOrder(LSBFIRST);
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
+    }
 
-static void rtc6705WriteRegister(uint32_t regData)
-{
-    vtxSPI.transferBits(regData, nullptr, 25);
+    #if defined(PLATFORM_ESP32)
+        vtxSPI->transferBits(regData, nullptr, 25);
+    #else
+        uint8_t buf[BUF_PACKET_SIZE];
+        memcpy(buf, (byte *)&regData, BUF_PACKET_SIZE);
+        vtxSPI->transfer(buf, BUF_PACKET_SIZE);
+    #endif
+
+    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    {
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+        vtxSPI->setBitOrder(MSBFIRST);
+    }
 }
-#else
-static void rtc6705WriteRegister(uint32_t regData)
-{
-    uint8_t buf[BUF_PACKET_SIZE];
-    memcpy(buf, (byte *)&regData, BUF_PACKET_SIZE);
-    SPI.setBitOrder(LSBFIRST);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
-    SPI.transfer(buf, BUF_PACKET_SIZE);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
-    SPI.setBitOrder(MSBFIRST);
-}
-#endif
 
 static void rtc6705ResetSynthRegA()
 {
@@ -160,7 +171,7 @@ static void VTxOutputDecrease()
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
-static uint16_t LinearInterpVpdSetPointArray(uint16_t VpdSetPointArray[])
+static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
 {
     uint16_t newVpd = 0;
     uint16_t f = freqTable[vtxSPIBandChannelIdxCurrent];
@@ -236,33 +247,55 @@ static void checkOutputPower()
 
 static void initialize()
 {
-
-    #if defined(GPIO_PIN_SPI_VTX_SCK) && GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN
-        vtxSPI.begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
-        vtxSPI.setHwCs(true);
-        vtxSPI.setBitOrder(LSBFIRST);
-    #else
-        pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
-        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+    #if defined(TARGET_UNIFIED_RX)
+    VpdSetPointArray25mW = VPD_VALUES_25MW;
+    VpdSetPointArray100mW = VPD_VALUES_100MW;
     #endif
 
-    pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
-    digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+    {
+        if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
+        {
+            vtxSPI = new SPIClass();
+            #if defined(PLATFORM_ESP32)
+            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            #else
+            vtxSPI->pins(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            vtxSPI->begin();
+            #endif
+            vtxSPI->setHwCs(true);
+            vtxSPI->setBitOrder(LSBFIRST);
+        }
+        else
+        {
+            vtxSPI = &SPI;
+            pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
+            digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+        }
 
-    #if defined(PLATFORM_ESP8266)
-        pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-        analogWriteFreq(10000); // 10kHz
-        analogWriteResolution(12); // 0 - 4095
-    #else
-        analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
-    #endif
-    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+        pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
-    delay(RTC6705_BOOT_DELAY);
+        #if defined(PLATFORM_ESP8266)
+            pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+            analogWriteFreq(10000); // 10kHz
+            analogWriteResolution(12); // 0 - 4095
+        #else
+            analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
+        #endif
+        analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+
+        delay(RTC6705_BOOT_DELAY);
+    }
 }
 
 static int start()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
 
     rtc6705PowerAmpOn();
@@ -272,6 +305,11 @@ static int start()
 
 static int event()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     if (IsArmed())
     {
         vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
@@ -287,6 +325,11 @@ static int event()
 
 static int timeout()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     if (!hwTimer::isTick) // Only run spi and analog reads during rx free time.
     {
         return DURATION_IMMEDIATELY;

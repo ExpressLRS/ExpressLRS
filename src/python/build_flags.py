@@ -1,4 +1,5 @@
 Import("env")
+from genericpath import exists
 import os
 import sys
 import hashlib
@@ -9,6 +10,8 @@ import melodyparser
 import elrs_helpers
 
 build_flags = env.get('BUILD_FLAGS', [])
+json_flags = {}
+json_flags['uart-inverted'] = False
 UIDbytes = ""
 define = ""
 target_name = env.get('PIOENV', '').upper()
@@ -25,25 +28,70 @@ def print_error(error):
     raise Exception('!!! %s !!!' % error)
 
 
+def dequote(str):
+    if str[0] == '"' and str[-1] == '"':
+        return str[1:-1]
+    return str
+
+def process_json_flag(define):
+    parts = re.search("-D(.*)\s*=\s*(.*)$", define)
+    if parts and define.startswith("-D"):
+        if parts.group(1) == "MY_BINDING_PHRASE":
+            json_flags['uid'] = [x for x in hashlib.md5(define.encode()).digest()[0:6]]
+        if parts.group(1) == "HOME_WIFI_SSID":
+            json_flags['wifi-ssid'] = dequote(parts.group(2))
+        if parts.group(1) == "HOME_WIFI_PASSWORD":
+            json_flags['wifi-password'] = dequote(parts.group(2))
+        if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
+            json_flags['wifi-on-interval'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "TLM_REPORT_INTERVAL_MS":
+            json_flags['tlm-interval'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "FAN_MIN_RUNTIME":
+            json_flags['fan-runtime'] = int(dequote(parts.group(2)))
+    if define == "-DUART_INVERTED":
+        json_flags['uart-inverted'] = True
+    if define == "-DNO_SYNC_ON_ARM":
+        json_flags['no-sync-on-arm'] = True
+    if define == "-DUNLOCK_HIGHER_POWER":
+        json_flags['unlock-higher-power'] = True
+
+def process_build_flag(define):
+    if define.startswith("-D") or define.startswith("!-D"):
+        if "MY_BINDING_PHRASE" in define:
+            build_flags.append(define)
+            bindingPhraseHash = hashlib.md5(define.encode()).digest()
+            UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
+            define = "-DMY_UID=" + UIDbytes
+            sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+            sys.stdout.flush()
+        if "MY_STARTUP_MELODY=" in define:
+            parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
+            define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
+        if "HOME_WIFI_SSID=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
+        if "HOME_WIFI_PASSWORD=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
+        if "DEVICE_NAME=" in define:
+            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            if parts and parts.group(2):
+                env['DEVICE_NAME'] = parts.group(2)
+        if not define in build_flags:
+            build_flags.append(define)
+
 def parse_flags(path):
     global build_flags
+    global json_flags
     try:
         with open(path, "r") as _f:
             for define in _f:
                 define = define.strip()
-                if define.startswith("-D") or define.startswith("!-D"):
-                    if "MY_BINDING_PHRASE" in define:
-                        build_flags.append(define)
-                        bindingPhraseHash = hashlib.md5(define.encode()).digest()
-                        UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
-                        define = "-DMY_UID=" + UIDbytes
-                        sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
-                        sys.stdout.flush()
-                    if "MY_STARTUP_MELODY=" in define:
-                        parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
-                        define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
-                    if not define in build_flags:
-                        build_flags.append(define)
+                process_build_flag(define)
+                process_json_flag(define)
+
     except IOError:
         print("File '%s' does not exist" % path)
 
@@ -53,30 +101,6 @@ def process_flags(path):
         return
     parse_flags(path)
 
-def escapeChars(x):
-    parts = re.search("(.*)=\w*\"(.*)\"$", x)
-    if parts and parts.group(2):
-        if parts.group(1) == "-DMY_STARTUP_MELODY_ARR": # ignoring escape chars for startup melody
-            return x
-        x = parts.group(1) + '="' + parts.group(2).translate(str.maketrans({
-            "!": "\\\\\\\\041",
-            "\"": "\\\\\\\\042",
-            "#": "\\\\\\\\043",
-            "$": "\\\\\\\\044",
-            "&": "\\\\\\\\046",
-            "'": "\\\\\\\\047",
-            "(": "\\\\\\\\050",
-            ")": "\\\\\\\\051",
-            ",": "\\\\\\\\054",
-            ";": "\\\\\\\\073",
-            "<": "\\\\\\\\074",
-            ">": "\\\\\\\\076",
-            "\\": "\\\\\\\\134",
-            "`": "\\\\\\\\140",
-            "|": "\\\\\\\\174"
-        })) + '"'
-    return x
-
 def condense_flags():
     global build_flags
     for line in build_flags:
@@ -84,26 +108,11 @@ def condense_flags():
         for flag in re.findall("!-D\s*[^\s]+", line):
             build_flags = [x.replace(flag,"") for x in build_flags] # remove the removal flag
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag if it matches the removal flag
-    build_flags = [escapeChars(x) for x in build_flags] # perform escaping of flags with values
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
 
 def version_to_env():
     ver = elrs_helpers.get_git_version()
     env.Append(GIT_SHA = ver['sha'], GIT_VERSION= ver['version'])
-
-def regulatory_domain_to_env():
-    regions = [("AU_915", "AU915"), ("EU_868", "EU868"), ("IN_866", "IN866"), ("AU_433", "AU433"), ("EU_433", "EU433"), ("FCC_915","FCC915"), ("ISM_2400", "ISM2G4"), ("EU_CE_2400", "CE2G4")]
-    retVal = "UNK"
-    if ("_2400" in target_name or \
-        '-DRADIO_SX128X=1' in build_flags) and \
-        '-DRegulatory_Domain_EU_CE_2400' not in build_flags:
-        retVal = "ISM2G4"
-    else:
-        for k, v in regions:
-            if fnmatch.filter(build_flags, '*-DRegulatory_Domain_'+k):
-                retVal = v
-                break
-    env.Append(REG_DOMAIN = retVal)
 
 def string_to_ascii(str):
     return ",".join(["%s" % ord(char) for char in str])
@@ -111,16 +120,14 @@ def string_to_ascii(str):
 def get_git_sha():
     return string_to_ascii(env.get('GIT_SHA'))
 
-def get_ver_and_reg():
-    return string_to_ascii(env.get('GIT_VERSION') + " " + env.get('REG_DOMAIN'))
-
+def get_version():
+    return string_to_ascii(env.get('GIT_VERSION'))
 
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
-regulatory_domain_to_env()
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
-build_flags.append("-DLATEST_VERSION=" + get_ver_and_reg()) # version and domain
+build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
@@ -134,11 +141,27 @@ if '-DRADIO_SX127X=1' in build_flags:
     if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
         print_error('Please define a Regulatory_Domain in user_defines.txt')
 
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_AU_915'):
+        json_flags['domain'] = 0
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_FCC_915'):
+        json_flags['domain'] = 1
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_868'):
+        json_flags['domain'] = 2
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_IN_866'):
+        json_flags['domain'] = 3
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_AU_433'):
+        json_flags['domain'] = 4
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_433'):
+        json_flags['domain'] = 5
+else:
+    json_flags['domain'] = 0
+
 # Remove ISM_2400 domain flag if not unit test, it is defined per target config
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
 
+env['OPTIONS_JSON'] = json_flags
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
 

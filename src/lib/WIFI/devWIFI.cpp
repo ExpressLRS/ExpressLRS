@@ -2,6 +2,15 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#include <ArduinoJson.h>
+#if defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#else
+#include <FS.h>
+#endif
+#endif
+
 #if defined(PLATFORM_ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -43,7 +52,7 @@ bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
 
 static wl_status_t laststatus = WL_IDLE_STATUS;
-static volatile WiFiMode_t wifiMode = WIFI_OFF;
+volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
 
@@ -108,25 +117,35 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-static void WebUpdateSendCSS(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t*)CSS, sizeof(CSS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
+static struct {
+  const char *url;
+  const char *contentType;
+  const uint8_t* content;
+  const size_t size;
+} files[] = {
+  {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
+  {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
+  {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+  {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
+  {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
+  {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
+  {"/options.js", "text/javascript", (uint8_t *)OPTIONS_JS, sizeof(OPTIONS_JS)},
+#endif
+};
 
-static void WebUpdateSendJS(AsyncWebServerRequest *request)
+static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
-
-static void WebUpdateSendFlag(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
+  for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
+    if (request->url().equals(files[i].url)) {
+      AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
+      response->addHeader("Content-Encoding", "gzip");
+      request->send(response);
+      return;
+    }
+  }
+  request->send(404, "text/plain", "File not found");
 }
 
 static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
@@ -136,17 +155,26 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  AsyncWebServerResponse *response;
+  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  if (connectionState == hardwareUndefined)
+  {
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
+  }
+  else
+  #endif
+  {
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  }
+  response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
-  response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
+extern uint8_t SERVO_COUNT;
 
 static String WebGetPwmStr()
 {
@@ -190,6 +218,43 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 }
 #endif
 
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  static File file;
+  static size_t bytes;
+  if (!file || request->url() != file.name()) {
+    file = SPIFFS.open(request->url(), "w");
+    bytes = 0;
+  }
+  file.write(data, len);
+  bytes += len;
+  if (bytes == total) {
+    file.close();
+  }
+}
+
+static void getFile(AsyncWebServerRequest *request)
+{
+  if (request->url() == "/options.json") {
+    request->send(200, "application/json", getOptions());
+  } else if (request->url() == "/hardware.json") {
+    request->send(200, "application/json", getHardware());
+  } else {
+    request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+  }
+}
+
+static void HandleReboot(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
+}
+#endif
+
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s = String("{\"ssid\":\"") + station_ssid + "\",\"mode\":\"";
@@ -202,15 +267,23 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   s += ",\"modelid\":" + String(config.GetModelId());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
-  s += WebGetPwmStr();
+  if (SERVO_COUNT > 0) {
+    s += WebGetPwmStr();
+  }
   #endif
+  s += ",\"product_name\": \"" + String(product_name) + "\"";
+  s += ",\"lua_name\": \"" + String(device_name) + "\"";
   s += "}";
   request->send(200, "application/json", s);
 }
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
+  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\"" +
+    ",\"version\": \"" + VERSION + "\"" +
+    ",\"product_name\": \"" + product_name + "\"" +
+    ",\"lua_name\": \"" + device_name + "\"" +
+    "}";
   request->send(200, "application/json", s);
 }
 
@@ -270,7 +343,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
   // Only save to config if we don't have a flashed wifi network
-  if (home_wifi_ssid[0] == 0) {
+  if (firmwareOptions.home_wifi_ssid[0] == 0) {
     config.SetSSID(ssid.c_str());
     config.SetPassword(password.c_str());
     config.Commit();
@@ -285,9 +358,9 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetPassword("");
   config.Commit();
   // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
     String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
     sendResponse(request, msg, WIFI_STA);
   }
@@ -499,15 +572,16 @@ static void startWiFi(unsigned long now)
   if (wifiStarted) {
     return;
   }
-  hwTimer::stop();
-  // Set transmit power to minimum
-  POWERMGNT::setPower(MinPower);
-  if (connectionState < FAILURE_STATES) {
-    connectionState = wifiUpdate;
-  }
 
-  DBGLN("Stopping Radio");
-  Radio.End();
+  if (connectionState < FAILURE_STATES) {
+    hwTimer::stop();
+    // Set transmit power to minimum
+    POWERMGNT::setPower(MinPower);
+    connectionState = wifiUpdate;
+
+    DBGLN("Stopping Radio");
+    Radio.End();
+  }
 
   DBGLN("Begin Webupdater");
 
@@ -520,9 +594,9 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
   }
   else {
     strcpy(station_ssid, config.GetSSID());
@@ -573,7 +647,7 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt("http", "tcp", "device", device_name);
+    MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
@@ -591,9 +665,9 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendCSS);
-  server.on("/scan.js", WebUpdateSendJS);
-  server.on("/logo.svg", WebUpdateSendFlag);
+  server.on("/main.css", WebUpdateSendContent);
+  server.on("/scan.js", WebUpdateSendContent);
+  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -620,6 +694,16 @@ static void startServices()
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
+  #endif
+  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+    server.on("/hardware.html", WebUpdateSendContent);
+    server.on("/hardware.js", WebUpdateSendContent);
+    server.on("/options.html", WebUpdateSendContent);
+    server.on("/options.js", WebUpdateSendContent);
+    server.on("/elrs.css", WebUpdateSendContent);
+    server.on("/hardware.json", getFile).onBody(putFile);
+    server.on("/options.json", getFile).onBody(putFile);
+    server.on("/reboot", HandleReboot);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -739,12 +823,7 @@ void HandleMSP2WIFI()
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
-
-  #ifdef AUTO_WIFI_ON_INTERVAL
-    return AUTO_WIFI_ON_INTERVAL * 1000;
-  #else
-    return DURATION_NEVER;
-  #endif
+  return firmwareOptions.wifi_auto_on_interval;
 }
 
 static int event()
@@ -768,21 +847,21 @@ static int timeout()
     return DURATION_IMMEDIATELY;
   }
 
-  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
+  #if defined(TARGET_TX)
+  // if webupdate was requested before or .wifi_auto_on_interval has elapsed but uart is not detected
+  // start webupdate, there might be wrong configuration flashed.
+  if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
     DBGLN("No CRSF ever detected, starting WiFi");
     connectionState = wifiUpdate;
     return DURATION_IMMEDIATELY;
   }
-  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
-  if (!webserverPreventAutoStart && (connectionState == disconnected))
+  #elif defined(TARGET_RX)
+  if (firmwareOptions.wifi_auto_on_interval != -1 && !webserverPreventAutoStart && (connectionState == disconnected))
   {
     static bool pastAutoInterval = false;
     // If InBindingMode then wait at least 60 seconds before going into wifi,
-    // regardless of if AUTO_WIFI_ON_INTERVAL is set to less
-    if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
+    // regardless of if .wifi_auto_on_interval is set to less
+    if (!InBindingMode || firmwareOptions.wifi_auto_on_interval >= 60000 || pastAutoInterval)
     {
       // No need to ExitBindingMode(), the radio is about to be stopped. Need
       // to change this before the mode change event so the LED is updated
@@ -791,7 +870,7 @@ static int timeout()
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
-    return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
+    return (60000 - firmwareOptions.wifi_auto_on_interval);
   }
   #endif
   return DURATION_NEVER;
