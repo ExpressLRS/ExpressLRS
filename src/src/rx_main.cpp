@@ -67,6 +67,7 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
+bool hardwareConfigured = true;
 
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
@@ -1049,7 +1050,8 @@ static void setupBindingFromConfig()
 
 static void HandleUARTin()
 {
-    if (OPT_CRSF_RCVR_NO_SERIAL)
+    // If the hardware is not configured we want to be able to allow BF passthrough to work
+    if (hardwareConfigured && OPT_CRSF_RCVR_NO_SERIAL)
     {
         return;
     }
@@ -1318,13 +1320,12 @@ RF_PRE_INIT()
 
 void setup()
 {
-    bool hardware_success = true;
     #if defined(TARGET_UNIFIED_RX)
     Serial.begin(420000);
     SerialLogger = &Serial;
     SPIFFS.begin();
-    hardware_success = options_init();
-    if (!hardware_success)
+    hardwareConfigured = options_init();
+    if (!hardwareConfigured)
     {
         // Register the WiFi with the framework
         static device_affinity_t wifi_device[] = {
@@ -1348,7 +1349,7 @@ void setup()
     }
     #endif
 
-    if (hardware_success)
+    if (hardwareConfigured)
     {
         initUID();
         setupTarget();
