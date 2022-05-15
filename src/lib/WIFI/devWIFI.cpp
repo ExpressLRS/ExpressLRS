@@ -640,8 +640,10 @@ static void startServices()
 
 static void HandleWebUpdate()
 {
+  static bool scanComplete = false;
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
+
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
     switch(status) {
@@ -670,15 +672,18 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
-        #if defined(PLATFORM_ESP8266)
-          WiFi.mode(WIFI_AP_STA);
-        #else
-          WiFi.mode(WIFI_AP);
-        #endif
+        WiFi.mode(wifiMode);
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
+        #if defined(PLATFORM_ESP8266)
+        scanComplete = false;
+        WiFi.scanNetworksAsync([](int){
+          scanComplete = true;
+        });
+        #else
         WiFi.scanNetworks(true);
+        #endif
         startServices();
         break;
       case WIFI_STA:
@@ -697,6 +702,14 @@ static void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
+
+  #if defined(PLATFORM_ESP8266)
+  if (scanComplete)
+  {
+    WiFi.mode(wifiMode);
+    scanComplete = false;
+  }
+  #endif
 
   if (servicesStarted)
   {
