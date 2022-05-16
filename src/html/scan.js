@@ -86,10 +86,12 @@ function get_mode() {
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
-            if (data.modelid !== undefined)
+            if (data.modelid)
                 _('modelid').value = data.modelid;
-            if (data.product_name !== undefined)
+            if (data.product_name)
                 _('product_name').textContent = data.product_name;
+            if (data.reg_domain)
+                _('reg_domain').textContent = data.reg_domain;
             updatePwmSettings(data.pwm);
         }
     };

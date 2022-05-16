@@ -13,7 +13,7 @@ from external.wheezy.template.loader import FileLoader
 
 
 def get_version(env):
-    return '%s (%s) %s' % (env.get('GIT_VERSION'), env.get('GIT_SHA'), env.get('REG_DOMAIN'))
+    return '%s (%s)' % (env.get('GIT_VERSION'), env.get('GIT_SHA'))
 
 def build_version(out, env):
     out.write('const char *VERSION = "%s";\n\n' % get_version(env))

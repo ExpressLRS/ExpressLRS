@@ -29,6 +29,7 @@
 
 #include "common.h"
 #include "POWERMGNT.h"
+#include "FHSS.h"
 #include "hwTimer.h"
 #include "logging.h"
 #include "options.h"
@@ -273,6 +274,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   #endif
   s += ",\"product_name\": \"" + String(product_name) + "\"";
   s += ",\"lua_name\": \"" + String(device_name) + "\"";
+  s += ",\"reg_domain\": \"" + String(getRegulatoryDomain()) + "\"";
   s += "}";
   request->send(200, "application/json", s);
 }
@@ -283,6 +285,7 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
     ",\"version\": \"" + VERSION + "\"" +
     ",\"product_name\": \"" + product_name + "\"" +
     ",\"lua_name\": \"" + device_name + "\"" +
+    ",\"reg_domain\": \"" + getRegulatoryDomain() + "\"" +
     "}";
   request->send(200, "application/json", s);
 }
