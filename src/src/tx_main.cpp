@@ -481,7 +481,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.std.msp_ul.payload,
           sizeof(otaPkt.std.msp_ul.payload));
-        );
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions
