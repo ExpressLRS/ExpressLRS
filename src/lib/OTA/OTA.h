@@ -3,7 +3,7 @@
 
 #include <functional>
 #include "common.h"
-#include "CRC.h"
+#include "crc.h"
 #include "CRSF.h"
 
 #define OTA4_PACKET_SIZE     8U
