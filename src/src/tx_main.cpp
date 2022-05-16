@@ -294,14 +294,12 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     uint8_t dataLen;
     if (ota8->tlm_dl.containsLinkStats)
     {
-      DBGW('T');
       LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
       telemPtr = ota8->tlm_dl.ul_link_stats.payload;
       dataLen = sizeof(ota8->tlm_dl.ul_link_stats.payload);
     }
     else
     {
-      DBGW('t');
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
