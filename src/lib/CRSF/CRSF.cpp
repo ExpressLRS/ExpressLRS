@@ -275,19 +275,19 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
-    if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
-    {
-        ERRLN("too large");
-        return;
-    }
-
     if (CRSF::CRSFstate)
     {
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (size > CRSF_MAX_PACKET_LEN)
+        {
+            ERRLN("too large");
+            return;
+        }
+
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
 #ifdef PLATFORM_ESP32
         portENTER_CRITICAL(&FIFOmux);
 #endif
-        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
         if (SerialOutFIFO.ensure(size + 1))
         {
             SerialOutFIFO.push(size); // length

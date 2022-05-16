@@ -14,6 +14,8 @@ public:
     void Unlock();
     bool GetCurrentConfirm();
 private:
+    void _ReceiveData(uint8_t const * const receiveData, uint8_t dataLen);
+
     uint8_t *data;
     volatile bool finishedData;
     volatile uint8_t length;

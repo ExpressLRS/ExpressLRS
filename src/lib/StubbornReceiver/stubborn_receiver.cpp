@@ -20,8 +20,8 @@ void StubbornReceiver::setMaxPackageIndex(uint8_t maxPackageIndex)
 
 void StubbornReceiver::ResetState()
 {
+    currentPackage = 1;
     currentOffset = 0;
-    currentPackage = 0;
     telemetryConfirm = false;
 }
 
@@ -39,12 +39,36 @@ void StubbornReceiver::SetDataToReceive(uint8_t* dataToReceive, uint8_t maxLengt
     finishedData = false;
 }
 
+void StubbornReceiver::_ReceiveData(uint8_t const * const receiveData, uint8_t dataLen)
+{
+    uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
+    for (unsigned i = 0; i < len; i++)
+    {
+        data[currentOffset++] = receiveData[i];
+    }
+}
+
 void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData, uint8_t dataLen)
 {
-    if  (packageIndex == 0 && currentPackage > 1)
+    if  (packageIndex == 0)
     {
-        finishedData = true;
-        telemetryConfirm = !telemetryConfirm;
+        // PackageIndex 0 (the final packet) can also contain data,
+        // but only if the the data isn't all zeroes
+        bool containedData = false;
+        for (unsigned i=0; i<dataLen; ++i)
+        {
+            if (receiveData[i] != 0)
+            {
+                _ReceiveData(receiveData, dataLen);
+                containedData = true;
+                break;
+            }
+        }
+        if (containedData || currentPackage > 1)
+        {
+            telemetryConfirm = !telemetryConfirm;
+            finishedData = true;
+        }
         return;
     }
 
@@ -64,12 +88,7 @@ void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * c
 
     if (packageIndex == currentPackage)
     {
-        uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
-        for (uint8_t i = 0; i < len; i++)
-        {
-            data[currentOffset++] = receiveData[i];
-        }
-
+        _ReceiveData(receiveData, dataLen);
         currentPackage++;
         telemetryConfirm = !telemetryConfirm;
         return;

@@ -22,7 +22,7 @@ void StubbornSender::ResetState()
 {
     bytesLastPayload = 0;
     currentOffset = 0;
-    currentPackage = 0;
+    currentPackage = 1;
     waitUntilTelemetryConfirm = true;
     waitCount = 0;
     // 80 corresponds to UpdateTelemetryRate(ANY, 2, 1), which is what the TX uses in boost mode
@@ -63,11 +63,23 @@ uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
         packageIndex = maxPackageIndex;
         break;
     case SENDING:
-        packageIndex = currentPackage;
-        bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
-        for (unsigned n = 0; n < bytesLastPayload; ++n)
         {
-            outData[n] = data[currentOffset + n];
+            bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
+            bool hasData = false;
+            for (unsigned n = 0; n < bytesLastPayload; ++n)
+            {
+                uint8_t b = data[currentOffset + n];
+                outData[n] = b;
+                if (b != 0)
+                    hasData = true;
+            }
+            // If this is the last data chunk, and the data is non-zero
+            // send it as index 0 so we can go directly from SENDING to IDLE
+            // and skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
+            if ((currentOffset + bytesLastPayload) >= length && hasData)
+                packageIndex = 0;
+            else
+                packageIndex = currentPackage;
         }
         break;
     default:
@@ -102,7 +114,10 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
 
         if (currentOffset >= length)
         {
-            nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
+            if (data[length-1] == 0)
+                nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
+            else
+                nextSenderState = SENDER_IDLE;
         }
         break;
 
