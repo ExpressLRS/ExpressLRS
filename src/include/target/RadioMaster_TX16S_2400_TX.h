@@ -1,13 +1,13 @@
 #ifndef DEVICE_NAME
-#define DEVICE_NAME "RadioMstr Zorro"
+#define DEVICE_NAME "RadioMstr TX16S"
 #endif
 // Copied from DupleTX
 
 // Any device features
 #define USE_SX1280_DCDC
 #define USE_SKY85321
-#define SKY85321_PDET_SLOPE     0.031
-#define SKY85321_PDET_INTERCEPT 2.4
+#define SKY85321_PDET_SLOPE     0.032
+#define SKY85321_PDET_INTERCEPT 1.5
 #define USE_TX_BACKPACK
 
 // GPIO pin definitions

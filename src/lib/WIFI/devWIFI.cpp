@@ -343,9 +343,13 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 }
 
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (Update.hasError()) {
+  if (!Update.end()) {
     StreamString p = StreamString();
-    Update.printError(p);
+    if (Update.hasError()) {
+      Update.printError(p);
+    } else {
+      p.println("Not enough data uploaded!");
+    }
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
@@ -380,15 +384,14 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   force_update = force_update || request->hasArg("force");
   if (index == 0) {
-    DBGLN("Update: %s", filename.c_str());
+    size_t filesize = request->header("X-FileSize").toInt();
+    DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
     #if defined(PLATFORM_ESP8266)
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
-    if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
-    #else
-    if (!Update.begin()) { //start with max available size
     #endif
+    if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
       Update.printError(LOGGING_UART);
     }
     target_seen = false;
@@ -427,16 +430,8 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         }
       }
       totalSize += len;
-    }
-  }
-  if (final && !Update.getError()) {
-    DBGVLN("finish");
-    if (target_seen) {
-      if (Update.end(true)) { //true to set the size to the current progress
-        DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
-      } else {
-        Update.printError(LOGGING_UART);
-      }
+    } else {
+      DBGLN("write failed to write %d", len);
     }
   }
 }
@@ -444,11 +439,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
-    if (Update.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
-    } else {
-      Update.printError(LOGGING_UART);
-    }
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
@@ -650,8 +640,10 @@ static void startServices()
 
 static void HandleWebUpdate()
 {
+  static bool scanComplete = false;
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
+
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
     switch(status) {
@@ -680,15 +672,18 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
-        #if defined(PLATFORM_ESP8266)
-          WiFi.mode(WIFI_AP_STA);
-        #else
-          WiFi.mode(WIFI_AP);
-        #endif
+        WiFi.mode(wifiMode);
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
+        #if defined(PLATFORM_ESP8266)
+        scanComplete = false;
+        WiFi.scanNetworksAsync([](int){
+          scanComplete = true;
+        });
+        #else
         WiFi.scanNetworks(true);
+        #endif
         startServices();
         break;
       case WIFI_STA:
@@ -707,6 +702,14 @@ static void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
+
+  #if defined(PLATFORM_ESP8266)
+  if (scanComplete)
+  {
+    WiFi.mode(wifiMode);
+    scanComplete = false;
+  }
+  #endif
 
   if (servicesStarted)
   {

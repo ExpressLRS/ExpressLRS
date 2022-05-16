@@ -86,6 +86,7 @@ public:
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
     static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+    static uint32_t VersionStrToU32(const char *verStr);
 
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -114,7 +115,7 @@ public:
     static void ResetMspQueue();
     static volatile uint32_t OpenTXsyncLastSent;
     static uint8_t GetMaxPacketBytes() { return maxPacketBytes; }
-    static uint32_t GetCurrentBaudRate() { return TxToHandsetBauds[UARTcurrentBaudIdx]; }
+    static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
 
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
     static void ICACHE_RAM_ATTR updateSwitchValues();
@@ -154,10 +155,14 @@ private:
     static uint32_t UARTwdtLastChecked;
     static uint8_t maxPacketBytes;
     static uint8_t maxPeriodBytes;
-    static uint32_t TxToHandsetBauds[6];
+    static uint32_t TxToHandsetBauds[7];
     static uint8_t UARTcurrentBaudIdx;
+    static uint32_t UARTrequestedBaud;
     static uint8_t MspData[ELRS_MSP_BUFFER];
     static uint8_t MspDataLength;
+    #if defined(PLATFORM_ESP32)
+    static bool UARTinverted;
+    #endif
 
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();
@@ -165,6 +170,7 @@ private:
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();
+    static uint32_t autobaud();
 #endif
 
     static void flush_port_input(void);

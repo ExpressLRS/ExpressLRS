@@ -79,7 +79,7 @@ uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'nor
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 bool CRSF::OpentxSyncActive = true;
-uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 4000; // 400us
+uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us
 
 /// UART Handling ///
 uint32_t CRSF::GoodPktsCount = 0;
@@ -89,8 +89,16 @@ uint32_t CRSF::UARTwdtLastChecked;
 uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
-uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600};
+uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
+uint32_t CRSF::UARTrequestedBaud = 400000;
+#if defined(PLATFORM_ESP32)
+#ifdef UART_INVERTED
+bool CRSF::UARTinverted = true;
+#else
+bool CRSF::UARTinverted = false;
+#endif
+#endif
 
 bool CRSF::CRSFstate = false;
 
@@ -702,15 +710,15 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
 #if defined(PLATFORM_ESP32)
   #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-    #ifdef UART_INVERTED
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
-    gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #else
-    gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
-    gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-    #endif
+    if (UARTinverted) {
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
+        gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+    } else {
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
+        gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+    }
   #endif
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin
@@ -728,19 +736,19 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
   #if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
     ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-    #ifdef UART_INVERTED
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
-    gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
-    #else
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
-    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-    constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
-    gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-    gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
-    #endif
+    if (UARTinverted) {
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
+    } else {
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
+    }
   #endif
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin
@@ -754,7 +762,6 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
 
 void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
 {
-    uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
     // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
     maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
     maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
@@ -763,6 +770,57 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
+
+#if defined(PLATFORM_ESP32)
+uint32_t CRSF::autobaud()
+{
+    static enum { INIT, MEASURED, INVERTED } state;
+
+    uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
+    uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
+
+    if (state == MEASURED) {
+        UARTinverted = !UARTinverted;
+        state = INVERTED;
+        return UARTrequestedBaud;
+    } else if (state == INVERTED) {
+        UARTinverted = !UARTinverted;
+        state = INIT;
+    }
+
+    if ((*autobaud_reg & 1) == 0) {
+        *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
+        return 400000;
+    } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
+        return 400000;
+
+    state = MEASURED;
+
+    uint32_t low_period  = *(uint32_t *)UART_LOWPULSE_REG(0);
+    uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
+    *autobaud_reg = (4 << 8) | 0;
+
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    // sample code at https://github.com/espressif/esp-idf/issues/3336
+    // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
+    // Based on testing use max and add 2 for lowest deviation
+    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 2);
+    int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
+    for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
+    {
+        if (abs(calulatedBaud - bestBaud) > abs(calulatedBaud - (int32_t)TxToHandsetBauds[i]))
+        {
+            bestBaud = (int32_t)TxToHandsetBauds[i];
+        }
+    }
+    return bestBaud;
+}
+#else
+uint32_t CRSF::autobaud() {
+    UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
+    return TxToHandsetBauds[UARTcurrentBaudIdx];
+}
+#endif
 
 bool CRSF::UARTwdt()
 {
@@ -782,8 +840,8 @@ bool CRSF::UARTwdt()
                 CRSFstate = false;
             }
 
-            UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
-            uint32_t UARTrequestedBaud = TxToHandsetBauds[UARTcurrentBaudIdx];
+            UARTrequestedBaud = autobaud();
+
             DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
             adjustMaxPacketSize();
@@ -950,6 +1008,43 @@ uint16_t CRSF::GetChannelOutput(uint8_t ch)
 
 #endif // CRSF_RX_MODULE
 
+/***
+ * @brief: Convert `version` (string) to a integer version representation
+ * e.g. "2.2.15 ISM24G" => 0x0002020f
+ * Assumes all version fields are < 256, the number portion
+ * MUST be followed by a space to correctly be parsed
+ ***/
+uint32_t CRSF::VersionStrToU32(const char *verStr)
+{
+    uint32_t retVal = 0;
+#if !defined(FORCE_NO_DEVICE_VERSION)
+    uint8_t accumulator = 0;
+    char c;
+    while (c = *verStr)
+    {
+        ++verStr;
+        // A decimal indicates moving to a new version field
+        // and the space after the version ends that field
+        if (c == '.' || c == ' ')
+        {
+            retVal = (retVal << 8) | accumulator;
+            accumulator = 0;
+        }
+        // Else if this is a number add it up
+        else if (c >= '0' && c <= '9')
+        {
+            accumulator = (accumulator * 10) + (c - '0');
+        }
+        // Anything except [0-9. ] ends the parsing
+        else
+        {
+            break;
+        }
+    }
+#endif
+    return retVal;
+}
+
 void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 {
     deviceInformationPacket_t *device = (deviceInformationPacket_t *)(frame + sizeof(crsf_ext_header_t) + device_name_size);
@@ -958,7 +1053,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-    device->softwareVer = 0; // unused currently by us, seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+    device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
 }
