@@ -43,10 +43,13 @@ def process_json_flag(define):
         if parts.group(1) == "HOME_WIFI_PASSWORD":
             json_flags['wifi-password'] = dequote(parts.group(2))
         if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['wifi-on-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "TLM_REPORT_INTERVAL_MS":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['tlm-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "FAN_MIN_RUNTIME":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['fan-runtime'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED":
         json_flags['uart-inverted'] = True
