@@ -100,7 +100,7 @@ typedef struct {
             OTA_Channels_4x10 chHigh; // AUX2-5 or AUX6-9
         } PACKED rc;
         struct {
-            uint8_t packetType; // only low 2 bits
+            uint8_t packetType; // actually struct rc's first byte
             uint32_t packetNum; // LittleEndian
             uint8_t free[6];
         } PACKED dbg_linkstats;

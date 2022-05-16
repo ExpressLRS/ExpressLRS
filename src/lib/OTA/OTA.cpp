@@ -295,10 +295,10 @@ static void ICACHE_RAM_ATTR UnpackChannelData_ch04(OTA_Channels_4x10 const * con
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, CRSF * const crsf)
 {
-    // The analog channels
 #if defined(DEBUG_RCVR_LINKSTATS)
-    debugRcvrLinkstatsPacketId = be32toh(otaPktPtr->dbg_linkstats.packetNum);
+    debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
 #else
+    // The analog channels
     UnpackChannelData_ch04(&ota4->rc.ch, crsf);
     crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota4->rc.ch4);
 #endif
@@ -439,10 +439,11 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
-    // Low 4 channels + AXU1
+ #if defined(DEBUG_RCVR_LINKSTATS)
+    debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
+#else
+    // Low 4 channels
     UnpackChannelData_ch04(&ota8->rc.chLow, crsf);
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota8->rc.ch4);
-
     // High 4 channels
     uint32_t channels[4];
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, channels);
@@ -460,6 +461,8 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
         crsf->PackedRCdataOut.ch7 = channels[2];
         crsf->PackedRCdataOut.ch8 = channels[3];
     }
+#endif
+    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota8->rc.ch4);
     crsf->LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower;
     return ota8->rc.telemetryStatus;
 }
