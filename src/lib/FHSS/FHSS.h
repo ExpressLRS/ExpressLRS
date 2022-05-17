@@ -65,3 +65,8 @@ static inline uint32_t FHSSgetNextFreq()
     uint32_t freq = FHSSconfig->freq_start + FHSSconfig->freq_spread * FHSSsequence[FHSSptr] - FreqCorrection;
     return freq;
 }
+
+static inline const char *getRegulatoryDomain()
+{
+    return FHSSconfig->domain;
+}

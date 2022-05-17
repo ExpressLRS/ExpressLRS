@@ -137,6 +137,7 @@ LPF LPF_UplinkRSSI1(5);
 
 /// LQ Calculation //////////
 LQCALC<100> LQCalc;
+LQCALC<100> LQCalcDVDA;
 uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
@@ -466,8 +467,18 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
     // }
 
-    // Save the LQ value before the inc() reduces it by 1
-    uplinkLQ = LQCalc.getLQ();
+
+    if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
+    {
+        // Save the LQ value before the inc() reduces it by 1
+        uplinkLQ = LQCalc.getLQ();
+    } else
+    if (!((NonceRX - 1) % ExpressLRS_currAirRate_Modparams->numOfSends))
+    {
+        uplinkLQ = LQCalcDVDA.getLQ();
+        LQCalcDVDA.inc();
+    }
+    
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
@@ -559,6 +570,11 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(NonceRX % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
+    {
+        crsf.sendRCFrameToFC();
+    }
+
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Emulate that TX just happened, even if it didn't because channel is not clear
     if(!LBTSuccessCalc.currentIsSet())
@@ -607,6 +623,7 @@ void LostConnection()
     GotConnectionMillis = 0;
     uplinkLQ = 0;
     LQCalc.reset();
+    LQCalcDVDA.reset();
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
@@ -681,7 +698,13 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         else
         #endif
         {
-            crsf.sendRCFrameToFC();
+            if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
+            {
+                crsf.sendRCFrameToFC();
+            } else
+            {
+                if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
+            }
         }
         #if defined(DEBUG_RCVR_LINKSTATS)
         debugRcvrLinkstatsPending = true;
@@ -1153,6 +1176,7 @@ static void cycleRfMode(unsigned long now)
         SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
         LQCalc.reset();
+        LQCalcDVDA.reset();
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
