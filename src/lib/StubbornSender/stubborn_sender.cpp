@@ -3,10 +3,9 @@
 #include "stubborn_sender.h"
 
 StubbornSender::StubbornSender()
+    : data(nullptr), length(0)
 {
     ResetState();
-    data = nullptr;
-    length = 0;
 }
 
 void StubbornSender::setMaxPackageIndex(uint8_t maxPackageIndex)

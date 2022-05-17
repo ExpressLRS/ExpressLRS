@@ -435,7 +435,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   uint32_t const now = millis();
   // ESP requires word aligned buffer
-  WORD_ALIGNED_ATTR OTA_Packet_s otaPkt;
+  WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
   static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
   uint32_t SyncInterval = 250;
