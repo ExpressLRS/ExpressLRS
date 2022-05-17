@@ -15,11 +15,12 @@
 typedef struct {
     const char  *domain;
     uint32_t    freq_start;
-    uint32_t    freq_spread;
+    uint32_t    freq_stop;
     uint32_t    freq_count;
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
+extern uint32_t freq_spread;
 extern int32_t FreqCorrection;
 extern uint8_t FHSSsequence[];
 extern uint_fast8_t sync_channel;
@@ -43,7 +44,7 @@ static inline uint8_t FHSSgetSequenceCount()
 // get the initial frequency, which is also the sync channel
 static inline uint32_t GetInitialFreq()
 {
-    return FHSSconfig->freq_start + sync_channel * FHSSconfig->freq_spread - FreqCorrection;
+    return FHSSconfig->freq_start + sync_channel * freq_spread - FreqCorrection;
 }
 
 // Get the current sequence pointer
@@ -62,7 +63,7 @@ static inline void FHSSsetCurrIndex(const uint8_t value)
 static inline uint32_t FHSSgetNextFreq()
 {
     FHSSptr = (FHSSptr + 1) % FHSSgetSequenceCount();
-    uint32_t freq = FHSSconfig->freq_start + FHSSconfig->freq_spread * FHSSsequence[FHSSptr] - FreqCorrection;
+    uint32_t freq = FHSSconfig->freq_start + freq_spread * FHSSsequence[FHSSptr] - FreqCorrection;
     return freq;
 }
 
