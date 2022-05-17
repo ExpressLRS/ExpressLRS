@@ -112,6 +112,12 @@ device_affinity_t ui_devices[] = {
   {&VTX_device, 1}
 };
 
+//////////// Diversity TX Antennas ////////////
+
+#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+    static bool diversityAntennaState = LOW;
+#endif
+
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 #if !defined(DYNPOWER_THRESH_UP)
@@ -152,6 +158,18 @@ bool ICACHE_RAM_ATTR IsArmed()
 {
    return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
 }
+
+void switchDiversityAntennas()
+{
+#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+    bool oldState = diversityAntennaState;
+    diversityAntennaState = !oldState;
+    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+#endif
+#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
+#endif
+};
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
@@ -387,7 +405,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   ExpressLRS_currAirRate_RFperfParams = RFperf;
   crsf.LinkStatistics.rf_Mode = ModParams->enum_rate;
 
-  crsf.setSyncParams(interval);
+  crsf.setSyncParams(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
   rfModeLastChangedMS = millis();
 }
@@ -504,7 +522,17 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 #endif
 
   // Sync OpenTX to this point
-  crsf.JustSentRFpacket();
+  if (!(NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends))
+  {
+    crsf.JustSentRFpacket();
+  }
+
+  // Tx Antenna Diversity
+  if (NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends == 0 || // Swicth with new packet data
+      NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) // Swicth in the middle of DVDA sends
+  {
+    switchDiversityAntennas();
+  }  
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
@@ -966,8 +994,15 @@ static void setupTarget()
 #if defined(TARGET_TX_FM30_MINI)
   pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-  pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL, LOW); // LEFT antenna
+#endif
+
+#if defined(GPIO_PIN_ANT_CTRL_1) && (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+    pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+#endif
+#if defined(GPIO_PIN_ANT_CTRL_2) && (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+    pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
 #endif
 
   setupTargetCommon();
