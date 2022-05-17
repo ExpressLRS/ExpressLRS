@@ -13,7 +13,42 @@ StubbornReceiver receiver;
 
 void test_stubborn_link_sends_data(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    // When the payload chunk contains non-zero data, the Sender can
+    // send the last chunk in packageIndex=0 and can end early
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
+    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.ResetState();
+    sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
+    uint8_t data[1];
+    uint8_t packageIndex;
+    bool confirmValue = true;
+
+    for(int i = 0; i < sizeof(batterySequence)-1; i++)
+    {
+        packageIndex = sender.GetCurrentPayload(data, 1);
+        TEST_ASSERT_EQUAL(i + 1, packageIndex);
+        TEST_ASSERT_EQUAL(batterySequence[i], data[0]);
+        sender.ConfirmCurrentPayload(confirmValue);
+        confirmValue = !confirmValue;
+    }
+
+    // Last byte in packageIndex 0
+    packageIndex = sender.GetCurrentPayload(data, 1);
+    TEST_ASSERT_EQUAL(0, packageIndex);
+    TEST_ASSERT_EQUAL(batterySequence[sizeof(batterySequence)-1], data[0]);
+
+    TEST_ASSERT_EQUAL(true, sender.IsActive());
+    sender.ConfirmCurrentPayload(!confirmValue);
+    TEST_ASSERT_EQUAL(true, sender.IsActive());
+    sender.ConfirmCurrentPayload(confirmValue);
+    TEST_ASSERT_EQUAL(false, sender.IsActive());
+}
+
+void test_stubborn_link_sends_data_0(void)
+{
+    // When the payload chunk is all zeroes, the Sender always requires
+    // one extra ACK (confirm), with a dedicated packageIndex=0, payload=000000
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,0};
     sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
@@ -41,7 +76,7 @@ void test_stubborn_link_sends_data(void)
 
 void test_stubborn_link_sends_data_even_bytes_per_call(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
@@ -49,7 +84,7 @@ void test_stubborn_link_sends_data_even_bytes_per_call(void)
     uint8_t packageIndex;
     bool confirmValue = true;
 
-    for(int i = 0; i < sizeof(batterySequence) / 2; i++)
+    for(int i = 0; i < (sizeof(batterySequence) / 2)-1; i++)
     {
         packageIndex = sender.GetCurrentPayload(data, 2);
         TEST_ASSERT_EQUAL(i + 1, packageIndex);
@@ -60,6 +95,8 @@ void test_stubborn_link_sends_data_even_bytes_per_call(void)
     }
     packageIndex = sender.GetCurrentPayload(data, 2);
     TEST_ASSERT_EQUAL(0, packageIndex);
+    TEST_ASSERT_EQUAL(batterySequence[sizeof(batterySequence)-2], data[0]);
+    TEST_ASSERT_EQUAL(batterySequence[sizeof(batterySequence)-1], data[1]);
 }
 
 void test_stubborn_link_sends_data_odd_bytes_per_call(void)
@@ -92,7 +129,7 @@ void test_stubborn_link_sends_data_odd_bytes_per_call(void)
 
 void test_stubborn_link_sends_data_larger_frame_size(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
@@ -102,26 +139,26 @@ void test_stubborn_link_sends_data_larger_frame_size(void)
 
     packageIndex = sender.GetCurrentPayload(data, sizeof(data));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(batterySequence, data, sizeof(batterySequence));
+    TEST_ASSERT_EQUAL(0, packageIndex);
 
     sender.ConfirmCurrentPayload(confirmValue);
-    confirmValue = !confirmValue;
     packageIndex = sender.GetCurrentPayload(data, sizeof(data));
     TEST_ASSERT_EQUAL(0, packageIndex);
 }
 
 void test_stubborn_link_receives_data(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     uint8_t data[100];
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(data, sizeof(data));
 
-    for(int i = 0; i < sizeof(batterySequence); i++)
+    for(int i = 1; i <= sizeof(batterySequence); i++)
     {
-        receiver.ReceiveData(i+1, &batterySequence[i], 1);
+        uint8_t idx = (i == sizeof(batterySequence)) ? 0 : i;
+        receiver.ReceiveData(idx, &batterySequence[i-1], 1);
     }
-    receiver.ReceiveData(0, nullptr, 1);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(batterySequence, data, sizeof(batterySequence));
 
@@ -130,17 +167,17 @@ void test_stubborn_link_receives_data(void)
 
 void test_stubborn_link_receives_data_with_multiple_bytes(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109,0,0,0};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109,0,0,0};
     uint8_t data[100];
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(data, sizeof(data));
 
     for(int i = 0; i < sizeof(batterySequence) / 3; i++)
     {
-        receiver.ReceiveData(i+1, &batterySequence[i * 5], 5);
+        uint8_t idx = (i >= sizeof(batterySequence)-6) ? 0 : i + 1;
+        receiver.ReceiveData(idx, &batterySequence[i * 5], 5);
     }
-    receiver.ReceiveData(0, nullptr, 5);
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(batterySequence, data, sizeof(batterySequence));
 
@@ -149,7 +186,7 @@ void test_stubborn_link_receives_data_with_multiple_bytes(void)
 
 void test_stubborn_link_resyncs(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     uint8_t buffer[100];
     uint8_t data[1];
     uint8_t packageIndex;
@@ -206,7 +243,8 @@ void test_stubborn_link_resyncs(void)
 
 void test_stubborn_link_resyncs_during_last_confirm(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    // 0 last byte so the separate confirm is used           vvv
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,0};
     uint8_t buffer[100];
     uint8_t data[1];
     uint8_t packageIndex;
@@ -219,7 +257,7 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
 
-    // send and confirm twelfe packages
+    // send and confirm twelve packages
     for (int i = 0; i < sizeof(batterySequence); i++)
     {
         packageIndex = sender.GetCurrentPayload(data, 1);
@@ -265,7 +303,7 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
 
 void test_stubborn_link_sends_data_until_confirmation(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     uint8_t data[1];
     uint8_t packageIndex;
     uint8_t buffer[100];
@@ -293,7 +331,7 @@ void test_stubborn_link_sends_data_until_confirmation(void)
 
 void test_stubborn_link_multiple_packages(void)
 {
-    uint8_t batterySequence[] = {0xEC,10, 0x08,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     uint8_t data[1];
     uint8_t packageIndex;
     uint8_t buffer[100];
@@ -309,7 +347,7 @@ void test_stubborn_link_multiple_packages(void)
     {
         sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
         TEST_ASSERT_EQUAL(true, sender.IsActive());
-        for(int currentByte = 0; currentByte <= sizeof(batterySequence); currentByte++)
+        for(int currentByte = 0; currentByte < sizeof(batterySequence); currentByte++)
         {
             packageIndex = sender.GetCurrentPayload(data, 1);
             receiver.ReceiveData(packageIndex, data, 1);
@@ -412,6 +450,7 @@ int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_stubborn_link_sends_data);
+    RUN_TEST(test_stubborn_link_sends_data_0);
     RUN_TEST(test_stubborn_link_sends_data_even_bytes_per_call);
     RUN_TEST(test_stubborn_link_sends_data_odd_bytes_per_call);
     RUN_TEST(test_stubborn_link_sends_data_larger_frame_size);
