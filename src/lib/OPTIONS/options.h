@@ -25,6 +25,7 @@ typedef struct _options {
     uint8_t     _mcu_type:2;    // 0=STM, 1=ESP32, 2=ESP8266, 3=???
     uint8_t     _device_type:3; // 0=TX, 1=RX, 2=TXBP, 3=VRX, ... 7=???
     uint8_t     _radio_chip:1;  // 0=SX127x, 1=SX1280
+    uint8_t     domain;         // depends on radio chip
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)

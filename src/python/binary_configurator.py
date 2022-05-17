@@ -160,32 +160,21 @@ def generate_domain(mm, pos, count, init, step):
         pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(val))
         val += step
 
-def patch_domain(mm, args):
-    pos = mm.find(b'\xF0\x0D\xD0\xBE')
-    if pos == -1:
-        raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
-    pos += 4                    # skip magic
-    if args.domain == RegulatoryDomain.eu_433:
-        pos += writeString(mm, pos, 'EU433', 8)
-        pos = write32(mm, pos, 3)
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433100000))
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(433925000))
-        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(434450000))
-    elif args.domain == RegulatoryDomain.au_433:
-        pos += writeString(mm, pos, 'AU433', 8)
-        generate_domain(mm, pos, 3, 433420000, 500000)
-    elif args.domain == RegulatoryDomain.in_866:
-        pos += writeString(mm, pos, 'IN866', 8)
-        generate_domain(mm, pos, 4, 865375000, 525000)
-    elif args.domain == RegulatoryDomain.eu_868:
-        pos += writeString(mm, pos, 'EU868', 8)
-        generate_domain(mm, pos, 13, 863275000, 525000)
-    elif args.domain == RegulatoryDomain.au_915:
-        pos += writeString(mm, pos, 'AU915', 8)
-        generate_domain(mm, pos, 20, 915500000, 600000)
+def patch_domain(mm, pos, args):
+    domain = 0
+    if args.domain == RegulatoryDomain.au_915:
+        domain = 0
     elif args.domain == RegulatoryDomain.fcc_915:
-        pos += writeString(mm, pos, 'FCC915', 8)
-        generate_domain(mm, pos, 40, 903500000, 600000)
+        domain = 1
+    elif args.domain == RegulatoryDomain.eu_868:
+        domain = 2
+    elif args.domain == RegulatoryDomain.in_866:
+        domain = 3
+    elif args.domain == RegulatoryDomain.au_433:
+        domain = 4
+    elif args.domain == RegulatoryDomain.eu_433:
+        domain = 5
+    mm[pos] = domain
 
 def patch_firmware(mm, pos, args):
     pos += 8 + 2                # Skip magic & version
@@ -196,6 +185,9 @@ def patch_firmware(mm, pos, args):
     _deviceType = (hardware >> 4) & 7
     _radioChip = (hardware >> 7) & 1
     pos += 1                    # Skip the hardware flag
+    if _radioChip == 0 and args.domain:         # SX127X
+        patch_domain(mm, pos, args)
+    pos += 1
 
     pos = patch_uid(mm, pos, args)
     if _hasWiFi:                # Has WiFi (i.e. ESP8266 or ESP32)
@@ -206,35 +198,28 @@ def patch_firmware(mm, pos, args):
             pos = patch_buzzer(mm, pos, args)
     if _deviceType == 1:        # RX target
         pos = patch_rx_params(mm, pos, args)
-    if _radioChip == 0 and args.domain:         # SX127X
-        patch_domain(mm, args)
 
-def print_domain(mm):
-    pos = mm.find(b'\xF0\x0D\xD0\xBE')
-    if pos == -1:
-        raise AssertionError('Regulatory Domain magic not found in firmware file. Is this a 2.3 firmware?')
-    pos += 4                    # skip magic
-    (pos, domain_short) = readString(mm, pos, 8)
-    (pos, count) = read32(mm, pos)
-    (pos, first) = read32(mm, pos)
-    print (f'Short domain configured as {domain_short}')
-    if count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433100000):
-        print('Regulatory Domain is EU 433 MHz')
-    elif count == 3 and first == FREQ_HZ_TO_REG_VAL_SX127X(433420000):
-        print('Regulatory Domain is AU 433 MHz')
-    elif count == 4 and first == FREQ_HZ_TO_REG_VAL_SX127X(865375000):
-        print('Regulatory Domain is IN 866 MHz')
-    elif count == 13 and first == FREQ_HZ_TO_REG_VAL_SX127X(863275000):
-        print('Regulatory Domain is EU 868 MHz')
-    elif count == 20 and first == FREQ_HZ_TO_REG_VAL_SX127X(915500000):
-        print('Regulatory Domain is AU 915 MHz')
-    elif count == 40 and first == FREQ_HZ_TO_REG_VAL_SX127X(903500000):
-        print('Regulatory Domain is FCC 915 MHz')
-    elif count == 80 and first == FREQ_HZ_TO_REG_VAL_SX1280(2400400000):
-        print('Regulatory Domain is ISM 2.4GHz')
+def print_domain(radio, domain):
+    if radio == 1:
+        if domain == 0:
+            print('Regulatory Domain is ISM 2.4GHz')
+        else:
+            raise AssertionError('Invalid domain detected!')
     else:
-        raise AssertionError('Regulatory Domain has an invalid FHSS frequency table!')
-    None
+        if domain == 0:
+            print('Regulatory Domain is AU 915 MHz')
+        if domain == 1:
+            print('Regulatory Domain is FCC 915 MHz')
+        if domain == 2:
+            print('Regulatory Domain is EU 868 MHz')
+        if domain == 3:
+            print('Regulatory Domain is IN 866 MHz')
+        if domain == 4:
+            print('Regulatory Domain is AU 433 MHz')
+        if domain == 5:
+            print('Regulatory Domain is EU 433 MHz')
+        else:
+            raise AssertionError('Invalid domain detected!')
 
 def print_config(mm, pos):
     pos += 8 + 2                # Skip magic & version
@@ -250,6 +235,10 @@ def print_config(mm, pos):
     device = ['TX', 'RX', 'TX Backpack', 'VRx Backpack', 'Unknown', 'Unknown', 'Unknown', 'Unknown'][_deviceType]
     radio = ['SX1280', 'SX127X'][_radioChip]
     print(f'MCU: {mcu}, Device: {device}, Radio: {radio}')
+
+    domain = mm[pos]
+    pos += 1
+    print_domain(_radioChip, domain)
 
     hasUID = mm[pos]
     pos += 1
@@ -315,8 +304,6 @@ def print_config(mm, pos):
         None
     elif _deviceType == 3:  # VRX
         None
-
-    print_domain(mm)
     return
 
 def length_check(l, f):

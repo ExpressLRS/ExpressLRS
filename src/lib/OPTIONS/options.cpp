@@ -56,8 +56,24 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #endif
 #if defined(Regulatory_Domain_ISM_2400)
     ._radio_chip = 1,
+    .domain = 0,
 #else
     ._radio_chip = 0,
+    #if defined(Regulatory_Domain_AU_915)
+    .domain = 0,
+    #elif defined(Regulatory_Domain_FCC_915)
+    .domain = 1,
+    #elif defined(Regulatory_Domain_EU_868)
+    .domain = 2,
+    #elif defined(Regulatory_Domain_IN_866)
+    .domain = 3,
+    #elif defined(Regulatory_Domain_AU_433)
+    .domain = 4,
+    #elif defined(Regulatory_Domain_EU_433)
+    .domain = 5,
+    #else
+    #error No regulatory domain defined, please define one in user_defines.txt
+    #endif
 #endif
 #if defined(MY_UID)
     .hasUID = true,
@@ -362,6 +378,7 @@ bool options_init()
     firmwareOptions.invert_tx = doc["invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
+    firmwareOptions.domain = doc["domain"] | 0;
 
     return hardware_inited;
 }
