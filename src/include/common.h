@@ -125,9 +125,9 @@ typedef struct expresslrs_mod_settings_s
 
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
-#define RATE_MAX 4
+#define RATE_MAX 5
 #define RATE_DEFAULT 0
-#define RATE_BINDING 2 // 50Hz bind mode
+#define RATE_BINDING 3 // 50Hz bind mode
 
 extern SX127xDriver Radio;
 

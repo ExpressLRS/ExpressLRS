@@ -27,7 +27,7 @@ static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
-    "25Hz;50Hz;100Hz;200Hz",
+    "25Hz;50Hz;100Hz;100Hz Full;200Hz",
 #elif defined(RADIO_SX128X)
     "50Hz;100Hz Full;150Hz;250Hz;333Hz Full;500Hz;F500;F1000",
 #else
