@@ -375,6 +375,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else
         {
+            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
             otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
                 otaPkt.std.tlm_dl.payload,
                 sizeof(otaPkt.std.tlm_dl.payload));
