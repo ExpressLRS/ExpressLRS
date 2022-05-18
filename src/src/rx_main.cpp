@@ -700,7 +700,11 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
     else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
     {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        connectionState = wifiUpdate;
+        // The MSP packet needs to be ACKed so the TX doesn't
+        // keep sending it, so defer the switch to wifi
+        deferExecution(500, []() {
+            connectionState = wifiUpdate;
+        });
 #endif
     }
 #if defined(HAS_VTX_SPI)
