@@ -219,7 +219,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    if (!OtaIsFullRes || OtaSwitchModeCurrent == smWideOr8ch)
+    // In 16ch mode, do not output RSSI/LQ on channels
+    if (!SwitchModePending && (!OtaIsFullRes || OtaSwitchModeCurrent == smWideOr8ch))
     {
         crsf.ChannelData[15] = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
