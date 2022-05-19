@@ -531,14 +531,36 @@ void luadevUpdateFolderNames()
   luadevUpdateTlmBandwidth();
 }
 
+uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, expresslrs_RFrates_e eRate)
+{
+  // Only the fullres modes have 3 switch modes, so reset the switch mode it is outside the
+  // range for 4ch mode
+  if (eRate != RATE_LORA_100HZ_8CH && eRate != RATE_LORA_333HZ_8CH)
+  {
+    if (eSwitchMode > smHybridOr16ch)
+      return smWideOr8ch;
+  }
+
+  return eSwitchMode;
+}
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if ((arg < RATE_MAX) && (arg >= 0))
     {
-      uint8_t currentRate = RATE_MAX - 1 - arg;
-      currentRate = adjustPacketRateForBaud(currentRate);
-      config.SetRate(currentRate);
+      uint8_t newRate = RATE_MAX - 1 - arg;
+      newRate = adjustPacketRateForBaud(newRate);
+      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+        (OtaSwitchMode_e)config.GetSwitchMode(), (expresslrs_RFrates_e)newRate);
+      // If the switch mode is going to change, block the change while connected
+      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+      {
+        config.SetRate(newRate);
+        config.SetSwitchMode(newSwitchMode);
+      }
+      else
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
     }
   });
   registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
