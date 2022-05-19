@@ -219,8 +219,35 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     ota8->dbg_linkstats.packetNum = packetCnt++;
 #else
-    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[0], &ota8->rc.chLow);
-    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[isHighAux ? 9 : 5], &ota8->rc.chHigh);
+    // Sources:
+    // 8ch always: low=0 high=5
+    // 12ch isHighAux=false: low=0 high=5
+    // 12ch isHighAux=true:  low=0 high=9
+    // 16ch isHighAux=false: low=0 high=4
+    // 16ch isHighAux=true:  low=8 high=12
+    uint8_t chSrcLow;
+    uint8_t chSrcHigh;
+    if (OtaSwitchModeCurrent == smHybridOr16ch)
+    {
+        // 16ch mode
+        if (isHighAux)
+        {
+            chSrcLow = 8;
+            chSrcHigh = 12;
+        }
+        else
+        {
+            chSrcLow = 0;
+            chSrcHigh = 4;
+        }
+    }
+    else
+    {
+        chSrcLow = 0;
+        chSrcHigh = isHighAux ? 9 : 5;
+    }
+    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[chSrcLow], &ota8->rc.chLow);
+    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[chSrcHigh], &ota8->rc.chHigh);
 #endif
 }
 
@@ -439,30 +466,61 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
- #if defined(DEBUG_RCVR_LINKSTATS)
+#if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
 #else
-    // Low 4 channels
-    UnpackChannelData_ch04(&ota8->rc.chLow, crsf);
-    // High 4 channels
-    uint32_t channels[4];
-    UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, channels);
-    if (ota8->rc.isHighAux)
+    if (OtaSwitchModeCurrent == smHybridOr16ch)
     {
-        crsf->PackedRCdataOut.ch9  = channels[0];
-        crsf->PackedRCdataOut.ch10 = channels[1];
-        crsf->PackedRCdataOut.ch11 = channels[2];
-        crsf->PackedRCdataOut.ch12 = channels[3];
+        uint32_t channels[8];
+        UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channels[0]);
+        UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channels[4]);
+        if (ota8->rc.isHighAux)
+        {
+            crsf->PackedRCdataOut.ch8  = channels[0];
+            crsf->PackedRCdataOut.ch9  = channels[1];
+            crsf->PackedRCdataOut.ch10 = channels[2];
+            crsf->PackedRCdataOut.ch11 = channels[3];
+            crsf->PackedRCdataOut.ch12 = channels[4];
+            crsf->PackedRCdataOut.ch13 = channels[5];
+            crsf->PackedRCdataOut.ch14 = channels[6];
+            crsf->PackedRCdataOut.ch15 = channels[7];
+        }
+        else
+        {
+            crsf->PackedRCdataOut.ch0 = channels[0];
+            crsf->PackedRCdataOut.ch1 = channels[1];
+            crsf->PackedRCdataOut.ch2 = channels[2];
+            crsf->PackedRCdataOut.ch3 = channels[3];
+            crsf->PackedRCdataOut.ch4 = channels[4];
+            crsf->PackedRCdataOut.ch5 = channels[5];
+            crsf->PackedRCdataOut.ch6 = channels[6];
+            crsf->PackedRCdataOut.ch7 = channels[7];
+        }
     }
     else
     {
-        crsf->PackedRCdataOut.ch5 = channels[0];
-        crsf->PackedRCdataOut.ch6 = channels[1];
-        crsf->PackedRCdataOut.ch7 = channels[2];
-        crsf->PackedRCdataOut.ch8 = channels[3];
+        crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota8->rc.ch4);
+        // Low 4 channels
+        UnpackChannelData_ch04(&ota8->rc.chLow, crsf);
+        // High 4 channels
+        uint32_t channels[4];
+        UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, channels);
+        if (ota8->rc.isHighAux)
+        {
+            crsf->PackedRCdataOut.ch9  = channels[0];
+            crsf->PackedRCdataOut.ch10 = channels[1];
+            crsf->PackedRCdataOut.ch11 = channels[2];
+            crsf->PackedRCdataOut.ch12 = channels[3];
+        }
+        else
+        {
+            crsf->PackedRCdataOut.ch5 = channels[0];
+            crsf->PackedRCdataOut.ch6 = channels[1];
+            crsf->PackedRCdataOut.ch7 = channels[2];
+            crsf->PackedRCdataOut.ch8 = channels[3];
+        }
     }
 #endif
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota8->rc.ch4);
     crsf->LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower;
     return ota8->rc.telemetryStatus;
 }
@@ -481,7 +539,7 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
     // For smHybrid the CRC only has the packet type in byte 0
     // For smWide the FHSS slot is added to the CRC in byte 0 on PACKET_TYPE_RCDATAs
 #if defined(TARGET_RX)
-    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr12ch)
+    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr8ch)
     {
         otaPktPtr->std.crcHigh = (OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval) + 1;
     }
@@ -504,7 +562,7 @@ void ICACHE_RAM_ATTR GeneratePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 {
 #if defined(TARGET_TX)
     // artificially inject the low bits of the nonce on data packets, this will be overwritten with the CRC after it's calculated
-    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr12ch)
+    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr8ch)
     {
         otaPktPtr->std.crcHigh = (OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval) + 1;
     }
@@ -525,10 +583,10 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, expresslrs_RFrates_e
         ota_crc.init(16, ELRS_CRC16_POLY);
 
         #if defined(TARGET_TX) || defined(UNIT_TEST)
-        if (switchMode == smWideOr12ch)
-            OtaPackChannelData = &GenerateChannelData12ch;
-        else
+        if (switchMode == smWideOr8ch)
             OtaPackChannelData = &GenerateChannelData8ch;
+        else
+            OtaPackChannelData = &GenerateChannelData12ch;
         #endif
         #if defined(TARGET_RX) || defined(UNIT_TEST)
         OtaUnpackChannelData = &UnpackChannelData8ch;
@@ -541,7 +599,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, expresslrs_RFrates_e
         OtaGeneratePacketCrc = &GeneratePacketCrcStd;
         ota_crc.init(14, ELRS_CRC14_POLY);
 
-        if (switchMode == smWideOr12ch)
+        if (switchMode == smWideOr8ch)
         {
             #if defined(TARGET_TX) || defined(UNIT_TEST)
             OtaPackChannelData = &GenerateChannelDataHybridWide;
@@ -549,7 +607,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, expresslrs_RFrates_e
             #if defined(TARGET_RX) || defined(UNIT_TEST)
             OtaUnpackChannelData = &UnpackChannelDataHybridWide;
             #endif
-        } // !is8ch and smWideOr12ch
+        } // !is8ch and smWideOr8ch
 
         else
         {
@@ -559,7 +617,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, expresslrs_RFrates_e
             #if defined(TARGET_RX) || defined(UNIT_TEST)
             OtaUnpackChannelData = &UnpackChannelDataHybridSwitch8;
             #endif
-        } // !is8ch and smHybridOr8ch
+        } // !is8ch and smHybridOr16ch
     }
 
     OtaSwitchModeCurrent = switchMode;

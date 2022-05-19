@@ -21,7 +21,7 @@ static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
-static const char switchmodeOpts8ch[] = "12ch;8ch";
+static const char switchmodeOpts8ch[] = "8ch;16ch;12ch";
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},

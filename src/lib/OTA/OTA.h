@@ -145,7 +145,7 @@ extern volatile uint8_t OtaNonce;
 extern uint16_t OtaCrcInitializer;
 void OtaUpdateCrcInitFromUid();
 
-enum OtaSwitchMode_e { smWideOr12ch = 0, smHybridOr8ch = 1 };
+enum OtaSwitchMode_e { smWideOr8ch = 0, smHybridOr16ch = 1, sm12ch = 2 };
 void OtaUpdateSerializers(OtaSwitchMode_e const mode, expresslrs_RFrates_e const eRate);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 

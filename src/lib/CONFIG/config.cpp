@@ -386,7 +386,7 @@ TxConfig::SetDefaults()
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smWideOr12ch);
+        SetSwitchMode((uint8_t)smWideOr8ch);
         SetModelMatch(false);
         SetFanMode(0);
         SetMotionMode(0);

@@ -223,9 +223,12 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                               ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-    crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    if (!OtaIsFullRes || OtaSwitchModeCurrent == smWideOr8ch)
+    {
+        crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+        crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+    }
 
     crsf.LinkStatistics.active_antenna = antenna;
     crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
@@ -261,7 +264,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                  );
-    OtaUpdateSerializers(smWideOr12ch, ModParams->enum_rate);
+    OtaUpdateSerializers(smWideOr8ch, ModParams->enum_rate);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
 
@@ -805,7 +808,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
     // Switch mode can only change when disconnected, and in 4ch mode
-    if (connectionState == disconnected && !OtaIsFullRes)
+    if (connectionState == disconnected)
     {
         OtaUpdateSerializers((OtaSwitchMode_e)otaSync->switchEncMode, ExpressLRS_currAirRate_Modparams->enum_rate);
     }

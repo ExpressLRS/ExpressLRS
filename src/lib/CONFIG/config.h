@@ -18,13 +18,13 @@
 
 #if defined(TARGET_TX)
 typedef struct {
-    uint8_t     rate:4;
-    uint8_t     tlm:3;
-    uint8_t     power:3;
-    uint8_t     switchMode:1;
-    uint8_t     modelMatch:1;
-    uint8_t     dynamicPower:1;
-    uint8_t     boostChannel:3;
+    uint8_t     rate:4,
+                tlm:4;
+    uint8_t     power:3,
+                switchMode:2,
+                boostChannel:3;
+    uint8_t     dynamicPower:1,
+                modelMatch:1;
 } model_config_t;
 
 typedef struct {
