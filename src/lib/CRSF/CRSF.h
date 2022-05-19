@@ -82,6 +82,7 @@ public:
     static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
+    static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
 
     #ifdef CRSF_TX_MODULE
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
@@ -113,8 +114,7 @@ public:
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
 
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
-    static void ICACHE_RAM_ATTR updateSwitchValues();
-    static void ICACHE_RAM_ATTR GetChannelDataIn();
+    static void ICACHE_RAM_ATTR RcPacketToChannelsData();
     #endif
 
     #ifdef CRSF_RX_MODULE

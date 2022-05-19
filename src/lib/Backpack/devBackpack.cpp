@@ -116,7 +116,7 @@ static void AuxStateToMSPOut()
     uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
     uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-    bool recordingState = CRSF_to_BIT(CRSF::ChannelDataIn[auxNumber]) ^ auxInverted;
+    bool recordingState = CRSF_to_BIT(CRSF::ChannelData[auxNumber]) ^ auxInverted;
 
     if (recordingState == lastRecordingState)
     {
@@ -144,7 +144,7 @@ static void AuxStateToMSPOut()
     packet.addByte(recordingState);
     packet.addByte(delay & 0xFF); // delay byte 1
     packet.addByte(delay >> 8); // delay byte 2
-    
+
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 #endif // USE_TX_BACKPACK
 }

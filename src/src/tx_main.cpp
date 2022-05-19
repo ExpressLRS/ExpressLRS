@@ -145,11 +145,6 @@ void EXTI2_TSC_IRQHandler()
 }
 #endif
 
-bool ICACHE_RAM_ATTR IsArmed()
-{
-   return CRSF_to_BIT(crsf.ChannelData[AUX1]);
-}
-
 //////////// DYNAMIC TX OUTPUT POWER ////////////
 
 // Assume this function is called inside loop(). Heavy functions goes here.
@@ -180,7 +175,7 @@ void DynamicPower_Update()
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  if ((connectionState == disconnected && IsArmed()) ||
+  if ((connectionState == disconnected && crsf.IsArmed()) ||
     (boostChannel && (CRSF_to_BIT(crsf.ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
@@ -439,7 +434,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   static uint8_t syncSlot;
 #if defined(NO_SYNC_ON_ARM)
   uint32_t SyncInterval = 250;
-  bool skipSync = IsArmed() || InBindingMode;
+  bool skipSync = crsf.IsArmed() || InBindingMode;
 #else
   uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = InBindingMode;
@@ -741,7 +736,7 @@ static void CheckReadyToSend()
   if (RxWiFiReadyToSend)
   {
     RxWiFiReadyToSend = false;
-    if (!IsArmed())
+    if (!crsf.IsArmed())
     {
       SendRxWiFiOverMSP();
     }

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "device.h"
-
 #if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+
+#include "device.h"
+#include "CRSF.h"
 
 #define HAS_VTX_SPI
 

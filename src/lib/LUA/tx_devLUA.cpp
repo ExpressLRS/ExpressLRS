@@ -234,7 +234,6 @@ static struct luaItem_selection luaDvrStopDelay = {
 
 static char luaBadGoodString[10];
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern TxConfig config;
 extern void VtxTriggerSend();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);

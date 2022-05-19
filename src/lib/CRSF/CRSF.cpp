@@ -354,10 +354,12 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
+    #if defined(PLATFORM_ESP32)
     uint16_t prev_AUX1 = ChannelData[4];
+    #endif
 
     ChannelData[0] = (rcChannels->ch0);
     ChannelData[1] = (rcChannels->ch1);
@@ -377,7 +379,7 @@ void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per c
     ChannelData[15] = (rcChannels->ch15);
 
     #if defined(PLATFORM_ESP32)
-    if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
+    if (prev_AUX1 != ChannelData[4]) // for monitoring arming state
     {
         devicesTriggerEvent();
     }
@@ -401,7 +403,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
-        GetChannelDataIn();
+        RcPacketToChannelsData();
         packetReceived = true;
     }
     // check for all extended frames that are a broadcast or a message to the FC
