@@ -121,6 +121,7 @@ uint8_t uplinkLQ;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
+uint8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
@@ -666,7 +667,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
 {
     // Must be fully connected to process RC packets, prevents processing RC
     // during sync, where packets can be received before connection
-    if (connectionState != connected)
+    if (connectionState != connected || SwitchModePending)
         return;
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf,
@@ -802,11 +803,14 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
-    // Switch mode can only change when disconnected, and in 4ch mode
+    // Switch mode can only change when disconnected, and happens on the main thread
     if (connectionState == disconnected)
     {
-        OtaUpdateSerializers((OtaSwitchMode_e)otaSync->switchEncMode, ExpressLRS_currAirRate_Modparams->enum_rate);
+        // Add one to the mode because SwitchModePending==0 means no switch pending
+        // and that's also a valid switch mode. The 1 is removed when this is handled
+        SwitchModePending = otaSync->switchEncMode + 1;
     }
+
     // Update TLM ratio
     if (ExpressLRS_currAirRate_Modparams->TLMinterval != otaSync->newTlmRatio)
     {
@@ -1293,6 +1297,15 @@ static void debugRcvrLinkstats()
 #endif
 }
 
+static void updateSwitchMode()
+{
+    if (!SwitchModePending)
+        return;
+
+    OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->enum_rate);
+    SwitchModePending = 0;
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -1426,6 +1439,7 @@ void loop()
     }
     updateTelemetryBurst();
     updateBindingMode();
+    updateSwitchMode();
     debugRcvrLinkstats();
 }
 
