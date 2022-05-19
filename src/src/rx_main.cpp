@@ -1161,7 +1161,7 @@ static void servosUpdate(unsigned long now)
         for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
+            uint16_t us = CRSF_to_US(crsf.ChannelData[chConfig->val.inputChannel]);
             if (chConfig->val.inverted)
                 us = 3000U - us;
 
