@@ -46,7 +46,7 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static uint32_t ChannelDataIn[16];
+    static uint32_t ChannelData[16];
 
     /////Variables/////
 
@@ -71,11 +71,6 @@ public:
     /// UART Handling ///
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
-    #endif
-
-    #ifdef CRSF_RX_MODULE
-    static crsf_channels_s PackedRCdataOut;            // RC data in packed format for output.
-    static uint16_t GetChannelOutput(uint8_t ch);
     #endif
 
     static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct

@@ -181,7 +181,7 @@ void OnELRSBindMSP(uint8_t* packet);
 
 bool ICACHE_RAM_ATTR IsArmed()
 {
-   return CRSF_to_BIT(crsf.GetChannelOutput(AUX1));
+   return CRSF_to_BIT(crsf.ChannelData[AUX1]);
 }
 
 static uint8_t minLqForChaos()
@@ -225,9 +225,9 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     if (!OtaIsFullRes || OtaSwitchModeCurrent == smWideOr8ch)
     {
-        crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+        crsf.ChannelData[15] = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-        crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
+        crsf.ChannelData[14] = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
     }
 
     crsf.LinkStatistics.active_antenna = antenna;

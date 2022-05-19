@@ -39,7 +39,7 @@ MSP2CROSSFIRE CRSF::msp2crsf;
 ///Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
-uint32_t CRSF::ChannelDataIn[16] = {0};
+uint32_t CRSF::ChannelData[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
 
@@ -108,10 +108,6 @@ bool CRSF::CRSFstate = false;
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
-
-#ifdef CRSF_RX_MODULE
-crsf_channels_s CRSF::PackedRCdataOut;
-#endif
 
 void CRSF::Begin()
 {
@@ -361,24 +357,24 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
 {
     const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    uint16_t prev_AUX1 = ChannelDataIn[4];
+    uint16_t prev_AUX1 = ChannelData[4];
 
-    ChannelDataIn[0] = (rcChannels->ch0);
-    ChannelDataIn[1] = (rcChannels->ch1);
-    ChannelDataIn[2] = (rcChannels->ch2);
-    ChannelDataIn[3] = (rcChannels->ch3);
-    ChannelDataIn[4] = (rcChannels->ch4);
-    ChannelDataIn[5] = (rcChannels->ch5);
-    ChannelDataIn[6] = (rcChannels->ch6);
-    ChannelDataIn[7] = (rcChannels->ch7);
-    ChannelDataIn[8] = (rcChannels->ch8);
-    ChannelDataIn[9] = (rcChannels->ch9);
-    ChannelDataIn[10] = (rcChannels->ch10);
-    ChannelDataIn[11] = (rcChannels->ch11);
-    ChannelDataIn[12] = (rcChannels->ch12);
-    ChannelDataIn[13] = (rcChannels->ch13);
-    ChannelDataIn[14] = (rcChannels->ch14);
-    ChannelDataIn[15] = (rcChannels->ch15);
+    ChannelData[0] = (rcChannels->ch0);
+    ChannelData[1] = (rcChannels->ch1);
+    ChannelData[2] = (rcChannels->ch2);
+    ChannelData[3] = (rcChannels->ch3);
+    ChannelData[4] = (rcChannels->ch4);
+    ChannelData[5] = (rcChannels->ch5);
+    ChannelData[6] = (rcChannels->ch6);
+    ChannelData[7] = (rcChannels->ch7);
+    ChannelData[8] = (rcChannels->ch8);
+    ChannelData[9] = (rcChannels->ch9);
+    ChannelData[10] = (rcChannels->ch10);
+    ChannelData[11] = (rcChannels->ch11);
+    ChannelData[12] = (rcChannels->ch12);
+    ChannelData[13] = (rcChannels->ch13);
+    ChannelData[14] = (rcChannels->ch14);
+    ChannelData[15] = (rcChannels->ch15);
 
     #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
@@ -957,6 +953,24 @@ void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
     };
 
+    crsf_channels_s PackedRCdataOut;
+    PackedRCdataOut.ch0 = ChannelData[0];
+    PackedRCdataOut.ch1 = ChannelData[1];
+    PackedRCdataOut.ch2 = ChannelData[2];
+    PackedRCdataOut.ch3 = ChannelData[3];
+    PackedRCdataOut.ch4 = ChannelData[4];
+    PackedRCdataOut.ch5 = ChannelData[5];
+    PackedRCdataOut.ch6 = ChannelData[6];
+    PackedRCdataOut.ch7 = ChannelData[7];
+    PackedRCdataOut.ch8 = ChannelData[8];
+    PackedRCdataOut.ch9 = ChannelData[9];
+    PackedRCdataOut.ch10 = ChannelData[10];
+    PackedRCdataOut.ch11 = ChannelData[11];
+    PackedRCdataOut.ch12 = ChannelData[12];
+    PackedRCdataOut.ch13 = ChannelData[13];
+    PackedRCdataOut.ch14 = ChannelData[14];
+    PackedRCdataOut.ch15 = ChannelData[15];
+
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
@@ -978,32 +992,6 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
         this->_dev->write(data, totalBufferLen);
     }
 #endif // CRSF_RCVR_NO_SERIAL
-}
-
-/**
- * @brief   Get encoded channel position from PackedRCdataOut
- * @param   ch: zero-based channel number
- * @return  CRSF-encoded channel position, or 0 if invalid channel
- **/
-uint16_t CRSF::GetChannelOutput(uint8_t ch)
-{
-    switch (ch)
-    {
-        case 0: return PackedRCdataOut.ch0;
-        case 1: return PackedRCdataOut.ch1;
-        case 2: return PackedRCdataOut.ch2;
-        case 3: return PackedRCdataOut.ch3;
-        case 4: return PackedRCdataOut.ch4;
-        case 5: return PackedRCdataOut.ch5;
-        case 6: return PackedRCdataOut.ch6;
-        case 7: return PackedRCdataOut.ch7;
-        case 8: return PackedRCdataOut.ch8;
-        case 9: return PackedRCdataOut.ch9;
-        case 10: return PackedRCdataOut.ch10;
-        case 11: return PackedRCdataOut.ch11;
-        default:
-            return 0;
-    }
 }
 
 #endif // CRSF_RX_MODULE

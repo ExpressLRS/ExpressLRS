@@ -87,8 +87,8 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     ota4->dbg_linkstats.packetNum = packetCnt++;
 #else
     // CRSF input is 11bit and OTA will carry only 10b => LSB is dropped
-    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[0], &ota4->rc.ch);
-    ota4->rc.ch4 = CRSF_to_BIT(crsf->ChannelDataIn[4]);
+    PackUInt11ToChannels4x10(&crsf->ChannelData[0], &ota4->rc.ch);
+    ota4->rc.ch4 = CRSF_to_BIT(crsf->ChannelData[4]);
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
 
@@ -100,7 +100,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
  * A 3 bit switch index and 3-4 bit value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: crsf.ChannelDataIn, crsf.currentSwitches
+ * Inputs: crsf.ChannelData, crsf.currentSwitches
  * Outputs: OTA_Packet4_s, side-effects the sentSwitch value
  */
 // The next switch index to send, where 0=AUX2 and 6=AUX8
@@ -123,7 +123,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
     uint8_t value;
     // AUX8 is High Resolution 16-pos (4-bit)
     if (bitclearedSwitchIndex == 6)
-        value = CRSF_to_N(crsf->ChannelDataIn[6 + 1 + 4], 16);
+        value = CRSF_to_N(crsf->ChannelData[6 + 1 + 4], 16);
     else
     {
         // AUX2-7 are Low Resolution, "7pos" 6+center (3-bit)
@@ -132,7 +132,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
         // with switches with a middle position as well as 6-position
         const uint16_t CHANNEL_BIN_COUNT = 6;
         const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN) / CHANNEL_BIN_COUNT;
-        uint16_t ch = crsf->ChannelDataIn[bitclearedSwitchIndex + 1 + 4];
+        uint16_t ch = crsf->ChannelData[bitclearedSwitchIndex + 1 + 4];
         // If channel is within 1/4 a BIN of being in the middle use special value 7
         if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
             || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
@@ -153,12 +153,12 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
 }
 
 /**
- * Return the OTA value respresentation of the switch contained in ChannelDataIn
+ * Return the OTA value respresentation of the switch contained in ChannelData
  * Switches 1-6 (AUX2-AUX7) are 6 or 7 bit depending on the lowRes parameter
  */
 static uint8_t ICACHE_RAM_ATTR HybridWideSwitchToOta(CRSF const * const crsf, uint8_t const switchIdx, bool const lowRes)
 {
-    uint16_t ch = crsf->ChannelDataIn[switchIdx + 4];
+    uint16_t ch = crsf->ChannelData[switchIdx + 4];
     uint8_t binCount = (lowRes) ? 64 : 128;
     ch = CRSF_to_N(ch, binCount);
     if (lowRes)
@@ -175,7 +175,7 @@ static uint8_t ICACHE_RAM_ATTR HybridWideSwitchToOta(CRSF const * const crsf, ui
  * A 6 or 7 bit switch value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: crsf.ChannelDataIn, crsf.LinkStatistics.uplink_TX_Power
+ * Inputs: crsf.ChannelData, crsf.LinkStatistics.uplink_TX_Power
  * Outputs: OTA_Packet4_s
  **/
 void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPtr, CRSF const * const crsf,
@@ -214,7 +214,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     ota8->rc.telemetryStatus = TelemetryStatus;
     ota8->rc.uplinkPower = crsf->LinkStatistics.uplink_TX_Power;
     ota8->rc.isHighAux = isHighAux;
-    ota8->rc.ch4 = CRSF_to_BIT(crsf->ChannelDataIn[4]);
+    ota8->rc.ch4 = CRSF_to_BIT(crsf->ChannelData[4]);
 #if defined(DEBUG_RCVR_LINKSTATS)
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     ota8->dbg_linkstats.packetNum = packetCnt++;
@@ -246,8 +246,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
         chSrcLow = 0;
         chSrcHigh = isHighAux ? 9 : 5;
     }
-    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[chSrcLow], &ota8->rc.chLow);
-    PackUInt11ToChannels4x10(&crsf->ChannelDataIn[chSrcHigh], &ota8->rc.chHigh);
+    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcLow], &ota8->rc.chLow);
+    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcHigh], &ota8->rc.chHigh);
 #endif
 }
 
@@ -310,24 +310,14 @@ static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChanne
     }
 }
 
-static void ICACHE_RAM_ATTR UnpackChannelData_ch04(OTA_Channels_4x10 const * const srcChannels4x10, CRSF * const crsf)
-{
-    uint32_t channels[4];
-    UnpackChannels4x10ToUInt11(srcChannels4x10, channels);
-    crsf->PackedRCdataOut.ch0 = channels[0];
-    crsf->PackedRCdataOut.ch1 = channels[1];
-    crsf->PackedRCdataOut.ch2 = channels[2];
-    crsf->PackedRCdataOut.ch3 = channels[3];
-}
-
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, CRSF * const crsf)
 {
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
 #else
     // The analog channels
-    UnpackChannelData_ch04(&ota4->rc.ch, crsf);
-    crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota4->rc.ch4);
+    UnpackChannels4x10ToUInt11(&ota4->rc.ch, &crsf->ChannelData[0]);
+    crsf->ChannelData[4] = BIT_to_CRSF(ota4->rc.ch4);
 #endif
 }
 
@@ -339,7 +329,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
  * 3 bits for the round-robin switch index and 2 bits for the value
  *
  * Input: Buffer
- * Output: crsf->PackedRCdataOut
+ * Output: crsf->ChannelData
  * Returns: TelemetryStatus bit
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const otaPktPtr, CRSF * const crsf,
@@ -355,31 +345,15 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
     // where x is the high bit of switch 7
     const uint8_t switchByte = ota4->rc.switches;
     uint8_t switchIndex = (switchByte & 0b111000) >> 3;
-    uint16_t switchValue = SWITCH3b_to_CRSF(switchByte & 0b111);
-
-    switch (switchIndex) {
-    case 0:
-        crsf->PackedRCdataOut.ch5 = switchValue;
-        break;
-    case 1:
-        crsf->PackedRCdataOut.ch6 = switchValue;
-        break;
-    case 2:
-        crsf->PackedRCdataOut.ch7 = switchValue;
-        break;
-    case 3:
-        crsf->PackedRCdataOut.ch8 = switchValue;
-        break;
-    case 4:
-        crsf->PackedRCdataOut.ch9 = switchValue;
-        break;
-    case 5:
-        crsf->PackedRCdataOut.ch10 = switchValue;
-        break;
-    case 6:   // Because AUX1 (index 0) is the low latency switch, the low bit
-    case 7:   // of the switchIndex can be used as data, and arrives as index "6"
-        crsf->PackedRCdataOut.ch11 = N_to_CRSF(switchByte & 0b1111, 15);
-        break;
+    if (switchIndex >= 6)
+    {
+        // Because AUX1 (index 0) is the low latency switch, the low bit
+        // of the switchIndex can be used as data, and arrives as index "6"
+        crsf->ChannelData[11] = N_to_CRSF(switchByte & 0b1111, 15);
+    }
+    else
+    {
+        crsf->ChannelData[5+switchIndex] = SWITCH3b_to_CRSF(switchByte & 0b111);
     }
 
     // TelemetryStatus bit
@@ -395,7 +369,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
  * 1 bit for the TelemetryStatus, which may be in every packet or just idx 7
  * depending on TelemetryRatio
  *
- * Output: crsf.PackedRCdataOut, crsf.LinkStatistics.uplink_TX_Power
+ * Output: crsf.ChannelData, crsf.LinkStatistics.uplink_TX_Power
  * Returns: TelemetryStatus bit
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaPktPtr, CRSF * const crsf,
@@ -431,30 +405,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
             switchValue = switchByte & 0b1111111; // 7-bit
         }
 
-        switchValue = N_to_CRSF(switchValue, bins);
-        switch (switchIndex) {
-            case 0:
-                crsf->PackedRCdataOut.ch5 = switchValue;
-                break;
-            case 1:
-                crsf->PackedRCdataOut.ch6 = switchValue;
-                break;
-            case 2:
-                crsf->PackedRCdataOut.ch7 = switchValue;
-                break;
-            case 3:
-                crsf->PackedRCdataOut.ch8 = switchValue;
-                break;
-            case 4:
-                crsf->PackedRCdataOut.ch9 = switchValue;
-                break;
-            case 5:
-                crsf->PackedRCdataOut.ch10 = switchValue;
-                break;
-            case 6:
-                crsf->PackedRCdataOut.ch11 = switchValue;
-                break;
-        }
+        crsf->ChannelData[5 + switchIndex] = N_to_CRSF(switchValue, bins);
     }
 
     return TelemetryStatus;
@@ -469,57 +420,29 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
 #else
+    uint8_t chDstLow;
+    uint8_t chDstHigh;
     if (OtaSwitchModeCurrent == smHybridOr16ch)
     {
-        uint32_t channels[8];
-        UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channels[0]);
-        UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channels[4]);
         if (ota8->rc.isHighAux)
         {
-            crsf->PackedRCdataOut.ch8  = channels[0];
-            crsf->PackedRCdataOut.ch9  = channels[1];
-            crsf->PackedRCdataOut.ch10 = channels[2];
-            crsf->PackedRCdataOut.ch11 = channels[3];
-            crsf->PackedRCdataOut.ch12 = channels[4];
-            crsf->PackedRCdataOut.ch13 = channels[5];
-            crsf->PackedRCdataOut.ch14 = channels[6];
-            crsf->PackedRCdataOut.ch15 = channels[7];
+            chDstLow = 8;
+            chDstHigh = 12;
         }
         else
         {
-            crsf->PackedRCdataOut.ch0 = channels[0];
-            crsf->PackedRCdataOut.ch1 = channels[1];
-            crsf->PackedRCdataOut.ch2 = channels[2];
-            crsf->PackedRCdataOut.ch3 = channels[3];
-            crsf->PackedRCdataOut.ch4 = channels[4];
-            crsf->PackedRCdataOut.ch5 = channels[5];
-            crsf->PackedRCdataOut.ch6 = channels[6];
-            crsf->PackedRCdataOut.ch7 = channels[7];
+            chDstLow = 0;
+            chDstHigh = 4;
         }
     }
     else
     {
-        crsf->PackedRCdataOut.ch4 = BIT_to_CRSF(ota8->rc.ch4);
-        // Low 4 channels
-        UnpackChannelData_ch04(&ota8->rc.chLow, crsf);
-        // High 4 channels
-        uint32_t channels[4];
-        UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, channels);
-        if (ota8->rc.isHighAux)
-        {
-            crsf->PackedRCdataOut.ch9  = channels[0];
-            crsf->PackedRCdataOut.ch10 = channels[1];
-            crsf->PackedRCdataOut.ch11 = channels[2];
-            crsf->PackedRCdataOut.ch12 = channels[3];
-        }
-        else
-        {
-            crsf->PackedRCdataOut.ch5 = channels[0];
-            crsf->PackedRCdataOut.ch6 = channels[1];
-            crsf->PackedRCdataOut.ch7 = channels[2];
-            crsf->PackedRCdataOut.ch8 = channels[3];
-        }
+        crsf->ChannelData[4] = BIT_to_CRSF(ota8->rc.ch4);
+        chDstLow = 0;
+        chDstHigh = (ota8->rc.isHighAux) ? 9 : 5;
     }
+    UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &crsf->ChannelData[chDstLow]);
+    UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &crsf->ChannelData[chDstHigh]);
 #endif
     crsf->LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower;
     return ota8->rc.telemetryStatus;

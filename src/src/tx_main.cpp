@@ -147,7 +147,7 @@ void EXTI2_TSC_IRQHandler()
 
 bool ICACHE_RAM_ATTR IsArmed()
 {
-   return CRSF_to_BIT(crsf.ChannelDataIn[AUX1]);
+   return CRSF_to_BIT(crsf.ChannelData[AUX1]);
 }
 
 //////////// DYNAMIC TX OUTPUT POWER ////////////
@@ -181,7 +181,7 @@ void DynamicPower_Update()
   // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
   if ((connectionState == disconnected && IsArmed()) ||
-    (boostChannel && (CRSF_to_BIT(crsf.ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
+    (boostChannel && (CRSF_to_BIT(crsf.ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
     // POWERMGNT.setPower((PowerLevels_e)MaxPower);    // if you want to make the power to the aboslute maximum of a module, use this line.
