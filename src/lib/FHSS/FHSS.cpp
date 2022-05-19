@@ -58,7 +58,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     sync_channel = FHSSconfig->freq_count / 2;
     DBGLN("Sync channel = %u", sync_channel);
 
-    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) / (FHSSconfig->freq_count - 1);
+    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;

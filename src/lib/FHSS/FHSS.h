@@ -11,6 +11,7 @@
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
+#define FREQ_SPREAD_SCALE 256
 
 typedef struct {
     const char  *domain;
@@ -44,7 +45,7 @@ static inline uint8_t FHSSgetSequenceCount()
 // get the initial frequency, which is also the sync channel
 static inline uint32_t GetInitialFreq()
 {
-    return FHSSconfig->freq_start + sync_channel * freq_spread - FreqCorrection;
+    return FHSSconfig->freq_start + (sync_channel * freq_spread / FREQ_SPREAD_SCALE) - FreqCorrection;
 }
 
 // Get the current sequence pointer
@@ -63,7 +64,7 @@ static inline void FHSSsetCurrIndex(const uint8_t value)
 static inline uint32_t FHSSgetNextFreq()
 {
     FHSSptr = (FHSSptr + 1) % FHSSgetSequenceCount();
-    uint32_t freq = FHSSconfig->freq_start + freq_spread * FHSSsequence[FHSSptr] - FreqCorrection;
+    uint32_t freq = FHSSconfig->freq_start + (freq_spread * FHSSsequence[FHSSptr] / FREQ_SPREAD_SCALE) - FreqCorrection;
     return freq;
 }
 
