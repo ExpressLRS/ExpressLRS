@@ -41,8 +41,8 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {1, RATE_FLRC_500HZ,  -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {2, RATE_LORA_500HZ,  -105,  1665, 2500, 2500,  3, 5000, 4, 9},
     {3, RATE_LORA_250HZ,  -108,  3300, 3000, 2500,  6, 5000, 2, 9},
-    {4, RATE_LORA_150HZ,  -112,  5871, 3500, 2500, 10, 5000, 0, 9},
-    {5, RATE_LORA_50HZ,   -117, 18443, 4000, 2500,  0, 5000, 0, 6}};
+    {4, RATE_LORA_150HZ,  -112,  5871, 3500, 2500, 10, 5000, -1, 8},
+    {5, RATE_LORA_50HZ,   -117, 18443, 4000, 2500,  0, 5000, -2, 6}};
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
