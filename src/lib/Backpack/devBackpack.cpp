@@ -18,8 +18,8 @@ bool lastRecordingState = false;
 
 #if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
 
-#if BACKPACK_LOGGING_BAUD != 460800
-#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
+#ifndef PASSTHROUGH_BAUD
+#define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
 #endif
 
 #include "CRSF.h"
@@ -34,8 +34,22 @@ void startPassthrough()
     CRSF::End();
 
     // get ready for passthrough
-    CRSF::Port.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+    if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
+    {
+        // if we have a single S.PORT pin for RX then we assume the standard UART pins for passthrough
+        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, 3, 1);
+    }
+    else
+    {
+        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+    }
     disableLoopWDT();
+
+    HardwareSerial &backpack = *(HardwareSerial*)TxBackpack;
+    if (PASSTHROUGH_BAUD != BACKPACK_LOGGING_BAUD)
+    {
+        backpack.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+    }
 
     // reset ESP8285 into bootloader mode
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, HIGH);
@@ -47,11 +61,11 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
-    TxBackpack->flush();
+    backpack.flush();
 
     uint8_t buf[64];
-    while (TxBackpack->available())
-        TxBackpack->readBytes(buf, sizeof(buf));
+    while (backpack.available())
+        backpack.readBytes(buf, sizeof(buf));
 
     // go hard!
     for (;;)
@@ -60,12 +74,12 @@ void startPassthrough()
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = CRSF::Port.readBytes(buf, r);
-        TxBackpack->write(buf, r);
+        backpack.write(buf, r);
 
-        r = TxBackpack->available();
+        r = backpack.available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = TxBackpack->readBytes(buf, r);
+        r = backpack.readBytes(buf, r);
         CRSF::Port.write(buf, r);
     }
 }
