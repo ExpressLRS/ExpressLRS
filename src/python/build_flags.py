@@ -11,10 +11,11 @@ import elrs_helpers
 
 build_flags = env.get('BUILD_FLAGS', [])
 json_flags = {}
-json_flags['uart-inverted'] = False
 UIDbytes = ""
 define = ""
 target_name = env.get('PIOENV', '').upper()
+
+isRX = True if '_RX_' in target_name else False
 
 def print_error(error):
     time.sleep(1)
@@ -45,18 +46,25 @@ def process_json_flag(define):
         if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['wifi-on-interval'] = int(dequote(parts.group(2)))
-        if parts.group(1) == "TLM_REPORT_INTERVAL_MS":
+        if parts.group(1) == "TLM_REPORT_INTERVAL_MS"  and not isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['tlm-interval'] = int(dequote(parts.group(2)))
-        if parts.group(1) == "FAN_MIN_RUNTIME":
+        if parts.group(1) == "FAN_MIN_RUNTIME"  and not isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['fan-runtime'] = int(dequote(parts.group(2)))
-    if define == "-DUART_INVERTED":
+        if define == "-DRCVR_UART_BAUD" and isRX:
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
+    if define == "-DUART_INVERTED" and not isRX:
         json_flags['uart-inverted'] = True
-    if define == "-DNO_SYNC_ON_ARM":
+    if define == "-DNO_SYNC_ON_ARM"  and not isRX:
         json_flags['no-sync-on-arm'] = True
-    if define == "-DUNLOCK_HIGHER_POWER":
+    if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
+    if define == "-DRCVR_INVERT_TX" and isRX:
+        json_flags['rcvr-invert-tx'] = True
+    if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
+        json_flags['lock-on-first-connection'] = True
 
 def process_build_flag(define):
     if define.startswith("-D") or define.startswith("!-D"):
