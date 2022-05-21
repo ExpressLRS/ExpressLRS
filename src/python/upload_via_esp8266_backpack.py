@@ -71,6 +71,7 @@ def on_upload(source, target, env):
 
     cmd = ["curl", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",
+           "--header", "X-FileSize: " + str(os.path.getsize(elrs_bin_target)),
            "-o", "%s" % (bin_upload_output)]
 
     pio_target = target[0].name
@@ -105,7 +106,7 @@ def on_upload(source, target, env):
             # Flash bootloader first if set
             if bootloader_target is not None:
                 print("** Flashing Bootloader...")
-                print(cmd_bootloader,cmd)
+                print(cmd_bootloader)
                 subprocess.check_call(cmd_bootloader + [addr])
                 print("** Bootloader Flashed!")
                 print()
