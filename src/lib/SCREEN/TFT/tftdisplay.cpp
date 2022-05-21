@@ -79,7 +79,7 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define IDLE_PAGE_START_X   SCREEN_CONTENT_GAP
 #define IDLE_PAGE_START_Y   0
 
-#define IDLE_PAGE_STAT_START_X  SCREEN_X/2 + SCREEN_CONTENT_GAP
+#define IDLE_PAGE_STAT_START_X  SCREEN_X/2 // is centered, so no GAP
 #define IDLE_PAGE_STAT_Y_GAP    (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE * 3)/4
 
 #define IDLE_PAGE_RATE_START_Y  IDLE_PAGE_STAT_Y_GAP

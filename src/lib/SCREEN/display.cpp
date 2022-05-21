@@ -39,8 +39,10 @@ const char *rate_string[] = {
     "F1000Hz",
     "F500Hz",
     "500Hz",
+    "333Hz Full",
     "250Hz",
     "150Hz",
+    "100Hz Full",
     "50Hz"
 };
 #else
