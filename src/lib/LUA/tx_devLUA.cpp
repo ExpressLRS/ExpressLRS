@@ -21,7 +21,7 @@ static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
-static const char switchmodeOpts8ch[] = "8ch;16ch;12ch";
+static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -533,7 +533,7 @@ void luadevUpdateFolderNames()
 
 uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, expresslrs_RFrates_e eRate)
 {
-  // Only the fullres modes have 3 switch modes, so reset the switch mode it is outside the
+  // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
   // range for 4ch mode
   if (eRate != RATE_LORA_100HZ_8CH && eRate != RATE_LORA_333HZ_8CH)
   {
@@ -552,7 +552,7 @@ static void registerLuaParameters()
       uint8_t newRate = RATE_MAX - 1 - arg;
       newRate = adjustPacketRateForBaud(newRate);
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), (expresslrs_RFrates_e)newRate);
+        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->enum_rate);
       // If the switch mode is going to change, block the change while connected
       if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
