@@ -1,4 +1,5 @@
 #include "common.h"
+#include "options.h"
 
 // Sanity checks
 static_assert(RATE_DEFAULT < RATE_MAX, "Default rate must be below RATE_MAX");
@@ -89,25 +90,11 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 connectionState_e connectionState = disconnected;
 bool connectionHasModelMatch;
 
+uint8_t MasterUID[6];                       // The definitive user UID
+uint8_t UID[6];                             // The currently running UID
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
-#if defined(MY_UID)
-    uint8_t UID[6] = {MY_UID};
-#else
-    #ifdef PLATFORM_ESP32
-        uint8_t UID[6];
-        esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
-    #elif PLATFORM_STM32
-        uint8_t UID[6] = {
-            (uint8_t)HAL_GetUIDw0(), (uint8_t)(HAL_GetUIDw0() >> 8),
-            (uint8_t)HAL_GetUIDw1(), (uint8_t)(HAL_GetUIDw1() >> 8),
-            (uint8_t)HAL_GetUIDw2(), (uint8_t)(HAL_GetUIDw2() >> 8)};
-    #else
-        uint8_t UID[6] = {0};
-    #endif
-#endif
-uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
-uint16_t CRCInitializer = (UID[4] << 8) | UID[5];
+uint16_t CRCInitializer;
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
 {
@@ -185,4 +172,27 @@ uint32_t uidMacSeedGet(void)
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
                              ((uint32_t)UID[4] << 8) + UID[5];
     return macSeed;
+}
+
+void initUID()
+{
+    if (firmwareOptions.hasUID)
+    {
+        memcpy(MasterUID, firmwareOptions.uid, sizeof(MasterUID));
+    }
+    else
+    {
+    #ifdef PLATFORM_ESP32
+        esp_err_t WiFiErr = esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
+    #elif PLATFORM_STM32
+        MasterUID[0] = (uint8_t)HAL_GetUIDw0();
+        MasterUID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
+        MasterUID[2] = (uint8_t)HAL_GetUIDw1();
+        MasterUID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
+        MasterUID[4] = (uint8_t)HAL_GetUIDw2();
+        MasterUID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+    #endif
+    }
+    memcpy(UID, MasterUID, sizeof(UID));
+    CRCInitializer = (UID[4] << 8) | UID[5];
 }

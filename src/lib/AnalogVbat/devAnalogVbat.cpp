@@ -18,6 +18,10 @@ extern Telemetry telemetry;
 
 static int start()
 {
+    if (GPIO_ANALOG_VBAT == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     return VBAT_SAMPLE_INTERVAL;
 }
 
@@ -37,6 +41,10 @@ static void reportVbat()
 
 static int timeout()
 {
+    if (GPIO_ANALOG_VBAT == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     int adc = analogRead(GPIO_ANALOG_VBAT);
     adc = (adc > ANALOG_VBAT_OFFSET) ? adc - ANALOG_VBAT_OFFSET : 0;
 

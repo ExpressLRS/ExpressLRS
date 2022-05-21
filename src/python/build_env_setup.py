@@ -5,6 +5,7 @@ import opentx
 import upload_via_esp8266_backpack
 import esp_compress
 import ETXinitPassthrough
+import UnifiedConfiguration
 
 def add_target_uploadoption(name: str, desc: str) -> None:
     # Add an upload target 'uploadforce' that forces update if target mismatch
@@ -85,6 +86,7 @@ elif platform in ['espressif32']:
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
     if "_ETX" in target_name:
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
+        env.AddPreAction("uploadfs", ETXinitPassthrough.init_passthrough)
 
 if "_WIFI" in target_name:
     add_target_uploadoption("uploadconfirm", "Do not upload, just send confirm")
@@ -95,3 +97,5 @@ if "_WIFI" in target_name:
 
 if platform != 'native':
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
+
+env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)
