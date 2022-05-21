@@ -207,20 +207,6 @@ constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x
 
 #define NORMAL_UPDATE_INTERVAL 50
 
-constexpr uint8_t rate_hue[RATE_MAX] =
-{
-#if defined(RADIO_SX128X)
-    208,     // FLRC 1000 Hz - purple
-    64,      // FLRC  500 Hz - yellow
-    64,      // TODO: Full res modes?!
-    64,      // TODO: Full res modes?!
-#endif
-    170,     // LoRa 500/200 Hz - blue
-    85,      // LoRa 250/100 Hz - green
-    21,      // LoRa 150/ 50 Hz - orange
-    0        // LoRa  50/ 25 Hz - red
-};
-
 static blinkyColor_t blinkyColor;
 
 static int blinkyUpdate() {
@@ -285,13 +271,13 @@ static int timeout()
             }
         #endif
         // Set the color and we're done!
-        blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
+        blinkyColor.h = ExpressLRS_currAirRate_Modparams->index * 256 / RATE_MAX;
         blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 128);
         WS281BsetLED(HsvToRgb(blinkyColor));
         return DURATION_NEVER;
     case tentative:
         // Set the color and we're done!
-        blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
+        blinkyColor.h = ExpressLRS_currAirRate_Modparams->index * 256 / RATE_MAX;
         blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 50);
         WS281BsetLED(HsvToRgb(blinkyColor));
         return DURATION_NEVER;
@@ -301,7 +287,7 @@ static int timeout()
             return flashLED(blinkyColor, 192, 0, LEDSEQ_DISCONNECTED, sizeof(LEDSEQ_DISCONNECTED));
         #endif
         #if defined(TARGET_TX)
-            blinkyColor.h = rate_hue[ExpressLRS_currAirRate_Modparams->index];
+            blinkyColor.h = ExpressLRS_currAirRate_Modparams->index * 256 / RATE_MAX;
             brightnessFadeLED(blinkyColor, 0, 64);
             return NORMAL_UPDATE_INTERVAL;
         #endif
