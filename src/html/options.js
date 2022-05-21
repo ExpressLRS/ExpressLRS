@@ -15,7 +15,6 @@ function init() {
       updateOptions(data);
       if (!_('wifi-ssid').value) {
         scanTimer = setInterval(get_networks, 2000);
-        _('loader').style.display = 'block';
       }
     }
   };
@@ -30,9 +29,11 @@ function get_networks() {
   xmlhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
       var data = JSON.parse(this.responseText);
-      _('loader').style.display = 'none';
-      autocomplete(_('wifi-ssid'), data);
-      clearInterval(scanTimer);
+      if (data.length > 0) {
+        _('loader').style.display = 'none';
+        autocomplete(_('wifi-ssid'), data);
+        clearInterval(scanTimer);
+      }
     }
   };
   xmlhttp.open("POST", json_url, true);
@@ -52,7 +53,7 @@ function submitOptions(e) {
     if (_(k) && _(k).type == 'checkbox') {
         return v == 'on' ? true : false;
     }
-    if (k.endsWith('_values')) {
+    if (k == 'uid') {
         const arr = v.split(',').map(element => {
             return Number(element);
         });
@@ -87,7 +88,7 @@ function updateOptions(data) {
   for (let [key, value] of Object.entries(data)) {
     if (_(key)) {
       if (_(key).type == 'checkbox') {
-        _(key).checked = value;
+        _(key).checked = value ? "on" : "off";
       }
       else {
         if (Array.isArray(value))

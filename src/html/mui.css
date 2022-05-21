@@ -1766,7 +1766,7 @@ h4, h5, h6 {
 .mui-table > tbody > tr > td,
 .mui-table > tfoot > tr > th,
 .mui-table > tfoot > tr > td {
-  padding: 10px;
+  padding: 0px;
   line-height: 1.429;
 }
 .mui-table > thead > tr > th {

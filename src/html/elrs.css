@@ -86,15 +86,11 @@ body, input, select, textarea {
 /* Loader spinner */
 
 .loader {
-	margin: 4px;
-	border: 8px solid #f3f3f3;
-	border-radius: 50%;
-	border-top: 8px solid #3498db;
-	width: 6px;
-	height: 6px;
-	-webkit-animation: spin 2s linear infinite; /* Safari */
-	animation: spin 2s linear infinite;
-	display: none;
+	background-color: #ffffff;
+	background-image: url("data:image/svg+xml,%3C%3Fxml%20version='1.0'%20encoding='utf-8'%3F%3E%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20xmlns:xlink='http://www.w3.org/1999/xlink'%20width='28px'%20height='28px'%20viewBox='0%200%20100%20100'%20preserveAspectRatio='xMidYMid'%3E%3Crect%20x='0'%20y='0'%20width='100'%20height='100'%20stroke='none'%20fill='none'/%3E%3Ccircle%20cx='28'%20cy='75'%20r='11'%20fill='%230051a2'%3E%3Canimate%20attributeName='fill-opacity'%20repeatCount='indefinite'%20dur='1s'%20values='0%3B1%3B1'%20keyTimes='0%3B0.2%3B1'%20begin='0s'%3E%3C/animate%3E%3C/circle%3E%3Cpath%20d='M28%2047A28%2028%200%200%201%2056%2075'%20fill='none'%20stroke='%231b75be'%20stroke-width='10'%3E%3Canimate%20attributeName='stroke-opacity'%20repeatCount='indefinite'%20dur='1s'%20values='0%3B1%3B1'%20keyTimes='0%3B0.2%3B1'%20begin='0.1s'%3E%3C/animate%3E%3C/path%3E%3Cpath%20d='M28%2025A50%2050%200%200%201%2078%2075'%20fill='none'%20stroke='%23408ee0'%20stroke-width='10'%3E%3Canimate%20attributeName='stroke-opacity'%20repeatCount='indefinite'%20dur='1s'%20values='0%3B1%3B1'%20keyTimes='0%3B0.2%3B1'%20begin='0.2s'%3E%3C/animate%3E%3C/path%3E%3C/svg%3E");
+	background-size: 25px 25px;
+	background-position: right center;
+	background-repeat: no-repeat;
 }
 
   /* Safari */
@@ -309,6 +305,15 @@ body, input, select, textarea {
 
   .info-bg {
 	background: #88cef7;
+  }
+
+    /* Custom code for ExpressLRS PWM Output table */
+  .pwmtbl th {
+	text-align: center;
+	font-weight: bold;
+  }
+  .pwmtbl td {
+	text-align: center;
   }
 
   /*==========================*/

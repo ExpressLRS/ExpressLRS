@@ -71,6 +71,9 @@ extern CRSF crsf;
 
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
+static bool scanComplete = false;
+static constexpr uint32_t STALE_WIFI_SCAN = 20000;
+static uint32_t lastScanTimeMS = 0;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -124,11 +127,10 @@ static struct {
   const uint8_t* content;
   const size_t size;
 } files[] = {
-  {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
-  {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
   {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
@@ -291,7 +293,7 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
   int numNetworks = WiFi.scanComplete();
-  if (numNetworks >= 0) {
+  if (numNetworks >= 0 && millis() - lastScanTimeMS < STALE_WIFI_SCAN) {
     DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
@@ -307,6 +309,18 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
     s+="]";
     request->send(200, "application/json", s);
   } else {
+    if (WiFi.scanComplete() != WIFI_SCAN_RUNNING)
+    {
+      #if defined(PLATFORM_ESP8266)
+      scanComplete = false;
+      WiFi.scanNetworksAsync([](int){
+        scanComplete = true;
+      });
+      #else
+      WiFi.scanNetworks(true);
+      #endif
+      lastScanTimeMS = millis();
+    }
     request->send(204, "application/json", "[]");
   }
 }
@@ -664,9 +678,9 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendContent);
+  server.on("/elrs.css", WebUpdateSendContent);
+  server.on("/mui.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
-  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -699,7 +713,6 @@ static void startServices()
     server.on("/hardware.js", WebUpdateSendContent);
     server.on("/options.html", WebUpdateSendContent);
     server.on("/options.js", WebUpdateSendContent);
-    server.on("/elrs.css", WebUpdateSendContent);
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
@@ -723,7 +736,6 @@ static void startServices()
 
 static void HandleWebUpdate()
 {
-  static bool scanComplete = false;
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
 
@@ -759,14 +771,6 @@ static void HandleWebUpdate()
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
-        #if defined(PLATFORM_ESP8266)
-        scanComplete = false;
-        WiFi.scanNetworksAsync([](int){
-          scanComplete = true;
-        });
-        #else
-        WiFi.scanNetworks(true);
-        #endif
         startServices();
         break;
       case WIFI_STA:

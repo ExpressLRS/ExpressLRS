@@ -36,19 +36,21 @@ function getPwmFormData()
 function enumSelectGenerate(id, val, arOptions)
 {
     // Generate a <select> item with every option in arOptions, and select the val element (0-based)
-    let retVal = `<select id="${id}">` +
+    let retVal = `<div class="mui-select"><select id="${id}">` +
         arOptions.map((item, idx) => {
             return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
-        }).join('') + '</select>';
+        }).join('') + '</select></div>';
     return retVal;
 }
 
 function updatePwmSettings(arPwm)
 {
-    if (arPwm === undefined)
+    if (arPwm === undefined) {
+        _('pwm_tab').style.display = 'none';
         return;
+    }
     // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Mode</th><th>Input</th><th>Invert?</th><th>750us?</th><th>Failsafe</th></tr>'];
+    let htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th>Output</th><th>Mode</th><th>Input</th><th>Invert?</th><th>750us?</th><th>Failsafe</th></tr>'];
     arPwm.forEach((item, index) => {
         let failsafe = (item & 1023) + 988; // 10 bits
         let ch = (item >> 10) & 15; // 4 bits
@@ -65,12 +67,12 @@ function updatePwmSettings(arPwm)
         htmlFields.push(`<tr><th>${index+1}</th>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
-            <td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
-            <td><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></td>
+            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
+            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></td></tr>`
         );
     });
-    htmlFields.push('<tr><td colspan="6"><input type="submit" value="Set PWM Output"></td></tr></table>');
+    htmlFields.push('</table></div><input type="submit" class="mui-btn mui-btn--primary" value="Set PWM Output">');
 
     let grp = document.createElement('DIV');
     grp.setAttribute('class', 'group');
@@ -78,7 +80,6 @@ function updatePwmSettings(arPwm)
 
     _('pwm').appendChild(grp);
     _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
-    _('pwm_container').style.display = 'block';
 }
 
 function get_mode() {
@@ -119,9 +120,11 @@ function get_networks() {
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             var data = JSON.parse(this.responseText);
-            _('loader').style.display = 'none';
-            autocomplete(_('network'), data);
-            clearInterval(scanTimer);
+            if (data.length > 0) {
+                _('loader').style.display = 'none';
+                autocomplete(_('network'), data);
+                clearInterval(scanTimer);
+            }
         }
     };
     xmlhttp.open("POST", json_url, true);
