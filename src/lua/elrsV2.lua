@@ -37,7 +37,6 @@ local backButtonId = 2
 local devicesRefreshTimeout = 50
 local allParamsLoaded = 0
 local folderAccess = nil
-local statusComplete = 0
 local commandRunningIndicator = 1
 local expectedChunks = -1
 local deviceIsELRS_TX = nil
@@ -344,7 +343,7 @@ local function fieldTextSelectionDisplay_color(field, y, attr)
     lcd.drawText(COL2 + (lcd.sizeText(field.values[field.value+1])), y, field.unit, 0)
   else
     lcd.drawText(COL2 + 10*string.len(field.values[field.value+1]), y, field.unit, 0)
-  end	
+  end
 end
 
 local function fieldTextSelectionDisplay_bw(field, y, attr)
@@ -537,7 +536,6 @@ local function parseParameterInfoMessage(data)
   end
   if chunks > 0 then
     fieldChunk = fieldChunk + 1
-    statusComplete = 0
   else
     fieldChunk = 0
     if #fieldData < 4 then -- short packet, invalid
@@ -576,14 +574,11 @@ local function parseParameterInfoMessage(data)
         -- advance to the next field if doing a full load
         fieldId = 1 + (fieldId % (#fields-1))
       elseif reloadFolder ~= nil then --if we still have to reload the folder name
-        fieldId, fieldChunk, statusComplete = reloadFolder, 0, 0
+        fieldId, fieldChunk = reloadFolder, 0
       end
       fieldTimeout = getTime() + 200
     else
       fieldTimeout = getTime() + fieldPopup.timeout
-    end
-    if reloadFolder == nil then
-      statusComplete = 1  --status is not complete, we got to reload the folder
     end
     fieldData = {}
   end
@@ -628,7 +623,7 @@ local function refreshNext()
     parseDeviceInfoMessage(data)
   elseif command == 0x2B then
     parseParameterInfoMessage(data)
-    if allParamsLoaded < 1 or statusComplete == 0 then
+    if fieldChunk > 0 or allParamsLoaded < 1 then
       fieldTimeout = 0 -- go fast until we have complete status record
     end
   elseif command == 0x2D then
@@ -657,7 +652,7 @@ local function refreshNext()
     end
     linkstatTimeout = time + 100
   elseif time > fieldTimeout and fields_count ~= 0 and not edit then
-    if allParamsLoaded < 1 or statusComplete == 0 then
+    if allParamsLoaded < 1 or fieldChunk > 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, fieldId, fieldChunk })
       fieldTimeout = time + 50 -- 0.5s
     end
@@ -792,7 +787,7 @@ local function handleDevicePageEvent(event)
             -- data again, with a short delay to allow the module EEPROM to
             -- commit. Do this before save() to allow save to override
             fieldTimeout = getTime() + 20
-            fieldId, fieldChunk, statusComplete = field.id, 0, 0
+            fieldId, fieldChunk = field.id, 0
             if field.parent then
               -- if it is inside a folder, then we reload the folder
               reloadFolder = field.parent
@@ -877,7 +872,7 @@ local function runPopupPage(event)
       fieldPopup = nil
     end
   elseif fieldPopup.status == 2 then -- running
-    if statusComplete then
+    if fieldChunk == 0 then
       commandRunningIndicator = (commandRunningIndicator % 4) + 1
     end
     result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
