@@ -112,3 +112,7 @@
 # Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
 # on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
 #-DDEBUG_FREQ_CORRECTION
+
+# Use an ELRS TX and RX as a transparent UART over the air
+#-DUSE_AIRPORT
+#-DAIRPORT_BAUD=4800

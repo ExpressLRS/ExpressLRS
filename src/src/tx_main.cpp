@@ -36,6 +36,7 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 Stream *TxBackpack;
+Stream *TxUSB;
 
 volatile uint8_t NonceTX;
 
@@ -72,6 +73,22 @@ static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
+
+#if defined(USE_AIRPORT)
+/////////////////////////////////////////
+/// Variables / constants for Airport ///
+
+#define AP_MAX_INPUT_BUF_LEN    5
+#define AP_DATA_OFFSET_INDEX    2
+
+uint8_t apInputBufferLen = 0;
+uint8_t apInputBuffer[AP_MAX_INPUT_BUF_LEN];
+
+uint8_t apOutputBufferLen = 0;
+uint8_t apOutputBuffer[AP_MAX_INPUT_BUF_LEN];
+
+/////////////////////////////////////////
+#endif
 
 device_affinity_t ui_devices[] = {
   {&CRSF_device, 0},
@@ -317,7 +334,15 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
             break;
 
         case ELRS_TELEMETRY_TYPE_DATA:
-            TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
+            #if defined(USE_AIRPORT)
+              apOutputBufferLen = TLMheader >> ELRS_TELEMETRY_SHIFT;
+              for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+              {
+                apOutputBuffer[i] = Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX];
+              }
+            #else
+              TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
+            #endif
             break;
     }
 }
@@ -495,8 +520,21 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
-        NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+      
+       #if defined(USE_AIRPORT)
+        Radio.TXdataBuffer[0] = RC_DATA_PACKET & 0b11;
+        Radio.TXdataBuffer[1] = apInputBufferLen;
+        Radio.TXdataBuffer[2] = apInputBuffer[0];
+        Radio.TXdataBuffer[3] = apInputBuffer[1];
+        Radio.TXdataBuffer[4] = apInputBuffer[2];
+        Radio.TXdataBuffer[5] = apInputBuffer[3];
+        Radio.TXdataBuffer[6] = apInputBuffer[4];
+
+        apInputBufferLen = 0;
+      #else
+        PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
+          NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+      #endif
     }
   }
 
@@ -950,11 +988,51 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
 }
 
-static void setupTxBackpack()
+static void HandleUARTout()
+{
+  #if defined(USE_AIRPORT)
+    if (apOutputBufferLen)
+    {
+      for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+      {
+          TxUSB->write(apOutputBuffer[i]);
+      }
+      apOutputBufferLen = 0;
+    }
+  #endif
+}
+
+static void setupSerial()
 {  /*
-   * Setup the logging/backpack serial port.
+   * Setup the logging/backpack serial port, and the USB serial port.
    * This is always done because we need a place to send data even if there is no backpack!
    */
+#if defined(USE_AIRPORT)
+  // Airport enabled - set TxUSB port to pins 1 and 3
+  #define GPIO_PIN_USB_RX   3
+  #define GPIO_PIN_USB_TX   1
+  #if defined(AIRPORT_BAUD)
+    #define USB_BAUD        AIRPORT_BAUD
+  #else
+    #define USB_BAUD        460800
+  #endif // defined(AIRPORT_BAUD)
+  #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+    if (GPIO_PIN_DEBUG_RX == 1 && GPIO_PIN_DEBUG_TX == 3)
+    {
+      // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
+      // TxUSB takes priority over TxBackpack
+      #define GPIO_PIN_DEBUG_RX UNDEF_PIN
+      #define GPIO_PIN_DEBUG_TX UNDEF_PIN
+    }
+  #endif // defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+#else
+  // No airport - set TxUSB port to null
+  #define GPIO_PIN_USB_RX   UNDEF_PIN
+  #define GPIO_PIN_USB_TX   UNDEF_PIN
+  #define USB_BAUD          460800
+#endif // defined(USE_AIRPORT)
+
+// Setup TxBackpack
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
   Stream *serialPort;
   if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
@@ -985,6 +1063,23 @@ static void setupTxBackpack()
   Stream *serialPort = new NullStream();
 #endif
   TxBackpack = serialPort;
+
+// Setup TxUSB
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_USB_RX) && defined(GPIO_PIN_USB_TX)
+  Stream *usbPort;
+  if (GPIO_PIN_USB_RX != UNDEF_PIN && GPIO_PIN_USB_TX != UNDEF_PIN)
+  {
+    usbPort = new HardwareSerial(2);
+    ((HardwareSerial *)usbPort)->begin(USB_BAUD, SERIAL_8N1, GPIO_PIN_USB_RX, GPIO_PIN_USB_TX);
+  }
+  else
+  {
+    usbPort = new NullStream();
+  }
+#else
+  Stream *usbPort = new NullStream();
+#endif
+  TxUSB = usbPort;
 }
 
 /**
@@ -1024,7 +1119,7 @@ static void setupTarget()
   }
 
   setupTargetCommon();
-  setupTxBackpack();
+  setupSerial();
 }
 
 void setup()
@@ -1067,7 +1162,9 @@ void setup()
     Radio.TXdoneCallback = &TXdoneISR;
 
     crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-    crsf.disconnected = &UARTdisconnected;
+    #if !defined(USE_AIRPORT)
+      crsf.disconnected = &UARTdisconnected;
+    #endif
     crsf.RecvModelUpdate = &ModelUpdateReq;
     hwTimer.callbackTock = &timerCallbackNormal;
     DBGLN("ExpressLRS TX Module Booted...");
@@ -1117,11 +1214,18 @@ void setup()
   }
 
   devicesStart();
+
+  #if defined(USE_AIRPORT)
+    config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
+    UARTconnected();
+  #endif
 }
 
 void loop()
 {
   uint32_t now = millis();
+
+  HandleUARTout(); // Only used for non-CRSF output
 
   #if defined(USE_BLE_JOYSTICK)
   if (connectionState != bleJoystick && connectionState != noCrossfire) // Wait until the correct crsf baud has been found
@@ -1154,6 +1258,17 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update();
   VtxPitmodeSwitchUpdate();
+
+  if (TxUSB->available())
+  {
+    #if defined(USE_AIRPORT)
+      if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN)
+      {
+        apInputBuffer[apInputBufferLen] = TxUSB->read();
+        apInputBufferLen++;
+      }
+    #endif
+  }
 
   if (TxBackpack->available())
   {

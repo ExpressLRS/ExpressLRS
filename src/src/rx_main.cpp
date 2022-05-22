@@ -184,6 +184,22 @@ static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
+#if defined(USE_AIRPORT)
+/////////////////////////////////////////
+/// Variables / constants for Airport ///
+
+#define AP_MAX_INPUT_BUF_LEN    5
+#define AP_DATA_OFFSET_INDEX    2
+
+uint8_t apInputBufferLen = 0;
+uint8_t apInputBuffer[AP_MAX_INPUT_BUF_LEN];
+
+uint8_t apOutputBufferLen = 0;
+uint8_t apOutputBuffer[AP_MAX_INPUT_BUF_LEN];
+
+/////////////////////////////////////////
+#endif
+
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
 bool returnModelFromLoan = false;
@@ -326,7 +342,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     Radio.TXdataBuffer[0] = TLM_PACKET;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK
+    #if !defined(USE_AIRPORT)
+        || !TelemetrySender.IsActive()
+    #endif
+        )
     {
         Radio.TXdataBuffer[1] = ELRS_TELEMETRY_TYPE_LINK;
         // The value in linkstatistics is "positivized" (inverted polarity)
@@ -359,13 +379,24 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
-        Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
-        Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
-        Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
-        Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
-        Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
-        Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+        #if defined(USE_AIRPORT)
+            Radio.TXdataBuffer[1] = (apInputBufferLen << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+            Radio.TXdataBuffer[2] = apInputBuffer[0];
+            Radio.TXdataBuffer[3] = apInputBuffer[1];
+            Radio.TXdataBuffer[4] = apInputBuffer[2];
+            Radio.TXdataBuffer[5] = apInputBuffer[3];
+            Radio.TXdataBuffer[6] = apInputBuffer[4];
+
+            apInputBufferLen = 0;
+        #else
+            TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
+            Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+            Radio.TXdataBuffer[2] = maxLength > 0 ? *data : 0;
+            Radio.TXdataBuffer[3] = maxLength >= 1 ? *(data + 1) : 0;
+            Radio.TXdataBuffer[4] = maxLength >= 2 ? *(data + 2) : 0;
+            Radio.TXdataBuffer[5] = maxLength >= 3 ? *(data + 3): 0;
+            Radio.TXdataBuffer[6] = maxLength >= 4 ? *(data + 4): 0;
+        #endif
     }
 
     uint16_t crc = ota_crc.calc(Radio.TXdataBuffer, 7, CRCInitializer);
@@ -676,33 +707,41 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     if (connectionState != connected)
         return;
 
-    bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
-        NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
-    TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+    #if defined(USE_AIRPORT)
+        apOutputBufferLen = Radio.RXdataBuffer[1];
+        for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+        {
+            apOutputBuffer[i] = Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX];
+        }
+    #else
+        bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
+            NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
-    // No channels packets to the FC if no model match
-    if (connectionHasModelMatch)
-    {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
-        if (SERVO_COUNT != 0)
+        // No channels packets to the FC if no model match
+        if (connectionHasModelMatch)
         {
-            newChannelsAvailable = true;
-        }
-        else
-        #endif
-        {
-            if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
+            #if defined(GPIO_PIN_PWM_OUTPUTS)
+            if (SERVO_COUNT != 0)
             {
-                crsf.sendRCFrameToFC();
-            } else
-            {
-                if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
+                newChannelsAvailable = true;
             }
+            else
+            #endif
+            {
+                if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
+                {
+                    crsf.sendRCFrameToFC();
+                } else
+                {
+                    if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
+                }
+            }
+            #if defined(DEBUG_RCVR_LINKSTATS)
+            debugRcvrLinkstatsPending = true;
+            #endif
         }
-        #if defined(DEBUG_RCVR_LINKSTATS)
-        debugRcvrLinkstatsPending = true;
-        #endif
-    }
+    #endif // USE_AIRPORT
 }
 
 /**
@@ -938,6 +977,10 @@ static void setupSerial()
         return;
     }
 
+#if defined(USE_AIRPORT) && defined(AIRPORT_BAUD)
+    firmwareOptions.uart_baud = AIRPORT_BAUD;
+#endif
+
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -1078,9 +1121,18 @@ static void HandleUARTin()
     {
         return;
     }
-    while (CRSF_RX_SERIAL.available())
+    if (CRSF_RX_SERIAL.available())
     {
-        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
+        uint8_t data = CRSF_RX_SERIAL.read();
+        #if defined(USE_AIRPORT)
+            if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN && connectionState != disconnected)
+            {
+                apInputBuffer[apInputBufferLen] = data;
+                apInputBufferLen++;
+            }
+        #endif // USE_AIRPORT
+
+        telemetry.RXhandleUARTin(data);
 
         if (telemetry.ShouldCallBootloader())
         {
@@ -1102,6 +1154,20 @@ static void HandleUARTin()
             crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
+}
+
+static void HandleUARTout()
+{
+    #if defined(USE_AIRPORT)
+        if (apOutputBufferLen)
+        {
+            for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+            {
+                Serial.write(apOutputBuffer[i]);
+            }
+            apOutputBufferLen = 0;
+        }
+    #endif
 }
 
 static void setupRadio()
@@ -1415,7 +1481,10 @@ void setup()
 void loop()
 {
     unsigned long now = millis();
+
     HandleUARTin();
+    HandleUARTout(); // Only used for non-CRSF output
+
     if (hwTimer.running == false)
     {
         crsf.RXhandleUARTout();
