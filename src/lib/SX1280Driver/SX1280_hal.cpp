@@ -131,15 +131,14 @@ void SX1280Hal::reset(void)
 {
     DBGLN("SX1280 Reset");
 
-#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
-    pinMode(GPIO_PIN_RST, OUTPUT);
-
-    delay(50);
-    digitalWrite(GPIO_PIN_RST, LOW);
-    delay(50);
-    digitalWrite(GPIO_PIN_RST, HIGH);
-    delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
-#endif
+    if (GPIO_PIN_RST != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_RST, OUTPUT);
+        digitalWrite(GPIO_PIN_RST, LOW);
+        delay(50);
+        digitalWrite(GPIO_PIN_RST, HIGH);
+        delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
+    }
 
     BusyDelay(10000); // 10ms delay if GPIO_PIN_BUSY is undefined
     WaitOnBusy(SX1280_Radio_All);
