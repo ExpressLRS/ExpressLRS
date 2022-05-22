@@ -150,7 +150,7 @@ def reset_to_bootloader(args) -> int:
     return ElrsUploadResult.Success
 
 
-if __name__ == '__main__':
+def main(custom_args = None):
     parser = argparse.ArgumentParser(
         description="Initialize BetaFlight passthrough and optionally send a reboot comamnd sequence")
     parser.add_argument("-b", "--baud", type=int, default=420000,
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--action", type=str, default="upload",
         help="Upload action: upload (default), or uploadforce to flash even on target mismatch")
 
-    args = parser.parse_args()
+    args = parser.parse_args(custom_args)
 
     if (args.port == None):
         args.port = serials_find.get_serial_port()
@@ -182,4 +182,8 @@ if __name__ == '__main__':
     if args.reset_to_bl:
         returncode = reset_to_bootloader(args)
 
+    return returncode
+
+if __name__ == '__main__':
+    returncode = main()
     exit(returncode)

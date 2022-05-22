@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
+#include "options.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -12,7 +13,7 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   5
+#define TX_CONFIG_VERSION   6
 #define RX_CONFIG_VERSION   5
 #define UID_LEN             6
 
@@ -39,6 +40,9 @@ typedef struct {
     model_config_t  model_config[64];
     uint8_t         fanMode;
     uint8_t         motionMode;
+    uint8_t         dvrAux:5;
+    uint8_t         dvrStartDelay:3;
+    uint8_t         dvrStopDelay:3;
 } tx_config_t;
 
 class TxConfig
@@ -66,6 +70,9 @@ public:
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
     uint8_t  GetFanMode() const { return m_config.fanMode; }
     uint8_t  GetMotionMode() const { return m_config.motionMode; }
+    uint8_t  GetDvrAux() const { return m_config.dvrAux; }
+    uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
+    uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -86,12 +93,15 @@ public:
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
     void SetFanMode(uint8_t fanMode);
     void SetMotionMode(uint8_t motionMode);
+    void SetDvrAux(uint8_t dvrAux);
+    void SetDvrStartDelay(uint8_t dvrStartDelay);
+    void SetDvrStopDelay(uint8_t dvrStopDelay);
 
     // State setters
     bool SetModelId(uint8_t modelId);
 
 private:
-    bool UpgradeEepromV1ToV4();
+    bool UpgradeEepromV5ToV6();
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -145,13 +155,7 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound() const {
-        #ifdef MY_UID
-            return true;
-        #else
-            return m_config.isBound;
-        #endif
-    }
+    bool     GetIsBound() const { return firmwareOptions.hasUID || m_config.isBound; }
     const uint8_t* GetUID() const { return m_config.uid; }
     bool GetOnLoan() const { return m_config.onLoan; }
     const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
