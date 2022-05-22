@@ -2,13 +2,17 @@
 #include "common.h"
 #include "device.h"
 
-#if defined(GPIO_PIN_BUTTON) && (GPIO_PIN_BUTTON != UNDEF_PIN)
+#if defined(GPIO_PIN_BUTTON)
 #include "logging.h"
 #include "button.h"
 
-static Button<GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED> button;
+static Button button;
 
-#if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
+#ifndef GPIO_BUTTON_INVERTED
+#define GPIO_BUTTON_INVERTED false
+#endif
+
+#if defined(TARGET_TX)
 #include "POWERMGNT.h"
 void EnterBindingMode();
 
@@ -26,9 +30,9 @@ static void cyclePower()
     if (connectionState < MODE_STATES)
     {
         PowerLevels_e curr = POWERMGNT::currPower();
-        if (curr == MaxPower)
+        if (curr == POWERMGNT::getMaxPower())
         {
-            POWERMGNT::setPower(MinPower);
+            POWERMGNT::setPower(POWERMGNT::getMinPower());
         }
         else
         {
@@ -55,22 +59,34 @@ static void rxWebUpdateReboot()
 
 static void initialize()
 {
-    #if defined(TARGET_TX_BETAFPV_2400_V1) || defined(TARGET_TX_BETAFPV_900_V1) || defined(TARGET_TX_IFLIGHT)
-        button.OnShortPress = enterBindMode3Click;
-        button.OnLongPress = cyclePower;
-    #endif
-    #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-        button.OnLongPress = rxWebUpdateReboot;
-    #endif
+    if (GPIO_PIN_BUTTON != UNDEF_PIN)
+    {
+        button.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
+        #if defined(TARGET_TX)
+            button.OnShortPress = enterBindMode3Click;
+            button.OnLongPress = cyclePower;
+        #endif
+        #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
+            button.OnLongPress = rxWebUpdateReboot;
+        #endif
+    }
 }
 
 static int start()
 {
+    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
 {
+    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
     return button.update();
 }
 

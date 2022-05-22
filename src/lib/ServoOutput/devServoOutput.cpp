@@ -5,9 +5,8 @@
 #include "CRSF.h"
 #include "helpers.h"
 
-static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-static constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-static ServoMgr_8266 servoMgr(SERVO_PINS, SERVO_COUNT, 20000U);
+static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
+static ServoMgr_8266 *servoMgr;
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
 
@@ -33,14 +32,14 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 
 static void servosFailsafe()
 {
-    for (uint8_t ch=0; ch<servoMgr.getOutputCnt(); ++ch)
+    for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
         uint16_t us = chConfig->val.failsafe + 988U;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
-        servoMgr.writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
     }
 }
 
@@ -51,7 +50,7 @@ static int servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (uint8_t ch=0; ch<servoMgr.getOutputCnt(); ++ch)
+        for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             uint16_t us = CRSF_to_US(CRSF::GetChannelOutput(chConfig->val.inputChannel));
@@ -64,9 +63,9 @@ static int servosUpdate(unsigned long now)
             if (us >= 988U && us <= 2012U)
             {
                 if ((eServoOutputMode)chConfig->val.mode == somOnOff)
-                    servoMgr.writeDigital(ch, us > 1500U);
+                    servoMgr->writeDigital(ch, us > 1500U);
                 else
-                    servoMgr.writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
             }
         } /* for each servo */
         Serial.println();
@@ -84,16 +83,24 @@ static int servosUpdate(unsigned long now)
 
 static void initialize()
 {
+    uint8_t count = GPIO_PIN_PWM_OUTPUTS_COUNT;
+    DBGLN("%d servos", count);
+    for (int i=0 ; i<count ; i++)
+    {
+        SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
+    }
+    servoMgr = new ServoMgr_8266(SERVO_PINS, count, 20000U);
+
     // Initialize all servos to low ASAP
-    servoMgr.initialize();
+    servoMgr->initialize();
 }
 
 static int start()
 {
-    for (uint8_t ch=0; ch<servoMgr.getOutputCnt(); ++ch)
+    for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        servoMgr.setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
+        servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
     }
 
     return DURATION_NEVER; // or maybe 500ms needed?
@@ -106,7 +113,7 @@ static int event()
         return DURATION_NEVER;
     else if (connectionState == wifiUpdate)
     {
-        servoMgr.stopAllPwm();
+        servoMgr->stopAllPwm();
         return DURATION_NEVER;
     }
     else
@@ -126,4 +133,3 @@ device_t ServoOut_device = {
 };
 
 #endif
-

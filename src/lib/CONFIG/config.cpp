@@ -636,11 +636,14 @@ RxConfig::SetDefaults()
     SetPowerOnCounter(0);
     SetModelId(0xFF);
     SetPower(POWERMGNT::getDefaultPower());
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-    SetAntennaMode(2); //2 is diversity
-#else
-    SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
-#endif
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    {
+        SetAntennaMode(2); //2 is diversity
+    }
+    else
+    {
+        SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
+    }
     SetSSID("");
     SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)

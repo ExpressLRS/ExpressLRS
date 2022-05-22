@@ -1,0 +1,20 @@
+{
+    "serial_rx": 13,
+    "serial_tx": 13,
+    "radio_busy": 21,
+    "radio_dio1": 4,
+    "radio_miso": 19,
+    "radio_mosi": 23,
+    "radio_nss": 5,
+    "radio_rst": 14,
+    "radio_sck": 18,
+    "power_min": 0,
+    "power_high": 1,
+    "power_max": 1,
+    "power_default": 1,
+    "power_control": 0,
+    "power_values": [8,13],
+    "debug_backpack_baud": 460800,
+    "debug_backpack_rx": 3,
+    "debug_backpack_tx": 1
+}
