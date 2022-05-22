@@ -52,7 +52,7 @@ def process_json_flag(define):
         if parts.group(1) == "FAN_MIN_RUNTIME"  and not isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['fan-runtime'] = int(dequote(parts.group(2)))
-        if define == "-DRCVR_UART_BAUD" and isRX:
+        if parts.group(1) == "RCVR_UART_BAUD" and isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED" and not isRX:
