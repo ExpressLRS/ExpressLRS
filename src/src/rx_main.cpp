@@ -470,7 +470,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         uplinkLQ = LQCalcDVDA.getLQ();
         LQCalcDVDA.inc();
     }
-    
+
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
@@ -1273,6 +1273,7 @@ static void updateBindingMode()
         config.Commit();
 
         INFOLN("Power on counter >=3, enter binding mode...");
+        config.SetIsBound(false);
         EnterBindingMode();
     }
 }
