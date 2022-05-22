@@ -7,18 +7,18 @@
 #include "SX127xDriver.h"
 
 const fhss_config_t domains[] = {
-    {"AU915",  915500000, 600000, 20},
-    {"FCC915", 903500000, 600000, 40},
-    {"EU868",  865275000, 525000, 13},
-    {"IN866",  865375000, 525000, 4},
-    {"AU433",  433420000, 500000, 3},
-    {"EU433",  433100000, 675000, 3}
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20},
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40},
+    {"EU868",  FREQ_HZ_TO_REG_VAL(865275000), FREQ_HZ_TO_REG_VAL(869575000), 13},
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4},
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3},
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3}
 };
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 
 const fhss_config_t domains[] = {
-    {"ISM2G4", 2400400000, 1000000, 80}
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
 };
 #endif
 
@@ -33,6 +33,8 @@ uint8_t volatile FHSSptr;
 uint_fast8_t sync_channel;
 // Offset from the predefined frequency determined by AFC on Team900 (register units)
 int32_t FreqCorrection;
+
+uint32_t freq_spread;
 
 /**
 Requirements:
@@ -55,6 +57,8 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     sync_channel = FHSSconfig->freq_count / 2;
     DBGLN("Sync channel = %u", sync_channel);
+
+    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;

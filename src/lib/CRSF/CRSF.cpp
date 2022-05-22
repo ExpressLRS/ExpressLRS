@@ -906,6 +906,7 @@ bool CRSF::RXhandleUARTout()
         while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
         {
             uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+
             uint8_t OutData[OutPktLen];
             msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
             this->_dev->write(OutData, OutPktLen); // write the packet out

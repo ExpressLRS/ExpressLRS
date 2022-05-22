@@ -374,8 +374,8 @@ bool options_init()
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #else
-    firmwareOptions.uart_baud = doc["uart-baud"] | 420000;
-    firmwareOptions.invert_tx = doc["invert-tx"] | false;
+    firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
+    firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;

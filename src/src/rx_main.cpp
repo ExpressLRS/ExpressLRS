@@ -973,9 +973,8 @@ static void setupSerial()
     CRSF_TX_SERIAL.setHalfDuplex();
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
-#else
-    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
+    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* PLATFORM_STM32 */
 
 #if defined(TARGET_RX_FM30_MINI)
