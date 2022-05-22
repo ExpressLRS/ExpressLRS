@@ -4,7 +4,12 @@
 
 #ifdef HAS_GSENSOR_STK8xxx
 #include "stk8baxx.h"
+#ifndef OPT_HAS_GSENSOR_STK8xxx
+#define OPT_HAS_GSENSOR_STK8xxx true
+#endif
 STK8xxx stk8xxx;
+#else
+#define OPT_HAS_GSENSOR_STK8xxx false
 #endif
 
 int gensor_status = GSENSOR_STATUS_FAIL;
@@ -39,9 +44,11 @@ ICACHE_RAM_ATTR void handleGsensorInterrupt()
 void Gsensor::init()
 {
     uint8_t id = -1;
-#ifdef HAS_GSENSOR_STK8xxx
-    id = stk8xxx.STK8xxx_Initialization();
-#endif
+    if (OPT_HAS_GSENSOR_STK8xxx)
+        id = stk8xxx.STK8xxx_Initialization();
+    else
+        return;
+
     if(id == -1)
     {
         ERRLN("Gsensor failed!");
@@ -54,11 +61,12 @@ void Gsensor::init()
 
     if(gensor_status == GSENSOR_STATUS_NORMAL)
     {
-#ifdef HAS_GSENSOR_STK8xxx
-       stk8xxx.STK8xxx_Anymotion_init();
-       pinMode(GPIO_PIN_GSENSOR_INT,INPUT_PULLUP);
-       attachInterrupt(digitalPinToInterrupt(GPIO_PIN_GSENSOR_INT), handleGsensorInterrupt, FALLING);
-#endif
+        if (OPT_HAS_GSENSOR_STK8xxx)
+        {
+            stk8xxx.STK8xxx_Anymotion_init();
+            pinMode(GPIO_PIN_GSENSOR_INT,INPUT_PULLUP);
+            attachInterrupt(digitalPinToInterrupt(GPIO_PIN_GSENSOR_INT), handleGsensorInterrupt, FALLING);
+        }
     }
 
     system_state = GSENSOR_SYSTEM_STATE_MOVING;
@@ -180,9 +188,8 @@ void Gsensor::getGSensorData(float *X_DataOut, float *Y_DataOut, float *Z_DataOu
     *Z_DataOut = 0;
     if(gensor_status == GSENSOR_STATUS_NORMAL)
     {
-#ifdef HAS_GSENSOR_STK8xxx
-        stk8xxx.STK8xxx_Getregister_data(X_DataOut, Y_DataOut, Z_DataOut);
-#endif
+        if (OPT_HAS_GSENSOR_STK8xxx)
+            stk8xxx.STK8xxx_Getregister_data(X_DataOut, Y_DataOut, Z_DataOut);
     }
     else
     {

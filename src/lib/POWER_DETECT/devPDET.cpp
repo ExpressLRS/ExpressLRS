@@ -3,7 +3,7 @@
 #include "logging.h"
 #include "POWERMGNT.h"
 
-#if defined(GPIO_PIN_PA_PDET) && GPIO_PIN_PA_PDET != UNDEF_PIN
+#if defined(GPIO_PIN_PA_PDET)
 
 #if defined(USE_SKY85321)
 #define SKY85321_MAX_DBM_INPUT 5
@@ -28,8 +28,12 @@ static uint8_t lastTargetPowerdBm;
 
 static int start()
 {
-    analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
-    return DURATION_IMMEDIATELY;
+    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
+    {
+        analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()

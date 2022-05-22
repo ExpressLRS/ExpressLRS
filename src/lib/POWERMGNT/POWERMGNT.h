@@ -1,13 +1,10 @@
 #pragma once
 
+#include "options.h"
+
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
 #include <nvs.h>
-#endif
-
-#if defined(HighPower) && !defined(UNLOCK_HIGHER_POWER)
-    #undef MaxPower
-    #define MaxPower HighPower
 #endif
 
 #ifndef POWER_OUTPUT_VALUES
@@ -15,7 +12,6 @@
     #define MinPower PWR_10mW
     #define MaxPower PWR_10mW
 #endif
-
 
 #if !defined(DefaultPower)
     #define DefaultPower PWR_50mW
@@ -29,6 +25,10 @@
         #undef HighPower
         #define HighPower MaxPower
     #endif
+#endif
+
+#if !defined(HighPower)
+#define HighPower MaxPower
 #endif
 
 typedef enum
@@ -70,6 +70,15 @@ public:
     static void setPower(PowerLevels_e Power);
     static PowerLevels_e incPower();
     static PowerLevels_e decPower();
+    static PowerLevels_e currPower() { return CurrentPower; }
+    static PowerLevels_e getMinPower() { return MinPower; }
+    static PowerLevels_e getMaxPower() {
+        #if defined(TARGET_RX)
+            return MaxPower;
+        #else
+            return firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
+        #endif
+    }
     static void incSX1280Ouput();
     static void decSX1280Ouput();
     static int8_t currentSX1280Ouput();

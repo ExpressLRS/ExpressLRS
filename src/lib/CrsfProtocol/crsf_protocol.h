@@ -26,10 +26,6 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#ifndef RCVR_UART_BAUD
-#define RCVR_UART_BAUD 420000
-#endif
-
 #define CRSF_NUM_CHANNELS 16
 #define CRSF_CHANNEL_VALUE_MIN  172
 #define CRSF_CHANNEL_VALUE_1000 191
@@ -243,7 +239,7 @@ typedef struct deviceInformationPacket_s
     uint8_t parameterVersion;
 } PACKED deviceInformationPacket_t;
 
-#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + device_name_size)
+#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + strlen(device_name)+1)
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 

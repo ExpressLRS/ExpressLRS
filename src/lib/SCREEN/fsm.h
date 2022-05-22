@@ -37,6 +37,7 @@ typedef struct fsm_state_event_s
 typedef struct fsm_state_entry_s
 {
     fsm_state_t state;
+    std::function<bool()> available;
     std::function<void(bool init)> entry;
     uint16_t timeout;
     fsm_state_event_t const *events;

@@ -3,6 +3,9 @@
 #include "device.h"
 
 #ifdef HAS_GSENSOR
+#if !defined(OPT_HAS_GSENSOR)
+#define OPT_HAS_GSENSOR true
+#endif
 
 #include <functional>
 
@@ -38,12 +41,19 @@ extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 static void initialize()
 {
-    gsensor.init();
+    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        gsensor.init();
+    }
 }
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()
