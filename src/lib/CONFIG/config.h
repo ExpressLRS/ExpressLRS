@@ -120,7 +120,7 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
-constexpr uint8_t PWM_MAX_CHANNELS = 12;
+constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
 typedef union {
     struct {
