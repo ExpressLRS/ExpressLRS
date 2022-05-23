@@ -74,7 +74,7 @@ StubbornReceiver TelemetryReceiver(ELRS_TELEMETRY_MAX_PACKAGES);
 StubbornSender MspSender(ELRS_MSP_MAX_PACKAGES);
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-#if defined(USE_AIRPORT)
+#if defined(USE_AIRPORT_AT_BAUD)
 /////////////////////////////////////////
 /// Variables / constants for Airport ///
 
@@ -334,7 +334,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
             break;
 
         case ELRS_TELEMETRY_TYPE_DATA:
-            #if defined(USE_AIRPORT)
+            #if defined(USE_AIRPORT_AT_BAUD)
               apOutputBufferLen = TLMheader >> ELRS_TELEMETRY_SHIFT;
               for (uint8_t i = 0; i < apOutputBufferLen; ++i)
               {
@@ -521,7 +521,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
       
-       #if defined(USE_AIRPORT)
+       #if defined(USE_AIRPORT_AT_BAUD)
         Radio.TXdataBuffer[0] = RC_DATA_PACKET & 0b11;
         Radio.TXdataBuffer[1] = apInputBufferLen;
         Radio.TXdataBuffer[2] = apInputBuffer[0];
@@ -990,7 +990,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 static void HandleUARTout()
 {
-  #if defined(USE_AIRPORT)
+  #if defined(USE_AIRPORT_AT_BAUD)
     if (apOutputBufferLen)
     {
       for (uint8_t i = 0; i < apOutputBufferLen; ++i)
@@ -1009,11 +1009,12 @@ static void setupSerial()
    */
   bool portConflict = false;
 
-#if defined(USE_AIRPORT)
+#if defined(USE_AIRPORT_AT_BAUD)
   #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     // Airport enabled - set TxUSB port to pins 1 and 3
     #define GPIO_PIN_USB_RX   3
     #define GPIO_PIN_USB_TX   1
+    #define USB_BAUD          USE_AIRPORT_AT_BAUD
 
     #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
       if (GPIO_PIN_DEBUG_RX == 1 && GPIO_PIN_DEBUG_TX == 3)
@@ -1032,12 +1033,7 @@ static void setupSerial()
   // No airport - set TxUSB port to null
   #define GPIO_PIN_USB_RX   UNDEF_PIN
   #define GPIO_PIN_USB_TX   UNDEF_PIN
-#endif
-
-#if defined(AIRPORT_BAUD)
-  #define USB_BAUD  AIRPORT_BAUD
-#else
-  #define USB_BAUD  460800
+  #define USB_BAUD          460800
 #endif
 
 // Setup TxBackpack
@@ -1170,7 +1166,7 @@ void setup()
     Radio.TXdoneCallback = &TXdoneISR;
 
     crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-    #if !defined(USE_AIRPORT)
+    #if !defined(USE_AIRPORT_AT_BAUD)
       crsf.disconnected = &UARTdisconnected;
     #endif
     crsf.RecvModelUpdate = &ModelUpdateReq;
@@ -1223,9 +1219,9 @@ void setup()
 
   devicesStart();
 
-  #if defined(USE_AIRPORT)
+  #if defined(USE_AIRPORT_AT_BAUD)
     config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
-    SetMotionMode(0); // Ensure motion detection is off
+    config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   #endif
 }
@@ -1270,7 +1266,7 @@ void loop()
 
   if (TxUSB->available())
   {
-    #if defined(USE_AIRPORT)
+    #if defined(USE_AIRPORT_AT_BAUD)
       if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN)
       {
         apInputBuffer[apInputBufferLen] = TxUSB->read();

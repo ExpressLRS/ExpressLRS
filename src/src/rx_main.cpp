@@ -184,7 +184,7 @@ static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
-#if defined(USE_AIRPORT)
+#if defined(USE_AIRPORT_AT_BAUD)
 /////////////////////////////////////////
 /// Variables / constants for Airport ///
 
@@ -343,7 +343,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     Radio.TXdataBuffer[0] = TLM_PACKET;
 
     if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK
-    #if !defined(USE_AIRPORT)
+    #if !defined(USE_AIRPORT_AT_BAUD)
         || !TelemetrySender.IsActive()
     #endif
         )
@@ -379,7 +379,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        #if defined(USE_AIRPORT)
+        #if defined(USE_AIRPORT_AT_BAUD)
             Radio.TXdataBuffer[1] = (apInputBufferLen << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
             Radio.TXdataBuffer[2] = apInputBuffer[0];
             Radio.TXdataBuffer[3] = apInputBuffer[1];
@@ -707,7 +707,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     if (connectionState != connected)
         return;
 
-    #if defined(USE_AIRPORT)
+    #if defined(USE_AIRPORT_AT_BAUD)
         apOutputBufferLen = Radio.RXdataBuffer[1];
         for (uint8_t i = 0; i < apOutputBufferLen; ++i)
         {
@@ -741,7 +741,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
             debugRcvrLinkstatsPending = true;
             #endif
         }
-    #endif // USE_AIRPORT
+    #endif // USE_AIRPORT_AT_BAUD
 }
 
 /**
@@ -977,8 +977,8 @@ static void setupSerial()
         return;
     }
 
-#if defined(USE_AIRPORT) && defined(AIRPORT_BAUD)
-    firmwareOptions.uart_baud = AIRPORT_BAUD;
+#if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = USE_AIRPORT_AT_BAUD;
 #endif
 
 #ifdef PLATFORM_STM32
@@ -1124,13 +1124,13 @@ static void HandleUARTin()
     if (CRSF_RX_SERIAL.available())
     {
         uint8_t data = CRSF_RX_SERIAL.read();
-        #if defined(USE_AIRPORT)
+        #if defined(USE_AIRPORT_AT_BAUD)
             if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN && connectionState != disconnected)
             {
                 apInputBuffer[apInputBufferLen] = data;
                 apInputBufferLen++;
             }
-        #endif // USE_AIRPORT
+        #endif // USE_AIRPORT_AT_BAUD
 
         telemetry.RXhandleUARTin(data);
 
@@ -1158,7 +1158,7 @@ static void HandleUARTin()
 
 static void HandleUARTout()
 {
-    #if defined(USE_AIRPORT)
+    #if defined(USE_AIRPORT_AT_BAUD)
         if (apOutputBufferLen)
         {
             for (uint8_t i = 0; i < apOutputBufferLen; ++i)

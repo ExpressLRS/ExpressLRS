@@ -540,7 +540,7 @@ static void registerLuaParameters()
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
       {
-        #if !defined(USE_AIRPORT) // Don't allow TLM ratio changes if using AIRPORT
+        #if !defined(USE_AIRPORT_AT_BAUD) // Don't allow TLM ratio changes if using AIRPORT
           config.SetTlm((expresslrs_tlm_ratio_e)arg);
         #endif
       }
@@ -551,7 +551,7 @@ static void registerLuaParameters()
       devicesTriggerEvent();
     });
     #endif
-    #if !defined(USE_AIRPORT)
+    #if !defined(USE_AIRPORT_AT_BAUD)
     registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
       // Only allow changing switch mode when disconnected since we need to guarantee
       // the pack and unpack functions are matched
@@ -581,7 +581,7 @@ static void registerLuaParameters()
       }
       luadevUpdateModelID();
     });
-    #endif // !defined(USE_AIRPORT)
+    #endif // !defined(USE_AIRPORT_AT_BAUD)
 
     // POWER folder
     registerLUAParameter(&luaPowerFolder);
@@ -604,7 +604,7 @@ static void registerLuaParameters()
     registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
   }
 #endif
-#if !defined(USE_AIRPORT)
+#if !defined(USE_AIRPORT_AT_BAUD)
   if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
     // VTX folder
     registerLUAParameter(&luaVtxFolder);
@@ -622,7 +622,7 @@ static void registerLuaParameters()
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
   }
-#endif // !defined(USE_AIRPORT)
+#endif // !defined(USE_AIRPORT_AT_BAUD)
 
   // WIFI folder
   #if defined(PLATFORM_ESP32)
@@ -640,7 +640,7 @@ static void registerLuaParameters()
       registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
       registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
       
-      #if !defined(USE_AIRPORT)
+      #if !defined(USE_AIRPORT_AT_BAUD)
       // Backpack folder
       registerLUAParameter(&luaBackpackFolder);
       registerLUAParameter(
@@ -658,11 +658,11 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
-      #endif // !defined(USE_AIRPORT)
+      #endif // !defined(USE_AIRPORT_AT_BAUD)
     }
   }
 
-  #if defined(PLATFORM_ESP32) && !defined(USE_AIRPORT)
+  #if defined(PLATFORM_ESP32) && !defined(USE_AIRPORT_AT_BAUD)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
 
