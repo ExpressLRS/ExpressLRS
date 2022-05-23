@@ -1007,35 +1007,43 @@ static void setupSerial()
    * Setup the logging/backpack serial port, and the USB serial port.
    * This is always done because we need a place to send data even if there is no backpack!
    */
+  bool portConflict = false;
+
 #if defined(USE_AIRPORT)
-  // Airport enabled - set TxUSB port to pins 1 and 3
-  #define GPIO_PIN_USB_RX   3
-  #define GPIO_PIN_USB_TX   1
-  #if defined(AIRPORT_BAUD)
-    #define USB_BAUD        AIRPORT_BAUD
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // Airport enabled - set TxUSB port to pins 1 and 3
+    #define GPIO_PIN_USB_RX   3
+    #define GPIO_PIN_USB_TX   1
+
+    #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+      if (GPIO_PIN_DEBUG_RX == 1 && GPIO_PIN_DEBUG_TX == 3)
+      {
+        // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
+        // TxUSB takes priority over TxBackpack
+        portConflict = true;
+      }
+    #endif
   #else
-    #define USB_BAUD        460800
-  #endif // defined(AIRPORT_BAUD)
-  #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
-    if (GPIO_PIN_DEBUG_RX == 1 && GPIO_PIN_DEBUG_TX == 3)
-    {
-      // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
-      // TxUSB takes priority over TxBackpack
-      #define GPIO_PIN_DEBUG_RX UNDEF_PIN
-      #define GPIO_PIN_DEBUG_TX UNDEF_PIN
-    }
-  #endif // defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+    // For STM targets, assume GPIO_PIN_DEBUG defines point to USB
+    #define GPIO_PIN_USB_RX   GPIO_PIN_DEBUG_RX
+    #define GPIO_PIN_USB_TX   GPIO_PIN_DEBUG_TX
+  #endif
 #else
   // No airport - set TxUSB port to null
   #define GPIO_PIN_USB_RX   UNDEF_PIN
   #define GPIO_PIN_USB_TX   UNDEF_PIN
-  #define USB_BAUD          460800
-#endif // defined(USE_AIRPORT)
+#endif
+
+#if defined(AIRPORT_BAUD)
+  #define USB_BAUD  AIRPORT_BAUD
+#else
+  #define USB_BAUD  460800
+#endif
 
 // Setup TxBackpack
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
   Stream *serialPort;
-  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN && !portConflict)
   {
     serialPort = new HardwareSerial(2);
     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -1217,6 +1225,7 @@ void setup()
 
   #if defined(USE_AIRPORT)
     config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
+    SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   #endif
 }

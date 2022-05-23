@@ -494,15 +494,19 @@ fsm_state_event_t const wifi_menu_events[] = {MENU_EVENTS(wifi_menu_fsm)};
 fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_PACKET, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_POWER, nullptr, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
+#if !defined(USE_AIRPORT)
     {STATE_TELEMETRY, nullptr,displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #ifdef HAS_GSENSOR
     {STATE_POWERSAVE, [](){return OPT_HAS_GSENSOR;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
+#endif
 #ifdef HAS_THERMAL
     {STATE_SMARTFAN, [](){return OPT_HAS_THERMAL;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
+#if !defined(USE_AIRPORT)
     {STATE_VTX, nullptr, displayMenuScreen, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
     {STATE_JOYSTICK, nullptr, displayMenuScreen, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
+#endif
     {STATE_BIND, nullptr, displayMenuScreen, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
     {STATE_WIFI, nullptr, displayMenuScreen, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
     {STATE_LAST}
