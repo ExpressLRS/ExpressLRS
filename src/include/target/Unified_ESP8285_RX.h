@@ -128,5 +128,5 @@
 #define GPIO_PIN_SPI_VTX_MISO hardware_pin(HARDWARE_vtx_miso)
 #define GPIO_PIN_SPI_VTX_MOSI hardware_pin(HARDWARE_vtx_mosi)
 #define GPIO_PIN_SPI_VTX_SCK hardware_pin(HARDWARE_vtx_sck)
-#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vpd_25mW)
-#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vpd_100mW)
+#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vpd_25mW)
+#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vpd_100mW)

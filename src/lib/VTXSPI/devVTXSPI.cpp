@@ -27,9 +27,9 @@
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
 #if defined(PLATFORM_ESP32)
-// ESP32 DAC pins are 0-255
-#define MIN_PWM                                 63  // Testing required.
-#define MAX_PWM                                 225 // Absolute max is 255.  But above 219 does nothing.
+// ESP32 DAC pins are 0-4095
+#define MIN_PWM                                 1 // Testing required.
+#define MAX_PWM                                 250 // Absolute max is 4095.  But above 250 does nothing.
 #else
 // ESP8285 PWM is 0-4095
 #define MIN_PWM                                 1000 // Testing required.
@@ -60,7 +60,7 @@ static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
-#define VPD_SETPOINT_YOLO_MW                    1500
+#define VPD_SETPOINT_YOLO_MW                    2000
 #if defined(TARGET_UNIFIED_RX)
 const uint16_t *VpdSetPointArray25mW = nullptr;
 const uint16_t *VpdSetPointArray100mW = nullptr;
@@ -279,10 +279,10 @@ static void initialize()
         #if defined(PLATFORM_ESP8266)
             pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
             analogWriteFreq(10000); // 10kHz
-            analogWriteResolution(12); // 0 - 4095
         #else
             analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
         #endif
+        analogWriteResolution(12); // 0 - 4095
         analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 
         delay(RTC6705_BOOT_DELAY);
