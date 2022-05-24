@@ -1221,7 +1221,7 @@ void loop()
 
     devicesUpdate(now);
 
-    #if defined(PLATFORM_ESP8266) && defined(AUTO_WIFI_ON_INTERVAL)
+    #if defined(PLATFORM_ESP8266)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
