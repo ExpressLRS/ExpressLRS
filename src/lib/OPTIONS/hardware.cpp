@@ -103,15 +103,15 @@ static const struct {
     {HARDWARE_vbat, "vbat", INT},
     {HARDWARE_vbat_offset, "vbat_offset", INT},
     {HARDWARE_vbat_scale, "vbat_scale", INT},
-    {HARDWARE_rf_amp_pwm, "rf_amp_pwm", INT},
-    {HARDWARE_rf_amp_vpd, "rf_amp_vpd", INT},
-    {HARDWARE_rf_amp_vref, "rf_amp_vref", INT},
+    {HARDWARE_vtx_amp_pwm, "vtx_amp_pwm", INT},
+    {HARDWARE_vtx_amp_vpd, "vtx_amp_vpd", INT},
+    {HARDWARE_vtx_amp_vref, "vtx_amp_vref", INT},
     {HARDWARE_vtx_nss, "vtx_nss", INT},
     {HARDWARE_vtx_miso, "vtx_miso", INT},
     {HARDWARE_vtx_mosi, "vtx_mosi", INT},
     {HARDWARE_vtx_sck, "vtx_sck", INT},
-    {HARDWARE_vpd_25mW, "vpd_25mW", ARRAY},
-    {HARDWARE_vpd_100mW, "vpd_100mW", ARRAY},
+    {HARDWARE_vtx_amp_vpd_25mW, "vtx_amp_vpd_25mW", ARRAY},
+    {HARDWARE_vtx_amp_vpd_100mW, "vtx_amp_vpd_100mW", ARRAY},
 };
 
 typedef union {

@@ -121,12 +121,12 @@
 // VTX
 #define HAS_VTX_SPI
 #define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)
-#define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_rf_amp_pwm)
-#define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_rf_amp_vpd)
-#define GPIO_PIN_RF_AMP_VREF hardware_pin(HARDWARE_rf_amp_vref)
+#define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_vtx_amp_pwm)
+#define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_vtx_amp_vpd)
+#define GPIO_PIN_RF_AMP_VREF hardware_pin(HARDWARE_vtx_amp_vref)
 #define GPIO_PIN_SPI_VTX_NSS hardware_pin(HARDWARE_vtx_nss)
 #define GPIO_PIN_SPI_VTX_MISO hardware_pin(HARDWARE_vtx_miso)
 #define GPIO_PIN_SPI_VTX_MOSI hardware_pin(HARDWARE_vtx_mosi)
 #define GPIO_PIN_SPI_VTX_SCK hardware_pin(HARDWARE_vtx_sck)
-#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vpd_25mW)
-#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vpd_100mW)
+#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_vpd_25mW)
+#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)

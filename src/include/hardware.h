@@ -112,15 +112,15 @@ typedef enum {
     HARDWARE_vbat_scale,
 
     // VTX
-    HARDWARE_rf_amp_pwm,
-    HARDWARE_rf_amp_vpd,
-    HARDWARE_rf_amp_vref,
+    HARDWARE_vtx_amp_pwm,
+    HARDWARE_vtx_amp_vpd,
+    HARDWARE_vtx_amp_vref,
     HARDWARE_vtx_nss,
     HARDWARE_vtx_miso,
     HARDWARE_vtx_mosi,
     HARDWARE_vtx_sck,
-    HARDWARE_vpd_25mW,
-    HARDWARE_vpd_100mW,
+    HARDWARE_vtx_amp_vpd_25mW,
+    HARDWARE_vtx_amp_vpd_100mW,
 
     HARDWARE_LAST
 } nameType;
