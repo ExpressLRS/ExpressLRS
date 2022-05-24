@@ -7,6 +7,7 @@
  */
 
 #include "OTA.h"
+#include "common.h"
 #include <assert.h>
 
 static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
@@ -495,9 +496,9 @@ void ICACHE_RAM_ATTR GeneratePacketCrcStd(OTA_Packet_s * const otaPktPtr)
     otaPktPtr->std.crcLow  = crc;
 }
 
-void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, expresslrs_RFrates_e const eRate)
+void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 {
-    OtaIsFullRes = (eRate == RATE_LORA_100HZ_8CH || eRate == RATE_LORA_333HZ_8CH);
+    OtaIsFullRes = (packetSize == OTA8_PACKET_SIZE);
 
     if (OtaIsFullRes)
     {

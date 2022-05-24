@@ -167,9 +167,3 @@ uint32_t uidMacSeedGet(void);
 #define AUX10 13
 #define AUX11 14
 #define AUX12 15
-
-// ELRS SPECIFIC OTA CRC
-// Value is implicit leading 1, comment is Koopman formatting (implicit trailing 1) https://users.ece.cmu.edu/~koopman/crc/
-#define ELRS_CRC_POLY 0x07 // 0x83
-#define ELRS_CRC14_POLY 0x2E57 // 0x372b
-#define ELRS_CRC16_POLY 0x3D65 // 0x9eb2

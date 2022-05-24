@@ -2,7 +2,6 @@
 #define H_OTA
 
 #include <functional>
-#include "common.h"
 #include "crc.h"
 #include "CRSF.h"
 
@@ -146,7 +145,7 @@ extern uint16_t OtaCrcInitializer;
 void OtaUpdateCrcInitFromUid();
 
 enum OtaSwitchMode_e { smWideOr8ch = 0, smHybridOr16ch = 1, sm12ch = 2 };
-void OtaUpdateSerializers(OtaSwitchMode_e const mode, expresslrs_RFrates_e const eRate);
+void OtaUpdateSerializers(OtaSwitchMode_e const mode, uint8_t packetSize);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 
 // CRC
@@ -154,6 +153,10 @@ typedef std::function<bool (OTA_Packet_s * const otaPktPtr)> ValidatePacketCrc_t
 typedef std::function<void (OTA_Packet_s * const otaPktPtr)> GeneratePacketCrc_t;
 extern ValidatePacketCrc_t OtaValidatePacketCrc;
 extern GeneratePacketCrc_t OtaGeneratePacketCrc;
+// Value is implicit leading 1, comment is Koopman formatting (implicit trailing 1) https://users.ece.cmu.edu/~koopman/crc/
+#define ELRS_CRC_POLY 0x07 // 0x83
+#define ELRS_CRC14_POLY 0x2E57 // 0x372b
+#define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
 typedef std::function<void (OTA_Packet_s * const otaPktPtr, CRSF const * const crsf, bool TelemetryStatus, uint8_t tlmDenom)> PackChannelData_t;

@@ -531,11 +531,11 @@ void luadevUpdateFolderNames()
   luadevUpdateTlmBandwidth();
 }
 
-uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, expresslrs_RFrates_e eRate)
+uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
 {
   // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
   // range for 4ch mode
-  if (eRate != RATE_LORA_100HZ_8CH && eRate != RATE_LORA_333HZ_8CH)
+  if (packetSize == OTA4_PACKET_SIZE)
   {
     if (eSwitchMode > smHybridOr16ch)
       return smWideOr8ch;
@@ -552,7 +552,7 @@ static void registerLuaParameters()
       uint8_t newRate = RATE_MAX - 1 - arg;
       newRate = adjustPacketRateForBaud(newRate);
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->enum_rate);
+        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
       // If the switch mode is going to change, block the change while connected
       if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
