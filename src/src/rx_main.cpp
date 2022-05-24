@@ -305,7 +305,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
 #if defined(DEBUG_FREQ_CORRECTION)
-    ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
+    ls->SNR = FreqCorrection * 64 / FreqCorrectionMax;
 #else
     ls->SNR = crsf.LinkStatistics.uplink_SNR;
 #endif
