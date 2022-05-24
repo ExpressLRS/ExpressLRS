@@ -106,7 +106,7 @@ void test_encodingHybrid8(bool highResChannel)
         OtaSetHybrid8NextSwitchIndex(3-1);
 
     // encode it
-    OtaUpdateSerializers(smHybridOr8ch, RATE_LORA_500HZ);
+    OtaUpdateSerializers(smHybridOr8ch, OTA4_PACKET_SIZE);
     OtaPackChannelData(otaPktPtr, &crsf, false, 0);
 
     // check it looks right
@@ -188,7 +188,7 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         OtaSetHybrid8NextSwitchIndex(forceSwitch-1);
 
     // use the encoding method to pack it into TXdataBuffer
-    OtaUpdateSerializers(smHybridOr8ch, RATE_LORA_500HZ);
+    OtaUpdateSerializers(smHybridOr8ch, OTA4_PACKET_SIZE);
     OtaPackChannelData(otaPktPtr, &crsf, false, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
@@ -264,7 +264,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
 
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
-    OtaUpdateSerializers(smWideOr12ch, RATE_LORA_500HZ);
+    OtaUpdateSerializers(smWideOr12ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
     OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
 
@@ -351,7 +351,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
 
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
-    OtaUpdateSerializers(smWideOr12ch, RATE_LORA_500HZ);
+    OtaUpdateSerializers(smWideOr12ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
     OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
 

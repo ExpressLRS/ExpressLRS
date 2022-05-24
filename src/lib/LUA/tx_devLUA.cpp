@@ -582,7 +582,7 @@ static void registerLuaParameters()
     if (connectionState == disconnected)
     {
       config.SetSwitchMode(arg);
-      OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->enum_rate);
+      OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
     }
     else
       setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
