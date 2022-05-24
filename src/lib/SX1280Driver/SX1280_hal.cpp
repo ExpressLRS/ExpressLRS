@@ -111,7 +111,7 @@ void SX1280Hal::init()
 #endif
 }
 
-void SX1280Hal::NssHigh(SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::NssHigh(uint8_t radioNumber)
 {
     if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, HIGH);
 #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
@@ -119,7 +119,7 @@ void SX1280Hal::NssHigh(SX1280_Radio_Number_t radioNumber)
 #endif
 }
 
-void SX1280Hal::NssLow(SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::NssLow(uint8_t radioNumber)
 {
     if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, LOW);
 #if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
