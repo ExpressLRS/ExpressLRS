@@ -28,7 +28,7 @@ static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
-    emptySpace
+    "mW"
 };
 #endif
 
