@@ -55,6 +55,7 @@ uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
 {
     uint8_t packageIndex;
 
+    bytesLastPayload = 0;
     switch (senderState)
     {
     case RESYNC:
@@ -64,18 +65,13 @@ uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
     case SENDING:
         {
             bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
-            bool hasData = false;
             for (unsigned n = 0; n < bytesLastPayload; ++n)
             {
-                uint8_t b = data[currentOffset + n];
-                outData[n] = b;
-                if (b != 0)
-                    hasData = true;
+                outData[n] = data[currentOffset + n];
             }
-            // If this is the last data chunk, and the data is non-zero
-            // send it as index 0 so we can go directly from SENDING to IDLE
-            // and skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
-            if ((currentOffset + bytesLastPayload) >= length && hasData)
+            // If this is the last data chunk, and there has been at least one other packet
+            // skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
+            if (currentPackage > 1 && (currentOffset + bytesLastPayload) >= length)
                 packageIndex = 0;
             else
                 packageIndex = currentPackage;
@@ -107,17 +103,20 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         }
 
         currentOffset += bytesLastPayload;
-        currentPackage++;
-        waitUntilTelemetryConfirm = !waitUntilTelemetryConfirm;
-        waitCount = 0;
-
         if (currentOffset >= length)
         {
-            if (data[length-1] == 0)
+            // A 0th packet is always requred so the reciver can
+            // differentiate a new send from a resend, if this is
+            // the first packet acked, send another, else IDLE
+            if (currentPackage == 1)
                 nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
             else
                 nextSenderState = SENDER_IDLE;
         }
+
+        currentPackage++;
+        waitUntilTelemetryConfirm = !waitUntilTelemetryConfirm;
+        waitCount = 0;
         break;
 
     case RESYNC:

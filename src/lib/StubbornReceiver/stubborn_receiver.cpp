@@ -39,39 +39,9 @@ void StubbornReceiver::SetDataToReceive(uint8_t* dataToReceive, uint8_t maxLengt
     finishedData = false;
 }
 
-void StubbornReceiver::_ReceiveData(uint8_t const * const receiveData, uint8_t dataLen)
-{
-    uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
-    for (unsigned i = 0; i < len; i++)
-    {
-        data[currentOffset++] = receiveData[i];
-    }
-}
-
 void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData, uint8_t dataLen)
 {
-    if  (packageIndex == 0)
-    {
-        // PackageIndex 0 (the final packet) can also contain data,
-        // but only if the the data isn't all zeroes
-        bool containedData = false;
-        for (unsigned i=0; i<dataLen; ++i)
-        {
-            if (receiveData[i] != 0)
-            {
-                _ReceiveData(receiveData, dataLen);
-                containedData = true;
-                break;
-            }
-        }
-        if (containedData || currentPackage > 1)
-        {
-            telemetryConfirm = !telemetryConfirm;
-            finishedData = true;
-        }
-        return;
-    }
-
+    // Resync
     if (packageIndex == maxPackageIndex)
     {
         telemetryConfirm = !telemetryConfirm;
@@ -86,15 +56,28 @@ void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * c
         return;
     }
 
-    if (packageIndex == currentPackage)
+    bool acceptData = false;
+    if (packageIndex == 0 && currentPackage > 1)
     {
-        _ReceiveData(receiveData, dataLen);
+        // PackageIndex 0 (the final packet) can also contain data
+        acceptData = true;
+        finishedData = true;
+    }
+    else if (packageIndex == currentPackage)
+    {
+        acceptData = true;
         currentPackage++;
-        telemetryConfirm = !telemetryConfirm;
-        return;
     }
 
-    return;
+    if (acceptData)
+    {
+        uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
+        for (unsigned i = 0; i < len; i++)
+        {
+            data[currentOffset++] = receiveData[i];
+        }
+        telemetryConfirm = !telemetryConfirm;
+    }
 }
 
 bool StubbornReceiver::HasFinishedData()
