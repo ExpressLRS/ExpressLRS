@@ -572,7 +572,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(NonceRX % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
-        crsf.sendRCFrameToFC();
+        newChannelsAvailable = true;
     }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -690,21 +690,13 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     // No channels packets to the FC or PWM pins if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
-        if (SERVO_COUNT != 0)
+        if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             newChannelsAvailable = true;
         }
-        else
-        #endif
+        else if (!LQCalcDVDA.currentIsSet())
         {
-            if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
-            {
-                crsf.sendRCFrameToFC();
-            } else
-            {
-                if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
-            }
+            LQCalcDVDA.add();
         }
         #if defined(DEBUG_RCVR_LINKSTATS)
         debugRcvrLinkstatsPending = true;
@@ -1204,7 +1196,6 @@ static void servosUpdate(unsigned long now)
 
     if (newChannelsAvailable)
     {
-        newChannelsAvailable = false;
         for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -1482,10 +1473,10 @@ void loop()
     }
 
     cycleRfMode(now);
+    servosUpdate(now);
     if (newChannelsAvailable)
     {
         crsf.sendRCFrameToFC();
-        servosUpdate(now);
         newChannelsAvailable = false;
     }
 
