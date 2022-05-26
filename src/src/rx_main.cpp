@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 
+#include "devCRSF.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -40,6 +41,7 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
   {&LED_device, 1},
 #endif
@@ -54,10 +56,10 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 1},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
+  {&VTxSPI_device, 1},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 0},
+  {&AnalogVbat_device, 1},
 #endif
 };
 
@@ -572,6 +574,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(NonceRX % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
+        crsfRCFrameAvailable();
         newChannelsAvailable = true;
     }
 
@@ -692,6 +695,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     {
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
+            crsfRCFrameAvailable();
             newChannelsAvailable = true;
         }
         else if (!LQCalcDVDA.currentIsSet())
@@ -707,7 +711,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
 /**
  * Process the assembled MSP packet in MspData[]
  **/
-static void MspReceiveComplete()
+void MspReceiveComplete()
 {
     if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
     {
@@ -1076,7 +1080,7 @@ static void setupBindingFromConfig()
     }
 }
 
-static void HandleUARTin()
+void HandleUARTin()
 {
     // If the hardware is not configured we want to be able to allow BF passthrough to work
     if (hardwareConfigured && OPT_CRSF_RCVR_NO_SERIAL)
@@ -1196,7 +1200,8 @@ static void servosUpdate(unsigned long now)
 
     if (newChannelsAvailable)
     {
-        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+        newChannelsAvailable = false;
+        for (uint8_t ch = 0; ch < SERVO_COUNT; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
@@ -1425,14 +1430,6 @@ void loop()
 {
     unsigned long now = millis();
 
-    HandleUARTin();
-    crsf.RXhandleUARTout();
-
-    if (MspReceiver.HasFinishedData())
-    {
-        MspReceiveComplete();
-    }
-
     devicesUpdate(now);
 
     #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
@@ -1474,11 +1471,6 @@ void loop()
 
     cycleRfMode(now);
     servosUpdate(now);
-    if (newChannelsAvailable)
-    {
-        crsf.sendRCFrameToFC();
-        newChannelsAvailable = false;
-    }
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||
