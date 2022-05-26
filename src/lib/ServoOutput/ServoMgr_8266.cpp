@@ -17,14 +17,19 @@ void ServoMgr_8266::initialize()
     for (uint8_t ch=0; ch<_outputCnt; ++ch)
     {
         const uint8_t pin = _pins[ch];
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, LOW);
+        if (pin != PIN_DISCONNECTED)
+        {
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, LOW);
+        }
     }
 }
 
 void ServoMgr_8266::writeMicroseconds(uint8_t ch, uint16_t valueUs)
 {
     const uint8_t pin = _pins[ch];
+    if (pin == PIN_DISCONNECTED)
+        return;
     _activePwmChannels |= (1 << pin);
     startWaveform8266(pin, valueUs, _refreshInterval[ch] - valueUs);
 }
@@ -38,6 +43,8 @@ void ServoMgr_8266::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
 void ServoMgr_8266::stopPwm(uint8_t ch)
 {
     const uint8_t pin = _pins[ch];
+    if (pin == PIN_DISCONNECTED)
+        return;
     _activePwmChannels &= ~(1 << pin);
     stopWaveform8266(pin);
 }
@@ -56,6 +63,8 @@ void ServoMgr_8266::stopAllPwm()
 void ServoMgr_8266::writeDigital(uint8_t ch, bool value)
 {
     const uint8_t pin = _pins[ch];
+    if (pin == PIN_DISCONNECTED)
+        return;
     if (isPwmActive(ch))
     {
         stopPwm(ch);

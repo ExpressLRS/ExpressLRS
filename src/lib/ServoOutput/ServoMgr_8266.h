@@ -26,6 +26,7 @@ public:
     bool isAnyPwmActive() const { return _activePwmChannels; }
     uint8_t getOutputCnt() const { return _outputCnt; }
 
+    const uint8_t PIN_DISCONNECTED = 0xff;
 private:
     const uint8_t * const _pins;
     const uint8_t _outputCnt;

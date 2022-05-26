@@ -32,7 +32,7 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 
 static void servosFailsafe()
 {
-    for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
@@ -50,7 +50,7 @@ static int servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+        for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             uint16_t us = CRSF_to_US(CRSF::GetChannelOutput(chConfig->val.inputChannel));
@@ -68,7 +68,6 @@ static int servosUpdate(unsigned long now)
                     servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
             }
         } /* for each servo */
-        Serial.println();
     } /* if newChannelsAvailable */
 
     else if (lastUpdate && (now - lastUpdate) > 1000U && connectionState == connected)
@@ -83,13 +82,23 @@ static int servosUpdate(unsigned long now)
 
 static void initialize()
 {
-    uint8_t count = GPIO_PIN_PWM_OUTPUTS_COUNT;
-    DBGLN("%d servos", count);
-    for (int i=0 ; i<count ; i++)
+    if (GPIO_PIN_PWM_OUTPUTS_COUNT == 0)
+        return;
+
+    servoMgr = new ServoMgr_8266(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
+
+    for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
-        SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
+        uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
+#if defined(DEBUG_LOG) && defined(PLATFORM_ESP8266)
+        // Disconnect the debug UART pins if DEBUG_LOG
+        if (pin == 1 || pin == 3)
+        {
+            pin = servoMgr->PIN_DISCONNECTED;
+        }
+#endif
+        SERVO_PINS[ch] = pin;
     }
-    servoMgr = new ServoMgr_8266(SERVO_PINS, count, 20000U);
 
     // Initialize all servos to low ASAP
     servoMgr->initialize();
@@ -97,20 +106,23 @@ static void initialize()
 
 static int start()
 {
-    for (uint8_t ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch=0; servoMgr && ch<servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
     }
 
-    return DURATION_NEVER; // or maybe 500ms needed?
+    return DURATION_NEVER;
 }
 
 static int event()
 {
-    // Disconnected should come after failsafe so it is safe to shut down when disconnected
-    if (connectionState == disconnected)
+    if (servoMgr == nullptr || connectionState == disconnected)
+    {
+        // Disconnected should come after failsafe on the RX
+        // so it is safe to shut down when disconnected
         return DURATION_NEVER;
+    }
     else if (connectionState == wifiUpdate)
     {
         servoMgr->stopAllPwm();
