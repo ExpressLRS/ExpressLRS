@@ -82,7 +82,7 @@ static int servosUpdate(unsigned long now)
 
 static void initialize()
 {
-    if (GPIO_PIN_PWM_OUTPUTS_COUNT == 0)
+    if (!OPT_HAS_SERVO_OUTPUT)
         return;
 
     servoMgr = new ServoMgr_8266(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
