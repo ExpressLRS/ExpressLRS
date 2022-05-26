@@ -11,7 +11,7 @@ void test_msp_receive(void)
     // WHEN a valid packet is send to processReceivedByte() one byte at a time
     // THEN the complete packet will be available via getReceivedPacket()
     // AND the packet values will match the values from the sent bytes
-    
+
     uint8_t c;
     bool packetComplete;
 
@@ -54,7 +54,7 @@ void test_msp_receive(void)
     c = 125; // crc
     packetComplete = MSPProtocol.processReceivedByte(c);
     TEST_ASSERT_EQUAL(true, packetComplete);
-  
+
     // Assert that values in packet match sent values
     mspPacket_t* packet = MSPProtocol.getReceivedPacket();
     TEST_ASSERT_EQUAL(MSP_PACKET_COMMAND, packet->type);
@@ -71,7 +71,7 @@ void test_msp_send(void)
     // WHEN a valid packet is passed as an argument to sendPacket()
     // THEN the complete packet will be transmitted to the passed in Stream object
     // AND the return value will be true
-    
+
     // Build an MSP reply packet
     mspPacket_t packet;
     packet.reset();
@@ -103,6 +103,10 @@ void test_msp_send(void)
 
 extern void test_encapsulated_msp_send(void);
 extern void test_encapsulated_msp_send_too_long(void);
+
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
 
 int main(int argc, char **argv)
 {

@@ -84,6 +84,10 @@ void test_fhss_reg_same(void)
     }
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

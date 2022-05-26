@@ -410,6 +410,10 @@ void test_decodingHybridWide_AUXX_low()
         test_decodingHybridWide(false, i, 0, CRSF_CHANNEL_VALUE_1000);
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

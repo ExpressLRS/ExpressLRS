@@ -152,6 +152,10 @@ void MSPV2_SERIAL_SETTINGS_TEST()
     // cout << endl;
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

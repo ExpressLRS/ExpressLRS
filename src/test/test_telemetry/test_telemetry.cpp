@@ -204,6 +204,9 @@ void test_function_uart_in(void)
     TEST_ASSERT_EQUAL(true, telemetry.RXhandleUARTin(0xEC));
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
 
 int main(int argc, char **argv)
 {
