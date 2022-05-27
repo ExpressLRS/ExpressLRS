@@ -163,6 +163,7 @@ typedef std::function<void (OTA_Packet_s * const otaPktPtr, CRSF const * const c
 extern PackChannelData_t OtaPackChannelData;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx);
+void OtaSetFullResNextChannelSet(bool next);
 #endif
 #endif
 

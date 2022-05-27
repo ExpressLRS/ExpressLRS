@@ -54,6 +54,7 @@ PackChannelData_t OtaPackChannelData;
  * @desc: Values are packed little-endianish such that bits A987654321 -> 87654321, 000000A9
  *        which is compatible with the 10-bit CRSF subset RC frame structure (0x17)
  *        in Betaflight
+ *        destChannels4x10 must be zeroed before this call, the channels are ORed into it
  ***/
 static void ICACHE_RAM_ATTR PackUInt11ToChannels4x10(uint32_t const * const src, OTA_Channels_4x10 * const destChannels4x10)
 {
@@ -259,6 +260,10 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch(OTA_Packet_s * const otaPktPt
     GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, crsf, TelemetryStatus, false);
 }
 
+static bool FullResIsHighAux;
+#if defined(UNIT_TEST)
+void OtaSetFullResNextChannelSet(bool next) { FullResIsHighAux = next; }
+#endif
 static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktPtr, CRSF const * const crsf, bool const TelemetryStatus, uint8_t const tlmDenom)
 {
     (void)tlmDenom;
@@ -266,9 +271,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktP
     // Every time this function is called, the opposite high Aux channels are sent
     // This tries to ensure a fair split of high and low aux channels packets even
     // at 1:2 ratio and around sync packets
-    static bool isHighAux;
-    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, crsf, TelemetryStatus, isHighAux);
-    isHighAux = !isHighAux;
+    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, crsf, TelemetryStatus, FullResIsHighAux);
+    FullResIsHighAux = !FullResIsHighAux;
 }
 #endif
 
