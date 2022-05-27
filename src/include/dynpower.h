@@ -8,6 +8,7 @@
 #include <CRSF.h>
 #include <logging.h>
 #include <MeanAccumulator.h>
+#include <common.h>
 
 typedef enum
 {
