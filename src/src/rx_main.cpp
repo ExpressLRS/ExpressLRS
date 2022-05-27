@@ -1430,9 +1430,15 @@ void loop()
 {
     unsigned long now = millis();
 
+    HandleUARTin();
+    if (MspReceiver.HasFinishedData())
+    {
+        MspReceiveComplete();
+    }
+
     devicesUpdate(now);
 
-    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
