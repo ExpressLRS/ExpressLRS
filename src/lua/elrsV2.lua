@@ -477,7 +477,7 @@ local function parseParameterInfoMessage(data)
       local offset
       field.id = fieldId
       field.parent = (fieldData[1] ~= 0) and fieldData[1] or nil
-      field.type = bit32.band(fieldData[2], 0x4f)
+      field.type = bit32.band(fieldData[2], 0x7f)
       field.hidden = bit32.btest(fieldData[2], 0x80) or nil
       field.name, offset = fieldGetString(fieldData, 3, field.name)
       if functions[field.type+1].load then
