@@ -43,7 +43,8 @@ typedef enum
     bleJoystick,
     // Failure states go below here to display immediately
     FAILURE_STATES,
-    radioFailed
+    radioFailed,
+    hardwareUndefined
 } connectionState_e;
 
 /**
@@ -85,7 +86,8 @@ typedef enum
     RATE_LORA_250HZ,
     RATE_LORA_333HZ_8CH,
     RATE_LORA_500HZ,
-    RATE_FLRC_500HZ,
+    RATE_DVDA_250HZ,
+    RATE_DVDA_500HZ,
     RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
@@ -121,6 +123,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
+    uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
@@ -132,9 +135,9 @@ typedef struct expresslrs_mod_settings_s
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 8      // 2xFLRC + 4xLoRa
-#define RATE_DEFAULT 2  // Default to LoRa 500Hz
-#define RATE_BINDING 7  // 50Hz bind mode
+#define RATE_MAX 9      // 1xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_DEFAULT 3  // Default to LoRa 500Hz
+#define RATE_BINDING 8  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
@@ -154,6 +157,7 @@ extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 #endif // UNIT_TEST
 
 uint32_t uidMacSeedGet(void);
+void initUID();
 
 #define AUX1 4
 #define AUX2 5

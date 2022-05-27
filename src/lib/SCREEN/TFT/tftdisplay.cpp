@@ -1,14 +1,18 @@
 #ifdef HAS_TFT_SCREEN
 
-#include <TFT_eSPI.h>
+#include <Arduino_GFX_Library.h>
+#include "Pragma_Sans36pt7b.h"
+#include "Pragma_Sans38pt7b.h"
+#include "Pragma_Sans314pt7b.h"
 
-#include "display.h"
+#include "tftdisplay.h"
 
 #include "logos.h"
 #include "options.h"
 #include "logging.h"
 
-TFT_eSPI tft = TFT_eSPI();
+#include "WiFi.h"
+extern WiFiMode_t wifiMode;
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
@@ -46,20 +50,20 @@ constexpr uint16_t elrs_banner_bgColor[] = {
     0xF501  // MSG_MISMATCH      => #F0A30A (amber)
 };
 
-#define SCREEN_X    TFT_HEIGHT
-#define SCREEN_Y    TFT_WIDTH
+#define SCREEN_X    160
+#define SCREEN_Y    80
 
 //see #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 #define SCREEN_SMALL_FONT_SIZE      8
-#define SCREEN_SMALL_FONT           1
+#define SCREEN_SMALL_FONT           Pragma_Sans36pt7b
 
 //see #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
 #define SCREEN_NORMAL_FONT_SIZE     16
-#define SCREEN_NORMAL_FONT          2
+#define SCREEN_NORMAL_FONT          Pragma_Sans38pt7b
 
 //see #define LOAD_FONT4  // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
 #define SCREEN_LARGE_FONT_SIZE      26
-#define SCREEN_LARGE_FONT           4
+#define SCREEN_LARGE_FONT           Pragma_Sans314pt7b
 
 //ICON SIZE Definition
 #define SCREEN_LARGE_ICON_SIZE      60
@@ -114,70 +118,84 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define SUB_PAGE_BINDING_WORD_START_X   0
 #define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
 
-void Display::init()
+static Arduino_DataBus *bus;
+static Arduino_GFX *gfx;
+
+void TFTDisplay::init()
 {
-    tft.init();
-    tft.setRotation(1);
-    tft.setSwapBytes(true);
+    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_TFT_BL, OUTPUT);
+    }
+    bus = new Arduino_ESP32SPI(GPIO_PIN_TFT_DC, GPIO_PIN_TFT_CS, GPIO_PIN_TFT_SCLK, GPIO_PIN_TFT_MOSI, GFX_NOT_DEFINED, HSPI);
+    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+
+    gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
+    displaySplashScreen();
 }
 
-void Display::doScreenBackLight(screen_backlight_t state)
+void TFTDisplay::doScreenBackLight(screen_backlight_t state)
 {
-    #ifdef TFT_BL
-    digitalWrite(TFT_BL, state);
-    #endif
+    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    {
+        digitalWrite(GPIO_PIN_TFT_BL, state);
+    }
 }
 
-void Display::printScreenshot()
+void TFTDisplay::printScreenshot()
 {
     DBGLN("Unimplemented");
 }
 
 static void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,
-                                            int font_size, int font_type, String font_string,
+                                            int font_size, const GFXfont& font, String font_string,
                                             uint16_t fgColor, uint16_t bgColor)
 {
-    tft.fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
+    gfx->fillRect(font_start_x, font_start_y, font_end_x - font_start_x, font_size, bgColor);
+    gfx->setFont(&font);
 
-    int start_pos = font_start_x + (font_end_x - font_start_x -  tft.textWidth(font_string, font_type))/2;
-    tft.setCursor(start_pos, font_start_y, font_type);
+    int16_t x, y;
+    uint16_t w, h;
+    gfx->getTextBounds(font_string, font_start_x, font_start_y, &x, &y, &w, &h);
+    int start_pos = font_start_x + (font_end_x - font_start_x - w)/2;
 
-    tft.setTextColor(fgColor, bgColor);
-    tft.print(font_string);
+    gfx->setCursor(start_pos, font_start_y + h);
+    gfx->setTextColor(fgColor, bgColor);
+    gfx->print(font_string);
 }
 
 
-void Display::displaySplashScreen()
+void TFTDisplay::displaySplashScreen()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(0, 0, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y, vendor_logo);
+    gfx->draw16bitRGBBitmap(0, 0, vendor_logo, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y);
 
-    tft.fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
-                    SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, TFT_BLACK);
+    gfx->fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
+                    SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, BLACK);
 
     char buffer[50];
     snprintf(buffer, sizeof(buffer), "%s  ELRS-%.6s", HARDWARE_VERSION, version);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        String(buffer), TFT_WHITE, TFT_BLACK);
+                        String(buffer), WHITE, BLACK);
 }
 
-void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
+void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     if (changed == 0xFF)
     {
         // Everything has changed! So clear the right side
-        tft.fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, TFT_WHITE);
+        gfx->fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, WHITE);
     }
 
     if (changed & CHANGED_MESSAGE)
     {
         // Left side logo, version, and temp
-        tft.fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[message_index]);
-        tft.drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
-                        TFT_WHITE);
+        gfx->fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[message_index]);
+        gfx->drawBitmap(IDLE_PAGE_START_X, IDLE_PAGE_START_Y, elrs_banner_bmp, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE,
+                        WHITE);
 
         // Update the temperature
         char buffer[20];
@@ -185,16 +203,16 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
         snprintf(buffer, sizeof(buffer), "%.6s %02d\367C", version, temperature);
         displayFontCenter(0, SCREEN_X/2, SCREEN_LARGE_ICON_SIZE + (SCREEN_Y - SCREEN_LARGE_ICON_SIZE - SCREEN_SMALL_FONT_SIZE)/2,
                             SCREEN_SMALL_FONT_SIZE, SCREEN_SMALL_FONT,
-                            String(buffer), TFT_WHITE, elrs_banner_bgColor[message_index]);
+                            String(buffer), WHITE, elrs_banner_bgColor[message_index]);
     }
 
     // The Radio Params right half of the screen
-    uint16_t text_color = (message_index == MSG_ARMED) ? TFT_DARKGREY : TFT_BLACK;
+    uint16_t text_color = (message_index == MSG_ARMED) ? DARKGREY : BLACK;
 
     if (changed & CHANGED_RATE)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(STATE_PACKET, rate_index), text_color, TFT_WHITE);
+                            getValue(STATE_PACKET, rate_index), text_color, WHITE);
     }
 
     if (changed & CHANGED_POWER)
@@ -205,146 +223,132 @@ void Display::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t pow
             power += " *";
         }
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            power, text_color, TFT_WHITE);
+                            power, text_color, WHITE);
     }
 
     if (changed & CHANGED_TELEMETRY)
     {
         displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(STATE_TELEMETRY, ratio_index), text_color, TFT_WHITE);
+                            getValue(STATE_TELEMETRY, ratio_index), text_color, WHITE);
     }
 }
 
-void Display::displayMainMenu(menu_item_t menu)
+void TFTDisplay::displayMainMenu(menu_item_t menu)
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(MAIN_PAGE_ICON_START_X, MAIN_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, main_menu_icons[menu]);
-
+    gfx->draw16bitRGBBitmap(MAIN_PAGE_ICON_START_X, MAIN_PAGE_ICON_START_Y, main_menu_icons[menu], SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
     displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-        main_menu_strings[menu][0], TFT_BLACK, TFT_WHITE);
-
+        main_menu_strings[menu][0], BLACK, WHITE);
     displayFontCenter(MAIN_PAGE_WORD_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-        main_menu_strings[menu][1], TFT_BLACK, TFT_WHITE);
+        main_menu_strings[menu][1], BLACK, WHITE);
 }
 
-void Display::displayValue(menu_item_t menu, uint8_t value_index)
+void TFTDisplay::displayValue(menu_item_t menu, uint8_t value_index)
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
     String val = String(getValue(menu, value_index));
-    val.replace("!+", "(high)");
-    val.replace("!-", "(low)");
+    val.replace("!+", "\xA0");
+    val.replace("!-", "\xA1");
 
     displayFontCenter(SUB_PAGE_VALUE_START_X, SCREEN_X, SUB_PAGE_VALUE_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        val.c_str(), TFT_BLACK, TFT_WHITE);
-
+                        val.c_str(), BLACK, WHITE);
     displayFontCenter(SUB_PAGE_TIPS_START_X, SCREEN_X, SUB_PAGE_TIPS_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "PRESS TO CONFIRM", TFT_BLACK, TFT_WHITE);
+                        "PRESS TO CONFIRM", BLACK, WHITE);
 }
 
-void Display::displayBLEConfirm()
+void TFTDisplay::displayBLEConfirm()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_joystick);
-
+    gfx->draw16bitRGBBitmap(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, elrs_joystick, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "PRESS TO", TFT_BLACK, TFT_WHITE);
-
+                        "PRESS TO", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "START BLE", TFT_BLACK, TFT_WHITE);
-
+                        "START BLE", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "GAMEPAD", TFT_BLACK, TFT_WHITE);
+                        "GAMEPAD", BLACK, WHITE);
 }
 
-void Display::displayBLEStatus()
+void TFTDisplay::displayBLEStatus()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_joystick);
+    gfx->draw16bitRGBBitmap(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, elrs_joystick, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "BLE", TFT_BLACK, TFT_WHITE);
+                        "BLE", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "GAMEPAD", TFT_BLACK, TFT_WHITE);
+                        "GAMEPAD", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "RUNNING", TFT_BLACK, TFT_WHITE);
+                        "RUNNING", BLACK, WHITE);
 }
 
-void Display::displayWiFiConfirm()
+void TFTDisplay::displayWiFiConfirm()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_wifimode);
-
+    gfx->draw16bitRGBBitmap(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, elrs_wifimode, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "PRESS TO", TFT_BLACK, TFT_WHITE);
-
+                        "PRESS TO", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "ENTER WIFI", TFT_BLACK, TFT_WHITE);
-
+                        "ENTER WIFI", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "UPDATE MODE", TFT_BLACK, TFT_WHITE);
+                        "UPDATE MODE", BLACK, WHITE);
 }
 
-void Display::displayWiFiStatus()
+void TFTDisplay::displayWiFiStatus()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_wifimode);
-#if defined(HOME_WIFI_SSID) && defined(HOME_WIFI_PASSWORD)
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "open http://", TFT_BLACK, TFT_WHITE);
-
-    String host_msg = String(wifi_hostname) + ".local";
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        host_msg, TFT_BLACK, TFT_WHITE);
-
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "by browser", TFT_BLACK, TFT_WHITE);
-#else
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_ssid, TFT_BLACK, TFT_WHITE);
-
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_password, TFT_BLACK, TFT_WHITE);
-
-    displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        wifi_ap_address, TFT_BLACK, TFT_WHITE);
-#endif
+    gfx->draw16bitRGBBitmap(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, elrs_wifimode, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
+    if (wifiMode == WIFI_STA) {
+        String host_msg = String(wifi_hostname) + ".local";
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            "open http://", BLACK, WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            host_msg, BLACK, WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            "by browser", BLACK, WHITE);
+    }
+    else
+    {
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_ssid, BLACK, WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_password, BLACK, WHITE);
+        displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                            wifi_ap_address, BLACK, WHITE);
+    }
 }
 
-void Display::displayBindConfirm()
+void TFTDisplay::displayBindConfirm()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
-    tft.pushImage(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE, elrs_bind);
-
+    gfx->draw16bitRGBBitmap(SUB_PAGE_ICON_START_X, SUB_PAGE_ICON_START_Y, elrs_bind, SCREEN_LARGE_ICON_SIZE, SCREEN_LARGE_ICON_SIZE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "PRESS TO", TFT_BLACK, TFT_WHITE);
-
+                        "PRESS TO", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "SEND BIND", TFT_BLACK, TFT_WHITE);
-
+                        "SEND BIND", BLACK, WHITE);
     displayFontCenter(SUB_PAGE_WORD_START_X, SCREEN_X, SUB_PAGE_WORD_START_Y3,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                        "REQUEST", TFT_BLACK, TFT_WHITE);
+                        "REQUEST", BLACK, WHITE);
 }
 
-void Display::displayBindStatus()
+void TFTDisplay::displayBindStatus()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        "BINDING", TFT_BLACK, TFT_WHITE);
+                        "BINDING", BLACK, WHITE);
 }
 
-void Display::displayRunning()
+void TFTDisplay::displayRunning()
 {
-    tft.fillScreen(TFT_WHITE);
+    gfx->fillScreen(WHITE);
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        "RUNNING", TFT_BLACK, TFT_WHITE);
+                        "RUNNING", BLACK, WHITE);
 }
 
 #endif

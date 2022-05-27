@@ -1,3 +1,4 @@
+#include "targets.h"
 #include "devThermal.h"
 
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
@@ -22,31 +23,36 @@ bool is_smart_fan_control = false;
 bool is_smart_fan_working = false;
 #endif
 
-#endif // HAS_THERMAL
-
-#if defined(HAS_FAN)
-#include "POWERMGNT.h"
-
-#if !defined(FAN_MIN_RUNTIME)
-    #define FAN_MIN_RUNTIME 30U // seconds
+#ifdef HAS_THERMAL_LM75A
+    #ifndef OPT_HAS_THERMAL_LM75A
+        #define OPT_HAS_THERMAL_LM75A true
+    #endif
+#else
+    #define OPT_HAS_THERMAL_LM75A true
 #endif
 
-#endif // HAS_FAN
+#endif // HAS_THERMAL
+
+#include "POWERMGNT.h"
 
 static void initialize()
 {
-#if defined(HAS_THERMAL)
-    thermal.init();
-#endif
-#if defined(HAS_FAN)
-    pinMode(GPIO_PIN_FAN_EN, OUTPUT);
-#endif
+    #if defined(HAS_THERMAL)
+    if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        thermal.init();
+    }
+    #endif
+    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+    }
 }
 
+#if defined(HAS_THERMAL)
 static void timeoutThermal()
 {
-#if defined(HAS_THERMAL)
-    if(!CRSF::IsArmed() && connectionState != wifiUpdate)
+    if(OPT_HAS_THERMAL_LM75A && !CRSF::IsArmed() && connectionState != wifiUpdate)
     {
         thermal.handle();
  #ifdef HAS_SMART_FAN
@@ -62,8 +68,8 @@ static void timeoutThermal()
         }
 #endif
     }
-#endif // HAS_THERMAL
 }
+#endif
 
 /***
  * Checks the PowerFanThreshold vs CurrPower and enables the fan if at or above the threshold
@@ -72,7 +78,6 @@ static void timeoutThermal()
  ***/
 static void timeoutFan()
 {
-#if defined(HAS_FAN)
     static uint8_t fanStateDuration;
     static bool fanIsOn;
     bool fanShouldBeOn = POWERMGNT::currPower() >= (PowerLevels_e)config.GetPowerFanThreshold();
@@ -83,7 +88,7 @@ static void timeoutFan()
         {
             fanStateDuration = 0; // reset the timeout
         }
-        else if (fanStateDuration < FAN_MIN_RUNTIME)
+        else if (fanStateDuration < firmwareOptions.fan_min_runtime)
         {
             ++fanStateDuration; // counting to turn off
         }
@@ -110,36 +115,45 @@ static void timeoutFan()
             fanIsOn = true;
         }
     }
-#endif // HAS_FAN
 }
 
 static int event()
 {
 #if defined(HAS_THERMAL)
-#ifdef HAS_SMART_FAN
-    if(!is_smart_fan_control)
+    if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
-#endif
-        thermal.update_threshold(config.GetFanMode());
 #ifdef HAS_SMART_FAN
+        if(!is_smart_fan_control)
+        {
+#endif
+            thermal.update_threshold(config.GetFanMode());
+#ifdef HAS_SMART_FAN
+        }
+#endif
     }
 #endif
-#endif // HAS_THERMAL
-
     return THERMAL_DURATION;
 }
 
 static int timeout()
 {
-    timeoutThermal();
-    timeoutFan();
+#if defined(HAS_THERMAL)
+    if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        timeoutThermal();
+    }
+#endif
+    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+    {
+        timeoutFan();
+    }
 
     return THERMAL_DURATION;
 }
 
 device_t Thermal_device = {
     .initialize = initialize,
-    .start = NULL,
+    .start = nullptr,
     .event = event,
     .timeout = timeout
 };

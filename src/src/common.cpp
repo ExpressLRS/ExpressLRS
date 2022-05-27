@@ -12,11 +12,11 @@ static_assert(RATE_BINDING < RATE_MAX, "Binding rate must be below RATE_MAX");
 SX127xDriver DMA_ATTR Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RADIO_TYPE_SX127x_LORA, RATE_LORA_200HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  5000, TLM_RATIO_1_64,   4,  8, OTA4_PACKET_SIZE},
-    {1, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8, 10000, TLM_RATIO_1_32,   4,  8, OTA8_PACKET_SIZE},
-    {2, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_32,   4,  8, OTA4_PACKET_SIZE},
-    {3, RADIO_TYPE_SX127x_LORA, RATE_LORA_50HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 4, 10, OTA4_PACKET_SIZE},
-    {4, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10, OTA4_PACKET_SIZE}};
+    {0, RADIO_TYPE_SX127x_LORA, RATE_LORA_200HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  5000, TLM_RATIO_1_64,   4,  8, OTA4_PACKET_SIZE, 1},
+    {1, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ_8CH, SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_8, 10000, TLM_RATIO_1_32,   4,  8, OTA8_PACKET_SIZE, 1},
+    {2, RADIO_TYPE_SX127x_LORA, RATE_LORA_100HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_7, SX127x_CR_4_7, 10000, TLM_RATIO_1_32,   4,  8, OTA4_PACKET_SIZE, 1},
+    {3, RADIO_TYPE_SX127x_LORA, RATE_LORA_50HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_8, SX127x_CR_4_7, 20000, TLM_RATIO_NO_TLM, 4, 10, OTA4_PACKET_SIZE, 1},
+    {4, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ,      SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10, OTA4_PACKET_SIZE, 1}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_LORA_200HZ,     -112,  4380, 3000, 2500, 600, 5000},
@@ -32,24 +32,26 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 SX1280Driver DMA_ATTR Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_1000HZ,    SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,     1000, TLM_RATIO_1_128,  8, 32, OTA4_PACKET_SIZE},
-    {1, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_500HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,     2000, TLM_RATIO_1_128,  4, 32, OTA4_PACKET_SIZE},
-    {2, RADIO_TYPE_SX128x_LORA, RATE_LORA_500HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_6,  2000, TLM_RATIO_1_128,  4, 12, OTA4_PACKET_SIZE},
-    {3, RADIO_TYPE_SX128x_LORA, RATE_LORA_333HZ_8CH, SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_7,  3003, TLM_RATIO_1_128,  4, 12, OTA8_PACKET_SIZE},
-    {4, RADIO_TYPE_SX128x_LORA, RATE_LORA_250HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF6,  SX1280_LORA_CR_LI_4_7,  4000, TLM_RATIO_1_64,   4, 14, OTA4_PACKET_SIZE},
-    {5, RADIO_TYPE_SX128x_LORA, RATE_LORA_150HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_7,  6666, TLM_RATIO_1_32,   4, 12, OTA4_PACKET_SIZE},
-    {6, RADIO_TYPE_SX128x_LORA, RATE_LORA_100HZ_8CH, SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_7, 10000, TLM_RATIO_1_32,   4, 12, OTA8_PACKET_SIZE},
-    {7, RADIO_TYPE_SX128x_LORA, RATE_LORA_50HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF9,  SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 2, 12, OTA4_PACKET_SIZE}};
+    {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_1000HZ,    SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,     1000, TLM_RATIO_1_128,  8, 32, OTA4_PACKET_SIZE, 1},
+    {1, RADIO_TYPE_SX128x_FLRC, RATE_DVDA_500HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,     1000, TLM_RATIO_1_128,  2, 32, OTA4_PACKET_SIZE, 2},
+    {2, RADIO_TYPE_SX128x_FLRC, RATE_DVDA_250HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,     1000, TLM_RATIO_1_128,  2, 32, OTA4_PACKET_SIZE, 4},
+    {3, RADIO_TYPE_SX128x_LORA, RATE_LORA_500HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_6,  2000, TLM_RATIO_1_128,  4, 12, OTA4_PACKET_SIZE, 1},
+    {4, RADIO_TYPE_SX128x_LORA, RATE_LORA_333HZ_8CH, SX1280_LORA_BW_0800,         SX1280_LORA_SF5,  SX1280_LORA_CR_LI_4_7,  3003, TLM_RATIO_1_128,  4, 12, OTA8_PACKET_SIZE, 1},
+    {5, RADIO_TYPE_SX128x_LORA, RATE_LORA_250HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF6,  SX1280_LORA_CR_LI_4_7,  4000, TLM_RATIO_1_64,   4, 14, OTA4_PACKET_SIZE, 1},
+    {6, RADIO_TYPE_SX128x_LORA, RATE_LORA_150HZ,     SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_7,  6666, TLM_RATIO_1_32,   4, 12, OTA4_PACKET_SIZE, 1},
+    {7, RADIO_TYPE_SX128x_LORA, RATE_LORA_100HZ_8CH, SX1280_LORA_BW_0800,         SX1280_LORA_SF7,  SX1280_LORA_CR_LI_4_7, 10000, TLM_RATIO_1_32,   4, 12, OTA8_PACKET_SIZE, 1},
+    {8, RADIO_TYPE_SX128x_LORA, RATE_LORA_50HZ,      SX1280_LORA_BW_0800,         SX1280_LORA_SF9,  SX1280_LORA_CR_LI_4_6, 20000, TLM_RATIO_NO_TLM, 2, 12, OTA4_PACKET_SIZE, 1}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_FLRC_1000HZ,    -104,   389, 2500, 2500,  3, 5000},
-    {1, RATE_FLRC_500HZ,     -104,   389, 2500, 2500,  3, 5000},
-    {2, RATE_LORA_500HZ,     -105,  1507, 2500, 2500,  3, 5000},
-    {3, RATE_LORA_333HZ_8CH, -105,  2374, 2500, 2500,  4, 5000},
-    {4, RATE_LORA_250HZ,     -108,  3300, 3000, 2500,  6, 5000},
-    {5, RATE_LORA_150HZ,     -112,  5871, 3500, 2500, 10, 5000},
-    {6, RATE_LORA_100HZ_8CH, -112,  7605, 3500, 2500, 11, 5000},
-    {7, RATE_LORA_50HZ,      -117, 18443, 4000, 2500,  0, 5000}};
+    {1, RATE_DVDA_500HZ,     -104,   389, 2500, 2500,  3, 5000},
+    {2, RATE_DVDA_250HZ,     -104,   389, 2500, 2500,  3, 5000},
+    {3, RATE_LORA_500HZ,     -105,  1507, 2500, 2500,  3, 5000},
+    {4, RATE_LORA_333HZ_8CH, -105,  2374, 2500, 2500,  4, 5000},
+    {5, RATE_LORA_250HZ,     -108,  3300, 3000, 2500,  6, 5000},
+    {6, RATE_LORA_150HZ,     -112,  5871, 3500, 2500, 10, 5000},
+    {7, RATE_LORA_100HZ_8CH, -112,  7605, 3500, 2500, 11, 5000},
+    {8, RATE_LORA_50HZ,      -117, 18443, 4000, 2500,  0, 5000}};
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
@@ -94,23 +96,9 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 connectionState_e connectionState = disconnected;
 bool connectionHasModelMatch;
 
+uint8_t MasterUID[6];                       // The definitive user UID
+uint8_t UID[6];                             // The currently running UID
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
-#if defined(MY_UID)
-    uint8_t UID[6] = {MY_UID};
-#else
-    #ifdef PLATFORM_ESP32
-        uint8_t UID[6];
-        esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
-    #elif PLATFORM_STM32
-        uint8_t UID[6] = {
-            (uint8_t)HAL_GetUIDw0(), (uint8_t)(HAL_GetUIDw0() >> 8),
-            (uint8_t)HAL_GetUIDw1(), (uint8_t)(HAL_GetUIDw1() >> 8),
-            (uint8_t)HAL_GetUIDw2(), (uint8_t)(HAL_GetUIDw2() >> 8)};
-    #else
-        uint8_t UID[6] = {0};
-    #endif
-#endif
-uint8_t MasterUID[6] = {UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]}; // Special binding UID values
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
 {
@@ -169,7 +157,8 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate)
     switch(eRate)
     {
     case RATE_FLRC_1000HZ: return 1000;
-    case RATE_FLRC_500HZ: return 500;
+    case RATE_DVDA_500HZ: return 500;
+    case RATE_DVDA_250HZ: return 250;
     case RATE_LORA_500HZ: return 500;
     case RATE_LORA_333HZ_8CH: return 333;
     case RATE_LORA_250HZ: return 250;
@@ -189,4 +178,27 @@ uint32_t uidMacSeedGet(void)
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
                              ((uint32_t)UID[4] << 8) + UID[5];
     return macSeed;
+}
+
+void initUID()
+{
+    if (firmwareOptions.hasUID)
+    {
+        memcpy(MasterUID, firmwareOptions.uid, sizeof(MasterUID));
+    }
+    else
+    {
+    #ifdef PLATFORM_ESP32
+        esp_err_t WiFiErr = esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
+    #elif PLATFORM_STM32
+        MasterUID[0] = (uint8_t)HAL_GetUIDw0();
+        MasterUID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
+        MasterUID[2] = (uint8_t)HAL_GetUIDw1();
+        MasterUID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
+        MasterUID[4] = (uint8_t)HAL_GetUIDw2();
+        MasterUID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+    #endif
+    }
+    memcpy(UID, MasterUID, sizeof(UID));
+    OtaUpdateCrcInitFromUid();
 }

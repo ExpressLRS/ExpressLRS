@@ -16,10 +16,10 @@ bool VRxBackpackWiFiReadyToSend = false;
 
 bool lastRecordingState = false;
 
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
+#if defined(GPIO_PIN_BACKPACK_EN)
 
-#if BACKPACK_LOGGING_BAUD != 460800
-#error "Backpack passthrough flashing requires BACKPACK_LOGGING_BAUD==460800"
+#ifndef PASSTHROUGH_BAUD
+#define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
 #endif
 
 #include "CRSF.h"
@@ -34,8 +34,22 @@ void startPassthrough()
     CRSF::End();
 
     // get ready for passthrough
-    CRSF::Port.begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+    if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
+    {
+        // if we have a single S.PORT pin for RX then we assume the standard UART pins for passthrough
+        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, 3, 1);
+    }
+    else
+    {
+        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+    }
     disableLoopWDT();
+
+    HardwareSerial &backpack = *(HardwareSerial*)TxBackpack;
+    if (PASSTHROUGH_BAUD != BACKPACK_LOGGING_BAUD && PASSTHROUGH_BAUD != -1)
+    {
+        backpack.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+    }
 
     // reset ESP8285 into bootloader mode
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, HIGH);
@@ -47,11 +61,11 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
-    TxBackpack->flush();
+    backpack.flush();
 
     uint8_t buf[64];
-    while (TxBackpack->available())
-        TxBackpack->readBytes(buf, sizeof(buf));
+    while (backpack.available())
+        backpack.readBytes(buf, sizeof(buf));
 
     // go hard!
     for (;;)
@@ -60,12 +74,12 @@ void startPassthrough()
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = CRSF::Port.readBytes(buf, r);
-        TxBackpack->write(buf, r);
+        backpack.write(buf, r);
 
-        r = TxBackpack->available();
+        r = backpack.available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = TxBackpack->readBytes(buf, r);
+        r = backpack.readBytes(buf, r);
         CRSF::Port.write(buf, r);
     }
 }
@@ -151,15 +165,18 @@ static void AuxStateToMSPOut()
 
 static void initialize()
 {
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
-    // reset the ESP8285 so we know it's running
-    pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-    pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-    digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-    delay(50);
-    digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH); // enable high
+#ifdef GPIO_PIN_BACKPACK_EN
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
+        // reset the ESP8285 so we know it's running
+        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+        delay(50);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH); // enable high
+    }
 #endif
 
     CRSF::RCdataCallback = AuxStateToMSPOut;
@@ -167,7 +184,11 @@ static void initialize()
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+    if (OPT_USE_TX_BACKPACK)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()
@@ -190,11 +211,14 @@ static int timeout()
         BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
     }
 
-#if defined(GPIO_PIN_BACKPACK_EN) && GPIO_PIN_BACKPACK_EN != UNDEF_PIN
-    if (!digitalRead(0))
+#ifdef GPIO_PIN_BACKPACK_EN
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
-        startPassthrough();
-        return DURATION_NEVER;
+        if (!digitalRead(0))
+        {
+            startPassthrough();
+            return DURATION_NEVER;
+        }
     }
 #endif
     return BACKPACK_TIMEOUT;

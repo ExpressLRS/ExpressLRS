@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
+#include "options.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -154,13 +155,7 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound() const {
-        #ifdef MY_UID
-            return true;
-        #else
-            return m_config.isBound;
-        #endif
-    }
+    bool     GetIsBound() const { return firmwareOptions.hasUID || m_config.isBound; }
     const uint8_t* GetUID() const { return m_config.uid; }
     bool GetOnLoan() const { return m_config.onLoan; }
     const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }

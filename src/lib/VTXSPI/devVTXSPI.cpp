@@ -1,4 +1,4 @@
-#if defined(GPIO_PIN_SPI_VTX_NSS) && (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+#if defined(GPIO_PIN_SPI_VTX_NSS)
 
 #include "devVTXSPI.h"
 #include "targets.h"
@@ -49,8 +49,14 @@ static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
 #define VPD_SETPOINT_YOLO_MW                    1500
+#if defined(TARGET_UNIFIED_RX)
+const uint16_t *VpdSetPointArray25mW = nullptr;
+const uint16_t *VpdSetPointArray100mW = nullptr;
+#else
 uint16_t VpdSetPointArray25mW[] = VPD_VALUES_25MW;
 uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
+#endif
+
 uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
@@ -139,7 +145,7 @@ static void VTxOutputDecrease()
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 }
 
-static uint16_t LinearInterpVpdSetPointArray(uint16_t VpdSetPointArray[])
+static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
 {
     uint16_t newVpd = 0;
     uint16_t f = freqTable[vtxSPIBandChannelIdxCurrent];
@@ -215,22 +221,35 @@ static void checkOutputPower()
 
 static void initialize()
 {
-    pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+    #if defined(TARGET_UNIFIED_RX)
+    VpdSetPointArray25mW = VPD_VALUES_25MW;
+    VpdSetPointArray100mW = VPD_VALUES_100MW;
+    #endif
 
-    pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
-    digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
 
-    pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-    analogWriteFreq(10000); // 10kHz
-    analogWriteResolution(12); // 0 - 4095
-    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+        pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
-    delay(RTC6705_BOOT_DELAY);
+        pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+        analogWriteFreq(10000); // 10kHz
+        analogWriteResolution(12); // 0 - 4095
+        analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+
+        delay(RTC6705_BOOT_DELAY);
+    }
 }
 
 static int start()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
 
     rtc6705PowerAmpOn();
@@ -240,6 +259,11 @@ static int start()
 
 static int event()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     if (CRSF::IsArmed())
     {
         vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
@@ -255,6 +279,11 @@ static int event()
 
 static int timeout()
 {
+    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    {
+        return DURATION_NEVER;
+    }
+
     if (!hwTimer::isTick) // Only run spi and analog reads during rx free time.
     {
         return DURATION_IMMEDIATELY;

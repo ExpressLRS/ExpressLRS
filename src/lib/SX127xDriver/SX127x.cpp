@@ -4,6 +4,13 @@
 SX127xHal hal;
 SX127xDriver *SX127xDriver::instance = NULL;
 
+#ifdef USE_SX1276_RFO_HF
+  #ifndef OPT_USE_SX1276_RFO_HF
+    #define OPT_USE_SX1276_RFO_HF true
+  #endif
+#else
+  #define OPT_USE_SX1276_RFO_HF false
+#endif
 
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
@@ -148,11 +155,14 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
   SetMode(SX127x_OPMODE_STANDBY);
-  #if defined(USE_SX1276_RFO_HF)
-    hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER | Power);
-  #else
+  if (OPT_USE_SX1276_RFO_HF)
+  {
+    hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power);
+  }
+  else
+  {
     hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
-  #endif
+  }
   currPWR = Power;
 }
 

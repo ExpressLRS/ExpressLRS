@@ -1,4 +1,5 @@
-#include "display.h"
+#include "OLED/oleddisplay.h"
+#include "TFT/tftdisplay.h"
 
 #include "common.h"
 #include "config.h"
@@ -22,6 +23,8 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
 
+extern Display *display;
+
 #ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
 #endif
@@ -39,7 +42,7 @@ fsm_state_t getInitialState()
 
 static void displaySplashScreen(bool init)
 {
-    Display::displaySplashScreen();
+    display->displaySplashScreen();
 }
 
 static void displayIdleScreen(bool init)
@@ -92,13 +95,13 @@ static void displayIdleScreen(bool init)
         last_dynamic = config.GetDynamicPower();
         last_run_power = (uint8_t)(POWERMGNT::currPower());
 
-        Display::displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
+        display->displayIdleScreen(changed, last_rate, last_power, last_tlm, last_motion, last_fan, last_dynamic, last_run_power, last_temperature, last_message);
     }
 }
 
 static void displayMenuScreen(bool init)
 {
-    Display::displayMainMenu((menu_item_t)state_machine.getCurrentState());
+    display->displayMainMenu((menu_item_t)state_machine.getCurrentState());
 }
 
 // Value menu
@@ -112,22 +115,22 @@ static void setupValueIndex(bool init)
     {
     case STATE_PACKET:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetRate();
         break;
     case STATE_TELEMETRY:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetTlm();
         break;
     case STATE_POWERSAVE:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetMotionMode();
         break;
     case STATE_SMARTFAN:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetFanMode();
         break;
 
@@ -138,28 +141,28 @@ static void setupValueIndex(bool init)
         break;
     case STATE_POWER_DYNAMIC:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
         break;
 
     case STATE_VTX_BAND:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxBand();
         break;
     case STATE_VTX_CHANNEL:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxChannel();
         break;
     case STATE_VTX_POWER:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPower();
         break;
     case STATE_VTX_PITMODE:
         values_min = 0;
-        values_max = Display::getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetVtxPitmode();
         break;
     }
@@ -167,7 +170,7 @@ static void setupValueIndex(bool init)
 
 static void displayValueIndex(bool init)
 {
-    Display::displayValue((menu_item_t)state_machine.getParentState(), values_index);
+    display->displayValue((menu_item_t)state_machine.getParentState(), values_index);
 }
 
 static void incrementValueIndex(bool init)
@@ -230,7 +233,7 @@ static void executeSendVTX(bool init)
     if (init)
     {
         VtxTriggerSend();
-        Display::displayRunning();
+        display->displayRunning();
     }
     else
     {
@@ -241,7 +244,7 @@ static void executeSendVTX(bool init)
 // Bluetooth Joystck
 static void displayBLEConfirm(bool init)
 {
-    Display::displayBLEConfirm();
+    display->displayBLEConfirm();
 }
 
 static void executeBLE(bool init)
@@ -249,7 +252,7 @@ static void executeBLE(bool init)
     if (init)
     {
         connectionState = bleJoystick;
-        Display::displayBLEStatus();
+        display->displayBLEStatus();
     }
     else
     {
@@ -273,7 +276,7 @@ static void exitBLE(bool init)
 // WiFi
 static void displayWiFiConfirm(bool init)
 {
-    Display::displayWiFiConfirm();
+    display->displayWiFiConfirm();
 }
 
 static void exitWiFi(bool init)
@@ -307,11 +310,11 @@ static void executeWiFi(bool init)
         }
         if (state_machine.getParentState() == STATE_WIFI_TX)
         {
-            Display::displayWiFiStatus();
+            display->displayWiFiStatus();
         }
         else
         {
-            Display::displayRunning();
+            display->displayRunning();
         }
         return;
     }
@@ -341,7 +344,7 @@ static void executeWiFi(bool init)
 // Bind
 static void displayBindConfirm(bool init)
 {
-    Display::displayBindConfirm();
+    display->displayBindConfirm();
 }
 
 static void executeBind(bool init)
@@ -349,7 +352,7 @@ static void executeBind(bool init)
     if (init)
     {
         EnterBindingMode();
-        Display::displayBindStatus();
+        display->displayBindStatus();
         return;
     }
     if (!InBindingMode)
@@ -384,11 +387,11 @@ fsm_state_event_t const value_decrement_events[] = {{EVENT_IMMEDIATE, GOTO(STATE
 fsm_state_event_t const value_save_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
 fsm_state_entry_t const value_select_fsm[] = {
-    {STATE_VALUE_INIT, setupValueIndex, 0, value_init_events, ARRAY_SIZE(value_init_events)},
-    {STATE_VALUE_SELECT, displayValueIndex, 20000, value_select_events, ARRAY_SIZE(value_select_events)},
-    {STATE_VALUE_INC, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
-    {STATE_VALUE_DEC, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
-    {STATE_VALUE_SAVE, saveValueIndex, 0, value_save_events, ARRAY_SIZE(value_save_events)},
+    {STATE_VALUE_INIT, nullptr, setupValueIndex, 0, value_init_events, ARRAY_SIZE(value_init_events)},
+    {STATE_VALUE_SELECT, nullptr, displayValueIndex, 20000, value_select_events, ARRAY_SIZE(value_select_events)},
+    {STATE_VALUE_INC, nullptr, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
+    {STATE_VALUE_DEC, nullptr, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
+    {STATE_VALUE_SAVE, nullptr, saveValueIndex, 0, value_save_events, ARRAY_SIZE(value_save_events)},
     {STATE_LAST}
 };
 
@@ -396,24 +399,24 @@ fsm_state_event_t const value_menu_events[] = {MENU_EVENTS(value_select_fsm)};
 
 // Power FSM
 fsm_state_entry_t const power_menu_fsm[] = {
-    {STATE_POWER_MAX, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_POWER_DYNAMIC, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER_MAX, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER_DYNAMIC, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_LAST}
 };
 
 // VTX Admin FSM
 fsm_state_event_t const vtx_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_VTX_SEND)}, {EVENT_LEFT, ACTION_POP}};
 fsm_state_entry_t const vtx_execute_fsm[] = {
-    {STATE_VTX_SEND, executeSendVTX, 1000, vtx_execute_events, ARRAY_SIZE(vtx_execute_events)},
+    {STATE_VTX_SEND, nullptr, executeSendVTX, 1000, vtx_execute_events, ARRAY_SIZE(vtx_execute_events)},
 };
 
 fsm_state_event_t const vtx_send_events[] = {MENU_EVENTS(vtx_execute_fsm)};
 fsm_state_entry_t const vtx_menu_fsm[] = {
-    {STATE_VTX_BAND, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_VTX_CHANNEL, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_VTX_POWER, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_VTX_PITMODE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_VTX_SEND, displayMenuScreen, 20000, vtx_send_events, ARRAY_SIZE(vtx_send_events)},
+    {STATE_VTX_BAND, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_CHANNEL, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_POWER, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_PITMODE, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_VTX_SEND, nullptr, displayMenuScreen, 20000, vtx_send_events, ARRAY_SIZE(vtx_send_events)},
     {STATE_LAST}
 };
 
@@ -427,9 +430,9 @@ fsm_state_event_t const ble_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BLE_E
 fsm_state_event_t const ble_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
 fsm_state_entry_t const ble_menu_fsm[] = {
-    {STATE_BLE_CONFIRM, displayBLEConfirm, 20000, ble_confirm_events, ARRAY_SIZE(ble_confirm_events)},
-    {STATE_BLE_EXECUTE, executeBLE, 1000, ble_execute_events, ARRAY_SIZE(ble_execute_events)},
-    {STATE_BLE_EXIT, exitBLE, 0, ble_exit_events, ARRAY_SIZE(ble_exit_events)},
+    {STATE_BLE_CONFIRM, nullptr, displayBLEConfirm, 20000, ble_confirm_events, ARRAY_SIZE(ble_confirm_events)},
+    {STATE_BLE_EXECUTE, nullptr, executeBLE, 1000, ble_execute_events, ARRAY_SIZE(ble_execute_events)},
+    {STATE_BLE_EXIT, nullptr, exitBLE, 0, ble_exit_events, ARRAY_SIZE(ble_exit_events)},
     {STATE_LAST}
 };
 
@@ -443,26 +446,26 @@ fsm_state_event_t const wifi_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI
 fsm_state_event_t const wifi_exit_events[] = {{EVENT_IMMEDIATE, ACTION_POP}};
 
 fsm_state_entry_t const wifi_update_menu_fsm[] = {
-    {STATE_WIFI_CONFIRM, displayWiFiConfirm, 20000, wifi_confirm_events, ARRAY_SIZE(wifi_confirm_events)},
-    {STATE_WIFI_EXECUTE, executeWiFi, 1000, wifi_execute_events, ARRAY_SIZE(wifi_execute_events)},
-    {STATE_WIFI_EXIT, exitWiFi, 0, wifi_exit_events, ARRAY_SIZE(wifi_exit_events)},
+    {STATE_WIFI_CONFIRM, nullptr, displayWiFiConfirm, 20000, wifi_confirm_events, ARRAY_SIZE(wifi_confirm_events)},
+    {STATE_WIFI_EXECUTE, nullptr, executeWiFi, 1000, wifi_execute_events, ARRAY_SIZE(wifi_execute_events)},
+    {STATE_WIFI_EXIT, nullptr, exitWiFi, 0, wifi_exit_events, ARRAY_SIZE(wifi_exit_events)},
     {STATE_LAST}
 };
 fsm_state_event_t const wifi_menu_update_events[] = {MENU_EVENTS(wifi_update_menu_fsm)};
 fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}};
 fsm_state_entry_t const wifi_ext_menu_fsm[] = {
-    {STATE_WIFI_EXECUTE, executeWiFi, 1000, wifi_ext_execute_events, ARRAY_SIZE(wifi_ext_execute_events)},
+    {STATE_WIFI_EXECUTE, nullptr, executeWiFi, 1000, wifi_ext_execute_events, ARRAY_SIZE(wifi_ext_execute_events)},
     {STATE_LAST}
 };
 fsm_state_event_t const wifi_ext_menu_events[] = {MENU_EVENTS(wifi_ext_menu_fsm)};
 fsm_state_entry_t const wifi_menu_fsm[] = {
 #if defined(PLATFORM_ESP32)
-    {STATE_WIFI_TX, displayMenuScreen, 20000, wifi_menu_update_events, ARRAY_SIZE(wifi_menu_update_events)},
+    {STATE_WIFI_TX, nullptr, displayMenuScreen, 20000, wifi_menu_update_events, ARRAY_SIZE(wifi_menu_update_events)},
 #endif
-    {STATE_WIFI_RX, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+    {STATE_WIFI_RX, nullptr, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
 #if defined(USE_TX_BACKPACK)
-    {STATE_WIFI_BACKPACK, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
-    {STATE_WIFI_VRX, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+    {STATE_WIFI_BACKPACK, [](){return OPT_USE_TX_BACKPACK;}, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
+    {STATE_WIFI_VRX, [](){return OPT_USE_TX_BACKPACK;}, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
 #endif
     {STATE_LAST}
 };
@@ -476,8 +479,8 @@ fsm_state_event_t const bind_confirm_events[] = {
 fsm_state_event_t const bind_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_BIND_EXECUTE)}};
 
 fsm_state_entry_t const bind_menu_fsm[] = {
-    {STATE_BIND_CONFIRM, displayBindConfirm, 20000, bind_confirm_events, ARRAY_SIZE(bind_confirm_events)},
-    {STATE_BIND_EXECUTE, executeBind, 1000, bind_execute_events, ARRAY_SIZE(bind_execute_events)},
+    {STATE_BIND_CONFIRM, nullptr, displayBindConfirm, 20000, bind_confirm_events, ARRAY_SIZE(bind_confirm_events)},
+    {STATE_BIND_EXECUTE, nullptr, executeBind, 1000, bind_execute_events, ARRAY_SIZE(bind_execute_events)},
     {STATE_LAST}
 };
 
@@ -489,19 +492,19 @@ fsm_state_event_t const bind_menu_events[] = {MENU_EVENTS(bind_menu_fsm)};
 fsm_state_event_t const wifi_menu_events[] = {MENU_EVENTS(wifi_menu_fsm)};
 
 fsm_state_entry_t const main_menu_fsm[] = {
-    {STATE_PACKET, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-    {STATE_POWER, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
-    {STATE_TELEMETRY, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_PACKET, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWER, nullptr, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
+    {STATE_TELEMETRY, nullptr,displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #ifdef HAS_GSENSOR
-    {STATE_POWERSAVE, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_POWERSAVE, [](){return OPT_HAS_GSENSOR;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
 #ifdef HAS_THERMAL
-    {STATE_SMARTFAN, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_SMARTFAN, [](){return OPT_HAS_THERMAL;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #endif
-    {STATE_VTX, displayMenuScreen, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
-    {STATE_JOYSTICK, displayMenuScreen, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
-    {STATE_BIND, displayMenuScreen, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
-    {STATE_WIFI, displayMenuScreen, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
+    {STATE_VTX, nullptr, displayMenuScreen, 20000, vtx_menu_events, ARRAY_SIZE(vtx_menu_events)},
+    {STATE_JOYSTICK, nullptr, displayMenuScreen, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
+    {STATE_BIND, nullptr, displayMenuScreen, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
+    {STATE_WIFI, nullptr, displayMenuScreen, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},
     {STATE_LAST}
 };
 
@@ -515,7 +518,7 @@ fsm_state_event_t const idle_events[] = {
     {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
-    {STATE_SPLASH, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
-    {STATE_IDLE, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
+    {STATE_SPLASH, nullptr, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
+    {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };

@@ -2,6 +2,9 @@
 #include "common.h"
 
 #ifdef HAS_GSENSOR
+#if !defined(OPT_HAS_GSENSOR)
+#define OPT_HAS_GSENSOR true
+#endif
 
 #include "devGsensor.h"
 #include "gsensor.h"
@@ -23,12 +26,19 @@ int system_quiet_pre_state = GSENSOR_SYSTEM_STATE_MOVING;
 
 static void initialize()
 {
-    gsensor.init();
+    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        gsensor.init();
+    }
 }
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()
@@ -41,11 +51,11 @@ static int timeout()
     {
         if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !CRSF::IsArmed())
         {
-        POWERMGNT::setPower(MinPower);
+            POWERMGNT::setPower(MinPower);
         }
         if((system_quiet_state == GSENSOR_SYSTEM_STATE_MOVING) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_QUIET))
         {
-        POWERMGNT::setPower((PowerLevels_e)config.GetPower());
+            POWERMGNT::setPower((PowerLevels_e)config.GetPower());
         }
     }
     system_quiet_pre_state = system_quiet_state;
