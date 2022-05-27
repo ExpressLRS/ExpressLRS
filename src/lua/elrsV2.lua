@@ -56,7 +56,7 @@ local function allocateFields()
     fields[i] = { }
   end
   backButtonId = fields_count + 2 + #devices
-  fields[backButtonId] = {id = backButtonId, name="----BACK----", parent = 255, type=14}
+  fields[backButtonId] = {name="----BACK----", parent = 255, type=14}
   if folderAccess ~= nil then
     fields[backButtonId].parent = folderAccess
   end
@@ -137,16 +137,12 @@ local function selectField(step)
   end
 end
 
-local function fieldStrFF(data, offset, last)
-  while data[offset] ~= 0 do
-    offset = offset + 1
-  end
-  return last, offset + 1
-end
-
 local function fieldGetSelectOpts(data, offset, last)
   if last then
-    return fieldStrFF(data, offset, last)
+    while data[offset] ~= 0 do
+      offset = offset + 1
+    end
+    return last, offset + 1
   end
 
   -- Split a table of byte values (string) with ; separator into a table
@@ -165,12 +161,13 @@ local function fieldGetSelectOpts(data, offset, last)
   end
 
   r[#r+1] = opt
-  return r, offset + 1
+  opt = nil
+  return r, offset + 1, collectgarbage("collect")
 end
 
 local function fieldGetString(data, offset, last)
   if last then
-    return fieldStrFF(data, offset, last)
+    return last, offset + #last + 1
   end
 
   local result = ""
@@ -179,7 +176,7 @@ local function fieldGetString(data, offset, last)
     offset = offset + 1
   end
 
-  return result, offset + 1
+  return result, offset + 1, collectgarbage("collect")
 end
 
 local function getDevice(name)
@@ -215,7 +212,7 @@ local function fieldUnsignedToSigned(field, size)
   --field.default = field.default - bit32.band(field.default, bandval) * 2
 end
 
-  local function fieldSignedLoad(field, data, offset, size)
+local function fieldSignedLoad(field, data, offset, size)
   fieldUnsignedLoad(field, data, offset, size)
   fieldUnsignedToSigned(field, size)
 end
@@ -286,7 +283,8 @@ local function fieldTextSelectionLoad(field, data, offset)
   field.values, offset = fieldGetSelectOpts(data, offset, field.nc == nil and field.values)
   field.value = data[offset]
   -- min max and default (offset+1 to 3) are not used on selections
-  field.unit = fieldGetString(data, offset+4, field.unit)
+  -- units never uses cache
+  field.unit = fieldGetString(data, offset+4)
   field.nc = nil -- use cache next time
 end
 
@@ -302,8 +300,8 @@ local function fieldTextSelectionDisplay_color(field, y, attr)
 end
 
 local function fieldTextSelectionDisplay_bw(field, y, attr)
-  lcd.drawText(COL2, y, (field.values[field.value+1] or "ERR"), attr)
-  lcd.drawText((lcd.getLastPos()), y, field.unit, 0)
+  lcd.drawText(COL2, y, field.values[field.value+1] or "ERR", attr)
+  lcd.drawText(lcd.getLastPos(), y, field.unit, 0)
 end
 
 -- STRING
@@ -399,9 +397,9 @@ local function createDeviceFields() -- put other devices in the field list
   backButtonId = fields_count + 2 + #devices  -- move back button to the end of the list, so it will always show up at the bottom.
   for i=1, #devices do
     if devices[i].id == deviceId then
-      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = 255, type=15}
+      fields[fields_count+1+i] = {name=devices[i].name, parent = 255, type=15}
     else
-      fields[fields_count+1+i] = {id = fields_count+1+i, name=devices[i].name, parent = fields_count+1, type=15}
+      fields[fields_count+1+i] = {name=devices[i].name, parent = fields_count+1, type=15}
     end
   end
 end
@@ -476,15 +474,11 @@ local function parseParameterInfoMessage(data)
     loadQ[#loadQ] = nil
     -- Populate field from fieldData
     if #fieldData > 3 then
-      field.id = fieldId
-      local parent = (fieldData[1] ~= 0) and fieldData[1] or nil
-      local type = fieldData[2] % 128
-      local hidden = (bit32.rshift(fieldData[2], 7) == 1) or nil
       local offset
-      field.parent = parent
-      field.type = type
-      field.hidden = hidden
-      field.unit = nil
+      field.id = fieldId
+      field.parent = (fieldData[1] ~= 0) and fieldData[1] or nil
+      field.type = bit32.band(fieldData[2], 0x4f)
+      field.hidden = bit32.btest(fieldData[2], 0x80) or nil
       field.name, offset = fieldGetString(fieldData, 3, field.name)
       if functions[field.type+1].load then
         functions[field.type+1].load(field, fieldData, offset)
@@ -675,7 +669,7 @@ local function reloadRelatedFields(field)
     local fldTest = fields[fieldId]
     if fieldId ~= field.id
       and fldTest.parent == field.parent
-      and fldTest.type < 11 then
+      and (fldTest.type or 99) < 11 then -- type could be nil if still loading
       fldTest.nc = true -- "no cache" the options
       loadQ[#loadQ+1] = fieldId
     end
