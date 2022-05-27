@@ -2,7 +2,7 @@
 #include <unity.h>
 #include "ucrc_t.h"
 #include <crc.h>
-#include "common.h"
+#include "OTA.h"
 
 #ifdef BIG_TEST
 #define NUM_ITERATIONS 1000000

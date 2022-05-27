@@ -13,8 +13,6 @@ StubbornReceiver receiver;
 
 void test_stubborn_link_sends_data(void)
 {
-    // When the payload chunk contains non-zero data, the Sender can
-    // send the last chunk in packageIndex=0 and can end early
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
     sender.ResetState();
@@ -37,36 +35,6 @@ void test_stubborn_link_sends_data(void)
     TEST_ASSERT_EQUAL(0, packageIndex);
     TEST_ASSERT_EQUAL(batterySequence[sizeof(batterySequence)-1], data[0]);
 
-    TEST_ASSERT_EQUAL(true, sender.IsActive());
-    sender.ConfirmCurrentPayload(!confirmValue);
-    TEST_ASSERT_EQUAL(true, sender.IsActive());
-    sender.ConfirmCurrentPayload(confirmValue);
-    TEST_ASSERT_EQUAL(false, sender.IsActive());
-}
-
-void test_stubborn_link_sends_data_0(void)
-{
-    // When the payload chunk is all zeroes, the Sender always requires
-    // one extra ACK (confirm), with a dedicated packageIndex=0, payload=000000
-    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,0};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
-    sender.ResetState();
-    sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
-    uint8_t data[1];
-    uint8_t packageIndex;
-    bool confirmValue = true;
-
-    for(int i = 0; i < sizeof(batterySequence); i++)
-    {
-        packageIndex = sender.GetCurrentPayload(data, 1);
-        TEST_ASSERT_EQUAL(i + 1, packageIndex);
-        TEST_ASSERT_EQUAL(batterySequence[i], data[0]);
-        sender.ConfirmCurrentPayload(confirmValue);
-        confirmValue = !confirmValue;
-    }
-
-    packageIndex = sender.GetCurrentPayload(data, 1);
-    TEST_ASSERT_EQUAL(0, packageIndex);
     TEST_ASSERT_EQUAL(true, sender.IsActive());
     sender.ConfirmCurrentPayload(!confirmValue);
     TEST_ASSERT_EQUAL(true, sender.IsActive());
@@ -139,7 +107,7 @@ void test_stubborn_link_sends_data_larger_frame_size(void)
 
     packageIndex = sender.GetCurrentPayload(data, sizeof(data));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(batterySequence, data, sizeof(batterySequence));
-    TEST_ASSERT_EQUAL(0, packageIndex);
+    TEST_ASSERT_EQUAL(1, packageIndex);
 
     sender.ConfirmCurrentPayload(confirmValue);
     packageIndex = sender.GetCurrentPayload(data, sizeof(data));
@@ -243,8 +211,9 @@ void test_stubborn_link_resyncs(void)
 
 void test_stubborn_link_resyncs_during_last_confirm(void)
 {
-    // 0 last byte so the separate confirm is used           vvv
-    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,0};
+    // vv note sequence is an odd number of bytes so the last packet
+    // will have the opposite confirm value as a reset receiver
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,1,109};
     uint8_t buffer[100];
     uint8_t data[1];
     uint8_t packageIndex;
@@ -258,7 +227,7 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
 
     // send and confirm twelve packages
-    for (int i = 0; i < sizeof(batterySequence); i++)
+    for (int i = 0; i < sizeof(batterySequence) - 1; i++)
     {
         packageIndex = sender.GetCurrentPayload(data, 1);
         receiver.ReceiveData(packageIndex, data, 1);
@@ -292,6 +261,7 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
     // both are in sync again
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     packageIndex = sender.GetCurrentPayload(data, 1);
+    TEST_ASSERT_EQUAL(1, packageIndex);
     receiver.ReceiveData(packageIndex, data, 1);
     sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
 
@@ -453,7 +423,6 @@ int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_stubborn_link_sends_data);
-    RUN_TEST(test_stubborn_link_sends_data_0);
     RUN_TEST(test_stubborn_link_sends_data_even_bytes_per_call);
     RUN_TEST(test_stubborn_link_sends_data_odd_bytes_per_call);
     RUN_TEST(test_stubborn_link_sends_data_larger_frame_size);
