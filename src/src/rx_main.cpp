@@ -1361,7 +1361,11 @@ void setup()
     #if defined(TARGET_UNIFIED_RX)
     Serial.begin(420000);
     SerialLogger = &Serial;
+    #if defined(PLATFORM_ESP32)
+    SPIFFS.begin(true);
+    #else
     SPIFFS.begin();
+    #endif
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
