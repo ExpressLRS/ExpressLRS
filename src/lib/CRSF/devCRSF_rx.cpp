@@ -9,11 +9,15 @@ extern CRSF crsf;
 extern void HandleUARTin();
 extern void MspReceiveComplete();
 
-static bool sendFrame = false;
+static volatile bool sendFrame = false;
 
-void crsfRCFrameAvailable()
+void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
+    #if defined(PLATFORM_ESP32)
     sendFrame = true;
+    #else
+    crsf.sendRCFrameToFC();
+    #endif
 }
 
 static int start()
@@ -25,14 +29,16 @@ static int start()
 
 static int timeout()
 {
-    HandleUARTin();
-    crsf.RXhandleUARTout();
-
+    #if defined(PLATFORM_ESP32)
     if (sendFrame)
     {
         sendFrame = false;
         crsf.sendRCFrameToFC();
     }
+    #endif
+
+    HandleUARTin();
+    crsf.RXhandleUARTout();
 
     if (MspReceiver.HasFinishedData())
     {
