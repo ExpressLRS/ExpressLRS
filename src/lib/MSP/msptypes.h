@@ -8,9 +8,9 @@
 #define MSP_EEPROM_WRITE    250  //in message          no param
 
 // ELRS specific opcodes
-#define MSP_ELRS_RF_MODE                    0x06
-#define MSP_ELRS_TX_PWR                     0x07
-#define MSP_ELRS_TLM_RATE                   0x08
+#define MSP_ELRS_RF_MODE                    0x06    // NOTIMPL
+#define MSP_ELRS_TX_PWR                     0x07    // NOTIMPL
+#define MSP_ELRS_TLM_RATE                   0x08    // NOTIMPL
 #define MSP_ELRS_BIND                       0x09
 #define MSP_ELRS_MODEL_ID                   0x0A
 #define MSP_ELRS_REQU_VTX_PKT               0x0B

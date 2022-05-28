@@ -779,54 +779,7 @@ static void CheckReadyToSend()
   }
 }
 
-void OnRFModePacket(mspPacket_t *packet)
-{
-  // Parse the RF mode
-  uint8_t rfMode = packet->readByte();
-  CHECK_PACKET_PARSING();
-
-  switch (rfMode)
-  {
-  case RATE_LORA_200HZ:
-  case RATE_LORA_100HZ:
-  case RATE_LORA_50HZ:
-    SetRFLinkRate(enumRatetoIndex((expresslrs_RFrates_e)rfMode));
-    break;
-  default:
-    // Unsupported rate requested
-    break;
-  }
-}
-
-void OnTxPowerPacket(mspPacket_t *packet)
-{
-  // Parse the TX power
-  uint8_t txPower = packet->readByte();
-  CHECK_PACKET_PARSING();
-  DBGLN("TX setpower");
-
-  if (txPower < PWR_COUNT)
-    POWERMGNT.setPower((PowerLevels_e)txPower);
-}
-
-void OnTLMRatePacket(mspPacket_t *packet)
-{
-  // Parse the TLM rate
-  // uint8_t tlmRate = packet->readByte();
-  CHECK_PACKET_PARSING();
-
-  // TODO: Implement dynamic TLM rates
-  // switch (tlmRate) {
-  // case TLM_RATIO_NO_TLM:
-  //   break;
-  // case TLM_RATIO_1_128:
-  //   break;
-  // default:
-  //   // Unsupported rate requested
-  //   break;
-  // }
-}
-
+#if !defined(CRITICAL_FLASH)
 void OnPowerGetCalibration(mspPacket_t *packet)
 {
   uint8_t index = packet->readByte();
@@ -856,7 +809,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   DBGLN("power calibration done %d, %d", index, value);
   hwTimer.resume();
 }
-
+#endif
 
 void SendUIDOverMSP()
 {
@@ -919,6 +872,7 @@ void ExitBindingMode()
 
 void ProcessMSPPacket(mspPacket_t *packet)
 {
+#if !defined(CRITICAL_FLASH)
   // Inspect packet for ELRS specific opcodes
   if (packet->function == MSP_ELRS_FUNC)
   {
@@ -928,15 +882,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
     switch (opcode)
     {
-    case MSP_ELRS_RF_MODE:
-      OnRFModePacket(packet);
-      break;
-    case MSP_ELRS_TX_PWR:
-      OnTxPowerPacket(packet);
-      break;
-    case MSP_ELRS_TLM_RATE:
-      OnTLMRatePacket(packet);
-      break;
     case MSP_ELRS_POWER_CALI_GET:
       OnPowerGetCalibration(packet);
       break;
@@ -960,6 +905,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
     VtxTriggerSend();
   }
+#endif
 }
 
 static void setupTxBackpack()
