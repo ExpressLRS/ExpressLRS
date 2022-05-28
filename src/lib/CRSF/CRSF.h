@@ -52,7 +52,7 @@ public:
     /////Variables/////
 
 
-    static volatile uint8_t ParameterUpdateData[3];
+    static uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
     static void inline nullCallback(void);
@@ -67,7 +67,7 @@ public:
     // The model ID as received from the Transmitter
     static uint8_t modelId;
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
-    static volatile bool elrsLUAmode;
+    static bool elrsLUAmode;
 
     /// UART Handling ///
     static uint32_t GoodPktsCountResult; // need to latch the results
@@ -107,7 +107,7 @@ public:
 
     static void GetMspMessage(uint8_t **data, uint8_t *len);
     static void UnlockMspMessage();
-    static void AddMspMessage(const uint8_t length, volatile uint8_t* data);
+    static void AddMspMessage(const uint8_t length, uint8_t* data);
     static void AddMspMessage(mspPacket_t* packet);
     static void ResetMspQueue();
     static uint32_t OpenTXsyncLastSent;
@@ -143,9 +143,9 @@ private:
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
 
     /// UART Handling ///
-    static volatile uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
-    static volatile uint8_t SerialInPacketPtr;                   // index where we are reading/writing
-    static volatile bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
+    static uint8_t SerialInPacketLen;                   // length of the CRSF packet as measured
+    static uint8_t SerialInPacketPtr;                   // index where we are reading/writing
+    static bool CRSFframeActive;  //since we get a copy of the serial data use this flag to know when to ignore it
     static uint32_t GoodPktsCount;
     static uint32_t BadPktsCount;
     static uint32_t UARTwdtLastChecked;

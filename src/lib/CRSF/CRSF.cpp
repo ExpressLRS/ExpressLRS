@@ -45,7 +45,7 @@ inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
-volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
+uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
@@ -62,16 +62,16 @@ void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges
 void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
 
 /// UART Handling ///
-volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
-volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
+uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
+bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
 uint8_t CRSF::modelId = 0;
 bool CRSF::ForwardDevicePings = false;
-volatile bool CRSF::elrsLUAmode = false;
+bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
 uint32_t CRSF::OpenTXsyncLastSent = 0;
@@ -378,7 +378,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
-    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+    uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
@@ -493,7 +493,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     AddMspMessage(totalBufferLen, outBuffer);
 }
 
-void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
+void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, uint8_t* data)
 {
     if (length > ELRS_MSP_BUFFER)
     {

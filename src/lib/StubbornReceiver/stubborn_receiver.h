@@ -15,10 +15,10 @@ public:
     bool GetCurrentConfirm();
 private:
     uint8_t *data;
-    volatile bool finishedData;
-    volatile uint8_t length;
-    volatile uint8_t currentOffset;
-    volatile uint8_t currentPackage;
-    volatile bool telemetryConfirm;
+    bool finishedData;
+    uint8_t length;
+    uint8_t currentOffset;
+    uint8_t currentPackage;
+    bool telemetryConfirm;
     uint8_t maxPackageIndex;
 };
