@@ -15,9 +15,34 @@
 #include "CRSF.h"
 #include "POWERMGNT.h"
 #include <OTA.h>
+#include "crsf_sysmocks.h"
 
 CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
 uint8_t UID[6] = {1,2,3,4,5,6};
+
+void test_crsf_endpoints()
+{
+    // Validate 988us and 2012us convert to approprate CRSF values. Spoiler: They don't
+    TEST_ASSERT_EQUAL(-1024, Us_to_OpenTx(988));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MIN+1, OpenTx_to_Crsf(-1024)); // NOTE: 988 comes from OpenTX as 173, not 172!
+    TEST_ASSERT_EQUAL(1024, Us_to_OpenTx(2012));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MAX, OpenTx_to_Crsf(1024));
+
+    // Validate CRSF values convert to their expected values in OpenTX
+    TEST_ASSERT_EQUAL(988, Crsf_to_OpenTx_to_Us(CRSF_CHANNEL_VALUE_MIN));
+    TEST_ASSERT_EQUAL(2012-1, Crsf_to_OpenTx_to_Us(CRSF_CHANNEL_VALUE_MAX)); // NOTE: Feeding the 2012 CRSF value back into OpenTX would give 2011
+
+    // Validate CRSF values convert to their expected values in Betaflight
+    TEST_ASSERT_EQUAL(988, Crsf_to_BfUs(CRSF_CHANNEL_VALUE_MIN));
+    TEST_ASSERT_EQUAL(2012, Crsf_to_BfUs(CRSF_CHANNEL_VALUE_MAX));
+
+    // Validate important values are still the same value when mapped and umapped from their 10-bit representations
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MIN,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_MIN));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_1000, Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_1000));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MID,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_MID));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_2000, Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_2000));
+    TEST_ASSERT_EQUAL(CRSF_CHANNEL_VALUE_MAX,  Crsf_to_Uint10_to_Crsf(CRSF_CHANNEL_VALUE_MAX));
+}
 
 void test_crsfToBit()
 {
@@ -612,6 +637,7 @@ void tearDown() {}
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_crsf_endpoints);
     RUN_TEST(test_crsfToBit);
     RUN_TEST(test_bitToCrsf);
     RUN_TEST(test_crsfToN);

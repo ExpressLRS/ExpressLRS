@@ -330,19 +330,19 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
 // Scale a full range crossfire value to 988-2012 (Taransi channel uS)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 {
-    return fmap(val, 172, 1811, 988, 2012);
+    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 988, 2012);
 }
 
 // Scale down a 10-bit value to a full range crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
 {
-    return fmap(val, 0, 1024, 172, 1811);
+    return fmap(val, 0, 1023, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
 }
 
 // Scale up a full range crossfire value to 10-bit
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
 {
-    return fmap(val, 172, 1811, 0, 1023);
+    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023);
 }
 
 // Convert 0-max to the CRSF values for 1000-2000

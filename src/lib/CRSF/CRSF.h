@@ -46,7 +46,7 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static uint32_t ChannelData[16];
+    static uint32_t ChannelData[CRSF_NUM_CHANNELS];
 
     /////Variables/////
 
