@@ -53,20 +53,20 @@ static int servosUpdate(unsigned long now)
         for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            uint16_t us = CRSF_to_US(CRSF::GetChannelOutput(chConfig->val.inputChannel));
+            const unsigned crsfVal = CRSF::GetChannelOutput(chConfig->val.inputChannel);
+            // crsfVal might 0 if this is a switch channel and it has not been
+            // received yet. Delay initializing the servo until the channel is valid
+            if (crsfVal == 0)
+                continue;
+            uint16_t us = CRSF_to_US(crsfVal);
             // Flip the output around the mid value if inverted
             if (chConfig->val.inverted)
                 us = 3000U - us;
 
-            // us might be out of bounds if this is a switch channel and it has not been
-            // received yet. Delay initializing the servo until the channel is valid
-            if (us >= 988U && us <= 2012U)
-            {
-                if ((eServoOutputMode)chConfig->val.mode == somOnOff)
-                    servoMgr->writeDigital(ch, us > 1500U);
-                else
-                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
-            }
+            if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+                servoMgr->writeDigital(ch, us > 1500U);
+            else
+                servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
         } /* for each servo */
     } /* if newChannelsAvailable */
 
