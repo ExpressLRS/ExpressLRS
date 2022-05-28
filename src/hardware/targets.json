@@ -446,7 +446,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Generic 2400.json",
+                "layout_file": "Vantac 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
