@@ -352,34 +352,18 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
 
 void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
-    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    #if defined(PLATFORM_ESP32)
-    uint16_t prev_AUX1 = ChannelData[4];
-    #endif
+    // for monitoring arming state
+    uint32_t prev_AUX1 = ChannelData[4];
 
-    ChannelData[0] = (rcChannels->ch0);
-    ChannelData[1] = (rcChannels->ch1);
-    ChannelData[2] = (rcChannels->ch2);
-    ChannelData[3] = (rcChannels->ch3);
-    ChannelData[4] = (rcChannels->ch4);
-    ChannelData[5] = (rcChannels->ch5);
-    ChannelData[6] = (rcChannels->ch6);
-    ChannelData[7] = (rcChannels->ch7);
-    ChannelData[8] = (rcChannels->ch8);
-    ChannelData[9] = (rcChannels->ch9);
-    ChannelData[10] = (rcChannels->ch10);
-    ChannelData[11] = (rcChannels->ch11);
-    ChannelData[12] = (rcChannels->ch12);
-    ChannelData[13] = (rcChannels->ch13);
-    ChannelData[14] = (rcChannels->ch14);
-    ChannelData[15] = (rcChannels->ch15);
+    uint8_t const * const payload = (uint8_t const * const)&CRSF::inBuffer.asRCPacket_t.channels;
+    bitpacker_unpack(payload, 11, ChannelData, 11, 16);
 
-    #if defined(PLATFORM_ESP32)
-    if (prev_AUX1 != ChannelData[4]) // for monitoring arming state
+    if (prev_AUX1 != ChannelData[4])
     {
+    #if defined(PLATFORM_ESP32)
         devicesTriggerEvent();
-    }
     #endif
+    }
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()

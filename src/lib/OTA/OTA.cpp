@@ -289,30 +289,8 @@ uint32_t debugRcvrLinkstatsPacketId;
 
 static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest)
 {
-    constexpr unsigned numOfChannels = 4;
-    constexpr unsigned channelMask = 0x3ff;
-    constexpr unsigned channelBits = 10;
-    constexpr unsigned DEST_PRECISION = 11;
-    constexpr unsigned precisionShift = (DEST_PRECISION - channelBits);
-
     uint8_t const * const payload = (uint8_t const * const)srcChannels4x10;
-    // code from BetaFlight rx/crsf.cpp
-    uint8_t bitsMerged = 0;
-    uint32_t readValue = 0;
-    unsigned readByteIndex = 0;
-    for (uint8_t n = 0; n < numOfChannels; n++)
-    {
-        while (bitsMerged < channelBits)
-        {
-            uint8_t readByte = payload[readByteIndex++];
-            readValue |= ((uint32_t) readByte) << bitsMerged;
-            bitsMerged += 8;
-        }
-        //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & channelMask), bitsMerged);
-        dest[n] = (readValue & channelMask) << precisionShift;
-        readValue >>= channelBits;
-        bitsMerged -= channelBits;
-    }
+    bitpacker_unpack(payload, 10, dest, 11, 4);
 }
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, CRSF * const crsf)
