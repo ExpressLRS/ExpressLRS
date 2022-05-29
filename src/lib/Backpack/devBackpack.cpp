@@ -33,20 +33,21 @@ void startPassthrough()
     hwTimer::stop();
     CRSF::End();
 
+    uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
         // if we have a single S.PORT pin for RX then we assume the standard UART pins for passthrough
-        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, 3, 1);
+        CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);
     }
     else
     {
-        CRSF::Port.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSF::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     }
     disableLoopWDT();
 
     HardwareSerial &backpack = *(HardwareSerial*)TxBackpack;
-    if (PASSTHROUGH_BAUD != BACKPACK_LOGGING_BAUD && PASSTHROUGH_BAUD != -1)
+    if (baud != BACKPACK_LOGGING_BAUD)
     {
         backpack.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
     }
@@ -158,7 +159,7 @@ static void AuxStateToMSPOut()
     packet.addByte(recordingState);
     packet.addByte(delay & 0xFF); // delay byte 1
     packet.addByte(delay >> 8); // delay byte 2
-    
+
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 #endif // USE_TX_BACKPACK
 }
