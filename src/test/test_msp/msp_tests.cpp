@@ -104,6 +104,10 @@ void test_msp_send(void)
 extern void test_encapsulated_msp_send(void);
 extern void test_encapsulated_msp_send_too_long(void);
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

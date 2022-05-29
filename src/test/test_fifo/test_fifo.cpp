@@ -56,6 +56,10 @@ void test_fifo_ensure()
         TEST_ASSERT_EQUAL(10, f.pop()); // and that all the bytes in the head packet are what we expect
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

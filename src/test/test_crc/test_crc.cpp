@@ -219,6 +219,10 @@ void test_crc8(void)
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0xFF), c, genMsg(bytes, sizeof(bytes)));
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     srandom(micros());
