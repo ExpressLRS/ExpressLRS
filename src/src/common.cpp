@@ -99,7 +99,7 @@ uint16_t CRCInitializer;
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)
 {
-    // !! TLM_RATIO_STD should be converted by the caller !!
+    // !! TLM_RATIO_STD/TLM_RATIO_DISARMED should be converted by the caller !!
     switch (enumval)
     {
     case TLM_RATIO_1_2:

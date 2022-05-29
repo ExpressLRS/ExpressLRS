@@ -322,21 +322,51 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
 }
 
-expresslrs_tlm_ratio_e ICACHE_RAM_ATTR CalcTlmRatioEffective()
+expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
 {
+  expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
+  expresslrs_tlm_ratio_e retVal;
+  bool updateTelemDenom = true;
+
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
   if (MspSender.IsActive())
-    return TLM_RATIO_1_2;
-
-  expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
-  if (ratioConfigured == TLM_RATIO_STD)
   {
-    return ExpressLRS_currAirRate_Modparams->TLMinterval;
+    retVal = TLM_RATIO_1_2;
+  }
+  // If Armed, telemetry is disabled, otherwise use STD
+  else if (ratioConfigured == TLM_RATIO_DISARMED)
+  {
+    if (IsArmed())
+    {
+      retVal = TLM_RATIO_NO_TLM;
+      // Avoid updating ExpressLRS_currTlmDenom until connectionState == disconnected
+      if (connectionState == connected)
+        updateTelemDenom = false;
+    }
+    else
+    {
+      retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
+    }
+  }
+  else if (ratioConfigured == TLM_RATIO_STD)
+  {
+    retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   }
   else
   {
-    return ratioConfigured;
+    retVal = ratioConfigured;
   }
+
+  if (updateTelemDenom)
+  {
+    uint8_t newTlmDenom = TLMratioEnumToValue(retVal);
+    // Delay going into disconnected state when the TLM ratio increases
+    if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
+      LastTLMpacketRecvMillis = SyncPacketLastSent;
+    ExpressLRS_currTlmDenom = newTlmDenom;
+  }
+
+  return retVal;
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
@@ -356,12 +386,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     --syncSpamCounter;
   SyncPacketLastSent = millis();
 
-  expresslrs_tlm_ratio_e newTlmRatio = CalcTlmRatioEffective();
-  uint8_t newTlmDenom = TLMratioEnumToValue(newTlmRatio);
-  // Delay going into disconnected state when the TLM ratio increases
-  if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
-    LastTLMpacketRecvMillis = SyncPacketLastSent;
-  ExpressLRS_currTlmDenom = newTlmDenom;
+  expresslrs_tlm_ratio_e newTlmRatio = UpdateTlmRatioEffective();
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();

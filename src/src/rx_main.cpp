@@ -800,7 +800,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] >> SYNC_PACKET_RATE_OFFSET) & SYNC_PACKET_RATE_MASK;
     // Update switch mode encoding immediately
     OtaSetSwitchMode((OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK));
-    // Update TLM ratio, should never be TLM_RATIO_STD, the TX calculates the correct value for the RX
+    // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_TLM_OFFSET) & SYNC_PACKET_TLM_MASK);
     uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
     if (ExpressLRS_currTlmDenom != TlmDenom)
