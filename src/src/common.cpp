@@ -84,6 +84,7 @@ ICACHE_RAM_ATTR uint8_t enumRatetoIndex(uint8_t const rate)
     return (rate == RATE_LORA_25HZ) ? RATE_MAX - 1 : 0;
 }
 
+uint8_t ExpressLRS_currTlmDenom;
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
@@ -96,12 +97,11 @@ uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 
 uint16_t CRCInitializer;
 
-uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
+uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)
 {
+    // !! TLM_RATIO_STD should be converted by the caller !!
     switch (enumval)
     {
-    case TLM_RATIO_NO_TLM:
-        return 1;
     case TLM_RATIO_1_2:
         return 2;
     case TLM_RATIO_1_4:
@@ -117,7 +117,8 @@ uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(uint8_t const enumval)
     case TLM_RATIO_1_128:
         return 128;
     default:
-        return 0;
+        // TLM_RATIO_NO_TLM
+        return 1;
     }
 }
 
@@ -176,6 +177,8 @@ uint32_t uidMacSeedGet(void)
 
 void initUID()
 {
+    // default until first sync packet calculates it
+    ExpressLRS_currTlmDenom = 1;
     if (firmwareOptions.hasUID)
     {
         memcpy(MasterUID, firmwareOptions.uid, sizeof(MasterUID));

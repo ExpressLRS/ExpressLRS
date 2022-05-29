@@ -40,7 +40,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
     tlmBandwidth
 };
 
@@ -293,10 +293,23 @@ static void luadevUpdateModelID() {
 static void luadevUpdateTlmBandwidth()
 {
   expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
-  if (eRatio == TLM_RATIO_NO_TLM)
+  // TLM_RATIO_STD
+  if (eRatio == TLM_RATIO_STD)
+  {
+    // For Standard ratio, display the ratio instead of bps
+    strcpy(tlmBandwidth, " (1:");
+    uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    itoa(ratioDiv, &tlmBandwidth[4], 10);
+    strcat(tlmBandwidth, ")");
+  }
+
+  // TLM_RATIO_NO_TLM
+  else if (eRatio == TLM_RATIO_NO_TLM)
   {
     tlmBandwidth[0] = '\0';
   }
+
+  // All normal ratios
   else
   {
     tlmBandwidth[0] = ' ';
@@ -538,9 +551,10 @@ static void registerLuaParameters()
       }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+      expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
+      if (eRatio <= TLM_RATIO_1_2)
       {
-        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+        config.SetTlm(eRatio);
       }
     });
     #if defined(TARGET_TX_FM30)

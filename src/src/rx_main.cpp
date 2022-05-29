@@ -298,9 +298,9 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
 
-    uint8_t modresultTLM = (NonceRX + 1) % (TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+    uint8_t modresultTLM = (NonceRX + 1) % ExpressLRS_currTlmDenom;
 
-    if (modresultTLM != 0 || ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) // if we are about to send a tlm response don't bother going back to rx
+    if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
     }
@@ -312,9 +312,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     uint8_t *data;
     uint8_t maxLength;
     uint8_t packageIndex;
-    uint8_t modresult = (NonceRX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    uint8_t modresult = (NonceRX + 1) % ExpressLRS_currTlmDenom;
 
-    if ((connectionState == disconnected) || (ExpressLRS_currAirRate_Modparams->TLMinterval == TLM_RATIO_NO_TLM) || (alreadyTLMresp == true) || (modresult != 0))
+    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
@@ -677,7 +677,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         return;
 
     bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
-        NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+        NonceRX, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // No channels packets to the FC if no model match
@@ -800,12 +800,13 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t now)
     ExpressLRS_nextAirRateIndex = (Radio.RXdataBuffer[3] >> SYNC_PACKET_RATE_OFFSET) & SYNC_PACKET_RATE_MASK;
     // Update switch mode encoding immediately
     OtaSetSwitchMode((OtaSwitchMode_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_SWITCH_OFFSET) & SYNC_PACKET_SWITCH_MASK));
-    // Update TLM ratio
+    // Update TLM ratio, should never be TLM_RATIO_STD, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)((Radio.RXdataBuffer[3] >> SYNC_PACKET_TLM_OFFSET) & SYNC_PACKET_TLM_MASK);
-    if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLMrateIn)
+    uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
+    if (ExpressLRS_currTlmDenom != TlmDenom)
     {
-        DBGLN("New TLMrate: %d", TLMrateIn);
-        ExpressLRS_currAirRate_Modparams->TLMinterval = TLMrateIn;
+        DBGLN("New TLMrate 1:%u", TlmDenom);
+        ExpressLRS_currTlmDenom = TlmDenom;
         telemBurstValid = false;
     }
 
@@ -1139,11 +1140,10 @@ static void updateTelemetryBurst()
     telemBurstValid = true;
 
     uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
-    uint32_t ratiodiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    telemetryBurstMax = TLMBurstMaxForRateRatio(hz, ratiodiv);
+    telemetryBurstMax = TLMBurstMaxForRateRatio(hz, ExpressLRS_currTlmDenom);
 
     // Notify the sender to adjust its expected throughput
-    TelemetrySender.UpdateTelemetryRate(hz, ratiodiv, telemetryBurstMax);
+    TelemetrySender.UpdateTelemetryRate(hz, ExpressLRS_currTlmDenom, telemetryBurstMax);
 }
 
 /* If not connected will rotate through the RF modes looking for sync

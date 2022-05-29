@@ -20,7 +20,7 @@
 #if defined(TARGET_TX)
 typedef struct {
     uint8_t     rate:3;
-    uint8_t     tlm:3;
+    uint8_t     tlm:4;
     uint8_t     power:3;
     uint8_t     switchMode:2;
     uint8_t     modelMatch:1;

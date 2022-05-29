@@ -382,7 +382,7 @@ TxConfig::SetDefaults()
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
         SetRate(modParams->index);
-        SetTlm(modParams->TLMinterval);
+        SetTlm(TLM_RATIO_STD);
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);

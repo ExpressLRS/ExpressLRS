@@ -322,6 +322,23 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
 }
 
+expresslrs_tlm_ratio_e ICACHE_RAM_ATTR CalcTlmRatioEffective()
+{
+  // TLM ratio is boosted for one sync cycle when the MspSender goes active
+  if (MspSender.IsActive())
+    return TLM_RATIO_1_2;
+
+  expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
+  if (ratioConfigured == TLM_RATIO_STD)
+  {
+    return ExpressLRS_currAirRate_Modparams->TLMinterval;
+  }
+  else
+  {
+    return ratioConfigured;
+  }
+}
+
 void ICACHE_RAM_ATTR GenerateSyncPacketData()
 {
   const uint8_t SwitchEncMode = config.GetSwitchMode();
@@ -339,12 +356,12 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
     --syncSpamCounter;
   SyncPacketLastSent = millis();
 
-  // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  expresslrs_tlm_ratio_e newTlmRatio = (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
+  expresslrs_tlm_ratio_e newTlmRatio = CalcTlmRatioEffective();
+  uint8_t newTlmDenom = TLMratioEnumToValue(newTlmRatio);
   // Delay going into disconnected state when the TLM ratio increases
-  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newTlmRatio)
+  if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
     LastTLMpacketRecvMillis = SyncPacketLastSent;
-  ExpressLRS_currAirRate_Modparams->TLMinterval = newTlmRatio;
+  ExpressLRS_currTlmDenom = newTlmDenom;
 
   Radio.TXdataBuffer[0] = SYNC_PACKET & 0b11;
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
@@ -424,9 +441,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandlePrepareForTLM()
 {
-  uint8_t modresult = (NonceTX + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-  // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
-  if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
+  // If TLM enabled and next packet is going to be telemetry, start listening to have a large receive window (time-wise)
+  if (ExpressLRS_currTlmDenom != 1 && ((NonceTX + 1) % ExpressLRS_currTlmDenom) == 0)
   {
     Radio.RXnb();
     TelemetryRcvPhase = ttrpPreReceiveGap;
@@ -496,7 +512,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
       PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
-        NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+        NonceTX, ExpressLRS_currTlmDenom);
     }
   }
 
@@ -540,7 +556,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
       NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) // Swicth in the middle of DVDA sends
   {
     switchDiversityAntennas();
-  }  
+  }
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
@@ -716,9 +732,8 @@ static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
-  const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
   // +2 to account for any rounding down and partial millis()
-  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  const uint32_t msConnectionLostTimeout = (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
   // Capture the last before now so it will always be <= now
   const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
   const uint32_t now = millis();
