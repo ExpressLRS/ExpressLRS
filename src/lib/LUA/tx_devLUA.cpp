@@ -40,7 +40,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
+    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Std",
     tlmBandwidth
 };
 
@@ -552,7 +552,7 @@ static void registerLuaParameters()
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
-      if (eRatio <= TLM_RATIO_1_2)
+      if (eRatio <= TLM_RATIO_STD)
       {
         config.SetTlm(eRatio);
       }
