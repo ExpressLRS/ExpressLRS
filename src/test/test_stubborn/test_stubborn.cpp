@@ -378,6 +378,10 @@ static void test_stubborn_link_resync_then_send(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(testSequence2, buffer, ARRAY_SIZE(testSequence2));
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
