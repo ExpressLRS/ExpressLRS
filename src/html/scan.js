@@ -58,7 +58,10 @@ function updatePwmSettings(arPwm)
         let modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
             ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', 'On/Off']);
         let inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
-            ['ch1', 'ch2', 'ch3', 'ch4', 'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)', 'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)']);
+            ['ch1', 'ch2', 'ch3', 'ch4',
+             'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
+             'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
+             'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
         htmlFields.push(`<tr><th>${index+1}</th>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
