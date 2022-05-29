@@ -265,12 +265,10 @@ def print_config(mm, pos):
         (pos, fan) = read32(mm, pos)
         val = mm[pos]
         pos += 1
-        no_sync_on_arm = (val & 1) == 1
-        uart_inverted = (val & 2) == 2
-        unlock_higher_power = (val & 4) == 4
+        uart_inverted = (val & 1) == 1
+        unlock_higher_power = (val & 2) == 2
         print(f'Telemetry report interval = {tlm}ms')
         print(f'Fan minimum run time = {fan}s')
-        print(f'NO_SYNC_ON_ARM is {no_sync_on_arm}')
         print(f'UART_INVERTED is {uart_inverted}')
         print(f'UNLOCK_HIGHER_POWER is {unlock_higher_power}')
         if _hasBuzzer:

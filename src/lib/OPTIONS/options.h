@@ -42,7 +42,6 @@ typedef struct _options {
 #if defined(TARGET_TX)
     uint32_t    tlm_report_interval;
     uint32_t    fan_min_runtime;
-    bool        no_sync_on_arm:1;
     bool        uart_inverted:1;
     bool        unlock_higher_power:1;
 #if defined(GPIO_PIN_BUZZER)

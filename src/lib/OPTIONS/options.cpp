@@ -132,11 +132,6 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .fan_min_runtime = 30,
 #endif
-#if defined(NO_SYNC_ON_ARM)
-    .no_sync_on_arm = true,
-#else
-    .no_sync_on_arm = false,
-#endif
 #if defined(UART_INVERTED) // Only on ESP32
     .uart_inverted = true,
 #else
@@ -176,9 +171,6 @@ const char PROGMEM compile_options[] = {
 #ifdef TARGET_TX
     #ifdef UNLOCK_HIGHER_POWER
         "-DUNLOCK_HIGHER_POWER "
-    #endif
-    #ifdef NO_SYNC_ON_ARM
-        "-DNO_SYNC_ON_ARM "
     #endif
     #ifdef UART_INVERTED
         "-DUART_INVERTED "
@@ -370,7 +362,6 @@ bool options_init()
     #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
-    firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #else
