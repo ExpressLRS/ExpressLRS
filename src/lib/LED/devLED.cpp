@@ -270,7 +270,6 @@ static int event()
         #else
             return DURATION_NEVER;
         #endif
-    case noCrossfire: // technically nocrossfire is {10,100} but {20,100} is close enough
     case radioFailed:
         if (hasRGBLeds)
         {
@@ -291,6 +290,12 @@ static int event()
             return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         }
         return DURATION_NEVER;
+    case noCrossfire:
+        if (GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
+            // technically nocrossfire is {10,100} but {20,100} is close enough
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
     default:
         return DURATION_NEVER;
     }
