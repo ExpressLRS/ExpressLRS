@@ -20,10 +20,8 @@ extern uint16_t CRCInitializer;
 
 typedef enum : uint8_t
 {
-    // The first 8 items here must be actual ratios
-    // as the Ratio enum is passed directly in the sync
-    // packet
-    TLM_RATIO_NO_TLM = 0,
+    TLM_RATIO_STD = 0,   // Use suggested ratio from ModParams
+    TLM_RATIO_NO_TLM,
     TLM_RATIO_1_128,
     TLM_RATIO_1_64,
     TLM_RATIO_1_32,
@@ -31,7 +29,6 @@ typedef enum : uint8_t
     TLM_RATIO_1_8,
     TLM_RATIO_1_4,
     TLM_RATIO_1_2,
-    TLM_RATIO_STD, // Use suggested ratio from ModParams
     TLM_RATIO_DISARMED, // TLM_RATIO_STD when disarmed, TLM_RATIO_NO_TLM when armed
 } expresslrs_tlm_ratio_e;
 

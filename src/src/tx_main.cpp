@@ -325,7 +325,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
 {
   expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
-  expresslrs_tlm_ratio_e retVal;
+  // default is suggested rate for TLM_RATIO_STD/TLM_RATIO_DISARMED
+  expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   bool updateTelemDenom = true;
 
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
@@ -343,16 +344,8 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
       if (connectionState == connected)
         updateTelemDenom = false;
     }
-    else
-    {
-      retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
-    }
   }
-  else if (ratioConfigured == TLM_RATIO_STD)
-  {
-    retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
-  }
-  else
+  else if (ratioConfigured != TLM_RATIO_STD)
   {
     retVal = ratioConfigured;
   }
@@ -392,7 +385,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
   Radio.TXdataBuffer[1] = FHSSgetCurrIndex();
   Radio.TXdataBuffer[2] = NonceTX;
   Radio.TXdataBuffer[3] = ((Index & SYNC_PACKET_RATE_MASK) << SYNC_PACKET_RATE_OFFSET) +
-                          ((newTlmRatio & SYNC_PACKET_TLM_MASK) << SYNC_PACKET_TLM_OFFSET) +
+                          (((newTlmRatio - TLM_RATIO_NO_TLM) & SYNC_PACKET_TLM_MASK) << SYNC_PACKET_TLM_OFFSET) +
                           ((SwitchEncMode & SYNC_PACKET_SWITCH_MASK) << SYNC_PACKET_SWITCH_OFFSET);
   Radio.TXdataBuffer[4] = UID[3];
   Radio.TXdataBuffer[5] = UID[4];

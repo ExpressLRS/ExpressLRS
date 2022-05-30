@@ -40,7 +40,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Std;!Arm",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;!Arm",
     tlmBandwidth
 };
 
@@ -294,7 +294,7 @@ static void luadevUpdateTlmBandwidth()
 {
   expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
   // TLM_RATIO_STD / TLM_RATIO_DISARMED
-  if (eRatio >= TLM_RATIO_STD)
+  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
   {
     // For Standard ratio, display the ratio instead of bps
     strcpy(tlmBandwidth, " (1:");
