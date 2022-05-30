@@ -20,10 +20,6 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
-#if defined(TARGET_UNIFIED_TX)
-#include <SPIFFS.h>
-#endif
-
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -540,7 +536,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
       NonceTX % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) // Swicth in the middle of DVDA sends
   {
     switchDiversityAntennas();
-  }  
+  }
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
@@ -1027,16 +1023,19 @@ static void setupTarget()
   setupTxBackpack();
 }
 
-void setup()
+bool setupHardwareFromOptions()
 {
-  bool hardware_success = true;
   #if defined(TARGET_UNIFIED_TX)
-  TxBackpack = new HardwareSerial(1);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
-  SPIFFS.begin(true);
-  hardware_success = options_init();
-  if (!hardware_success)
+  if (!options_init())
   {
+    #if defined(PLATFORM_ESP32)
+    TxBackpack = new HardwareSerial(1);
+    ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
+    #else
+    TxBackpack = new HardwareSerial(0);
+    ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1);
+    #endif
+
     // Register the WiFi with the framework
     static device_affinity_t wifi_device[] = {
         {&WIFI_device, 1}
@@ -1045,13 +1044,16 @@ void setup()
     devicesInit();
 
     connectionState = hardwareUndefined;
-  }
-  else
-  {
-    ((HardwareSerial *)TxBackpack)->end();
+    return false;
   }
   #endif
-  if (hardware_success)
+
+  return true;
+}
+
+void setup()
+{
+  if (setupHardwareFromOptions())
   {
     initUID();
     setupTarget();

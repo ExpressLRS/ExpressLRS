@@ -3,7 +3,7 @@
 #include "targets.h"
 #include "helpers.h"
 #include "logging.h"
-#if defined(TARGET_UNIFIED_RX)
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
