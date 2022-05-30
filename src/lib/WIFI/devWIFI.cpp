@@ -417,41 +417,39 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 }
 
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (!Update.end()) {
-    StreamString p = StreamString();
-    if (Update.hasError()) {
-      Update.printError(p);
+  if (target_seen) {
+    String msg;
+    if (Update.end()) {
+      DBGLN("Update complete, rebooting");
+      msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
+      #if defined(TARGET_RX)
+        msg += "Please wait for the LED to resume blinking before disconnecting power.\"}";
+      #else
+        msg += "Please wait for a few seconds while the device reboots.\"}";
+      #endif
+      rebootTime = millis() + 200;
     } else {
-      p.println("Not enough data uploaded!");
+      StreamString p = StreamString();
+      if (Update.hasError()) {
+        Update.printError(p);
+      } else {
+        p.println("Not enough data uploaded!");
+      }
+      p.trim();
+      DBGLN("Failed to upload firmware: %s", p.c_str());
+      msg = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
     }
-    p.trim();
-    DBGLN("Failed to upload firmware: %s", p.c_str());
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
     response->addHeader("Connection", "close");
     request->send(response);
     request->client()->close();
   } else {
-    if (target_seen) {
-      DBGLN("Update complete, rebooting");
-      String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
-      #if defined(TARGET_RX)
-        success += "Please wait for the LED to resume blinking before disconnecting power.\"}";
-      #else
-        success += "Please wait for a few seconds while the device reboots.\"}";
-      #endif
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
-      response->addHeader("Connection", "close");
-      request->send(response);
-      request->client()->close();
-      rebootTime = millis() + 200;
-    } else {
-      String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
-      if (target_found.length() != 0) {
-        message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
-      }
-      message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
-      request->send(200, "application/json", message);
+    String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
+    if (target_found.length() != 0) {
+      message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
     }
+    message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
+    request->send(200, "application/json", message);
   }
 }
 
