@@ -96,15 +96,12 @@ def patch_tx_params(mm, pos, args):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
-    if args.sync_on_arm != None:
-        val &= ~1
-        val |= args.sync_on_arm
     if args.uart_inverted != None:
-        val &= ~2
-        val |= (args.uart_inverted << 1)
+        val &= ~1
+        val |= args.uart_inverted
     if args.unlock_higher_power != None:
-        val &= ~4
-        val |= (args.unlock_higher_power << 2)
+        val &= ~2
+        val |= (args.unlock_higher_power << 1)
     mm[pos] = val
     return pos + 1
 
@@ -336,9 +333,6 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
-    parser.add_argument('--sync-on-arm', dest='sync_on_arm', action='store_true', help='Send sync packets to the RX when armed')
-    parser.add_argument('--no-sync-on-arm', dest='sync_on_arm', action='store_false', help='Do not send sync packets to the RX when armed')
-    parser.set_defaults(sync_on_arm=None)
     parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
     parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
     parser.set_defaults(uart_inverted=None)
