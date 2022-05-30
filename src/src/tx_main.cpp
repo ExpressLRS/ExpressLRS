@@ -475,7 +475,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   uint32_t SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
   bool skipSync = InBindingMode ||
     // TLM_RATIO_DISARMED keeps sending sync packets even when armed until the RX stops sending telemetry and the TLM=Off has taken effect
-    ((config.GetTlm() == TLM_RATIO_DISARMED) && IsArmed() && (connectionState == disconnected) && (ExpressLRS_currTlmDenom == 1));
+    ((config.GetTlm() == TLM_RATIO_DISARMED) && IsArmed() && (ExpressLRS_currTlmDenom == 1));
 
   uint8_t NonceFHSSresult = NonceTX % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
   bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
