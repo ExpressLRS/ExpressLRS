@@ -248,38 +248,6 @@ extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
-static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
-{
-  //return the separator Index + 1
-  uint8_t arrayCount = 0;
-  uint8_t returnvalue = 0;
-  uint8_t SeparatorCount = 0;
-  char *c = searchArray;
-  int i = 0;
-  while (c[i] != '\0')
-  {
-    //treat symbols as separator except : !,",#,$,%,&,',(,),*,+,,,-,.,/ as these would probably inside our label names
-    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A'))
-    {
-      SeparatorCount++;
-      arrayCount++;
-      //if found separator is equal to the nth(index) requested separator,
-      //return the start of the labelSpace
-      if (SeparatorCount == index+1) {
-        return returnvalue;
-      } else {
-        returnvalue = arrayCount;
-      }
-    } else {
-      arrayCount++;
-    }
-    //increment the char count until null termination
-    i++;
-  }
-  //if we reach null termination and haven't got the requested index, just return 0, which would overwrite the first label
-  return returnvalue;
-}
-
 static void luadevUpdateRateSensitivity() {
   itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
   strcat(rateSensitivity, "dBm)");
@@ -445,10 +413,9 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 static void updateFolderName_TxPower()
 {
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2, pwrFolderDynamicName); // start writing name after the 2nd space
+  uint8_t pwrFolderLabelOffset = 10; // start writing after "TX Power ("
 
   // Power Level
-  pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
   pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
 
   // Dynamic Power
@@ -468,8 +435,7 @@ static void updateFolderName_VtxAdmin()
   if (vtxBand)
   {
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // start writing name after the 2nd space
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
+    uint8_t vtxFolderLabelOffset = 11; // start writing after "VTX Admin ("
 
     // Band
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
