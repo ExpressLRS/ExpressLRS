@@ -175,14 +175,12 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-extern uint8_t SERVO_COUNT;
-
 static String WebGetPwmStr()
 {
   // Output is raw integers, the Javascript side needs to parse it
   // ,"pwm":[49664,50688,51200] = 3 channels, 0=512, 1=512, 2=0
   String pwmStr(",\"pwm\":[");
-  for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
+  for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
   {
     if (ch > 0)
       pwmStr.concat(',');
@@ -206,9 +204,9 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
   // strtok will modify the string as it parses
   char *token = strtok((char *)pwmStr.c_str(), ",");
   uint8_t channel = 0;
-  while (token != nullptr && channel < SERVO_COUNT)
+  while (token != nullptr && channel < GPIO_PIN_PWM_OUTPUTS_COUNT)
   {
-    uint16_t val = atoi(token);
+    uint32_t val = atoi(token);
     DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
     ++channel;
@@ -268,7 +266,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   s += ",\"modelid\":" + String(config.GetModelId());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
-  if (SERVO_COUNT > 0) {
+  if (GPIO_PIN_PWM_OUTPUTS_COUNT > 0) {
     s += WebGetPwmStr();
   }
   #endif

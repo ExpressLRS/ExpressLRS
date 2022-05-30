@@ -79,8 +79,20 @@
 
 			<div align="left" id="pwm_container" style="display:none;">
 				<fieldset>
-					Set PWM output and failsafe positions. Note: Failsafe values are absolute and do not use the "invert" flag.
-					<br><br>
+					Set PWM output mode and failsafe positions.
+					<ul>
+						<li><b>Output:</b> Receiver output pin</li>
+						<li><b>Mode:</b> Output frequency or binary On/Off mode</li>
+						<li><b>Input:</b> Input channel from the handset</li>
+						<li><b>Invert:</b> Invert input channel position</li>
+						<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
+						<li><b>Failsafe:</b> Absolute position to set the servo on failsafe</li>
+						<ul>
+							<li>Does not use "Invert" flag</li>
+							<li>Value will be halved if "750us" flag is set</li>
+							<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
+						</ul>
+					</ul>
 					<legend>
 						<h2>PWM Output</h2>
 					</legend>

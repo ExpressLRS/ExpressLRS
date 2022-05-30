@@ -13,15 +13,17 @@ function getPwmFormData()
     while (inField = _(`pwm_${ch}_ch`))
     {
         let inChannel = inField.value;
+        let mode = _(`pwm_${ch}_mode`).value;
         let invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
+        let narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
         let failsafeField = _(`pwm_${ch}_fs`);
         let failsafe = failsafeField.value;
         if (failsafe > 2011) failsafe = 2011;
         if (failsafe < 988) failsafe = 988;
         failsafeField.value = failsafe;
 
-        let raw = (invert << 14) | (inChannel << 10) | (failsafe - 988);
-        //console.log(`PWM ${ch} input=${inChannel} fs=${failsafe} inv=${invert} raw=${raw}`);
+        let raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafe - 988);
+        //console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} inv=${invert} nar=${narrow} raw=${raw}`);
         outData.push(raw);
         ++ch;
     }
@@ -31,33 +33,44 @@ function getPwmFormData()
     return outForm;
 }
 
+function enumSelectGenerate(id, val, arOptions)
+{
+    // Generate a <select> item with every option in arOptions, and select the val element (0-based)
+    let retVal = `<select id="${id}">` +
+        arOptions.map((item, idx) => {
+            return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
+        }).join('') + '</select>';
+    return retVal;
+}
+
 function updatePwmSettings(arPwm)
 {
     if (arPwm === undefined)
         return;
-    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert
-    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Input</th><th>Invert?</th><th>Failsafe</th></tr>'];
+    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
+    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Mode</th><th>Input</th><th>Invert?</th><th>750us?</th><th>Failsafe</th></tr>'];
     arPwm.forEach((item, index) => {
         let failsafe = (item & 1023) + 988; // 10 bits
         let ch = (item >> 10) & 15; // 4 bits
         let inv = (item >> 14) & 1;
-        htmlFields.push(`<tr><th>${index+1}</th><td><select id="pwm_${index}_ch">
-          <option value="0"${(ch===0) ? ' selected' : ''}>ch1</option>
-          <option value="1"${(ch===1) ? ' selected' : ''}>ch2</option>
-          <option value="2"${(ch===2) ? ' selected' : ''}>ch3</option>
-          <option value="3"${(ch===3) ? ' selected' : ''}>ch4</option>
-          <option value="4"${(ch===4) ? ' selected' : ''}>ch5 (AUX1)</option>
-          <option value="5"${(ch===5) ? ' selected' : ''}>ch6 (AUX2)</option>
-          <option value="6"${(ch===6) ? ' selected' : ''}>ch7 (AUX3)</option>
-          <option value="7"${(ch===7) ? ' selected' : ''}>ch8 (AUX4)</option>
-          <option value="8"${(ch===8) ? ' selected' : ''}>ch9 (AUX5)</option>
-          <option value="9"${(ch===9) ? ' selected' : ''}>ch10 (AUX6)</option>
-          <option value="10"${(ch===10) ? ' selected' : ''}>ch11 (AUX7)</option>
-          <option value="11"${(ch===11) ? ' selected' : ''}>ch12 (AUX8)</option>
-        </select></td><td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
-        <td><input id="pwm_${index}_fs" value="${failsafe}" size="4"/></td></tr>`);
+        let mode = (item >> 15) & 15; // 4 bits
+        let narrow = (item >> 19) & 1;
+        let modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
+            ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', 'On/Off']);
+        let inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
+            ['ch1', 'ch2', 'ch3', 'ch4',
+             'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
+             'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
+             'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
+        htmlFields.push(`<tr><th>${index+1}</th>
+            <td>${modeSelect}</td>
+            <td>${inputSelect}</td>
+            <td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
+            <td><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></td>
+            <td><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></td></tr>`
+        );
     });
-    htmlFields.push('<tr><td colspan="4"><input type="submit" value="Set PWM Output"></td></tr></table>');
+    htmlFields.push('<tr><td colspan="6"><input type="submit" value="Set PWM Output"></td></tr></table>');
 
     let grp = document.createElement('DIV');
     grp.setAttribute('class', 'group');
