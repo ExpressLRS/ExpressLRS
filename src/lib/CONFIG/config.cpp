@@ -375,6 +375,8 @@ TxConfig::SetDefaults()
     SetVtxPower(0);
     SetVtxPitmode(0);
     SetPowerFanThreshold(PWR_250mW);
+    SetFanMode(0);
+    SetMotionMode(0);
     SetDvrAux(0);
     SetDvrStartDelay(0);
     SetDvrStopDelay(0);
@@ -388,8 +390,6 @@ TxConfig::SetDefaults()
         SetBoostChannel(0);
         SetSwitchMode((uint8_t)smWideOr8ch);
         SetModelMatch(false);
-        SetFanMode(0);
-        SetMotionMode(0);
         Commit();
     }
 
@@ -648,8 +648,8 @@ RxConfig::SetDefaults()
     SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false);
-    SetPwmChannel(2, 0, 2, false); // ch2 is throttle, failsafe it to 988
+        SetPwmChannel(ch, 512, ch, false, 0, false);
+    SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
     SetOnLoan(false);
     Commit();
@@ -680,24 +680,27 @@ RxConfig::SetPassword(const char *password)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh
-        && pwm->val.inverted == inverted)
+    rx_config_pwm_t newConfig;
+    newConfig.val.failsafe = failsafe;
+    newConfig.val.inputChannel = inputCh;
+    newConfig.val.inverted = inverted;
+    newConfig.val.mode = mode;
+    newConfig.val.narrow = narrow;
+    if (pwm->raw == newConfig.raw)
         return;
 
-    pwm->val.failsafe = failsafe;
-    pwm->val.inputChannel = inputCh;
-    pwm->val.inverted = inverted;
+    pwm->raw = newConfig.raw;
     m_modified = true;
 }
 
 void
-RxConfig::SetPwmChannelRaw(uint8_t ch, uint16_t raw)
+RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
