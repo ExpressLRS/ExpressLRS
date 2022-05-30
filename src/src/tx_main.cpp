@@ -1025,7 +1025,7 @@ static void setupTarget()
 
 bool setupHardwareFromOptions()
 {
-  #if defined(TARGET_UNIFIED_TX)
+#if defined(TARGET_UNIFIED_TX)
   if (!options_init())
   {
     #if defined(PLATFORM_ESP32)
@@ -1046,7 +1046,7 @@ bool setupHardwareFromOptions()
     connectionState = hardwareUndefined;
     return false;
   }
-  #endif
+#endif
 
   return true;
 }
