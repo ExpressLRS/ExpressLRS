@@ -88,6 +88,7 @@ typedef enum
     RATE_LORA_500HZ,
     RATE_DVDA_250HZ,
     RATE_DVDA_500HZ,
+    RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
@@ -135,9 +136,9 @@ typedef struct expresslrs_mod_settings_s
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 9      // 1xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_DEFAULT 3  // Default to LoRa 500Hz
-#define RATE_BINDING 8  // 50Hz bind mode
+#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_DEFAULT 4  // Default to LoRa 500Hz
+#define RATE_BINDING 9  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
