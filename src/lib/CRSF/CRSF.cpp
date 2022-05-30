@@ -51,14 +51,12 @@ volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 static FIFO MspWriteFIFO;
 
-void inline CRSF::nullCallback(void) {}
+void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
+void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
 
-void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
-void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
-
-void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
-void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges, ie command from Radio
-void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
+void (*CRSF::RecvParameterUpdate)() = nullptr; // called when recv parameter update req, ie from LUA
+void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
+void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
 
 /// UART Handling ///
 volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
@@ -127,7 +125,7 @@ void CRSF::Begin()
     if (esp_reset_reason() != ESP_RST_POWERON)
     {
         modelId = rtcModelId;
-        RecvModelUpdate();
+        if (RecvModelUpdate) RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
@@ -393,7 +391,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         DBGLN("CRSF UART Connected");
-        connected();
+        if (connected) connected();
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
@@ -432,14 +430,22 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             #if defined(PLATFORM_ESP32)
             rtcModelId = modelId;
             #endif
-            RecvModelUpdate();
+            if (RecvModelUpdate) RecvModelUpdate();
         }
         else
         {
+            #if defined(TARGET_TX_FM30)
+            for (unsigned n=0; n<8; n++)
+            {
+                Serial.print(SerialInBuffer[n], HEX);
+                Serial.write(' ');
+            }
+            Serial.println();
+            #endif
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
-            RecvParameterUpdate();
+            if (RecvParameterUpdate) RecvParameterUpdate();
         }
 
         packetReceived = true;
@@ -621,7 +627,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     {
                         //delayMicroseconds(50);
                         handleUARTout();
-                        RCdataCallback();
+                        if (RCdataCallback) RCdataCallback();
                     }
                 }
                 else
@@ -841,7 +847,7 @@ bool CRSF::UARTwdt()
             if (CRSFstate == true)
             {
                 DBGLN("CRSF UART Disconnected");
-                disconnected();
+                if (disconnected) disconnected();
                 CRSFstate = false;
             }
 

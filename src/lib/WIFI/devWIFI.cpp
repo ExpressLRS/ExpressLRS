@@ -464,6 +464,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
+    UNUSED(maxSketchSpace); // for warning
     #endif
     if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
       Update.printError(LOGGING_UART);
