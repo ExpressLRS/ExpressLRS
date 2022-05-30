@@ -32,11 +32,12 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 
 static void servosFailsafe()
 {
+    constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
     for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
-        uint16_t us = chConfig->val.failsafe + 988U;
+        uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
         servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
