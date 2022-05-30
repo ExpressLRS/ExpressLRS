@@ -28,7 +28,7 @@ function submitHardwareSettings() {
         if (_(k) && _(k).type == 'checkbox') {
             return v == 'on' ? true : false;
         }
-        if (k.endsWith('_values')) {
+        if (_(k) && _(k).classList.contains('array')) {
             const arr = v.split(',').map(element => {
                 return Number(element);
             });

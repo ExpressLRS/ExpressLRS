@@ -15,6 +15,8 @@ function init() {
       updateOptions(data);
       if (!_('wifi-ssid').value) {
         scanTimer = setInterval(get_networks, 2000);
+      } else {
+        _('loader').style.display = 'none';
       }
     }
   };
@@ -53,7 +55,7 @@ function submitOptions(e) {
     if (_(k) && _(k).type == 'checkbox') {
         return v == 'on' ? true : false;
     }
-    if (k == 'uid') {
+    if (_(k) && _(k).classList.contains('array')) {
         const arr = v.split(',').map(element => {
             return Number(element);
         });

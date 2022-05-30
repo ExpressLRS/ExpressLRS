@@ -23,7 +23,7 @@
 			</div>
 			<form id='upload_options' method='POST' action="/options">
 				<div class="mui-textfield">
-					<input size='40' id='uid' name='uid' type='text' readonly/>
+					<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
 					<label>UID (Auto updated by changing the bind-phrase above)</label>
 				</div>
 @@if sx127x:
@@ -61,15 +61,15 @@
 					<input size='3' id='fan-runtime' name='fan-runtime' type='text'/>
 					<label>Fan runtime (s)</label>
 				</div>
-				<div class="mui-textfield">
+				<div class="mui-checkbox">
 					<input size='3' id='no-sync-on-arm' name='no-sync-on-arm' type='checkbox'/>
 					<label>No sync on arm</label>
 				</div>
-				<div class="mui-textfield">
+				<div class="mui-checkbox">
 					<input size='3' id='uart-inverted' name='uart-inverted' type='checkbox'/>
 					<label>UART inverted</label>
 				</div>
-				<div class="mui-textfield">
+				<div class="mui-checkbox">
 					<input size='3' id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>
 					<label>Unlock higher power</label>
 				</div>

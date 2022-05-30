@@ -116,7 +116,7 @@
 							<option value='3'>DACWRITE</option>
 						</select>
 					</td></tr>
-					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text'/></td></tr>
+					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
 					<tr><td></td><td>PDET pin</td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td></tr>
@@ -125,7 +125,7 @@
 @@if isTX:
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
 					<tr><td></td><td>ADC pin</td><td><input size='3' id='joystick' name='joystick' type='text'/></td></tr>
-					<tr><td></td><td>Values</td><td><input size='20' id='joystick_values' name='joystick_values' type='text'/></td></tr>
+					<tr><td></td><td>Values</td><td><input size='40' id='joystick_values' name='joystick_values' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>Digital Joystick</td></tr>
 					<tr><td></td><td>Pin 1</td><td><input size='3' id='five_way1' name='five_way1' type='text'/></td></tr>
@@ -150,7 +150,7 @@
 					-->
 @@if isTX:
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
-					<tr><td></td><td>OLED type</td><td>
+					<tr><td></td><td>Screen type</td><td>
 						<select id='screen_type' name='screen_type'>
 							<option value='0'>None</option>
 							<option value='1'>I2C OLED</option>
@@ -183,12 +183,12 @@
 					<tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td></tr>
 					<tr><td></td><td>Fan enable pin</td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td></tr>
 					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td></tr>
-					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='input'/></td></tr>
+					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='text'/></td></tr>
 					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td></tr>
 @@end
 @@if not isTX:
 					<tr><td colspan='2'><b>PWM</td></tr>
-					<tr><td></td><td>PWM output pins</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text'/></td></tr>
+					<tr><td></td><td>PWM output pins</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>VBat</td></tr>
 					<tr><td></td><td>VBat pin</td><td><input size='3' id='vbat' name='vbat' type='text'/></td></tr>
@@ -200,8 +200,8 @@
 					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='rf_amp_vpd' name='rf_amp_vpd' type='text'/></td></tr>
 					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='rf_amp_vref' name='rf_amp_vref' type='text'/></td></tr>
 					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='spi_vtx_nss' name='spi_vtx_nss' type='checkbox'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_25mW' name='vpd_25mW' type='input'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_100mW' name='vpd_100mW' type='checkbox'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vpd_25mW' name='vpd_25mW' type='text' class='array'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vpd_100mW' name='vpd_100mW' type='text' class='array'/></td></tr>
 @@end
 				</table>
 				<input type='button' value='Save Target Configuration' class='mui-btn mui-btn--primary' onclick="submitHardwareSettings()"/>
