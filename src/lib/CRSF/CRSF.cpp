@@ -939,7 +939,7 @@ void CRSF::sendLinkStatisticsToFC()
 
 void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
 {
-#if !defined(CRSF_RCVR_NO_SERIAL)
+#if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (OPT_CRSF_RCVR_NO_SERIAL)
         return;
 
