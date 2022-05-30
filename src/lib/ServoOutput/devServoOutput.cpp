@@ -60,6 +60,7 @@ static int servosUpdate(unsigned long now)
                 continue;
             uint16_t us = CRSF_to_US(crsfVal);
             // Flip the output around the mid value if inverted
+            // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
                 us = 3000U - us;
 
