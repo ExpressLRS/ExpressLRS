@@ -40,7 +40,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;!Arm",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
     tlmBandwidth
 };
 
