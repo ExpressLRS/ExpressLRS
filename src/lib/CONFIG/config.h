@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "elrs_eeprom.h"
+#include "options.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -12,8 +13,8 @@
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   5
-#define RX_CONFIG_VERSION   4
+#define TX_CONFIG_VERSION   6
+#define RX_CONFIG_VERSION   5
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -39,6 +40,9 @@ typedef struct {
     model_config_t  model_config[64];
     uint8_t         fanMode;
     uint8_t         motionMode;
+    uint8_t         dvrAux:5;
+    uint8_t         dvrStartDelay:3;
+    uint8_t         dvrStopDelay:3;
 } tx_config_t;
 
 class TxConfig
@@ -66,6 +70,9 @@ public:
     uint8_t GetPowerFanThreshold() const { return m_config.powerFanThreshold; }
     uint8_t  GetFanMode() const { return m_config.fanMode; }
     uint8_t  GetMotionMode() const { return m_config.motionMode; }
+    uint8_t  GetDvrAux() const { return m_config.dvrAux; }
+    uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
+    uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -86,12 +93,15 @@ public:
     void SetPowerFanThreshold(uint8_t powerFanThreshold);
     void SetFanMode(uint8_t fanMode);
     void SetMotionMode(uint8_t motionMode);
+    void SetDvrAux(uint8_t dvrAux);
+    void SetDvrStartDelay(uint8_t dvrStartDelay);
+    void SetDvrStopDelay(uint8_t dvrStopDelay);
 
     // State setters
     bool SetModelId(uint8_t modelId);
 
 private:
-    bool UpgradeEepromV1ToV4();
+    bool UpgradeEepromV5ToV6();
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -110,24 +120,31 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
-constexpr uint8_t PWM_MAX_CHANNELS = 8;
+constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
 typedef union {
     struct {
-        uint16_t failsafe:10; // us output during failsafe +988 (e.g. 512 here would be 1500us)
-        uint8_t inputChannel:4; // 0-based input channel
-        uint8_t inverted:1; // invert channel output
-        uint8_t unused:1;
+        unsigned failsafe:10;   // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        unsigned inputChannel:4; // 0-based input channel
+        unsigned inverted:1;     // invert channel output
+        unsigned mode:4;         // Output mode (eServoOutputMode)
+        unsigned narrow:1;       // Narrow output mode (half pulse width)
+        unsigned unused:13;
     } val;
-    uint16_t raw;
+    uint32_t raw;
 } rx_config_pwm_t;
 
 typedef struct {
     uint32_t    version;
     bool        isBound;
     uint8_t     uid[UID_LEN];
+    bool        onLoan;
+    uint8_t     loanUID[UID_LEN];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
+    uint8_t     power;
+    uint8_t     antennaMode;    //keep antenna mode in struct even in non diversity RX,
+                                // because turning feature diversity on and off would require change of RX config version.
     char        ssid[33];
     char        password[33];
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
@@ -140,16 +157,14 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound() const {
-        #ifdef MY_UID
-            return true;
-        #else
-            return m_config.isBound;
-        #endif
-    }
+    bool     GetIsBound() const { return firmwareOptions.hasUID || m_config.isBound; }
     const uint8_t* GetUID() const { return m_config.uid; }
+    bool GetOnLoan() const { return m_config.onLoan; }
+    const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
+    uint8_t GetPower() const { return m_config.power; }
+    uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
     const char* GetSSID() const { return m_config.ssid; }
     const char* GetPassword() const { return m_config.password; }
@@ -160,15 +175,19 @@ public:
     // Setters
     void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
+    void SetOnLoan(bool loaned);
+    void SetOnLoanUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
+    void SetPower(uint8_t power);
+    void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetSSID(const char *ssid);
     void SetPassword(const char *password);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted);
-    void SetPwmChannelRaw(uint8_t ch, uint16_t raw);
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
+    void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
 
 private:

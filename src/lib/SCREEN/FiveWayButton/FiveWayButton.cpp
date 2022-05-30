@@ -12,7 +12,11 @@
     #error "JOY_ADC_VALUES requires GPIO_PIN_JOYSTICK defined too"
 #endif
 
-constexpr uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
+#if defined(TARGET_UNIFIED_TX)
+uint16_t FiveWayButton::joyAdcValues[] = {0};
+#else
+uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
+#endif
 
 /**
  * @brief Calculate fuzz: half the distance to the next nearest neighbor for each joystick position.
@@ -32,6 +36,9 @@ constexpr uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
  */
 void FiveWayButton::calcFuzzValues()
 {
+#if defined(TARGET_UNIFIED_TX)
+    memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
+#endif
     for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
     {
         uint16_t closestDist = 0xffff;
@@ -58,37 +65,55 @@ void FiveWayButton::calcFuzzValues()
 
 int FiveWayButton::readKey()
 {
-#if defined(JOY_ADC_VALUES)
-    uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
-
-    constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
-        {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};
-    for (unsigned int i=0; i<N_JOY_ADC_VALUES - 1; ++i)
+#if defined(GPIO_PIN_JOYSTICK)
+    if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
-        if (value < (joyAdcValues[i] + fuzzValues[i]) &&
-            value > (joyAdcValues[i] - fuzzValues[i]))
-        return IDX_TO_INPUT[i];
+        uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
+
+        constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
+            {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};
+        for (unsigned int i=0; i<N_JOY_ADC_VALUES - 1; ++i)
+        {
+            if (value < (joyAdcValues[i] + fuzzValues[i]) &&
+                value > (joyAdcValues[i] - fuzzValues[i]))
+            return IDX_TO_INPUT[i];
+        }
+        return INPUT_KEY_NO_PRESS;
     }
-    return INPUT_KEY_NO_PRESS;
-#else
-    return digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |
-        digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |
-        digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
+    else
 #endif
+    {
+        return digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |
+            digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |
+            digitalRead(GPIO_PIN_FIVE_WAY_INPUT3);
+    }
+}
+
+FiveWayButton::FiveWayButton()
+{
+    isLongPressed = false;
+    keyInProcess = INPUT_KEY_NO_PRESS;
+    keyDownStart = 0;
 }
 
 void FiveWayButton::init()
 {
     isLongPressed = false;
     keyInProcess = INPUT_KEY_NO_PRESS;
+    keyDownStart = 0;
 
-#if defined(JOY_ADC_VALUES)
-    calcFuzzValues();
-#else
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT | PULLUP);
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT | PULLUP);
-    pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT | PULLUP);
+#if defined(GPIO_PIN_JOYSTICK)
+    if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
+    {
+        calcFuzzValues();
+    }
+    else
 #endif
+    {
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT_PULLUP);
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT_PULLUP);
+        pinMode(GPIO_PIN_FIVE_WAY_INPUT3, INPUT_PULLUP);
+    }
 }
 
 void FiveWayButton::update(int *keyValue, bool *keyLongPressed)

@@ -44,7 +44,8 @@ typedef enum
     bleJoystick,
     // Failure states go below here to display immediately
     FAILURE_STATES,
-    radioFailed
+    radioFailed,
+    hardwareUndefined
 } connectionState_e;
 
 /**
@@ -76,15 +77,17 @@ typedef enum
 
 typedef enum
 {
-    RATE_4HZ = 0,
-    RATE_25HZ,
-    RATE_50HZ,
-    RATE_100HZ,
-    RATE_150HZ,
-    RATE_200HZ,
-    RATE_250HZ,
-    RATE_500HZ,
-    RATE_1000HZ,
+    RATE_LORA_4HZ = 0,
+    RATE_LORA_25HZ,
+    RATE_LORA_50HZ,
+    RATE_LORA_100HZ,
+    RATE_LORA_150HZ,
+    RATE_LORA_200HZ,
+    RATE_LORA_250HZ,
+    RATE_LORA_500HZ,
+    RATE_DVDA_250HZ,
+    RATE_DVDA_500HZ,
+    RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
@@ -119,6 +122,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
+    uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
 #ifndef UNIT_TEST
@@ -130,32 +134,35 @@ typedef struct expresslrs_mod_settings_s
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 4
-#define RATE_DEFAULT 0
-#define RATE_BINDING 2  // 50Hz bind mode
+#define RATE_MAX 7      // 3xFLRC + 4xLoRa
+#define RATE_DEFAULT 0  // Default to FLRC 1000Hz
+#define RATE_BINDING 6  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
 
 
-#define SYNC_PACKET_SWITCH_OFFSET   1   // Switch encoding mode
-#define SYNC_PACKET_TLM_OFFSET      3   // Telemetry ratio
-#define SYNC_PACKET_RATE_OFFSET     6   // Rate index
+#define SYNC_PACKET_SWITCH_OFFSET   0   // Switch encoding mode
+#define SYNC_PACKET_TLM_OFFSET      2   // Telemetry ratio
+#define SYNC_PACKET_RATE_OFFSET     5   // Rate index
 #define SYNC_PACKET_SWITCH_MASK     0b11
 #define SYNC_PACKET_TLM_MASK        0b111
-#define SYNC_PACKET_RATE_MASK       0b11
+#define SYNC_PACKET_RATE_MASK       0b111
 
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 
-uint8_t TLMratioEnumToValue(uint8_t enumval);
-uint16_t RateEnumToHz(uint8_t eRate);
+uint8_t TLMratioEnumToValue(uint8_t const enumval);
+uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
+uint16_t RateEnumToHz(uint8_t const eRate);
 
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 uint8_t enumRatetoIndex(uint8_t rate);
+
+void initUID();
 
 #endif // UNIT_TEST
 

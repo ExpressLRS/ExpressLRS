@@ -83,9 +83,6 @@
 # Startup plays you own custom tune and crsf connect/disconnct do beep-boop
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
-#Comment this to disable diversity function
-#-DUSE_DIVERSITY
-
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
 
@@ -104,3 +101,14 @@
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
+
+# Prints a log line for every channels packet recieved at the RX:
+#    ID,Antenna,RSSI,LQ,SNR,PWR,FHSS,TimingOffset
+# The ID is generated on the TX side and overwrites CH1-CH4 and increments once for every
+# channels packet. Writes directly to Serial, does not require DEBUG_LOG.
+# Flash both TX & RX with this enbled to use it if the ID is required.
+#-DDEBUG_RCVR_LINKSTATS
+
+# Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
+# on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
+#-DDEBUG_FREQ_CORRECTION

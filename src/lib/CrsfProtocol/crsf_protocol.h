@@ -26,10 +26,6 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#ifndef RCVR_UART_BAUD
-#define RCVR_UART_BAUD 420000
-#endif
-
 #define CRSF_NUM_CHANNELS 16
 #define CRSF_CHANNEL_VALUE_MIN  172
 #define CRSF_CHANNEL_VALUE_1000 191
@@ -56,6 +52,8 @@
 
 #define CRSF_TELEMETRY_LENGTH_INDEX 1
 #define CRSF_TELEMETRY_TYPE_INDEX 2
+#define CRSF_TELEMETRY_FIELD_ID_INDEX 5
+#define CRSF_TELEMETRY_FIELD_CHUNK_INDEX 6
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
@@ -78,19 +76,12 @@
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
-static const unsigned int VTXtable[6][8] =
-    {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
-     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866},  /* Band B */
-     {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945},  /* Band E */
-     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880},  /* Ariwave */
-     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917},  /* Race */
-     {5621, 5584, 5547, 5510, 5473, 5436, 5399, 5362}}; /* LO Race */
-
 typedef enum
 {
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
+    CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
     CRSF_FRAMETYPE_RADIO_ID = 0x3A,
@@ -135,6 +126,7 @@ enum {
 enum {
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
     CRSF_FRAME_VARIO_PAYLOAD_SIZE = 2,
+    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 2,
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
     CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
@@ -197,6 +189,8 @@ typedef struct crsf_header_s
     uint8_t type;        // from crsf_frame_type_e
 } PACKED crsf_header_t;
 
+#define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
+
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_ext_header_s
 {
@@ -251,7 +245,7 @@ typedef struct deviceInformationPacket_s
     uint8_t parameterVersion;
 } PACKED deviceInformationPacket_t;
 
-#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + device_name_size)
+#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + strlen(device_name)+1)
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 

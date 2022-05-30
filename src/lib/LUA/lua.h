@@ -1,19 +1,22 @@
 #pragma once
 
-#ifdef TARGET_TX
 
 #include "targets.h"
 #include "crsf_protocol.h"
+#include <functional>
 
 enum lua_Flags{
-    LUA_FLAG_CONNECTED = 0, //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
+    //bit 0 and 1 are status flags, show up as the little icon in the lua top right corner
+    LUA_FLAG_CONNECTED = 0,
     LUA_FLAG_STATUS1,
-    LUA_FLAG_MODEL_MATCH,   //bit 2,3,4 are warning flags, change the tittle bar every 0.5s
+    //bit 2,3,4 are warning flags, change the tittle bar every 0.5s
+    LUA_FLAG_MODEL_MATCH,
     LUA_FLAG_ISARMED,
     LUA_FLAG_WARNING1,
-    LUA_FLAG_CRITICAL_WARNING1, //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
+    //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
+    LUA_FLAG_ERROR_CONNECTED,
+    LUA_FLAG_CRITICAL_WARNING1,
     LUA_FLAG_CRITICAL_WARNING2,
-    LUA_FLAG_CRITICAL_WARNING3
 };
 
 struct luaPropertiesCommon {
@@ -34,12 +37,22 @@ struct luaItem_selection {
     struct luaPropertiesCommon common;
     uint8_t value;
     const char* options; // selection options, separated by ';'
-    const char* const units;
+    const char* units;
 } PACKED;
+
+enum luaCmdStep_e : uint8_t {
+    lcsIdle = 0,
+    lcsClick = 1,       // user has clicked the command to execute
+    lcsExecuting = 2,   // command is executing
+    lcsAskConfirm = 3,  // command pending user OK
+    lcsConfirmed = 4,   // user has confirmed
+    lcsCancel = 5,      // user has requested cancel
+    lcsQuery = 6,       // UI is requesting status update
+};
 
 struct luaItem_command {
     struct luaPropertiesCommon common;
-    uint8_t step;           // state
+    luaCmdStep_e step;      // state
     const char *info;       // status info to display
 } PACKED;
 
@@ -92,6 +105,7 @@ struct luaItem_string {
 
 struct luaItem_folder {
     const struct luaPropertiesCommon common;
+    char* dyn_name;
 } PACKED;
 
 struct tagLuaElrsParams {
@@ -101,18 +115,23 @@ struct tagLuaElrsParams {
     char msg[1]; // null-terminated string
 } PACKED;
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, uint8_t step, const char *message);
-
-void suppressCurrentLuaWarning(void);
+#ifdef TARGET_TX
 void setLuaWarningFlag(lua_Flags flag, bool value);
 uint8_t getLuaWarningFlags(void);
+
+void luaRegisterDevicePingCallback(void (*callback)());
+#endif
+
+void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
+
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 
-void registerLUAPopulateParams(void (*populate)());
+typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
+void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
 
-typedef void (*luaCallback)(uint8_t id, uint8_t arg);
-void registerLUAParameter(void *definition, luaCallback callback = 0, uint8_t parent = 0);
+uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value);
 
 void sendLuaDevicePacket(void);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
@@ -133,4 +152,6 @@ inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) 
 inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
     luaStruct->value = newvalue;
 }
-#endif
+
+#define LUASYM_ARROW_UP "\xc0"
+#define LUASYM_ARROW_DN "\xc1"

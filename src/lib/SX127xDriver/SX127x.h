@@ -2,40 +2,25 @@
 
 #include "SX127xRegs.h"
 #include "SX127xHal.h"
+#include "SX12xxDriverCommon.h"
 
 #ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
-class SX127xDriver
+class SX127xDriver: public SX12xxDriverCommon
 {
 
 public:
     static SX127xDriver *instance;
 
-    ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
-
     ///////////Radio Variables////////
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
-
     bool headerExplMode = false;
     bool crcEnabled = false;
 
     //// Parameters ////
-    uint32_t currFreq;
-    uint8_t PayloadLength;
-    bool IQinverted;
     uint16_t timeoutSymbols;
     ///////////////////////////////////
-
-    /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
-    /////////////////////////////////
 
     ////////////////Configuration Functions/////////////
     SX127xDriver();
@@ -51,7 +36,6 @@ public:
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
-    void SetOutputPowerMax() { SetOutputPower(0b1111); };
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
     void SetRxTimeoutUs(uint32_t interval);
@@ -62,6 +46,7 @@ public:
     #define FREQ_STEP 61.03515625
     void SetFrequencyHz(uint32_t freq);
     void SetFrequencyReg(uint32_t freq);
+    bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
     void SetPPMoffsetReg(int32_t offset);
