@@ -434,14 +434,6 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         }
         else
         {
-            #if defined(TARGET_TX_FM30)
-            for (unsigned n=0; n<8; n++)
-            {
-                Serial.print(SerialInBuffer[n], HEX);
-                Serial.write(' ');
-            }
-            Serial.println();
-            #endif
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
