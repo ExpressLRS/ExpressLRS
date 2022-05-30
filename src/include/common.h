@@ -74,7 +74,7 @@ typedef enum
     RF_AIRMODE_PARAMETERS = 2
 } expresslrs_tlm_header_e;
 
-typedef enum
+typedef enum : uint8_t
 {
     RATE_LORA_4HZ = 0,
     RATE_LORA_25HZ,
@@ -102,12 +102,12 @@ typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
     expresslrs_RFrates_e enum_rate;
-    int32_t RXsensitivity;                // expected RF sensitivity based on
-    uint32_t TOA;                         // time on air in microseconds
-    uint32_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
-    uint32_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
-    uint32_t SyncPktIntervalDisconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
-    uint32_t SyncPktIntervalConnected;    // how often to send the PACKET_TYPE_SYNC (ms) when there we have a connection
+    int16_t RXsensitivity;                // expected RF sensitivity based on
+    uint16_t TOA;                         // time on air in microseconds
+    uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
+    uint16_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
+    uint16_t SyncPktIntervalDisconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
+    uint16_t SyncPktIntervalConnected;    // how often to send the PACKET_TYPE_SYNC (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
 
@@ -119,9 +119,9 @@ typedef struct expresslrs_mod_settings_s
     uint8_t bw;
     uint8_t sf;
     uint8_t cr;
-    uint32_t interval;          // interval in us seconds that corresponds to that frequency
     uint8_t TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint32_t interval;          // interval in us seconds that corresponds to that frequency
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
