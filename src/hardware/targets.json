@@ -158,6 +158,12 @@
                 "lua_name": "DupleTX",
                 "layout_file": "DIY 2400 DupleTX.json",
                 "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "dupletxesp": {
+                "product_name": "Generic Full-duplex 2.4GHz ESP TX",
+                "lua_name": "DupleTX ESP",
+                "layout_file": "DIY 2400 DupleTX ESP.json",
+                "upload_methods": ["uart", "wifi"]
             }
         },
         "rx_2400": {
