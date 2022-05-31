@@ -1019,10 +1019,11 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
-#if defined(GPIO_PIN_ANTENNA_SELECT)
-    pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
-#endif
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+    }
 #if defined(TARGET_RX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
