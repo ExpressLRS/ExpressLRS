@@ -2,7 +2,7 @@
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 #include "device.h"
-#include "ServoMgr_8266.h"
+#include "ServoMgr.h"
 
 enum eServoOutputMode {
     som50Hz,  // Hz modes are "Servo PWM" where the signal is 988-2012us

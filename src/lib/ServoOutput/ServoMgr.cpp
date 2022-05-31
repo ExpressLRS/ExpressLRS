@@ -1,9 +1,9 @@
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
-#include <ServoMgr_8266.h>
+#include <ServoMgr.h>
 #include <waveform_8266.h>
 
-ServoMgr_8266::ServoMgr_8266(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval)
+ServoMgr::ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval)
   : _pins(pins), _outputCnt(outputCnt), _refreshInterval(new uint16_t[outputCnt]), _activePwmChannels(0)
 {
     for (uint8_t ch=0; ch<_outputCnt; ++ch)
@@ -12,7 +12,7 @@ ServoMgr_8266::ServoMgr_8266(const uint8_t * const pins, const uint8_t outputCnt
     }
 }
 
-void ServoMgr_8266::initialize()
+void ServoMgr::initialize()
 {
     for (uint8_t ch=0; ch<_outputCnt; ++ch)
     {
@@ -25,31 +25,46 @@ void ServoMgr_8266::initialize()
     }
 }
 
-void ServoMgr_8266::writeMicroseconds(uint8_t ch, uint16_t valueUs)
+void ServoMgr::writeMicroseconds(uint8_t ch, uint16_t valueUs)
 {
     const uint8_t pin = _pins[ch];
     if (pin == PIN_DISCONNECTED)
         return;
     _activePwmChannels |= (1 << pin);
+#if defined(PLATFORM_ESP32)
+    ledcWrite(ch, map(valueUs, 0, _refreshInterval[ch], 0, 65535));
+#else
     startWaveform8266(pin, valueUs, _refreshInterval[ch] - valueUs);
+#endif
 }
 
-void ServoMgr_8266::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
+void ServoMgr::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
 {
     if (intervalUs != 0)
+    {
         _refreshInterval[ch] = intervalUs;
+#if defined(PLATFORM_ESP32)
+        const uint8_t pin = _pins[ch];
+        ledcSetup(ch, 1000000U / intervalUs, 16);
+        ledcAttachPin(pin, ch);
+#endif
+    }
 }
 
-void ServoMgr_8266::stopPwm(uint8_t ch)
+void ServoMgr::stopPwm(uint8_t ch)
 {
     const uint8_t pin = _pins[ch];
     if (pin == PIN_DISCONNECTED)
         return;
     _activePwmChannels &= ~(1 << pin);
+#if defined(PLATFORM_ESP32)
+    ledcDetachPin(pin);
+#else
     stopWaveform8266(pin);
+#endif
 }
 
-void ServoMgr_8266::stopAllPwm()
+void ServoMgr::stopAllPwm()
 {
     for (uint8_t ch=0; ch<_outputCnt; ++ch)
     {
@@ -60,7 +75,7 @@ void ServoMgr_8266::stopAllPwm()
     _activePwmChannels = 0;
 }
 
-void ServoMgr_8266::writeDigital(uint8_t ch, bool value)
+void ServoMgr::writeDigital(uint8_t ch, bool value)
 {
     const uint8_t pin = _pins[ch];
     if (pin == PIN_DISCONNECTED)
