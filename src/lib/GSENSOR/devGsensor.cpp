@@ -69,7 +69,8 @@ static int timeout()
     {
         float x, y, z;
         gsensor.getGSensorData(&x, &y, &z);
-        if (bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)   // Single bump while holding the radio antenna up
+        // Single bump while holding the radio antenna up and NOT armed is Loan/Bind
+        if (!IsArmed() && bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)
         {
             lastBumpCommand = now;
             if (connectionState == connected)
