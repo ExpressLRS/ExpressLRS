@@ -1,7 +1,7 @@
 #if defined(TARGET_TX)
 
 #include <dynpower.h>
-#include <MeanAccumulator.h>
+#include <common.h>
 
 // LQ-based boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
@@ -14,7 +14,6 @@
 #define DYNPOWER_RSSI_THRESH_DN 21        // RSSI > (Sensitivity+Dn) >- lower power
 
 // SNR-based increment defines
-#define DYNPOWER_LQ_THRESH_UP 80          // LQ threshold for raising one power level
 #define DYNPOWER_LQ_THRESH_DN 95          // Min LQ for lowering power using SNR-based power lowering
 
 template<uint8_t K, uint8_t SHIFT>
@@ -136,13 +135,6 @@ void DynamicPower_Update()
       DynamicPower_SetToConfigPower();
       return;
   }
-  // if LQ is dropped below a threshold, inc power by one step
-  if ((lq_avg <=DYNPOWER_LQ_THRESH_UP) && (powerHeadroom > 0))
-  {
-    DBGLN("+power (lq)");
-    POWERMGNT::incPower();
-    --powerHeadroom;
-  }  
 
   if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
@@ -190,7 +182,6 @@ void DynamicPower_Update()
       --powerHeadroom;
     }
   } // ^^ if SNR-based
-
 }
 
 #endif // TARGET_TX

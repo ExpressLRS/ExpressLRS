@@ -96,7 +96,6 @@ enum {
 
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
-#define DYNPOWER_MEAN_ACCUMULATOR_MUL 4
 
 typedef struct expresslrs_rf_pref_params_s
 {

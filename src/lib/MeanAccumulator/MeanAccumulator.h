@@ -1,5 +1,4 @@
 #pragma once
-#include <common.h>
 
 template <typename StorageType, typename IncrementType, IncrementType NoValueReturn>
 class MeanAccumulator
@@ -7,7 +6,7 @@ class MeanAccumulator
 public:
     void add(IncrementType val)
     {
-        _accumulator += (StorageType)val * DYNPOWER_MEAN_ACCUMULATOR_MUL;
+        _accumulator += val;
         ++_count;
     }
 
