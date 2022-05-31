@@ -30,7 +30,7 @@ static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
-    emptySpace
+    "mW"
 };
 #endif
 
@@ -152,9 +152,10 @@ static void registerLuaParameters()
 static int event()
 {
 
-#if defined(GPIO_PIN_ANTENNA_SELECT)
-  setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
-#endif
+  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+  }
 
 #ifdef POWER_OUTPUT_VALUES
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());

@@ -175,7 +175,7 @@ void test_crc14_flip5(void)
             for (int i = 0; i < 4; i++)
             {
                 int pos = random() % 50;
-                if (pos > 1) 
+                if (pos > 1)
                     pos += 6;
                 bytes[pos / 8] ^= 1 << (pos % 8);
             }
@@ -218,6 +218,10 @@ void test_crc8(void)
 
     TEST_ASSERT_EQUAL_MESSAGE((int)(crc & 0xFF), c, genMsg(bytes, sizeof(bytes)));
 }
+
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
 
 int main(int argc, char **argv)
 {

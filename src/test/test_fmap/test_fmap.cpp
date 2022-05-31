@@ -35,6 +35,10 @@ void test_fmap_consistent_bider(void)
     }
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();

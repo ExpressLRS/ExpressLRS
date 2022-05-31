@@ -17,6 +17,7 @@
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
+#include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
@@ -55,6 +56,9 @@ device_affinity_t ui_devices[] = {
 #ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
 #endif
+#ifdef HAS_SERVO_OUTPUT
+  {&ServoOut_device, 0},
+#endif
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -72,20 +76,6 @@ bool hardwareConfigured = true;
 #ifdef PLATFORM_ESP8266
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
-#endif
-
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-#include <Servo.h>
-#if defined(TARGET_UNIFIED_RX)
-uint8_t SERVO_COUNT = 0;
-uint8_t SERVO_PINS[MAX_SERVOS];
-static Servo *Servos[MAX_SERVOS];
-#else
-static constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-static Servo *Servos[ARRAY_SIZE(SERVO_PINS)];
-#endif
-static bool newChannelsAvailable;
 #endif
 
 /* CRSF_TX_SERIAL is used by CRSF output */
@@ -476,7 +466,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         uplinkLQ = LQCalcDVDA.getLQ();
         LQCalcDVDA.inc();
     }
-    
+
     crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
@@ -689,10 +679,10 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
     // No channels packets to the FC if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
-        if (SERVO_COUNT != 0)
+        #if defined(HAS_SERVO_OUTPUT)
+        if (OPT_HAS_SERVO_OUTPUT)
         {
-            newChannelsAvailable = true;
+            servoNewChannelsAvaliable();
         }
         else
         #endif
@@ -1011,7 +1001,7 @@ static void setupConfigAndPocCheck()
     bool doPowerCount = config.GetOnLoan() || !firmwareOptions.hasUID;
     if (doPowerCount)
     {
-        DBGLN("Doing power-up check for loan revocation and/or re-binding")
+        DBGLN("Doing power-up check for loan revocation and/or re-binding");
         // Increment the power on counter in eeprom
         config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
         config.Commit();
@@ -1040,10 +1030,11 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
-#if defined(GPIO_PIN_ANTENNA_SELECT)
-    pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
-#endif
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+    }
 #if defined(TARGET_RX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
@@ -1176,66 +1167,6 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
-static void servosUpdate(unsigned long now)
-{
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-    if (SERVO_COUNT == 0)
-    {
-        return;
-    }
-    // The ESP waveform generator is nice because it doesn't change the value
-    // mid-cycle, but it does busywait if there's already a change queued.
-    // Updating every 20ms minimizes the amount of waiting (0-800us cycling
-    // after it syncs up) where 19ms always gets a 1000-1800us wait cycling
-    static uint32_t lastUpdate;
-    const uint32_t elapsed = now - lastUpdate;
-    if (elapsed < 20)
-        return;
-
-    if (newChannelsAvailable)
-    {
-        newChannelsAvailable = false;
-        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-        {
-            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            uint16_t us = CRSF_to_US(crsf.GetChannelOutput(chConfig->val.inputChannel));
-            if (chConfig->val.inverted)
-                us = 3000U - us;
-
-            if (Servos[ch])
-                Servos[ch]->writeMicroseconds(us);
-            else if (us >= 988U && us <= 2012U)
-            {
-                // us might be out of bounds if this is a switch channel and it has not been
-                // received yet. Delay initializing the servo until the channel is valid
-                Servo *servo = new Servo();
-                Servos[ch] = servo;
-                servo->attach(SERVO_PINS[ch], 988U, 2012U, us);
-            }
-        } /* for each servo */
-    } /* if newChannelsAvailable */
-
-    else if (elapsed > 1000U && connectionState == connected)
-    {
-        // No update for 1s, go to failsafe
-        for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-        {
-            // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
-            uint16_t us = config.GetPwmChannel(ch)->val.failsafe + 988U;
-            if (Servos[ch])
-                Servos[ch]->writeMicroseconds(us);
-        }
-    }
-
-    else
-        return; // prevent updating lastUpdate
-
-    // need to sample actual millis at the end to account for any
-    // waiting that happened in Servo::writeMicroseconds()
-    lastUpdate = millis();
-#endif
-}
-
 static void updateBindingMode(unsigned long now)
 {
 #ifndef MY_UID
@@ -1283,6 +1214,7 @@ static void updateBindingMode(unsigned long now)
         config.Commit();
 
         INFOLN("Power on counter >=3, enter binding mode...");
+        config.SetIsBound(false);
         EnterBindingMode();
     }
 }
@@ -1369,17 +1301,6 @@ void setup()
         devicesInit();
 
         connectionState = hardwareUndefined;
-    }
-    else
-    {
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
-        SERVO_COUNT = GPIO_PIN_PWM_OUTPUTS_COUNT;
-        DBGLN("%d servos");
-        for (int i=0 ; i<SERVO_COUNT ; i++)
-        {
-            SERVO_PINS[i] = GPIO_PIN_PWM_OUTPUTS[i];
-        }
-        #endif
     }
     #endif
 
@@ -1473,7 +1394,6 @@ void loop()
     }
 
     cycleRfMode(now);
-    servosUpdate(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == disconnectPending) ||

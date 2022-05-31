@@ -4,6 +4,10 @@
 #include <unity.h>
 #include "eeprom_tests.h"
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 void setup() {
     // NOTE!!! Wait for >2 secs
     // if board doesn't support software reset via Serial.DTR/RTS

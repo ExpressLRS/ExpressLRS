@@ -11,10 +11,10 @@
     "power_rxen": 9,
     "power_txen": 10,
     "power_min": 0,
-    "power_high": 0,
-    "power_max": 0,
-    "power_default": 0,
+    "power_high": 3,
+    "power_max": 3,
+    "power_default": 3,
     "power_control": 0,
-    "power_values": [13],
+    "power_values": [-4,-2,2,5],
     "led": 16
 }
