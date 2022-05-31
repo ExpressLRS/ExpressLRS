@@ -93,21 +93,27 @@ jobs:
         cd src
         case ${{matrix.target}} in
           *2400* | FM30*)
-            export REG=-DRegulatory_Domain_ISM_2400
+            # release builds
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400 -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+            mkdir ~/artifacts/LBT/
+            mv .pio/build/${{ matrix.target }} ~/artifacts/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400 -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+            mkdir ~/artifacts/FCC/
+            mv .pio/build/${{ matrix.target }} ~/artifacts/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
             ;;
           *)
-            export REG=-DRegulatory_Domain_AU_915
+            # release build
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915 -DUSE_DIVERSITY" pio run -e ${{ matrix.target }}
+            mkdir ~/artifacts/FCC/
+            mv .pio/build/${{ matrix.target }} ~/artifacts/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
             ;;
         esac
-        # All the features
-        PLATFORMIO_BUILD_FLAGS="$REG -DUSE_DIVERSITY -DDEBUG_LOG" pio run -e ${{ matrix.target }}
-        # Minimal/default features
-        PLATFORMIO_BUILD_FLAGS="$REG" pio run -e ${{ matrix.target }}
-        mv .pio/build ~/artifacts/AU_915
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:
         name: ExpressLRS-${{ env.GITHUB_REF_SLUG_URL }}-${{ github.run_number }}
-        path: ~/artifacts/**/*.bin
+        path: |
+          ~/artifacts/**/*.bin
+          ~/artifacts/**/*.elrs
       continue-on-error: true

@@ -12,6 +12,7 @@
 #include <math.h>
 #include <sys/time.h>
 
+#define DEVICE_NAME "testing"
 #define RADIO_SX128X 1
 
 typedef uint8_t byte;
@@ -34,6 +35,14 @@ public:
     // Print methods
     virtual size_t write(uint8_t c) = 0;
     virtual size_t write(uint8_t *s, int l) = 0;
+
+    int print(const char *s) {return 0;}
+    int print(uint8_t s) {return 0;}
+    int print(uint8_t s, int radix) {return 0;}
+    int println() {return 0;}
+    int println(const char *s) {return 0;}
+    int println(uint8_t s) {return 0;}
+    int println(uint8_t s, int radix) {return 0;}
 };
 
 class HardwareSerial: public Stream {
@@ -62,6 +71,7 @@ public:
 };
 
 static HardwareSerial Serial;
+static Stream *SerialLogger = &Serial;
 
 inline void interrupts() {}
 inline void noInterrupts() {}
@@ -76,14 +86,10 @@ inline void delay(int32_t time) {
     usleep(time);
 }
 
-
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
-
-const char device_name[] = "testing";
-const uint8_t device_name_size = sizeof(device_name);
 
 #ifdef _WIN32
 #define random rand

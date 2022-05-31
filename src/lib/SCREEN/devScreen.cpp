@@ -4,9 +4,12 @@
 #include "device.h"
 #include "logging.h"
 
-#include "display.h"
+#include "OLED/oleddisplay.h"
+#include "TFT/tftdisplay.h"
 
 FiniteStateMachine state_machine(entry_fsm);
+
+Display *display;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
@@ -24,7 +27,6 @@ static bool is_pre_screen_flipped = false;
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 
-#ifdef HAS_FIVE_WAY_BUTTON
 static int handle(void)
 {
 #if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
@@ -40,11 +42,11 @@ static int handle(void)
 
     if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
     {
-        Display::doScreenBackLight(SCREEN_BACKLIGHT_OFF);
+        display->doScreenBackLight(SCREEN_BACKLIGHT_OFF);
     }
     else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
     {
-        Display::doScreenBackLight(SCREEN_BACKLIGHT_ON);
+        display->doScreenBackLight(SCREEN_BACKLIGHT_ON);
     }
     is_pre_screen_flipped = is_screen_flipped;
     if (is_screen_flipped)
@@ -54,6 +56,7 @@ static int handle(void)
 #endif
     uint32_t now = millis();
 
+#ifdef HAS_FIVE_WAY_BUTTON
     if (!IsArmed())
     {
         int key;
@@ -94,40 +97,58 @@ static int handle(void)
         state_machine.handleEvent(now, fsm_event);
     }
     else
+#endif
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
     return SCREEN_DURATION;
 }
-#else
-static int handle(void)
-{
-    return DURATION_NEVER;
-}
-#endif
 
 static void initialize()
 {
 #ifdef HAS_FIVE_WAY_BUTTON
     fivewaybutton.init();
 #endif
-    Display::init();
-    state_machine.start(millis(), getInitialState());
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
+    {
+        if (OPT_HAS_TFT_SCREEN)
+        {
+            display = new TFTDisplay();
+        }
+        else
+        {
+            display = new OLEDDisplay();
+        }
+        display->init();
+        state_machine.start(millis(), getInitialState());
+    }
 }
 
 static int start()
 {
-    return DURATION_IMMEDIATELY;
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_NEVER;
 }
 
 static int event()
 {
-    return handle();
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
+    {
+        return handle();
+    }
+    return DURATION_NEVER;
 }
 
 static int timeout()
 {
-    return handle();
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
+    {
+        return handle();
+    }
+    return DURATION_NEVER;
 }
 
 device_t Screen_device = {

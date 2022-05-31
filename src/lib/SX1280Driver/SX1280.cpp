@@ -44,6 +44,13 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
+#ifdef USE_SX1280_DCDC
+    #ifndef OPT_USE_SX1280_DCDC
+        #define OPT_USE_SX1280_DCDC true
+    #endif
+#else
+    #define OPT_USE_SX1280_DCDC false
+#endif
 
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
@@ -84,9 +91,10 @@ bool SX1280Driver::Begin()
     SetFrequencyReg(currFreq);                                                                                                    //Set Freq
     SetFIFOaddr(0x00, 0x00);                                                                                                      //Config FIFO addr
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE);                                               //set IRQ to both RXdone/TXdone on DIO1
-#if defined(USE_SX1280_DCDC)
-    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
-#endif
+    if (OPT_USE_SX1280_DCDC)
+    {
+        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
+    }
     return true;
 }
 
@@ -101,7 +109,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
     IQinverted = InvertIQ;
     packet_mode = mode;
     SetMode(SX1280_MODE_STDBY_XOSC);
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode);
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, 20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
         DBGLN("Config FLRC");
@@ -157,39 +165,33 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     }
 
     WORD_ALIGNED_ATTR uint8_t buf[3];
-    uint32_t switchDelay = 0;
-
     switch (OPmode)
     {
 
     case SX1280_MODE_SLEEP:
-        hal.WriteCommand(SX1280_RADIO_SET_SLEEP, 0x01);
+        hal.WriteCommand(SX1280_RADIO_SET_SLEEP, (uint8_t)0x01);
         break;
 
     case SX1280_MODE_CALIBRATION:
         break;
 
     case SX1280_MODE_STDBY_RC:
-        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC);
-        switchDelay = 1500;
+        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC, 1500);
         break;
 
     case SX1280_MODE_STDBY_XOSC:
-        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC);
-        switchDelay = 50;
+        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC, 50);
         break;
 
     case SX1280_MODE_FS:
-        hal.WriteCommand(SX1280_RADIO_SET_FS, 0x00);
-        switchDelay = 70;
+        hal.WriteCommand(SX1280_RADIO_SET_FS, (uint8_t)0x00, 70);
         break;
 
     case SX1280_MODE_RX:
         buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = timeout >> 8;
         buf[2] = timeout & 0xFF;
-        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf));
-        switchDelay = 100;
+        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), 100);
         break;
 
     case SX1280_MODE_TX:
@@ -197,8 +199,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = 0xFF; // no timeout set for now
         buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
-        hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf));
-        switchDelay = 100;
+        hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf), 100);
         break;
 
     case SX1280_MODE_CAD:
@@ -207,7 +208,6 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
     default:
         break;
     }
-    hal.BusyDelay(switchDelay);
 
     currOpmode = OPmode;
 }
@@ -219,7 +219,7 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
 
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {sf, bw, cr};
 
-    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams));
+    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), 25);
 
     switch (sf)
     {
@@ -252,7 +252,7 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
     buf[5] = 0x00;
     buf[6] = 0x00;
 
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), 20);
 
     // FEI only triggers in Lora mode when the header is present :(
     modeSupportsFei = HeaderType == SX1280_LORA_PACKET_VARIABLE_LENGTH;
@@ -261,7 +261,7 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
 void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 {
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {bw, cr, bt};
-    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams));
+    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), 110);
 }
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
@@ -284,7 +284,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[4] = PayloadLength;                     // PayloadLength
     buf[5] = (crc << 4);                        // CrcLength
     buf[6] = 0x08;                              // Must be whitening disabled
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), 30);
 
     // CRC seed (use dedicated cipher)
     buf[0] = (uint8_t)(crcSeed >> 8);

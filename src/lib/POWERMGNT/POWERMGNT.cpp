@@ -1,4 +1,5 @@
 #ifndef UNIT_TEST
+#include "targets.h"
 #include "common.h"
 #include "device.h"
 #include "POWERMGNT.h"
@@ -38,8 +39,18 @@ PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefin
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+static const int16_t *powerValues;
+#else
 #if defined(POWER_OUTPUT_VALUES)
-static int16_t powerValues[] = POWER_OUTPUT_VALUES;
+static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
+#if defined(POWER_OUTPUT_DAC) && !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
+static const int16_t powerValues868[] = POWER_OUTPUT_VALUES_868;
+extern bool isDomain868();
+#endif
+#else
+static const int16_t *powerValues = nullptr;
+#endif
 #endif
 
 static int8_t powerCaliValues[PWR_COUNT] = {0};
@@ -50,7 +61,7 @@ nvs_handle POWERMGNT::handle = 0;
 
 PowerLevels_e POWERMGNT::incPower()
 {
-    if (CurrentPower < MaxPower)
+    if (CurrentPower < getMaxPower())
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
@@ -170,6 +181,9 @@ void POWERMGNT::LoadCalibration()
 
 void POWERMGNT::init()
 {
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+    powerValues = POWER_OUTPUT_VALUES;
+#endif
 #if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
 #elif defined(POWER_OUTPUT_ANALOG)
@@ -186,9 +200,10 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
-#if defined(GPIO_PIN_FAN_EN)
-    pinMode(GPIO_PIN_FAN_EN, OUTPUT);
-#endif
+    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+    }
     LoadCalibration();
     setDefaultPower();
 }
@@ -199,9 +214,9 @@ PowerLevels_e POWERMGNT::getDefaultPower()
     {
         return MinPower;
     }
-    if (MaxPower < DefaultPower)
+    if (getMaxPower() < DefaultPower)
     {
-        return MaxPower;
+        return getMaxPower();
     }
     return DefaultPower;
 }
@@ -220,29 +235,41 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MinPower;
     }
-    else if (Power > MaxPower)
+    else if (Power > getMaxPower())
     {
-        Power = MaxPower;
+        Power = getMaxPower();
     }
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
-    TxDAC.setPower(powerValues[Power - MinPower]);
+    int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];
+    TxDAC.setPower(mV);
 #elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_DACWRITE)
+#elif defined(POWER_OUTPUT_DACWRITE) && !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_FIXED)
-    Radio.SetOutputPower(POWER_OUTPUT_FIXED);
-#elif defined(POWER_OUTPUT_VALUES)
-    CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
-    Radio.SetOutputPower(CurrentSX1280Power);
 #else
-#error "[ERROR] Unknown power management!"
+    #if defined(TARGET_UNIFIED_TX)
+    if (POWER_OUTPUT_DACWRITE)
+    {
+        Radio.SetOutputPower(0b0000);
+        dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+    }
+    else
+    #endif
+    if (POWER_OUTPUT_FIXED != -99)
+    {
+        Radio.SetOutputPower(POWER_OUTPUT_FIXED);
+    }
+    else if (powerValues != nullptr)
+    {
+        CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
+        Radio.SetOutputPower(CurrentSX1280Power);
+    }
 #endif
     CurrentPower = Power;
     devicesTriggerEvent();
