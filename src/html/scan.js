@@ -46,7 +46,7 @@ function enumSelectGenerate(id, val, arOptions)
 function updatePwmSettings(arPwm)
 {
     if (arPwm === undefined) {
-        _('pwm_tab').style.display = 'none';
+        if(_('pwm_tab')) _('pwm_tab').style.display = 'none';
         return;
     }
     // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
