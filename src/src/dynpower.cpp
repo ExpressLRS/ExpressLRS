@@ -31,7 +31,7 @@ private:
 };
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
-static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
+static MeanAccumulator<int32_t, int8_t, -128, 1> dynamic_power_mean_rssi;
 static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
 
 extern bool IsArmed();
@@ -178,7 +178,7 @@ void DynamicPower_Update()
       DBGLN("+power (snr)");
       POWERMGNT::incPower();
       // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
-      snr += 2;
+      snr += 2*4;
       --powerHeadroom;
     }
   } // ^^ if SNR-based

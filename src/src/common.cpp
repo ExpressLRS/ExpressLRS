@@ -17,10 +17,10 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {3, RADIO_TYPE_SX127x_LORA, RATE_LORA_25HZ, SX127x_BW_500_00_KHZ, SX127x_SF_9, SX127x_CR_4_7, 40000, TLM_RATIO_NO_TLM, 2, 10, 8}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
-    {0, RATE_LORA_200HZ, -112,  4380, 3000, 2500, 600, 5000, -1,  2},
-    {1, RATE_LORA_100HZ, -117,  8770, 3500, 2500, 600, 5000, -3,  1},
-    {2, RATE_LORA_50HZ,  -120, 18560, 4000, 2500, 600, 5000, -4,  0},
-    {3, RATE_LORA_25HZ,  -123, 29950, 6000, 4000,   0, 5000, -5, -1}};
+    {0, RATE_LORA_200HZ, -112,  4380, 3000, 2500, 600, 5000, 0*4,  3*4},
+    {1, RATE_LORA_100HZ, -117,  8770, 3500, 2500, 600, 5000, 0*4,  2*4},
+    {2, RATE_LORA_50HZ,  -120, 18560, 4000, 2500, 600, 5000, -2*4, 1*4},
+    {3, RATE_LORA_25HZ,  -123, 29950, 6000, 4000,   0, 5000, -4*4, 0*4}};
 #endif
 
 #if defined(RADIO_SX128X)
@@ -39,10 +39,10 @@ expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {0, RATE_FLRC_1000HZ, -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
     {1, RATE_FLRC_500HZ,  -104,   389, 2500, 2500,  3, 5000, DYNPOWER_SNR_THRESH_NONE, DYNPOWER_SNR_THRESH_NONE},
-    {2, RATE_LORA_500HZ,  -105,  1665, 2500, 2500,  3, 5000, 4, 9},
-    {3, RATE_LORA_250HZ,  -108,  3300, 3000, 2500,  6, 5000, 2, 9},
-    {4, RATE_LORA_150HZ,  -112,  5871, 3500, 2500, 10, 5000, -1, 8},
-    {5, RATE_LORA_50HZ,   -117, 18443, 4000, 2500,  0, 5000, -2, 6}};
+    {2, RATE_LORA_500HZ,  -105,  1665, 2500, 2500,  3, 5000, 4*4, 9*4},
+    {3, RATE_LORA_250HZ,  -108,  3300, 3000, 2500,  6, 5000, 2*4, 9*4},
+    {4, RATE_LORA_150HZ,  -112,  5871, 3500, 2500, 10, 5000, -1*4, 8*4},
+    {5, RATE_LORA_50HZ,   -117, 18443, 4000, 2500,  0, 5000, -2*4, 6*4}};
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
