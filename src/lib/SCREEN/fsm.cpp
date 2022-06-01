@@ -103,21 +103,25 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
                     }
                     break;
                 case ACTION_NEXT:
-                    current_index++;
-                    if (current_fsm[current_index].state == STATE_LAST)
-                    {
-                        current_index = 0;
-                    }
+                    do {
+                        current_index++;
+                        if (current_fsm[current_index].state == STATE_LAST)
+                        {
+                            current_index = 0;
+                        }
+                    } while (current_fsm[current_index].available && !current_fsm[current_index].available());
                     break;
                 case ACTION_PREVIOUS:
-                    if (current_index == 0)
-                    {
-                        while (current_fsm[current_index].state != STATE_LAST)
+                    do {
+                        if (current_index == 0)
                         {
-                            current_index++;
+                            while (current_fsm[current_index].state != STATE_LAST)
+                            {
+                                current_index++;
+                            }
                         }
-                    }
-                    current_index--;
+                        current_index--;
+                    } while (current_fsm[current_index].available && !current_fsm[current_index].available());
                     break;
             }
             current_fsm[current_index].entry(init);

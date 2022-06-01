@@ -10,8 +10,9 @@
 #include "lua.h"
 #include "OTA.h"
 #include "hwTimer.h"
+#include "FHSS.h"
 
-
+static char version_domain[20+1+6+1];
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
@@ -21,13 +22,15 @@ static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 
+#define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
+
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
     "25Hz;50Hz;100Hz;200Hz",
 #elif defined(RADIO_SX128X)
-    "50Hz;150Hz;250Hz;500Hz;F500;F1000",
+    "50Hz;150Hz;250Hz;500Hz;D250;D500;F1000",
 #else
     #error Invalid radio configuration!
 #endif
@@ -104,7 +107,7 @@ static struct luaItem_string luaInfo = {
 };
 
 static struct luaItem_string luaELRSversion = {
-    {version, CRSF_INFO},
+    {version_domain, CRSF_INFO},
     commit
 };
 
@@ -127,7 +130,6 @@ static struct luaItem_command luaRxWebUpdate = {
     emptySpace
 };
 
-#if defined(USE_TX_BACKPACK)
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
     lcsIdle, // step
@@ -139,7 +141,6 @@ static struct luaItem_command luaVRxBackpackUpdate = {
     lcsIdle, // step
     emptySpace
 };
-#endif // USE_TX_BACKPACK
 //---------------------------- WiFi -----------------------------
 
 #if defined(PLATFORM_ESP32)
@@ -203,6 +204,30 @@ struct luaItem_selection luaBluetoothTelem = {
 };
 #endif
 
+//---------------------------- BACKPACK ------------------
+static struct luaItem_folder luaBackpackFolder = {
+    {"Backpack", CRSF_FOLDER},
+};
+
+static struct luaItem_selection luaDvrAux = {
+    {"DVR AUX", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;AUX1;!AUX1;AUX2;!AUX2;AUX3;!AUX3;AUX4;!AUX4;AUX5;!AUX5;AUX6;!AUX6;AUX7;!AUX7;AUX8;!AUX8;AUX9;!AUX9;AUX10;!AUX10",
+    emptySpace};
+
+static struct luaItem_selection luaDvrStartDelay = {
+    {"DVR Srt Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace};
+
+static struct luaItem_selection luaDvrStopDelay = {
+    {"DVR Stp Dly", CRSF_TEXT_SELECTION},
+    0, // value
+    "0s;5s;15s;30s;45s;1min;2min",
+    emptySpace};
+
+//---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
 
@@ -234,12 +259,13 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
   while (c[i] != '\0')
   {
     //treat symbols as separator except : !,",#,$,%,&,',(,),*,+,,,-,.,/ as these would probably inside our label names
-    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A')) {
+    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A'))
+    {
       SeparatorCount++;
       arrayCount++;
       //if found separator is equal to the nth(index) requested separator,
       //return the start of the labelSpace
-      if(SeparatorCount == index+1){
+      if (SeparatorCount == index+1) {
         return returnvalue;
       } else {
         returnvalue = arrayCount;
@@ -255,25 +281,33 @@ static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
 }
 
 static void luadevUpdateRateSensitivity() {
-  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity,rateSensitivity+2,10);
-  strcat(rateSensitivity,"dBm)");
+  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
+  strcat(rateSensitivity, "dBm)");
 }
 
 static void luadevUpdateModelID() {
   itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
-  strcat(modelMatchUnit,")");
+  strcat(modelMatchUnit, ")");
 }
 
-static void luadevUpdateTlmBandwidth() {
-  if((expresslrs_tlm_ratio_e)config.GetTlm()){
-  tlmBandwidth[0] = ' ';
-  uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
-  uint32_t tlmRatio = TLMratioEnumToValue((expresslrs_tlm_ratio_e)config.GetTlm());
-  uint32_t bandwidthValue = ((float)hz / tlmRatio) *1/2*5*8;
-  itoa(bandwidthValue,tlmBandwidth+2,10);
-  strcat(tlmBandwidth,"bps)");
-  } else {
+static void luadevUpdateTlmBandwidth()
+{
+  expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
+  if (eRatio == TLM_RATIO_NO_TLM)
+  {
     tlmBandwidth[0] = '\0';
+  }
+  else
+  {
+    tlmBandwidth[0] = ' ';
+
+    uint16_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
+    uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
+    uint32_t bandwidthValue = ELRS_TELEMETRY_BYTES_PER_CALL * 8U * burst * hz / ratiodiv / (burst + 1);
+
+    itoa(bandwidthValue, &tlmBandwidth[2], 10);
+    strcat(tlmBandwidth, "bps)");
   }
 }
 
@@ -295,7 +329,7 @@ static void luadevGeneratePowerOpts()
 
   // Continue until after than MAXth item and drop a null in the orginal
   // string on the semicolon (not after like the previous loop)
-  while (pwr <= MaxPower)
+  while (pwr <= POWERMGNT::getMaxPower())
   {
     // If out still points to a semicolon from the last loop move past it
     if (*out)
@@ -378,11 +412,11 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
       RxWiFiReadyToSend = true;
     }
 #if defined(USE_TX_BACKPACK)
-    else if ((void *)item == (void *)&luaTxBackpackUpdate)
+    else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       TxBackpackWiFiReadyToSend = true;
     }
-    else if ((void *)item == (void *)&luaVRxBackpackUpdate)
+    else if ((void *)item == (void *)&luaVRxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       VRxBackpackWiFiReadyToSend = true;
     }
@@ -395,42 +429,63 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
   }
 }
 
-static void updateFolderName(){
-  
-  //power folder name
+static void updateFolderName_TxPower()
+{
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2,pwrFolderDynamicName); // start writing name after the 2nd space
+  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2, pwrFolderDynamicName); // start writing name after the 2nd space
+
+  // Power Level
   pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
   pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
-  if(txPwrDyn){
+
+  // Dynamic Power
+  if (txPwrDyn)
+  {
     pwrFolderDynamicName[pwrFolderLabelOffset++] = folderNameSeparator[0];
     pwrFolderLabelOffset += findLuaSelectionLabel(&luaDynamicPower, &pwrFolderDynamicName[pwrFolderLabelOffset], txPwrDyn);
   }
+
   pwrFolderDynamicName[pwrFolderLabelOffset++] = ')';
   pwrFolderDynamicName[pwrFolderLabelOffset] = '\0';
-  //vtx folder
+}
+
+static void updateFolderName_VtxAdmin()
+{
   uint8_t vtxBand = config.GetVtxBand();
-  if(vtxBand){
+  if (vtxBand)
+  {
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
     uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // start writing name after the 2nd space
     vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
+
+    // Band
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
     vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
+
+    // Channel
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxChannel, &vtxFolderDynamicName[vtxFolderLabelOffset], config.GetVtxChannel());
+
+    // VTX Power
     uint8_t vtxPwr = config.GetVtxPower();
     //if power is no-change (-), don't show, also hide pitmode
-    if(vtxPwr){
+    if (vtxPwr)
+    {
       vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
       vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPwr, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPwr);
-      
+
+      // Pit Mode
       uint8_t vtxPit = config.GetVtxPitmode();
       //if pitmode is off, don't show
       //show pitmode AuxSwitch or show P if not OFF
-      if(vtxPit != 0){
-        if(vtxPit != 1){
+      if (vtxPit != 0)
+      {
+        if (vtxPit != 1)
+        {
           vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
           vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxPit, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxPit);
-        } else {
+        }
+        else
+        {
           vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
           vtxFolderDynamicName[vtxFolderLabelOffset++] = 'P';
         }
@@ -438,138 +493,200 @@ static void updateFolderName(){
     }
     vtxFolderDynamicName[vtxFolderLabelOffset++] = ')';
     vtxFolderDynamicName[vtxFolderLabelOffset] = '\0';
-  } else {
-  //don't show vtx settings if band is OFF
+  }
+  else
+  {
+    //don't show vtx settings if band is OFF
     luaVtxFolder.dyn_name = NULL;
   }
 }
 
-static void registerLuaParameters()
-{ 
-  registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    if ((arg < RATE_MAX) && (arg >= 0))
-    {
-      uint8_t currentRate = RATE_MAX - 1 - arg;
-      currentRate = adjustPacketRateForBaud(currentRate);
-      config.SetRate(currentRate);
-    }
-  });
-  registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
-    {
-      config.SetTlm((expresslrs_tlm_ratio_e)arg);
-    }
-  });
-  #if defined(TARGET_TX_FM30)
-  registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
-    devicesTriggerEvent();
-  });
-  #endif
-  registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    // Only allow changing switch mode when disconnected since we need to guarantee
-    // the pack and unpack functions are matched
-    if (connectionState == disconnected)
-    {
-      // +1 to the mode because 1-bit was mode 0 and has been removed
-      // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-      uint32_t newSwitchMode = (arg + 1) & 0b11;
-      config.SetSwitchMode(newSwitchMode);
-      OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
-    }
-    else
-      setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-  });
-  registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    bool newModelMatch = arg;
-    config.SetModelMatch(newModelMatch);
-    if (connectionState == connected) {
-      mspPacket_t msp;
-      msp.reset();
-      msp.makeCommand();
-      msp.function = MSP_SET_RX_CONFIG;
-      msp.addByte(MSP_ELRS_MODEL_ID);
-      msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
-      CRSF::AddMspMessage(&msp);
-    }
-    luadevUpdateModelID();
-  });
+/***
+ * @brief: Update the luaBadGoodString with the current bad/good count
+ * This item is hidden on our Lua and only displayed in other systems that don't poll our status
+ * Called from luaRegisterDevicePingCallback
+ ****/
+static void luadevUpdateBadGood()
+{
+  itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
+  strcat(luaBadGoodString, "/");
+  itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+}
 
-  // POWER folder
-  registerLUAParameter(&luaPowerFolder);
-  luadevGeneratePowerOpts();
-  registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
-    updateFolderName();
-  }, luaPowerFolder.common.id);
-  registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetDynamicPower(arg > 0);
-    config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
-    updateFolderName();
-  }, luaPowerFolder.common.id);
-#if defined(GPIO_PIN_FAN_EN)
-  registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
-    config.SetPowerFanThreshold(arg);
-  }, luaPowerFolder.common.id);
-#endif
+/***
+ * @brief: Update the dynamic strings used for folder names and labels
+ ***/
+void luadevUpdateFolderNames()
+{
+  updateFolderName_TxPower();
+  updateFolderName_VtxAdmin();
+
+  // These aren't folder names, just string labels slapped in the units field generally
+  luadevUpdateRateSensitivity();
+  luadevUpdateTlmBandwidth();
+}
+
+static void registerLuaParameters()
+{
+  if (HAS_RADIO) {
+    registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if ((arg < RATE_MAX) && (arg >= 0))
+      {
+        uint8_t currentRate = RATE_MAX - 1 - arg;
+        currentRate = adjustPacketRateForBaud(currentRate);
+        config.SetRate(currentRate);
+      }
+    });
+    registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+      {
+        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+      }
+    });
+    #if defined(TARGET_TX_FM30)
+    registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
+      devicesTriggerEvent();
+    });
+    #endif
+    registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      // Only allow changing switch mode when disconnected since we need to guarantee
+      // the pack and unpack functions are matched
+      if (connectionState == disconnected)
+      {
+        // +1 to the mode because 1-bit was mode 0 and has been removed
+        // The modes should be updated for 1.1RC so mode 0 can be smHybrid
+        uint32_t newSwitchMode = (arg + 1) & 0b11;
+        config.SetSwitchMode(newSwitchMode);
+        OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
+      }
+      else
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+    });
+    registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      bool newModelMatch = arg;
+      config.SetModelMatch(newModelMatch);
+      if (connectionState == connected)
+      {
+        mspPacket_t msp;
+        msp.reset();
+        msp.makeCommand();
+        msp.function = MSP_SET_RX_CONFIG;
+        msp.addByte(MSP_ELRS_MODEL_ID);
+        msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
+        CRSF::AddMspMessage(&msp);
+      }
+      luadevUpdateModelID();
+    });
+
+    // POWER folder
+    registerLUAParameter(&luaPowerFolder);
+    luadevGeneratePowerOpts();
+    registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
+    }, luaPowerFolder.common.id);
+    registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetDynamicPower(arg > 0);
+      config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
+    }, luaPowerFolder.common.id);
+  }
+  if (GPIO_PIN_FAN_EN != UNDEF_PIN) {
+    registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
+      config.SetPowerFanThreshold(arg);
+    }, luaPowerFolder.common.id);
+  }
 #if defined(Regulatory_Domain_EU_CE_2400)
-  registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
+  if (HAS_RADIO) {
+    registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
+  }
 #endif
-  // VTX folder
-  registerLUAParameter(&luaVtxFolder);
-  registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetVtxBand(arg);
-    updateFolderName();
-  }, luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetVtxChannel(arg);
-    updateFolderName();
-  }, luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetVtxPower(arg);
-    updateFolderName();
-  }, luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    config.SetVtxPitmode(arg);
-    updateFolderName();
-  }, luaVtxFolder.common.id);
-  registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
+  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
+    // VTX folder
+    registerLUAParameter(&luaVtxFolder);
+    registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetVtxBand(arg);
+    }, luaVtxFolder.common.id);
+    registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetVtxChannel(arg);
+    }, luaVtxFolder.common.id);
+    registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetVtxPower(arg);
+    }, luaVtxFolder.common.id);
+    registerLUAParameter(&luaVtxPit, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      config.SetVtxPitmode(arg);
+    }, luaVtxFolder.common.id);
+    registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
+  }
   // WIFI folder
-  registerLUAParameter(&luaWiFiFolder);
+
   #if defined(PLATFORM_ESP32)
+  registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
+  #else
+  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
+    registerLUAParameter(&luaWiFiFolder);
+  }
   #endif
-  registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
-  #if defined(USE_TX_BACKPACK)
-  registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
-  registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
-  #endif // USE_TX_BACKPACK
+  if (HAS_RADIO) {
+    registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
+
+    if (OPT_USE_TX_BACKPACK) {
+      registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+      registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
+      // Backpack folder
+      registerLUAParameter(&luaBackpackFolder);
+      registerLUAParameter(
+          &luaDvrAux, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrAux(arg);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaDvrStartDelay, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrStartDelay(arg);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaDvrStopDelay, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetDvrStopDelay(arg);
+          },
+          luaBackpackFolder.common.id);
+    }
+  }
 
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
 
-  registerLUAParameter(&luaBind, &luahandSimpleSendCmd);
+  if (HAS_RADIO) {
+    registerLUAParameter(&luaBind, &luahandSimpleSendCmd);
+  }
 
   registerLUAParameter(&luaInfo);
+  if (strlen(version) < 21) {
+    strlcpy(version_domain, version, 21);
+    strlcat(version_domain, " ", sizeof(version_domain));
+  } else {
+    strlcpy(version_domain, version, 18);
+    strlcat(version_domain, "... ", sizeof(version_domain));
+  }
+  strlcat(version_domain, FHSSconfig->domain, sizeof(version_domain));
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
 
 static int event()
 {
-    uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-    luadevUpdateRateSensitivity();
-    setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
-    luadevUpdateTlmBandwidth();
-    setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-    setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
-    luadevUpdateModelID();
-    setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
-    setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
-#if defined(GPIO_PIN_FAN_EN)
-  setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
-#endif
+  uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  luadevUpdateModelID();
+  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+  if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
+  }
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower, dynamic);
@@ -578,9 +695,15 @@ static int event()
   setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
-  #if defined(TARGET_TX_FM30)
-    setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
-  #endif
+  if (OPT_USE_TX_BACKPACK)
+  {
+    setLuaTextSelectionValue(&luaDvrAux, config.GetDvrAux());
+    setLuaTextSelectionValue(&luaDvrStartDelay, config.GetDvrStartDelay());
+    setLuaTextSelectionValue(&luaDvrStopDelay, config.GetDvrStopDelay());
+  }
+#if defined(TARGET_TX_FM30)
+  setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
+#endif
   return DURATION_IMMEDIATELY;
 }
 
@@ -596,17 +719,12 @@ static int timeout()
 static int start()
 {
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
-  luadevUpdateModelID();
-  luadevUpdateRateSensitivity();
-  luadevUpdateTlmBandwidth();
   registerLuaParameters();
-  registerLUAPopulateParams([](){
-    itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
-    strcat(luaBadGoodString, "/");
-    itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
-    setLuaStringValue(&luaInfo, luaBadGoodString);
-  });
-  updateFolderName();
+
+  setLuaStringValue(&luaInfo, luaBadGoodString);
+  luaRegisterDevicePingCallback(&luadevUpdateBadGood);
+
+  luadevUpdateFolderNames();
   event();
   return DURATION_IMMEDIATELY;
 }

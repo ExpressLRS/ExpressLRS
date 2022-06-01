@@ -15,8 +15,6 @@
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
-static const char thisCommit[] = {LATEST_COMMIT, 0};
-static const char thisVersion[] = {LATEST_VERSION, 0};
 static const char emptySpace[1] = {0};
 static char modelString[] = "000";
 
@@ -30,11 +28,11 @@ static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
-    emptySpace
+    "mW"
 };
 #endif
 
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
+#if defined(GPIO_PIN_ANTENNA_SELECT)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
@@ -51,8 +49,8 @@ static struct luaItem_string luaModelNumber = {
 };
 
 static struct luaItem_string luaELRSversion = {
-    {thisVersion, CRSF_INFO},
-    thisCommit
+    {version, CRSF_INFO},
+    commit
 };
 
 //----------------------------Info-----------------------------------
@@ -116,11 +114,12 @@ static void luadevGeneratePowerOpts()
 static void registerLuaParameters()
 {
 
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-  registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetAntennaMode(arg);
-  });
-#endif
+  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  {
+    registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetAntennaMode(arg);
+    });
+  }
 #ifdef POWER_OUTPUT_VALUES
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -151,9 +150,10 @@ static void registerLuaParameters()
 static int event()
 {
 
-#if defined(GPIO_PIN_ANTENNA_SELECT) && defined(USE_DIVERSITY)
-  setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
-#endif
+  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+  }
 
 #ifdef POWER_OUTPUT_VALUES
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
