@@ -15,9 +15,13 @@
 		<h1>Welcome to the <b>ExpressLRS</b> target configuration page<br />
 		</h1>
 	</header>
-
-	<div class="mui-container-fluid">
-		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+	<br>
+	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
+		<div id="custom_config" class="mui-panel" style="display:none; background-color: #FFC107;">
+			This hardware configuration has been customised. This can be safely ignored if this is a custom hardware build or for testing purposes.<br>
+			You can <a download href="/hardware.json">download</a> the configuration or <a href="/reset?hardware">reset</a> to pre-configured defaults and reboot.
+		</div>
+		<div class="mui-panel">
 			<form id="notused" action="" method="POST" enctype="multipart/form-data">
 				<fieldset>
 					<input type="hidden" id="MAX_FILE_SIZE" name="MAX_FILE_SIZE" value="10000" />
@@ -29,8 +33,9 @@
 				</fieldset>
 			</form>
 		</div>
-		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+		<div class="mui-panel">
 			<form id='upload_hardware' method='POST' action="/hardware">
+				<input type="hidden" id="customised" name="customised" value="true"/>
 				<table>
 					<tr><td colspan='2'><b>CRSF Serial Pins</td></tr>
 					<tr><td width="30"></td><td>RX pin</td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td></tr>

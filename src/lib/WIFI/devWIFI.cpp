@@ -254,6 +254,21 @@ static void HandleReboot(AsyncWebServerRequest *request)
   request->client()->close();
   rebootTime = millis() + 100;
 }
+
+static void HandleReset(AsyncWebServerRequest *request)
+{
+  if (request->hasArg("hardware")) {
+    SPIFFS.remove("/hardware.json");
+  }
+  if (request->hasArg("options")) {
+    SPIFFS.remove("/options.json");
+  }
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
+}
 #endif
 
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
@@ -716,6 +731,7 @@ static void startServices()
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
+    server.on("/reset", HandleReset);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);

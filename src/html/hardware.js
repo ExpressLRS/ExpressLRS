@@ -72,6 +72,7 @@ function updateHardwareSettings(data) {
       }
     }
   }
+  if (data.customised) _('custom_config').style.display = 'block';
 }
 
 function fileDragHover(e) {
