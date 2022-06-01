@@ -49,16 +49,30 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;
 
+/******** Decimate 11bit to 10bit functions ********/
+typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
+
+static uint32_t ICACHE_RAM_ATTR Decimate11to10_Limit(uint32_t ch11bit)
+{
+    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_MIN/MAX
+    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+}
+
+static uint32_t ICACHE_RAM_ATTR Decimate11to10_Div2(uint32_t ch11bit)
+{
+    // Simple divide-by-2 to discard the bit
+    return ch11bit >> 1;
+}
+
 /***
  * @brief: Pack 4x 11-bit channel array into 4x 10 bit channel struct
  * @desc: Values are packed little-endianish such that bits A987654321 -> 87654321, 000000A9
- *        which is compatible with the 10-bit CRSF subset RC frame structure (0x17)
- *        in Betaflight
+ *        which is compatible with the 10-bit CRSF subset RC frame structure (0x17) in
+ *        Betaflight, but depends on which decimate function is used if it is legacy or CRSFv3 10-bit
  *        destChannels4x10 must be zeroed before this call, the channels are ORed into it
  ***/
-static void ICACHE_RAM_ATTR PackUInt11ToChannels4x10(uint32_t const * const src, OTA_Channels_4x10 * const destChannels4x10)
+static void ICACHE_RAM_ATTR PackUInt11ToChannels4x10(uint32_t const * const src, OTA_Channels_4x10 * const destChannels4x10, Decimate11to10_fn decimate)
 {
-    const unsigned SRC_PRECISION = 11; // number of bits from each source, must be >DEST
     const unsigned DEST_PRECISION = 10; // number of bits for each dest, must be <SRC
     uint8_t *dest = (uint8_t *)destChannels4x10;
     *dest = 0;
@@ -66,7 +80,7 @@ static void ICACHE_RAM_ATTR PackUInt11ToChannels4x10(uint32_t const * const src,
     for (unsigned ch=0; ch<4; ++ch)
     {
         // Convert to DEST_PRECISION value
-        unsigned chVal = (src[ch] >> (SRC_PRECISION - DEST_PRECISION)); // & 0x3ff;
+        unsigned chVal = decimate(src[ch]);
 
         // Put the low bits in any remaining dest capacity
         *dest++ |= chVal << destShift;
@@ -88,8 +102,15 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     ota4->dbg_linkstats.packetNum = packetCnt++;
 #else
-    // CRSF input is 11bit and OTA will carry only 10b => LSB is dropped
-    PackUInt11ToChannels4x10(&crsf->ChannelData[0], &ota4->rc.ch);
+    // CRSF input is 11bit and OTA will carry only 10bit. Discard the Extended Limits (E.Limits)
+    // range and use the full 10bits to carry only 998us - 2012us
+    // uint32_t ch11bit[4];
+    // for (unsigned ch=0; ch<4; ++ch)
+    // {
+    //     uint32_t chval = constrain(crsf->ChannelData[ch], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+    //     ch11bit[ch] = fmap(chval, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 2047);
+    // }
+    PackUInt11ToChannels4x10(&crsf->ChannelData[0], &ota4->rc.ch, &Decimate11to10_Limit);
     ota4->rc.ch4 = CRSF_to_BIT(crsf->ChannelData[4]);
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
@@ -248,8 +269,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
         chSrcLow = 0;
         chSrcHigh = isHighAux ? 9 : 5;
     }
-    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcLow], &ota8->rc.chLow);
-    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcHigh], &ota8->rc.chHigh);
+    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcLow], &ota8->rc.chLow, &Decimate11to10_Div2);
+    PackUInt11ToChannels4x10(&crsf->ChannelData[chSrcHigh], &ota8->rc.chHigh, &Decimate11to10_Div2);
 #endif
 }
 
@@ -290,7 +311,29 @@ uint32_t debugRcvrLinkstatsPacketId;
 static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest)
 {
     uint8_t const * const payload = (uint8_t const * const)srcChannels4x10;
-    bitpacker_unpack(payload, 10, dest, 11, 4);
+    constexpr unsigned numOfChannels = 4;
+    constexpr unsigned srcBits = 10;
+    constexpr unsigned dstBits = 11;
+    constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
+    constexpr unsigned precisionShift = dstBits - srcBits;
+
+    // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
+    uint8_t bitsMerged = 0;
+    uint32_t readValue = 0;
+    unsigned readByteIndex = 0;
+    for (uint8_t n = 0; n < numOfChannels; n++)
+    {
+        while (bitsMerged < srcBits)
+        {
+            uint8_t readByte = payload[readByteIndex++];
+            readValue |= ((uint32_t) readByte) << bitsMerged;
+            bitsMerged += 8;
+        }
+        //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & channelMask), bitsMerged);
+        dest[n] = (readValue & inputChannelMask) << precisionShift;
+        readValue >>= srcBits;
+        bitsMerged -= srcBits;
+    }
 }
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, CRSF * const crsf)
@@ -298,8 +341,15 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
 #else
-    // The analog channels
+    // The analog channels, encoded as 10bit where 0 = 998us and 1023 = 2012us
     UnpackChannels4x10ToUInt11(&ota4->rc.ch, &crsf->ChannelData[0]);
+    // The unpacker simply does a << 1 to convert 10 to 11bit, but Hybrid/Wide modes
+    // only pack a subset of the full range CRSF data, so properly expand it
+    // This is ~80 bytes less code than passing an 10-to-11 expander fn to the unpacker
+    for (unsigned ch=0; ch<4; ++ch)
+    {
+        crsf->ChannelData[ch] = UINT10_to_CRSF(crsf->ChannelData[ch] >> 1);
+    }
     crsf->ChannelData[4] = BIT_to_CRSF(ota4->rc.ch4);
 #endif
 }
@@ -424,6 +474,9 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
         chDstLow = 0;
         chDstHigh = (ota8->rc.isHighAux) ? 9 : 5;
     }
+
+    // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
+    // ** Different than the 10bit encoding in Hybrid/Wide mode **
     UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &crsf->ChannelData[chDstLow]);
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &crsf->ChannelData[chDstHigh]);
 #endif

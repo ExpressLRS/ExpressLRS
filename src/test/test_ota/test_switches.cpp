@@ -140,13 +140,8 @@ void test_encodingHybrid8(bool highResChannel)
     uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
-    // bytes 1 through 5 are 10 bit packed analog channels
-    uint8_t expected[5];
-    expected[0] = ((crsf.ChannelData[0] >> 1) >> 0);
-    expected[1] = ((crsf.ChannelData[0] >> 1) >> 8) | ((crsf.ChannelData[1] >> 1) << 2);
-    expected[2] = ((crsf.ChannelData[1] >> 1) >> 6) | ((crsf.ChannelData[2] >> 1) << 4);
-    expected[3] = ((crsf.ChannelData[2] >> 1) >> 4) | ((crsf.ChannelData[3] >> 1) << 6);
-    expected[4] = ((crsf.ChannelData[3] >> 1) >> 2);
+    // bytes 1 through 5 are 10 bit packed analog channels representing 998-2012 (CRSF_CHANNEL_VALUE_MIN-CRSF_CHANNEL_VALUE_MAX)
+    uint8_t expected[5] = { 0x4a, 0xd0, 0xfb, 0x49, 0xd2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
@@ -224,10 +219,10 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     OtaUnpackChannelData(otaPktPtr, &crsf, 0);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0] & 0b11111111110, crsf.ChannelData[0]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[1] & 0b11111111110, crsf.ChannelData[1]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[2] & 0b11111111110, crsf.ChannelData[2]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[3] & 0b11111111110, crsf.ChannelData[3]); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
+    TEST_ASSERT_EQUAL(ChannelsIn[1], crsf.ChannelData[1]);
+    TEST_ASSERT_EQUAL(ChannelsIn[2], crsf.ChannelData[2]);
+    TEST_ASSERT_EQUAL(ChannelsIn[3], crsf.ChannelData[3]);
 
     TEST_ASSERT_EQUAL(ChannelsIn[4+0], crsf.ChannelData[4]); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
@@ -292,13 +287,8 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     uint8_t header = PACKET_TYPE_RCDATA;
     TEST_ASSERT_EQUAL(header, TXdataBuffer[0]);
 
-    // bytes 1 through 5 are 10 bit packed analog channels
-    uint8_t expected[5];
-    expected[0] = ((ChannelsIn[0] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
-    expected[2] = ((ChannelsIn[1] >> 1) >> 6) | ((ChannelsIn[2] >> 1) << 4);
-    expected[3] = ((ChannelsIn[2] >> 1) >> 4) | ((ChannelsIn[3] >> 1) << 6);
-    expected[4] = ((ChannelsIn[3] >> 1) >> 2);
+    // bytes 1 through 5 are 10 bit packed analog channels representing 998-2012 (CRSF_CHANNEL_VALUE_MIN-CRSF_CHANNEL_VALUE_MAX)
+    uint8_t expected[5] = { 0x4a, 0xd0, 0xfb, 0x49, 0xd2 };
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switches encoded
@@ -384,10 +374,10 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     bool telemResult = OtaUnpackChannelData(otaPktPtr, &crsf, tlmDenom);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0] & 0b11111111110, crsf.ChannelData[0]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[1] & 0b11111111110, crsf.ChannelData[1]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[2] & 0b11111111110, crsf.ChannelData[2]); // analog channels are truncated to 10 bits
-    TEST_ASSERT_EQUAL(ChannelsIn[3] & 0b11111111110, crsf.ChannelData[3]); // analog channels are truncated to 10 bits
+    TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
+    TEST_ASSERT_EQUAL(ChannelsIn[1], crsf.ChannelData[1]);
+    TEST_ASSERT_EQUAL(ChannelsIn[2], crsf.ChannelData[2]);
+    TEST_ASSERT_EQUAL(ChannelsIn[3], crsf.ChannelData[3]);
 
     // Switch 0 is sent on every packet
     TEST_ASSERT_EQUAL(crsf.ChannelData[4], crsf.ChannelData[4]);

@@ -3,7 +3,6 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
-#include "bitpacker.h"
 #if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
 #include "msp2crsf.h"

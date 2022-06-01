@@ -356,7 +356,28 @@ void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits
     uint32_t prev_AUX1 = ChannelData[4];
 
     uint8_t const * const payload = (uint8_t const * const)&CRSF::inBuffer.asRCPacket_t.channels;
-    bitpacker_unpack(payload, 11, ChannelData, 11, 16);
+    constexpr unsigned srcBits = 11;
+    constexpr unsigned dstBits = 11;
+    constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
+    constexpr unsigned precisionShift = dstBits - srcBits;
+
+    // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
+    uint8_t bitsMerged = 0;
+    uint32_t readValue = 0;
+    unsigned readByteIndex = 0;
+    for (unsigned n = 0; n < CRSF_NUM_CHANNELS; n++)
+    {
+        while (bitsMerged < srcBits)
+        {
+            uint8_t readByte = payload[readByteIndex++];
+            readValue |= ((uint32_t) readByte) << bitsMerged;
+            bitsMerged += 8;
+        }
+        //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & inputChannelMask), bitsMerged);
+        ChannelData[n] = (readValue & inputChannelMask) << precisionShift;
+        readValue >>= srcBits;
+        bitsMerged -= srcBits;
+    }
 
     if (prev_AUX1 != ChannelData[4])
     {
