@@ -25,4 +25,6 @@ extern device_t ServoOut_device;
 void servoNewChannelsAvaliable();
 // Convert eServoOutputMode to microseconds, or 0 for non-servo modes
 uint16_t servoOutputModeToUs(eServoOutputMode mode);
+#else
+inline void servoNewChannelsAvaliable() {};
 #endif
