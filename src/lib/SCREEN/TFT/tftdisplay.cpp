@@ -2,7 +2,7 @@
 
 #include <Arduino_GFX_Library.h>
 #include "Pragma_Sans36pt7b.h"
-#include "Pragma_Sans38pt7b.h"
+#include "Pragma_Sans37pt7b.h"
 #include "Pragma_Sans314pt7b.h"
 
 #include "tftdisplay.h"
@@ -53,15 +53,12 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define SCREEN_X    160
 #define SCREEN_Y    80
 
-//see #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 #define SCREEN_SMALL_FONT_SIZE      8
 #define SCREEN_SMALL_FONT           Pragma_Sans36pt7b
 
-//see #define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
 #define SCREEN_NORMAL_FONT_SIZE     16
-#define SCREEN_NORMAL_FONT          Pragma_Sans38pt7b
+#define SCREEN_NORMAL_FONT          Pragma_Sans37pt7b
 
-//see #define LOAD_FONT4  // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
 #define SCREEN_LARGE_FONT_SIZE      26
 #define SCREEN_LARGE_FONT           Pragma_Sans314pt7b
 
@@ -94,7 +91,7 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define MAIN_PAGE_ICON_START_X  SCREEN_CONTENT_GAP
 #define MAIN_PAGE_ICON_START_Y  (SCREEN_Y -  SCREEN_LARGE_ICON_SIZE)/2
 
-#define MAIN_PAGE_WORD_START_X  MAIN_PAGE_ICON_START_X + SCREEN_LARGE_ICON_SIZE + SCREEN_CONTENT_GAP
+#define MAIN_PAGE_WORD_START_X  MAIN_PAGE_ICON_START_X + SCREEN_LARGE_ICON_SIZE
 #define MAIN_PAGE_WORD_START_Y1 (SCREEN_Y -  SCREEN_NORMAL_FONT_SIZE*2 - SCREEN_FONT_GAP)/2
 #define MAIN_PAGE_WORD_START_Y2 MAIN_PAGE_WORD_START_Y1 + SCREEN_NORMAL_FONT_SIZE + SCREEN_FONT_GAP
 
