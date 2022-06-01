@@ -31,7 +31,7 @@ private:
 };
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
-static MeanAccumulator<int32_t, int8_t, -128, 1> dynamic_power_mean_rssi;
+static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
 static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
 
 extern bool IsArmed();
