@@ -50,7 +50,7 @@ function updatePwmSettings(arPwm)
         return;
     }
     // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-    let htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th>Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
+    let htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="mui--text-center">Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
     arPwm.forEach((item, index) => {
         let failsafe = (item & 1023) + 988; // 10 bits
         let ch = (item >> 10) & 15; // 4 bits
@@ -64,7 +64,7 @@ function updatePwmSettings(arPwm)
              'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
              'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
              'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
-        htmlFields.push(`<tr><th>${index+1}</th>
+        htmlFields.push(`<tr><th class="mui--text-center">${index+1}</th>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
