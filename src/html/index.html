@@ -163,14 +163,33 @@
 			</div>
 
 			<div class="mui-tabs__pane" id="pane-justified-5">
-				<div id="apmode" style="display:none;">
-					<div class="mui-panel">
-						<h2>Join Network</h2>
-						Here you can join a network and it will be saved as your &quot;home&quot; network.
-						When you are in range of your &quot;home&quot; network and start WiFi update the TX Module will automatically connect.
-						<br>
-						<br>
-						<form action="/sethome" id="sethome" method="POST" autocomplete="off" class="mui-form">
+				<div class="mui-panel">
+					<h2 id="apmode" style="display:none;">Currently in Access Point mode</h2>
+					<h2 id="stamode" style="display:none;">Current Home network: <span id="ssid"></span></h2>
+					Here you can join a network and it will be saved as your Home network. When you enable WiFi in range of your Home network,
+					ExpressLRS will automatically connect to it. In Access Point (AP) mode, the network name is ExpressLRS TX or ExpressLRS RX
+					with password "expresslrs".
+					<br/>
+					<br/>
+					<form id="sethome" method="POST" autocomplete="off" class="mui-form">
+						<div class="mui-radio">
+							<input type="radio" id="nt0" name="networktype" value="0" checked>
+							<label for="nt0">Set new Home network</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt1" name="networktype" value="1">
+							<label for="nt1">One-time connect to network, retain Home network setting</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt2" name="networktype" value="2">
+							<label for="nt2">Start AP mode, retain Home network setting</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt3" name="networktype" value="3">
+							<label for="nt3">Forget Home network setting, always use AP mode</label>
+						</div>
+						<br/>
+						<div id="credentials">
 							<div class="autocomplete mui-textfield" style="position:relative;">
 								<div id="loader" style="position:absolute;right:0;width: 28px;height: 28px;" class="loader"></div>
 								<input id="network" type="text" name="network" placeholder="SSID"/>
@@ -180,25 +199,12 @@
 								<input size='64' id='password' name='password' type='password'/>
 								<label>WiFi password</label>
 							</div>
-							<button type="submit" name="action" value="save" class="mui-btn mui-btn--primary">Save & Join</button>
-							<button type="submit" name="action" value="join" class="mui-btn mui-btn--primary">Join Temporarily</button>
-						</form>
-					</div>
-					<div class="mui-panel">
-						<a id="connect" href="#">Connect to &quot;home&quot; network: <span id="homenet"></span></a>
-					</div>
+						</div>
+						<button type="submit" class="mui-btn mui-btn--primary">Confirm</button>
+					</form>
 				</div>
-
-				<div id="stamode" style="display:none;">
-					<h2>Home Network: <span id="ssid"></span></h2>
-					<br>
-					Forget &quot;home&quot; network and start access point
-					<br>
-					<a id="forget" href="#" class="mui-btn mui-btn--primary">Forget</a>
-					<br><br>
-					Disconnect from &quot;home&quot; network start access point
-					<br>
-					<a id="access" href="#" class="mui-btn mui-btn--primary">Disconnect</a>
+				<div class="mui-panel">
+					<a id="connect" href="#">Connect to Home network: <span id="homenet"></span></a>
 				</div>
 			</div>
 		</div>

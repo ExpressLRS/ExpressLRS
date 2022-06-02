@@ -366,13 +366,12 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
 {
   String ssid = request->arg("network");
   String password = request->arg("password");
-  String action = request->arg("action");
 
   DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-  if (action == "save") {
+  if (request->hasArg("save")) {
     strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
     saveOptions();

@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 /* eslint-disable require-jsdoc */
 
-document.addEventListener('DOMContentLoaded', initOptions, false);
+document.addEventListener('DOMContentLoaded', init, false);
 let scanTimer = undefined;
 
 function _(el) {
@@ -82,6 +82,15 @@ function updatePwmSettings(arPwm) {
 }
 
 function init() {
+  _('nt0').onclick = ()=>_('credentials').style.display = 'block';
+  _('nt1').onclick = ()=>_('credentials').style.display = 'block';
+  _('nt2').onclick = ()=>_('credentials').style.display = 'none';
+  _('nt3').onclick = ()=>_('credentials').style.display = 'none';
+
+  initOptions();
+}
+
+function initNetwork() {
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
@@ -91,17 +100,12 @@ function init() {
         _('ssid').textContent = data.ssid;
       } else {
         _('apmode').style.display = 'block';
-        if (data.ssid) {
-          _('homenet').textContent = data.ssid;
-        } else {
-          _('connect').style.display = 'none';
-        }
-        scanTimer = setInterval(getNetworks, 2000);
       }
       if (data.modelid) _('modelid').value = data.modelid;
       if (data.product_name) _('product_name').textContent = data.product_name;
       if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
       updatePwmSettings(data.pwm);
+      scanTimer = setInterval(getNetworks, 2000);
     }
   };
   xmlhttp.open('POST', 'mode.json', true);
@@ -116,7 +120,12 @@ function initOptions() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       updateOptions(data);
-      init();
+      if (data['wifi-ssid']) {
+        _('homenet').textContent = data['wifi-ssid'];
+      } else {
+        _('connect').style.display = 'none';
+      }
+      initNetwork();
     }
   };
   xmlhttp.open('GET', '/options.json', true);
@@ -312,12 +321,27 @@ function callback(title, msg, url, getdata) {
   };
 }
 
-_('sethome').addEventListener('submit', callback('Set Home Network', 'An error occurred setting the home network', '/sethome', function() {
-  return new FormData(_('sethome'));
-}));
+function setupNetwork(event) {
+  if (_('nt0').checked) {
+    callback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function() {
+      return new FormData(_('sethome'));
+    })(event);
+  }
+  if (_('nt1').checked) {
+    callback('Connect To Network', 'An error occurred connecting to the network', '/sethome', function() {
+      return new FormData(_('sethome'));
+    })(event);
+  }
+  if (_('nt2').checked) {
+    callback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event);
+  }
+  if (_('nt3').checked) {
+    callback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event);
+  }
+}
+
+_('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
-_('access').addEventListener('click', callback('Access Point', 'An error occurred starting the Access Point', '/access', null));
-_('forget').addEventListener('click', callback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null));
 if (_('modelmatch') != undefined) {
   _('modelmatch').addEventListener('submit', callback('Set Model Match', 'An error occurred updating the model match number', '/model',
       () => {
