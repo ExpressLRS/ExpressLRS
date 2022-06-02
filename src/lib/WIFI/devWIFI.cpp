@@ -34,6 +34,7 @@
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
+#include "devVTXSPI.h"
 
 #include "WebContent.h"
 
@@ -574,6 +575,9 @@ static void startWiFi(unsigned long now)
 
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();
+
+    VTxOutputMinimum();
+
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
     connectionState = wifiUpdate;
