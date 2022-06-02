@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', init, false);
 let scanTimer = undefined;
+let storedModelId = 255;
 
 function _(el) {
   return document.getElementById(el);
@@ -82,10 +83,26 @@ function updatePwmSettings(arPwm) {
 }
 
 function init() {
-  _('nt0').onclick = ()=>_('credentials').style.display = 'block';
-  _('nt1').onclick = ()=>_('credentials').style.display = 'block';
-  _('nt2').onclick = ()=>_('credentials').style.display = 'none';
-  _('nt3').onclick = ()=>_('credentials').style.display = 'none';
+  // setup network radio button handling
+  _('nt0').onclick = () => _('credentials').style.display = 'block';
+  _('nt1').onclick = () => _('credentials').style.display = 'block';
+  _('nt2').onclick = () => _('credentials').style.display = 'none';
+  _('nt3').onclick = () => _('credentials').style.display = 'none';
+
+  // setup model match checkbox handler
+  _('model-match').onclick = () => {
+    if (_('model-match').checked) {
+      _('modelid').style.display = 'block';
+      if (storedModelId == 255) {
+        _('modelid').value = '';
+      } else {
+        _('modelid').value = storedModelId;
+      }
+    } else {
+      _('modelid').style.display = 'none';
+      _('modelid').value = '255';
+    }
+  };
 
   initOptions();
 }
@@ -101,7 +118,16 @@ function initNetwork() {
       } else {
         _('apmode').style.display = 'block';
       }
-      if (data.modelid) _('modelid').value = data.modelid;
+      if (data.modelid && data.modelid != 255) {
+        _('modelid').style.display = 'block';
+        _('model-match').checked = true;
+        storedModelId = data.modelid;
+      } else {
+        _('modelid').style.display = 'none';
+        _('model-match').checked = false;
+        storedModelId = 255;
+      }
+      _('modelid').value = storedModelId;
       if (data.product_name) _('product_name').textContent = data.product_name;
       if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
       updatePwmSettings(data.pwm);
@@ -120,11 +146,9 @@ function initOptions() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       updateOptions(data);
-      if (data['wifi-ssid']) {
-        _('homenet').textContent = data['wifi-ssid'];
-      } else {
-        _('connect').style.display = 'none';
-      }
+      if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
+      else _('connect').style.display = 'none';
+      if (data['customised']) _('reset-options').style.display = 'block';
       initNetwork();
     }
   };
@@ -132,7 +156,6 @@ function initOptions() {
   xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xmlhttp.send();
 }
-
 
 function getNetworks() {
   const xmlhttp = new XMLHttpRequest();
@@ -150,29 +173,6 @@ function getNetworks() {
   xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xmlhttp.send();
 }
-
-function hasErrorParameter() {
-  let tmp = [];
-  let result = false;
-  location.search
-      .substring(1)
-      .split('&')
-      .forEach(function(item) {
-        tmp = item.split('=');
-        if (tmp[0] === 'error') result = true;
-      });
-  return result;
-}
-
-function show(elements, specifiedDisplay) {
-  elements = elements.length ? elements : [elements];
-  for (let index = 0; index < elements.length; index++) {
-    elements[index].style.display = specifiedDisplay || 'block';
-  }
-}
-
-const elements = document.querySelectorAll('#failed');
-if (hasErrorParameter()) show(elements);
 
 // =========================================================
 
@@ -339,6 +339,9 @@ function setupNetwork(event) {
     callback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event);
   }
 }
+
+_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred reseting model settings', '/reset?model', null));
+_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred reseting runtime options', '/reset?options', null));
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));

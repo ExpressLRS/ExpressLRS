@@ -261,6 +261,10 @@ static void HandleReset(AsyncWebServerRequest *request)
   if (request->hasArg("options")) {
     SPIFFS.remove("/options.json");
   }
+  if (request->hasArg("model")) {
+    config.SetDefaults();
+    config.Commit();
+  }
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
   response->addHeader("Connection", "close");
   request->send(response);
