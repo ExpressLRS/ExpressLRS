@@ -169,6 +169,9 @@ uint8_t enumRatetoIndex(uint8_t rate);
 
 void initUID();
 
+#define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
+#define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
+
 #endif // UNIT_TEST
 
 uint32_t uidMacSeedGet(void);

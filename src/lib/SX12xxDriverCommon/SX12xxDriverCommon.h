@@ -36,7 +36,8 @@ public:
 
     /////////////Packet Stats//////////
     int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
+    //int8_t LastPacketSNR;
+    int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
 
 protected:
     void RemoveCallbacks(void)

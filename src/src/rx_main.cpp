@@ -230,10 +230,10 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     crsf.PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     crsf.PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
-    SnrMean.add(Radio.LastPacketSNR);
+    SnrMean.add(Radio.LastPacketSNRRaw);
 
     crsf.LinkStatistics.active_antenna = antenna;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
+    crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
     //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
     crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);

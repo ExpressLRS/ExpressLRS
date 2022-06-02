@@ -32,7 +32,7 @@ private:
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
-static DynamicPowerTelemetryUpdate_e dynamic_power_updated;
+static int8_t dynamic_power_updated;
 
 extern bool IsArmed();
 extern volatile uint32_t LastTLMpacketRecvMillis;
@@ -45,19 +45,21 @@ static void DynamicPower_SetToConfigPower()
 void DynamicPower_Init()
 {
     dynamic_power_mavg_lq = 100;
-    dynamic_power_updated = dptuNoUpdate;
+    dynamic_power_updated = DYNPOWER_UPDATE_NOUPDATE;
 }
 
-void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(DynamicPowerTelemetryUpdate_e dptu)
+void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
 {
-    dynamic_power_updated = dptu;
+    dynamic_power_updated = snrScaled;
 }
 
 void DynamicPower_Update()
 {
-  bool newTlmAvail = dynamic_power_updated == dptuNewLinkstats;
-  bool lastTlmMissed = dynamic_power_updated == dptuMissed;
-  dynamic_power_updated = dptuNoUpdate;
+  int8_t snrScaled = dynamic_power_updated;
+  dynamic_power_updated = DYNPOWER_UPDATE_NOUPDATE;
+
+  bool newTlmAvail = snrScaled > DYNPOWER_UPDATE_MISSED;
+  bool lastTlmMissed = snrScaled == DYNPOWER_UPDATE_MISSED;
 
   int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
 
@@ -166,19 +168,19 @@ void DynamicPower_Update()
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
-    int8_t snr = CRSF::LinkStatistics.uplink_SNR;
-    if (snr >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
+    //int8_t snrScaled = CRSF::LinkStatistics.uplink_SNR;
+    if (snrScaled >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
       DBGVLN("-power (snr)");
       POWERMGNT::decPower();
     }
 
-    while ((snr <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
+    while ((snrScaled <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
     {
       DBGLN("+power (snr)");
       POWERMGNT::incPower();
       // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
-      snr += 2*4;
+      snrScaled += SNR_SCALE(2);
       --powerHeadroom;
     }
   } // ^^ if SNR-based

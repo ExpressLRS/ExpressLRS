@@ -182,24 +182,26 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
         case ELRS_TELEMETRY_TYPE_LINK:
-            // Antenna is the high bit in the RSSI_1 value
-            // RSSI received is signed, inverted polarity (positive value = -dBm)
-            // OpenTX's value is signed and will display +dBm and -dBm properly
-            crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
-            crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3] & 0x7f);
-            crsf.LinkStatistics.uplink_SNR = Radio.RXdataBuffer[4];
-            crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-            crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
-            crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-            crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
-            connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
-            // -- uplink_TX_Power is updated via devCRSF event, so it updates with no telemetry
-            // -- rf_mode is updated when we change rates
-            // -- downlink_Link_quality is updated before the LQ period is incremented
-            MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
-
-            DynamicPower_TelemetryUpdate(dptuNewLinkstats);
-            break;
+            {
+                int8_t snrScaled = (int8_t)Radio.RXdataBuffer[4];
+                DynamicPower_TelemetryUpdate(snrScaled);
+                // Antenna is the high bit in the RSSI_1 value
+                // RSSI received is signed, inverted polarity (positive value = -dBm)
+                // OpenTX's value is signed and will display +dBm and -dBm properly
+                crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(snrScaled);
+                crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
+                crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3] & 0x7f);
+                crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
+                crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+                crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+                crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
+                connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
+                // -- uplink_TX_Power is updated via devCRSF event, so it updates with no telemetry
+                // -- rf_mode is updated when we change rates
+                // -- downlink_Link_quality is updated before the LQ period is incremented
+                MspSender.ConfirmCurrentPayload(Radio.RXdataBuffer[6] == 1);
+                break;
+            }
 
         case ELRS_TELEMETRY_TYPE_DATA:
             TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
@@ -442,9 +444,9 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 #else
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
 #endif
-    // Indicate no telemetry packet received with -1
+    // Indicate no telemetry packet received to the DP system
     if (!LQCalc.currentIsSet())
-      DynamicPower_TelemetryUpdate(dptuMissed);
+      DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
     LQCalc.inc();
     return;
   }

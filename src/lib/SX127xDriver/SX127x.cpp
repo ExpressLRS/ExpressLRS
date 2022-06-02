@@ -332,10 +332,10 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
     currOpmode = SX127x_OPMODE_STANDBY;
   }
   LastPacketRSSI = GetLastPacketRSSI();
-  LastPacketSNR = GetLastPacketSNR();
+  LastPacketSNRRaw = GetLastPacketSNRRaw();
   // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
-  // page 87 (note we have to /4 from the raw GetLastPacketSNR() value)
-  int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR/4 : 0;
+  // Section 3.5.5 (page 87)
+  int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
   LastPacketRSSI += negOffset;
   RXdoneCallback(SX12XX_RX_OK);
 }
@@ -496,10 +496,9 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
   return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNRRaw()
 {
-  int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return rawSNR;
+  return (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);;
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::GetIrqFlags()
