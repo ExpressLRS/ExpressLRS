@@ -174,9 +174,15 @@ static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
+#define LOAN_BIND_TIMEOUT_DEFAULT 60000
+#define LOAN_BIND_TIMEOUT_MSP 10000U
+
+
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
 bool returnModelFromLoan = false;
+static unsigned long loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
+static unsigned long loadBindingStartedMs = 0;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -710,6 +716,11 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
         connectionState = wifiUpdate;
 #endif
     }
+    else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
+    {
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
+        InLoanBindingMode = true;
+    }
     else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
     {
         vtxSPIBandChannelIdx = MspData[8];
@@ -1039,11 +1050,7 @@ static void setupBindingFromConfig()
     if (config.GetOnLoan())
     {
         DBGLN("RX has been loaned, reading the UID from eeprom...");
-        const uint8_t* storedUID = config.GetOnLoanUID();
-        for (uint8_t i = 0; i < UID_LEN; ++i)
-        {
-            UID[i] = storedUID[i];
-        }
+        memcpy(UID, config.GetOnLoanUID(), sizeof(UID));
         DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
         CRCInitializer = (UID[4] << 8) | UID[5];
         return;
@@ -1052,11 +1059,7 @@ static void setupBindingFromConfig()
     if (!firmwareOptions.hasUID && config.GetIsBound())
     {
         DBGLN("RX has been bound previously, reading the UID from eeprom...");
-        const uint8_t* storedUID = config.GetUID();
-        for (uint8_t i = 0; i < UID_LEN; ++i)
-        {
-            UID[i] = storedUID[i];
-        }
+        memcpy(UID, config.GetUID(), sizeof(UID));
         DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
         CRCInitializer = (UID[4] << 8) | UID[5];
     }
@@ -1164,7 +1167,7 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
-static void updateBindingMode()
+static void updateBindingMode(unsigned long now)
 {
 #ifndef MY_UID
     // If the eeprom is indicating that we're not bound
@@ -1186,6 +1189,13 @@ static void updateBindingMode()
     // If in binding mode and the bind packet has come in, leave binding mode
     else if (InBindingMode && !InLoanBindingMode && config.GetIsBound())
     {
+        ExitBindingMode();
+    }
+    // If in "loan" binding mode and we've been here for more than timeout period, reset UID and leave binding mode
+    else if (InBindingMode && InLoanBindingMode && (now - loadBindingStartedMs) > loanBindTimeout) {
+        loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
+        memcpy(UID, MasterUID, sizeof(MasterUID));
+        setupBindingFromConfig();
         ExitBindingMode();
     }
     // If returning the model to the owner, set the flag and call ExitBindingMode to reset the CRC and FHSS
@@ -1359,6 +1369,8 @@ void loop()
         devicesTriggerEvent();
     }
 
+    executeDeferredFunction(now);
+
     if (connectionState > MODE_STATES)
     {
         return;
@@ -1410,7 +1422,7 @@ void loop()
         TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
     }
     updateTelemetryBurst();
-    updateBindingMode();
+    updateBindingMode(now);
     debugRcvrLinkstats();
 }
 
@@ -1449,6 +1461,7 @@ void reset_into_bootloader(void)
 void EnterBindingMode()
 {
     if (InLoanBindingMode) {
+        loadBindingStartedMs = millis();
         LostConnection();
     }
     if (connectionState == connected || InBindingMode) {
@@ -1507,6 +1520,7 @@ void ExitBindingMode()
     RFmodeLastCycled = 0;
 
     LostConnection();
+    LockRFmode = false;
     SetRFLinkRate(RATE_DEFAULT);
     Radio.RXnb();
 

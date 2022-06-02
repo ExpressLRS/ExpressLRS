@@ -29,10 +29,6 @@ static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
-static uint32_t startDeferredTime = 0;
-static uint32_t deferredTimeout = 0;
-static std::function<void()> deferredFunction = nullptr;
-
 static uint8_t luaSelectionOptionMax(const char *strOptions)
 {
   // Returns the max index of the semicolon-delimited option string
@@ -344,20 +340,8 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   paramCallbacks[lastLuaField] = callback;
 }
 
-void deferExecution(uint32_t ms, std::function<void()> f)
-{
-  startDeferredTime = millis();
-  deferredTimeout = ms;
-  deferredFunction = f;
-}
-
 bool luaHandleUpdateParameter()
 {
-  if (deferredFunction!=nullptr && (millis() - startDeferredTime) > deferredTimeout)
-  {
-    deferredFunction();
-    deferredFunction = nullptr;
-  }
   if (UpdateParamReq == false)
   {
     return false;
