@@ -307,13 +307,13 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     ls->uplink_RSSI_2 = crsf.LinkStatistics.uplink_RSSI_2;
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
+    ls->lq = crsf.LinkStatistics.uplink_Link_quality;
+    ls->mspConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 #if defined(DEBUG_FREQ_CORRECTION)
-    ls->SNR = FreqCorrection * 63 / FreqCorrectionMax;
+    ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
     ls->SNR = crsf.LinkStatistics.uplink_SNR;
 #endif
-    ls->lq = crsf.LinkStatistics.uplink_Link_quality;
-    ls->mspConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 }
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()

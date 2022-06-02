@@ -37,7 +37,7 @@ typedef struct {
             modelMatch:1;
     uint8_t lq:7,
             mspConfirm:1;
-    uint8_t SNR; // only needs about 5 of these bits
+    int8_t SNR;
 } PACKED OTA_LinkStats_s;
 
 typedef struct {
