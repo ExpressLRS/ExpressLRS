@@ -125,7 +125,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #if defined(TLM_REPORT_INTERVAL_MS)
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
-    .tlm_report_interval = 320U,
+    .tlm_report_interval = 240U,
 #endif
 #if defined(FAN_MIN_RUNTIME)
     .fan_min_runtime = FAN_MIN_RUNTIME,

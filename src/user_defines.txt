@@ -61,7 +61,7 @@
 # Does not output SBUS protocol, just inverted CRSF.
 #-DUSE_R9MM_R9MINI_SBUS
 
-#-DTLM_REPORT_INTERVAL_MS=320LU
+#-DTLM_REPORT_INTERVAL_MS=240LU
 
 ### OTHER OPTIONS: ###
 
