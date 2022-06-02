@@ -233,7 +233,12 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     crsf.LinkStatistics.active_antenna = antenna;
+#if defined(DEBUG_RCVR_LINKSTATS)
+    // DEBUG_RCVR_LINKSTATS gets full precision SNR
+    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
+#else
     crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+#endif
     //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
     crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
