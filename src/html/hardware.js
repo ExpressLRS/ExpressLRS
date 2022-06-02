@@ -65,7 +65,7 @@ function updateHardwareSettings(data) {
   for (const [key, value] of Object.entries(data)) {
     if (_(key)) {
       if (_(key).type == 'checkbox') {
-        _(key).checked = value ? 'on' : 'off';
+        _(key).checked = value;
       } else {
         if (Array.isArray(value)) _(key).value = value.toString();
         else _(key).value = value;

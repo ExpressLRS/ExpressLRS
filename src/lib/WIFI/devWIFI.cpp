@@ -133,8 +133,6 @@ static struct {
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
-  {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
-  {"/options.js", "text/javascript", (uint8_t *)OPTIONS_JS, sizeof(OPTIONS_JS)},
 #endif
 };
 
@@ -358,7 +356,7 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
-  DBGLN("Connecting to home network");
+  DBGLN("Connecting to network");
   String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
@@ -368,38 +366,33 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
 {
   String ssid = request->arg("network");
   String password = request->arg("password");
+  String action = request->arg("action");
 
-  DBGLN("Setting home network %s", ssid.c_str());
+  DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
-  // Only save to config if we don't have a flashed wifi network
-  if (firmwareOptions.home_wifi_ssid[0] == 0) {
-    config.SetSSID(ssid.c_str());
-    config.SetPassword(password.c_str());
-    config.Commit();
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  if (action == "save") {
+    strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
+    strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
+    saveOptions();
   }
+#endif
   WebUpdateConnect(request);
 }
 
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
-  DBGLN("Forget home network");
-  config.SetSSID("");
-  config.SetPassword("");
-  config.Commit();
-  // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (firmwareOptions.home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
-    strcpy(station_password, firmwareOptions.home_wifi_password);
-    String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
-    sendResponse(request, msg, WIFI_STA);
-  }
-  else {
-    station_ssid[0] = 0;
-    station_password[0] = 0;
-    String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
-    sendResponse(request, msg, WIFI_AP);
-  }
+  DBGLN("Forget network");
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  firmwareOptions.home_wifi_ssid[0] = 0;
+  firmwareOptions.home_wifi_password[0] = 0;
+  saveOptions();
+#endif
+  station_ssid[0] = 0;
+  station_password[0] = 0;
+  String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
+  sendResponse(request, msg, WIFI_AP);
 }
 
 #if defined(TARGET_RX)
@@ -622,14 +615,8 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (firmwareOptions.home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
-    strcpy(station_password, firmwareOptions.home_wifi_password);
-  }
-  else {
-    strcpy(station_ssid, config.GetSSID());
-    strcpy(station_password, config.GetPassword());
-  }
+  strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+  strcpy(station_password, firmwareOptions.home_wifi_password);
   if (station_ssid[0] == 0) {
     changeTime = now;
     changeMode = WIFI_AP;
@@ -726,8 +713,6 @@ static void startServices()
   #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     server.on("/hardware.html", WebUpdateSendContent);
     server.on("/hardware.js", WebUpdateSendContent);
-    server.on("/options.html", WebUpdateSendContent);
-    server.on("/options.js", WebUpdateSendContent);
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
@@ -790,7 +775,7 @@ static void HandleWebUpdate()
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", station_ssid);
+        DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA

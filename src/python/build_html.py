@@ -60,8 +60,6 @@ def build_common(env, mainfile, isTX):
             build_html("elrs.css", "ELRS_CSS", out, env)
             build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)
             build_html("hardware.js", "HARDWARE_JS", out, env)
-            build_html("options.html", "OPTIONS_HTML", out, env, isTX)
-            build_html("options.js", "OPTIONS_JS", out, env)
 
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
@@ -71,7 +69,4 @@ def build_common(env, mainfile, isTX):
 platform = env.get('PIOPLATFORM', '')
 target_name = env['PIOENV'].upper()
 
-if '_RX_' in target_name:
-    build_common(env, "rx_index.html", False)
-else:
-    build_common(env, "tx_index.html", True)
+build_common(env, "index.html", not '_RX_' in target_name)
