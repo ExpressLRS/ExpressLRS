@@ -7,6 +7,7 @@
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
 #define DYNPOWER_LQ_BOOST_THRESH_MIN  50  // If LQ is below this value (absolute), immediately boost to the max power configured.
 #define DYNPOWER_LQ_MOVING_AVG_K      8   // Number of previous values for calculating moving average. Best with power of 2.
+#define DYNPOWER_LQ_THRESH_UP         85  // Below this LQ, the RSSI/SNR code will increase the power if RSSI/SNR did nothing
 
 // RSSI-based increment defines
 #define DYNPOWER_RSSI_CNT 5               // Number of RSSI readings to average (straight average) to make an RSSI-based adjustment
@@ -138,6 +139,7 @@ void DynamicPower_Update()
       return;
   }
 
+  PowerLevels_e startPowerLevel = POWERMGNT::currPower();
   if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
     // =============  RSSI-based power increment ==============
@@ -184,6 +186,14 @@ void DynamicPower_Update()
       --powerHeadroom;
     }
   } // ^^ if SNR-based
+
+  // If instant LQ is low, but the SNR/RSSI did nothing, inc power by one step
+  if ((startPowerLevel == POWERMGNT::currPower()) && (lq_current <= DYNPOWER_LQ_THRESH_UP))
+  {
+    DBGLN("+power (lq)");
+    POWERMGNT::incPower();
+    //--powerHeadroom;
+  }
 }
 
 #endif // TARGET_TX
