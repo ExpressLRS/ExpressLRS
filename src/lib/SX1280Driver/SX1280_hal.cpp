@@ -84,6 +84,20 @@ void SX1280Hal::init()
         digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
     }
 
+    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN)
+    {
+        DBGLN("Use TX_2 pin: %d", GPIO_PIN_TX_ENABLE_2);
+        pinMode(GPIO_PIN_TX_ENABLE_2, OUTPUT);
+        digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
+    }
+
+    if (GPIO_PIN_RX_ENABLE_2 != UNDEF_PIN)
+    {
+        DBGLN("Use RX_2 pin: %d", GPIO_PIN_RX_ENABLE_2);
+        pinMode(GPIO_PIN_RX_ENABLE_2, OUTPUT);
+        digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
+    }
+
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
@@ -344,34 +358,52 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
         instance->IsrCallback_2();
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::TXenable()
+void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX1280_Radio_Number_t radioNumber)
 {
     if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
+
     if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN && radioNumber & SX1280_Radio_1)
         digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+        
+    if (GPIO_PIN_RX_ENABLE_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
+    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN && radioNumber & SX1280_Radio_2)
+        digitalWrite(GPIO_PIN_TX_ENABLE_2, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 {
     if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
+        
     if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
     if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+        
+    if (GPIO_PIN_RX_ENABLE_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE_2, HIGH);
+    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 {
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
+        
     if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
     if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-        digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
+        
+    if (GPIO_PIN_RX_ENABLE_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
+    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
 }
 
 #endif // UNIT_TEST

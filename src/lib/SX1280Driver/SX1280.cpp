@@ -407,7 +407,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
     if (lastSuccessfulPacketRadio == SX1280_Radio_2) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
 #endif
 
-    hal.TXenable();                      // do first to allow PA stablise
+    hal.TXenable(lastSuccessfulPacketRadio); // do first to allow PA stablise
     hal.WriteBuffer(0x00, TXdataBuffer, PayloadLength, lastSuccessfulPacketRadio); //todo fix offset to equal fifo addr
     instance->SetMode(SX1280_MODE_TX, lastSuccessfulPacketRadio);
 

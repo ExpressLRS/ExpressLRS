@@ -54,7 +54,7 @@ public:
 
     bool ICACHE_RAM_ATTR WaitOnBusy(SX1280_Radio_Number_t radioNumber);
 
-    void ICACHE_RAM_ATTR TXenable();
+    void ICACHE_RAM_ATTR TXenable(SX1280_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
 

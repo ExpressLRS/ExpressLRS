@@ -44,6 +44,8 @@ static const struct {
     {HARDWARE_power_apc2, "power_apc2", INT},
     {HARDWARE_power_rxen, "power_rxen", INT},
     {HARDWARE_power_txen, "power_txen", INT},
+    {HARDWARE_power_rxen_2, "power_rxen_2", INT},
+    {HARDWARE_power_txen_2, "power_txen_2", INT},
     {HARDWARE_power_min, "power_min", INT},
     {HARDWARE_power_high, "power_high", INT},
     {HARDWARE_power_max, "power_max", INT},
