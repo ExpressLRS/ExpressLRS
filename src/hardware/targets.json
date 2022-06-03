@@ -158,6 +158,12 @@
                 "lua_name": "DupleTX",
                 "layout_file": "DIY 2400 DupleTX.json",
                 "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "dupletxesp": {
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
+                "lua_name": "DupleTX ESP",
+                "layout_file": "DIY 2400 DupleTX ESP.json",
+                "upload_methods": ["uart", "wifi"]
             }
         },
         "rx_2400": {
@@ -446,7 +452,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Generic 2400.json",
+                "layout_file": "Vantac 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }

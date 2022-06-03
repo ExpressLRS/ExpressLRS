@@ -14,3 +14,4 @@
 #include "POWERMGNT.h"
 
 void setupTargetCommon();
+void executeDeferredFunction(unsigned long now);
