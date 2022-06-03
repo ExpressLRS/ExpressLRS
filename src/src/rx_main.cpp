@@ -975,15 +975,7 @@ static void setupSerial()
         USC0(UART0) |= BIT(UCTXI);
     }
 #elif defined(PLATFORM_ESP32)
-    Serial.begin(firmwareOptions.uart_baud);
-    if (firmwareOptions.invert_tx)
-    {
-        Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1, -1, -1, true);
-    }
-    else
-    {
-        Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1);
-    }
+    Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1, -1, -1, firmwareOptions.invert_tx);
 #endif
 
     SerialLogger = &Serial;
