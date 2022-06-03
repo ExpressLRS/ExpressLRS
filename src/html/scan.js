@@ -118,7 +118,7 @@ function initNetwork() {
       } else {
         _('apmode').style.display = 'block';
       }
-      if (data.modelid && data.modelid != 255) {
+      if (data.hasOwnProperty('modelid') && data.modelid != 255) {
         _('modelid').style.display = 'block';
         _('model-match').checked = true;
         storedModelId = data.modelid;
