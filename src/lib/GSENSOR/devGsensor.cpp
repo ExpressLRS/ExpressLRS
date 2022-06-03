@@ -96,7 +96,7 @@ static int timeout()
         //When system is idle, set power to minimum
         if(config.GetMotionMode() == 1)
         {
-            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !IsArmed())
+            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !CRSF::IsArmed())
             {
                 POWERMGNT::setPower(MinPower);
             }
