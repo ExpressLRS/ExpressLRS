@@ -23,10 +23,6 @@ static Crc2Byte ota_crc;
 ValidatePacketCrc_t OtaValidatePacketCrc;
 GeneratePacketCrc_t OtaGeneratePacketCrc;
 
-#if defined(DEBUG_RCVR_LINKSTATS)
-static uint32_t packetCnt;
-#endif
-
 void OtaUpdateCrcInitFromUid()
 {
     OtaCrcInitializer = (UID[4] << 8) | UID[5];
@@ -48,6 +44,9 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;
+#if defined(DEBUG_RCVR_LINKSTATS)
+static uint32_t packetCnt;
+#endif
 
 /******** Decimate 11bit to 10bit functions ********/
 typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
@@ -104,12 +103,6 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
 #else
     // CRSF input is 11bit and OTA will carry only 10bit. Discard the Extended Limits (E.Limits)
     // range and use the full 10bits to carry only 998us - 2012us
-    // uint32_t ch11bit[4];
-    // for (unsigned ch=0; ch<4; ++ch)
-    // {
-    //     uint32_t chval = constrain(crsf->ChannelData[ch], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
-    //     ch11bit[ch] = fmap(chval, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 2047);
-    // }
     PackUInt11ToChannels4x10(&crsf->ChannelData[0], &ota4->rc.ch, &Decimate11to10_Limit);
     ota4->rc.ch4 = CRSF_to_BIT(crsf->ChannelData[4]);
 #endif /* !DEBUG_RCVR_LINKSTATS */
@@ -306,7 +299,7 @@ UnpackChannelData_t OtaUnpackChannelData;
 #if defined(DEBUG_RCVR_LINKSTATS)
 // Sequential PacketID from the TX
 uint32_t debugRcvrLinkstatsPacketId;
-#endif
+#else
 
 static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest)
 {
@@ -335,11 +328,12 @@ static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChanne
         bitsMerged -= srcBits;
     }
 }
+#endif /* !DEBUG_RCVR_LINKSTATS */
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, CRSF * const crsf)
 {
 #if defined(DEBUG_RCVR_LINKSTATS)
-    debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
+    debugRcvrLinkstatsPacketId = ota4->dbg_linkstats.packetNum;
 #else
     // The analog channels, encoded as 10bit where 0 = 998us and 1023 = 2012us
     UnpackChannels4x10ToUInt11(&ota4->rc.ch, &crsf->ChannelData[0]);
@@ -451,7 +445,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
 #if defined(DEBUG_RCVR_LINKSTATS)
-    debugRcvrLinkstatsPacketId = otaPktPtr->dbg_linkstats.packetNum;
+    debugRcvrLinkstatsPacketId = ota8->dbg_linkstats.packetNum;
 #else
     uint8_t chDstLow;
     uint8_t chDstHigh;
