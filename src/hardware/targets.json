@@ -160,7 +160,7 @@
                 "upload_methods": ["uart", "wifi", "etx"]
             },
             "dupletxesp": {
-                "product_name": "Generic Full-duplex 2.4GHz ESP TX",
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
                 "lua_name": "DupleTX ESP",
                 "layout_file": "DIY 2400 DupleTX ESP.json",
                 "upload_methods": ["uart", "wifi"]
