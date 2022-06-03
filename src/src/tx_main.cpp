@@ -1028,14 +1028,6 @@ bool setupHardwareFromOptions()
 #if defined(TARGET_UNIFIED_TX)
   if (!options_init())
   {
-    #if defined(PLATFORM_ESP32)
-    TxBackpack = new HardwareSerial(1);
-    ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
-    #else
-    TxBackpack = new HardwareSerial(0);
-    ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1);
-    #endif
-
     // Register the WiFi with the framework
     static device_affinity_t wifi_device[] = {
         {&WIFI_device, 1}

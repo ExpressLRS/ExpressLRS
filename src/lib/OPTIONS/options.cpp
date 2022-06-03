@@ -298,6 +298,8 @@ String& getOptions()
 
 bool options_init()
 {
+    debugCreateInitLogger();
+
     uint32_t partition_start = 0;
     #if defined(PLATFORM_ESP32)
     SPIFFS.begin(true);
@@ -381,6 +383,8 @@ bool options_init()
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
+
+    debugFreeInitLogger();
 
     return hardware_inited;
 }
