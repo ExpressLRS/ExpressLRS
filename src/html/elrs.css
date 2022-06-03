@@ -21,6 +21,13 @@ body, input, select, textarea {
     line-height: 1.65em;
 }
 
+@media screen and (max-width: 800px) {
+    .logo {
+        width:25%;
+		height:25%;
+    }
+}
+
 /*==========================*/
 
 #filedrag {
