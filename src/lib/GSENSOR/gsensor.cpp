@@ -28,7 +28,7 @@ float x_average = 0;
 float y_average = 0;
 float z_average = 0;
 
-static int motion_event_counter = 0;
+static bool interrupt = false;
 
 #ifdef HAS_SMART_FAN
 extern bool is_smart_fan_control;
@@ -36,8 +36,9 @@ uint32_t smart_fan_start_time = 0;
 #define SMART_FAN_TIME_OUT 5000
 #endif
 
-ICACHE_RAM_ATTR void handleGsensorInterrupt() {
-    motion_event_counter++;
+ICACHE_RAM_ATTR void handleGsensorInterrupt()
+{
+    interrupt = true;
 }
 
 void Gsensor::init()
@@ -96,12 +97,26 @@ float get_data_variance(float average, float *data, int length)
     return variance;
 }
 
+bool Gsensor::hasTriggered(unsigned long now)
+{
+    static unsigned long lastTriggeredMs = 0;
+
+    if (interrupt)
+    {
+        interrupt = false;
+        if (now - lastTriggeredMs > 20)
+        {
+            lastTriggeredMs = now;
+            return true;
+        }
+    }
+    return false;
+}
 
 void Gsensor::handle()
 {
-    bool data_check_quiet = false;
-
     float x, y, z;
+
     getGSensorData(&x, &y, &z);
 #ifdef HAS_SMART_FAN
     if(z < -0.5f)
@@ -125,7 +140,8 @@ void Gsensor::handle()
     {
         is_flipped = false;
     }
-    if(system_state == GSENSOR_SYSTEM_STATE_QUIET){
+    if(system_state == GSENSOR_SYSTEM_STATE_QUIET)
+    {
         x = abs(x - x_average);
         y = abs(y - y_average);
         z = abs(z - z_average);
@@ -152,29 +168,15 @@ void Gsensor::handle()
             float y_variance = get_data_variance(y_average, y_buffer, DATA_SAMPLE_LENGTH);
             float z_variance = get_data_variance(z_average, z_buffer, DATA_SAMPLE_LENGTH);
 
-            if((x_variance < QUIET_VARIANCE_THRESHOLD) & (y_variance < QUIET_VARIANCE_THRESHOLD) &
+            if((x_variance < QUIET_VARIANCE_THRESHOLD) && (y_variance < QUIET_VARIANCE_THRESHOLD) &&
                 (z_variance < QUIET_VARIANCE_THRESHOLD))
             {
-                data_check_quiet = true;
+                system_state = GSENSOR_SYSTEM_STATE_QUIET;
             }
-
         }
         else
         {
             sample_counter++;
-        }
-
-        if(motion_event_counter !=0)
-        {
-            system_state = GSENSOR_SYSTEM_STATE_MOVING;
-            motion_event_counter = 0;
-        }else if(data_check_quiet)
-        {
-            system_state = GSENSOR_SYSTEM_STATE_QUIET;
-        }
-        else
-        {
-            system_state = GSENSOR_SYSTEM_STATE_MOVING;
         }
     }
 }

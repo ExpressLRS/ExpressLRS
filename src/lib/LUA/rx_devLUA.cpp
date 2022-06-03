@@ -12,6 +12,8 @@
 #include "hwTimer.h"
 #include "FHSS.h"
 
+extern void deferExecution(uint32_t ms, std::function<void()> f);
+
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
@@ -150,9 +152,10 @@ static void registerLuaParameters()
 static int event()
 {
 
-#if defined(GPIO_PIN_ANTENNA_SELECT)
-  setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
-#endif
+  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+  }
 
 #ifdef POWER_OUTPUT_VALUES
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());

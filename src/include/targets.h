@@ -173,7 +173,7 @@
 
 
 #if defined(TARGET_TX)
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP32)
 #ifndef GPIO_PIN_DEBUG_RX
 #define GPIO_PIN_DEBUG_RX       3
 #endif

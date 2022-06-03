@@ -126,7 +126,6 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, cons
 
 extern void ICACHE_RAM_ATTR luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
-extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
