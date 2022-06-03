@@ -21,10 +21,6 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
-#if defined(TARGET_UNIFIED_RX)
-#include <FS.h>
-#endif
-
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -1328,7 +1324,6 @@ void setup()
     #if defined(TARGET_UNIFIED_RX)
     Serial.begin(420000);
     SerialLogger = &Serial;
-    SPIFFS.begin();
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {

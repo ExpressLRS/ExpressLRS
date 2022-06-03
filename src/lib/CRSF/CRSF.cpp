@@ -1,12 +1,11 @@
 #include "CRSF.h"
+#include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
-#include "device.h"
-
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
 // for better performance, and on other targets (mostly using pin 13), it always uses Matrix
 HardwareSerial CRSF::Port(0);
@@ -14,7 +13,7 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
-HardwareSerial CRSF::Port = Serial;
+HardwareSerial CRSF::Port(0);
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -52,14 +51,12 @@ uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 static FIFO MspWriteFIFO;
 
-void inline CRSF::nullCallback(void) {}
+void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
+void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
 
-void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
-void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
-
-void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
-void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges, ie command from Radio
-void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
+void (*CRSF::RecvParameterUpdate)() = nullptr; // called when recv parameter update req, ie from LUA
+void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
+void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
 
 /// UART Handling ///
 uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
@@ -124,13 +121,13 @@ void CRSF::Begin()
     if (esp_reset_reason() != ESP_RST_POWERON)
     {
         modelId = rtcModelId;
-        RecvModelUpdate();
+        if (RecvModelUpdate) RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
-    CRSF::Port.flush();
-    CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
-    // Invert RX/TX
-    USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
+    // Uses default UART pins
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    // Invert RX/TX (not done, connection is full duplex uninverted)
+    //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 
 #elif defined(PLATFORM_STM32)
@@ -395,7 +392,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         DBGLN("CRSF UART Connected");
-        connected();
+        if (connected) connected();
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
@@ -434,14 +431,14 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             #if defined(PLATFORM_ESP32)
             rtcModelId = modelId;
             #endif
-            RecvModelUpdate();
+            if (RecvModelUpdate) RecvModelUpdate();
         }
         else
         {
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
-            RecvParameterUpdate();
+            if (RecvParameterUpdate) RecvParameterUpdate();
         }
 
         packetReceived = true;
@@ -623,7 +620,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     {
                         //delayMicroseconds(50);
                         handleUARTout();
-                        RCdataCallback();
+                        if (RCdataCallback) RCdataCallback();
                     }
                 }
                 else
@@ -724,7 +721,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
         }
     }
 #elif defined(PLATFORM_ESP8266)
-    // Enable loopback on UART0 to connect the RX pin to the TX pin
+    // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
@@ -758,7 +755,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
         }
     }
 #elif defined(PLATFORM_ESP8266)
-    // Disable loopback to disconnect the RX pin from the TX pin
+    // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) &= ~BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
@@ -843,7 +840,7 @@ bool CRSF::UARTwdt()
             if (CRSFstate == true)
             {
                 DBGLN("CRSF UART Disconnected");
-                disconnected();
+                if (disconnected) disconnected();
                 CRSFstate = false;
             }
 

@@ -20,10 +20,6 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
-#if defined(TARGET_UNIFIED_TX)
-#include <SPIFFS.h>
-#endif
-
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -931,7 +927,7 @@ static void setupTxBackpack()
     serialPort = new NullStream();
   }
 #elif defined(PLATFORM_ESP8266) && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-  HardwareSerial *serialPort = new HardwareSerial(0);
+  HardwareSerial *serialPort = new HardwareSerial(1);
   serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
 #elif defined(TARGET_TX_FM30)
   USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
@@ -991,15 +987,10 @@ static void setupTarget()
   setupTxBackpack();
 }
 
-void setup()
+bool setupHardwareFromOptions()
 {
-  bool hardware_success = true;
-  #if defined(TARGET_UNIFIED_TX)
-  TxBackpack = new HardwareSerial(1);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
-  SPIFFS.begin(true);
-  hardware_success = options_init();
-  if (!hardware_success)
+#if defined(TARGET_UNIFIED_TX)
+  if (!options_init())
   {
     // Register the WiFi with the framework
     static device_affinity_t wifi_device[] = {
@@ -1009,13 +1000,16 @@ void setup()
     devicesInit();
 
     connectionState = hardwareUndefined;
+    return false;
   }
-  else
-  {
-    ((HardwareSerial *)TxBackpack)->end();
-  }
-  #endif
-  if (hardware_success)
+#endif
+
+  return true;
+}
+
+void setup()
+{
+  if (setupHardwareFromOptions())
   {
     initUID();
     setupTarget();

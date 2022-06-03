@@ -118,7 +118,7 @@ static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
@@ -244,7 +244,7 @@ extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 #endif
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
@@ -351,7 +351,7 @@ static void luadevGeneratePowerOpts()
   *out = '\0';
 }
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
@@ -648,7 +648,7 @@ static void registerLuaParameters()
   }
   // WIFI folder
 
-  #if defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
   #else
