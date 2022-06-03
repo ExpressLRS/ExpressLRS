@@ -97,12 +97,12 @@
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
 #define WS2812_IS_GRB
 #define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
-#define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_led_rgb_status)
-#define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_led_rgb_status_count)
-#define WS2812_VTX_STATUS_LEDS hardware_i16_array(HARDWARE_led_rgb_vtx)
-#define WS2812_VTX_STATUS_LEDS_COUNT hardware_int(HARDWARE_led_rgb_vtx_count)
-#define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_led_rgb_boot)
-#define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_led_rgb_boot_count)
+#define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_status)
+#define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_status_count)
+#define WS2812_VTX_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_vtx)
+#define WS2812_VTX_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_vtx_count)
+#define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
+#define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
 // I2C
 #define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)

@@ -64,12 +64,12 @@ typedef enum {
     HARDWARE_led_rgb,
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
-    HARDWARE_led_rgb_status,
-    HARDWARE_led_rgb_status_count,
-    HARDWARE_led_rgb_vtx,
-    HARDWARE_led_rgb_vtx_count,
-    HARDWARE_led_rgb_boot,
-    HARDWARE_led_rgb_boot_count,
+    HARDWARE_ledidx_rgb_status,
+    HARDWARE_ledidx_rgb_status_count,
+    HARDWARE_ledidx_rgb_vtx,
+    HARDWARE_ledidx_rgb_vtx_count,
+    HARDWARE_ledidx_rgb_boot,
+    HARDWARE_ledidx_rgb_boot_count,
 
     // OLED/TFT
     HARDWARE_screen_cs,       // SPI

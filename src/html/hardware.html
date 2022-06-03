@@ -141,11 +141,11 @@
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
 					<tr><td></td><td>RGB LED pin</td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td></tr>
-					<tr><td></td><td>RGB LEDs for Status</td><td><input size='40' id='led_rgb_status' name='led_rgb_status' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty then only LED at 0 is used)</td></tr>
+					<tr><td></td><td>RGB indexes for Status</td><td><input size='40' id='ledidx_rgb_status' name='ledidx_rgb_status' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty then only LED at 0 is used)</td></tr>
 @@if not isTX:
-					<tr><td></td><td>RGB LEDs for VTX Status</td><td><input size='40' id='led_rgb_vtx' name='led_rgb_vtx' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty then no VTX status)</td></tr>
+					<tr><td></td><td>RGB indexes for VTX Status</td><td><input size='40' id='ledidx_rgb_vtx' name='ledidx_rgb_vtx' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty then no VTX status)</td></tr>
 @@end
-					<tr><td></td><td>RGB LEDs for Boot animation</td><td><input size='40' id='led_rgb_boot' name='led_rgb_boot' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty status list is used)</td></tr>
+					<tr><td></td><td>RGB indexes for Boot animation</td><td><input size='40' id='ledidx_rgb_boot' name='ledidx_rgb_boot' type='text'/></td><td>Indexes into the "string" of RGB LEDs (if empty status indexes are used)</td></tr>
 					<tr><td></td><td>LED pin</td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
 					<tr><td></td><td>Red LED pin</td><td><input size='3' id='led_red' name='led_red' type='text'/></td></tr>
 					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='led_red_invert' name='led_red_invert' type='checkbox'/></td></tr>
