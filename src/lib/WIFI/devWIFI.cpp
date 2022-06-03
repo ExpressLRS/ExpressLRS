@@ -4,10 +4,10 @@
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 #include <ArduinoJson.h>
-#if defined(PLATFORM_ESP32)
-#include <SPIFFS.h>
-#else
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
+#else
+#include <SPIFFS.h>
 #endif
 #endif
 
@@ -462,6 +462,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
+    UNUSED(maxSketchSpace); // for warning
     #endif
     if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
       Update.printError(LOGGING_UART);

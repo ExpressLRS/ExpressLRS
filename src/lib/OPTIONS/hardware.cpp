@@ -3,10 +3,10 @@
 #include "targets.h"
 #include "helpers.h"
 #include "logging.h"
-#if defined(PLATFORM_ESP32)
-#include <SPIFFS.h>
-#else
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
+#else
+#include <SPIFFS.h>
 #endif
 #include <ArduinoJson.h>
 

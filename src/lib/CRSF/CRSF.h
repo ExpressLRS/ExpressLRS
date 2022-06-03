@@ -54,8 +54,6 @@ public:
     static volatile uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
-    static void inline nullCallback(void);
-
     static void (*disconnected)();
     static void (*connected)();
 

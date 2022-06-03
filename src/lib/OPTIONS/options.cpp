@@ -233,10 +233,10 @@ const char PROGMEM compile_options[] = {
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
 #include <ArduinoJson.h>
-#if defined(PLATFORM_ESP32)
-#include <SPIFFS.h>
-#else
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
+#else
+#include <SPIFFS.h>
 #endif
 #if defined(PLATFORM_ESP32)
 #include <esp_partition.h>
@@ -298,14 +298,18 @@ String& getOptions()
 
 bool options_init()
 {
+    debugCreateInitLogger();
+
     uint32_t partition_start = 0;
     #if defined(PLATFORM_ESP32)
+    SPIFFS.begin(true);
     const esp_partition_t *running = esp_ota_get_running_partition();
     if (running) {
         partition_start = running->address;
     }
     uint32_t location = partition_start + ESP.getSketchSize();
     #else
+    SPIFFS.begin();
     uint32_t location = partition_start + myGetSketchSize();
     #endif
     ESP.flashRead(location, buf, 2048);
@@ -379,6 +383,8 @@ bool options_init()
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
+
+    debugFreeInitLogger();
 
     return hardware_inited;
 }
