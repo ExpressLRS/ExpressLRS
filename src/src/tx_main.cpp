@@ -767,6 +767,12 @@ static void SendRxWiFiOverMSP()
   MspSender.SetDataToTransmit(MSPDataPackage, 1);
 }
 
+void SendRxLoanOverMSP()
+{
+  MSPDataPackage[0] = MSP_ELRS_SET_RX_LOAN_MODE;
+  MspSender.SetDataToTransmit(MSPDataPackage, 1);
+}
+
 static void CheckReadyToSend()
 {
   if (RxWiFiReadyToSend)
@@ -1102,6 +1108,8 @@ void loop()
       ESP.restart();
     }
   #endif
+
+  executeDeferredFunction(now);
 
   if (connectionState > MODE_STATES)
   {

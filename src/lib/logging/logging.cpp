@@ -12,7 +12,7 @@ void debugPrintf(const char* fmt, ...)
 {
   char c;
   const char *v;
-  char buf[11];
+  char buf[21];
   va_list  vlist;
   va_start(vlist,fmt);
 
@@ -36,6 +36,17 @@ void debugPrintf(const char* fmt, ...)
         case 'x':
           utoa(va_arg(vlist, uint32_t), buf, HEX);
           break;
+#if !defined(PLATFORM_STM32)
+        case 'f':
+          {
+            float val = va_arg(vlist, double);
+            itoa((int32_t)val, buf, DEC);
+            strcat(buf, ".");
+            int32_t decimals = abs((int32_t)(val * 1000)) % 1000;
+            itoa(decimals, buf + strlen(buf), DEC);
+          }
+          break;
+#endif
         default:
           break;
       }
