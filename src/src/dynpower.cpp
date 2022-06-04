@@ -188,7 +188,7 @@ void DynamicPower_Update()
   } // ^^ if SNR-based
 
   // If instant LQ is low, but the SNR/RSSI did nothing, inc power by one step
-  if ((startPowerLevel == POWERMGNT::currPower()) && (lq_current <= DYNPOWER_LQ_THRESH_UP))
+  if ((powerHeadroom > 0) && (startPowerLevel == POWERMGNT::currPower()) && (lq_current <= DYNPOWER_LQ_THRESH_UP))
   {
     DBGLN("+power (lq)");
     POWERMGNT::incPower();
