@@ -37,7 +37,6 @@
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
 extern bool ICACHE_RAM_ATTR IsArmed();
-static void VTxOutputMinimum(void);
 
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
@@ -127,7 +126,7 @@ static void RfAmpVrefOff()
     RfAmpVrefState = 0;
 }
 
-static void VTxOutputMinimum()
+void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
