@@ -422,13 +422,11 @@ fsm_state_entry_t const vtx_execute_fsm[] = {
 // Changing Channel, Band, Power, Pitmode in the VTX Admin menu operate like the value_select_fsm, except
 // on a LONG press saving they jump to STATE_VTX_SAVESEND, an immediate send instead of doing a POP
 // back to the item and requiring a LEFT then PREV/NEXT to get to it
-fsm_state_event_t const vtx_save_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_VTX_SEND)}};
-fsm_state_event_t const vtx_send_events[] = {MENU_EVENTS(vtx_execute_fsm)};
 fsm_state_event_t const vtxvalue_select_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
     {EVENT_ENTER, GOTO(STATE_VTX_SEND)}, // short press gets save then pop
-    {EVENT_LONG_ENTER, GOTO(STATE_VTX_SAVESEND)}, // long press gets save then VTX_SEND
+    {EVENT_LONG_ENTER, GOTO(STATE_VTX_SAVESEND)}, // long press gets save, then immediately sends automatically
     {EVENT_UP, GOTO(STATE_VALUE_DEC)},
     {EVENT_DOWN, GOTO(STATE_VALUE_INC)}
 };
@@ -444,6 +442,7 @@ fsm_state_entry_t const vtx_select_fsm[] = {
     {STATE_LAST}
 };
 fsm_state_event_t const vtx_item_events[] = {MENU_EVENTS(vtx_select_fsm)};
+fsm_state_event_t const vtx_send_events[] = {MENU_EVENTS(vtx_execute_fsm)};
 fsm_state_entry_t const vtx_menu_fsm[] = {
     // Channel first, the most frequently changed
     {STATE_VTX_CHANNEL, nullptr, displayMenuScreen, 20000, vtx_item_events, ARRAY_SIZE(vtx_item_events)},
