@@ -31,9 +31,9 @@ private:
   uint32_t _shiftedVal;
 };
 
-static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynamic_power_mavg_lq;
-static MeanAccumulator<int32_t, int8_t, -128> dynamic_power_mean_rssi;
-static int8_t dynamic_power_updated;
+static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynpower_mavg_lq;
+static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
+static int8_t dynpower_updated;
 
 extern bool IsArmed();
 extern volatile uint32_t LastTLMpacketRecvMillis;
@@ -45,19 +45,19 @@ static void DynamicPower_SetToConfigPower()
 
 void DynamicPower_Init()
 {
-    dynamic_power_mavg_lq = 100;
-    dynamic_power_updated = DYNPOWER_UPDATE_NOUPDATE;
+    dynpower_mavg_lq = 100;
+    dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
 }
 
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
 {
-    dynamic_power_updated = snrScaled;
+    dynpower_updated = snrScaled;
 }
 
 void DynamicPower_Update()
 {
-  int8_t snrScaled = dynamic_power_updated;
-  dynamic_power_updated = DYNPOWER_UPDATE_NOUPDATE;
+  int8_t snrScaled = dynpower_updated;
+  dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
 
   bool newTlmAvail = snrScaled > DYNPOWER_UPDATE_MISSED;
   bool lastTlmMissed = snrScaled == DYNPOWER_UPDATE_MISSED;
@@ -87,7 +87,7 @@ void DynamicPower_Update()
   //
 
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
-  // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
+  // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
   bool armed = IsArmed();
   if ((connectionState == disconnected && armed) ||
@@ -129,9 +129,9 @@ void DynamicPower_Update()
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
-  uint32_t lq_avg = dynamic_power_mavg_lq;
+  uint32_t lq_avg = dynpower_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
-  dynamic_power_mavg_lq.add(lq_current);
+  dynpower_mavg_lq.add(lq_current);
   // if LQ drops quickly (DYNPOWER_LQ_BOOST_THRESH_DIFF) or critically low below DYNPOWER_LQ_BOOST_THRESH_MIN, immediately boost to the configured max power.
   if (lq_diff >= DYNPOWER_LQ_BOOST_THRESH_DIFF || lq_current <= DYNPOWER_LQ_BOOST_THRESH_MIN)
   {
@@ -145,14 +145,14 @@ void DynamicPower_Update()
     // =============  RSSI-based power increment ==============
     // a simple threshold compared against N sample average of
     // rssi vs the sensitivity limit +/- some thresholds
-    dynamic_power_mean_rssi.add(rssi);
+    dynpower_mean_rssi.add(rssi);
 
-    if (dynamic_power_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
+    if (dynpower_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
     {
       int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
       int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
       int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN;
-      int8_t avg_rssi = dynamic_power_mean_rssi.mean(); // resets it too
+      int8_t avg_rssi = dynpower_mean_rssi.mean(); // resets it too
       if ((avg_rssi < rssi_inc_threshold) && (powerHeadroom > 0))
       {
         DBGLN("+power (rssi)");
