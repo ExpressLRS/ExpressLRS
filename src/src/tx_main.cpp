@@ -174,6 +174,8 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
+  crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+  crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
     switch(TLMheader & ELRS_TELEMETRY_TYPE_MASK)
     {
@@ -188,10 +190,9 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                 crsf.LinkStatistics.uplink_RSSI_1 = -(Radio.RXdataBuffer[2] & 0x7f);
                 crsf.LinkStatistics.uplink_RSSI_2 = -(Radio.RXdataBuffer[3] & 0x7f);
                 crsf.LinkStatistics.uplink_Link_quality = Radio.RXdataBuffer[5];
-                crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-                crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
                 crsf.LinkStatistics.active_antenna = Radio.RXdataBuffer[2] >> 7;
                 connectionHasModelMatch = Radio.RXdataBuffer[3] >> 7;
+                // -- downlink_SNR / downlink_RSSI is updated outside this block
                 // -- uplink_TX_Power is updated via devCRSF event, so it updates with no telemetry
                 // -- rf_mode is updated when we change rates
                 // -- downlink_Link_quality is updated before the LQ period is incremented
