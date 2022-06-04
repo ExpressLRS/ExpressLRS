@@ -241,6 +241,15 @@ static void executeSendVTX(bool init)
     }
 }
 
+static void executeSaveAndSendVTX(bool init)
+{
+    if (init)
+    {
+        saveValueIndex(true);
+    }
+    executeSendVTX(init);
+}
+
 // Bluetooth Joystck
 static void displayBLEConfirm(bool init)
 {
@@ -411,14 +420,14 @@ fsm_state_entry_t const vtx_execute_fsm[] = {
 };
 
 // Changing Channel, Band, Power, Pitmode in the VTX Admin menu operate like the value_select_fsm, except
-// on a LONG press saving they jump to STATE_VTX_SEND to allow an immediate send instead of doing a POP
+// on a LONG press saving they jump to STATE_VTX_SAVESEND, an immediate send instead of doing a POP
 // back to the item and requiring a LEFT then PREV/NEXT to get to it
 fsm_state_event_t const vtx_save_events[] = {{EVENT_IMMEDIATE, GOTO(STATE_VTX_SEND)}};
 fsm_state_event_t const vtx_send_events[] = {MENU_EVENTS(vtx_execute_fsm)};
 fsm_state_event_t const vtxvalue_select_events[] = {
     {EVENT_TIMEOUT, ACTION_POPALL},
     {EVENT_LEFT, ACTION_POP},
-    {EVENT_ENTER, GOTO(STATE_VALUE_SAVE)}, // short press gets save then pop
+    {EVENT_ENTER, GOTO(STATE_VTX_SEND)}, // short press gets save then pop
     {EVENT_LONG_ENTER, GOTO(STATE_VTX_SAVESEND)}, // long press gets save then VTX_SEND
     {EVENT_UP, GOTO(STATE_VALUE_DEC)},
     {EVENT_DOWN, GOTO(STATE_VALUE_INC)}
@@ -428,10 +437,10 @@ fsm_state_entry_t const vtx_select_fsm[] = {
     {STATE_VALUE_SELECT, nullptr, displayValueIndex, 20000, vtxvalue_select_events, ARRAY_SIZE(vtxvalue_select_events)},
     {STATE_VALUE_INC, nullptr, incrementValueIndex, 0, value_increment_events, ARRAY_SIZE(value_increment_events)},
     {STATE_VALUE_DEC, nullptr, decrementValueIndex, 0, value_decrement_events, ARRAY_SIZE(value_decrement_events)},
-    {STATE_VALUE_SAVE, nullptr, saveValueIndex, 0, value_save_events, ARRAY_SIZE(value_save_events)},
-    {STATE_VTX_SAVESEND, nullptr, saveValueIndex, 0, vtx_save_events, ARRAY_SIZE(vtx_save_events)},
-
-    {STATE_VTX_SEND, nullptr, displayMenuScreen, 20000, vtx_send_events, ARRAY_SIZE(vtx_send_events)},
+    {STATE_VTX_SAVESEND, nullptr, executeSaveAndSendVTX, 1000, vtx_execute_events, ARRAY_SIZE(vtx_execute_events)},
+    // vv This is actually STATE_VALUE_SAVE with a different state ID, since vtx_execute_events wants
+    // a STATE_VTX_SEND as its target, so it "saves" the value twice. Once before SEND and once after
+    {STATE_VTX_SEND, nullptr, saveValueIndex, 0, value_save_events, ARRAY_SIZE(value_save_events)},
     {STATE_LAST}
 };
 fsm_state_event_t const vtx_item_events[] = {MENU_EVENTS(vtx_select_fsm)};
