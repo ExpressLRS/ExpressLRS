@@ -37,8 +37,6 @@
 
 extern bool ICACHE_RAM_ATTR IsArmed();
 
-static void VTxOutputMinimum(void);
-
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0;
