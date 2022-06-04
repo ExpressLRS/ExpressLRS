@@ -23,6 +23,7 @@ enum fsm_state_s {
     STATE_VTX_POWER,
     STATE_VTX_PITMODE,
     STATE_VTX_SEND,
+    STATE_VTX_SAVESEND,
 
     STATE_WIFI_TX,
     STATE_WIFI_RX,
