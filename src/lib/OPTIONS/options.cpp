@@ -398,7 +398,6 @@ void saveOptions()
     #if defined(TARGET_UNIFIED_TX)
     doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["no-sync-on-arm"] = firmwareOptions.no_sync_on_arm;
     doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
     #else
