@@ -58,6 +58,7 @@ extern char device_name[];
 extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
+extern void saveOptions();
 #else
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];

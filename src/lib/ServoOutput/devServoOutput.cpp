@@ -6,7 +6,7 @@
 #include "helpers.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
-static ServoMgr_8266 *servoMgr;
+static ServoMgr *servoMgr;
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
 
@@ -87,7 +87,7 @@ static void initialize()
     if (!OPT_HAS_SERVO_OUTPUT)
         return;
 
-    servoMgr = new ServoMgr_8266(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
+    servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
 
     for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {

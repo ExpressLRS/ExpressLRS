@@ -1,13 +1,13 @@
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 #pragma once
 
 #include <Arduino.h>
 
-class ServoMgr_8266
+class ServoMgr
 {
 public:
-    ServoMgr_8266(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
-    ~ServoMgr_8266() { delete [] _refreshInterval; }
+    ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
+    ~ServoMgr() { delete [] _refreshInterval; }
 
     // Initialize the pins for output
     void initialize();

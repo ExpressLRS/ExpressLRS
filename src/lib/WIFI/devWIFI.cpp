@@ -34,6 +34,7 @@
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
+#include "devVTXSPI.h"
 
 #include "WebContent.h"
 
@@ -71,6 +72,9 @@ extern CRSF crsf;
 
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
+static bool scanComplete = false;
+static constexpr uint32_t STALE_WIFI_SCAN = 20000;
+static uint32_t lastScanTimeMS = 0;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -124,15 +128,12 @@ static struct {
   const uint8_t* content;
   const size_t size;
 } files[] = {
-  {"/main.css", "text/css", (uint8_t *)MAIN_CSS, sizeof(MAIN_CSS)},
-  {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
-  {"/options.html", "text/html", (uint8_t *)OPTIONS_HTML, sizeof(OPTIONS_HTML)},
-  {"/options.js", "text/javascript", (uint8_t *)OPTIONS_JS, sizeof(OPTIONS_JS)},
 #endif
 };
 
@@ -252,6 +253,25 @@ static void HandleReboot(AsyncWebServerRequest *request)
   request->client()->close();
   rebootTime = millis() + 100;
 }
+
+static void HandleReset(AsyncWebServerRequest *request)
+{
+  if (request->hasArg("hardware")) {
+    SPIFFS.remove("/hardware.json");
+  }
+  if (request->hasArg("options")) {
+    SPIFFS.remove("/options.json");
+  }
+  if (request->hasArg("model")) {
+    config.SetDefaults();
+    config.Commit();
+  }
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
+}
 #endif
 
 static void WebUpdateSendMode(AsyncWebServerRequest *request)
@@ -291,7 +311,7 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
   int numNetworks = WiFi.scanComplete();
-  if (numNetworks >= 0) {
+  if (numNetworks >= 0 && millis() - lastScanTimeMS < STALE_WIFI_SCAN) {
     DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
@@ -307,6 +327,18 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
     s+="]";
     request->send(200, "application/json", s);
   } else {
+    if (WiFi.scanComplete() != WIFI_SCAN_RUNNING)
+    {
+      #if defined(PLATFORM_ESP8266)
+      scanComplete = false;
+      WiFi.scanNetworksAsync([](int){
+        scanComplete = true;
+      });
+      #else
+      WiFi.scanNetworks(true);
+      #endif
+      lastScanTimeMS = millis();
+    }
     request->send(204, "application/json", "[]");
   }
 }
@@ -329,7 +361,7 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
-  DBGLN("Connecting to home network");
+  DBGLN("Connecting to network");
   String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
@@ -340,37 +372,31 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String ssid = request->arg("network");
   String password = request->arg("password");
 
-  DBGLN("Setting home network %s", ssid.c_str());
+  DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
-  // Only save to config if we don't have a flashed wifi network
-  if (firmwareOptions.home_wifi_ssid[0] == 0) {
-    config.SetSSID(ssid.c_str());
-    config.SetPassword(password.c_str());
-    config.Commit();
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  if (request->hasArg("save")) {
+    strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
+    strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
+    saveOptions();
   }
+#endif
   WebUpdateConnect(request);
 }
 
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
-  DBGLN("Forget home network");
-  config.SetSSID("");
-  config.SetPassword("");
-  config.Commit();
-  // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (firmwareOptions.home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
-    strcpy(station_password, firmwareOptions.home_wifi_password);
-    String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
-    sendResponse(request, msg, WIFI_STA);
-  }
-  else {
-    station_ssid[0] = 0;
-    station_password[0] = 0;
-    String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
-    sendResponse(request, msg, WIFI_AP);
-  }
+  DBGLN("Forget network");
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+  firmwareOptions.home_wifi_ssid[0] = 0;
+  firmwareOptions.home_wifi_password[0] = 0;
+  saveOptions();
+#endif
+  station_ssid[0] = 0;
+  station_password[0] = 0;
+  String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
+  sendResponse(request, msg, WIFI_AP);
 }
 
 #if defined(TARGET_RX)
@@ -575,6 +601,11 @@ static void startWiFi(unsigned long now)
 
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();
+
+#ifdef HAS_VTX_SPI
+    VTxOutputMinimum();
+#endif
+
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
     connectionState = wifiUpdate;
@@ -594,14 +625,8 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (firmwareOptions.home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
-    strcpy(station_password, firmwareOptions.home_wifi_password);
-  }
-  else {
-    strcpy(station_ssid, config.GetSSID());
-    strcpy(station_password, config.GetPassword());
-  }
+  strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+  strcpy(station_password, firmwareOptions.home_wifi_password);
   if (station_ssid[0] == 0) {
     changeTime = now;
     changeMode = WIFI_AP;
@@ -665,9 +690,9 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendContent);
+  server.on("/elrs.css", WebUpdateSendContent);
+  server.on("/mui.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
-  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -698,12 +723,10 @@ static void startServices()
   #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     server.on("/hardware.html", WebUpdateSendContent);
     server.on("/hardware.js", WebUpdateSendContent);
-    server.on("/options.html", WebUpdateSendContent);
-    server.on("/options.js", WebUpdateSendContent);
-    server.on("/elrs.css", WebUpdateSendContent);
     server.on("/hardware.json", getFile).onBody(putFile);
     server.on("/options.json", getFile).onBody(putFile);
     server.on("/reboot", HandleReboot);
+    server.on("/reset", HandleReset);
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -724,7 +747,6 @@ static void startServices()
 
 static void HandleWebUpdate()
 {
-  static bool scanComplete = false;
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
 
@@ -760,18 +782,10 @@ static void HandleWebUpdate()
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
-        #if defined(PLATFORM_ESP8266)
-        scanComplete = false;
-        WiFi.scanNetworksAsync([](int){
-          scanComplete = true;
-        });
-        #else
-        WiFi.scanNetworks(true);
-        #endif
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", station_ssid);
+        DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA

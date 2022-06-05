@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 
+#include "devCRSF.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -33,24 +34,25 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
-  {&LED_device, 0},
+  {&LED_device, 1},
 #endif
-  {&LUA_device,0},
+  {&LUA_device, 1},
 #ifdef HAS_RGB
-  {&RGB_device, 0},
+  {&RGB_device, 1},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 0},
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 0},
+  {&Button_device, 1},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
+  {&VTxSPI_device, 1},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 0},
+  {&AnalogVbat_device, 1},
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 0},
@@ -69,7 +71,7 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
@@ -470,7 +472,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    crsf.RXhandleUARTout();
 }
 
 //////////////////////////////////////////////////////////////
@@ -557,7 +558,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(NonceRX % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
-        crsf.sendRCFrameToFC();
+        crsfRCFrameAvailable();
+        servoNewChannelsAvaliable();
     }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -672,24 +674,17 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         NonceRX, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
-    // No channels packets to the FC if no model match
+    // No channels packets to the FC or PWM pins if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(HAS_SERVO_OUTPUT)
-        if (OPT_HAS_SERVO_OUTPUT)
+        if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
+            crsfRCFrameAvailable();
             servoNewChannelsAvaliable();
         }
-        else
-        #endif
+        else if (!LQCalcDVDA.currentIsSet())
         {
-            if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
-            {
-                crsf.sendRCFrameToFC();
-            } else
-            {
-                if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
-            }
+            LQCalcDVDA.add();
         }
         #if defined(DEBUG_RCVR_LINKSTATS)
         debugRcvrLinkstatsPending = true;
@@ -700,7 +695,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
 /**
  * Process the assembled MSP packet in MspData[]
  **/
-static void ICACHE_RAM_ATTR MspReceiveComplete()
+void MspReceiveComplete()
 {
     if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
     {
@@ -769,10 +764,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
     if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
     {
         NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-    }
-    if (MspReceiver.HasFinishedData())
-    {
-        MspReceiveComplete();
     }
 }
 
@@ -984,6 +975,8 @@ static void setupSerial()
     {
         USC0(UART0) |= BIT(UCTXI);
     }
+#elif defined(PLATFORM_ESP32)
+    Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1, -1, -1, firmwareOptions.invert_tx);
 #endif
 
     SerialLogger = &Serial;
@@ -1062,7 +1055,7 @@ static void setupBindingFromConfig()
     }
 }
 
-static void HandleUARTin()
+void HandleUARTin()
 {
     // If the hardware is not configured we want to be able to allow BF passthrough to work
     if (hardwareConfigured && OPT_CRSF_RCVR_NO_SERIAL)
@@ -1341,15 +1334,16 @@ void setup()
 void loop()
 {
     unsigned long now = millis();
+
     HandleUARTin();
-    if (hwTimer.running == false)
+    if (MspReceiver.HasFinishedData())
     {
-        crsf.RXhandleUARTout();
+        MspReceiveComplete();
     }
 
     devicesUpdate(now);
 
-    #if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
