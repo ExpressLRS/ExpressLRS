@@ -5,10 +5,11 @@ void (*hwTimer::callbackTick)() = nullptr;
 void (*hwTimer::callbackTock)() = nullptr;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
+bool hwTimer::running = false;
+
 volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
-bool hwTimer::running = false;
 uint32_t hwTimer::NextTimeout;
 
 #define HWTIMER_TICKS_PER_US 5

@@ -197,6 +197,14 @@
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
             }
+        },
+        "rx32_2400": {
+            "frank": {
+                "product_name": "Generic ESP32 2.4Ghz Franken RX",
+                "lua_name": "Frank 2400RX",
+                "layout_file": "Frank 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
         }
     },
     "geprc": {

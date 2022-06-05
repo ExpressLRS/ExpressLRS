@@ -24,7 +24,7 @@ public:
     }
 
     /* Start a new period */
-    void inc()
+    void ICACHE_RAM_ATTR inc()
     {
         // Increment the counter by shifting one bit higher
         // If we've shifted out all the bits, move to next idx
@@ -53,7 +53,7 @@ public:
     }
 
     /* Return the current running total of bits set, in percent */
-    uint8_t getLQ() const
+    uint8_t ICACHE_RAM_ATTR getLQ() const
     {
         return (uint32_t)LQ * 100U / count;
     }
@@ -89,7 +89,7 @@ public:
     }
 
     /*  Return true if the current period was add()ed */
-    bool currentIsSet() const
+    bool ICACHE_RAM_ATTR currentIsSet() const
     {
         return LQArray[index] & LQmask;
     }
