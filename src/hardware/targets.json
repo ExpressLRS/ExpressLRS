@@ -204,6 +204,12 @@
                 "lua_name": "Frank 2400RX",
                 "layout_file": "Frank 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "rx_vtx": {
+                "product_name": "Generic ESP32 2.4Ghz Rx and VTx",
+                "lua_name": "Rx+VTx 2400RX",
+                "layout_file": "Generic 2400 Whoop Rx and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
     },
