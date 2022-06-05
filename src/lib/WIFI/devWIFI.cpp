@@ -4,7 +4,7 @@
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 #include <ArduinoJson.h>
-#if defined(TARGET_UNIFIED_RX)
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
@@ -34,6 +34,7 @@
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
+#include "devVTXSPI.h"
 
 #include "WebContent.h"
 
@@ -487,6 +488,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
+    UNUSED(maxSketchSpace); // for warning
     #endif
     if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
       Update.printError(LOGGING_UART);
@@ -599,6 +601,11 @@ static void startWiFi(unsigned long now)
 
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();
+
+#ifdef HAS_VTX_SPI
+    VTxOutputMinimum();
+#endif
+
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
     connectionState = wifiUpdate;

@@ -3,7 +3,7 @@
 #include "telemetry.h"
 #include "logging.h"
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX) && defined(PLATFORM_ESP8266) //enable MSP2WIFI for RX only at the moment
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
 #include "CRSF.h"
 extern TCPSOCKET wifi2tcp;
@@ -254,7 +254,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
 
-            #if defined(USE_MSP_WIFI) && defined(TARGET_RX) && defined(PLATFORM_ESP8266)
+            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
                 // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
                 if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
                 {

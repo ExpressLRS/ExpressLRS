@@ -1,4 +1,4 @@
-#if defined(USE_MSP_WIFI) && defined(PLATFORM_ESP8266)
+#if defined(USE_MSP_WIFI)
 
 #include "tcpsocket.h"
 #include "logging.h"

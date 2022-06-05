@@ -158,6 +158,12 @@
                 "lua_name": "DupleTX",
                 "layout_file": "DIY 2400 DupleTX.json",
                 "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "dupletxesp": {
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
+                "lua_name": "DupleTX ESP",
+                "layout_file": "DIY 2400 DupleTX ESP.json",
+                "upload_methods": ["uart", "wifi"]
             }
         },
         "rx_2400": {
@@ -190,6 +196,14 @@
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
+            }
+        },
+        "rx32_2400": {
+            "frank": {
+                "product_name": "Generic ESP32 2.4Ghz Franken RX",
+                "lua_name": "Frank 2400RX",
+                "layout_file": "Frank 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
     },

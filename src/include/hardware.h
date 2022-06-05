@@ -64,6 +64,12 @@ typedef enum {
     HARDWARE_led_rgb,
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
+    HARDWARE_ledidx_rgb_status,
+    HARDWARE_ledidx_rgb_status_count,
+    HARDWARE_ledidx_rgb_vtx,
+    HARDWARE_ledidx_rgb_vtx_count,
+    HARDWARE_ledidx_rgb_boot,
+    HARDWARE_ledidx_rgb_boot_count,
 
     // OLED/TFT
     HARDWARE_screen_cs,       // SPI
@@ -106,12 +112,15 @@ typedef enum {
     HARDWARE_vbat_scale,
 
     // VTX
-    HARDWARE_rf_amp_pwm,
-    HARDWARE_rf_amp_vpd,
-    HARDWARE_rf_amp_vref,
-    HARDWARE_spi_vtx_nss,
-    HARDWARE_vpd_25mW,
-    HARDWARE_vpd_100mW,
+    HARDWARE_vtx_amp_pwm,
+    HARDWARE_vtx_amp_vpd,
+    HARDWARE_vtx_amp_vref,
+    HARDWARE_vtx_nss,
+    HARDWARE_vtx_miso,
+    HARDWARE_vtx_mosi,
+    HARDWARE_vtx_sck,
+    HARDWARE_vtx_amp_vpd_25mW,
+    HARDWARE_vtx_amp_vpd_100mW,
 
     HARDWARE_LAST
 } nameType;

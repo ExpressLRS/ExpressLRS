@@ -3,7 +3,7 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
-#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
+#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 #endif
@@ -36,7 +36,7 @@ public:
 
     CRSF(Stream &dev) : _dev(&dev) {}
 
-    #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+    #if defined(USE_MSP_WIFI)
     static CROSSFIRE2MSP crsf2msp;
     static MSP2CROSSFIRE msp2crsf;
     #endif
@@ -54,8 +54,6 @@ public:
     static volatile uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
-    static void inline nullCallback(void);
-
     static void (*disconnected)();
     static void (*connected)();
 

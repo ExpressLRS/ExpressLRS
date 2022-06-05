@@ -97,6 +97,12 @@
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
 #define WS2812_IS_GRB
 #define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
+#define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_status)
+#define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_status_count)
+#define WS2812_VTX_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_vtx)
+#define WS2812_VTX_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_vtx_count)
+#define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
+#define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
 // I2C
 #define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)
@@ -114,10 +120,13 @@
 
 // VTX
 #define HAS_VTX_SPI
-#define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_spi_vtx_nss) != UNDEF_PIN)
-#define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_rf_amp_pwm)
-#define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_rf_amp_vpd)
-#define GPIO_PIN_RF_AMP_VREF hardware_pin(HARDWARE_rf_amp_vref)
-#define GPIO_PIN_SPI_VTX_NSS hardware_pin(HARDWARE_spi_vtx_nss)
-#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vpd_25mW)
-#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vpd_100mW)
+#define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)
+#define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_vtx_amp_pwm)
+#define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_vtx_amp_vpd)
+#define GPIO_PIN_RF_AMP_VREF hardware_pin(HARDWARE_vtx_amp_vref)
+#define GPIO_PIN_SPI_VTX_NSS hardware_pin(HARDWARE_vtx_nss)
+#define GPIO_PIN_SPI_VTX_MISO hardware_pin(HARDWARE_vtx_miso)
+#define GPIO_PIN_SPI_VTX_MOSI hardware_pin(HARDWARE_vtx_mosi)
+#define GPIO_PIN_SPI_VTX_SCK hardware_pin(HARDWARE_vtx_sck)
+#define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_vpd_25mW)
+#define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)

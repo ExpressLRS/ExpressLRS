@@ -66,7 +66,5 @@ def build_common(env, mainfile, isTX):
             shutil.copyfile(path, "include/WebContent.h")
         os.remove(path)
 
-platform = env.get('PIOPLATFORM', '')
 target_name = env['PIOENV'].upper()
-
 build_common(env, "index.html", not '_RX_' in target_name)

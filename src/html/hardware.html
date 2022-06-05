@@ -144,6 +144,11 @@
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
 					<tr><td></td><td>RGB LED pin</td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td></tr>
+					<tr><td></td><td>RGB indexes for Status</td><td><input size='40' id='ledidx_rgb_status' name='ledidx_rgb_status' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then only LED at 0 is used)</td></tr>
+@@if not isTX:
+					<tr><td></td><td>RGB indexes for VTX Status</td><td><input size='40' id='ledidx_rgb_vtx' name='ledidx_rgb_vtx' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then no VTX status)</td></tr>
+@@end
+					<tr><td></td><td>RGB indexes for Boot animation</td><td><input size='40' id='ledidx_rgb_boot' name='ledidx_rgb_boot' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty status indexes are used)</td></tr>
 					<tr><td></td><td>LED pin</td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
 					<tr><td></td><td>Red LED pin</td><td><input size='3' id='led_red' name='led_red' type='text'/></td></tr>
 					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='led_red_invert' name='led_red_invert' type='checkbox'/></td></tr>
@@ -202,12 +207,15 @@
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
-					<tr><td></td><td>RF amp PWM pin</td><td><input size='3' id='rf_amp_pwm' name='rf_amp_pwm' type='text'/></td></tr>
-					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='rf_amp_vpd' name='rf_amp_vpd' type='text'/></td></tr>
-					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='rf_amp_vref' name='rf_amp_vref' type='text'/></td></tr>
-					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='spi_vtx_nss' name='spi_vtx_nss' type='checkbox'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vpd_25mW' name='vpd_25mW' type='text' class='array'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vpd_100mW' name='vpd_100mW' type='text' class='array'/></td></tr>
+					<tr><td></td><td>RF amp PWM pin</td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='vtx_amp_vpd' name='vtx_amp_vpd' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='vtx_amp_vref' name='vtx_amp_vref' type='text'/></td></tr>
+					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='vtx_nss' name='vtx_nss' type='text'/></td></tr>
+					<tr><td></td><td>SPI SCK pin</td><td><input size='3' id='vtx_sck' name='vtx_sck' type='text'/></td><td>If this pin is undefined, then the SPI bus is shared with the radio chip</td></tr>
+					<tr><td></td><td>SPI MISO pin</td><td><input size='3' id='vtx_miso' name='vtx_miso' type='text'/></td></tr>
+					<tr><td></td><td>SPI MOSI pin</td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_25mW' name='vtx_amp_vpd_25mW' type='text' class='array'/></td></tr>
+					<tr><td></td><td>100mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_100mW' name='vtx_amp_vpd_100mW' type='text' class='array'/></td></tr>
 @@end
 				</table>
 				<br>

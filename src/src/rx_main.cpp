@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 
+#include "devCRSF.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -20,10 +21,6 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
-
-#if defined(TARGET_UNIFIED_RX)
-#include <FS.h>
-#endif
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -37,24 +34,25 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
+  {&CRSF_device, 0},
 #ifdef HAS_LED
-  {&LED_device, 0},
+  {&LED_device, 1},
 #endif
-  {&LUA_device,0},
+  {&LUA_device, 1},
 #ifdef HAS_RGB
-  {&RGB_device, 0},
+  {&RGB_device, 1},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 0},
+  {&WIFI_device, 1},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 0},
+  {&Button_device, 1},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
+  {&VTxSPI_device, 1},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 0},
+  {&AnalogVbat_device, 1},
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 0},
@@ -73,7 +71,7 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#ifdef PLATFORM_ESP8266
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 #endif
@@ -174,9 +172,15 @@ static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
+#define LOAN_BIND_TIMEOUT_DEFAULT 60000
+#define LOAN_BIND_TIMEOUT_MSP 10000U
+
+
 bool InBindingMode = false;
 bool InLoanBindingMode = false;
 bool returnModelFromLoan = false;
+static unsigned long loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
+static unsigned long loadBindingStartedMs = 0;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -468,7 +472,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
     alreadyTLMresp = false;
     alreadyFHSS = false;
-    crsf.RXhandleUARTout();
 }
 
 //////////////////////////////////////////////////////////////
@@ -555,7 +558,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(NonceRX % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
-        crsf.sendRCFrameToFC();
+        crsfRCFrameAvailable();
+        servoNewChannelsAvaliable();
     }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -670,24 +674,17 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         NonceRX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
-    // No channels packets to the FC if no model match
+    // No channels packets to the FC or PWM pins if no model match
     if (connectionHasModelMatch)
     {
-        #if defined(HAS_SERVO_OUTPUT)
-        if (OPT_HAS_SERVO_OUTPUT)
+        if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
+            crsfRCFrameAvailable();
             servoNewChannelsAvaliable();
         }
-        else
-        #endif
+        else if (!LQCalcDVDA.currentIsSet())
         {
-            if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
-            {
-                crsf.sendRCFrameToFC();
-            } else
-            {
-                if (!LQCalcDVDA.currentIsSet()) LQCalcDVDA.add();
-            }
+            LQCalcDVDA.add();
         }
         #if defined(DEBUG_RCVR_LINKSTATS)
         debugRcvrLinkstatsPending = true;
@@ -698,7 +695,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
 /**
  * Process the assembled MSP packet in MspData[]
  **/
-static void ICACHE_RAM_ATTR MspReceiveComplete()
+void MspReceiveComplete()
 {
     if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
     {
@@ -709,6 +706,11 @@ static void ICACHE_RAM_ATTR MspReceiveComplete()
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         connectionState = wifiUpdate;
 #endif
+    }
+    else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
+    {
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
+        InLoanBindingMode = true;
     }
     else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
     {
@@ -762,10 +764,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP()
     if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
     {
         NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-    }
-    if (MspReceiver.HasFinishedData())
-    {
-        MspReceiveComplete();
     }
 }
 
@@ -976,6 +974,8 @@ static void setupSerial()
     {
         USC0(UART0) |= BIT(UCTXI);
     }
+#elif defined(PLATFORM_ESP32)
+    Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1, -1, -1, firmwareOptions.invert_tx);
 #endif
 
     SerialLogger = &Serial;
@@ -1019,10 +1019,11 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
-#if defined(GPIO_PIN_ANTENNA_SELECT)
-    pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-    digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
-#endif
+    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
+        digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+    }
 #if defined(TARGET_RX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
@@ -1038,11 +1039,7 @@ static void setupBindingFromConfig()
     if (config.GetOnLoan())
     {
         DBGLN("RX has been loaned, reading the UID from eeprom...");
-        const uint8_t* storedUID = config.GetOnLoanUID();
-        for (uint8_t i = 0; i < UID_LEN; ++i)
-        {
-            UID[i] = storedUID[i];
-        }
+        memcpy(UID, config.GetOnLoanUID(), sizeof(UID));
         DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
         CRCInitializer = (UID[4] << 8) | UID[5];
         return;
@@ -1051,17 +1048,13 @@ static void setupBindingFromConfig()
     if (!firmwareOptions.hasUID && config.GetIsBound())
     {
         DBGLN("RX has been bound previously, reading the UID from eeprom...");
-        const uint8_t* storedUID = config.GetUID();
-        for (uint8_t i = 0; i < UID_LEN; ++i)
-        {
-            UID[i] = storedUID[i];
-        }
+        memcpy(UID, config.GetUID(), sizeof(UID));
         DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
         CRCInitializer = (UID[4] << 8) | UID[5];
     }
 }
 
-static void HandleUARTin()
+void HandleUARTin()
 {
     // If the hardware is not configured we want to be able to allow BF passthrough to work
     if (hardwareConfigured && OPT_CRSF_RCVR_NO_SERIAL)
@@ -1163,7 +1156,7 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
-static void updateBindingMode()
+static void updateBindingMode(unsigned long now)
 {
 #ifndef MY_UID
     // If the eeprom is indicating that we're not bound
@@ -1185,6 +1178,13 @@ static void updateBindingMode()
     // If in binding mode and the bind packet has come in, leave binding mode
     else if (InBindingMode && !InLoanBindingMode && config.GetIsBound())
     {
+        ExitBindingMode();
+    }
+    // If in "loan" binding mode and we've been here for more than timeout period, reset UID and leave binding mode
+    else if (InBindingMode && InLoanBindingMode && (now - loadBindingStartedMs) > loanBindTimeout) {
+        loanBindTimeout = LOAN_BIND_TIMEOUT_DEFAULT;
+        memcpy(UID, MasterUID, sizeof(MasterUID));
+        setupBindingFromConfig();
         ExitBindingMode();
     }
     // If returning the model to the owner, set the flag and call ExitBindingMode to reset the CRC and FHSS
@@ -1278,7 +1278,6 @@ void setup()
     #if defined(TARGET_UNIFIED_RX)
     Serial.begin(420000);
     SerialLogger = &Serial;
-    SPIFFS.begin();
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
@@ -1335,15 +1334,16 @@ void setup()
 void loop()
 {
     unsigned long now = millis();
+
     HandleUARTin();
-    if (hwTimer.running == false)
+    if (MspReceiver.HasFinishedData())
     {
-        crsf.RXhandleUARTout();
+        MspReceiveComplete();
     }
 
     devicesUpdate(now);
 
-    #if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
@@ -1357,6 +1357,8 @@ void loop()
         config.Commit();
         devicesTriggerEvent();
     }
+
+    executeDeferredFunction(now);
 
     if (connectionState > MODE_STATES)
     {
@@ -1409,7 +1411,7 @@ void loop()
         TelemetrySender.SetDataToTransmit(nextPlayloadSize, nextPayload, ELRS_TELEMETRY_BYTES_PER_CALL);
     }
     updateTelemetryBurst();
-    updateBindingMode();
+    updateBindingMode(now);
     debugRcvrLinkstats();
 }
 
@@ -1448,6 +1450,7 @@ void reset_into_bootloader(void)
 void EnterBindingMode()
 {
     if (InLoanBindingMode) {
+        loadBindingStartedMs = millis();
         LostConnection();
     }
     if (connectionState == connected || InBindingMode) {
@@ -1506,6 +1509,7 @@ void ExitBindingMode()
     RFmodeLastCycled = 0;
 
     LostConnection();
+    LockRFmode = false;
     SetRFLinkRate(RATE_DEFAULT);
     Radio.RXnb();
 
