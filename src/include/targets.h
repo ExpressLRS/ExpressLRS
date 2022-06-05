@@ -86,17 +86,26 @@
 #ifndef GPIO_PIN_SCK
 #define GPIO_PIN_SCK UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_NSS_2
+#define GPIO_PIN_NSS_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_BUSY_2
+#define GPIO_PIN_BUSY_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_DIO0
 #define GPIO_PIN_DIO0 UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_DIO1
 #define GPIO_PIN_DIO1 UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DIO1_2
+#define GPIO_PIN_DIO1_2 UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_DIO2
 #define GPIO_PIN_DIO2 UNDEF_PIN
