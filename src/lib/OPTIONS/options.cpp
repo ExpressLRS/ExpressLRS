@@ -125,7 +125,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #if defined(TLM_REPORT_INTERVAL_MS)
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
-    .tlm_report_interval = 320U,
+    .tlm_report_interval = 240U,
 #endif
 #if defined(FAN_MIN_RUNTIME)
     .fan_min_runtime = FAN_MIN_RUNTIME,
@@ -372,7 +372,7 @@ bool options_init()
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     #if defined(TARGET_UNIFIED_TX)
-    firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
+    firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
