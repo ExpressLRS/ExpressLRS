@@ -56,26 +56,15 @@ def build_common(env, mainfile, isTX):
             build_version(out, env)
             build_html(mainfile, "INDEX_HTML", out, env, isTX)
             build_html("scan.js", "SCAN_JS", out, env)
-            build_html("main.css", "MAIN_CSS", out, env)
-            build_html("logo.svg", "LOGO_SVG", out, env)
+            build_html("mui.js", "MUI_JS", out, env)
             build_html("elrs.css", "ELRS_CSS", out, env)
             build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)
             build_html("hardware.js", "HARDWARE_JS", out, env)
-            build_html("options.html", "OPTIONS_HTML", out, env, isTX)
-            build_html("options.js", "OPTIONS_JS", out, env)
 
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")
         os.remove(path)
 
-
-platform = env.get('PIOPLATFORM', '')
-is_rx = any('TARGET_RX' in string for string in env.get('BUILD_FLAGS'))
-if platform in ['espressif8266']:
-    build_common(env, "rx_index.html", False)
-elif platform in ['espressif32']:
-    if is_rx:
-        build_common(env, "rx_index.html", False)
-    else:
-        build_common(env, "tx_index.html", True)
+target_name = env['PIOENV'].upper()
+build_common(env, "index.html", not '_RX_' in target_name)
