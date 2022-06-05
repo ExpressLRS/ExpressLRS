@@ -35,7 +35,7 @@ extern void debugPrintf(const char* fmt, ...);
 
 #if defined(CRITICAL_FLASH) || ((defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
   #define INFOLN(msg, ...)
-  #define ERRLN(msg)
+  #define ERRLN(msg, ...)
 #else
   #define INFOLN(msg, ...) { \
       debugPrintf(msg, ##__VA_ARGS__); \
