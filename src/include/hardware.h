@@ -7,12 +7,15 @@ typedef enum {
 
     // Radio
     HARDWARE_radio_busy,
+    HARDWARE_radio_busy_2,
     HARDWARE_radio_dio0,
     HARDWARE_radio_dio1,
+    HARDWARE_radio_dio1_2,
     HARDWARE_radio_dio2,
     HARDWARE_radio_miso,
     HARDWARE_radio_mosi,
     HARDWARE_radio_nss,
+    HARDWARE_radio_nss_2,
     HARDWARE_radio_rst,
     HARDWARE_radio_sck,
     HARDWARE_radio_dcdc,

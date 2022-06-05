@@ -85,17 +85,19 @@ bool SX1280Driver::Begin()
         return false;
     }
 
-#if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_2)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_2)));
-    DBGLN("Read Vers sx1280 #2: %d", firmwareRev);
-    if ((firmwareRev == 0) || (firmwareRev == 65535))
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        // SPI communication failed, just return without configuration
-        return false;
+        firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_2)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_2)));
+        DBGLN("Read Vers sx1280 #2: %d", firmwareRev);
+        if ((firmwareRev == 0) || (firmwareRev == 65535))
+        {
+            // SPI communication failed, just return without configuration
+            return false;
+        }
+        
+        hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_2) | 0xC0), SX1280_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
-    
-    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_2) | 0xC0), SX1280_Radio_2);   //default is low power mode, switch to high sensitivity instead
-#endif
+
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_1) | 0xC0), SX1280_Radio_1);   //default is low power mode, switch to high sensitivity instead
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All);                              //Enable auto FS
 #if defined(USE_SX1280_DCDC)
@@ -402,10 +404,11 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
         return;
     }
 
-#if defined(GPIO_PIN_NSS_2) && (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    if (lastSuccessfulPacketRadio == SX1280_Radio_1) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2); // Make sure the unused radio is in FS mode and will not receive the tx packet.
-    if (lastSuccessfulPacketRadio == SX1280_Radio_2) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
-#endif
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        if (lastSuccessfulPacketRadio == SX1280_Radio_1) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2); // Make sure the unused radio is in FS mode and will not receive the tx packet.
+        if (lastSuccessfulPacketRadio == SX1280_Radio_2) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+    }
 
     hal.TXenable(lastSuccessfulPacketRadio); // do first to allow PA stablise
     hal.WriteBuffer(0x00, TXdataBuffer, PayloadLength, lastSuccessfulPacketRadio); //todo fix offset to equal fifo addr

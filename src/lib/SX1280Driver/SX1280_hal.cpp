@@ -33,9 +33,10 @@ void SX1280Hal::end()
 {
     TXRXdisable(); // make sure the RX/TX amp pins are disabled
     detachInterrupt(GPIO_PIN_DIO1);
-#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
-    detachInterrupt(GPIO_PIN_DIO1_2);
-#endif
+    if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    {
+        detachInterrupt(GPIO_PIN_DIO1_2);
+    }
     SPI.end();
     IsrCallback_1 = nullptr; // remove callbacks
     IsrCallback_2 = nullptr; // remove callbacks
@@ -44,17 +45,20 @@ void SX1280Hal::end()
 void SX1280Hal::init()
 {
     DBGLN("Hal Init");
-#if (GPIO_PIN_BUSY != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUSY, INPUT);
-#endif
-#if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUSY_2, INPUT);
-#endif
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_BUSY, INPUT);
+    }
+    if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_BUSY_2, INPUT);
+    }
 
     pinMode(GPIO_PIN_DIO1, INPUT);
-#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
-    pinMode(GPIO_PIN_DIO1_2, INPUT);
-#endif
+    if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_DIO1_2, INPUT);
+    }
 
     pinMode(GPIO_PIN_NSS, OUTPUT);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
@@ -121,9 +125,10 @@ void SX1280Hal::init()
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
-#if defined(GPIO_PIN_DIO1_2) && (GPIO_PIN_DIO1_2 != UNDEF_PIN)
-    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1_2), this->dioISR_2, RISING);
-#endif
+    if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
+    {
+        attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1_2), this->dioISR_2, RISING);
+    }
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::setNss(uint8_t radioNumber, bool state)
@@ -297,45 +302,42 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, volatile uint8_t *buf
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
 {
-#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    constexpr uint32_t wtimeoutUS = 1000U;
-    uint32_t startTime = 0;
-    uint32_t now = 0;
-
-    while (true)
+    if (GPIO_PIN_BUSY != UNDEF_PIN)
     {
-        if (radioNumber == SX1280_Radio_1)
+        constexpr uint32_t wtimeoutUS = 1000U;
+        uint32_t startTime = 0;
+
+        while (true)
         {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-        }
-#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-        else
-        if (radioNumber == SX1280_Radio_2)
-        {
-            if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-        }
-#endif
-        else
-        if (radioNumber == SX1280_Radio_All)
-        {
-#if defined(GPIO_PIN_BUSY_2) && (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-            if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-#else
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-#endif
-        }
-        else
-        {
-            // Use this time to call micros().
-            now = micros();
-            if (startTime == 0) startTime = now;
-            if ((now - startTime) > wtimeoutUS) return false;
+            if (radioNumber == SX1280_Radio_1)
+            {
+                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+            }
+            else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX1280_Radio_2)
+            {
+                if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+            }
+            else if (radioNumber == SX1280_Radio_All)
+            {
+                if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+                {
+                    if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+                }
+                else
+                {
+                    if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+                }
+            }
+            else
+            {
+                // Use this time to call micros().
+                uint32_t now = micros();
+                if (startTime == 0) startTime = now;
+                if ((now - startTime) > wtimeoutUS) return false;
+            }
         }
     }
-#else
-    // observed BUSY time for Write* calls are 12-20uS after NSS de-assert
-    // and state transitions require extra time depending on prior state
-    if (BusyDelayDuration)
+    else
     {
         uint32_t now = micros();
         while ((now - BusyDelayStart) < BusyDelayDuration)
@@ -343,7 +345,6 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
         BusyDelayDuration = 0;
     }
     return true;
-#endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::dioISR_1()

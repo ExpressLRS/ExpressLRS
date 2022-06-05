@@ -40,12 +40,15 @@
 
 // Radio
 #define GPIO_PIN_BUSY hardware_pin(HARDWARE_radio_busy)
+#define GPIO_PIN_BUSY_2 hardware_pin(HARDWARE_radio_busy_2)
 #define GPIO_PIN_DIO0 hardware_pin(HARDWARE_radio_dio0)
 #define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
+#define GPIO_PIN_DIO1_2 hardware_pin(HARDWARE_radio_dio1_2)
 #define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)
 #define GPIO_PIN_MISO hardware_pin(HARDWARE_radio_miso)
 #define GPIO_PIN_MOSI hardware_pin(HARDWARE_radio_mosi)
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
+#define GPIO_PIN_NSS_2 hardware_pin(HARDWARE_radio_nss_2)
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
 #define USE_SX1280_DCDC
