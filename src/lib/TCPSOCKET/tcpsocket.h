@@ -1,6 +1,5 @@
 #pragma once
-#if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
-
+#if defined(USE_MSP_WIFI)
 
 #include <cstdint>
 #include <cstring>
