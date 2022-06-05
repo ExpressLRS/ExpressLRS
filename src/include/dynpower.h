@@ -15,7 +15,7 @@
 // Call DynamicPower_Init in setup()
 void DynamicPower_Init();
 // Call DynamicPower_Update from loop()
-void DynamicPower_Update();
+void DynamicPower_Update(uint32_t now);
 // Call DynamicPower_TelemetryUpdate from ISR with DYNPOWER_UPDATE_MISSED or ScaledSNR value
 void DynamicPower_TelemetryUpdate(int8_t snrScaled);
 

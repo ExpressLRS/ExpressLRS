@@ -441,11 +441,13 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
 #else
     crsf.LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
 #endif
-    // Indicate no telemetry packet received to the DP system
-    if (!LQCalc.currentIsSet())
-      DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
     LQCalc.inc();
     return;
+  }
+  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet())
+  {
+    // Indicate no telemetry packet received to the DP system
+    DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
   }
   TelemetryRcvPhase = ttrpTransmitting;
 
@@ -1047,7 +1049,7 @@ void loop()
 
   CheckReadyToSend();
   CheckConfigChangePending();
-  DynamicPower_Update();
+  DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
 
   if (TxBackpack->available())

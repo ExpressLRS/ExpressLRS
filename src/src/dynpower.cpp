@@ -34,9 +34,9 @@ private:
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynpower_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
 static int8_t dynpower_updated;
+static uint32_t dynpower_last_linkstats_millis;
 
 extern bool IsArmed();
-extern volatile uint32_t LastTLMpacketRecvMillis;
 
 static void DynamicPower_SetToConfigPower()
 {
@@ -52,9 +52,16 @@ void DynamicPower_Init()
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
 {
     dynpower_updated = snrScaled;
+    // static unsigned lastUp;
+    // if (snrScaled != DYNPOWER_UPDATE_MISSED)
+    // {
+    //   unsigned now = millis();
+    //   DBGLN(" %u P=%u SNR=%d ", now - lastUp, POWERMGNT::currPower(), snrScaled);
+    //   lastUp = now;
+    // }
 }
 
-void DynamicPower_Update()
+void DynamicPower_Update(uint32_t now)
 {
   int8_t snrScaled = dynpower_updated;
   dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
@@ -107,12 +114,9 @@ void DynamicPower_Update()
     // state == connected is not used: unplugging an RX will be connected and will boost power to max before disconnect
     if (armed && (powerHeadroom > 0))
     {
-      uint32_t linkstatsInterval = 2U * TLMratioEnumToValue(config.GetTlm()) * ExpressLRS_currAirRate_Modparams->interval / 1000U;
+      uint32_t linkstatsInterval = TLMratioEnumToValue(config.GetTlm()) * ExpressLRS_currAirRate_Modparams->interval / (1000U / 2U);
       linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
-      // Capture the last before now so it will always be <= now
-      const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
-      const uint32_t now = millis();
-      if (now - lastTlmMillis > (linkstatsInterval + 2U))
+      if ((now - dynpower_last_linkstats_millis) > (linkstatsInterval + 2U))
       {
         DBGLN("+power (tlm)");
         POWERMGNT::incPower();
@@ -124,6 +128,7 @@ void DynamicPower_Update()
   // If no new telemetry, no new LQ/SNR/RSSI to use for adjustment
   if (!newTlmAvail)
     return;
+  dynpower_last_linkstats_millis = now;
 
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
