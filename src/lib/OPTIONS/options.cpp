@@ -389,4 +389,37 @@ bool options_init()
     return hardware_inited;
 }
 
+void saveOptions()
+{
+    DynamicJsonDocument doc(1024);
+
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
+    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.home_wifi_ssid[0])
+    {
+        doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
+        doc["wifi-password"] = firmwareOptions.home_wifi_password;
+    }
+    #if defined(TARGET_UNIFIED_TX)
+    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
+    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
+    doc["no-sync-on-arm"] = firmwareOptions.no_sync_on_arm;
+    doc["uart-inverted"] = firmwareOptions.uart_inverted;
+    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+    #else
+    doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
+    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
+    doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
+    #endif
+    doc["domain"] = firmwareOptions.domain;
+
+    File options = SPIFFS.open("/options.json", "w");
+    serializeJson(doc, options);
+    options.close();
+}
+
 #endif

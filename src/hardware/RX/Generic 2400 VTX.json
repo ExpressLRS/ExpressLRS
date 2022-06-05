@@ -16,10 +16,10 @@
     "power_values": [13],
     "led_rgb": 2,
     "led_rgb_isgrb": 1,
-    "spi_vtx_nss": 9,
-    "rf_amp_pwm": 0,
-    "rf_amp_vpd": 17,
-    "rf_amp_vref": 10,
-    "vpd_25mW": [460,470,505,505],
-    "vpd_100mW": [830,840,890,895]
+    "vtx_nss": 9,
+    "vtx_amp_pwm": 0,
+    "vtx_amp_vpd": 17,
+    "vtx_amp_vref": 10,
+    "vtx_amp_vpd_25mW": [460,470,505,505],
+    "vtx_amp_vpd_100mW": [830,840,890,895]
 }
