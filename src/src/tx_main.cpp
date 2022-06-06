@@ -273,25 +273,25 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   dynamic_power_updated = true;
 }
 
-void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
     DBGLN("TLM HW CRC error");
-    return;
+    return false;
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
     DBGLN("TLM crc error");
-    return;
+    return false;
   }
 
   if (otaPktPtr->std.type != PACKET_TYPE_TLM)
   {
     DBGLN("TLM type error %d", otaPktPtr->std.type);
-    return;
+    return false;
   }
 
   LastTLMpacketRecvMillis = millis();
@@ -333,6 +333,7 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
     }
   }
+  return true;
 }
 
 void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
@@ -698,10 +699,11 @@ static void CheckConfigChangePending()
   }
 }
 
-void ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  ProcessTLMpacket(status);
+  bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
+  return packetSuccessful;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()

@@ -59,46 +59,54 @@ SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 
 void SX1280Driver::End()
 {
-    SetMode(SX1280_MODE_SLEEP);
+    SetMode(SX1280_MODE_SLEEP, SX1280_Radio_All);
     hal.end();
     RemoveCallbacks();
-    currFreq = 2400000000;
+    currFreq = (uint32_t)((double)2400000000 / (double)FREQ_STEP);
     PayloadLength = 8; // Dummy default value which is overwritten during setup.
 }
 
 bool SX1280Driver::Begin()
 {
     hal.init();
-    hal.IsrCallback = &SX1280Driver::IsrCallback;
+    hal.IsrCallback_1 = &SX1280Driver::IsrCallback_1;
+    hal.IsrCallback_2 = &SX1280Driver::IsrCallback_2;
 
     hal.reset();
     DBGLN("SX1280 Begin");
-    delay(100);
-    uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1)));
-    DBGLN("Read Vers: %d", firmwareRev);
+    
+    SetMode(SX1280_MODE_STDBY_RC, SX1280_Radio_All); // Put in STDBY_RC mode.  Must be SX1280_MODE_STDBY_RC for SX1280_RADIO_SET_REGULATORMODE to be set.
+
+    uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_1)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_1)));
+    DBGLN("Read Vers sx1280 #1: %d", firmwareRev);
     if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
         return false;
     }
 
-    SetMode(SX1280_MODE_STDBY_RC);                                                                                                //Put in STDBY_RC mode
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, SX1280_PACKET_TYPE_LORA);                                                       //Set packet type to LoRa
-    ConfigModParamsLoRa(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7);                                                //Configure Modulation Params
-    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01);                                                                              //Enable auto FS
-    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891) | 0xC0));                                                                 //default is low power mode, switch to high sensitivity instead
-    SetPacketParamsLoRa(12, SX1280_LORA_PACKET_IMPLICIT, 8, SX1280_LORA_CRC_OFF, SX1280_LORA_IQ_NORMAL);                          //default params
-    SetFrequencyReg(currFreq);                                                                                                    //Set Freq
-    SetFIFOaddr(0x00, 0x00);                                                                                                      //Config FIFO addr
-    SetDioIrqParams(SX1280_IRQ_RADIO_ALL, SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE);                                               //set IRQ to both RXdone/TXdone on DIO1
-    if (OPT_USE_SX1280_DCDC)
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC);     // Enable DCDC converter instead of LDO
+        firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_2)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_2)));
+        DBGLN("Read Vers sx1280 #2: %d", firmwareRev);
+        if ((firmwareRev == 0) || (firmwareRev == 65535))
+        {
+            // SPI communication failed, just return without configuration
+            return false;
+        }
+        
+        hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_2) | 0xC0), SX1280_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
+
+    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_1) | 0xC0), SX1280_Radio_1);   //default is low power mode, switch to high sensitivity instead
+    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All);                              //Enable auto FS
+#if defined(USE_SX1280_DCDC)
+    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);            // Enable DCDC converter instead of LDO
+#endif
     return true;
 }
 
-void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
+void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
@@ -108,8 +116,8 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
     PayloadLength = _PayloadLength;
     IQinverted = InvertIQ;
     packet_mode = mode;
-    SetMode(SX1280_MODE_STDBY_XOSC);
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, 20);
+    SetMode(SX1280_MODE_STDBY_XOSC, SX1280_Radio_All);
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, SX1280_Radio_All, 20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
         DBGLN("Config FLRC");
@@ -130,7 +138,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType,
                             _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
     }
-    SetFrequencyReg(freq);
+    SetFrequencyReg(regfreq);
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, irqs);
     SetRxTimeoutUs(interval);
 }
@@ -152,46 +160,50 @@ void SX1280Driver::SetOutputPower(int8_t power)
     if (power < -18) power = -18;
     else if (13 < power) power = 13;
     uint8_t buf[2] = {(uint8_t)(power + 18), (uint8_t)SX1280_RADIO_RAMP_04_US};
-    hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf), SX1280_Radio_All);
     DBGLN("SetPower: %d", buf[0]);
     return;
 }
 
-void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
+void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Number_t radioNumber)
 {
-    if (OPmode == currOpmode)
-    {
-       return;
-    }
+    /*
+    Comment out since it is difficult to keep track of dual radios.
+    When checking SPI it is also useful to see every possible SPI transaction to make sure it fits when required.
+    */
+    // if (OPmode == currOpmode)
+    // {
+    //    return;
+    // }
 
     WORD_ALIGNED_ATTR uint8_t buf[3];
     switch (OPmode)
     {
 
     case SX1280_MODE_SLEEP:
-        hal.WriteCommand(SX1280_RADIO_SET_SLEEP, (uint8_t)0x01);
+        hal.WriteCommand(SX1280_RADIO_SET_SLEEP, (uint8_t)0x01, radioNumber);
         break;
 
     case SX1280_MODE_CALIBRATION:
         break;
 
     case SX1280_MODE_STDBY_RC:
-        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC, 1500);
+        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC, radioNumber, 1500);
         break;
 
     case SX1280_MODE_STDBY_XOSC:
-        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC, 50);
+        hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC, radioNumber, 50);
         break;
 
     case SX1280_MODE_FS:
-        hal.WriteCommand(SX1280_RADIO_SET_FS, (uint8_t)0x00, 70);
+        hal.WriteCommand(SX1280_RADIO_SET_FS, (uint8_t)0x00, radioNumber, 70);
         break;
 
     case SX1280_MODE_RX:
         buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = timeout >> 8;
         buf[2] = timeout & 0xFF;
-        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), 100);
+        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
         break;
 
     case SX1280_MODE_TX:
@@ -199,7 +211,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode)
         buf[0] = RX_TIMEOUT_PERIOD_BASE;
         buf[1] = 0xFF; // no timeout set for now
         buf[2] = 0xFF; // TODO dynamic timeout based on expected onairtime
-        hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf), 100);
+        hal.WriteCommand(SX1280_RADIO_SET_TX, buf, sizeof(buf), radioNumber, 100);
         break;
 
     case SX1280_MODE_CAD:
@@ -219,23 +231,23 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
 
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {sf, bw, cr};
 
-    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), 25);
+    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), SX1280_Radio_All, 25);
 
     switch (sf)
     {
     case SX1280_LORA_SF5:
     case SX1280_LORA_SF6:
-        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x1E); // for SF5 or SF6
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x1E, SX1280_Radio_All); // for SF5 or SF6
         break;
     case SX1280_LORA_SF7:
     case SX1280_LORA_SF8:
-        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x37); // for SF7 or SF8
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x37, SX1280_Radio_All); // for SF7 or SF8
         break;
     default:
-        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x32); // for SF9, SF10, SF11, SF12
+        hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x32, SX1280_Radio_All); // for SF9, SF10, SF11, SF12
     }
     // Enable frequency compensation
-    hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x1);
+    hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x1, SX1280_Radio_All);
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
@@ -252,7 +264,7 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
     buf[5] = 0x00;
     buf[6] = 0x00;
 
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), 20);
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), SX1280_Radio_All, 20);
 
     // FEI only triggers in Lora mode when the header is present :(
     modeSupportsFei = HeaderType == SX1280_LORA_PACKET_VARIABLE_LENGTH;
@@ -261,7 +273,7 @@ void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaP
 void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 {
     WORD_ALIGNED_ATTR uint8_t rfparams[3] = {bw, cr, bt};
-    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), 110);
+    hal.WriteCommand(SX1280_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), SX1280_Radio_All, 110);
 }
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
@@ -282,54 +294,49 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[2] = SX1280_FLRC_RX_MATCH_SYNC_WORD_1;  // SyncWordMatch
     buf[3] = HeaderType;                        // PacketType
     buf[4] = PayloadLength;                     // PayloadLength
-    buf[5] = (crc << 4);                        // CrcLength
+    buf[5] = crc;                               // CrcLength
     buf[6] = 0x08;                              // Must be whitening disabled
-    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), 30);
+    hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), SX1280_Radio_All, 30);
 
     // CRC seed (use dedicated cipher)
     buf[0] = (uint8_t)(crcSeed >> 8);
     buf[1] = (uint8_t)crcSeed;
-    hal.WriteRegister(SX1280_REG_FLRC_CRC_SEED, buf, 2);
+    hal.WriteRegister(SX1280_REG_FLRC_CRC_SEED, buf, 2, SX1280_Radio_All);
 
     // CRC POLY 0x3D65
     buf[0] = 0x3D;
     buf[1] = 0x65;
-    hal.WriteRegister(SX1280_REG_FLRC_CRC_POLY, buf, 2);
+    hal.WriteRegister(SX1280_REG_FLRC_CRC_POLY, buf, 2, SX1280_Radio_All);
 
     // Set SyncWord1
     buf[0] = (uint8_t)(syncWord >> 24);
     buf[1] = (uint8_t)(syncWord >> 16);
     buf[2] = (uint8_t)(syncWord >> 8);
     buf[3] = (uint8_t)syncWord;
-    hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4);
+    hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
 
     // FEI only works in Lora and Ranging mode
     modeSupportsFei = false;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t Reqfreq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq)
 {
-    WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
+    uint32_t regfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
 
-    uint32_t freq = (uint32_t)((double)Reqfreq / (double)FREQ_STEP);
-    buf[0] = (uint8_t)((freq >> 16) & 0xFF);
-    buf[1] = (uint8_t)((freq >> 8) & 0xFF);
-    buf[2] = (uint8_t)(freq & 0xFF);
-
-    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf));
-    currFreq = Reqfreq;
+    SetFrequencyReg(regfreq);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t freq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
-    buf[0] = (uint8_t)((freq >> 16) & 0xFF);
-    buf[1] = (uint8_t)((freq >> 8) & 0xFF);
-    buf[2] = (uint8_t)(freq & 0xFF);
+    buf[0] = (uint8_t)((regfreq >> 16) & 0xFF);
+    buf[1] = (uint8_t)((regfreq >> 8) & 0xFF);
+    buf[2] = (uint8_t)(regfreq & 0xFF);
 
-    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf));
-    currFreq = freq;
+    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf), SX1280_Radio_All);
+
+    currFreq = regfreq;
 }
 
 void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
@@ -338,7 +345,7 @@ void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
 
     buf[0] = txBaseAddr;
     buf[1] = rxBaseAddr;
-    hal.WriteCommand(SX1280_RADIO_SET_BUFFERBASEADDRESS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_SET_BUFFERBASEADDRESS, buf, sizeof(buf), SX1280_Radio_All);
 }
 
 void SX1280Driver::SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t dio2Mask, uint16_t dio3Mask)
@@ -354,25 +361,25 @@ void SX1280Driver::SetDioIrqParams(uint16_t irqMask, uint16_t dio1Mask, uint16_t
     buf[6] = (uint8_t)((dio3Mask >> 8) & 0x00FF);
     buf[7] = (uint8_t)(dio3Mask & 0x00FF);
 
-    hal.WriteCommand(SX1280_RADIO_SET_DIOIRQPARAMS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_SET_DIOIRQPARAMS, buf, sizeof(buf), SX1280_Radio_All);
 }
 
-uint16_t ICACHE_RAM_ATTR SX1280Driver::GetIrqStatus()
+uint16_t ICACHE_RAM_ATTR SX1280Driver::GetIrqStatus(SX1280_Radio_Number_t radioNumber)
 {
     uint8_t status[2];
 
-    hal.ReadCommand(SX1280_RADIO_GET_IRQSTATUS, status, 2);
+    hal.ReadCommand(SX1280_RADIO_GET_IRQSTATUS, status, 2, radioNumber);
     return status[0] << 8 | status[1];
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::ClearIrqStatus(uint16_t irqMask)
+void ICACHE_RAM_ATTR SX1280Driver::ClearIrqStatus(uint16_t irqMask, SX1280_Radio_Number_t radioNumber)
 {
     uint8_t buf[2];
 
     buf[0] = (uint8_t)(((uint16_t)irqMask >> 8) & 0x00FF);
     buf[1] = (uint8_t)((uint16_t)irqMask & 0x00FF);
 
-    hal.WriteCommand(SX1280_RADIO_CLR_IRQSTATUS, buf, sizeof(buf));
+    hal.WriteCommand(SX1280_RADIO_CLR_IRQSTATUS, buf, sizeof(buf), radioNumber);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
@@ -392,23 +399,39 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
         //DBGLN("Timeout!");
-        SetMode(SX1280_MODE_FS);
+        SetMode(SX1280_MODE_FS, SX1280_Radio_All);
         TXnbISR();
         return;
     }
-    hal.TXenable();                      // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, size);   //todo fix offset to equal fifo addr
-    instance->SetMode(SX1280_MODE_TX);
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        // Make sure the unused radio is in FS mode and will not receive the tx packet.
+        if (lastSuccessfulPacketRadio == SX1280_Radio_1)
+        {
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
+        }
+        else
+        {
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+        }
+    }
+
+    hal.TXenable(lastSuccessfulPacketRadio); // do first to allow PA stablise
+    hal.WriteBuffer(0x00, data, size, lastSuccessfulPacketRadio); //todo fix offset to equal fifo addr
+    instance->SetMode(SX1280_MODE_TX, lastSuccessfulPacketRadio);
+
 #ifdef DEBUG_SX1280_OTA_TIMING
     beginTX = micros();
 #endif
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus)
+bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
 {
     rx_status const fail =
-        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) +
-        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK);
+        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK) |
+        ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
     {
@@ -419,37 +442,37 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus)
     }
     if (fail == SX12XX_RX_OK)
     {
-        uint8_t const FIFOaddr = GetRxBufferAddr();
-        hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength);
-        GetLastPacketStats();
+        uint8_t const FIFOaddr = GetRxBufferAddr(radioNumber);
+        hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength, radioNumber);
     }
-    RXdoneCallback(fail);
+
+    return RXdoneCallback(fail);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::RXnb()
 {
     hal.RXenable();
-    SetMode(SX1280_MODE_RX);
+    SetMode(SX1280_MODE_RX, SX1280_Radio_All);
 }
 
-uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr()
+uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX1280_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t status[2] = {0};
-    hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2);
+    hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2, radioNumber);
     return status[1];
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::GetStatus()
+void ICACHE_RAM_ATTR SX1280Driver::GetStatus(SX1280_Radio_Number_t radioNumber)
 {
     uint8_t status = 0;
-    hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1);
+    hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1, radioNumber);
     DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
 }
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
 {
     // Only need the highest bit of the 20-bit FEI to determine the direction
-    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB);
+    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, lastSuccessfulPacketRadio);
     // fei & (1 << 19) and flip sign if IQinverted
     if (feiMsb & 0x08)
         return IQinverted;
@@ -461,14 +484,14 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
 {
     uint8_t status = 0;
 
-    hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, (uint8_t *)&status, 1);
+    hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, (uint8_t *)&status, 1, lastSuccessfulPacketRadio);
     return -(int8_t)(status / 2);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
     uint8_t status[2];
-    hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2);
+    hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, processingPacketRadio);
     if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
         // No SNR in FLRC mode
         LastPacketRSSI = -(int8_t)(status[1] / 2);
@@ -484,15 +507,39 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     LastPacketRSSI += negOffset;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::IsrCallback()
+void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
 {
-    uint16_t irqStatus = instance->GetIrqStatus();
-    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL);
+    instance->IsrCallback(SX1280_Radio_1);
+}
+
+void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
+{
+    instance->IsrCallback(SX1280_Radio_2);
+}
+
+void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber)
+{
+    instance->processingPacketRadio = radioNumber;
+
+    uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
+
     if (irqStatus & SX1280_IRQ_TX_DONE)
     {
         hal.TXRXdisable();
         instance->TXnbISR();
+        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All);
     }
-    else if (irqStatus & (SX1280_IRQ_RX_DONE | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT))
-        instance->RXnbISR(irqStatus);
+    else
+    if (irqStatus & (SX1280_IRQ_RX_DONE | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT))
+    {
+        if (instance->RXnbISR(irqStatus, radioNumber))
+        {
+            instance->lastSuccessfulPacketRadio = radioNumber;
+            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All); // Packet received so clear all radios and dont spend extra time retrieving data.
+        }
+        else
+        {
+            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
+        }
+    }
 }
