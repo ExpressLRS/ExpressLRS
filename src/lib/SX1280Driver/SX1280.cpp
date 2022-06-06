@@ -406,8 +406,15 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        if (lastSuccessfulPacketRadio == SX1280_Radio_1) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2); // Make sure the unused radio is in FS mode and will not receive the tx packet.
-        if (lastSuccessfulPacketRadio == SX1280_Radio_2) instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+        // Make sure the unused radio is in FS mode and will not receive the tx packet.
+        if (lastSuccessfulPacketRadio == SX1280_Radio_1)
+        {
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
+        }
+        else
+        {
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+        }
     }
 
     hal.TXenable(lastSuccessfulPacketRadio); // do first to allow PA stablise
@@ -422,8 +429,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb()
 bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
 {
     rx_status const fail =
-        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) +
-        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK) +
+        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK) |
         ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
