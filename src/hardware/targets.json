@@ -210,6 +210,18 @@
                 "lua_name": "Rx+VTx 2400RX",
                 "layout_file": "Generic 2400 Whoop Rx and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity": {
+                "product_name": "Generic ESP32 2.4Ghz Diversity RX",
+                "lua_name": "Diversity 2.4RX",
+                "layout_file": "Generic 2400 Diversity.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity_vtx": {
+                "product_name": "Generic ESP32 2.4Ghz Diversity and VTx RX",
+                "lua_name": "Div+VTx 2.4RX",
+                "layout_file": "Generic 2400 Diversity and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
     },
