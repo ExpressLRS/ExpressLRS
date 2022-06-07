@@ -233,7 +233,7 @@ static void executeSendVTX(bool init)
     if (init)
     {
         VtxTriggerSend();
-        display->displayRunning();
+        display->displaySending();
     }
     else
     {
