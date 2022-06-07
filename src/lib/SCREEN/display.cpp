@@ -74,6 +74,7 @@ static const char *dynamic_string[] = {
 };
 
 static const char *ratio_string[] = {
+    "Std",
     "Off",
     "1:128",
     "1:64",
@@ -81,7 +82,8 @@ static const char *ratio_string[] = {
     "1:16",
     "1:8",
     "1:4",
-    "1:2"
+    "1:2",
+    "Race"
 };
 
 static const char *powersaving_string[] = {

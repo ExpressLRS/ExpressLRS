@@ -40,7 +40,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
     tlmBandwidth
 };
 
@@ -248,38 +248,6 @@ extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
 
-static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
-{
-  //return the separator Index + 1
-  uint8_t arrayCount = 0;
-  uint8_t returnvalue = 0;
-  uint8_t SeparatorCount = 0;
-  char *c = searchArray;
-  int i = 0;
-  while (c[i] != '\0')
-  {
-    //treat symbols as separator except : !,",#,$,%,&,',(,),*,+,,,-,.,/ as these would probably inside our label names
-    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A'))
-    {
-      SeparatorCount++;
-      arrayCount++;
-      //if found separator is equal to the nth(index) requested separator,
-      //return the start of the labelSpace
-      if (SeparatorCount == index+1) {
-        return returnvalue;
-      } else {
-        returnvalue = arrayCount;
-      }
-    } else {
-      arrayCount++;
-    }
-    //increment the char count until null termination
-    i++;
-  }
-  //if we reach null termination and haven't got the requested index, just return 0, which would overwrite the first label
-  return returnvalue;
-}
-
 static void luadevUpdateRateSensitivity() {
   itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
   strcat(rateSensitivity, "dBm)");
@@ -293,10 +261,23 @@ static void luadevUpdateModelID() {
 static void luadevUpdateTlmBandwidth()
 {
   expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
-  if (eRatio == TLM_RATIO_NO_TLM)
+  // TLM_RATIO_STD / TLM_RATIO_DISARMED
+  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
+  {
+    // For Standard ratio, display the ratio instead of bps
+    strcpy(tlmBandwidth, " (1:");
+    uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    itoa(ratioDiv, &tlmBandwidth[4], 10);
+    strcat(tlmBandwidth, ")");
+  }
+
+  // TLM_RATIO_NO_TLM
+  else if (eRatio == TLM_RATIO_NO_TLM)
   {
     tlmBandwidth[0] = '\0';
   }
+
+  // All normal ratios
   else
   {
     tlmBandwidth[0] = ' ';
@@ -432,10 +413,9 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 static void updateFolderName_TxPower()
 {
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2, pwrFolderDynamicName); // start writing name after the 2nd space
+  uint8_t pwrFolderLabelOffset = 10; // start writing after "TX Power ("
 
   // Power Level
-  pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
   pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
 
   // Dynamic Power
@@ -455,8 +435,7 @@ static void updateFolderName_VtxAdmin()
   if (vtxBand)
   {
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // start writing name after the 2nd space
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
+    uint8_t vtxFolderLabelOffset = 11; // start writing after "VTX Admin ("
 
     // Band
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
@@ -538,9 +517,10 @@ static void registerLuaParameters()
       }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+      expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
+      if (eRatio <= TLM_RATIO_DISARMED)
       {
-        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+        config.SetTlm(eRatio);
       }
     });
     #if defined(TARGET_TX_FM30)

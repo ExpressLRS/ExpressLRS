@@ -18,17 +18,18 @@ extern uint8_t UID[6];
 extern uint8_t MasterUID[6];
 extern uint16_t CRCInitializer;
 
-typedef enum
+typedef enum : uint8_t
 {
-    TLM_RATIO_NO_TLM = 0,
-    TLM_RATIO_1_128 = 1,
-    TLM_RATIO_1_64 = 2,
-    TLM_RATIO_1_32 = 3,
-    TLM_RATIO_1_16 = 4,
-    TLM_RATIO_1_8 = 5,
-    TLM_RATIO_1_4 = 6,
-    TLM_RATIO_1_2 = 7
-
+    TLM_RATIO_STD = 0,   // Use suggested ratio from ModParams
+    TLM_RATIO_NO_TLM,
+    TLM_RATIO_1_128,
+    TLM_RATIO_1_64,
+    TLM_RATIO_1_32,
+    TLM_RATIO_1_16,
+    TLM_RATIO_1_8,
+    TLM_RATIO_1_4,
+    TLM_RATIO_1_2,
+    TLM_RATIO_DISARMED, // TLM_RATIO_STD when disarmed, TLM_RATIO_NO_TLM when armed
 } expresslrs_tlm_ratio_e;
 
 typedef enum
@@ -118,7 +119,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t sf;
     uint8_t cr;
     uint32_t interval;          // interval in us seconds that corresponds to that frequency
-    uint8_t TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
+    expresslrs_tlm_ratio_e TLMinterval; // Suggested telemetry ratio for this rate
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
@@ -153,10 +154,11 @@ extern SX1280Driver Radio;
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 
-uint8_t TLMratioEnumToValue(uint8_t const enumval);
+uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
 uint16_t RateEnumToHz(uint8_t const eRate);
 
+extern uint8_t ExpressLRS_currTlmDenom;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
