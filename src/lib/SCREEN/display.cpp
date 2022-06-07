@@ -14,10 +14,10 @@ const char *Display::main_menu_strings[][2] = {
     {"TELEM", "RATIO"},
     {"MOTION", "DETECT"},
     {"FAN", "CONTROL"},
-    {"VTX", "ADMIN"},
     {"BLE", "GAMEPAD"},
     {"BIND", "MODE"},
     {"WIFI", "ADMIN"},
+    {"VTX", "ADMIN"},
 
     {"MAX", "POWER"},
     {"DYNAMIC", "POWER"},
