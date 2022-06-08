@@ -137,7 +137,7 @@ extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_DEFAULT 4  // Default to LoRa 500Hz
+#define RATE_DEFAULT 0  // Default to F1000
 #define RATE_BINDING 9  // 50Hz bind mode
 
 extern SX1280Driver Radio;
