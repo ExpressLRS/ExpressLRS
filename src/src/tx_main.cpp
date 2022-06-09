@@ -336,6 +336,46 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   return true;
 }
 
+expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
+{
+  expresslrs_tlm_ratio_e ratioConfigured = (expresslrs_tlm_ratio_e)config.GetTlm();
+  // default is suggested rate for TLM_RATIO_STD/TLM_RATIO_DISARMED
+  expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
+  bool updateTelemDenom = true;
+
+  // TLM ratio is boosted for one sync cycle when the MspSender goes active
+  if (MspSender.IsActive())
+  {
+    retVal = TLM_RATIO_1_2;
+  }
+  // If Armed, telemetry is disabled, otherwise use STD
+  else if (ratioConfigured == TLM_RATIO_DISARMED)
+  {
+    if (crsf.IsArmed())
+    {
+      retVal = TLM_RATIO_NO_TLM;
+      // Avoid updating ExpressLRS_currTlmDenom until connectionState == disconnected
+      if (connectionState == connected)
+        updateTelemDenom = false;
+    }
+  }
+  else if (ratioConfigured != TLM_RATIO_STD)
+  {
+    retVal = ratioConfigured;
+  }
+
+  if (updateTelemDenom)
+  {
+    uint8_t newTlmDenom = TLMratioEnumToValue(retVal);
+    // Delay going into disconnected state when the TLM ratio increases
+    if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
+      LastTLMpacketRecvMillis = SyncPacketLastSent;
+    ExpressLRS_currTlmDenom = newTlmDenom;
+  }
+
+  return retVal;
+}
+
 void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 {
   const uint8_t SwitchEncMode = config.GetSwitchMode();
@@ -345,18 +385,12 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
     --syncSpamCounter;
   SyncPacketLastSent = millis();
 
-  // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  const expresslrs_tlm_ratio_e newTlmRatio =
-    (MspSender.IsActive()) ? TLM_RATIO_1_2 : (expresslrs_tlm_ratio_e)config.GetTlm();
-  // Delay going into disconnected state when the TLM ratio increases
-  if (connectionState == connected && ExpressLRS_currAirRate_Modparams->TLMinterval < newTlmRatio)
-    LastTLMpacketRecvMillis = SyncPacketLastSent;
-  ExpressLRS_currAirRate_Modparams->TLMinterval = newTlmRatio;
+  expresslrs_tlm_ratio_e newTlmRatio = UpdateTlmRatioEffective();
 
   syncPtr->fhssIndex = FHSSgetCurrIndex();
   syncPtr->nonce = OtaNonce;
   syncPtr->rateIndex = Index;
-  syncPtr->newTlmRatio = newTlmRatio;
+  syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
   syncPtr->switchEncMode = SwitchEncMode;
   syncPtr->UID3 = UID[3];
   syncPtr->UID4 = UID[4];
@@ -434,9 +468,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
 
 void ICACHE_RAM_ATTR HandlePrepareForTLM()
 {
-  uint8_t modresult = (OtaNonce + 1) % TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-  // If next packet is going to be telemetry, start listening to have a large receive window (time-wise)
-  if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_NO_TLM && modresult == 0)
+  // If TLM enabled and next packet is going to be telemetry, start listening to have a large receive window (time-wise)
+  if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0)
   {
     Radio.RXnb();
     TelemetryRcvPhase = ttrpPreReceiveGap;
@@ -449,19 +482,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   // ESP requires word aligned buffer
   WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
   static uint8_t syncSlot;
-  uint32_t SyncInterval;
-  bool skipSync;
 
-  if (firmwareOptions.no_sync_on_arm)
-  {
-    SyncInterval = 250;
-    skipSync = crsf.IsArmed() || InBindingMode;
-  }
-  else
-  {
-    SyncInterval = (connectionState == connected) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-    skipSync = InBindingMode;
-  }
+  const bool isTlmDisarmed = config.GetTlm() == TLM_RATIO_DISARMED;
+  uint32_t SyncInterval = (connectionState == connected && !isTlmDisarmed) ? ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalConnected : ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
+  bool skipSync = InBindingMode ||
+    // TLM_RATIO_DISARMED keeps sending sync packets even when armed until the RX stops sending telemetry and the TLM=Off has taken effect
+    (isTlmDisarmed && crsf.IsArmed() && (ExpressLRS_currTlmDenom == 1));
 
   uint8_t NonceFHSSresult = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
   bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
@@ -512,8 +538,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(),
-                      TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
+      OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
     }
   }
 
@@ -727,9 +752,8 @@ static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
-  const uint32_t tlmInterval = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
   // +2 to account for any rounding down and partial millis()
-  const uint32_t msConnectionLostTimeout = tlmInterval * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  const uint32_t msConnectionLostTimeout = (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
   // Capture the last before now so it will always be <= now
   const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
   const uint32_t now = millis();

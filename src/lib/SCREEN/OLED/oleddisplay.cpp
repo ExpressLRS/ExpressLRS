@@ -337,6 +337,22 @@ void OLEDDisplay::displayRunning()
     u8g2->sendBuffer();
 }
 
+void OLEDDisplay::displaySending()
+{
+    // TODO: Put wifi image?
+    u8g2->clearBuffer();
+    u8g2->setFont(u8g2_font_t0_17_mr);
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
+        u8g2->drawStr(0,15, "SENDING...");
+    }
+    else
+    {
+        u8g2->drawStr(0,29, "SENDING...");
+    }
+    u8g2->sendBuffer();
+}
+
 // helpers
 static void helperDrawImage(menu_item_t menu)
 {
