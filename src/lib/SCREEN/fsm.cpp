@@ -19,6 +19,24 @@ fsm_state_t FiniteStateMachine::getParentState()
     return (pos.fsm)[pos.index].state;
 }
 
+void FiniteStateMachine::jumpTo(fsm_state_entry_t const *fsm, fsm_state_t state)
+{
+    fsm_stack.push_back({current_fsm, current_index});
+    current_fsm = fsm;
+    for (int i = 0 ; current_fsm[i].state != STATE_LAST ; i++)
+    {
+        if (current_fsm[i].state == state)
+        {
+            current_index = i;
+            uint32_t now = millis();
+            current_fsm[current_index].entry(true);
+            current_state_entered = now;
+            handleEvent(now, EVENT_IMMEDIATE);
+            break;
+        }
+    }
+}
+
 void FiniteStateMachine::start(uint32_t now, fsm_state_t state)
 {
     current_fsm = root_fsm;
