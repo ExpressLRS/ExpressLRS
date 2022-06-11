@@ -404,7 +404,20 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
     if (crsf.GetCurrentBaudRate() == 115200) {
       while (rateIndex < RATE_MAX) {
         expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        if (ModParams->enum_rate <= RATE_LORA_250HZ) {
+        uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
+        if (RCpacketInterval >= 4000) {
+          break;
+        }
+        rateIndex++;
+      }
+    }
+    else
+    // Packet rate limited to 500Hz if we are on 400k baud
+    if (crsf.GetCurrentBaudRate() == 400000) {
+      while (rateIndex < RATE_MAX) {
+        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
+        uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
+        if (RCpacketInterval >= 2000) {
           break;
         }
         rateIndex++;
