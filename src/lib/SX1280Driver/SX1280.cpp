@@ -313,11 +313,14 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
         buf[1] = temp;
     }
     else
+    if (cr != SX1280_FLRC_CR_1_2)
     {
         // Not done for unused coding rates to save space.
-        DBGLN("!!! WARNING !!!");
-        DBGLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
-        DBGLN("!!! WARNING !!!");
+        ERRLN("!!! WARNING !!!");
+        ERRLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
+        ERRLN("!!! WARNING !!!");
+
+        while(1);
     }
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
