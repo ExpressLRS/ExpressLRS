@@ -24,6 +24,10 @@
 #include <SPIFFS.h>
 #endif
 
+#if defined(USE_AIRPORT_AT_BAUD)
+#include "FIFO_GENERIC.h"
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -78,14 +82,11 @@ uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 /////////////////////////////////////////
 /// Variables / constants for Airport ///
 
-#define AP_MAX_INPUT_BUF_LEN    5
+#define AP_MAX_BUF_LEN          256
 #define AP_DATA_OFFSET_INDEX    2
 
-uint8_t apInputBufferLen = 0;
-uint8_t apInputBuffer[AP_MAX_INPUT_BUF_LEN];
-
-uint8_t apOutputBufferLen = 0;
-uint8_t apOutputBuffer[AP_MAX_INPUT_BUF_LEN];
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
 
 /////////////////////////////////////////
 #endif
@@ -335,10 +336,10 @@ void ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
         case ELRS_TELEMETRY_TYPE_DATA:
             #if defined(USE_AIRPORT_AT_BAUD)
-              apOutputBufferLen = TLMheader >> ELRS_TELEMETRY_SHIFT;
-              for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+              uint8_t count = TLMheader >> ELRS_TELEMETRY_SHIFT;
+              for (uint8_t i = 0; i < count; ++i)
               {
-                apOutputBuffer[i] = Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX];
+                apOutputBuffer.push(Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX]);
               }
             #else
               TelemetryReceiver.ReceiveData(TLMheader >> ELRS_TELEMETRY_SHIFT, Radio.RXdataBuffer + 2);
@@ -523,14 +524,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       
        #if defined(USE_AIRPORT_AT_BAUD)
         Radio.TXdataBuffer[0] = RC_DATA_PACKET & 0b11;
-        Radio.TXdataBuffer[1] = apInputBufferLen;
-        Radio.TXdataBuffer[2] = apInputBuffer[0];
-        Radio.TXdataBuffer[3] = apInputBuffer[1];
-        Radio.TXdataBuffer[4] = apInputBuffer[2];
-        Radio.TXdataBuffer[5] = apInputBuffer[3];
-        Radio.TXdataBuffer[6] = apInputBuffer[4];
-
-        apInputBufferLen = 0;
+        Radio.TXdataBuffer[1] = apInputBuffer.size() > 5 ? 5 : apInputBuffer.size();
+        Radio.TXdataBuffer[2] = apInputBuffer.pop();
+        Radio.TXdataBuffer[3] = apInputBuffer.pop();
+        Radio.TXdataBuffer[4] = apInputBuffer.pop();
+        Radio.TXdataBuffer[5] = apInputBuffer.pop();
+        Radio.TXdataBuffer[6] = apInputBuffer.pop();
       #else
         PackChannelData(Radio.TXdataBuffer, &crsf, TelemetryReceiver.GetCurrentConfirm(),
           NonceTX, TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval));
@@ -991,13 +990,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
 static void HandleUARTout()
 {
   #if defined(USE_AIRPORT_AT_BAUD)
-    if (apOutputBufferLen)
+    // Send one byte to the UART per loop, rather than
+    // holding up the execution in a for-loop to spam
+    // the full buffer out to the UART
+    if (apOutputBuffer.size())
     {
-      for (uint8_t i = 0; i < apOutputBufferLen; ++i)
-      {
-          TxUSB->write(apOutputBuffer[i]);
-      }
-      apOutputBufferLen = 0;
+      TxUSB->write(apOutputBuffer.pop());
     }
   #endif
 }
@@ -1017,7 +1015,7 @@ static void setupSerial()
     #define USB_BAUD          USE_AIRPORT_AT_BAUD
 
     #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
-      if (GPIO_PIN_DEBUG_RX == 1 && GPIO_PIN_DEBUG_TX == 3)
+      if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
       {
         // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
         // TxUSB takes priority over TxBackpack
@@ -1073,7 +1071,7 @@ static void setupSerial()
   Stream *usbPort;
   if (GPIO_PIN_USB_RX != UNDEF_PIN && GPIO_PIN_USB_TX != UNDEF_PIN)
   {
-    usbPort = new HardwareSerial(2);
+    usbPort = new HardwareSerial(1);
     ((HardwareSerial *)usbPort)->begin(USB_BAUD, SERIAL_8N1, GPIO_PIN_USB_RX, GPIO_PIN_USB_TX);
   }
   else
@@ -1267,10 +1265,9 @@ void loop()
   if (TxUSB->available())
   {
     #if defined(USE_AIRPORT_AT_BAUD)
-      if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN)
+      if (apInputBuffer.size() < AP_MAX_BUF_LEN)
       {
-        apInputBuffer[apInputBufferLen] = TxUSB->read();
-        apInputBufferLen++;
+        apInputBuffer.push(TxUSB->read());
       }
     #endif
   }

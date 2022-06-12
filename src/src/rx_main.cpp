@@ -24,6 +24,10 @@
 #include <FS.h>
 #endif
 
+#if defined(USE_AIRPORT_AT_BAUD)
+#include "FIFO_GENERIC.h"
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -188,14 +192,11 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 /////////////////////////////////////////
 /// Variables / constants for Airport ///
 
-#define AP_MAX_INPUT_BUF_LEN    5
+#define AP_MAX_BUF_LEN          256
 #define AP_DATA_OFFSET_INDEX    2
 
-uint8_t apInputBufferLen = 0;
-uint8_t apInputBuffer[AP_MAX_INPUT_BUF_LEN];
-
-uint8_t apOutputBufferLen = 0;
-uint8_t apOutputBuffer[AP_MAX_INPUT_BUF_LEN];
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
 
 /////////////////////////////////////////
 #endif
@@ -380,14 +381,13 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
 
         #if defined(USE_AIRPORT_AT_BAUD)
-            Radio.TXdataBuffer[1] = (apInputBufferLen << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
-            Radio.TXdataBuffer[2] = apInputBuffer[0];
-            Radio.TXdataBuffer[3] = apInputBuffer[1];
-            Radio.TXdataBuffer[4] = apInputBuffer[2];
-            Radio.TXdataBuffer[5] = apInputBuffer[3];
-            Radio.TXdataBuffer[6] = apInputBuffer[4];
-
-            apInputBufferLen = 0;
+            uint8_t count = apInputBuffer.size() > 5 ? 5 : apInputBuffer.size();
+            Radio.TXdataBuffer[1] = (count << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
+            Radio.TXdataBuffer[2] = apInputBuffer.pop();
+            Radio.TXdataBuffer[3] = apInputBuffer.pop();
+            Radio.TXdataBuffer[4] = apInputBuffer.pop();
+            Radio.TXdataBuffer[5] = apInputBuffer.pop();
+            Radio.TXdataBuffer[6] = apInputBuffer.pop();
         #else
             TelemetrySender.GetCurrentPayload(&packageIndex, &maxLength, &data);
             Radio.TXdataBuffer[1] = (packageIndex << ELRS_TELEMETRY_SHIFT) + ELRS_TELEMETRY_TYPE_DATA;
@@ -708,10 +708,10 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC()
         return;
 
     #if defined(USE_AIRPORT_AT_BAUD)
-        apOutputBufferLen = Radio.RXdataBuffer[1];
-        for (uint8_t i = 0; i < apOutputBufferLen; ++i)
+        uint8_t count = Radio.RXdataBuffer[1];
+        for (uint8_t i = 0; i < count; ++i)
         {
-            apOutputBuffer[i] = Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX];
+            apOutputBuffer.push(Radio.RXdataBuffer[i + AP_DATA_OFFSET_INDEX]);
         }
     #else
         bool telemetryConfirmValue = UnpackChannelData(Radio.RXdataBuffer, &crsf,
@@ -1123,49 +1123,44 @@ static void HandleUARTin()
     }
     if (CRSF_RX_SERIAL.available())
     {
-        uint8_t data = CRSF_RX_SERIAL.read();
         #if defined(USE_AIRPORT_AT_BAUD)
-            if (apInputBufferLen < AP_MAX_INPUT_BUF_LEN && connectionState != disconnected)
+            if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState != disconnected)
             {
-                apInputBuffer[apInputBufferLen] = data;
-                apInputBufferLen++;
+                apInputBuffer.push(CRSF_RX_SERIAL.read());
             }
-        #endif // USE_AIRPORT_AT_BAUD
+        #else
+            uint8_t data = CRSF_RX_SERIAL.read();
+            telemetry.RXhandleUARTin(data);
 
-        telemetry.RXhandleUARTin(data);
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-        if (telemetry.ShouldCallEnterBind())
-        {
-            EnterBindingMode();
-        }
-        if (telemetry.ShouldCallUpdateModelMatch())
-        {
-            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
-        }
-        if (telemetry.ShouldSendDeviceFrame())
-        {
-            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-            crsf.GetDeviceInformation(deviceInformation, 0);
-            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            crsf.sendMSPFrameToFC(deviceInformation);
-        }
+            if (telemetry.ShouldCallBootloader())
+            {
+                reset_into_bootloader();
+            }
+            if (telemetry.ShouldCallEnterBind())
+            {
+                EnterBindingMode();
+            }
+            if (telemetry.ShouldCallUpdateModelMatch())
+            {
+                UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+            }
+            if (telemetry.ShouldSendDeviceFrame())
+            {
+                uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+                crsf.GetDeviceInformation(deviceInformation, 0);
+                crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+                crsf.sendMSPFrameToFC(deviceInformation);
+            }
+        #endif
     }
 }
 
 static void HandleUARTout()
 {
     #if defined(USE_AIRPORT_AT_BAUD)
-        if (apOutputBufferLen)
+        if (apOutputBuffer.size())
         {
-            for (uint8_t i = 0; i < apOutputBufferLen; ++i)
-            {
-                Serial.write(apOutputBuffer[i]);
-            }
-            apOutputBufferLen = 0;
+            Serial.write(apOutputBuffer.pop());
         }
     #endif
 }

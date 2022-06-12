@@ -135,7 +135,7 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
     // telemInterval = 1000 / (hz / ratiodiv);
     // burst = TELEM_MIN_LINK_INTERVAL_MS / telemInterval;
     // This ^^^ rearranged to preserve precision vvv
-    uint8_t retVal = TELEM_MIN_LINK_INTERVAL_MS * rateHz / ratioDiv / 1000U;
+    uint16_t retVal = TELEM_MIN_LINK_INTERVAL_MS * rateHz / ratioDiv / 1000U;
 
     // Reserve one slot for LINK telemetry
     if (retVal > 1)
@@ -144,9 +144,8 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
         retVal = 1;
     //DBGLN("TLMburst: %d", retVal);
 
-    return retVal;
+    return retVal < 256 ? retVal : 255;
 }
-
 
 uint16_t RateEnumToHz(uint8_t const eRate)
 {
