@@ -3,7 +3,7 @@
 #include "targets.h"
 #include "helpers.h"
 #include "logging.h"
-#if defined(TARGET_UNIFIED_RX)
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
@@ -26,12 +26,15 @@ static const struct {
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
     {HARDWARE_radio_busy, "radio_busy", INT},
+    {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
     {HARDWARE_radio_dio1, "radio_dio1", INT},
+    {HARDWARE_radio_dio1_2, "radio_dio1_2", INT},
     {HARDWARE_radio_dio2, "radio_dio2", INT},
     {HARDWARE_radio_miso, "radio_miso", INT},
     {HARDWARE_radio_mosi, "radio_mosi", INT},
     {HARDWARE_radio_nss, "radio_nss", INT},
+    {HARDWARE_radio_nss_2, "radio_nss_2", INT},
     {HARDWARE_radio_rst, "radio_rst", INT},
     {HARDWARE_radio_sck, "radio_sck", INT},
     {HARDWARE_radio_dcdc, "radio_dcdc", BOOL},
@@ -44,6 +47,8 @@ static const struct {
     {HARDWARE_power_apc2, "power_apc2", INT},
     {HARDWARE_power_rxen, "power_rxen", INT},
     {HARDWARE_power_txen, "power_txen", INT},
+    {HARDWARE_power_rxen_2, "power_rxen_2", INT},
+    {HARDWARE_power_txen_2, "power_txen_2", INT},
     {HARDWARE_power_min, "power_min", INT},
     {HARDWARE_power_high, "power_high", INT},
     {HARDWARE_power_max, "power_max", INT},
@@ -69,6 +74,12 @@ static const struct {
     {HARDWARE_led_reg_green, "led_red_green", INT},
     {HARDWARE_led_rgb, "led_rgb", INT},
     {HARDWARE_led_rgb_isgrb, "led_rgb_isgrb", BOOL},
+    {HARDWARE_ledidx_rgb_status, "ledidx_rgb_status", ARRAY},
+    {HARDWARE_ledidx_rgb_status_count, "ledidx_rgb_status", COUNT},
+    {HARDWARE_ledidx_rgb_vtx, "ledidx_rgb_vtx", ARRAY},
+    {HARDWARE_ledidx_rgb_vtx_count, "ledidx_rgb_vtx", COUNT},
+    {HARDWARE_ledidx_rgb_boot, "ledidx_rgb_boot", ARRAY},
+    {HARDWARE_ledidx_rgb_boot_count, "ledidx_rgb_boot", COUNT},
     {HARDWARE_screen_cs, "screen_cs", INT},
     {HARDWARE_screen_dc, "screen_dc", INT},
     {HARDWARE_screen_mosi, "screen_mosi", INT},
@@ -97,12 +108,15 @@ static const struct {
     {HARDWARE_vbat, "vbat", INT},
     {HARDWARE_vbat_offset, "vbat_offset", INT},
     {HARDWARE_vbat_scale, "vbat_scale", INT},
-    {HARDWARE_rf_amp_pwm, "rf_amp_pwm", INT},
-    {HARDWARE_rf_amp_vpd, "rf_amp_vpd", INT},
-    {HARDWARE_rf_amp_vref, "rf_amp_vref", INT},
-    {HARDWARE_spi_vtx_nss, "spi_vtx_nss", INT},
-    {HARDWARE_vpd_25mW, "vpd_25mW", ARRAY},
-    {HARDWARE_vpd_100mW, "vpd_100mW", ARRAY},
+    {HARDWARE_vtx_amp_pwm, "vtx_amp_pwm", INT},
+    {HARDWARE_vtx_amp_vpd, "vtx_amp_vpd", INT},
+    {HARDWARE_vtx_amp_vref, "vtx_amp_vref", INT},
+    {HARDWARE_vtx_nss, "vtx_nss", INT},
+    {HARDWARE_vtx_miso, "vtx_miso", INT},
+    {HARDWARE_vtx_mosi, "vtx_mosi", INT},
+    {HARDWARE_vtx_sck, "vtx_sck", INT},
+    {HARDWARE_vtx_amp_vpd_25mW, "vtx_amp_vpd_25mW", ARRAY},
+    {HARDWARE_vtx_amp_vpd_100mW, "vtx_amp_vpd_100mW", ARRAY},
 };
 
 typedef union {

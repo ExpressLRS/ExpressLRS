@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb()
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -315,7 +315,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 
   hal.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegisterFIFO(TXdataBuffer, PayloadLength);
+  hal.writeRegisterFIFO(data, size);
 
   SetMode(SX127x_OPMODE_TX);
 }
@@ -331,8 +331,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
     // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
     currOpmode = SX127x_OPMODE_STANDBY;
   }
-  LastPacketRSSI = GetLastPacketRSSI();
-  LastPacketSNR = GetLastPacketSNR();
   // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
   // page 87 (note we already do /4 in GetLastPacketSNR())
   int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
@@ -358,6 +356,12 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   {
     SetMode(SX127x_OPMODE_RXCONTINUOUS);
   }
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+{
+  LastPacketRSSI = GetLastPacketRSSI();
+  LastPacketSNR = GetLastPacketSNR();
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)

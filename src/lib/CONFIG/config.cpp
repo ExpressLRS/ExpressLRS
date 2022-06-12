@@ -8,11 +8,9 @@
 
 #define MODEL_CHANGED       bit(1)
 #define VTX_CHANGED         bit(2)
-#define SSID_CHANGED        bit(3)
-#define PASSWORD_CHANGED    bit(4)
-#define MAIN_CHANGED        bit(5) // catch-all for global config item
-#define FAN_CHANGED         bit(6)
-#define MOTION_CHANGED      bit(7)
+#define MAIN_CHANGED        bit(3) // catch-all for global config item
+#define FAN_CHANGED         bit(4)
+#define MOTION_CHANGED      bit(5)
 
 TxConfig::TxConfig()
 {
@@ -52,10 +50,6 @@ TxConfig::Load()
         nvs_get_u32(handle, "motion", &value);
         m_config.motionMode = value;
 
-        value = sizeof(m_config.ssid);
-        nvs_get_str(handle, "ssid", m_config.ssid, &value);
-        value = sizeof(m_config.password);
-        nvs_get_str(handle, "password", m_config.password, &value);
         uint8_t value8;
         nvs_get_u8(handle, "fanthresh", &value8);
         m_config.powerFanThreshold = value8;
@@ -148,10 +142,6 @@ TxConfig::Commit()
         uint32_t value = m_config.motionMode;
         nvs_set_u32(handle, "motion", value);
     }
-    if (m_modified & SSID_CHANGED)
-        nvs_set_str(handle, "ssid", m_config.ssid);
-    if (m_modified & PASSWORD_CHANGED)
-        nvs_set_str(handle, "password", m_config.password);
     if (m_modified & MAIN_CHANGED)
     {
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
@@ -291,20 +281,6 @@ TxConfig::SetPowerFanThreshold(uint8_t powerFanThreshold)
 }
 
 void
-TxConfig::SetSSID(const char *ssid)
-{
-    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
-    m_modified |= SSID_CHANGED;
-}
-
-void
-TxConfig::SetPassword(const char *password)
-{
-    strncpy(m_config.password, password, sizeof(m_config.password)-1);
-    m_modified |= PASSWORD_CHANGED;
-}
-
-void
 TxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 {
     if (eeprom)
@@ -368,13 +344,13 @@ TxConfig::SetDefaults()
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
-    SetSSID("");
-    SetPassword("");
     SetVtxBand(0);
     SetVtxChannel(0);
     SetVtxPower(0);
     SetVtxPitmode(0);
     SetPowerFanThreshold(PWR_250mW);
+    SetFanMode(0);
+    SetMotionMode(0);
     SetDvrAux(0);
     SetDvrStartDelay(0);
     SetDvrStopDelay(0);
@@ -382,14 +358,12 @@ TxConfig::SetDefaults()
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
         SetRate(modParams->index);
-        SetTlm(modParams->TLMinterval);
+        SetTlm(TLM_RATIO_STD);
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
+        SetSwitchMode((uint8_t)smWideOr8ch);
         SetModelMatch(false);
-        SetFanMode(0);
-        SetMotionMode(0);
         Commit();
     }
 
@@ -424,10 +398,6 @@ TxConfig::UpgradeEepromV5ToV6()
         nvs_get_u32(handle, "motion", &value);
         m_config.motionMode = value;
 
-        value = sizeof(m_config.ssid);
-        nvs_get_str(handle, "ssid", m_config.ssid, &value);
-        value = sizeof(m_config.password);
-        nvs_get_str(handle, "password", m_config.password, &value);
         uint8_t value8;
         nvs_get_u8(handle, "fanthresh", &value8);
         m_config.powerFanThreshold = value8;
@@ -444,8 +414,6 @@ TxConfig::UpgradeEepromV5ToV6()
         // Define config struct based on the prev EEPROM schema
         typedef struct {
             uint32_t        version;
-            char            ssid[33];
-            char            password[33];
             uint8_t         vtxBand;
             uint8_t         vtxChannel;
             uint8_t         vtxPower;
@@ -644,12 +612,10 @@ RxConfig::SetDefaults()
     {
         SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
     }
-    SetSSID("");
-    SetPassword("");
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false);
-    SetPwmChannel(2, 0, 2, false); // ch2 is throttle, failsafe it to 988
+        SetPwmChannel(ch, 512, ch, false, 0, false);
+    SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
     SetOnLoan(false);
     Commit();
@@ -664,40 +630,29 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
-void
-RxConfig::SetSSID(const char *ssid)
-{
-    strncpy(m_config.ssid, ssid, sizeof(m_config.ssid)-1);
-    m_modified = true;
-}
-
-void
-RxConfig::SetPassword(const char *password)
-{
-    strncpy(m_config.password, password, sizeof(m_config.password)-1);
-    m_modified = true;
-}
-
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    if (pwm->val.failsafe == failsafe && pwm->val.inputChannel == inputCh
-        && pwm->val.inverted == inverted)
+    rx_config_pwm_t newConfig;
+    newConfig.val.failsafe = failsafe;
+    newConfig.val.inputChannel = inputCh;
+    newConfig.val.inverted = inverted;
+    newConfig.val.mode = mode;
+    newConfig.val.narrow = narrow;
+    if (pwm->raw == newConfig.raw)
         return;
 
-    pwm->val.failsafe = failsafe;
-    pwm->val.inputChannel = inputCh;
-    pwm->val.inverted = inverted;
+    pwm->raw = newConfig.raw;
     m_modified = true;
 }
 
 void
-RxConfig::SetPwmChannelRaw(uint8_t ch, uint16_t raw)
+RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;

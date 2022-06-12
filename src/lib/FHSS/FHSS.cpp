@@ -55,7 +55,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     INFOLN("Setting %s Mode", FHSSconfig->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
 
-    sync_channel = FHSSconfig->freq_count / 2;
+    sync_channel = (FHSSconfig->freq_count / 2) + 1;
     DBGLN("Sync channel = %u", sync_channel);
 
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);

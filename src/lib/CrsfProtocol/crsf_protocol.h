@@ -27,11 +27,11 @@
 #define CRSF_CRC_POLY 0xd5
 
 #define CRSF_NUM_CHANNELS 16
-#define CRSF_CHANNEL_VALUE_MIN  172
+#define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
 #define CRSF_CHANNEL_VALUE_1000 191
 #define CRSF_CHANNEL_VALUE_MID  992
 #define CRSF_CHANNEL_VALUE_2000 1792
-#define CRSF_CHANNEL_VALUE_MAX  1811
+#define CRSF_CHANNEL_VALUE_MAX  1811 // 2012us - actual CRSF max is 1984 with E.Limits on
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
@@ -57,12 +57,18 @@
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
-// Macros for big-endian (assume little endian host for now) etc
-#define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
-#define CRSF_DEC_I16(x) ((int16_t)CRSF_DEC_U16(x))
-#define CRSF_DEC_U24(x) (CRSF_DEC_U32((uint32_t)x << 8))
-#define CRSF_DEC_U32(x) ((uint32_t)__builtin_bswap32(x))
-#define CRSF_DEC_I32(x) ((int32_t)CRSF_DEC_U32(x))
+#define AUX1 4
+#define AUX2 5
+#define AUX3 6
+#define AUX4 7
+#define AUX5 8
+#define AUX6 9
+#define AUX7 10
+#define AUX8 11
+#define AUX9 12
+#define AUX10 13
+#define AUX11 14
+#define AUX12 15
 
 //////////////////////////////////////////////////////////////
 
@@ -327,22 +333,22 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
     return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2;
 }
 
-// Scale a full range crossfire value to 988-2012 (Taransi channel uS)
+// Scale a -100& to +100% crossfire value to 988-2012 (Taranis channel uS)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 {
-    return fmap(val, 172, 1811, 988, 2012);
+    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 988, 2012);
 }
 
-// Scale down a 10-bit value to a full range crossfire value
+// Scale down a 10-bit value to a -100& to +100% crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
 {
-    return fmap(val, 0, 1024, 172, 1811);
+    return fmap(val, 0, 1023, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
 }
 
-// Scale up a full range crossfire value to 10-bit
+// Scale up a -100& to +100% crossfire value to 10-bit
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
 {
-    return fmap(val, 172, 1811, 0, 1023);
+    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023);
 }
 
 // Convert 0-max to the CRSF values for 1000-2000
@@ -409,7 +415,25 @@ static inline uint16_t htobe16(uint16_t val)
 #endif
 }
 
+static inline uint16_t be16toh(uint16_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap16(val);
+#endif
+}
+
 static inline uint32_t htobe32(uint32_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap32(val);
+#endif
+}
+
+static inline uint32_t be32toh(uint32_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;

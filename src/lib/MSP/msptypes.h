@@ -8,15 +8,16 @@
 #define MSP_EEPROM_WRITE    250  //in message          no param
 
 // ELRS specific opcodes
-#define MSP_ELRS_RF_MODE                    0x06
-#define MSP_ELRS_TX_PWR                     0x07
-#define MSP_ELRS_TLM_RATE                   0x08
+#define MSP_ELRS_RF_MODE                    0x06    // NOTIMPL
+#define MSP_ELRS_TX_PWR                     0x07    // NOTIMPL
+#define MSP_ELRS_TLM_RATE                   0x08    // NOTIMPL
 #define MSP_ELRS_BIND                       0x09
 #define MSP_ELRS_MODEL_ID                   0x0A
 #define MSP_ELRS_REQU_VTX_PKT               0x0B
 #define MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE  0x0C
 #define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE 0x0D
 #define MSP_ELRS_SET_RX_WIFI_MODE           0x0E
+#define MSP_ELRS_SET_RX_LOAN_MODE           0x0F
 
 #define MSP_ELRS_POWER_CALI_GET             0x20
 #define MSP_ELRS_POWER_CALI_SET             0x21

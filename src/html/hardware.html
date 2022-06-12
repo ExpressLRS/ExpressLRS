@@ -1,4 +1,4 @@
-@@require(isTX)
+@@require(PLATFORM, VERSION, isTX, sx127x)
 <!DOCTYPE HTML>
 <html>
 
@@ -11,16 +11,18 @@
 
 <body>
 	<header class="mui-appbar mui--z1 mui--text-center elrs-header">
-		<svg fill="#fff" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" height="250" width="250" style="padding:20px;">
-			<path d="M237.6 14.8c47.2-5 96.3 10.3 131.9 41.8 5.3 4.9 12.5 9.4 13.4 17.2 1.3 8.8-6.8 17.5-15.8 16.4-8-.4-12.3-8.1-18.1-12.4-21-17.9-47.2-29.6-74.6-33.1-42.8-6-88.1 8.3-119.2 38.5-3.5 3.7-7.8 7.3-13.2 7.1-7.4.4-14.2-5.8-14.9-13.2-.4-4.3 1.1-8.8 4.1-11.9 28.2-28.4 66.5-46.7 106.4-50.4zm0 49c39-5.7 80.5 8.2 107.6 36.9 4.9 5.7 4.3 15.2-1.4 20.1-4.7 4.6-12.7 5.3-18.1 1.5-2.9-2.1-5.3-4.7-8-7-14.9-12.9-34-21-53.6-22.7-26.2-2.7-53.4 6.1-73 23.6-3.6 3.1-6.8 7.2-11.7 8.2-7.7 2.1-16.4-3.6-17.8-11.4-1-4.7.5-9.9 4-13.3 19.3-19.5 45-32.3 72-35.9zm8 48c23.8-3.2 48.8 5.7 65.2 23.1 4.9 5.5 4.5 14.9-1 19.9-5.1 5.5-14.7 5.7-20.1.5-6.3-6.2-14-11-22.6-13.1-16-4.2-33.9.5-45.8 12.1-3.7 4.1-9.7 5.8-15 4.2-4.7-1.4-8.6-5.3-10-9.9-1.3-4.9-.3-10.4 3.3-14.1 12.1-12.6 28.6-20.8 46-22.7zm-2.7 61c6.3-4.1 14.6-4.9 21.6-2.3 8.6 3 15.1 11.2 16.1 20.3 1 7.8-2.1 15.7-7.7 21.1l4.3 28.1h-16.7l-3.3-21.5c-.6 0-1.7.1-2.3.1l-3.3 21.4h-16.7l4.3-28.1c-4.5-4.4-7.6-10.4-7.9-16.8-.6-8.9 4.1-17.7 11.6-22.3m9.4 13.6c-5.6 2.5-6.1 11.1-.9 14.2 5 3.7 13-.5 12.8-6.7.4-5.9-6.7-10.4-11.9-7.5zM86 232c5.5-5.6 13.1-9.2 21-9.6 11.6-.8 23.2 5.5 29 15.6 5.6 9.4 5.8 21.8.3 31.4-2.5 4.6-6.4 8.2-10.1 11.8l-23.5 23.5c-7.6 7.7-12 18.4-11.9 29.2l.1 42.9c.1 13 8 23.8 13.2 35.2l32.5-32.5c10-9.8 26.6-11.4 38.4-3.8 12 7.2 17.9 23 13.5 36.3-1.8 6-5.6 11-10.1 15.2l-46.5 46.5c-5.3 5.4-11 10.5-15.1 16.9-4.3 6.4-7 13.8-8.6 21.3H91.5c2.2-15.7 9.5-30.6 20.7-41.8l54.5-54.5c3.1-2.9 6-6.3 6.5-10.6 1.2-6.4-2.4-13.2-8.3-16-5.7-3-13.2-1.4-17.6 3.2l-24 24c-6.5 6.3-12.5 13.5-21 17.2-11.3 5.4-24.2 3.1-36.3 3.6v-16.5c7.9-.2 15.8.4 23.6-.4L80 400.7c-3.9-8-5.8-16.9-5.7-25.8v-42c.1-14.6 6-29 16.2-39.5l28.9-29.1c4.4-4.4 5.6-11.6 2.8-17.1-2.7-5.7-9.2-9.3-15.4-8.4-3.8.4-7.1 2.4-9.7 5.1l-39.4 39.5c-8.3 8.4-13.9 19.5-15.8 31.2l-7.4 47a109.61 109.61 0 0 0-1.5 18.1v111c0 7.1.6 14.1 2.2 21H18.4c-1.4-6.9-1.9-14-1.9-21V381.8c-.4-16.2 3.5-32 5.7-47.9 2.4-13 3-26.5 8.3-38.8 3.8-9.1 9.5-17.3 16.5-24.3L86 232zm286.5 14.8c2.7-12.2 13.2-22.1 25.6-24 9.9-1.7 20.4 1.6 27.5 8.7l40.5 40.5c11.2 11.3 18.4 26.3 20.6 42.1l7.7 49.1c1.5 9.5 1.1 19.2 1.2 28.9v84c-.1 12 .6 24.1-1.9 36h-16.8c2.8-11.5 2.1-23.3 2.2-35v-84c0-9.6.4-19.3-1.2-28.8l-8-50.3c-2.1-12.5-8.8-24.1-18-32.7l-38-38c-5.5-5.5-15.3-5.8-20.8-.2-5.9 5.2-6.4 15.2-1 20.9 6.4 6.7 13.1 13.1 19.6 19.7 5.9 6.1 12.5 11.8 17 19 6.2 9.5 9.3 21 9.1 32.3l-.1 44.6c-.5 14.9-9.1 27.6-15.2 40.7 7.8.7 15.7.2 23.6.4v16.5c-10-.4-20.2 1.1-30-1.4-7.1-1.8-13.6-5.8-18.8-10.9l-33-33c-5.5-5.5-15.1-5.7-20.7-.2-6.2 5.4-6.4 15.7-.6 21.5l57 57.1c11.2 11.2 18.5 26.2 20.7 41.8H404c-2.2-11.3-7.6-21.9-15.7-30.1l-57.4-57.5c-10-10.1-11.5-27.2-3.5-39 7.6-12 23.7-17.4 36.9-12.5 8.2 2.6 13.8 9.5 19.7 15.3l24 24c5.2-11.4 13.1-22.2 13.2-35.2v-42.9c.1-10.8-4.3-21.6-11.9-29.2l-29-29.1c-7.3-7.7-10.3-18.9-7.8-29.1zm-215.6.4h198.2v16.5H157c-.2-5.5-.1-11-.1-16.5zm-5.4 33.6c11.5-2.8 24.3 4 28.4 15.1 3.3 8 1.8 17.7-3.6 24.5-6.2 8.1-17.7 11.5-27.3 8.1-10.2-3.3-17.5-13.8-16.8-24.5.2-11 8.6-21 19.3-23.2m1.9 16.7c-5.7 2.4-6.3 11.1-1.1 14.3 4.7 3.5 12.2.1 12.8-5.8 1-6.1-6.2-11.4-11.7-8.5zm53-17.3h99.1v66.1h-99.1v-66.1m16.6 16.5v33h66v-33h-66zm127.5-16.1c7.4-1.5 15.5.8 21.1 5.8 7 6.1 10 16.4 7.3 25.3-2.6 9.3-11.1 16.7-20.8 17.7-8.4 1.1-17.2-2.5-22.4-9.2-5.4-6.7-6.9-16.3-3.7-24.3 3-7.7 10.2-13.8 18.5-15.3m1.6 16.7c-5.7 1.9-7.1 10.3-2.3 14 4.3 4 12.1 1.4 13.3-4.3 1.9-6.1-5.1-12.4-11-9.7zm-215.2 48.2c11.4-6.6 25.1-8.9 38.1-6.7 13.6 2.3 26.2 9.7 34.9 20.4 11 13.2 15.5 31.5 11.9 48.3-4.6 23-24.5 42-47.8 45.3l-2.5-16.3c11.2-1.8 21.5-8.2 27.8-17.6 6.6-9.5 8.9-21.9 6-33.1-2.9-11.9-11.5-22.3-22.6-27.5-11.6-5.5-25.8-5.1-37 1.1-11.2 6-19.3 17.4-21.2 30l-16.3-2.5c2.5-17.1 13.4-32.8 28.7-41.4zm175.5 3.9c13.5-10.2 31.6-13.9 48-9.8 22.3 5.2 40.2 24.8 43.5 47.4l-16.3 2.5c-1.9-12.1-9.4-23.1-19.9-29.3-10.3-6.2-23.3-7.5-34.6-3.4-10.6 3.7-19.5 12-24 22.2-5 11.2-4.6 24.7 1.2 35.6 5.9 11.5 17.5 19.9 30.4 21.8l-2.4 16.2c-17-2.4-32.5-13.2-41.2-28-6.6-11-9.2-24.3-7.4-37 1.9-14.9 10.4-29.1 22.7-38.2z"/>
-			<path d="M247.8 395.8h16.5v16.5h-16.5c-.1-5.5-.1-11 0-16.5zm-49.6 66.1h115.6v33h66.1v16.2l-134.9.2c-28.7-.1-57.3 0-86 0-8.9-.2-17.9.4-26.8-.2v-16.2h66.1l-.1-33m16.5 16.5v16.5h82.6v-16.5h-82.6z"/>
-		</svg>
-		<h1>Welcome to the <b>ExpressLRS</b> target configuration page<br />
-		</h1>
+		@@include("logo-template.svg")
+		<h1><b>ExpressLRS</b></h1>
+		<span id="product_name"></span><br/>
+		<b>Firmware Rev. </b>@@{VERSION} <span id="reg_domain"></span>
 	</header>
-
-	<div class="mui-container-fluid">
-		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+	<br>
+	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
+		<div id="custom_config" class="mui-panel" style="display:none; background-color: #FFC107;">
+			This hardware configuration has been customised. This can be safely ignored if this is a custom hardware build or for testing purposes.<br>
+			You can <a download href="/hardware.json">download</a> the configuration or <a href="/reset?hardware">reset</a> to pre-configured defaults and reboot.
+		</div>
+		<div class="mui-panel">
 			<form id="notused" action="" method="POST" enctype="multipart/form-data">
 				<fieldset>
 					<input type="hidden" id="MAX_FILE_SIZE" name="MAX_FILE_SIZE" value="10000" />
@@ -32,8 +34,9 @@
 				</fieldset>
 			</form>
 		</div>
-		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+		<div class="mui-panel">
 			<form id='upload_hardware' method='POST' action="/hardware">
+				<input type="hidden" id="customised" name="customised" value="true"/>
 				<table>
 					<tr><td colspan='2'><b>CRSF Serial Pins</td></tr>
 					<tr><td width="30"></td><td>RX pin</td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td></tr>
@@ -49,6 +52,9 @@
 					<tr><td></td><td>NSS pin</td><td><input size='3' id='radio_nss' name='radio_nss' type='text'/></td></tr>
 					<tr><td></td><td>RST pin</td><td><input size='3' id='radio_rst' name='radio_rst' type='text'/></td></tr>
 					<tr><td></td><td>SCK pin</td><td><input size='3' id='radio_sck' name='radio_sck' type='text'/></td></tr>
+					<tr><td></td><td>BUSY_2 pin</td><td><input size='3' id='radio_busy_2' name='radio_busy_2' type='text'/></td>Busy pin for second SX1280</tr>
+					<tr><td></td><td>DIO1_2 pin</td><td><input size='3' id='radio_dio1_2' name='radio_dio1_2' type='text'/></td>Interrupt pin for second SX1280</tr>
+					<tr><td></td><td>NSS_2 pin</td><td><input size='3' id='radio_nss_2' name='radio_nss_2' type='text'/></td><td>Chip select pin for second SX1280</td></tr>
 					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td></tr>
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td></tr>
 
@@ -63,6 +69,8 @@
 					<tr><td></td><td>APC2 pin</td><td><input size='3' id='power_apc2' name='power_apc2' type='text'/></td></tr>
 					<tr><td></td><td>RXEN pin</td><td><input size='3' id='power_rxen' name='power_rxen' type='text'/></td></tr>
 					<tr><td></td><td>TXEN pin</td><td><input size='3' id='power_txen' name='power_txen' type='text'/></td></tr>
+					<tr><td></td><td>RXEN_2 pin</td><td><input size='3' id='power_rxen_2' name='power_rxen_2' type='text'/></td></tr>
+					<tr><td></td><td>TXEN_2 pin</td><td><input size='3' id='power_txen_2' name='power_txen_2' type='text'/></td></tr>
 					<tr><td></td><td>Min Power</td><td>
 						<select id='power_min' name='power_min'>
 							<option value='0'>10mW</option>
@@ -119,7 +127,7 @@
 							<option value='3'>DACWRITE</option>
 						</select>
 					</td></tr>
-					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text'/></td></tr>
+					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
 					<tr><td></td><td>PDET pin</td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td></tr>
@@ -128,7 +136,7 @@
 @@if isTX:
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
 					<tr><td></td><td>ADC pin</td><td><input size='3' id='joystick' name='joystick' type='text'/></td></tr>
-					<tr><td></td><td>Values</td><td><input size='20' id='joystick_values' name='joystick_values' type='text'/></td></tr>
+					<tr><td></td><td>Values</td><td><input size='40' id='joystick_values' name='joystick_values' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>Digital Joystick</td></tr>
 					<tr><td></td><td>Pin 1</td><td><input size='3' id='five_way1' name='five_way1' type='text'/></td></tr>
@@ -141,6 +149,11 @@
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
 					<tr><td></td><td>RGB LED pin</td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td></tr>
+					<tr><td></td><td>RGB indexes for Status</td><td><input size='40' id='ledidx_rgb_status' name='ledidx_rgb_status' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then only LED at 0 is used)</td></tr>
+@@if not isTX:
+					<tr><td></td><td>RGB indexes for VTX Status</td><td><input size='40' id='ledidx_rgb_vtx' name='ledidx_rgb_vtx' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then no VTX status)</td></tr>
+@@end
+					<tr><td></td><td>RGB indexes for Boot animation</td><td><input size='40' id='ledidx_rgb_boot' name='ledidx_rgb_boot' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty status indexes are used)</td></tr>
 					<tr><td></td><td>LED pin</td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
 					<tr><td></td><td>Red LED pin</td><td><input size='3' id='led_red' name='led_red' type='text'/></td></tr>
 					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='led_red_invert' name='led_red_invert' type='checkbox'/></td></tr>
@@ -153,7 +166,7 @@
 					-->
 @@if isTX:
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
-					<tr><td></td><td>OLED type</td><td>
+					<tr><td></td><td>Screen type</td><td>
 						<select id='screen_type' name='screen_type'>
 							<option value='0'>None</option>
 							<option value='1'>I2C OLED</option>
@@ -186,12 +199,12 @@
 					<tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td></tr>
 					<tr><td></td><td>Fan enable pin</td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td></tr>
 					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td></tr>
-					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='input'/></td></tr>
+					<tr><td></td><td>G-sensor interrupt pin</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='text'/></td></tr>
 					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td></tr>
 @@end
 @@if not isTX:
 					<tr><td colspan='2'><b>PWM</td></tr>
-					<tr><td></td><td>PWM output pins</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text'/></td></tr>
+					<tr><td></td><td>PWM output pins</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text' class='array'/></td></tr>
 
 					<tr><td colspan='2'><b>VBat</td></tr>
 					<tr><td></td><td>VBat pin</td><td><input size='3' id='vbat' name='vbat' type='text'/></td></tr>
@@ -199,14 +212,18 @@
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
-					<tr><td></td><td>RF amp PWM pin</td><td><input size='3' id='rf_amp_pwm' name='rf_amp_pwm' type='text'/></td></tr>
-					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='rf_amp_vpd' name='rf_amp_vpd' type='text'/></td></tr>
-					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='rf_amp_vref' name='rf_amp_vref' type='text'/></td></tr>
-					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='spi_vtx_nss' name='spi_vtx_nss' type='checkbox'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_25mW' name='vpd_25mW' type='input'/></td></tr>
-					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='20' id='vpd_100mW' name='vpd_100mW' type='checkbox'/></td></tr>
+					<tr><td></td><td>RF amp PWM pin</td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VPD pin</td><td><input size='3' id='vtx_amp_vpd' name='vtx_amp_vpd' type='text'/></td></tr>
+					<tr><td></td><td>RF amp VREF pin</td><td><input size='3' id='vtx_amp_vref' name='vtx_amp_vref' type='text'/></td></tr>
+					<tr><td></td><td>SPI NSS pin</td><td><input size='3' id='vtx_nss' name='vtx_nss' type='text'/></td></tr>
+					<tr><td></td><td>SPI SCK pin</td><td><input size='3' id='vtx_sck' name='vtx_sck' type='text'/></td><td>If this pin is undefined, then the SPI bus is shared with the radio chip</td></tr>
+					<tr><td></td><td>SPI MISO pin</td><td><input size='3' id='vtx_miso' name='vtx_miso' type='text'/></td></tr>
+					<tr><td></td><td>SPI MOSI pin</td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td></tr>
+					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_25mW' name='vtx_amp_vpd_25mW' type='text' class='array'/></td></tr>
+					<tr><td></td><td>100mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_100mW' name='vtx_amp_vpd_100mW' type='text' class='array'/></td></tr>
 @@end
 				</table>
+				<br>
 				<input type='button' value='Save Target Configuration' class='mui-btn mui-btn--primary' onclick="submitHardwareSettings()"/>
 			</form>
 		</div>

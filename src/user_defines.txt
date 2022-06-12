@@ -31,8 +31,6 @@
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
 #-DUNLOCK_HIGHER_POWER
 
-#-DNO_SYNC_ON_ARM
-
 -DLOCK_ON_FIRST_CONNECTION
 
 # For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
@@ -61,7 +59,7 @@
 # Does not output SBUS protocol, just inverted CRSF.
 #-DUSE_R9MM_R9MINI_SBUS
 
-#-DTLM_REPORT_INTERVAL_MS=320LU
+#-DTLM_REPORT_INTERVAL_MS=240LU
 
 ### OTHER OPTIONS: ###
 

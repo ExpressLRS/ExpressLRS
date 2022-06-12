@@ -125,17 +125,12 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #if defined(TLM_REPORT_INTERVAL_MS)
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
-    .tlm_report_interval = 320U,
+    .tlm_report_interval = 240U,
 #endif
 #if defined(FAN_MIN_RUNTIME)
     .fan_min_runtime = FAN_MIN_RUNTIME,
 #else
     .fan_min_runtime = 30,
-#endif
-#if defined(NO_SYNC_ON_ARM)
-    .no_sync_on_arm = true,
-#else
-    .no_sync_on_arm = false,
 #endif
 #if defined(UART_INVERTED) // Only on ESP32
     .uart_inverted = true,
@@ -176,9 +171,6 @@ const char PROGMEM compile_options[] = {
 #ifdef TARGET_TX
     #ifdef UNLOCK_HIGHER_POWER
         "-DUNLOCK_HIGHER_POWER "
-    #endif
-    #ifdef NO_SYNC_ON_ARM
-        "-DNO_SYNC_ON_ARM "
     #endif
     #ifdef UART_INVERTED
         "-DUART_INVERTED "
@@ -233,7 +225,7 @@ const char PROGMEM compile_options[] = {
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
 #include <ArduinoJson.h>
-#if defined(TARGET_UNIFIED_RX)
+#if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
@@ -298,14 +290,18 @@ String& getOptions()
 
 bool options_init()
 {
+    debugCreateInitLogger();
+
     uint32_t partition_start = 0;
     #if defined(PLATFORM_ESP32)
+    SPIFFS.begin(true);
     const esp_partition_t *running = esp_ota_get_running_partition();
     if (running) {
         partition_start = running->address;
     }
     uint32_t location = partition_start + ESP.getSketchSize();
     #else
+    SPIFFS.begin();
     uint32_t location = partition_start + myGetSketchSize();
     #endif
     ESP.flashRead(location, buf, 2048);
@@ -368,9 +364,8 @@ bool options_init()
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     #if defined(TARGET_UNIFIED_TX)
-    firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 320U;
+    firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
-    firmwareOptions.no_sync_on_arm = doc["no-sync-on-arm"] | false;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #else
@@ -380,7 +375,41 @@ bool options_init()
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
 
+    debugFreeInitLogger();
+
     return hardware_inited;
+}
+
+void saveOptions()
+{
+    DynamicJsonDocument doc(1024);
+
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
+    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.home_wifi_ssid[0])
+    {
+        doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
+        doc["wifi-password"] = firmwareOptions.home_wifi_password;
+    }
+    #if defined(TARGET_UNIFIED_TX)
+    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
+    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
+    doc["uart-inverted"] = firmwareOptions.uart_inverted;
+    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+    #else
+    doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
+    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
+    doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
+    #endif
+    doc["domain"] = firmwareOptions.domain;
+
+    File options = SPIFFS.open("/options.json", "w");
+    serializeJson(doc, options);
+    options.close();
 }
 
 #endif

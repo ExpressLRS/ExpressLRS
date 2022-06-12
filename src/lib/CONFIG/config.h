@@ -19,19 +19,17 @@
 
 #if defined(TARGET_TX)
 typedef struct {
-    uint8_t     rate:3;
-    uint8_t     tlm:3;
-    uint8_t     power:3;
-    uint8_t     switchMode:2;
-    uint8_t     modelMatch:1;
-    uint8_t     dynamicPower:1;
-    uint8_t     boostChannel:3;
+    uint8_t     rate:4,
+                tlm:4;
+    uint8_t     power:3,
+                switchMode:2,
+                boostChannel:3;
+    uint8_t     dynamicPower:1,
+                modelMatch:1;
 } model_config_t;
 
 typedef struct {
     uint32_t        version;
-    char            ssid[33];
-    char            password[33];
     uint8_t         vtxBand;
     uint8_t         vtxChannel;
     uint8_t         vtxPower;
@@ -61,8 +59,6 @@ public:
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
-    const char* GetSSID() const { return m_config.ssid; }
-    const char* GetPassword() const { return m_config.password; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
     uint8_t  GetVtxChannel() const { return m_config.vtxChannel; }
     uint8_t  GetVtxPower() const { return m_config.vtxPower; }
@@ -84,8 +80,6 @@ public:
     void SetModelMatch(bool modelMatch);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
-    void SetSSID(const char *ssid);
-    void SetPassword(const char *password);
     void SetVtxBand(uint8_t vtxBand);
     void SetVtxChannel(uint8_t vtxChannel);
     void SetVtxPower(uint8_t vtxPower);
@@ -120,16 +114,18 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
-constexpr uint8_t PWM_MAX_CHANNELS = 8;
+constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
 typedef union {
     struct {
-        uint16_t failsafe:10; // us output during failsafe +988 (e.g. 512 here would be 1500us)
-        uint8_t inputChannel:4; // 0-based input channel
-        uint8_t inverted:1; // invert channel output
-        uint8_t unused:1;
+        unsigned failsafe:10;   // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        unsigned inputChannel:4; // 0-based input channel
+        unsigned inverted:1;     // invert channel output
+        unsigned mode:4;         // Output mode (eServoOutputMode)
+        unsigned narrow:1;       // Narrow output mode (half pulse width)
+        unsigned unused:13;
     } val;
-    uint16_t raw;
+    uint32_t raw;
 } rx_config_pwm_t;
 
 typedef struct {
@@ -143,8 +139,6 @@ typedef struct {
     uint8_t     power;
     uint8_t     antennaMode;    //keep antenna mode in struct even in non diversity RX,
                                 // because turning feature diversity on and off would require change of RX config version.
-    char        ssid[33];
-    char        password[33];
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
@@ -164,8 +158,6 @@ public:
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
-    const char* GetSSID() const { return m_config.ssid; }
-    const char* GetPassword() const { return m_config.password; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
     #endif
@@ -181,11 +173,9 @@ public:
     void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults();
     void SetStorageProvider(ELRS_EEPROM *eeprom);
-    void SetSSID(const char *ssid);
-    void SetPassword(const char *password);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted);
-    void SetPwmChannelRaw(uint8_t ch, uint16_t raw);
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
+    void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
 
 private:

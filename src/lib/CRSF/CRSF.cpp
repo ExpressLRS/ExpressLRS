@@ -1,12 +1,11 @@
 #include "CRSF.h"
+#include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 #include "logging.h"
 #include "helpers.h"
 
 #if defined(PLATFORM_ESP32)
-#include "device.h"
-
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
 // for better performance, and on other targets (mostly using pin 13), it always uses Matrix
 HardwareSerial CRSF::Port(0);
@@ -14,7 +13,7 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
-HardwareSerial CRSF::Port = Serial;
+HardwareSerial CRSF::Port(0);
 #elif CRSF_TX_MODULE_STM32
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -31,50 +30,48 @@ Stream *CRSF::PortSecondary;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
-#if defined(PLATFORM_ESP8266) && defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
+#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
 CROSSFIRE2MSP CRSF::crsf2msp;
 MSP2CROSSFIRE CRSF::msp2crsf;
 #endif
 
-///Out FIFO to buffer messages///
+/// Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
-volatile uint16_t CRSF::ChannelDataIn[16] = {0};
+uint32_t CRSF::ChannelData[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
-volatile uint8_t CRSF::ParameterUpdateData[3] = {0};
+uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 static FIFO MspWriteFIFO;
 
-void inline CRSF::nullCallback(void) {}
+void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
+void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
 
-void (*CRSF::disconnected)() = &nullCallback; // called when CRSF stream is lost
-void (*CRSF::connected)() = &nullCallback;    // called when CRSF stream is regained
-
-void (*CRSF::RecvParameterUpdate)() = &nullCallback; // called when recv parameter update req, ie from LUA
-void (*CRSF::RecvModelUpdate)() = &nullCallback; // called when model id cahnges, ie command from Radio
-void (*CRSF::RCdataCallback)() = &nullCallback; // called when there is new RC data
+void (*CRSF::RecvParameterUpdate)() = nullptr; // called when recv parameter update req, ie from LUA
+void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
+void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
 
 /// UART Handling ///
-volatile uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
-volatile uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
-volatile bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
+uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
+uint8_t CRSF::SerialInPacketPtr = 0; // index where we are reading/writing
+bool CRSF::CRSFframeActive = false; //since we get a copy of the serial data use this flag to know when to ignore it
 
 uint32_t CRSF::GoodPktsCountResult = 0;
 uint32_t CRSF::BadPktsCountResult = 0;
 
 uint8_t CRSF::modelId = 0;
 bool CRSF::ForwardDevicePings = false;
-volatile bool CRSF::elrsLUAmode = false;
+bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
-volatile uint32_t CRSF::OpenTXsyncLastSent = 0;
+uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
@@ -105,10 +102,6 @@ uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
-#ifdef CRSF_RX_MODULE
-crsf_channels_s CRSF::PackedRCdataOut;
-#endif
-
 void CRSF::Begin()
 {
     DBGLN("About to start CRSF task...");
@@ -128,13 +121,13 @@ void CRSF::Begin()
     if (esp_reset_reason() != ESP_RST_POWERON)
     {
         modelId = rtcModelId;
-        RecvModelUpdate();
+        if (RecvModelUpdate) RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
-    CRSF::Port.flush();
-    CRSF::Port.updateBaudRate(TxToHandsetBauds[UARTcurrentBaudIdx]);
-    // Invert RX/TX
-    USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
+    // Uses default UART pins
+    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    // Invert RX/TX (not done, connection is full duplex uninverted)
+    //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 
 #elif defined(PLATFORM_STM32)
@@ -271,19 +264,19 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
 {
-    if (data[CRSF_TELEMETRY_LENGTH_INDEX] > CRSF_PAYLOAD_SIZE_MAX)
-    {
-        ERRLN("too large");
-        return;
-    }
-
     if (CRSF::CRSFstate)
     {
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (size > CRSF_MAX_PACKET_LEN)
+        {
+            ERRLN("too large");
+            return;
+        }
+
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
 #ifdef PLATFORM_ESP32
         portENTER_CRITICAL(&FIFOmux);
 #endif
-        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
         if (SerialOutFIFO.ensure(size + 1))
         {
             SerialOutFIFO.push(size); // length
@@ -354,34 +347,41 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::GetChannelDataIn() // data is packed as 11 bits per channel
+void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
-    const volatile crsf_channels_t *rcChannels = &CRSF::inBuffer.asRCPacket_t.channels;
-    uint16_t prev_AUX1 = ChannelDataIn[4];
+    // for monitoring arming state
+    uint32_t prev_AUX1 = ChannelData[4];
 
-    ChannelDataIn[0] = (rcChannels->ch0);
-    ChannelDataIn[1] = (rcChannels->ch1);
-    ChannelDataIn[2] = (rcChannels->ch2);
-    ChannelDataIn[3] = (rcChannels->ch3);
-    ChannelDataIn[4] = (rcChannels->ch4);
-    ChannelDataIn[5] = (rcChannels->ch5);
-    ChannelDataIn[6] = (rcChannels->ch6);
-    ChannelDataIn[7] = (rcChannels->ch7);
-    ChannelDataIn[8] = (rcChannels->ch8);
-    ChannelDataIn[9] = (rcChannels->ch9);
-    ChannelDataIn[10] = (rcChannels->ch10);
-    ChannelDataIn[11] = (rcChannels->ch11);
-    ChannelDataIn[12] = (rcChannels->ch12);
-    ChannelDataIn[13] = (rcChannels->ch13);
-    ChannelDataIn[14] = (rcChannels->ch14);
-    ChannelDataIn[15] = (rcChannels->ch15);
+    uint8_t const * const payload = (uint8_t const * const)&CRSF::inBuffer.asRCPacket_t.channels;
+    constexpr unsigned srcBits = 11;
+    constexpr unsigned dstBits = 11;
+    constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
+    constexpr unsigned precisionShift = dstBits - srcBits;
 
-    #if defined(PLATFORM_ESP32)
-    if (prev_AUX1 != ChannelDataIn[4]) // for monitoring arming state
+    // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
+    uint8_t bitsMerged = 0;
+    uint32_t readValue = 0;
+    unsigned readByteIndex = 0;
+    for (unsigned n = 0; n < CRSF_NUM_CHANNELS; n++)
     {
-        devicesTriggerEvent();
+        while (bitsMerged < srcBits)
+        {
+            uint8_t readByte = payload[readByteIndex++];
+            readValue |= ((uint32_t) readByte) << bitsMerged;
+            bitsMerged += 8;
+        }
+        //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & inputChannelMask), bitsMerged);
+        ChannelData[n] = (readValue & inputChannelMask) << precisionShift;
+        readValue >>= srcBits;
+        bitsMerged -= srcBits;
     }
+
+    if (prev_AUX1 != ChannelData[4])
+    {
+    #if defined(PLATFORM_ESP32)
+        devicesTriggerEvent();
     #endif
+    }
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
@@ -392,16 +392,16 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         DBGLN("CRSF UART Connected");
-        connected();
+        if (connected) connected();
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
-    volatile uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
+    uint8_t *SerialInBuffer = CRSF::inBuffer.asUint8_t;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         CRSF::RCdataLastRecv = micros();
-        GetChannelDataIn();
+        RcPacketToChannelsData();
         packetReceived = true;
     }
     // check for all extended frames that are a broadcast or a message to the FC
@@ -431,14 +431,14 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
             #if defined(PLATFORM_ESP32)
             rtcModelId = modelId;
             #endif
-            RecvModelUpdate();
+            if (RecvModelUpdate) RecvModelUpdate();
         }
         else
         {
             ParameterUpdateData[0] = packetType;
             ParameterUpdateData[1] = SerialInBuffer[5];
             ParameterUpdateData[2] = SerialInBuffer[6];
-            RecvParameterUpdate();
+            if (RecvParameterUpdate) RecvParameterUpdate();
         }
 
         packetReceived = true;
@@ -511,7 +511,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     AddMspMessage(totalBufferLen, outBuffer);
 }
 
-void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, volatile uint8_t* data)
+void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, uint8_t* data)
 {
     if (length > ELRS_MSP_BUFFER)
     {
@@ -620,7 +620,7 @@ void ICACHE_RAM_ATTR CRSF::handleUARTin()
                     {
                         //delayMicroseconds(50);
                         handleUARTout();
-                        RCdataCallback();
+                        if (RCdataCallback) RCdataCallback();
                     }
                 }
                 else
@@ -721,7 +721,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_RX()
         }
     }
 #elif defined(PLATFORM_ESP8266)
-    // Enable loopback on UART0 to connect the RX pin to the TX pin
+    // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
@@ -755,7 +755,7 @@ void ICACHE_RAM_ATTR CRSF::duplex_set_TX()
         }
     }
 #elif defined(PLATFORM_ESP8266)
-    // Disable loopback to disconnect the RX pin from the TX pin
+    // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) &= ~BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
@@ -840,7 +840,7 @@ bool CRSF::UARTwdt()
             if (CRSFstate == true)
             {
                 DBGLN("CRSF UART Disconnected");
-                disconnected();
+                if (disconnected) disconnected();
                 CRSFstate = false;
             }
 
@@ -902,10 +902,11 @@ bool CRSF::RXhandleUARTout()
         // don't write more than 128 bytes at a time to avoid RX buffer overflow
         const int maxBytesPerCall = 128;
         uint32_t bytesWritten = 0;
-        #if defined(PLATFORM_ESP8266) && defined(USE_MSP_WIFI)
+        #if defined(USE_MSP_WIFI)
             while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
             {
                 uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+
                 uint8_t OutData[OutPktLen];
                 msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
                 this->_dev->write(OutData, OutPktLen); // write the packet out
@@ -934,7 +935,7 @@ void CRSF::sendLinkStatisticsToFC()
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (!OPT_CRSF_RCVR_NO_SERIAL)
     {
-        constexpr uint8_t outBuffer[4] = {
+        constexpr uint8_t outBuffer[] = {
             LinkStatisticsFrameLength + 4,
             CRSF_ADDRESS_FLIGHT_CONTROLLER,
             LinkStatisticsFrameLength + 2,
@@ -944,42 +945,59 @@ void CRSF::sendLinkStatisticsToFC()
         uint8_t crc = crsf_crc.calc(outBuffer[3]);
         crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 
-        if (SerialOutFIFO.ensure(outBuffer[0] + 1)) {
+        if (SerialOutFIFO.ensure(outBuffer[0] + 1))
+        {
             SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
             SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
             SerialOutFIFO.push(crc);
         }
-
-        //this->_dev->write(outBuffer, LinkStatisticsFrameLength + 4);
     }
 #endif // DEBUG_CRSF_NO_OUTPUT
 }
 
-void ICACHE_RAM_ATTR CRSF::sendRCFrameToFC()
+void CRSF::sendRCFrameToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
-    {
-        constexpr uint8_t outBuffer[] = {
-            // No need for length prefix as we aren't using the FIFO
-            CRSF_ADDRESS_FLIGHT_CONTROLLER,
-            RCframeLength + 2,
-            CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-        };
+    if (OPT_CRSF_RCVR_NO_SERIAL)
+        return;
 
-        uint8_t crc = crsf_crc.calc(outBuffer[2]);
-        crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+    constexpr uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        RCframeLength + 2,
+        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
 
-        //SerialOutFIFO.push(RCframeLength + 4);
-        //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-        this->_dev->write(outBuffer, sizeof(outBuffer));
-        this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
-        this->_dev->write(crc);
-    }
-#endif // DEBUG_CRSF_NO_OUTPUT
+    crsf_channels_s PackedRCdataOut;
+    PackedRCdataOut.ch0 = ChannelData[0];
+    PackedRCdataOut.ch1 = ChannelData[1];
+    PackedRCdataOut.ch2 = ChannelData[2];
+    PackedRCdataOut.ch3 = ChannelData[3];
+    PackedRCdataOut.ch4 = ChannelData[4];
+    PackedRCdataOut.ch5 = ChannelData[5];
+    PackedRCdataOut.ch6 = ChannelData[6];
+    PackedRCdataOut.ch7 = ChannelData[7];
+    PackedRCdataOut.ch8 = ChannelData[8];
+    PackedRCdataOut.ch9 = ChannelData[9];
+    PackedRCdataOut.ch10 = ChannelData[10];
+    PackedRCdataOut.ch11 = ChannelData[11];
+    PackedRCdataOut.ch12 = ChannelData[12];
+    PackedRCdataOut.ch13 = ChannelData[13];
+    PackedRCdataOut.ch14 = ChannelData[14];
+    PackedRCdataOut.ch15 = ChannelData[15];
+
+    uint8_t crc = crsf_crc.calc(outBuffer[2]);
+    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+
+    //SerialOutFIFO.push(RCframeLength + 4);
+    //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
+    this->_dev->write(outBuffer, sizeof(outBuffer));
+    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+    this->_dev->write(crc);
+#endif // CRSF_RCVR_NO_SERIAL
 }
 
-void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
+void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (!OPT_CRSF_RCVR_NO_SERIAL)
@@ -988,36 +1006,11 @@ void ICACHE_RAM_ATTR CRSF::sendMSPFrameToFC(uint8_t* data)
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
         {
             data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-            this->_dev->write(data, totalBufferLen);
+            SerialOutFIFO.push(totalBufferLen);
+            SerialOutFIFO.pushBytes(data, totalBufferLen);
         }
     }
 #endif // DEBUG_CRSF_NO_OUTPUT
-}
-
-/**
- * @brief   Get encoded channel position from PackedRCdataOut
- * @param   ch: zero-based channel number
- * @return  CRSF-encoded channel position, or 0 if invalid channel
- **/
-uint16_t CRSF::GetChannelOutput(uint8_t ch)
-{
-    switch (ch)
-    {
-        case 0: return PackedRCdataOut.ch0;
-        case 1: return PackedRCdataOut.ch1;
-        case 2: return PackedRCdataOut.ch2;
-        case 3: return PackedRCdataOut.ch3;
-        case 4: return PackedRCdataOut.ch4;
-        case 5: return PackedRCdataOut.ch5;
-        case 6: return PackedRCdataOut.ch6;
-        case 7: return PackedRCdataOut.ch7;
-        case 8: return PackedRCdataOut.ch8;
-        case 9: return PackedRCdataOut.ch9;
-        case 10: return PackedRCdataOut.ch10;
-        case 11: return PackedRCdataOut.ch11;
-        default:
-            return 0;
-    }
 }
 
 #endif // CRSF_RX_MODULE
@@ -1034,7 +1027,7 @@ uint32_t CRSF::VersionStrToU32(const char *verStr)
 #if !defined(FORCE_NO_DEVICE_VERSION)
     uint8_t accumulator = 0;
     char c;
-    while (c = *verStr)
+    while ((c = *verStr))
     {
         ++verStr;
         // A decimal indicates moving to a new version field
