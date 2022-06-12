@@ -19,7 +19,7 @@
     "power_txen": 14,
     "power_rxen_2": 9,
     "power_txen_2": 15,
-    
+
     "power_min": 0,
     "power_high": 3,
     "power_max": 3,
@@ -30,5 +30,7 @@
     "led_rgb": 22,
     "led_rgb_isgrb": 1,
     "ledidx_rgb_status": [0],
-    "ledidx_rgb_boot": [0]
+    "ledidx_rgb_boot": [0],
+
+    "button": 0
 }

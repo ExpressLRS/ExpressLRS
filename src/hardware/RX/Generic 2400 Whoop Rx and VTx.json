@@ -10,7 +10,7 @@
     "radio_busy": 36,
     "radio_dio1": 37,
     "radio_nss": 27,
-    
+
     "power_min": 0,
     "power_high": 0,
     "power_max": 0,
@@ -23,7 +23,7 @@
     "ledidx_rgb_status": [0],
     "ledidx_rgb_vtx": [1],
     "ledidx_rgb_boot": [0,1],
-	
+
     "vtx_nss": 19,
     "vtx_miso": 23,
     "vtx_mosi": 18,
@@ -34,5 +34,7 @@
     "vtx_amp_vref": 2,
 
     "vtx_amp_vpd_25mW": [1350,1350,1350,1350],
-    "vtx_amp_vpd_100mW": [1600,1600,1600,1600]
+    "vtx_amp_vpd_100mW": [1600,1600,1600,1600],
+
+    "button": 0
 }
