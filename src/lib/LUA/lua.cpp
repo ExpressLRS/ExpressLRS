@@ -8,7 +8,6 @@
 #endif
 
 extern CRSF crsf;
-extern bool IsArmed();
 
 #ifdef TARGET_RX
 extern Telemetry telemetry;
@@ -259,7 +258,7 @@ static void updateElrsFlags()
 {
   setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
   setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setLuaWarningFlag(LUA_FLAG_ISARMED, IsArmed());
+  setLuaWarningFlag(LUA_FLAG_ISARMED, crsf.IsArmed());
 }
 
 void sendELRSstatus()

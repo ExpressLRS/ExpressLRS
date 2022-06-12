@@ -16,7 +16,6 @@
 extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
 extern uint8_t MasterUID[6];
-extern uint16_t CRCInitializer;
 
 typedef enum : uint8_t
 {
@@ -76,18 +75,21 @@ typedef enum
     RF_AIRMODE_PARAMETERS = 2
 } expresslrs_tlm_header_e;
 
-typedef enum
+typedef enum : uint8_t
 {
     RATE_LORA_4HZ = 0,
     RATE_LORA_25HZ,
     RATE_LORA_50HZ,
     RATE_LORA_100HZ,
+    RATE_LORA_100HZ_8CH,
     RATE_LORA_150HZ,
     RATE_LORA_200HZ,
     RATE_LORA_250HZ,
+    RATE_LORA_333HZ_8CH,
     RATE_LORA_500HZ,
     RATE_DVDA_250HZ,
     RATE_DVDA_500HZ,
+    RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
@@ -100,13 +102,13 @@ enum {
 typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
-    uint8_t enum_rate;                    // Max value of 4 since only 2 bits have been assigned in the sync package.
-    int32_t RXsensitivity;                // expected RF sensitivity based on
-    uint32_t TOA;                         // time on air in microseconds
-    uint32_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
-    uint32_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
-    uint32_t SyncPktIntervalDisconnected; // how often to send the SYNC_PACKET packet (ms) when there is no response from RX
-    uint32_t SyncPktIntervalConnected;    // how often to send the SYNC_PACKET packet (ms) when there we have a connection
+    expresslrs_RFrates_e enum_rate;
+    int16_t RXsensitivity;                // expected RF sensitivity based on
+    uint16_t TOA;                         // time on air in microseconds
+    uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
+    uint16_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
+    uint16_t SyncPktIntervalDisconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
+    uint16_t SyncPktIntervalConnected;    // how often to send the PACKET_TYPE_SYNC (ms) when there we have a connection
 
 } expresslrs_rf_pref_params_s;
 
@@ -114,13 +116,13 @@ typedef struct expresslrs_mod_settings_s
 {
     uint8_t index;
     uint8_t radio_type;
-    uint8_t enum_rate;          // Max value of 4 since only 2 bits have been assigned in the sync package.
+    expresslrs_RFrates_e enum_rate;
     uint8_t bw;
     uint8_t sf;
     uint8_t cr;
-    uint32_t interval;          // interval in us seconds that corresponds to that frequency
-    expresslrs_tlm_ratio_e TLMinterval; // Suggested telemetry ratio for this rate
+    expresslrs_tlm_ratio_e TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
+    uint32_t interval;          // interval in us seconds that corresponds to that frequency
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
@@ -128,27 +130,19 @@ typedef struct expresslrs_mod_settings_s
 
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
-#define RATE_MAX 4
+#define RATE_MAX 5
 #define RATE_DEFAULT 0
-#define RATE_BINDING 2 // 50Hz bind mode
+#define RATE_BINDING 3 // 50Hz bind mode
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
-#define RATE_MAX 7      // 3xFLRC + 4xLoRa
-#define RATE_DEFAULT 0  // Default to FLRC 1000Hz
-#define RATE_BINDING 6  // 50Hz bind mode
+#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_DEFAULT 0  // Default to F1000
+#define RATE_BINDING 9  // 50Hz bind mode
 
 extern SX1280Driver Radio;
 #endif
-
-
-#define SYNC_PACKET_SWITCH_OFFSET   0   // Switch encoding mode
-#define SYNC_PACKET_TLM_OFFSET      2   // Telemetry ratio
-#define SYNC_PACKET_RATE_OFFSET     5   // Rate index
-#define SYNC_PACKET_SWITCH_MASK     0b11
-#define SYNC_PACKET_TLM_MASK        0b111
-#define SYNC_PACKET_RATE_MASK       0b111
 
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
@@ -156,19 +150,30 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
-uint16_t RateEnumToHz(uint8_t const eRate);
+uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate);
+uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
 extern uint8_t ExpressLRS_currTlmDenom;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
-uint8_t enumRatetoIndex(uint8_t rate);
-
-void initUID();
-
 #endif // UNIT_TEST
 
 uint32_t uidMacSeedGet(void);
+void initUID();
+
+#define AUX1 4
+#define AUX2 5
+#define AUX3 6
+#define AUX4 7
+#define AUX5 8
+#define AUX6 9
+#define AUX7 10
+#define AUX8 11
+#define AUX9 12
+#define AUX10 13
+#define AUX11 14
+#define AUX12 15
 
 //ELRS SPECIFIC OTA CRC
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/

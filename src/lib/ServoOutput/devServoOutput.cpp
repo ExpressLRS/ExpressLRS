@@ -54,7 +54,7 @@ static int servosUpdate(unsigned long now)
         for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            const unsigned crsfVal = CRSF::GetChannelOutput(chConfig->val.inputChannel);
+            const unsigned crsfVal = CRSF::ChannelData[chConfig->val.inputChannel];
             // crsfVal might 0 if this is a switch channel and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)

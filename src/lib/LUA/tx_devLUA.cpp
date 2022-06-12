@@ -21,6 +21,8 @@ static char modelMatchUnit[] = " (ID: 00)";
 static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
+static const char switchmodeOpts4ch[] = "Wide;Hybrid";
+static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
@@ -28,9 +30,9 @@ static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
-    "25Hz;50Hz;100Hz;200Hz",
+    "25Hz;50Hz;100Hz;100Hz Full;200Hz",
 #elif defined(RADIO_SX128X)
-    "50Hz;150Hz;250Hz;500Hz;D250;D500;F1000",
+    "50Hz;100Hz Full;150Hz;250Hz;333Hz Full;500Hz;D250;D500;F500;F1000",
 #else
     #error Invalid radio configuration!
 #endif
@@ -84,7 +86,7 @@ static struct luaItem_string luaCELimit = {
 static struct luaItem_selection luaSwitch = {
     {"Switch Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Hybrid;Wide",
+    switchmodeOpts4ch,
     emptySpace
 };
 
@@ -231,7 +233,6 @@ static struct luaItem_selection luaDvrStopDelay = {
 
 static char luaBadGoodString[10];
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern TxConfig config;
 extern void VtxTriggerSend();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
@@ -285,7 +286,16 @@ static void luadevUpdateTlmBandwidth()
     uint16_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
     uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
-    uint32_t bandwidthValue = ELRS_TELEMETRY_BYTES_PER_CALL * 8U * burst * hz / ratiodiv / (burst + 1);
+    uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_TELEMETRY_BYTES_PER_CALL : ELRS4_TELEMETRY_BYTES_PER_CALL;
+    uint32_t bandwidthValue = bytesPerCall * 8U * burst * hz / ratiodiv / (burst + 1);
+    if (OtaIsFullRes)
+    {
+      // Due to fullres also packing telemetry into the LinkStats packet, there is at least
+      // N bytes more data for every rate except 100Hz 1:128, and 2*N bytes more for many
+      // rates. The calculation is a more complex though, so just approximate some of the
+      // extra bandwidth
+      bandwidthValue += 8U * (ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
+    }
 
     itoa(bandwidthValue, &tlmBandwidth[2], 10);
     strcat(tlmBandwidth, "bps)");
@@ -505,16 +515,38 @@ void luadevUpdateFolderNames()
   luadevUpdateTlmBandwidth();
 }
 
+uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
+{
+  // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
+  // range for 4ch mode
+  if (packetSize == OTA4_PACKET_SIZE)
+  {
+    if (eSwitchMode > smHybridOr16ch)
+      return smWideOr8ch;
+  }
+
+  return eSwitchMode;
+}
+
 static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      if ((arg < RATE_MAX) && (arg >= 0))
+    if (arg < RATE_MAX)
+    {
+      uint8_t newRate = RATE_MAX - 1 - arg;
+      newRate = adjustPacketRateForBaud(newRate);
+      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
+      // If the switch mode is going to change, block the change while connected
+      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
-        uint8_t currentRate = RATE_MAX - 1 - arg;
-        currentRate = adjustPacketRateForBaud(currentRate);
-        config.SetRate(currentRate);
+        config.SetRate(newRate);
+        config.SetSwitchMode(newSwitchMode);
       }
+      else
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+    }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
@@ -534,11 +566,8 @@ static void registerLuaParameters()
       // the pack and unpack functions are matched
       if (connectionState == disconnected)
       {
-        // +1 to the mode because 1-bit was mode 0 and has been removed
-        // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-        uint32_t newSwitchMode = (arg + 1) & 0b11;
-        config.SetSwitchMode(newSwitchMode);
-        OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
+        config.SetSwitchMode(arg);
+        OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
       }
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
@@ -608,7 +637,7 @@ static void registerLuaParameters()
   }
   #endif
   if (HAS_RADIO) {
-    registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
+    registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
 
     if (OPT_USE_TX_BACKPACK) {
       registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
@@ -659,7 +688,8 @@ static int event()
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
+  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

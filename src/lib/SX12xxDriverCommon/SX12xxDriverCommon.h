@@ -26,9 +26,8 @@ public:
     bool (*RXdoneCallback)(rx_status crcFail); //function pointer for callback
     void (*TXdoneCallback)(); //function pointer for callback
 
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
+    #define RXBuffSize 16
+    WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
 
     ///////////Radio Variables////////
     uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
