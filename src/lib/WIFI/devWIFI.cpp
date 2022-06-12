@@ -70,6 +70,7 @@ static IPAddress ipAddress;
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
 #include "CRSF.h"
 extern CRSF crsf;
+static AsyncWebSocket mspWS("/msp_ws");
 #endif
 
 static AsyncWebServer server(80);
@@ -593,6 +594,32 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+static void WebHandleMSPEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    client->ping();
+    break;
+
+  case WS_EVT_DATA: {
+    AwsFrameInfo *info = (AwsFrameInfo*)arg;
+    if (info->opcode != WS_BINARY) {
+      // we only want binary frames
+      break;
+    }
+
+    crsf.msp2crsf.parse(data, len);
+    break;
+  }
+
+  default:
+      break;
+  }
+}
+#endif
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -752,6 +779,8 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
   #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
   wifi2tcp.begin();
+  mspWS.onEvent(WebHandleMSPEvent);
+  server.addHandler(&mspWS);
   #endif
 }
 
@@ -842,6 +871,7 @@ void HandleMSP2WIFI()
     uint8_t data[len];
     crsf.crsf2msp.FIFOout.popBytes(data, len);
     wifi2tcp.write(data, len);
+    mspWS.binaryAll(data, len);
   }
 
   // check if there is any data to read in
@@ -856,6 +886,13 @@ void HandleMSP2WIFI()
   wifi2tcp.handle();
   #endif
 }
+
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+bool WifiHasMSPClient()
+{
+  return wifi2tcp.hasClient() || mspWS.count();
+}
+#endif
 
 static int start()
 {
