@@ -410,7 +410,7 @@
             "flash": {
                 "product_name": "NamimnoRC Flash 2.4GHz RX",
                 "lua_name": "Namimno 2400RX",
-                "layout_file": "Namimno FLASH 2400.json",
+                "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "flash-pa": {
