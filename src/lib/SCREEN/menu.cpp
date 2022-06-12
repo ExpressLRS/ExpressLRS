@@ -6,6 +6,7 @@
 #include "helpers.h"
 #include "logging.h"
 #include "POWERMGNT.h"
+#include "CRSF.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -15,7 +16,6 @@ extern Thermal thermal;
 
 extern FiniteStateMachine state_machine;
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
 extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
@@ -68,7 +68,7 @@ static void displayIdleScreen(bool init)
     }
 #endif
 
-    message_index_t disp_message = IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
+    message_index_t disp_message = CRSF::IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
     uint8_t changed = init ? 0xFF : 0;
     if (changed == 0)
     {

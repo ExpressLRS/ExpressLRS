@@ -49,8 +49,8 @@ public:
     void ICACHE_RAM_ATTR ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber);
     uint8_t ICACHE_RAM_ATTR ReadRegister(uint16_t address, SX1280_Radio_Number_t radioNumber);
 
-    void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber); // Writes and Reads to FIFO
-    void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber);
+    void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber); // Writes and Reads to FIFO
+    void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber);
 
     bool ICACHE_RAM_ATTR WaitOnBusy(SX1280_Radio_Number_t radioNumber);
 
