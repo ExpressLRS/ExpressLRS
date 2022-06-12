@@ -414,7 +414,7 @@
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "flash-pa": {
-                "product_name": "NamimnoRC Flash 100mW 2.4GHz RX",
+                "product_name": "NamimnoRC Flash 100mW Diversity 2.4GHz RX",
                 "lua_name": "Namimno 2400RX",
                 "layout_file": "Namimno FLASH 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
