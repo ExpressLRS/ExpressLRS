@@ -19,7 +19,7 @@
     "power_txen": 14,
     "power_rxen_2": 9,
     "power_txen_2": 15,
-    
+
     "power_min": 0,
     "power_high": 3,
     "power_max": 3,
@@ -28,11 +28,11 @@
     "power_values": [-10,-6,-3,1],
 
     "led_rgb": 22,
-    "led_rgb_isgrb": 1,
+    "led_rgb_isgrb": true,
     "ledidx_rgb_status": [0],
     "ledidx_rgb_vtx": [1],
     "ledidx_rgb_boot": [0,1],
-	
+
     "vtx_nss": 19,
     "vtx_miso": 23,
     "vtx_mosi": 18,

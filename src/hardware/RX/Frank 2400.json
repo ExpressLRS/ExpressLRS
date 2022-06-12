@@ -15,7 +15,7 @@
     "power_control": 0,
     "power_values": [13],
     "led_rgb": 2,
-    "led_rgb_isgrb": 1,
+    "led_rgb_isgrb": true,
     "ledidx_rgb_status": [0],
     "ledidx_rgb_vtx": [1],
     "ledidx_rgb_boot": [0,1],
