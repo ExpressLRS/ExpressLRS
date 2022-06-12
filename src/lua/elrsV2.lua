@@ -1,4 +1,4 @@
--- TNS|ExpressLRS|TNE
+-- TNS|ExpressLRS Touch|TNE
 ---- #########################################################################
 ---- #                                                                       #
 ---- # Copyright (C) OpenTX                                                  #
@@ -34,6 +34,7 @@ local elrsFlags = 0
 local elrsFlagsInfo = ""
 local fields_count = 0
 local backButtonId = 2
+local exitButtonId = 3
 local devicesRefreshTimeout = 50
 local folderAccess = nil
 local commandRunningIndicator = 1
@@ -42,6 +43,7 @@ local deviceIsELRS_TX = nil
 local linkstatTimeout = 100
 local titleShowWarn = nil
 local titleShowWarnTimeout = 100
+local exitscript = 0
 
 local COL2
 local maxLineIndex
@@ -60,6 +62,8 @@ local function allocateFields()
   if folderAccess ~= nil then
     fields[backButtonId].parent = folderAccess
   end
+  exitButtonId = backButtonId + 1
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
 end
 
 local function reloadAllField()
@@ -347,13 +351,15 @@ local function fieldCommandLoad(field, data, offset)
 end
 
 local function fieldCommandSave(field)
-  if field.status < 4 then
-    field.status = 1
-    crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.status })
-    fieldPopup = field
-    fieldPopup.lastStatus = 0
-    commandRunningIndicator = 1
-    fieldTimeout = getTime() + field.timeout
+  if field.status ~= nil then
+    if field.status < 4 then
+      field.status = 1
+      crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.status })
+      fieldPopup = field
+      fieldPopup.lastStatus = 0
+      commandRunningIndicator = 1
+      fieldTimeout = getTime() + field.timeout
+    end
   end
 end
 
@@ -370,6 +376,10 @@ local function UIbackExec()
   backFld.li = nil
   backFld.po = nil
   folderAccess = nil
+end
+
+local function UIexitExec()
+  exitscript = 1
 end
 
 local function changeDeviceId(devId) --change to selected device ID
@@ -449,6 +459,7 @@ local functions = {
   { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
   { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
+  { load=nil, save=UIexitExec, display=fieldCommandDisplay }, --18 exit(17)
 }
 
 local function parseParameterInfoMessage(data)
@@ -681,7 +692,7 @@ local function reloadRelatedFields(field)
   fieldTimeout = getTime() + 20
 end
 
-local function handleDevicePageEvent(event)
+local function handleDevicePageEvent(event, touchState)
   if #fields == 0 then --if there is no field yet
     return
   else
@@ -690,7 +701,7 @@ local function handleDevicePageEvent(event)
     end
   end
 
-  if event == EVT_VIRTUAL_EXIT then             -- Cancel edit / go up a folder / reload all
+  if ((event == EVT_VIRTUAL_EXIT) or (event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft)) then -- Cancel edit / go up a folder / reload all
     if edit then
       edit = nil
       reloadCurField(0)
@@ -705,7 +716,7 @@ local function handleDevicePageEvent(event)
       end
       UIbackExec()
     end
-  elseif event == EVT_VIRTUAL_ENTER then        -- toggle editing/selecting current field
+  elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and (event == EVT_TOUCH_TAP or (event == EVT_TOUCH_SLIDE and touchState.swipeRight)))) then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
@@ -730,23 +741,27 @@ local function handleDevicePageEvent(event)
       end
     end
   elseif edit then
-    if event == EVT_VIRTUAL_NEXT then
-      incrField(1)
-    elseif event == EVT_VIRTUAL_PREV then
-      incrField(-1)
+    if ((event ~= nil) and (event ~= 0)) then
+      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
+        incrField(1)
+      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
+        incrField(-1)
+      end
     end
   else
-    if event == EVT_VIRTUAL_NEXT then
-      selectField(1)
-    elseif event == EVT_VIRTUAL_PREV then
-      selectField(-1)
+    if ((event ~= nil) and (event ~= 0)) then
+      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
+        selectField(1)
+      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
+        selectField(-1)
+      end
     end
   end
 end
 
 -- Main
-local function runDevicePage(event)
-  handleDevicePageEvent(event)
+local function runDevicePage(event, touchState)
+  handleDevicePageEvent(event, touchState)
 
   lcd_title()
 
@@ -780,7 +795,7 @@ local function popupCompat(t, m, e)
   return popupConfirmation(t, e)
 end
 
-local function runPopupPage(event)
+local function runPopupPage(event, touchState)
   if event == EVT_VIRTUAL_EXIT then
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 }) -- lcsCancel
     fieldTimeout = getTime() + 200 -- 2s
@@ -884,6 +899,10 @@ local function setMock()
   loadQ = { fields_count }
   deviceIsELRS_TX = true
   backButtonId = #fields
+
+  fields_count = fields_count + 1
+  exitButtonId = fields_count + 1
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
 end
 
 -- Init
@@ -895,19 +914,23 @@ local function init()
 end
 
 -- Main
-local function run(event)
+local function run(event, touchState)
   if event == nil then
     error("Cannot be run as a model script!")
     return 2
   end
 
   if fieldPopup ~= nil then
-    runPopupPage(event)
+    runPopupPage(event, touchState)
   else
-    runDevicePage(event)
+    runDevicePage(event, touchState)
   end
 
   refreshNext()
+
+  if exitscript > 0 then
+    return 1
+  end
 
   return 0
 end
