@@ -253,9 +253,9 @@ typedef enum
 typedef enum
 {
     SX1280_FLRC_CRC_OFF    = 0x00,
-    SX1280_FLRC_CRC_1_BYTE = 0x10,
-    SX1280_FLRC_CRC_2_BYTE = 0x20,
-    SX1280_FLRC_CRC_3_BYTE = 0x30,
+    SX1280_FLRC_CRC_2_BYTE = 0x10,
+    SX1280_FLRC_CRC_3_BYTE = 0x20,
+    SX1280_FLRC_CRC_4_BYTE = 0x30,
 } SX1280_RadioFlrcCrc_t;
 
 enum
