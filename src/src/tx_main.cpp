@@ -297,6 +297,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
 
+  Radio.GetLastPacketStats();
+
   // Full res mode
   if (OtaIsFullRes)
   {
