@@ -20,10 +20,10 @@ const uint16_t *main_menu_icons[] = {
     elrs_ratio,
     elrs_motion,
     elrs_fan,
-    elrs_vtx,
     elrs_joystick,
     elrs_bind,
     elrs_wifimode,
+    elrs_vtx,
 
     elrs_power,
     elrs_power,
