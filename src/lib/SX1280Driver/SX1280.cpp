@@ -298,11 +298,6 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[1] = (uint8_t)crcSeed;
     hal.WriteRegister(SX1280_REG_FLRC_CRC_SEED, buf, 2, SX1280_Radio_All);
 
-    // CRC POLY 0x3D65
-    buf[0] = 0x3D;
-    buf[1] = 0x65;
-    hal.WriteRegister(SX1280_REG_FLRC_CRC_POLY, buf, 2, SX1280_Radio_All);
-
     // Set SyncWord1
     buf[0] = (uint8_t)(syncWord >> 24);
     buf[1] = (uint8_t)(syncWord >> 16);
