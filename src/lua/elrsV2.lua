@@ -1,4 +1,4 @@
--- TNS|ExpressLRS Touch|TNE
+-- TNS|ExpressLRS|TNE
 ---- #########################################################################
 ---- #                                                                       #
 ---- # Copyright (C) OpenTX                                                  #
