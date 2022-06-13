@@ -15,6 +15,10 @@ fsm_state_t FiniteStateMachine::getCurrentState()
 
 fsm_state_t FiniteStateMachine::getParentState()
 {
+    if (fsm_stack.empty())
+    {
+        return STATE_LAST;
+    }
     const fsm_pos_t pos = fsm_stack.back();
     return (pos.fsm)[pos.index].state;
 }
