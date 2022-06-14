@@ -685,6 +685,10 @@ static void registerLuaParameters()
 
 static int event()
 {
+  if (connectionState > FAILURE_STATES)
+  {
+    return DURATION_NEVER;
+  }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
@@ -728,6 +732,10 @@ static int timeout()
 
 static int start()
 {
+  if (connectionState > FAILURE_STATES)
+  {
+    return DURATION_NEVER;
+  }
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   registerLuaParameters();
 
