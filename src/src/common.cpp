@@ -142,10 +142,10 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
 
     // telemInterval = 1000 / (hz / ratiodiv);
     // burst = TELEM_MIN_LINK_INTERVAL_MS / telemInterval;
-    // This ^^^ rearranged to preserve precision vvv
-    uint8_t retVal = TELEM_MIN_LINK_INTERVAL_MS * rateHz / ratioDiv / 1000U;
+    // This ^^^ rearranged to preserve precision vvv, using u32 because F1000 1:2 = 256
+    unsigned retVal = TELEM_MIN_LINK_INTERVAL_MS * rateHz / ratioDiv / 1000U;
 
-    // Reserve one slot for LINK telemetry
+    // Reserve one slot for LINK telemetry. 256 becomes 255 here, safe for return in uint8_t
     if (retVal > 1)
         --retVal;
     else
