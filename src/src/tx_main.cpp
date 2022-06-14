@@ -400,24 +400,27 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData()
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
   #if defined(RADIO_SX128X)
-    // Packet rate limited to 250Hz if we are on 115k baud
-    if (crsf.GetCurrentBaudRate() == 115200) {
-      while (rateIndex < RATE_MAX) {
+    if (crsf.GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    {
+      while (rateIndex < RATE_MAX)
+      {
         expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
         uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
-        if (RCpacketInterval >= 4000) {
+        if (RCpacketInterval >= 4000)
+        {
           break;
         }
         rateIndex++;
       }
     }
-    else
-    // Packet rate limited to 500Hz if we are on 400k baud
-    if (crsf.GetCurrentBaudRate() == 400000) {
-      while (rateIndex < RATE_MAX) {
+    else if (crsf.GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    {
+      while (rateIndex < RATE_MAX)
+      {
         expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
         uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
-        if (RCpacketInterval >= 2000) {
+        if (RCpacketInterval >= 2000)
+        {
           break;
         }
         rateIndex++;
