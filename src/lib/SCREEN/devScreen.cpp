@@ -25,6 +25,8 @@ static bool is_pre_screen_flipped = false;
 
 #define SCREEN_DURATION 20
 
+extern void jumpToWifiRunning();
+
 static int handle(void)
 {
 #if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
@@ -53,6 +55,13 @@ static int handle(void)
     }
 #endif
     uint32_t now = millis();
+
+#if defined(PLATFORM_ESP32)
+    if (state_machine.getParentState() != STATE_WIFI_TX && connectionState == wifiUpdate)
+    {
+        jumpToWifiRunning();
+    }
+#endif
 
 #ifdef HAS_FIVE_WAY_BUTTON
     if (!CRSF::IsArmed())

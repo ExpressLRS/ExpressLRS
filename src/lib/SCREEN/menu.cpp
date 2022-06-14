@@ -331,6 +331,10 @@ static void executeWiFi(bool init)
     {
         case STATE_WIFI_TX:
             running = connectionState == wifiUpdate;
+            if (running)
+            {
+                display->displayWiFiStatus();
+            }
             break;
         case STATE_WIFI_RX:
             running = RxWiFiReadyToSend;
@@ -555,3 +559,11 @@ fsm_state_entry_t const entry_fsm[] = {
     {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };
+
+#if defined(PLATFORM_ESP32)
+void jumpToWifiRunning()
+{
+    state_machine.jumpTo(wifi_menu_fsm, STATE_WIFI_TX);
+    state_machine.jumpTo(wifi_update_menu_fsm, STATE_WIFI_EXECUTE);
+}
+#endif
