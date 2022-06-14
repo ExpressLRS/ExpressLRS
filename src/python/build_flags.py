@@ -57,8 +57,6 @@ def process_json_flag(define):
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED" and not isRX:
         json_flags['uart-inverted'] = True
-    if define == "-DNO_SYNC_ON_ARM"  and not isRX:
-        json_flags['no-sync-on-arm'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
     if define == "-DRCVR_INVERT_TX" and isRX:

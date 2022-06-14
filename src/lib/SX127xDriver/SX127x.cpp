@@ -304,7 +304,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb()
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -315,7 +315,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 
   hal.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegisterFIFO(TXdataBuffer, PayloadLength);
+  hal.writeRegisterFIFO(data, size);
 
   SetMode(SX127x_OPMODE_TX);
 }
@@ -331,12 +331,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
     // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
     currOpmode = SX127x_OPMODE_STANDBY;
   }
-  LastPacketRSSI = GetLastPacketRSSI();
-  LastPacketSNRRaw = GetLastPacketSNRRaw();
-  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
-  // Section 3.5.5 (page 87)
-  int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
-  LastPacketRSSI += negOffset;
   RXdoneCallback(SX12XX_RX_OK);
 }
 
@@ -360,11 +354,21 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   }
 }
 
+void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+{
+  LastPacketRSSI = GetLastPacketRSSI();
+  LastPacketSNRRaw = GetLastPacketSNRRaw();
+  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
+  // Section 3.5.5 (page 87)
+  int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
+  LastPacketRSSI += negOffset;
+}
+
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (currOpmode != mode)
   {
-    hal.writeRegister(ModFSKorLoRa | SX127X_REG_OP_MODE, mode);
+    hal.writeRegister(SX127X_REG_OP_MODE, mode);
     currOpmode = mode;
   }
 }

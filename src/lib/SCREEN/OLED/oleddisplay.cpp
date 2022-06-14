@@ -337,6 +337,22 @@ void OLEDDisplay::displayRunning()
     u8g2->sendBuffer();
 }
 
+void OLEDDisplay::displaySending()
+{
+    // TODO: Put wifi image?
+    u8g2->clearBuffer();
+    u8g2->setFont(u8g2_font_t0_17_mr);
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
+        u8g2->drawStr(0,15, "SENDING...");
+    }
+    else
+    {
+        u8g2->drawStr(0,29, "SENDING...");
+    }
+    u8g2->sendBuffer();
+}
+
 // helpers
 static void helperDrawImage(menu_item_t menu)
 {
@@ -373,6 +389,7 @@ static void helperDrawImage(menu_item_t menu)
             case STATE_VTX_CHANNEL:
             case STATE_VTX_POWER:
             case STATE_VTX_PITMODE:
+            case STATE_VTX_SEND:
                 u8g2->drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
                 break;
             case STATE_WIFI:

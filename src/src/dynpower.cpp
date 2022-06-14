@@ -36,8 +36,6 @@ static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
 static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
 
-extern bool IsArmed();
-
 static void DynamicPower_SetToConfigPower()
 {
     POWERMGNT::setPower((PowerLevels_e)config.GetPower());
@@ -96,9 +94,9 @@ void DynamicPower_Update(uint32_t now)
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  bool armed = IsArmed();
+  bool armed = CRSF::IsArmed();
   if ((connectionState == disconnected && armed) ||
-    (boostChannel && (CRSF_to_BIT(CRSF::ChannelDataIn[AUX9 + boostChannel - 1]) == 0)))
+    (boostChannel && (CRSF_to_BIT(CRSF::ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {
     DynamicPower_SetToConfigPower();
     return;
@@ -114,7 +112,7 @@ void DynamicPower_Update(uint32_t now)
     // state == connected is not used: unplugging an RX will be connected and will boost power to max before disconnect
     if (armed && (powerHeadroom > 0))
     {
-      uint32_t linkstatsInterval = TLMratioEnumToValue(config.GetTlm()) * ExpressLRS_currAirRate_Modparams->interval / (1000U / 2U);
+      uint32_t linkstatsInterval = ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / 2U);
       linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
       if ((now - dynpower_last_linkstats_millis) > (linkstatsInterval + 2U))
       {

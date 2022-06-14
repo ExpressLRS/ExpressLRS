@@ -67,9 +67,10 @@ public:
     int8_t GetLastPacketRSSI();
     int8_t GetLastPacketSNRRaw();
     int8_t GetCurrRSSI();
+    void GetLastPacketStats();
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb();
+    void TXnb(uint8_t * data, uint8_t size);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 

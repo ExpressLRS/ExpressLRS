@@ -358,11 +358,11 @@ TxConfig::SetDefaults()
     for (int i=0 ; i<64 ; i++) {
         SetModelId(i);
         SetRate(modParams->index);
-        SetTlm(modParams->TLMinterval);
+        SetTlm(TLM_RATIO_STD);
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
+        SetSwitchMode((uint8_t)smWideOr8ch);
         SetModelMatch(false);
         Commit();
     }

@@ -18,4 +18,5 @@ public:
     void displayWiFiConfirm();
     void displayWiFiStatus();
     void displayRunning();
+    void displaySending();
 };
