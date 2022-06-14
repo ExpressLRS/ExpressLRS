@@ -533,7 +533,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       BindingSendCount++;
       // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
       // to add bandwidth for the reply
-      if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_1_2)
+      if (ExpressLRS_currTlmDenom != 2)
         syncSpamCounter = 1;
     }
     else
