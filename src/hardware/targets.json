@@ -370,7 +370,7 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 SE2431.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24s": {
