@@ -351,6 +351,12 @@
                 "layout_file": "Jumper T-Pro.json",
                 "upload_methods": ["uart", "wifi", "etx"]
             },
+            "t-lite": {
+                "product_name": "Jumper AION T-Lite 2.4GHz TX",
+                "lua_name": "AION T-Lite TX",
+                "layout_file": "Jumper T-Lite.json",
+                "upload_methods": ["uart", "wifi", "etx"]
+            },
             "nano": {
                 "product_name": "Jumper AION Nano 2.4GHz TX",
                 "lua_name": "AION 2G4NANO TX",
