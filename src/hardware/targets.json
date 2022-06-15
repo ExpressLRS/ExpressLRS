@@ -70,7 +70,7 @@
             "nano": {
                 "product_name": "BETAFPV 2.4GHz Nano RX",
                 "lua_name": "BFPV Nano 2G4RX",
-                "layout_file": "BETAFPV Nano 2400.json",
+                "layout_file": "Generic 2400 AT2401.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
@@ -196,6 +196,12 @@
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
+            },
+            "at2401": {
+                "product_name": "Generic ESP8285 + AT2401 PA 2.4Ghz RX",
+                "lua_name": "AT2401 2400RX",
+                "layout_file": "Generic 2400 AT2401.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "se2431": {
                 "product_name": "Generic ESP8285 + SE2431 PA 2.4Ghz RX",
@@ -376,7 +382,7 @@
             "r24s": {
                 "product_name": "MATEK R24-S 2.4GHz RX",
                 "lua_name": "MATEK R24-S",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 AT2401.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24p": {
@@ -484,7 +490,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Vantac 2400.json",
+                "layout_file": "Generic 2400 AT2401.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
