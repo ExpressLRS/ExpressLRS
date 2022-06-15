@@ -402,29 +402,11 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
   #if defined(RADIO_SX128X)
     if (crsf.GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
     {
-      while (rateIndex < RATE_MAX)
-      {
-        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
-        if (RCpacketInterval >= 4000)
-        {
-          break;
-        }
-        rateIndex++;
-      }
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
     }
     else if (crsf.GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
     {
-      while (rateIndex < RATE_MAX)
-      {
-        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        uint32_t RCpacketInterval = ModParams->interval * ModParams->numOfSends;
-        if (RCpacketInterval >= 2000)
-        {
-          break;
-        }
-        rateIndex++;
-      }
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
     }
   #endif
   return rateIndex;
