@@ -122,8 +122,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     {
         DBGLN("Config FLRC");
         ConfigModParamsFLRC(bw, cr, sf);
-        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, /*crc=*/1,
-                            PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed);
+        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed);
         irqs |= SX1280_IRQ_CRC_ERROR;
     }
     else
@@ -135,8 +134,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 #else
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_FIXED_LENGTH;
 #endif
-        SetPacketParamsLoRa(PreambleLength, packetLengthType,
-                            _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     }
     SetFrequencyReg(regfreq);
     SetDioIrqParams(SX1280_IRQ_RADIO_ALL, irqs);
@@ -251,15 +249,14 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
-                                       uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc,
-                                       uint8_t InvertIQ)
+                                       uint8_t PayloadLength, uint8_t InvertIQ)
 {
     uint8_t buf[7];
 
     buf[0] = PreambleLength;
     buf[1] = HeaderType;
     buf[2] = PayloadLength;
-    buf[3] = crc;
+    buf[3] = SX1280_LORA_CRC_OFF;
     buf[4] = InvertIQ ? SX1280_LORA_IQ_INVERTED : SX1280_LORA_IQ_NORMAL;
     buf[5] = 0x00;
     buf[6] = 0x00;
@@ -277,7 +274,6 @@ void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 }
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
-                                       uint8_t crc,
                                        uint8_t PreambleLength,
                                        uint8_t PayloadLength,
                                        uint32_t syncWord,
@@ -286,7 +282,6 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     if (PreambleLength < 8)
         PreambleLength = 8;
     PreambleLength = ((PreambleLength / 4) - 1) << 4;
-    crc = (crc) ? SX1280_FLRC_CRC_2_BYTE : SX1280_FLRC_CRC_OFF;
 
     uint8_t buf[7];
     buf[0] = PreambleLength;                    // AGCPreambleLength
@@ -294,7 +289,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[2] = SX1280_FLRC_RX_MATCH_SYNC_WORD_1;  // SyncWordMatch
     buf[3] = HeaderType;                        // PacketType
     buf[4] = PayloadLength;                     // PayloadLength
-    buf[5] = crc;                               // CrcLength
+    buf[5] = SX1280_FLRC_CRC_3_BYTE;            // CrcLength
     buf[6] = 0x08;                              // Must be whitening disabled
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), SX1280_Radio_All, 30);
 
@@ -302,11 +297,6 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[0] = (uint8_t)(crcSeed >> 8);
     buf[1] = (uint8_t)crcSeed;
     hal.WriteRegister(SX1280_REG_FLRC_CRC_SEED, buf, 2, SX1280_Radio_All);
-
-    // CRC POLY 0x3D65
-    buf[0] = 0x3D;
-    buf[1] = 0x65;
-    hal.WriteRegister(SX1280_REG_FLRC_CRC_POLY, buf, 2, SX1280_Radio_All);
 
     // Set SyncWord1
     buf[0] = (uint8_t)(syncWord >> 24);

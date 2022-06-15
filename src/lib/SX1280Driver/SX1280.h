@@ -59,12 +59,10 @@ private:
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr);
     void SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
-                             uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc,
-                             uint8_t InvertIQ);
+                             uint8_t PayloadLength, uint8_t InvertIQ);
     // FLRC functions
     void ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt=SX1280_FLRC_BT_0_5);
     void SetPacketParamsFLRC(uint8_t HeaderType,
-                             uint8_t crc,
                              uint8_t PreambleLength,
                              uint8_t PayloadLength,
                              uint32_t syncWord,
