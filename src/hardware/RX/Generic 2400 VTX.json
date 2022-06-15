@@ -15,7 +15,7 @@
     "power_control": 0,
     "power_values": [13],
     "led_rgb": 2,
-    "led_rgb_isgrb": 1,
+    "led_rgb_isgrb": true,
     "vtx_nss": 9,
     "vtx_amp_pwm": 0,
     "vtx_amp_vpd": 17,

@@ -6,6 +6,7 @@
 #include "helpers.h"
 #include "logging.h"
 #include "POWERMGNT.h"
+#include "CRSF.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -15,7 +16,6 @@ extern Thermal thermal;
 
 extern FiniteStateMachine state_machine;
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern void EnterBindingMode();
 extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
@@ -68,7 +68,7 @@ static void displayIdleScreen(bool init)
     }
 #endif
 
-    message_index_t disp_message = IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
+    message_index_t disp_message = CRSF::IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
     uint8_t changed = init ? 0xFF : 0;
     if (changed == 0)
     {
@@ -331,6 +331,10 @@ static void executeWiFi(bool init)
     {
         case STATE_WIFI_TX:
             running = connectionState == wifiUpdate;
+            if (running)
+            {
+                display->displayWiFiStatus();
+            }
             break;
         case STATE_WIFI_RX:
             running = RxWiFiReadyToSend;
@@ -555,3 +559,11 @@ fsm_state_entry_t const entry_fsm[] = {
     {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };
+
+#if defined(PLATFORM_ESP32)
+void jumpToWifiRunning()
+{
+    state_machine.jumpTo(wifi_menu_fsm, STATE_WIFI_TX);
+    state_machine.jumpTo(wifi_update_menu_fsm, STATE_WIFI_EXECUTE);
+}
+#endif

@@ -1,7 +1,7 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
+#include "devScreen.h"
 #include "common.h"
-#include "device.h"
 #include "logging.h"
 
 #include "OLED/oleddisplay.h"
@@ -25,7 +25,7 @@ static bool is_pre_screen_flipped = false;
 
 #define SCREEN_DURATION 20
 
-extern bool ICACHE_RAM_ATTR IsArmed();
+extern void jumpToWifiRunning();
 
 static int handle(void)
 {
@@ -56,8 +56,15 @@ static int handle(void)
 #endif
     uint32_t now = millis();
 
+#if defined(PLATFORM_ESP32)
+    if (state_machine.getParentState() != STATE_WIFI_TX && connectionState == wifiUpdate)
+    {
+        jumpToWifiRunning();
+    }
+#endif
+
 #ifdef HAS_FIVE_WAY_BUTTON
-    if (!IsArmed())
+    if (!CRSF::IsArmed())
     {
         int key;
         bool isLongPressed;

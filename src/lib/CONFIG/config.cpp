@@ -362,7 +362,7 @@ TxConfig::SetDefaults()
         SetPower(POWERMGNT::getDefaultPower());
         SetDynamicPower(0);
         SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smHybrid);
+        SetSwitchMode((uint8_t)smWideOr8ch);
         SetModelMatch(false);
         Commit();
     }
