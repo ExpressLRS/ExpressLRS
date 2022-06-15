@@ -70,7 +70,7 @@
             "nano": {
                 "product_name": "BETAFPV 2.4GHz Nano RX",
                 "lua_name": "BFPV Nano 2G4RX",
-                "layout_file": "Generic 2400 AT2401.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
@@ -197,16 +197,16 @@
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
             },
-            "at2401": {
-                "product_name": "Generic ESP8285 + AT2401 PA 2.4Ghz RX",
-                "lua_name": "AT2401 2400RX",
-                "layout_file": "Generic 2400 AT2401.json",
+            "pa": {
+                "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
+                "lua_name": "ELRS+PA 2400RX",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
-            "se2431": {
-                "product_name": "Generic ESP8285 + SE2431 PA 2.4Ghz RX",
-                "lua_name": "SE2431 2400RX",
-                "layout_file": "Generic 2400 SE2431.json",
+            "diversity": {
+                "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
+                "lua_name": "ELRS+D 2400RX",
+                "layout_file": "Generic 2400 PA Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         },
@@ -376,13 +376,13 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "Generic 2400 SE2431.json",
+                "layout_file": "Generic 2400 PA Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24s": {
                 "product_name": "MATEK R24-S 2.4GHz RX",
                 "lua_name": "MATEK R24-S",
-                "layout_file": "Generic 2400 AT2401.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24p": {
@@ -490,7 +490,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Generic 2400 AT2401.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }

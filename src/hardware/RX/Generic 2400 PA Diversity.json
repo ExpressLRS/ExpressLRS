@@ -12,11 +12,11 @@
     "ant_select": 9,
     "power_txen": 10,
     "power_min": 0,
-    "power_high": 4,
-    "power_max": 4,
+    "power_high": 3,
+    "power_max": 3,
     "power_default": 3,
     "power_control": 0,
-    "power_values": [-13,-9,-6,-3,1],
+    "power_values": [-10,-6,-3,1],
     "button": 0,
     "led": 16
 }
