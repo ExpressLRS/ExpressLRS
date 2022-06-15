@@ -15,6 +15,8 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Update.h>
+#include <esp_partition.h>
+#include <esp_ota_ops.h>
 #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -547,6 +549,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 {
   uint8_t *dst;
@@ -564,7 +567,7 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
     len = constrain((len / 4) * 4, 4, SPI_FLASH_SEC_SIZE);
   }
 
-  ESP.flashRead(pos, (uint32_t *)dst, len);
+  ESP.flashRead(firmwareOffset + pos, (uint32_t *)dst, len);
 
   // If using local stack buffer, move the 4 bytes into the passed buffer
   // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
@@ -577,7 +580,14 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 }
 
 static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
-  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
+  #if defined(PLATFORM_ESP32)
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  if (running) {
+      firmwareOffset = running->address;
+  }
+  #endif
+  const size_t firmwareTrailerSize = 4096;  // max number of bytes for the options/hardware layout json
+  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize() + firmwareTrailerSize, &getFirmwareChunk);
   String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
   response->addHeader("Content-Disposition", filename);
   request->send(response);
