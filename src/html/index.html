@@ -158,12 +158,11 @@
 				</div>
 				<div class="mui-panel">
 					<h2>Force telemetry off</h2>
-					You can run multiple receivers at the same time to increase the number of servo outputs but only one rx can use telemetry.
-					Disable telemetry output of all other receivers with this option.
+					When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the Telem Ratio setting on the TX and never send telemetry from this receiver.
 					<br/><br/>
 					<form class="mui-form--inline elrs-inline-form" action='/forceTelemetry' id='forcetlm' method='POST'>
 						<div class="mui-checkbox">
-							<label><input id='force-tlm' name='force-tlm' type='checkbox' value="1"/> Disable the telemetry output of this rx</label>
+							<label><input id='force-tlm' name='force-tlm' type='checkbox' value="1"/> Force telemetry OFF on this receiver</label>
 						</div>
 						<input type='submit' value='Save' class="mui-btn mui-btn--small mui-btn--primary">
 					</form>
