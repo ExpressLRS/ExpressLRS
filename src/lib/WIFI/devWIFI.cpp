@@ -657,7 +657,7 @@ static void startMDNS()
     return;
   }
 
-  String options = " -DAUTO_WIFI_ON_INTERVAL=" + firmwareOptions.wifi_auto_on_interval / 1000;
+  String options = "-DAUTO_WIFI_ON_INTERVAL=" + String(firmwareOptions.wifi_auto_on_interval / 1000);
 
   if (firmwareOptions.hasUID)
   {
@@ -665,6 +665,10 @@ static void startMDNS()
     for (int i=0 ; i<sizeof(firmwareOptions.uid) ; i++)
     {
       options += firmwareOptions.uid[i];
+      if (i!=sizeof(firmwareOptions.uid)-1)
+      {
+        options += ",";
+      }
     }
   }
 
@@ -677,8 +681,8 @@ static void startMDNS()
   {
     options += " -DUART_INVERTED";
   }
-  options += " -DTLM_REPORT_INTERVAL_MS=" + firmwareOptions.tlm_report_interval;
-  options += " -DFAN_MIN_RUNTIME=" + firmwareOptions.fan_min_runtime;
+  options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
+  options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
   #endif
 
   #ifdef TARGET_RX
@@ -690,7 +694,7 @@ static void startMDNS()
   {
     options += " -DRCVR_INVERT_TX";
   }
-  options += " -DRCVR_UART_BAUD=" + firmwareOptions.uart_baud;
+  options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
   #endif
 
   String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
