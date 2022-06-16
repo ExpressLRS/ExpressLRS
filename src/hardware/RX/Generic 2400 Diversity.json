@@ -30,5 +30,7 @@
     "led_rgb": 22,
     "led_rgb_isgrb": true,
     "ledidx_rgb_status": [0],
-    "ledidx_rgb_boot": [0]
+    "ledidx_rgb_boot": [0],
+
+    "button": 0
 }

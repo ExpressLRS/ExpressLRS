@@ -1398,9 +1398,10 @@ void loop()
 
     if (config.IsModified() && !InBindingMode)
     {
-        Radio.SetTxIdleMode();
         LostConnection();
+        Radio.SetTxIdleMode();
         config.Commit();
+        Radio.RXnb();
         devicesTriggerEvent();
     }
 

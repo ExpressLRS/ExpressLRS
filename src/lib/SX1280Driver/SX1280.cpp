@@ -110,7 +110,8 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
-    uint8_t irqs = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
+    uint8_t irqMask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
+    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
     uint8_t const mode = (flrc) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
 
     PayloadLength = _PayloadLength;
@@ -122,9 +123,8 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     {
         DBGLN("Config FLRC");
         ConfigModParamsFLRC(bw, cr, sf);
-        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, /*crc=*/1,
-                            PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed);
-        irqs |= SX1280_IRQ_CRC_ERROR;
+        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
+        irqMask |= SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     }
     else
     {
@@ -135,11 +135,10 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 #else
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_FIXED_LENGTH;
 #endif
-        SetPacketParamsLoRa(PreambleLength, packetLengthType,
-                            _PayloadLength, SX1280_LORA_CRC_OFF, InvertIQ);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     }
     SetFrequencyReg(regfreq);
-    SetDioIrqParams(SX1280_IRQ_RADIO_ALL, irqs);
+    SetDioIrqParams(irqMask, dio1Mask);
     SetRxTimeoutUs(interval);
 }
 
@@ -251,15 +250,14 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
-                                       uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc,
-                                       uint8_t InvertIQ)
+                                       uint8_t PayloadLength, uint8_t InvertIQ)
 {
     uint8_t buf[7];
 
     buf[0] = PreambleLength;
     buf[1] = HeaderType;
     buf[2] = PayloadLength;
-    buf[3] = crc;
+    buf[3] = SX1280_LORA_CRC_OFF;
     buf[4] = InvertIQ ? SX1280_LORA_IQ_INVERTED : SX1280_LORA_IQ_NORMAL;
     buf[5] = 0x00;
     buf[6] = 0x00;
@@ -277,16 +275,15 @@ void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 }
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
-                                       uint8_t crc,
                                        uint8_t PreambleLength,
                                        uint8_t PayloadLength,
                                        uint32_t syncWord,
-                                       uint16_t crcSeed)
+                                       uint16_t crcSeed,
+                                       uint8_t cr)
 {
     if (PreambleLength < 8)
         PreambleLength = 8;
     PreambleLength = ((PreambleLength / 4) - 1) << 4;
-    crc = (crc) ? SX1280_FLRC_CRC_2_BYTE : SX1280_FLRC_CRC_OFF;
 
     uint8_t buf[7];
     buf[0] = PreambleLength;                    // AGCPreambleLength
@@ -294,7 +291,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[2] = SX1280_FLRC_RX_MATCH_SYNC_WORD_1;  // SyncWordMatch
     buf[3] = HeaderType;                        // PacketType
     buf[4] = PayloadLength;                     // PayloadLength
-    buf[5] = crc;                               // CrcLength
+    buf[5] = SX1280_FLRC_CRC_3_BYTE;            // CrcLength
     buf[6] = 0x08;                              // Must be whitening disabled
     hal.WriteCommand(SX1280_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), SX1280_Radio_All, 30);
 
@@ -303,16 +300,30 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[1] = (uint8_t)crcSeed;
     hal.WriteRegister(SX1280_REG_FLRC_CRC_SEED, buf, 2, SX1280_Radio_All);
 
-    // CRC POLY 0x3D65
-    buf[0] = 0x3D;
-    buf[1] = 0x65;
-    hal.WriteRegister(SX1280_REG_FLRC_CRC_POLY, buf, 2, SX1280_Radio_All);
-
     // Set SyncWord1
     buf[0] = (uint8_t)(syncWord >> 24);
     buf[1] = (uint8_t)(syncWord >> 16);
     buf[2] = (uint8_t)(syncWord >> 8);
     buf[3] = (uint8_t)syncWord;
+
+    // DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
+    if ((cr == SX1280_FLRC_CR_1_2) && ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
+    {
+        uint8_t temp = buf[0];
+        buf[0] = buf[1];
+        buf[1] = temp;
+    }
+    else
+    if (cr != SX1280_FLRC_CR_1_2)
+    {
+        // Not done for unused coding rates to save space.
+        ERRLN("!!! WARNING !!!");
+        ERRLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
+        ERRLN("!!! WARNING !!!");
+
+        while(1);
+    }
+
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
 
     // FEI only works in Lora and Ranging mode
@@ -430,7 +441,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radi
 {
     rx_status const fail =
         ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
-        ((irqStatus & SX1280_IRQ_RX_TX_TIMEOUT) ? SX12XX_RX_TIMEOUT : SX12XX_RX_OK) |
+        ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
         ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
@@ -530,7 +541,7 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber
         instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All);
     }
     else
-    if (irqStatus & (SX1280_IRQ_RX_DONE | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT))
+    if (irqStatus & SX1280_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
@@ -541,5 +552,9 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber
         {
             instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
         }
+    }
+    else // Only SX1280_IRQ_TX_DONE and SX1280_IRQ_RX_DONE IRQs are set, so this should never happen.
+    {
+        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
     }
 }

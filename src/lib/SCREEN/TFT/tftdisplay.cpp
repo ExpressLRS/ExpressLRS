@@ -10,6 +10,7 @@
 #include "logos.h"
 #include "options.h"
 #include "logging.h"
+#include "common.h"
 
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
@@ -47,7 +48,8 @@ constexpr uint16_t elrs_banner_bgColor[] = {
     0x4315, // MSG_NONE          => #4361AA (ELRS blue)
     0x9E2D, // MSG_CONNECTED     => #9FC76F (ELRS green)
     0xAA08, // MSG_ARMED         => #AA4343 (red)
-    0xF501  // MSG_MISMATCH      => #F0A30A (amber)
+    0xF501, // MSG_MISMATCH      => #F0A30A (amber)
+    0xF800  // MSG_ERROR         => #F0A30A (very red)
 };
 
 #define SCREEN_X    160
@@ -181,6 +183,12 @@ void TFTDisplay::displaySplashScreen()
 
 void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
+    if (connectionState == radioFailed || connectionState == noCrossfire)
+    {
+        changed = 0xFF;
+        message_index = MSG_ERROR;
+    }
+
     if (changed == 0xFF)
     {
         // Everything has changed! So clear the right side
@@ -206,28 +214,46 @@ void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t 
     // The Radio Params right half of the screen
     uint16_t text_color = (message_index == MSG_ARMED) ? DARKGREY : BLACK;
 
-    if (changed & CHANGED_RATE)
+    if (connectionState == radioFailed)
     {
-        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(STATE_PACKET, rate_index), text_color, WHITE);
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+            "BAD", BLACK, WHITE);
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+            "RADIO", BLACK, WHITE);
     }
-
-    if (changed & CHANGED_POWER)
+    else if (connectionState == noCrossfire)
     {
-        String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
-        if (dynamic)
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y1,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+            "NO", BLACK, WHITE);
+        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, MAIN_PAGE_WORD_START_Y2,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+            "HANDSET", BLACK, WHITE);
+    }
+    else
+    {
+        if (changed & CHANGED_RATE)
         {
-            power += " *";
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATE_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                                getValue(STATE_PACKET, rate_index), text_color, WHITE);
         }
-        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            power, text_color, WHITE);
+
+        if (changed & CHANGED_POWER)
+        {
+            String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
+            if (dynamic)
+            {
+                power += " *";
+            }
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_POWER_START_Y, SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                                power, text_color, WHITE);
+        }
+
+        if (changed & CHANGED_TELEMETRY)
+        {
+            displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
+                                getValue(STATE_TELEMETRY, ratio_index), text_color, WHITE);
+        }
     }
 
-    if (changed & CHANGED_TELEMETRY)
-    {
-        displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                            getValue(STATE_TELEMETRY, ratio_index), text_color, WHITE);
-    }
 }
 
 void TFTDisplay::displayMainMenu(menu_item_t menu)
@@ -337,7 +363,7 @@ void TFTDisplay::displayBindStatus()
     gfx->fillScreen(WHITE);
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        "BINDING", BLACK, WHITE);
+                        "BINDING...", BLACK, WHITE);
 }
 
 void TFTDisplay::displayRunning()
@@ -345,7 +371,7 @@ void TFTDisplay::displayRunning()
     gfx->fillScreen(WHITE);
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        "RUNNING", BLACK, WHITE);
+                        "RUNNING...", BLACK, WHITE);
 }
 
 void TFTDisplay::displaySending()

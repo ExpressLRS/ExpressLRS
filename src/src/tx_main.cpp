@@ -295,15 +295,13 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
   #if defined(RADIO_SX128X)
-    // Packet rate limited to 250Hz if we are on 115k baud
-    if (crsf.GetCurrentBaudRate() == 115200) {
-      while (rateIndex < RATE_MAX) {
-        expresslrs_mod_settings_s const * const ModParams = get_elrs_airRateConfig(rateIndex);
-        if (ModParams->enum_rate <= RATE_LORA_250HZ) {
-          break;
-        }
-        rateIndex++;
-      }
+    if (crsf.GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    {
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
+    }
+    else if (crsf.GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    {
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
     }
   #endif
   return rateIndex;
@@ -420,7 +418,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       BindingSendCount++;
       // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
       // to add bandwidth for the reply
-      if (ExpressLRS_currAirRate_Modparams->TLMinterval != TLM_RATIO_1_2)
+      if (ExpressLRS_currTlmDenom != 2)
         syncSpamCounter = 1;
     }
     else

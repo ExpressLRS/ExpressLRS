@@ -44,6 +44,7 @@ typedef enum message_index_e {
     MSG_CONNECTED,
     MSG_ARMED,
     MSG_MISMATCH,
+    MSG_ERROR,
     MSG_INVALID
 } message_index_t;
 
