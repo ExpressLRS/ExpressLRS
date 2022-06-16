@@ -156,7 +156,7 @@ void DynamicPower_Update(uint32_t now)
       }
       else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
       {
-        DBGVLN("-power (rssi)");
+        DBGVLN("-power (rssi)"); // Verbose because this spams when idle
         POWERMGNT::decPower();
       }
     }
@@ -168,7 +168,7 @@ void DynamicPower_Update(uint32_t now)
     // Increase the power for each (X) SNR below the threshold
     if (snrScaled >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      DBGVLN("-power (snr)");
+      DBGVLN("-power (snr)"); // Verbose because this spams when idle
       POWERMGNT::decPower();
     }
 
@@ -187,7 +187,6 @@ void DynamicPower_Update(uint32_t now)
   {
     DBGLN("+power (lq)");
     POWERMGNT::incPower();
-    //--powerHeadroom;
   }
 }
 
