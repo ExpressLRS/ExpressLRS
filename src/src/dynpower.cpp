@@ -50,13 +50,6 @@ void DynamicPower_Init()
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
 {
     dynpower_updated = snrScaled;
-    // static unsigned lastUp;
-    // if (snrScaled != DYNPOWER_UPDATE_MISSED)
-    // {
-    //   unsigned now = millis();
-    //   DBGLN(" %u P=%u SNR=%d ", now - lastUp, POWERMGNT::currPower(), snrScaled);
-    //   lastUp = now;
-    // }
 }
 
 void DynamicPower_Update(uint32_t now)
@@ -173,7 +166,6 @@ void DynamicPower_Update(uint32_t now)
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
-    //int8_t snrScaled = CRSF::LinkStatistics.uplink_SNR;
     if (snrScaled >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
       DBGVLN("-power (snr)");
