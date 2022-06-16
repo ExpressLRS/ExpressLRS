@@ -122,7 +122,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     {
         DBGLN("Config FLRC");
         ConfigModParamsFLRC(bw, cr, sf);
-        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed);
+        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
         irqs |= SX1280_IRQ_CRC_ERROR;
     }
     else
@@ -277,7 +277,8 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
                                        uint8_t PreambleLength,
                                        uint8_t PayloadLength,
                                        uint32_t syncWord,
-                                       uint16_t crcSeed)
+                                       uint16_t crcSeed,
+                                       uint8_t cr)
 {
     if (PreambleLength < 8)
         PreambleLength = 8;
@@ -303,6 +304,25 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[1] = (uint8_t)(syncWord >> 16);
     buf[2] = (uint8_t)(syncWord >> 8);
     buf[3] = (uint8_t)syncWord;
+
+    // DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
+    if ((cr == SX1280_FLRC_CR_1_2) && ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
+    {
+        uint8_t temp = buf[0];
+        buf[0] = buf[1];
+        buf[1] = temp;
+    }
+    else
+    if (cr != SX1280_FLRC_CR_1_2)
+    {
+        // Not done for unused coding rates to save space.
+        ERRLN("!!! WARNING !!!");
+        ERRLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
+        ERRLN("!!! WARNING !!!");
+
+        while(1);
+    }
+
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
 
     // FEI only works in Lora and Ranging mode

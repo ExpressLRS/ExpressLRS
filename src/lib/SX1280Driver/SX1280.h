@@ -66,7 +66,8 @@ private:
                              uint8_t PreambleLength,
                              uint8_t PayloadLength,
                              uint32_t syncWord,
-                             uint16_t crcSeed);
+                             uint16_t crcSeed,
+                             uint8_t cr);
 
     void SetDioIrqParams(uint16_t irqMask,
                          uint16_t dio1Mask=SX1280_IRQ_RADIO_NONE,
