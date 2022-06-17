@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
 import argparse
+from json import JSONEncoder
 import mmap
 import hashlib
 from enum import Enum
 import melodyparser
+import UnifiedConfiguration
 
 class BuzzerMode(Enum):
     quiet = 'quiet'
@@ -157,21 +159,19 @@ def generate_domain(mm, pos, count, init, step):
         pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(val))
         val += step
 
-def patch_domain(mm, pos, args):
-    domain = 0
-    if args.domain == RegulatoryDomain.au_915:
-        domain = 0
-    elif args.domain == RegulatoryDomain.fcc_915:
-        domain = 1
-    elif args.domain == RegulatoryDomain.eu_868:
-        domain = 2
-    elif args.domain == RegulatoryDomain.in_866:
-        domain = 3
-    elif args.domain == RegulatoryDomain.au_433:
-        domain = 4
-    elif args.domain == RegulatoryDomain.eu_433:
-        domain = 5
-    mm[pos] = domain
+def domain_number(domain):
+    if domain == RegulatoryDomain.au_915:
+        return 0
+    elif domain == RegulatoryDomain.fcc_915:
+        return 1
+    elif domain == RegulatoryDomain.eu_868:
+        return 2
+    elif domain == RegulatoryDomain.in_866:
+        return 3
+    elif domain == RegulatoryDomain.au_433:
+        return 4
+    elif domain == RegulatoryDomain.eu_433:
+        return 5
 
 def patch_firmware(mm, pos, args):
     pos += 8 + 2                # Skip magic & version
@@ -183,7 +183,7 @@ def patch_firmware(mm, pos, args):
     _radioChip = (hardware >> 7) & 1
     pos += 1                    # Skip the hardware flag
     if _radioChip == 0 and args.domain:         # SX127X
-        patch_domain(mm, pos, args)
+        mm[pos] = domain_number(args.domain)
     pos += 1
 
     pos = patch_uid(mm, pos, args)
@@ -301,6 +301,38 @@ def print_config(mm, pos):
         None
     return
 
+def patch_unified(args):
+    json_flags = {}
+    if args.phrase is not None:
+        json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
+    if args.ssid is not None:
+        json_flags['wifi-ssid'] = args.ssid
+    if args.password is not None and args.ssid is not None:
+        json_flags['wifi-password'] = args.password
+    if args.auto_wifi is not None:
+        json_flags['wifi-on-interval'] = args.auto_wifi
+
+    if args.tlm_report is not None:
+        json_flags['tlm-interval'] = args.tlm_report
+    if args.unlock_higher_power is not None:
+        json_flags['unlock-higher-power'] = args.unlock_higher_power
+    if args.fan_min_runtime is not None:
+        json_flags['fan-runtime'] = args.fan_min_runtime
+    if args.uart_inverted is not None:
+        json_flags['uart-inverted'] = args.uart_inverted
+
+    if args.rx_baud is not None:
+        json_flags['rcvr-uart-baud'] = args.rx_baud
+    if args.invert_tx is not None:
+        json_flags['rcvr-invert-tx'] = args.invert_tx
+    if args.lock_on_first_connection is not None:
+        json_flags['lock-on-first-connection'] = args.lock_on_first_connection
+
+    if args.domain is not None:
+        json_flags['domain'] = domain_number(args.domain)
+
+    UnifiedConfiguration.configureFirmware(args.file, args.target, JSONEncoder().encode(json_flags))
+
 def length_check(l, f):
     def x(s):
         if (len(s) > l):
@@ -331,7 +363,7 @@ def main():
     parser.add_argument('--no-r9mm-mini-sbus', dest='r9mm_mini_sbus', action='store_false', help='Use the normal serial pins for CRSF')
     parser.set_defaults(r9mm_mini_sbus=None)
     # TX Params
-    parser.add_argument('--tlm-report', type=int, const=320, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
+    parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
     parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
     parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
@@ -344,6 +376,8 @@ def main():
     parser.add_argument('--buzzer-melody', type=str, default=None, help='If the mode is "custom", then this is the tune')
     # Regulatory domain
     parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
+    # Unified target
+    parser.add_argument('--target', type=str, help='Unified target JSON path')
 
     #
     # Firmware file to patch/configure
@@ -351,16 +385,18 @@ def main():
 
     args = parser.parse_args()
 
-
-    with args.file as f:
-        mm = mmap.mmap(f.fileno(), 0)
-        pos = find_patch_location(mm)
-        if pos == -1:
-            raise AssertionError('Configuration magic not found in firmware file. Is this a 2.3 firmware?')
-        if args.print:
-            print_config(mm, pos)
-        else:
-            patch_firmware(mm, pos, args)
+    if args.target is not None:
+        patch_unified(args)
+    else:
+        with args.file as f:
+            mm = mmap.mmap(f.fileno(), 0)
+            pos = find_patch_location(mm)
+            if pos == -1:
+                raise AssertionError('Configuration magic not found in firmware file. Is this a 2.3 firmware?')
+            if args.print:
+                print_config(mm, pos)
+            else:
+                patch_firmware(mm, pos, args)
 
 if __name__ == '__main__':
     try:
