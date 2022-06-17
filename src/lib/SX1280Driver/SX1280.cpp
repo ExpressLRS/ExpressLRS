@@ -103,6 +103,7 @@ bool SX1280Driver::Begin()
 #if defined(USE_SX1280_DCDC)
     hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);            // Enable DCDC converter instead of LDO
 #endif
+
     return true;
 }
 
@@ -110,8 +111,6 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
-    uint8_t irqMask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
-    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
     uint8_t const mode = (flrc) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
 
     PayloadLength = _PayloadLength;
@@ -124,7 +123,6 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         DBG("Config FLRC ");
         ConfigModParamsFLRC(bw, cr, sf);
         SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
-        irqMask |= SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     }
     else
     {
@@ -138,8 +136,11 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     }
     SetFrequencyReg(regfreq);
-    SetDioIrqParams(irqMask, dio1Mask);
     SetRxTimeoutUs(interval);
+
+    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
+    uint8_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
+    SetDioIrqParams(irqMask, dio1Mask);
 }
 
 void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
@@ -441,12 +442,13 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX1280_Radio_Numb
         currOpmode = SX1280_MODE_FS;
     }
 
-    rx_status fail = ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK);
-    // The SYNCWORD_VALID bit isn't set on LoRa, it has no synch (sic) word
+    rx_status fail = SX12XX_RX_OK;
+    // The SYNCWORD_VALID bit isn't set on LoRa, it has no synch (sic) word, and CRC is only on for FLRC
     if (packet_mode == SX1280_PACKET_TYPE_FLRC)
     {
-        fail |= ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
-                ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
+        fail = ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+               ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+               ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     }
     if (fail == SX12XX_RX_OK)
     {
