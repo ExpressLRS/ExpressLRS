@@ -121,14 +121,14 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, SX1280_Radio_All, 20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
-        DBGLN("Config FLRC");
+        DBG("Config FLRC ");
         ConfigModParamsFLRC(bw, cr, sf);
         SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
         irqMask |= SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     }
     else
     {
-        DBGLN("Config LoRa");
+        DBG("Config LoRa ");
         ConfigModParamsLoRa(bw, sf, cr);
 #if defined(DEBUG_FREQ_CORRECTION)
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_VARIABLE_LENGTH;
@@ -307,21 +307,16 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[3] = (uint8_t)syncWord;
 
     // DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
-    if ((cr == SX1280_FLRC_CR_1_2) && ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
+    if (((cr == SX1280_FLRC_CR_1_2) || (cr == SX1280_FLRC_CR_3_4)) &&
+        ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
     {
         uint8_t temp = buf[0];
         buf[0] = buf[1];
         buf[1] = temp;
-    }
-    else
-    if (cr != SX1280_FLRC_CR_1_2)
-    {
-        // Not done for unused coding rates to save space.
-        ERRLN("!!! WARNING !!!");
-        ERRLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
-        ERRLN("!!! WARNING !!!");
-
-        while(1);
+        // For SX1280_FLRC_CR_3_4 the datasheet also says
+        // "In addition to this the two LSB values XX XX must not be in the range 0x0000 to 0x3EFF"
+        // but let's evaluate this if we ever use CR 3/4
+        // if (cr == SX1280_FLRC_CR_3_4) buf[3] |= 0x80; // 0x80 or 0x40 would work
     }
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
