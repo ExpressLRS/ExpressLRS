@@ -10,11 +10,12 @@
 #endif
 
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
+#define CONFIG_MAGIC_MASK   (0b11 << 30)
 #define TX_CONFIG_MAGIC     (0b01 << 30)
 #define RX_CONFIG_MAGIC     (0b10 << 30)
 
-#define TX_CONFIG_VERSION   6
-#define RX_CONFIG_VERSION   5
+#define TX_CONFIG_VERSION   7U
+#define RX_CONFIG_VERSION   5U
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -23,24 +24,32 @@ typedef struct {
                 tlm:4;
     uint8_t     power:3,
                 switchMode:2,
-                boostChannel:3;
+                boostChannel:3; // dynamic power boost AUX channel
     uint8_t     dynamicPower:1,
-                modelMatch:1;
+                modelMatch:1,
+                txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
 } model_config_t;
 
 typedef struct {
     uint32_t        version;
-    uint8_t         vtxBand;
-    uint8_t         vtxChannel;
-    uint8_t         vtxPower;
-    uint8_t         vtxPitmode;
+    uint8_t         vtxBand;    // 0=Off, else band number
+    uint8_t         vtxChannel; // 0=Ch1 -> 7=Ch8
+    uint8_t         vtxPower;   // 0=Do not set, else power number
+    uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
     model_config_t  model_config[64];
-    uint8_t         fanMode;
-    uint8_t         motionMode;
-    uint8_t         dvrAux:5;
-    uint8_t         dvrStartDelay:3;
-    uint8_t         dvrStopDelay:3;
+    uint8_t         fanMode;        // some value used by thermal?
+    uint8_t         motionMode:2;   // bool, but space for 2 more modes
+    uint8_t         dvrStopDelay:3,
+                    unused: 3;      // FUTURE available
+    uint8_t         dvrStartDelay:3,
+                    dvrAux:5;
+    uint32_t        ledColorTx;     // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
+    uint32_t        ledColorModel;  // FUTURE: Model RGB color / mode (sets LED color mode on the model, but can be second TX led color too)
+    uint8_t         button0ActionShort:4,
+                    button0ActionLong:4;  // FUTURE: What button handler to use button 0
+    uint8_t         button1ActionShort:4,
+                    button1ActionLong:4;  // FUTURE: What button handler to use button 1
 } tx_config_t;
 
 class TxConfig
@@ -78,7 +87,7 @@ public:
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
     void SetModelMatch(bool modelMatch);
-    void SetDefaults();
+    void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetVtxBand(uint8_t vtxBand);
     void SetVtxChannel(uint8_t vtxChannel);
@@ -95,7 +104,9 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
-    bool UpgradeEepromV5ToV6();
+    void UpgradeEepromOrDefault();
+    void UpgradeEepromV5ToV6();
+    void UpgradeEepromV6ToV7();
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -118,27 +129,28 @@ constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
 typedef union {
     struct {
-        unsigned failsafe:10;   // us output during failsafe +988 (e.g. 512 here would be 1500us)
-        unsigned inputChannel:4; // 0-based input channel
-        unsigned inverted:1;     // invert channel output
-        unsigned mode:4;         // Output mode (eServoOutputMode)
-        unsigned narrow:1;       // Narrow output mode (half pulse width)
-        unsigned unused:13;
+        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+                 inputChannel:4, // 0-based input channel
+                 inverted:1,     // invert channel output
+                 mode:4,         // Output mode (eServoOutputMode)
+                 narrow:1,       // Narrow output mode (half pulse width)
+                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
 
 typedef struct {
     uint32_t    version;
-    bool        isBound;
     uint8_t     uid[UID_LEN];
-    bool        onLoan;
     uint8_t     loanUID[UID_LEN];
+    uint8_t     isBound:1,
+                onLoan:1,
+                power:4,
+                unused:2;
     uint8_t     powerOnCounter;
     uint8_t     modelId;
-    uint8_t     power;
-    uint8_t     antennaMode;    //keep antenna mode in struct even in non diversity RX,
-                                // because turning feature diversity on and off would require change of RX config version.
+    uint8_t     antennaMode;    // 0=0, 1=1, 2=Diversity
+    uint16_t    vbatScale;      // FUTURE: Override compiled vbat scale
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
@@ -171,7 +183,7 @@ public:
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);
     void SetAntennaMode(uint8_t antennaMode);
-    void SetDefaults();
+    void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
@@ -179,6 +191,9 @@ public:
     #endif
 
 private:
+    void UpgradeEepromOrDefault();
+    void UpgradeEepromV4ToV5();
+
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
