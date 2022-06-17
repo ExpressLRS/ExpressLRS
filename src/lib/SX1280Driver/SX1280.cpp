@@ -403,8 +403,6 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-uint8_t FIFOaddr = 0;
-
 void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
