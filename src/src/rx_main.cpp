@@ -12,6 +12,7 @@
 #include "msptypes.h"
 #include "PFD.h"
 #include "options.h"
+#include "MeanAccumulator.h"
 
 #include "devCRSF.h"
 #include "devLED.h"
@@ -106,19 +107,17 @@ uint8_t MspData[ELRS_MSP_BUFFER];
 
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
-/// Filters ////////////////
+/// PFD Filters ////////////////
 LPF LPF_Offset(2);
 LPF LPF_OffsetDx(4);
 
-// LPF LPF_UplinkRSSI(5);
-LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
-LPF LPF_UplinkRSSI1(5);
-
-
-/// LQ Calculation //////////
+/// LQ/RSSI/SNR Calculation //////////
 LQCALC<100> LQCalc;
 LQCALC<100> LQCalcDVDA;
 uint8_t uplinkLQ;
+LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
+LPF LPF_UplinkRSSI1(5);
+MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
@@ -233,9 +232,10 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
         crsf.ChannelData[14] = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
     }
+    SnrMean.add(Radio.LastPacketSNRRaw);
 
     crsf.LinkStatistics.active_antenna = antenna;
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNR;
+    crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
     //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
     crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
@@ -247,6 +247,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     #endif
 
     #if defined(DEBUG_RCVR_LINKSTATS)
+    // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
+    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
     debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
@@ -317,7 +319,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
-    ls->SNR = crsf.LinkStatistics.uplink_SNR;
+    ls->SNR = SnrMean.mean();
 #endif
 }
 
@@ -664,6 +666,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     FreqCorrection = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
+    SnrMean.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
     // The caller MUST call hwTimer.resume(). It is not done here because

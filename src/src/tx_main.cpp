@@ -1,5 +1,6 @@
 #include "rxtx_common.h"
 
+#include "dynpower.h"
 #include "lua.h"
 #include "msp.h"
 #include "telemetry_protocol.h"
@@ -51,7 +52,7 @@ uint32_t SyncPacketLastSent = 0;
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 
-LQCALC<10> LQCalc;
+LQCALC<25> LQCalc;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
@@ -105,34 +106,9 @@ device_affinity_t ui_devices[] = {
   {&VTX_device, 1}
 };
 
-//////////// Diversity TX Antennas ////////////
-
 #if defined(GPIO_PIN_ANT_CTRL_1)
     static bool diversityAntennaState = LOW;
 #endif
-
-//////////// DYNAMIC TX OUTPUT POWER ////////////
-
-#if !defined(DYNPOWER_THRESH_UP)
-  #define DYNPOWER_THRESH_UP              15
-#endif
-#if !defined(DYNPOWER_THRESH_DN)
-  #define DYNPOWER_THRESH_DN              21
-#endif
-#if !defined(DYNPOWER_THRESH_LQ_UP)
-  #define DYNPOWER_THRESH_LQ_UP           85
-#endif
-#if !defined(DYNPOWER_THRESH_LQ_DN)
-  #define DYNPOWER_THRESH_LQ_DN           97
-#endif
-#define DYNAMIC_POWER_MIN_RECORD_NUM       5 // average at least this number of records
-#define DYNAMIC_POWER_BOOST_LQ_THRESHOLD  20 // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
-#define DYNAMIC_POWER_BOOST_LQ_MIN        50 // If LQ is below this value (absolute), immediately boost to the max power configured.
-#define DYNAMIC_POWER_MOVING_AVG_K         8 // Number of previous values for calculating moving average. Best with power of 2.
-static int32_t dynamic_power_rssi_sum;
-static int32_t dynamic_power_rssi_n;
-static int32_t dynamic_power_avg_lq = DYNPOWER_THRESH_LQ_DN << 16;
-static bool dynamic_power_updated;
 
 #ifdef TARGET_TX_GHOST
 extern "C"
@@ -159,118 +135,27 @@ void switchDiversityAntennas()
   {
     digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
   }
-};
-
-//////////// DYNAMIC TX OUTPUT POWER ////////////
-
-// Assume this function is called inside loop(). Heavy functions goes here.
-void DynamicPower_Update()
-{
-  bool doUpdate = dynamic_power_updated;
-  dynamic_power_updated = false;
-
-  // Get the RSSI from the selected antenna.
-  int8_t rssi = (crsf.LinkStatistics.active_antenna == 0)? crsf.LinkStatistics.uplink_RSSI_1: crsf.LinkStatistics.uplink_RSSI_2;
-
-  if (doUpdate && (rssi >= -5)) { // power is too strong and saturate the RX LNA
-    DBGVLN("Power decrease due to the power blast");
-    POWERMGNT.decPower();
-  }
-
-  // When not using dynamic power, return here
-  if (!config.GetDynamicPower()) {
-    // if RSSI is dropped enough, inc power back to the configured power
-    if (doUpdate && (rssi <= -20)) {
-      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-    }
-    return;
-  }
-
-  // The rest of the codes should be executeded only if dynamic power config is enabled
-
-  // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
-  // Or if telemetry is lost while armed (done up here because dynamic_power_updated is only updated on telemetry)
-  uint8_t boostChannel = config.GetBoostChannel();
-  if ((connectionState == disconnected && crsf.IsArmed()) ||
-    (boostChannel && (CRSF_to_BIT(crsf.ChannelData[AUX9 + boostChannel - 1]) == 0)))
-  {
-    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-    // POWERMGNT.setPower(POWERMGNT::getMaxPower());    // if you want to make the power to the aboslute maximum of a module, use this line.
-    return;
-  }
-
-  // if telemetry is not arrived, quick return.
-  if (!doUpdate)
-    return;
-
-  // =============  LQ-based power boost up ==============
-  // Quick boost up of power when detected any emergency LQ drops.
-  // It should be useful for bando or sudden lost of LoS cases.
-  int32_t lq_current = crsf.LinkStatistics.uplink_Link_quality;
-  int32_t lq_avg = dynamic_power_avg_lq>>16;
-  int32_t lq_diff = lq_avg - lq_current;
-  // if LQ drops quickly (DYNAMIC_POWER_BOOST_LQ_THRESHOLD) or critically low below DYNAMIC_POWER_BOOST_LQ_MIN, immediately boost to the configured max power.
-  if(lq_diff >= DYNAMIC_POWER_BOOST_LQ_THRESHOLD || lq_current <= DYNAMIC_POWER_BOOST_LQ_MIN)
-  {
-      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
-      // restart the rssi sampling after a boost up
-      dynamic_power_rssi_sum = 0;
-      dynamic_power_rssi_n = 0;
-  }
-  // Moving average calculation, multiplied by 2^16 for avoiding (costly) floating point operation, while maintaining some fraction parts.
-  dynamic_power_avg_lq = ((int32_t)(DYNAMIC_POWER_MOVING_AVG_K - 1) * dynamic_power_avg_lq + (lq_current<<16)) / DYNAMIC_POWER_MOVING_AVG_K;
-
-  // =============  RSSI-based power adjustment ==============
-  // It is working slowly, suitable for a general long-range flights.
-  dynamic_power_rssi_sum += rssi;
-  dynamic_power_rssi_n++;
-
-  //DBGLN("LQ=%d LQA=%d RSSI=%d", lq_current, lq_avg, rssi);
-  // Dynamic power needs at least DYNAMIC_POWER_MIN_RECORD_NUM amount of telemetry records to update.
-  if(dynamic_power_rssi_n < DYNAMIC_POWER_MIN_RECORD_NUM)
-    return;
-
-  int32_t avg_rssi = dynamic_power_rssi_sum / dynamic_power_rssi_n;
-  int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
-
-  int32_t lq_adjust = (100-lq_avg)/3;
-  int32_t rssi_inc_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_UP;  // thresholds are adjusted according to LQ fluctuation
-  int32_t rssi_dec_threshold = expected_RXsensitivity + lq_adjust + DYNPOWER_THRESH_DN;
-
-  // increase power only up to the set power from the LUA script
-  if ((avg_rssi < rssi_inc_threshold || lq_avg < DYNPOWER_THRESH_LQ_UP) && (POWERMGNT.currPower() < (PowerLevels_e)config.GetPower())) {
-    DBGLN("Power increase");
-    POWERMGNT.incPower();
-  }
-  if (avg_rssi > rssi_dec_threshold && lq_avg > DYNPOWER_THRESH_LQ_DN) {
-    DBGVLN("Power decrease");  // Print this on verbose only, to prevent spamming when on a high telemetry ratio
-    dynamic_power_avg_lq = (DYNPOWER_THRESH_LQ_DN-5)<<16;    // preventing power down too fast due to the averaged LQ calculated from higher power.
-    POWERMGNT.decPower();
-  }
-
-  dynamic_power_rssi_sum = 0;
-  dynamic_power_rssi_n = 0;
 }
 
 void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 {
+  int8_t snrScaled = ls->SNR;
+  DynamicPower_TelemetryUpdate(snrScaled);
+
   // Antenna is the high bit in the RSSI_1 value
   // RSSI received is signed, inverted polarity (positive value = -dBm)
   // OpenTX's value is signed and will display +dBm and -dBm properly
   crsf.LinkStatistics.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
   crsf.LinkStatistics.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
   crsf.LinkStatistics.uplink_Link_quality = ls->lq;
-  crsf.LinkStatistics.uplink_SNR = ls->SNR;
-  crsf.LinkStatistics.downlink_SNR = Radio.LastPacketSNR;
-  crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+  crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(snrScaled);
   crsf.LinkStatistics.active_antenna = ls->antenna;
   connectionHasModelMatch = ls->modelMatch;
+  // -- downlink_SNR / downlink_RSSI is updated for any packet received, not just Linkstats
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
   // -- rf_mode is updated when we change rates
   // -- downlink_Link_quality is updated before the LQ period is incremented
   MspSender.ConfirmCurrentPayload(ls->mspConfirm);
-
-  dynamic_power_updated = true;
 }
 
 bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
@@ -298,6 +183,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   LQCalc.add();
 
   Radio.GetLastPacketStats();
+  crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+  crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
   // Full res mode
   if (OtaIsFullRes)
@@ -596,6 +483,11 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     LQCalc.inc();
     return;
   }
+  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet())
+  {
+    // Indicate no telemetry packet received to the DP system
+    DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
+  }
   TelemetryRcvPhase = ttrpTransmitting;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -648,8 +540,9 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
 
   SetRFLinkRate(config.GetRate());
-  // Dynamic Power starts at MinPower and will boost if switch is set or IsArmed and disconnected
-  POWERMGNT.setPower(config.GetDynamicPower() ? MinPower : (PowerLevels_e)config.GetPower());
+  // Dynamic Power starts at MinPower unless armed
+  // (user may be turning up the power while flying and dropping the power may compromise the link)
+  POWERMGNT.setPower((config.GetDynamicPower() && !crsf.IsArmed()) ? MinPower : (PowerLevels_e)config.GetPower());
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
   LBTEnabled = (config.GetPower() > PWR_10mW);
@@ -1088,6 +981,7 @@ void setup()
       TelemetryReceiver.SetDataToReceive(CRSFinBuffer, sizeof(CRSFinBuffer));
 
       POWERMGNT.init();
+      DynamicPower_Init();
 
       // Set the pkt rate, TLM ratio, and power from the stored eeprom values
       ChangeRadioParams();
@@ -1138,7 +1032,7 @@ void loop()
 
   CheckReadyToSend();
   CheckConfigChangePending();
-  DynamicPower_Update();
+  DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
 
   if (TxBackpack->available())

@@ -506,15 +506,15 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
         // No SNR in FLRC mode
         LastPacketRSSI = -(int8_t)(status[1] / 2);
-        LastPacketSNR = 0;
+        LastPacketSNRRaw = 0;
         return;
     }
     // LoRa mode has both RSSI and SNR
     LastPacketRSSI = -(int8_t)(status[0] / 2);
-    LastPacketSNR = (int8_t)status[1] / 4;
-    // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf
+    LastPacketSNRRaw = (int8_t)status[1];
+    // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
     // need to subtract SNR from RSSI when SNR <= 0;
-    int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
+    int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
     LastPacketRSSI += negOffset;
 }
 
