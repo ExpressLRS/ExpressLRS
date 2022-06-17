@@ -283,7 +283,6 @@ TxConfig::SetFanMode(uint8_t fanMode)
 void
 TxConfig::SetMotionMode(uint8_t motionMode)
 {
-
     if (m_config.motionMode != motionMode)
     {
         m_config.motionMode = motionMode;
