@@ -434,18 +434,16 @@ void TxConfig::UpgradeEepromV5ToV6()
 
 static uint8_t RateV6toV7(uint8_t rateV6)
 {
-#if defined(RADIO_900)
+#if defined(RADIO_SX127X)
     if (rateV6 == 0)
     {
         // 200Hz stays same
         return 0;
     }
-    else
-    {
-        // 100Hz, 50Hz, 25Hz all move up one
-        // to make room for 100Hz Full
-        return rateV6 + 1;
-    }
+
+    // 100Hz, 50Hz, 25Hz all move up one
+    // to make room for 100Hz Full
+    return rateV6 + 1;
 #else // RADIO_2400
     switch (rateV6)
     {

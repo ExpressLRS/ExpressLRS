@@ -71,10 +71,10 @@ typedef union {
 typedef struct {
     uint32_t    version;
     bool        isBound;
-    uint8_t     uid[UID_LEN];
+    uint8_t     uid[6];
     uint8_t     powerOnCounter;
     uint8_t     modelId;
     char        ssid[33];
     char        password[33];
-    v4_rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
+    v4_rx_config_pwm_t pwmChannels[8];
 } v4_rx_config_t;
