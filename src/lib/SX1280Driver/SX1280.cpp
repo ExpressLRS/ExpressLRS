@@ -435,12 +435,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 #endif
 }
 
-bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX1280_Radio_Number_t radioNumber)
 {
-    rx_status const fail =
-        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
-        ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
-        ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
     {
@@ -448,6 +444,14 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radi
         // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
         // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
         currOpmode = SX1280_MODE_FS;
+    }
+
+    rx_status fail = ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK);
+    // The SYNCWORD_VALID bit isn't set on LoRa, it has no synch (sic) word
+    if (packet_mode == SX1280_PACKET_TYPE_FLRC)
+    {
+        fail |= ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+                ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     }
     if (fail == SX12XX_RX_OK)
     {
