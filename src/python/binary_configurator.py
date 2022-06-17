@@ -5,8 +5,13 @@ from json import JSONEncoder
 import mmap
 import hashlib
 from enum import Enum
+
+import firmware
+from firmware import DeviceType, FirmwareOptions, RadioType, MCUType
 import melodyparser
 import UnifiedConfiguration
+import binary_flash
+from binary_flash import UploadMethod
 
 class BuzzerMode(Enum):
     quiet = 'quiet'
@@ -28,9 +33,6 @@ class RegulatoryDomain(Enum):
 
     def __str__(self):
         return self.value
-
-def find_patch_location(mm):
-    return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
 
 def write32(mm, pos, val):
     if val != None:
@@ -173,31 +175,24 @@ def domain_number(domain):
     elif domain == RegulatoryDomain.eu_433:
         return 5
 
-def patch_firmware(mm, pos, args):
-    pos += 8 + 2                # Skip magic & version
-    hardware = mm[pos]
-    _hasWiFi = hardware & 1
-    _hasBuzzer = hardware & 2
-    _mcuType = (hardware >> 2) & 3
-    _deviceType = (hardware >> 4) & 7
-    _radioChip = (hardware >> 7) & 1
-    pos += 1                    # Skip the hardware flag
-    if _radioChip == 0 and args.domain:         # SX127X
+def patch_firmware(options, mm, pos, args):
+    if options.radioChip is RadioType.SX127X and args.domain:
         mm[pos] = domain_number(args.domain)
     pos += 1
 
-    pos = patch_uid(mm, pos, args)
-    if _hasWiFi:                # Has WiFi (i.e. ESP8266 or ESP32)
-        pos = patch_wifi(mm, pos, args)
-    if _deviceType == 0:        # TX target
-        pos = patch_tx_params(mm, pos, args)
-        if _hasBuzzer:          # Has a Buzzer
-            pos = patch_buzzer(mm, pos, args)
-    if _deviceType == 1:        # RX target
-        pos = patch_rx_params(mm, pos, args)
+    if options.mcuType is MCUType.STM32:
+        pos = patch_uid(mm, pos, args)
+        if options.deviceType is DeviceType.TX:
+            pos = patch_tx_params(mm, pos, args)
+            if options.hasBuzzer:
+                pos = patch_buzzer(mm, pos, args)
+        elif options.deviceType is DeviceType.RX:
+            pos = patch_rx_params(mm, pos, args)
+    else:
+        patch_unified(args, options)
 
 def print_domain(radio, domain):
-    if radio == 1:
+    if radio is RadioType.SX1280:
         if domain == 0:
             print('Regulatory Domain is ISM 2.4GHz')
         else:
@@ -218,24 +213,15 @@ def print_domain(radio, domain):
         else:
             raise AssertionError('Invalid domain detected!')
 
-def print_config(mm, pos):
-    pos += 8 + 2                # Skip magic & version
-    hardware = mm[pos]
-    _hasWiFi = hardware & 1
-    _hasBuzzer = hardware & 2
-    _mcuType = (hardware >> 2) & 3
-    _deviceType = (hardware >> 4) & 7
-    _radioChip = (hardware >> 7) & 1
-    pos += 1                    # Skip the hardware flag
-
-    mcu = ['STM32', 'ESP32', 'ESP8266', 'Unknown'][_mcuType]
-    device = ['TX', 'RX', 'TX Backpack', 'VRx Backpack', 'Unknown', 'Unknown', 'Unknown', 'Unknown'][_deviceType]
-    radio = ['SX1280', 'SX127X'][_radioChip]
+def print_config(options: FirmwareOptions, mm, pos):
+    mcu = ['STM32', 'ESP32', 'ESP8266', 'Unknown'][options.mcuType.value]
+    device = ['TX', 'RX', 'TX Backpack', 'VRx Backpack', 'Unknown', 'Unknown', 'Unknown', 'Unknown'][options.deviceType.value]
+    radio = ['SX1280', 'SX127X'][options.radioChip.value]
     print(f'MCU: {mcu}, Device: {device}, Radio: {radio}')
 
     domain = mm[pos]
     pos += 1
-    print_domain(_radioChip, domain)
+    print_domain(options.radioChip, domain)
 
     hasUID = mm[pos]
     pos += 1
@@ -246,7 +232,7 @@ def print_config(mm, pos):
     else:
         print('No binding phrase set')
 
-    if _hasWiFi:
+    if options.hasWiFi:
         (pos, val) = read32(mm, pos)
         if val == 0xFFFFFFFF:
             print('WiFi auto on is disabled')
@@ -257,7 +243,7 @@ def print_config(mm, pos):
         print(f'WiFi SSID: {ssid}')
         print(f'WiFi Password: {password}')
 
-    if _deviceType == 0:    # TX
+    if options.deviceType is DeviceType.TX:
         (pos, tlm) = read32(mm, pos)
         (pos, fan) = read32(mm, pos)
         val = mm[pos]
@@ -268,7 +254,7 @@ def print_config(mm, pos):
         print(f'Fan minimum run time = {fan}s')
         print(f'UART_INVERTED is {uart_inverted}')
         print(f'UNLOCK_HIGHER_POWER is {unlock_higher_power}')
-        if _hasBuzzer:
+        if options.hasBuzzer:
             mode = mm[pos]
             pos += 1
             melody = []
@@ -284,7 +270,7 @@ def print_config(mm, pos):
                 print('Buzzer mode play tune')
                 print(melody)
             None
-    elif _deviceType == 1:  # RX
+    elif options.deviceType is DeviceType.RX:
         (pos, baud) = read32(mm, pos)
         val = mm[pos]
         pos += 1
@@ -295,13 +281,13 @@ def print_config(mm, pos):
         print(f'RCVR_INVERT_TX is {invert_tx}')
         print(f'LOCK_ON_FIRST_CONNECTION is {lock_on_first_connection}')
         print(f'USE_R9MM_MINI_SBUS is {r9mm_mini_sbus}')
-    elif _deviceType == 2:  # TXBP
+    elif options.deviceType is DeviceType.TX_Backpack:
         None
-    elif _deviceType == 3:  # VRX
+    elif options.deviceType is DeviceType.VRx_Backpack:
         None
     return
 
-def patch_unified(args):
+def patch_unified(args, options):
     json_flags = {}
     if args.phrase is not None:
         json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
@@ -331,7 +317,14 @@ def patch_unified(args):
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
 
-    UnifiedConfiguration.configureFirmware(args.file, args.target, JSONEncoder().encode(json_flags))
+    UnifiedConfiguration.doConfiguration(
+        args.file,
+        JSONEncoder().encode(json_flags),
+        args.target,
+        'tx' if options.deviceType is DeviceType.TX else 'rx',
+        '2400' if options.radioChip is RadioType.SX1280 else '900',
+        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else ''
+    )
 
 def length_check(l, f):
     def x(s):
@@ -378,6 +371,12 @@ def main():
     parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
     # Unified target
     parser.add_argument('--target', type=str, help='Unified target JSON path')
+    # Flashing options
+    parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
+    parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
+    parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
+    parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
 
     #
     # Firmware file to patch/configure
@@ -385,18 +384,17 @@ def main():
 
     args = parser.parse_args()
 
-    if args.target is not None:
-        patch_unified(args)
-    else:
-        with args.file as f:
-            mm = mmap.mmap(f.fileno(), 0)
-            pos = find_patch_location(mm)
-            if pos == -1:
-                raise AssertionError('Configuration magic not found in firmware file. Is this a 2.3 firmware?')
-            if args.print:
-                print_config(mm, pos)
-            else:
-                patch_firmware(mm, pos, args)
+    with args.file as f:
+        mm = mmap.mmap(f.fileno(), 0)
+
+        options, target, pos = firmware.get_hardware(mm)
+        if args.print:
+            print_config(options, mm, pos)
+        else:
+            patch_firmware(options, mm, pos, args)
+            if args.flash:
+                args.target = target
+                return binary_flash.upload(options, args)
 
 if __name__ == '__main__':
     try:
