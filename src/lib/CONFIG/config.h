@@ -104,7 +104,7 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
-    void UpgradeEepromOrDefault();
+    void UpgradeEeprom();
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
 
@@ -157,6 +157,8 @@ typedef struct {
 class RxConfig
 {
 public:
+    RxConfig();
+
     void Load();
     void Commit();
 
@@ -191,7 +193,7 @@ public:
     #endif
 
 private:
-    void UpgradeEepromOrDefault();
+    void UpgradeEeprom();
     void UpgradeEepromV4ToV5();
 
     rx_config_t m_config;

@@ -15,13 +15,12 @@
 
 TxConfig::TxConfig()
 {
-    SetModelId(0);
+    SetDefaults(false);
 }
 
-#if defined(PLATFORM_ESP32)
-void
-TxConfig::Load()
+void TxConfig::Load()
 {
+#if defined(PLATFORM_ESP32)
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -72,22 +71,18 @@ TxConfig::Load()
     }
     else
     {
-        UpgradeEepromOrDefault();
+        UpgradeEeprom();
     }
     m_modified = 0;
-}
 #else
-void
-TxConfig::Load()
-{
     m_eeprom->Get(0, m_config);
-    m_modified = 0;
 
     // Check if version number matches
     if (m_config.version != (TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
     {
-        UpgradeEepromOrDefault();
+        UpgradeEeprom();
     }
+    m_modified = 0;
 }
 #endif
 
@@ -331,9 +326,6 @@ TxConfig::SetDefaults(bool commit)
 {
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
 
-    if (commit)
-        m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
-
     SetVtxBand(0);
     SetVtxChannel(0);
     SetVtxPower(0);
@@ -370,15 +362,12 @@ TxConfig::SetDefaults(bool commit)
     SetModelId(0);
 }
 
-void TxConfig::UpgradeEepromOrDefault()
+void TxConfig::UpgradeEeprom()
 {
     uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
     bool upgraded = false;
 
-    // Default everything so the upgraders only set old fields
     // The upgraders must call Commit() or do their own committing
-    SetDefaults(false);
-
     if (m_config.version == (5U | TX_CONFIG_MAGIC))
     {
         UpgradeEepromV5ToV6();
@@ -396,8 +385,7 @@ void TxConfig::UpgradeEepromOrDefault()
     }
     else
     {
-        DBGLN("EEPROM version %u could not be upgraded, setting defaults", startVersion);
-        SetDefaults(true);
+        DBGLN("EEPROM version %u could not be upgraded, using defaults", startVersion);
     }
 }
 
@@ -474,15 +462,15 @@ static uint8_t SwitchesV6toV7(uint8_t switchesV6)
     }
 }
 
-static void ModelV6toV7(v6_model_config_t const * const v6model, model_config_t * const newModel)
+static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * const v7)
 {
-    newModel->rate = RateV6toV7(v6model->rate);
-    newModel->tlm = RatioV6toV7(v6model->tlm);
-    newModel->power = v6model->power;
-    newModel->switchMode = SwitchesV6toV7(v6model->switchMode);
-    newModel->modelMatch = v6model->modelMatch;
-    newModel->dynamicPower = v6model->dynamicPower;
-    newModel->boostChannel = v6model->boostChannel;
+    v7->rate = RateV6toV7(v6->rate);
+    v7->tlm = RatioV6toV7(v6->tlm);
+    v7->power = v6->power;
+    v7->switchMode = SwitchesV6toV7(v6->switchMode);
+    v7->modelMatch = v6->modelMatch;
+    v7->dynamicPower = v6->dynamicPower;
+    v7->boostChannel = v6->boostChannel;
 }
 
 void TxConfig::UpgradeEepromV6ToV7()
@@ -588,6 +576,11 @@ TxConfig::SetModelId(uint8_t modelId)
 
 #if defined(TARGET_RX)
 
+RxConfig::RxConfig()
+{
+    SetDefaults(false);
+}
+
 void
 RxConfig::Load()
 {
@@ -597,20 +590,17 @@ RxConfig::Load()
     // Check if version number matches
     if (m_config.version != (RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
     {
-        UpgradeEepromOrDefault();
+        UpgradeEeprom();
     }
 
     m_modified = false;
 }
 
-void RxConfig::UpgradeEepromOrDefault()
+void RxConfig::UpgradeEeprom()
 {
     uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
 
-    // Default everything so the upgraders only set old fields
     // The upgraders must call Commit() or do their own committing
-    SetDefaults(false);
-
     if (m_config.version == (4U | RX_CONFIG_MAGIC))
     {
         UpgradeEepromV4ToV5();
@@ -618,8 +608,7 @@ void RxConfig::UpgradeEepromOrDefault()
     }
     else
     {
-        DBGLN("EEPROM version %u could not be upgraded, setting defaults", startVersion);
-        SetDefaults(true);
+        DBGLN("EEPROM version %u could not be upgraded, using defaults", startVersion);
     }
 }
 
@@ -775,7 +764,6 @@ RxConfig::SetDefaults(bool commit)
     if (commit)
     {
         Commit();
-        m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     }
 }
 
