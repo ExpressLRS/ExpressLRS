@@ -74,7 +74,7 @@ bool SX1280Driver::Begin()
 
     hal.reset();
     DBGLN("SX1280 Begin");
-    
+
     SetMode(SX1280_MODE_STDBY_RC, SX1280_Radio_All); // Put in STDBY_RC mode.  Must be SX1280_MODE_STDBY_RC for SX1280_RADIO_SET_REGULATORMODE to be set.
 
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_1)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_1)));
@@ -94,7 +94,7 @@ bool SX1280Driver::Begin()
             // SPI communication failed, just return without configuration
             return false;
         }
-        
+
         hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_2) | 0xC0), SX1280_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
 
@@ -531,30 +531,22 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
+    SX1280_Radio_Number_t irqClearRadio = radioNumber;
 
     uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
-
     if (irqStatus & SX1280_IRQ_TX_DONE)
     {
         hal.TXRXdisable();
         instance->TXnbISR();
-        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All);
+        irqClearRadio = SX1280_Radio_All;
     }
-    else
-    if (irqStatus & SX1280_IRQ_RX_DONE)
+    else if (irqStatus & SX1280_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
-            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All); // Packet received so clear all radios and dont spend extra time retrieving data.
-        }
-        else
-        {
-            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
+            irqClearRadio = SX1280_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
     }
-    else // Only SX1280_IRQ_TX_DONE and SX1280_IRQ_RX_DONE IRQs are set, so this should never happen.
-    {
-        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
-    }
+    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, irqClearRadio);
 }
