@@ -83,8 +83,8 @@ void TxConfig::Load()
         UpgradeEeprom();
     }
     m_modified = 0;
-}
 #endif
+}
 
 void
 TxConfig::Commit()
