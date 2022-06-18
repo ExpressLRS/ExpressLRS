@@ -317,7 +317,8 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
         // For SX1280_FLRC_CR_3_4 the datasheet also says
         // "In addition to this the two LSB values XX XX must not be in the range 0x0000 to 0x3EFF"
         // but let's evaluate this if we ever use CR 3/4
-        // if (cr == SX1280_FLRC_CR_3_4) buf[3] |= 0x80; // 0x80 or 0x40 would work
+        if (cr == SX1280_FLRC_CR_3_4 && buf[3] < 0x3e)
+            buf[3] |= 0x80; // 0x80 or 0x40 would work
     }
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
