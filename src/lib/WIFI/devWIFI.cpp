@@ -659,19 +659,6 @@ static void startMDNS()
 
   String options = "-DAUTO_WIFI_ON_INTERVAL=" + String(firmwareOptions.wifi_auto_on_interval / 1000);
 
-  if (firmwareOptions.hasUID)
-  {
-    options += " -DMY_UID=";
-    for (int i=0 ; i<sizeof(firmwareOptions.uid) ; i++)
-    {
-      options += firmwareOptions.uid[i];
-      if (i!=sizeof(firmwareOptions.uid)-1)
-      {
-        options += ",";
-      }
-    }
-  }
-
   #ifdef TARGET_TX
   if (firmwareOptions.unlock_higher_power)
   {
