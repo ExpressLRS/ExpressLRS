@@ -316,7 +316,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
         buf[1] = temp;
         // For SX1280_FLRC_CR_3_4 the datasheet also says
         // "In addition to this the two LSB values XX XX must not be in the range 0x0000 to 0x3EFF"
-        if (cr == SX1280_FLRC_CR_3_4 && buf[3] < 0x3e)
+        if (cr == SX1280_FLRC_CR_3_4 && buf[3] <= 0x3e)
             buf[3] |= 0x80; // 0x80 or 0x40 would work
     }
 
