@@ -183,7 +183,6 @@ static unsigned long loadBindingStartedMs = 0;
 void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
-void UpdateModelMatch(uint8_t model);
 void OnELRSBindMSP(uint8_t* packet);
 
 static uint8_t minLqForChaos()
@@ -622,7 +621,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     #endif
 }
 
-void LostConnection()
+void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer.FreqOffset);
 
@@ -652,7 +651,11 @@ void LostConnection()
             hwTimer.stop();
         }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
-        Radio.RXnb();
+        // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
+        if (resumeRx)
+        {
+            Radio.RXnb();
+        }
     }
 }
 
@@ -718,62 +721,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         debugRcvrLinkstatsPending = true;
         #endif
     }
-}
-
-/**
- * Process the assembled MSP packet in MspData[]
- **/
-void MspReceiveComplete()
-{
-    if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
-    {
-        UpdateModelMatch(MspData[9]);
-    }
-    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
-    {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        // The MSP packet needs to be ACKed so the TX doesn't
-        // keep sending it, so defer the switch to wifi
-        deferExecution(500, []() {
-            connectionState = wifiUpdate;
-        });
-#endif
-    }
-    else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
-    {
-        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
-        InLoanBindingMode = true;
-    }
-    else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
-    {
-        vtxSPIBandChannelIdx = MspData[8];
-        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-        {
-            vtxSPIPowerIdx = MspData[10];
-            vtxSPIPitmode = MspData[11];
-        }
-        devicesTriggerEvent();
-    }
-    else
-    {
-        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-
-        // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-        {
-            crsf.sendMSPFrameToFC(MspData);
-        }
-
-        if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
-        {
-            crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
-            crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
-            crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
-            luaParamUpdateReq();
-        }
-    }
-
-    MspReceiver.Unlock();
 }
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPktPtr)
@@ -950,6 +897,68 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
+}
+
+void UpdateModelMatch(uint8_t model)
+{
+    DBGLN("Set ModelId=%u", model);
+    config.SetModelId(model);
+}
+
+/**
+ * Process the assembled MSP packet in MspData[]
+ **/
+void MspReceiveComplete()
+{
+    if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+    {
+        UpdateModelMatch(MspData[9]);
+    }
+    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
+    {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        // The MSP packet needs to be ACKed so the TX doesn't
+        // keep sending it, so defer the switch to wifi
+        deferExecution(500, []() {
+            connectionState = wifiUpdate;
+        });
+#endif
+    }
+    else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
+    {
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
+        InLoanBindingMode = true;
+    }
+    else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+    {
+        vtxSPIBandChannelIdx = MspData[8];
+        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+        {
+            vtxSPIPowerIdx = MspData[10];
+            vtxSPIPitmode = MspData[11];
+        }
+        devicesTriggerEvent();
+    }
+    else
+    {
+        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+
+        // No MSP data to the FC if no model match
+        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+        {
+            crsf.sendMSPFrameToFC(MspData);
+        }
+
+        if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+        {
+            crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
+            crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
+            crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
+            luaParamUpdateReq();
+        }
+    }
+
+    MspReceiver.Unlock();
 }
 
 static void setupSerial()
@@ -1226,7 +1235,7 @@ static void updateBindingMode(unsigned long now)
     }
     // If returning the model to the owner, set the flag and call ExitBindingMode to reset the CRC and FHSS
     else if (returnModelFromLoan && config.GetOnLoan()) {
-        LostConnection();
+        LostConnection(false);
         config.SetOnLoan(false);
         memcpy(UID, MasterUID, sizeof(MasterUID));
         setupBindingFromConfig();
@@ -1300,6 +1309,17 @@ static void updateSwitchMode()
 
     OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->PayloadLength);
     SwitchModePending = 0;
+}
+
+static void CheckConfigChangePending()
+{
+    if (config.IsModified() && !InBindingMode)
+    {
+        LostConnection(false);
+        config.Commit();
+        devicesTriggerEvent();
+        Radio.RXnb();
+    }
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -1396,15 +1416,7 @@ void loop()
     }
     #endif
 
-    if (config.IsModified() && !InBindingMode)
-    {
-        LostConnection();
-        Radio.SetTxIdleMode();
-        config.Commit();
-        Radio.RXnb();
-        devicesTriggerEvent();
-    }
-
+    CheckConfigChangePending();
     executeDeferredFunction(now);
 
     if (connectionState > MODE_STATES)
@@ -1414,7 +1426,7 @@ void loop()
 
     if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)){ // forced change
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
-        LostConnection();
+        LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
         SendLinkStatstoFCintervalLastSent = 0;
@@ -1424,7 +1436,7 @@ void loop()
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
     {
         DBGLN("Bad sync, aborting");
-        LostConnection();
+        LostConnection(true);
         RFmodeLastCycled = now;
         LastSyncPacket = now;
     }
@@ -1432,10 +1444,9 @@ void loop()
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
-    if ((connectionState == disconnectPending) ||
-        ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs < (int32_t)(now - localLastValidPacket)))) // check if we lost conn.
+    if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs < (int32_t)(now - localLastValidPacket))) // check if we lost conn.
     {
-        LostConnection();
+        LostConnection(true);
     }
 
     if ((connectionState == tentative) && (abs(LPF_OffsetDx.value()) <= 10) && (LPF_Offset.value() < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
@@ -1497,11 +1508,13 @@ void reset_into_bootloader(void)
 
 void EnterBindingMode()
 {
-    if (InLoanBindingMode) {
+    if (InLoanBindingMode)
+    {
         loadBindingStartedMs = millis();
-        LostConnection();
+        LostConnection(false);
     }
-    if (connectionState == connected || InBindingMode) {
+    else if (connectionState == connected || InBindingMode)
+    {
         // Don't enter binding if:
         // - we're already connected
         // - we're already binding
@@ -1556,7 +1569,7 @@ void ExitBindingMode()
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
 
-    LostConnection();
+    LostConnection(false);
     LockRFmode = false;
     SetRFLinkRate(RATE_DEFAULT);
     Radio.RXnb();
@@ -1595,13 +1608,3 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* packet)
     // EEPROM commit will happen on the main thread in ExitBindingMode()
 }
 
-void UpdateModelMatch(uint8_t model)
-{
-    DBGLN("Set ModelId=%u", model);
-
-    config.SetModelId(model);
-    config.Commit();
-    // This will be called from ProcessRFPacket(), schedule a disconnect
-    // in the main loop once the ISR has exited
-    connectionState = disconnectPending;
-}
