@@ -151,6 +151,8 @@ typedef struct {
     uint8_t     powerOnCounter;
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
+    uint8_t     forceTlmOff:1,
+                unused:7;       // FUTURE
 } rx_config_t;
 
 class RxConfig
@@ -174,6 +176,7 @@ public:
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
     #endif
+    bool GetForceTlmOff() const { return m_config.forceTlmOff; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -190,6 +193,7 @@ public:
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
+    void SetForceTlmOff(bool forceTlmOff);
 
 private:
     void UpgradeEeprom();

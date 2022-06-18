@@ -811,4 +811,14 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
 }
 #endif
 
+void
+RxConfig::SetForceTlmOff(bool forceTlmOff)
+{
+    if (m_config.forceTlmOff != forceTlmOff)
+    {
+        m_config.forceTlmOff = forceTlmOff;
+        m_modified = true;
+    }
+}
+
 #endif
