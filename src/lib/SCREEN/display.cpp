@@ -89,6 +89,17 @@ static const char *ratio_string[] = {
     "Race"
 };
 
+static const char *ratio_curr_string[] = {
+    "Off",
+    "1:2",
+    "1:4",
+    "1:8",
+    "1:16",
+    "1:32",
+    "1:64",
+    "1:128"
+};
+
 static const char *powersaving_string[] = {
     "OFF",
     "ON"
@@ -187,6 +198,8 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
         return rate_string[value_index];
     case STATE_TELEMETRY:
         return ratio_string[value_index];
+    case STATE_TELEMETRY_CURR:
+        return ratio_curr_string[value_index];
     case STATE_POWERSAVE:
         return powersaving_string[value_index];
     case STATE_SMARTFAN:

@@ -70,6 +70,8 @@ static void displayIdleScreen(bool init)
 
     message_index_t disp_message = CRSF::IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
     uint8_t changed = init ? 0xFF : 0;
+    // compute log2(ExpressLRS_currTlmDenom) (e.g. 128=7, 64=6, etc)
+    uint8_t tlmIdx = __builtin_ffs(ExpressLRS_currTlmDenom) - 1;
     if (changed == 0)
     {
         changed |= last_message != disp_message ? CHANGED_MESSAGE : 0;
@@ -78,7 +80,7 @@ static void displayIdleScreen(bool init)
         changed |= last_power != config.GetPower() ? CHANGED_POWER : 0;
         changed |= last_dynamic != config.GetDynamicPower() ? CHANGED_POWER : 0;
         changed |= last_run_power != (uint8_t)(POWERMGNT::currPower()) ? CHANGED_POWER : 0;
-        changed |= last_tlm != config.GetTlm() ? CHANGED_TELEMETRY : 0;
+        changed |= last_tlm != tlmIdx ? CHANGED_TELEMETRY : 0;
         changed |= last_motion != config.GetMotionMode() ? CHANGED_MOTION : 0;
         changed |= last_fan != config.GetFanMode() ? CHANGED_FAN : 0;
     }
@@ -89,7 +91,7 @@ static void displayIdleScreen(bool init)
         last_temperature = temperature;
         last_rate = config.GetRate();
         last_power = config.GetPower();
-        last_tlm = config.GetTlm();
+        last_tlm = tlmIdx;
         last_motion = config.GetMotionMode();
         last_fan = config.GetFanMode();
         last_dynamic = config.GetDynamicPower();
