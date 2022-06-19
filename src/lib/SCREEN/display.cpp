@@ -50,6 +50,7 @@ const char *rate_string[] = {
 #else
 static const char *rate_string[] = {
     "200Hz",
+    "100 Full",
     "100Hz",
     "50Hz",
     "25Hz"
