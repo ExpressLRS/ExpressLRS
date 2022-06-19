@@ -30,6 +30,19 @@ typedef struct {
                 txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
 } model_config_t;
 
+// FUTURE: Designed to hold one RGB LED color in 6-level color, and 2 custom button actions.
+// This struct can change entirely depending on how the button/RGB is implemented
+// across platforms.
+typedef union {
+    struct {
+        uint8_t color;
+        uint8_t pressShort;
+        uint8_t pressLong;
+        uint8_t unused;
+    } val;
+    uint32_t raw;
+} tx_button_color_t;
+
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
@@ -38,18 +51,15 @@ typedef struct {
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
     model_config_t  model_config[64];
-    uint8_t         fanMode;        // some value used by thermal?
-    uint8_t         motionMode:2;   // bool, but space for 2 more modes
-    uint8_t         dvrStopDelay:3,
-                    unused: 3;      // FUTURE available
+    uint8_t         fanMode;            // some value used by thermal?
+    uint8_t         motionMode:2,       // bool, but space for 2 more modes
+                    dvrStopDelay:3,
+                    unused: 3;          // FUTURE available
     uint8_t         dvrStartDelay:3,
                     dvrAux:5;
-    uint32_t        ledColorTx;     // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
-    uint32_t        ledColorModel;  // FUTURE: Model RGB color / mode (sets LED color mode on the model, but can be second TX led color too)
-    uint8_t         button0ActionShort:4,
-                    button0ActionLong:4;  // FUTURE: What button handler to use button 0
-    uint8_t         button1ActionShort:4,
-                    button1ActionLong:4;  // FUTURE: What button handler to use button 1
+    tx_button_color_t buttonColors[2];  // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
+                                        // FUTURE: Model RGB color / mode (sets LED color mode on the model, but can be second TX led color too)
+                                        // FUTURE: Custom button actions
 } tx_config_t;
 
 class TxConfig
