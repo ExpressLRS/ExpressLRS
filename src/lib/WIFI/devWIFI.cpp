@@ -424,10 +424,7 @@ static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
   config.SetForceTlmOff(forceTlm != 0);
   config.Commit();
 
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Force telemetry updated");
-  response->addHeader("Connection", "close");
-  request->send(response);
-  request->client()->close();
+  request->send(200, "text/plain", "Force telemetry updated");
 }
 #endif
 
