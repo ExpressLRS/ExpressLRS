@@ -3,6 +3,7 @@
 #include "common.h"
 #include "POWERMGNT.h"
 #include "OTA.h"
+#include "helpers.h"
 #include "logging.h"
 
 #if defined(TARGET_TX)
@@ -364,6 +365,7 @@ TxConfig::SetDefaults(bool commit)
 void TxConfig::UpgradeEeprom()
 {
     uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
+    UNUSED(startVersion); // if DEBUG_LOG not defined
     bool upgraded = false;
 
     // The upgraders must call Commit() or do their own committing
@@ -598,6 +600,7 @@ RxConfig::Load()
 void RxConfig::UpgradeEeprom()
 {
     uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
+    UNUSED(startVersion); // if DEBUG_LOG not defined
 
     // The upgraders must call Commit() or do their own committing
     if (m_config.version == (4U | RX_CONFIG_MAGIC))
