@@ -19,7 +19,7 @@ typedef struct {
     uint8_t     modelMatch:1;
     uint8_t     dynamicPower:1;
     uint8_t     boostChannel:3;
-} v5_model_config_t;
+} v5_model_config_t; // 16 bits
 
 typedef struct {
     uint32_t        version;

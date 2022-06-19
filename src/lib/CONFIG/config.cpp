@@ -14,6 +14,35 @@
 #define FAN_CHANGED         bit(4)
 #define MOTION_CHANGED      bit(5)
 
+// Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
+template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
+{
+    union {
+        union {
+            T model;
+            uint8_t padding[sizeof(uint32_t)-sizeof(T)];
+        } val;
+        uint32_t u32;
+    } converter = { .u32 = u32 };
+
+    *model = converter.val.model;
+}
+
+template<class T> static const uint32_t Model_to_U32(T const * const model)
+{
+    // clear the entire union because the assignment will only fill sizeof(T)
+    union {
+        union {
+            T model;
+            uint8_t padding[sizeof(uint32_t)-sizeof(T)];
+        } val;
+        uint32_t u32;
+    } converter = { 0 };
+
+    converter.val.model = *model;
+    return converter.u32;
+}
+
 TxConfig::TxConfig()
 {
     SetDefaults(false);
@@ -64,10 +93,10 @@ void TxConfig::Load()
         for(int i=0 ; i<64 ; i++)
         {
             char model[10] = "model";
-            model_config_t value;
             itoa(i, model+5, 10);
-            nvs_get_u32(handle, model, (uint32_t*)&value);
-            m_config.model_config[i] = value;
+            nvs_get_u32(handle, model, &value);
+            m_config.model_config[i] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+            U32_to_Model(value, &m_config.model_config[i]);
         }
     }
     else
@@ -99,7 +128,7 @@ TxConfig::Commit()
     // Write parts to NVS
     if (m_modified & MODEL_CHANGED)
     {
-        uint32_t value = *((uint32_t *)m_model);
+        uint32_t value = Model_to_U32(m_model);
         char model[10] = "model";
         itoa(m_modelId, model+5, 10);
         nvs_set_u32(handle, model, value);
@@ -514,11 +543,11 @@ void TxConfig::UpgradeEepromV6ToV7()
         // Do a straight conversion with a direct read/write
         // instead of calling Commit() for every model
         v6_model_config_t v6model;
-        nvs_get_u32(handle, model, (uint32_t*)&v6model);
-        model_config_t *newModel = &m_config.model_config[i];
+        nvs_get_u32(handle, model, &value);
+        U32_to_Model(value, &v6model);
+        model_config_t * const newModel = &m_config.model_config[i];
         ModelV6toV7(&v6model, newModel);
-        uint32_t value32 = *((uint32_t *)newModel);
-        nvs_set_u32(handle, model, value32);
+        nvs_set_u32(handle, model, Model_to_U32(newModel));
     }
 #else // STM32/ESP8266
     v6_tx_config_t v6Config;
