@@ -74,7 +74,7 @@ bool SX1280Driver::Begin()
 
     hal.reset();
     DBGLN("SX1280 Begin");
-    
+
     SetMode(SX1280_MODE_STDBY_RC, SX1280_Radio_All); // Put in STDBY_RC mode.  Must be SX1280_MODE_STDBY_RC for SX1280_RADIO_SET_REGULATORMODE to be set.
 
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX1280_Radio_1)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX1280_Radio_1)));
@@ -94,7 +94,7 @@ bool SX1280Driver::Begin()
             // SPI communication failed, just return without configuration
             return false;
         }
-        
+
         hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_2) | 0xC0), SX1280_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
 
@@ -103,6 +103,7 @@ bool SX1280Driver::Begin()
 #if defined(USE_SX1280_DCDC)
     hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);            // Enable DCDC converter instead of LDO
 #endif
+
     return true;
 }
 
@@ -110,8 +111,6 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
-    uint8_t irqMask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
-    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
     uint8_t const mode = (flrc) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
 
     PayloadLength = _PayloadLength;
@@ -121,14 +120,13 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, SX1280_Radio_All, 20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
-        DBGLN("Config FLRC");
+        DBG("Config FLRC ");
         ConfigModParamsFLRC(bw, cr, sf);
         SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
-        irqMask |= SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     }
     else
     {
-        DBGLN("Config LoRa");
+        DBG("Config LoRa ");
         ConfigModParamsLoRa(bw, sf, cr);
 #if defined(DEBUG_FREQ_CORRECTION)
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_VARIABLE_LENGTH;
@@ -138,8 +136,11 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     }
     SetFrequencyReg(regfreq);
-    SetDioIrqParams(irqMask, dio1Mask);
     SetRxTimeoutUs(interval);
+
+    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
+    uint8_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
+    SetDioIrqParams(irqMask, dio1Mask);
 }
 
 void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
@@ -307,21 +308,16 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     buf[3] = (uint8_t)syncWord;
 
     // DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
-    if ((cr == SX1280_FLRC_CR_1_2) && ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
+    if (((cr == SX1280_FLRC_CR_1_2) || (cr == SX1280_FLRC_CR_3_4)) &&
+        ((buf[0] == 0x8C && buf[1] == 0x38) || (buf[0] == 0x63 && buf[1] == 0x0E)))
     {
         uint8_t temp = buf[0];
         buf[0] = buf[1];
         buf[1] = temp;
-    }
-    else
-    if (cr != SX1280_FLRC_CR_1_2)
-    {
-        // Not done for unused coding rates to save space.
-        ERRLN("!!! WARNING !!!");
-        ERRLN("Check datasheet errata for forbidden sync word bytes when using coding rates 3/4 and 1/1.");
-        ERRLN("!!! WARNING !!!");
-
-        while(1);
+        // For SX1280_FLRC_CR_3_4 the datasheet also says
+        // "In addition to this the two LSB values XX XX must not be in the range 0x0000 to 0x3EFF"
+        if (cr == SX1280_FLRC_CR_3_4 && buf[3] <= 0x3e)
+            buf[3] |= 0x80; // 0x80 or 0x40 would work
     }
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
@@ -403,8 +399,6 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-uint8_t FIFOaddr = 0;
-
 void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
@@ -437,12 +431,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 #endif
 }
 
-bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX1280_Radio_Number_t radioNumber)
 {
-    rx_status const fail =
-        ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
-        ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
-        ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     // In continuous receive mode, the device stays in Rx mode
     if (timeout != 0xFFFF)
     {
@@ -450,6 +440,15 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t const irqStatus, SX1280_Radi
         // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
         // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
         currOpmode = SX1280_MODE_FS;
+    }
+
+    rx_status fail = SX12XX_RX_OK;
+    // The SYNCWORD_VALID bit isn't set on LoRa, it has no synch (sic) word, and CRC is only on for FLRC
+    if (packet_mode == SX1280_PACKET_TYPE_FLRC)
+    {
+        fail = ((irqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+               ((irqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+               ((irqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
     }
     if (fail == SX12XX_RX_OK)
     {
@@ -531,30 +530,22 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
+    SX1280_Radio_Number_t irqClearRadio = radioNumber;
 
     uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
-
     if (irqStatus & SX1280_IRQ_TX_DONE)
     {
         hal.TXRXdisable();
         instance->TXnbISR();
-        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All);
+        irqClearRadio = SX1280_Radio_All;
     }
-    else
-    if (irqStatus & SX1280_IRQ_RX_DONE)
+    else if (irqStatus & SX1280_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
-            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX1280_Radio_All); // Packet received so clear all radios and dont spend extra time retrieving data.
-        }
-        else
-        {
-            instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
+            irqClearRadio = SX1280_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
     }
-    else // Only SX1280_IRQ_TX_DONE and SX1280_IRQ_RX_DONE IRQs are set, so this should never happen.
-    {
-        instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
-    }
+    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, irqClearRadio);
 }
