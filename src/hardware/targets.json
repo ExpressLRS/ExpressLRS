@@ -70,7 +70,7 @@
             "nano": {
                 "product_name": "BETAFPV 2.4GHz Nano RX",
                 "lua_name": "BFPV Nano 2G4RX",
-                "layout_file": "BETAFPV Nano 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
@@ -158,6 +158,12 @@
                 "lua_name": "DupleTX",
                 "layout_file": "DIY 2400 DupleTX.json",
                 "upload_methods": ["uart", "wifi", "etx"]
+            },
+            "dupletxesp": {
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
+                "lua_name": "DupleTX ESP",
+                "layout_file": "DIY 2400 DupleTX ESP.json",
+                "upload_methods": ["uart", "wifi"]
             }
         },
         "rx_2400": {
@@ -190,6 +196,44 @@
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
+            },
+            "pa": {
+                "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
+                "lua_name": "ELRS+PA 2400RX",
+                "layout_file": "Generic 2400 PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity": {
+                "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
+                "lua_name": "ELRS+D 2400RX",
+                "layout_file": "Generic 2400 PA Diversity.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
+        },
+        "rx32_2400": {
+            "frank": {
+                "product_name": "Generic ESP32 2.4Ghz Franken RX",
+                "lua_name": "Frank 2400RX",
+                "layout_file": "Frank 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "rx_vtx": {
+                "product_name": "Generic ESP32 2.4Ghz Rx and VTx",
+                "lua_name": "Rx+VTx 2400RX",
+                "layout_file": "Generic 2400 Whoop Rx and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity": {
+                "product_name": "Generic ESP32 2.4Ghz Diversity RX",
+                "lua_name": "Diversity 2.4RX",
+                "layout_file": "Generic 2400 Diversity.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity_vtx": {
+                "product_name": "Generic ESP32 2.4Ghz Diversity and VTx RX",
+                "lua_name": "Div+VTx 2.4RX",
+                "layout_file": "Generic 2400 Diversity and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
     },
@@ -332,13 +376,13 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 PA Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24s": {
                 "product_name": "MATEK R24-S 2.4GHz RX",
                 "lua_name": "MATEK R24-S",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24p": {
@@ -378,11 +422,11 @@
             "flash": {
                 "product_name": "NamimnoRC Flash 2.4GHz RX",
                 "lua_name": "Namimno 2400RX",
-                "layout_file": "Namimno FLASH 2400.json",
+                "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "flash-pa": {
-                "product_name": "NamimnoRC Flash 100mW 2.4GHz RX",
+                "product_name": "NamimnoRC Flash 100mW Diversity 2.4GHz RX",
                 "lua_name": "Namimno 2400RX",
                 "layout_file": "Namimno FLASH 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
@@ -446,7 +490,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Generic 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }

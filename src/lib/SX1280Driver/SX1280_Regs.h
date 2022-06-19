@@ -6,12 +6,18 @@
 
 #define SX1280_REG_SF_ADDITIONAL_CONFIG 0x925
 #define SX1280_REG_FREQ_ERR_CORRECTION  0x93C
-#define SX1280_REG_FLRC_CRC_POLY        0x9C6
 #define SX1280_REG_FLRC_CRC_SEED        0x9C8
 #define SX1280_REG_FLRC_SYNC_WORD       0x9CF
 
 #define SX1280_XTAL_FREQ 52000000
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))
+
+typedef enum
+{
+    SX1280_Radio_1 = 1 << 0,
+    SX1280_Radio_2 = 1 << 1,
+    SX1280_Radio_All = 0xFF,
+} SX1280_Radio_Number_t;
 
 typedef enum
 {
@@ -246,9 +252,9 @@ typedef enum
 typedef enum
 {
     SX1280_FLRC_CRC_OFF    = 0x00,
-    SX1280_FLRC_CRC_1_BYTE = 0x10,
-    SX1280_FLRC_CRC_2_BYTE = 0x20,
-    SX1280_FLRC_CRC_3_BYTE = 0x30,
+    SX1280_FLRC_CRC_2_BYTE = 0x10,
+    SX1280_FLRC_CRC_3_BYTE = 0x20,
+    SX1280_FLRC_CRC_4_BYTE = 0x30,
 } SX1280_RadioFlrcCrc_t;
 
 enum

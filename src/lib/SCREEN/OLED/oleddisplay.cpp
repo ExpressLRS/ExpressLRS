@@ -7,6 +7,7 @@
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 #include "options.h"
 #include "logging.h"
+#include "common.h"
 
 #if defined(PLATFORM_ESP32)
 #include "WiFi.h"
@@ -65,6 +66,11 @@ static void ghostChase()
 #endif
 
 static void helperDrawImage(menu_item_t menu);
+static void drawCentered(u8g2_int_t y, const char *str)
+{
+    u8g2_int_t x = (u8g2->getDisplayWidth() - u8g2->getStrWidth(str)) / 2;
+    u8g2->drawStr(x, y, str);
+}
 
 void OLEDDisplay::init()
 {
@@ -119,9 +125,19 @@ void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t
         power += " *";
     }
 
-    if (OPT_USE_OLED_SPI_SMALL)
+    u8g2->setFont(u8g2_font_t0_15_mr);
+    if (connectionState == radioFailed)
     {
-        u8g2->setFont(u8g2_font_t0_15_mr);
+        drawCentered(15, "BAD");
+        drawCentered(32, "RADIO");
+    }
+    else if (connectionState == noCrossfire)
+    {
+        drawCentered(15, "NO");
+        drawCentered(32, "HANDSET");
+    }
+    else if (OPT_USE_OLED_SPI_SMALL)
+    {
         u8g2->drawStr(0, 15, getValue(STATE_PACKET, rate_index));
         u8g2->drawStr(70, 15, getValue(STATE_TELEMETRY, ratio_index));
         u8g2->drawStr(0, 32, power.c_str());
@@ -129,7 +145,6 @@ void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t
     }
     else
     {
-        u8g2->setFont(u8g2_font_t0_15_mr);
         u8g2->drawStr(0, 13, message_string[message_index]);
         u8g2->drawStr(0, 45, getValue(STATE_PACKET, rate_index));
         u8g2->drawStr(70, 45, getValue(STATE_TELEMETRY, ratio_index));
@@ -312,11 +327,11 @@ void OLEDDisplay::displayBindStatus()
     u8g2->setFont(u8g2_font_t0_17_mr);
     if (OPT_USE_OLED_SPI_SMALL)
     {
-        u8g2->drawStr(0,15, "BINDING");
+        drawCentered(15, "BINDING...");
     }
     else
     {
-        u8g2->drawStr(0,29, "BINDING");
+        drawCentered(29, "BINDING...");
     }
     u8g2->sendBuffer();
 }
@@ -328,11 +343,27 @@ void OLEDDisplay::displayRunning()
     u8g2->setFont(u8g2_font_t0_17_mr);
     if (OPT_USE_OLED_SPI_SMALL)
     {
-        u8g2->drawStr(0,15, "RUNNING");
+        drawCentered(15, "RUNNING...");
     }
     else
     {
-        u8g2->drawStr(0,29, "RUNNING");
+        drawCentered(29, "RUNNING...");
+    }
+    u8g2->sendBuffer();
+}
+
+void OLEDDisplay::displaySending()
+{
+    // TODO: Put wifi image?
+    u8g2->clearBuffer();
+    u8g2->setFont(u8g2_font_t0_17_mr);
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
+        drawCentered(15, "SENDING...");
+    }
+    else
+    {
+        drawCentered(29, "SENDING...");
     }
     u8g2->sendBuffer();
 }
@@ -373,6 +404,7 @@ static void helperDrawImage(menu_item_t menu)
             case STATE_VTX_CHANNEL:
             case STATE_VTX_POWER:
             case STATE_VTX_PITMODE:
+            case STATE_VTX_SEND:
                 u8g2->drawXBM(x_pos, y_pos, 32, 32, vtx_img32);
                 break;
             case STATE_WIFI:

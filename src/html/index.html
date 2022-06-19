@@ -1,0 +1,217 @@
+@@require(PLATFORM, VERSION, isTX, sx127x)
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Welcome to your ExpressLRS System</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="elrs.css" />
+</head>
+
+<body>
+	<header class="mui-appbar mui--z1 mui--text-center elrs-header">
+		@@include("logo-template.svg")
+		<h1><b>ExpressLRS</b></h1>
+		<span id="product_name"></span><br/>
+		<b>Firmware Rev. </b>@@{VERSION} <span id="reg_domain"></span>
+	</header>
+	<br/>
+	<div class="mui-container-fluid">
+		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
+
+			<ul class="mui-tabs__bar mui-tabs__bar--justified">
+				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-4">WiFi</a></li>
+@@if not isTX:
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Model</a></li>
+@@end
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Update</a></li>
+			</ul>
+
+			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
+				<div class="mui-panel">
+					<h2>Runtime Options</h2>
+					<br/>
+					<div class="mui-textfield">
+						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
+						<label for="phrase">Binding Phrase</label>
+					</div>
+					<form id='upload_options' method='POST' action="/options">
+						<input type="hidden" id="customised" name="customised" value="true"/>
+						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
+						<input type="hidden" id='wifi-password' name='wifi-password'/>
+						<div class="mui-textfield">
+							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
+							<label>UID (Auto updated by changing the bind-phrase above)</label>
+						</div>
+@@if sx127x:
+						<div class="mui-select">
+							<select id='domain' name='domain'>
+								<option value='0'>AU915</option>
+								<option value='1'>FCC915</option>
+								<option value='2'>EU868</option>
+								<option value='3'>IN866</option>
+								<option value='4'>AU433</option>
+								<option value='5'>EU433</option>
+							</select>
+							<label>Regulatory domain</label>
+						</div>
+@@end
+						<div class="mui-textfield">
+							<input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text'/>
+							<label>WiFi "auto on" interval (s)</label>
+						</div>
+@@if isTX:
+						<div class="mui-textfield">
+							<input size='5' id='tlm-interval' name='tlm-interval' type='text'/>
+							<label>TLM report interval (ms)</label>
+						</div>
+						<div class="mui-checkbox">
+							<input id='uart-inverted' name='uart-inverted' type='checkbox'/>
+							<label>UART inverted</label>
+						</div>
+						<div class="mui-textfield">
+							<input size='3' id='fan-runtime' name='fan-runtime' type='text'/>
+							<label>Fan runtime (s)</label>
+						</div>
+						<div class="mui-checkbox">
+							<input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>
+							<label>Unlock higher power</label>
+						</div>
+@@else:
+						<div class="mui-textfield">
+							<input size='7' id='rcvr-uart-baud' name='rcvr-uart-baud' type='text'/>
+							<label>UART baud</label>
+						</div>
+						<div class="mui-checkbox">
+							<input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/>
+							<label>Invert TX pin</label>
+						</div>
+						<div class="mui-checkbox">
+							<input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>
+							<label>Lock on first conenction</label>
+						</div>
+@@end
+						<input id='submit-options' type='button' value='Save & Reboot' class="mui-btn mui-btn--primary">
+					</form>
+				</div>
+				<div class="mui-panel">
+					<a id="reset-options" href="#">Reset all runtime options to defaults.</a>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-justified-2">
+				<div class="mui-panel">
+					<h2>Firmware Update</h2>
+					Choose a file to update module firmware. Select the correct .bin file for @@{PLATFORM} otherwise a bad flash may occur.
+					If this happens you will need to recover via USB/Serial. You may also download the
+					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
+					<br/><br/>
+					<form id='upload_form' method='POST' enctype='multipart/form-data'>
+						<div class="group">
+							<input id='firmware_file' type='file' name='update'>
+							<input type='submit' value='Update' class="mui-btn mui-btn--primary">
+						</div>
+						<br/>
+						<h3 id="status"></h3>
+						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
+					</form>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-justified-3">
+				<div class="mui-panel">
+					<h2>Model Match</h2>
+					Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
+					in the ELRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
+					<br/><br/>
+					<form class="mui-form--inline" action='/modelmatch' id='modelmatch' method='POST'>
+						<div class="mui-checkbox">
+							<input id='model-match' name='model-match' type='checkbox'/>
+							<label>Enable Model Match</label>
+						</div>
+						<div class="mui-textfield">
+							<input id='modelid' type='text' name='modelid' value="255" required/>
+							<label>Model ID</label>
+						</div>
+						<input type='submit' value='Save' class="mui-btn mui-btn--primary">
+					</form>
+				</div>
+				<div id="pwm_tab" class="mui-panel">
+					<h2>PWM Output</h2>
+					Set PWM output mode and failsafe positions.
+					<ul>
+						<li><b>Output:</b> Receiver output pin</li>
+						<li><b>Mode:</b> Output frequency or binary On/Off mode</li>
+						<li><b>Input:</b> Input channel from the handset</li>
+						<li><b>Invert:</b> Invert input channel position</li>
+						<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
+						<li><b>Failsafe:</b> Absolute position to set the servo on failsafe</li>
+						<ul>
+							<li>Does not use "Invert" flag</li>
+							<li>Value will be halved if "750us" flag is set</li>
+							<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
+						</ul>
+					</ul>
+					<br/><br/>
+					<form action="/pwm" id="pwm" method="POST">
+					</form>
+				</div>
+				<div class="mui-panel">
+					<a id="reset-model" href="#">Reset all model settings to defaults.</a>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-justified-4">
+				<div class="mui-panel">
+					<h2 id="apmode" style="display:none;">Currently in Access Point mode</h2>
+					<h2 id="stamode" style="display:none;">Current Home network: <span id="ssid"></span></h2>
+					Here you can join a network and it will be saved as your Home network. When you enable WiFi in range of your Home network,
+					ExpressLRS will automatically connect to it. In Access Point (AP) mode, the network name is ExpressLRS TX or ExpressLRS RX
+					with password "expresslrs".
+					<br/>
+					<br/>
+					<form id="sethome" method="POST" autocomplete="off" class="mui-form">
+						<div class="mui-radio">
+							<input type="radio" id="nt0" name="networktype" value="0" checked>
+							<label for="nt0">Set new Home network</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt1" name="networktype" value="1">
+							<label for="nt1">One-time connect to network, retain Home network setting</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt2" name="networktype" value="2">
+							<label for="nt2">Start AP mode, retain Home network setting</label>
+						</div>
+						<div class="mui-radio">
+							<input type="radio" id="nt3" name="networktype" value="3">
+							<label for="nt3">Forget Home network setting, always use AP mode</label>
+						</div>
+						<br/>
+						<div id="credentials">
+							<div class="autocomplete mui-textfield" style="position:relative;">
+								<div id="loader" style="position:absolute;right:0;width: 28px;height: 28px;" class="loader"></div>
+								<input id="network" type="text" name="network" placeholder="SSID"/>
+								<label>WiFi SSID</label>
+							</div>
+							<div class="mui-textfield">
+								<input size='64' id='password' name='password' type='password'/>
+								<label>WiFi password</label>
+							</div>
+						</div>
+						<button type="submit" class="mui-btn mui-btn--primary">Confirm</button>
+					</form>
+				</div>
+				<div class="mui-panel">
+					<a id="connect" href="#">Connect to Home network: <span id="homenet"></span></a>
+				</div>
+			</div>
+		</div>
+	</div>
+	@@include("footer-template.html")
+</body>
+<script src="mui.js"></script>
+<script src="scan.js"></script>
+</html>

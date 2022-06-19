@@ -256,6 +256,10 @@ static int event()
                 digitalWrite(GPIO_PIN_LED_RED, LOW);
                 return flashLED(GPIO_PIN_LED_BLUE, GPIO_LED_BLUE_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
             }
+            else if (GPIO_PIN_LED_RED != UNDEF_PIN)
+            {
+                return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_WIFI_UPDATE, sizeof(LEDSEQ_WIFI_UPDATE));
+            }
             return DURATION_NEVER;
         #endif
         #if defined(TARGET_RX)
@@ -286,6 +290,12 @@ static int event()
             return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         }
         return DURATION_NEVER;
+    case noCrossfire:
+        if (GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
+            // technically nocrossfire is {10,100} but {20,100} is close enough
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
     default:
         return DURATION_NEVER;
     }

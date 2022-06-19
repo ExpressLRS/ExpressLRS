@@ -16,7 +16,7 @@
 
 // DEBUG_LOG_VERBOSE and DEBUG_RX_SCOREBOARD implies DEBUG_LOG
 #if !defined(DEBUG_LOG)
-  #if defined(DEBUG_LOG_VERBOSE) || defined(DEBUG_RX_SCOREBOARD)
+  #if defined(DEBUG_LOG_VERBOSE) || (defined(DEBUG_RX_SCOREBOARD) && TARGET_RX) || defined(DEBUG_INIT)
     #define DEBUG_LOG
   #endif
 #endif
@@ -31,11 +31,18 @@ extern Stream *SerialLogger;
 
 // #define LOG_USE_PROGMEM
 
-extern void debugPrintf(const char* fmt, ...);
+void debugPrintf(const char* fmt, ...);
+#if defined(LOG_INIT)
+void debugCreateInitLogger();
+void debugFreeInitLogger();
+#else
+#define debugCreateInitLogger()
+#define debugFreeInitLogger()
+#endif
 
 #if defined(CRITICAL_FLASH) || ((defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
   #define INFOLN(msg, ...)
-  #define ERRLN(msg)
+  #define ERRLN(msg, ...)
 #else
   #define INFOLN(msg, ...) { \
       debugPrintf(msg, ##__VA_ARGS__); \

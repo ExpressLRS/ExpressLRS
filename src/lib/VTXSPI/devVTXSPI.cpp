@@ -1,13 +1,15 @@
 #if defined(GPIO_PIN_SPI_VTX_NSS)
 
+#include "devVTXSPI.h"
 #include "targets.h"
 #include "common.h"
-#include "device.h"
-#include "devVTXSPI.h"
 #include "helpers.h"
 #include "hwTimer.h"
 #include "logging.h"
 #include <SPI.h>
+#if defined(PLATFORM_ESP32)
+#include <analogWrite.h>
+#endif
 
 #define SYNTHESIZER_REGISTER_A                  0x00
 #define SYNTHESIZER_REGISTER_B                  0x01
@@ -23,8 +25,15 @@
 
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
+#if defined(PLATFORM_ESP32)
+// ESP32 DAC pins are 0-4095
+#define MIN_PWM                                 1 // Testing required.
+#define MAX_PWM                                 250 // Absolute max is 4095.  But above 250 does nothing.
+#else
+// ESP8285 PWM is 0-4095
 #define MIN_PWM                                 1000 // Testing required.
 #define MAX_PWM                                 3600 // Absolute max is 4095.  But above 3500 does nothing.
+#endif
 #define VPD_BUFFER                              5
 
 #define READ_BIT                                0x00
@@ -37,7 +46,6 @@
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
 extern bool ICACHE_RAM_ATTR IsArmed();
-static void VTxOutputMinimum(void);
 
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
@@ -50,7 +58,7 @@ static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
 #define VPD_SETPOINT_0_MW                       0
-#define VPD_SETPOINT_YOLO_MW                    1500
+#define VPD_SETPOINT_YOLO_MW                    2000
 #if defined(TARGET_UNIFIED_RX)
 const uint16_t *VpdSetPointArray25mW = nullptr;
 const uint16_t *VpdSetPointArray100mW = nullptr;
@@ -71,15 +79,29 @@ static const uint16_t freqTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
+static SPIClass *vtxSPI;
 static void rtc6705WriteRegister(uint32_t regData)
 {
-    uint8_t buf[BUF_PACKET_SIZE];
-    memcpy (buf, (byte *) &regData, BUF_PACKET_SIZE);
-    SPI.setBitOrder(LSBFIRST);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
-    SPI.transfer(buf, BUF_PACKET_SIZE);
-    digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
-    SPI.setBitOrder(MSBFIRST);
+    // When sharing the SPI Bus control of the NSS pin is done by us
+    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    {
+        vtxSPI->setBitOrder(LSBFIRST);
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
+    }
+
+    #if defined(PLATFORM_ESP32)
+        vtxSPI->transferBits(regData, nullptr, 25);
+    #else
+        uint8_t buf[BUF_PACKET_SIZE];
+        memcpy(buf, (byte *)&regData, BUF_PACKET_SIZE);
+        vtxSPI->transfer(buf, BUF_PACKET_SIZE);
+    #endif
+
+    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    {
+        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+        vtxSPI->setBitOrder(MSBFIRST);
+    }
 }
 
 static void rtc6705ResetSynthRegA()
@@ -127,7 +149,7 @@ static void RfAmpVrefOff()
     RfAmpVrefState = 0;
 }
 
-static void VTxOutputMinimum()
+void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
@@ -230,14 +252,34 @@ static void initialize()
 
     if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
-        digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+        if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
+        {
+            vtxSPI = new SPIClass();
+            #if defined(PLATFORM_ESP32)
+            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            #else
+            vtxSPI->pins(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            vtxSPI->begin();
+            #endif
+            vtxSPI->setHwCs(true);
+            vtxSPI->setBitOrder(LSBFIRST);
+        }
+        else
+        {
+            vtxSPI = &SPI;
+            pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
+            digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
+        }
 
         pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
         digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
-        pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-        analogWriteFreq(10000); // 10kHz
+        #if defined(PLATFORM_ESP8266)
+            pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+            analogWriteFreq(10000); // 10kHz
+        #else
+            analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
+        #endif
         analogWriteResolution(12); // 0 - 4095
         analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 
@@ -266,7 +308,7 @@ static int event()
         return DURATION_NEVER;
     }
 
-    if (IsArmed())
+    if (CRSF::IsArmed())
     {
         vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
     }

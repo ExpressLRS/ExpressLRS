@@ -85,6 +85,8 @@ def appendConfiguration(source, target, env):
         moduletype = 'tx' if '_TX_' in target_name else 'rx'
         frequency = '2400' if '_2400_' in target_name else '900'
 
+    platform = '32' if moduletype == 'rx' and env.get('PIOPLATFORM', '') in ['espressif32'] else ''
+
     parts = re.search('(.*)_VIA_.*', target_name)
     if parts and parts.group(1):
         target_name = parts.group(1).replace('_', ' ')
@@ -107,7 +109,7 @@ def appendConfiguration(source, target, env):
     else:
         products = []
         i = 0
-        for k in jmespath.search(f'*."{moduletype}_{frequency}".*[].product_name', targets):
+        for k in jmespath.search(f'*."{moduletype}{platform}_{frequency}".*[].product_name', targets):
             i += 1
             products.append(k)
             print(f"{i}) {k}")
@@ -115,7 +117,7 @@ def appendConfiguration(source, target, env):
         choice = input()
         if choice != "":
             config = products[int(choice)-1]
-            config = jmespath.search(f'[[*."{moduletype}_{frequency}"][].*][][?product_name==`{config}`][]', targets)[0]
+            config = jmespath.search(f'[[*."{moduletype}{platform}_{frequency}"][].*][][?product_name==`{config}`][]', targets)[0]
 
     if config is not None:
         product_name = config['product_name']

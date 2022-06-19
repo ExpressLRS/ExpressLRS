@@ -21,6 +21,8 @@ static char modelMatchUnit[] = " (ID: 00)";
 static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
+static const char switchmodeOpts4ch[] = "Wide;Hybrid";
+static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
@@ -28,9 +30,9 @@ static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
-    "25Hz;50Hz;100Hz;200Hz",
+    "25Hz;50Hz;100Hz;100Hz Full;200Hz",
 #elif defined(RADIO_SX128X)
-    "50Hz;150Hz;250Hz;500Hz;D250;D500;F1000",
+    "50Hz;100Hz Full;150Hz;250Hz;333Hz Full;500Hz;D250;D500;F500;F1000",
 #else
     #error Invalid radio configuration!
 #endif
@@ -40,7 +42,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
     tlmBandwidth
 };
 
@@ -84,7 +86,7 @@ static struct luaItem_string luaCELimit = {
 static struct luaItem_selection luaSwitch = {
     {"Switch Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Hybrid;Wide",
+    switchmodeOpts4ch,
     emptySpace
 };
 
@@ -116,7 +118,7 @@ static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
@@ -231,7 +233,6 @@ static struct luaItem_selection luaDvrStopDelay = {
 
 static char luaBadGoodString[10];
 
-extern bool ICACHE_RAM_ATTR IsArmed();
 extern TxConfig config;
 extern void VtxTriggerSend();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
@@ -243,42 +244,10 @@ extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 #endif
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void beginWebsever();
 #endif
-
-static uint8_t getSeparatorIndex(uint8_t index, char *searchArray)
-{
-  //return the separator Index + 1
-  uint8_t arrayCount = 0;
-  uint8_t returnvalue = 0;
-  uint8_t SeparatorCount = 0;
-  char *c = searchArray;
-  int i = 0;
-  while (c[i] != '\0')
-  {
-    //treat symbols as separator except : !,",#,$,%,&,',(,),*,+,,,-,.,/ as these would probably inside our label names
-    if (c[i] < '!' || (c[i] > '9' && c[i] < 'A'))
-    {
-      SeparatorCount++;
-      arrayCount++;
-      //if found separator is equal to the nth(index) requested separator,
-      //return the start of the labelSpace
-      if (SeparatorCount == index+1) {
-        return returnvalue;
-      } else {
-        returnvalue = arrayCount;
-      }
-    } else {
-      arrayCount++;
-    }
-    //increment the char count until null termination
-    i++;
-  }
-  //if we reach null termination and haven't got the requested index, just return 0, which would overwrite the first label
-  return returnvalue;
-}
 
 static void luadevUpdateRateSensitivity() {
   itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
@@ -293,10 +262,23 @@ static void luadevUpdateModelID() {
 static void luadevUpdateTlmBandwidth()
 {
   expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
-  if (eRatio == TLM_RATIO_NO_TLM)
+  // TLM_RATIO_STD / TLM_RATIO_DISARMED
+  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
+  {
+    // For Standard ratio, display the ratio instead of bps
+    strcpy(tlmBandwidth, " (1:");
+    uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    itoa(ratioDiv, &tlmBandwidth[4], 10);
+    strcat(tlmBandwidth, ")");
+  }
+
+  // TLM_RATIO_NO_TLM
+  else if (eRatio == TLM_RATIO_NO_TLM)
   {
     tlmBandwidth[0] = '\0';
   }
+
+  // All normal ratios
   else
   {
     tlmBandwidth[0] = ' ';
@@ -304,7 +286,16 @@ static void luadevUpdateTlmBandwidth()
     uint16_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
     uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
-    uint32_t bandwidthValue = ELRS_TELEMETRY_BYTES_PER_CALL * 8U * burst * hz / ratiodiv / (burst + 1);
+    uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_TELEMETRY_BYTES_PER_CALL : ELRS4_TELEMETRY_BYTES_PER_CALL;
+    uint32_t bandwidthValue = bytesPerCall * 8U * burst * hz / ratiodiv / (burst + 1);
+    if (OtaIsFullRes)
+    {
+      // Due to fullres also packing telemetry into the LinkStats packet, there is at least
+      // N bytes more data for every rate except 100Hz 1:128, and 2*N bytes more for many
+      // rates. The calculation is a more complex though, so just approximate some of the
+      // extra bandwidth
+      bandwidthValue += 8U * (ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
+    }
 
     itoa(bandwidthValue, &tlmBandwidth[2], 10);
     strcat(tlmBandwidth, "bps)");
@@ -341,7 +332,7 @@ static void luadevGeneratePowerOpts()
   *out = '\0';
 }
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
@@ -432,10 +423,9 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 static void updateFolderName_TxPower()
 {
   uint8_t txPwrDyn = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  uint8_t pwrFolderLabelOffset = getSeparatorIndex(2, pwrFolderDynamicName); // start writing name after the 2nd space
+  uint8_t pwrFolderLabelOffset = 10; // start writing after "TX Power ("
 
   // Power Level
-  pwrFolderDynamicName[pwrFolderLabelOffset++] = '(';
   pwrFolderLabelOffset += findLuaSelectionLabel(&luaPower, &pwrFolderDynamicName[pwrFolderLabelOffset], config.GetPower() - MinPower);
 
   // Dynamic Power
@@ -455,8 +445,7 @@ static void updateFolderName_VtxAdmin()
   if (vtxBand)
   {
     luaVtxFolder.dyn_name = vtxFolderDynamicName;
-    uint8_t vtxFolderLabelOffset = getSeparatorIndex(2,vtxFolderDynamicName); // start writing name after the 2nd space
-    vtxFolderDynamicName[vtxFolderLabelOffset++] = '(';
+    uint8_t vtxFolderLabelOffset = 11; // start writing after "VTX Admin ("
 
     // Band
     vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxBand, &vtxFolderDynamicName[vtxFolderLabelOffset], vtxBand);
@@ -526,21 +515,44 @@ void luadevUpdateFolderNames()
   luadevUpdateTlmBandwidth();
 }
 
+uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
+{
+  // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
+  // range for 4ch mode
+  if (packetSize == OTA4_PACKET_SIZE)
+  {
+    if (eSwitchMode > smHybridOr16ch)
+      return smWideOr8ch;
+  }
+
+  return eSwitchMode;
+}
+
 static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      if ((arg < RATE_MAX) && (arg >= 0))
+    if (arg < RATE_MAX)
+    {
+      uint8_t newRate = RATE_MAX - 1 - arg;
+      newRate = adjustPacketRateForBaud(newRate);
+      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
+      // If the switch mode is going to change, block the change while connected
+      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
-        uint8_t currentRate = RATE_MAX - 1 - arg;
-        currentRate = adjustPacketRateForBaud(currentRate);
-        config.SetRate(currentRate);
+        config.SetRate(newRate);
+        config.SetSwitchMode(newSwitchMode);
       }
+      else
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+    }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      if ((arg <= (uint8_t)TLM_RATIO_1_2) && (arg >= (uint8_t)TLM_RATIO_NO_TLM))
+      expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
+      if (eRatio <= TLM_RATIO_DISARMED)
       {
-        config.SetTlm((expresslrs_tlm_ratio_e)arg);
+        config.SetTlm(eRatio);
       }
     });
     #if defined(TARGET_TX_FM30)
@@ -554,11 +566,8 @@ static void registerLuaParameters()
       // the pack and unpack functions are matched
       if (connectionState == disconnected)
       {
-        // +1 to the mode because 1-bit was mode 0 and has been removed
-        // The modes should be updated for 1.1RC so mode 0 can be smHybrid
-        uint32_t newSwitchMode = (arg + 1) & 0b11;
-        config.SetSwitchMode(newSwitchMode);
-        OtaSetSwitchMode((OtaSwitchMode_e)newSwitchMode);
+        config.SetSwitchMode(arg);
+        OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
       }
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
@@ -619,7 +628,7 @@ static void registerLuaParameters()
   }
   // WIFI folder
 
-  #if defined(PLATFORM_ESP32)
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
   #else
@@ -628,7 +637,7 @@ static void registerLuaParameters()
   }
   #endif
   if (HAS_RADIO) {
-    registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd,luaWiFiFolder.common.id);
+    registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
 
     if (OPT_USE_TX_BACKPACK) {
       registerLUAParameter(&luaTxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
@@ -676,10 +685,15 @@ static void registerLuaParameters()
 
 static int event()
 {
+  if (connectionState > FAILURE_STATES)
+  {
+    return DURATION_NEVER;
+  }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch, (uint8_t)(config.GetSwitchMode() - 1)); // -1 for missing sm1Bit
+  setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
+  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
@@ -718,6 +732,10 @@ static int timeout()
 
 static int start()
 {
+  if (connectionState > FAILURE_STATES)
+  {
+    return DURATION_NEVER;
+  }
   CRSF::RecvParameterUpdate = &luaParamUpdateReq;
   registerLuaParameters();
 

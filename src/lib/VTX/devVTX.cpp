@@ -14,8 +14,6 @@ extern CRSF crsf;
 extern Stream *TxBackpack;
 uint8_t pitmodeAuxState = 0;
 
-extern bool ICACHE_RAM_ATTR IsArmed();
-
 static enum VtxSendState_e
 {
   VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
@@ -39,7 +37,7 @@ void VtxPitmodeSwitchUpdate()
 
     uint8_t auxInverted = config.GetVtxPitmode() % 2;
     uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
-    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelDataIn[auxNumber]) ^ auxInverted;
+    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelData[auxNumber]) ^ auxInverted;
 
     if (pitmodeAuxState != currentPitmodeAuxState)
     {
@@ -83,7 +81,7 @@ static void VtxConfigToMSPOut()
 
     crsf.AddMspMessage(&packet);
 
-    if (!IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    if (!crsf.IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
         MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
     }

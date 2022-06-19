@@ -54,6 +54,8 @@ public:
     fsm_state_t getParentState();
     void popState() { force_pop = true; }
 
+    void jumpTo(fsm_state_entry_t const *fsm, fsm_state_t state);
+
 private:
     const fsm_state_entry_t *root_fsm;
 

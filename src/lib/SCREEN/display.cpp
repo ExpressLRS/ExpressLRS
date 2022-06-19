@@ -14,10 +14,10 @@ const char *Display::main_menu_strings[][2] = {
     {"TELEM", "RATIO"},
     {"MOTION", "DETECT"},
     {"FAN", "CONTROL"},
-    {"VTX", "ADMIN"},
     {"BLE", "GAMEPAD"},
     {"BIND", "MODE"},
     {"WIFI", "ADMIN"},
+    {"VTX", "ADMIN"},
 
     {"MAX", "POWER"},
     {"DYNAMIC", "POWER"},
@@ -37,11 +37,14 @@ const char *Display::main_menu_strings[][2] = {
 #if defined(RADIO_SX128X)
 const char *rate_string[] = {
     "F1000Hz",
+    "F500",
     "D500Hz",
     "D250Hz",
     "500Hz",
+    "333Hz Full",
     "250Hz",
     "150Hz",
+    "100Hz Full",
     "50Hz"
 };
 #else
@@ -74,6 +77,7 @@ static const char *dynamic_string[] = {
 };
 
 static const char *ratio_string[] = {
+    "Std",
     "Off",
     "1:128",
     "1:64",
@@ -81,7 +85,8 @@ static const char *ratio_string[] = {
     "1:16",
     "1:8",
     "1:4",
-    "1:2"
+    "1:2",
+    "Race"
 };
 
 static const char *powersaving_string[] = {

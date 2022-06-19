@@ -44,6 +44,7 @@ typedef enum message_index_e {
     MSG_CONNECTED,
     MSG_ARMED,
     MSG_MISMATCH,
+    MSG_ERROR,
     MSG_INVALID
 } message_index_t;
 
@@ -71,6 +72,7 @@ public:
     virtual void displayWiFiConfirm() = 0;
     virtual void displayWiFiStatus() = 0;
     virtual void displayRunning() = 0;
+    virtual void displaySending() = 0;
 
     int getValueCount(menu_item_t menu);
     const char *getValue(menu_item_t menu, uint8_t value_index);

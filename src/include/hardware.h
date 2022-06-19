@@ -7,12 +7,15 @@ typedef enum {
 
     // Radio
     HARDWARE_radio_busy,
+    HARDWARE_radio_busy_2,
     HARDWARE_radio_dio0,
     HARDWARE_radio_dio1,
+    HARDWARE_radio_dio1_2,
     HARDWARE_radio_dio2,
     HARDWARE_radio_miso,
     HARDWARE_radio_mosi,
     HARDWARE_radio_nss,
+    HARDWARE_radio_nss_2,
     HARDWARE_radio_rst,
     HARDWARE_radio_sck,
     HARDWARE_radio_dcdc,
@@ -29,6 +32,8 @@ typedef enum {
     HARDWARE_power_apc2,
     HARDWARE_power_rxen,
     HARDWARE_power_txen,
+    HARDWARE_power_rxen_2,
+    HARDWARE_power_txen_2,
     HARDWARE_power_min,
     HARDWARE_power_high,
     HARDWARE_power_max,
@@ -64,6 +69,12 @@ typedef enum {
     HARDWARE_led_rgb,
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
+    HARDWARE_ledidx_rgb_status,
+    HARDWARE_ledidx_rgb_status_count,
+    HARDWARE_ledidx_rgb_vtx,
+    HARDWARE_ledidx_rgb_vtx_count,
+    HARDWARE_ledidx_rgb_boot,
+    HARDWARE_ledidx_rgb_boot_count,
 
     // OLED/TFT
     HARDWARE_screen_cs,       // SPI
@@ -106,12 +117,15 @@ typedef enum {
     HARDWARE_vbat_scale,
 
     // VTX
-    HARDWARE_rf_amp_pwm,
-    HARDWARE_rf_amp_vpd,
-    HARDWARE_rf_amp_vref,
-    HARDWARE_spi_vtx_nss,
-    HARDWARE_vpd_25mW,
-    HARDWARE_vpd_100mW,
+    HARDWARE_vtx_amp_pwm,
+    HARDWARE_vtx_amp_vpd,
+    HARDWARE_vtx_amp_vref,
+    HARDWARE_vtx_nss,
+    HARDWARE_vtx_miso,
+    HARDWARE_vtx_mosi,
+    HARDWARE_vtx_sck,
+    HARDWARE_vtx_amp_vpd_25mW,
+    HARDWARE_vtx_amp_vpd_100mW,
 
     HARDWARE_LAST
 } nameType;
