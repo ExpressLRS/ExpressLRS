@@ -85,12 +85,11 @@
 							<label>UART baud</label>
 						</div>
 						<div class="mui-checkbox">
-							<input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/>
-							<label>Invert TX pin</label>
+
+							<label><input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/> Invert TX pin</label>
 						</div>
 						<div class="mui-checkbox">
-							<input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>
-							<label>Lock on first conenction</label>
+							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/> Lock on first conenction</label>
 						</div>
 @@end
 						<input id='submit-options' type='button' value='Save & Reboot' class="mui-btn mui-btn--primary">
@@ -126,16 +125,15 @@
 					Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
 					in the ELRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
 					<br/><br/>
-					<form class="mui-form--inline" action='/modelmatch' id='modelmatch' method='POST'>
+					<form class="mui-form--inline elrs-inline-form" action='/modelmatch' id='modelmatch' method='POST'>
 						<div class="mui-checkbox">
-							<input id='model-match' name='model-match' type='checkbox'/>
-							<label>Enable Model Match</label>
+							<label><input id='model-match' name='model-match' type='checkbox'/> Enable Model Match</label>
 						</div>
 						<div class="mui-textfield">
 							<input id='modelid' type='text' name='modelid' value="255" required/>
 							<label>Model ID</label>
 						</div>
-						<input type='submit' value='Save' class="mui-btn mui-btn--primary">
+						<input type='submit' value='Save' class="mui-btn mui-btn--small mui-btn--primary">
 					</form>
 				</div>
 				<div id="pwm_tab" class="mui-panel">
@@ -156,6 +154,17 @@
 					</ul>
 					<br/><br/>
 					<form action="/pwm" id="pwm" method="POST">
+					</form>
+				</div>
+				<div class="mui-panel">
+					<h2>Force telemetry off</h2>
+					When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the Telem Ratio setting on the TX and never send telemetry from this receiver.
+					<br/><br/>
+					<form class="mui-form--inline elrs-inline-form" action='/forceTelemetry' id='forcetlm' method='POST'>
+						<div class="mui-checkbox">
+							<label><input id='force-tlm' name='force-tlm' type='checkbox' value="1"/> Force telemetry OFF on this receiver</label>
+						</div>
+						<input type='submit' value='Save' class="mui-btn mui-btn--small mui-btn--primary">
 					</form>
 				</div>
 				<div class="mui-panel">
