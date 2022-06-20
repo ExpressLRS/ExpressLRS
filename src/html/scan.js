@@ -181,17 +181,23 @@ function getNetworks() {
 // =========================================================
 
 function uploadFile() {
-  const file = _('firmware_file').files[0];
-  const formdata = new FormData();
-  formdata.append('upload', file, file.name);
-  const ajax = new XMLHttpRequest();
-  ajax.upload.addEventListener('progress', progressHandler, false);
-  ajax.addEventListener('load', completeHandler, false);
-  ajax.addEventListener('error', errorHandler, false);
-  ajax.addEventListener('abort', abortHandler, false);
-  ajax.open('POST', '/update');
-  ajax.setRequestHeader('X-FileSize', file.size);
-  ajax.send(formdata);
+  _('upload_btn').disabled = true
+  try {
+    const file = _('firmware_file').files[0];
+    const formdata = new FormData();
+    formdata.append('upload', file, file.name);
+    const ajax = new XMLHttpRequest();
+    ajax.upload.addEventListener('progress', progressHandler, false);
+    ajax.addEventListener('load', completeHandler, false);
+    ajax.addEventListener('error', errorHandler, false);
+    ajax.addEventListener('abort', abortHandler, false);
+    ajax.open('POST', '/update');
+    ajax.setRequestHeader('X-FileSize', file.size);
+    ajax.send(formdata);
+  }
+  catch (e) {
+    _('upload_btn').disabled = false
+  }
 }
 
 function progressHandler(event) {
