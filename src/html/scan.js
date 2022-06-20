@@ -210,6 +210,7 @@ function progressHandler(event) {
 function completeHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
+  _('upload_btn').disabled = false
   const data = JSON.parse(event.target.responseText);
   if (data.status === 'ok') {
     function showMessage() {
@@ -278,6 +279,7 @@ function completeHandler(event) {
 function errorHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
+  _('upload_btn').disabled = false
   cuteAlert({
     type: 'error',
     title: 'Update Failed',
@@ -288,6 +290,7 @@ function errorHandler(event) {
 function abortHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
+  _('upload_btn').disabled = false
   cuteAlert({
     type: 'info',
     title: 'Update Aborted',
