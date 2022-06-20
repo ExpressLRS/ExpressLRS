@@ -47,7 +47,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - id: set-targets
-      run: echo "::set-output name=targets::[$(grep -r "\[env:" src/targets | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
+      run: echo "::set-output name=targets::[$( (grep -r "\[env:.*STLINK\]" src/targets/ ; grep "\[env:.*UART\]" src/targets/unified.ini) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
 
   build:
     needs: targets
@@ -108,6 +108,10 @@ jobs:
             mv .pio/build/${{ matrix.target }} ~/artifacts/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
             ;;
         esac
+        if [[ ${{matrix.target}} == *ESP32* ]] ; then 
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/bin/bootloader_dio_40m.bin ~/artifacts/
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ~/artifacts/
+        fi
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
