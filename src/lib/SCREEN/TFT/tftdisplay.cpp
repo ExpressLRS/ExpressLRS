@@ -250,7 +250,7 @@ void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t 
         if (changed & CHANGED_TELEMETRY)
         {
             displayFontCenter(IDLE_PAGE_STAT_START_X, SCREEN_X, IDLE_PAGE_RATIO_START_Y,  SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
-                                getValue(STATE_TELEMETRY, ratio_index), text_color, WHITE);
+                                getValue(STATE_TELEMETRY_CURR, ratio_index), text_color, WHITE);
         }
     }
 

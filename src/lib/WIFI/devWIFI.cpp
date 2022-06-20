@@ -285,6 +285,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   }
   #if defined(TARGET_RX)
   s += ",\"modelid\":" + String(config.GetModelId());
+  s += ",\"forcetlm\":" + String(config.GetForceTlmOff());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (GPIO_PIN_PWM_OUTPUTS_COUNT > 0) {
@@ -414,6 +415,17 @@ static void WebUpdateModelId(AsyncWebServerRequest *request)
   request->send(response);
   request->client()->close();
   rebootTime = millis() + 100;
+}
+
+static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
+{
+  long forceTlm = request->arg("force-tlm").toInt();
+
+  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
+  config.SetForceTlmOff(forceTlm != 0);
+  config.Commit();
+
+  request->send(200, "text/plain", "Force telemetry updated");
 }
 #endif
 
@@ -752,6 +764,7 @@ static void startServices()
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
+    server.on("/forceTelemetry", WebUpdateForceTelemetry);
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);

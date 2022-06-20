@@ -158,11 +158,11 @@ typedef struct {
                 onLoan:1,
                 power:4,
                 antennaMode:2;  // 0=0, 1=1, 2=Diversity
-    uint8_t     powerOnCounter;
+    uint8_t     powerOnCounter:4,
+                forceTlmOff:1,
+                unused:3;       // FUTURE
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
-    uint8_t     forceTlmOff:1,
-                unused:7;       // FUTURE
 } rx_config_t;
 
 class RxConfig

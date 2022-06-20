@@ -37,19 +37,20 @@ const char *Display::main_menu_strings[][2] = {
 #if defined(RADIO_SX128X)
 const char *rate_string[] = {
     "F1000Hz",
-    "F500",
+    "F500Hz",
     "D500Hz",
     "D250Hz",
     "500Hz",
-    "333Hz Full",
+    "333 Full",
     "250Hz",
     "150Hz",
-    "100Hz Full",
+    "100 Full",
     "50Hz"
 };
 #else
 static const char *rate_string[] = {
     "200Hz",
+    "100 Full",
     "100Hz",
     "50Hz",
     "25Hz"
@@ -87,6 +88,17 @@ static const char *ratio_string[] = {
     "1:4",
     "1:2",
     "Race"
+};
+
+static const char *ratio_curr_string[] = {
+    "Off",
+    "1:2",
+    "1:4",
+    "1:8",
+    "1:16",
+    "1:32",
+    "1:64",
+    "1:128"
 };
 
 static const char *powersaving_string[] = {
@@ -187,6 +199,8 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
         return rate_string[value_index];
     case STATE_TELEMETRY:
         return ratio_string[value_index];
+    case STATE_TELEMETRY_CURR:
+        return ratio_curr_string[value_index];
     case STATE_POWERSAVE:
         return powersaving_string[value_index];
     case STATE_SMARTFAN:
