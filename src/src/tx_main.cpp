@@ -313,9 +313,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
+  OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)config.GetSwitchMode();
+
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
-    && (invertIQ == Radio.IQinverted))
+    && (invertIQ == Radio.IQinverted)
+    && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
   DBGLN("set rate %u", index);
@@ -330,7 +333,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
-  OtaUpdateSerializers((OtaSwitchMode_e)config.GetSwitchMode(), ModParams->PayloadLength);
+  OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
   TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
 
