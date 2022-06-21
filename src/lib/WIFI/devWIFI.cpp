@@ -411,11 +411,7 @@ static void WebUpdateModelId(AsyncWebServerRequest *request)
   config.SetModelId((uint8_t)modelid);
   config.Commit();
 
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Model Match updated, rebooting receiver");
-  response->addHeader("Connection", "close");
-  request->send(response);
-  request->client()->close();
-  rebootTime = millis() + 100;
+  request->send(200, "text/plain", "Model Match updated");
 }
 
 static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)

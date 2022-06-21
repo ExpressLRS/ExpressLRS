@@ -36,7 +36,6 @@ typedef enum
     connected,
     tentative,
     disconnected,
-    disconnectPending, // used on modelmatch change to drop the connection
     MODE_STATES,
     // States below here are special mode states
     noCrossfire,
