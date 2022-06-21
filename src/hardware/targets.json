@@ -368,7 +368,7 @@
             "nano": {
                 "product_name": "Jumper AION Nano 2.4GHz RX",
                 "lua_name": "AION 2G4NANORX",
-                "layout_file": "Jumper AION Nano RX.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
