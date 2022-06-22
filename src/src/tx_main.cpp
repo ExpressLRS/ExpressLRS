@@ -147,7 +147,12 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   crsf.LinkStatistics.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
   crsf.LinkStatistics.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
   crsf.LinkStatistics.uplink_Link_quality = ls->lq;
+#if defined(DEBUG_FREQ_CORRECTION)
+  // Don't descale the FreqCorrection value being send in SNR
+  crsf.LinkStatistics.uplink_SNR = snrScaled;
+#else
   crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(snrScaled);
+#endif
   crsf.LinkStatistics.active_antenna = ls->antenna;
   connectionHasModelMatch = ls->modelMatch;
   // -- downlink_SNR / downlink_RSSI is updated for any packet received, not just Linkstats

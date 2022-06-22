@@ -12,7 +12,7 @@
 #define SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK    0b11110000
 
 #define SX1280_XTAL_FREQ 52000000
-#define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))
+#define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))  // 198.3642578125
 
 typedef enum
 {
