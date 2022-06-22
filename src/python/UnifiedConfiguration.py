@@ -71,7 +71,7 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform):
     else:
         products = []
         i = 0
-        for k in jmespath.search(f'*."{moduletype}{platform}_{frequency}".*[].product_name', targets):
+        for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][].product_name', targets):
             i += 1
             products.append(k)
             print(f"{i}) {k}")
@@ -79,7 +79,7 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform):
         choice = input()
         if choice != "":
             config = products[int(choice)-1]
-            config = jmespath.search(f'[[*."{moduletype}{platform}_{frequency}"][].*][][?product_name==`{config}`][]', targets)[0]
+            config = jmespath.search(f'[*."{moduletype}_{frequency}".*][][?product_name==`{config}`][]', targets)[0]
 
     if config is not None:
         product_name = config['product_name']
@@ -104,7 +104,7 @@ def appendConfiguration(source, target, env):
         moduletype = 'tx' if '_TX_' in target_name else 'rx'
         frequency = '2400' if '_2400_' in target_name else '900'
 
-    platform = '32' if moduletype == 'rx' and env.get('PIOPLATFORM', '') in ['espressif32'] else ''
+    platform = 'esp32' if env.get('PIOPLATFORM', '') in ['espressif32'] else 'esp8285'
 
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 
