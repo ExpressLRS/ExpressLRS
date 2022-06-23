@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
-import argparse
 from enum import Enum
-import mmap
 import re
 
 from elrs_helpers import ElrsUploadResult
@@ -12,7 +10,6 @@ import serials_find
 import UARTupload
 import upload_via_esp8266_backpack
 import stlink
-import firmware
 from firmware import DeviceType, FirmwareOptions, MCUType
 from external.esptool import esptool
 
@@ -70,7 +67,7 @@ def upload_wifi(args, upload_addr, isstm: bool):
 def upload_stm32_uart(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target)
+    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept)
 
 def upload_stm32_stlink(args):
     bl_args = bootloader_args[re.sub('_via_.*', '', args.target)]
@@ -92,7 +89,7 @@ def upload_esp8266_bf(args):
     mode = 'upload'
     if args.force == True:
         mode = 'uploadforce'
-    retval = BFinitPassthrough.main(['-p', args.port, '-b', str(args.baud), '-r', args.target, '-a', mode])
+    retval = BFinitPassthrough.main(['-p', args.port, '-b', str(args.baud), '-r', args.target, '-a', mode, '--accept', args.accept])
     if retval != ElrsUploadResult.Success:
         return retval
     try:
@@ -176,37 +173,3 @@ def upload(options: FirmwareOptions, args):
                 return upload_wifi(args, ['elrs_txbp', 'elrs_txbp.local'], True)
     print("Invalid upload method for firmware")
     return ElrsUploadResult.ErrorGeneral
-
-def main():
-    parser = argparse.ArgumentParser(description="Upload Binary Firmware")
-
-    parser.add_argument("-p", "--port", type=str,
-        help="SerialPort or WiFi address to flash firmware to")
-    parser.add_argument("-b", "--baud", type=int, default=0,
-        help="Baud rate for serial communication")
-    parser.add_argument("-m", "--method", type=UploadMethod, choices=list(UploadMethod), required=True,
-        help="Upload Method")
-    parser.add_argument("-f", "--force", action='store_true', default=False,
-        help="Force upload even if target does not match")
-    parser.add_argument("-c", "--confirm", action='store_true', default=False,
-        help="Confirm upload if a mismatched target was previously uploaded")
-
-    # Firmware file to upload
-    parser.add_argument("file", type=argparse.FileType("rb"))
-
-    args = parser.parse_args()
-
-    with args.file as f:
-        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        options, target, pos = firmware.get_hardware(mm)
-
-    args.target = target
-    return upload(options, args)
-
-if __name__ == '__main__':
-    try:
-        retval = main()
-    except AssertionError as e:
-        print(e)
-        retval = ElrsUploadResult.ErrorGeneral
-    exit(retval)

@@ -200,7 +200,8 @@
                 "product_name": "FrSky R9M 900MHz TX",
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
-                "firmware": "Frsky_TX_R9M"
+                "firmware": "Frsky_TX_R9M",
+                "has_buzzer": true
             },
             "r9m-lite": {
                 "product_name": "FrSky R9M Lite 900MHz TX",
@@ -409,7 +410,8 @@
                 "product_name": "HappyModel ES915 TX",
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
-                "firmware": "HappyModel_TX_ES915TX"
+                "firmware": "HappyModel_TX_ES915TX",
+                "has_buzzer": true
             },
             "es900": {
                 "product_name": "HappyModel ES900 TX",
@@ -563,13 +565,15 @@
                 "product_name": "Ghost 2.4GHz TX",
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
-                "firmware": "GHOST_2400_TX"
+                "firmware": "GHOST_2400_TX",
+                "has_buzzer": true
             },
             "ghost_lite": {
                 "product_name": "Ghost Lite 2.4GHz TX",
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
-                "firmware": "GHOST_2400_TX_LITE"
+                "firmware": "GHOST_2400_TX_LITE",
+                "has_buzzer": true
             }
         },
         "rx_2400": {

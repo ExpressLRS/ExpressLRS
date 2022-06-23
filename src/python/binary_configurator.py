@@ -1,10 +1,13 @@
 #!/usr/bin/python
 
+import os
 import argparse
+import json
 from json import JSONEncoder
 import mmap
 import hashlib
 from enum import Enum
+import shutil
 
 import firmware
 from firmware import DeviceType, FirmwareOptions, RadioType, MCUType
@@ -12,6 +15,7 @@ import melodyparser
 import UnifiedConfiguration
 import binary_flash
 from binary_flash import UploadMethod
+from external import jmespath
 
 class BuzzerMode(Enum):
     quiet = 'quiet'
@@ -176,11 +180,10 @@ def domain_number(domain):
         return 5
 
 def patch_firmware(options, mm, pos, args):
-    if options.radioChip is RadioType.SX127X and args.domain:
-        mm[pos] = domain_number(args.domain)
-    pos += 1
-
     if options.mcuType is MCUType.STM32:
+        if options.radioChip is RadioType.SX127X and args.domain:
+            mm[pos] = domain_number(args.domain)
+        pos += 1
         pos = patch_uid(mm, pos, args)
         if options.deviceType is DeviceType.TX:
             pos = patch_tx_params(mm, pos, args)
@@ -334,6 +337,31 @@ def length_check(l, f):
             return s
     return x
 
+def ask_for_firmware(args):
+    moduletype = 'tx' if args.tx else 'rx'
+    with open('hardware/targets.json') as f:
+        targets = json.load(f)
+        products = []
+        if args.target is not None:
+            target = args.target
+            config = jmespath.search(f'{target}', targets)
+        else:
+            i = 0
+            for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900"][].*[]', targets):
+                i += 1
+                products.append(k)
+                print(f"{i}) {k['product_name']}")
+            print('Choose a configuration to flash')
+            choice = input()
+            if choice != "":
+                config = products[int(choice)-1]
+                for v in targets:
+                    for t in targets[v]:
+                        for m in targets[v][t]:
+                            if targets[v][t][m]['product_name'] == config['product_name']:
+                                target = f'{v}.{t}.{m}'
+    return target, config
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     parser.add_argument('--print', action='store_true', help='Print the current configuration in the firmware')
@@ -377,23 +405,45 @@ def main():
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
+    parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
+    parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (onl for 2.4GHz firmware)")
 
     #
     # Firmware file to patch/configure
-    parser.add_argument("file", type=argparse.FileType("r+b"))
+    parser.add_argument("file", nargs="?", type=argparse.FileType("r+b"))
 
     args = parser.parse_args()
+
+    if args.file == None:
+        os.chdir('firmware')
+        args.target, config = ask_for_firmware(args)
+        try:
+            file = config['firmware']
+            src = ('LBT/' if args.lbt else 'FCC/') + file + '/firmware.bin'
+            dst = 'firmware.bin'
+            shutil.copyfile(src, dst)
+            args.file = open(dst, 'r+b')
+        except FileNotFoundError:
+            print("Firmware files not found, did you download and unpack them in this directory?")
+            exit(1)
 
     with args.file as f:
         mm = mmap.mmap(f.fileno(), 0)
 
-        options, target, pos = firmware.get_hardware(mm)
+        pos = firmware.get_hardware(mm)
+        options = FirmwareOptions(
+            False if config['platform'] == 'stm32' else True,
+            True if config.get('has_buzzer') == True else False,
+            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
+            DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
+            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
+        )
         if args.print:
             print_config(options, mm, pos)
         else:
             patch_firmware(options, mm, pos, args)
             if args.flash:
-                args.target = target
+                args.accept = config.get('prior_target_name')
                 return binary_flash.upload(options, args)
 
 if __name__ == '__main__':
