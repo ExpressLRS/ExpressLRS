@@ -114,9 +114,10 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
-    void UpgradeEeprom();
+#if !defined(PLATFORM_ESP32)
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
+#endif
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -206,7 +207,6 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
 
 private:
-    void UpgradeEeprom();
     void UpgradeEepromV4ToV5();
 
     rx_config_t m_config;
