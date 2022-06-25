@@ -154,14 +154,14 @@ typedef struct {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
     uint8_t     loanUID[UID_LEN];
-    uint16_t    vbatScale;      // FUTURE: Override compiled vbat scale
+    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
     uint8_t     isBound:1,
                 onLoan:1,
                 power:4,
-                antennaMode:2;  // 0=0, 1=1, 2=Diversity
-    uint8_t     powerOnCounter:4,
+                antennaMode:2;      // 0=0, 1=1, 2=Diversity
+    uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                unused:3;       // FUTURE
+                rateInitialIdx:4;   // FUTURE: Rate to start rateCycling at on boot
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
