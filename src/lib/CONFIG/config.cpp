@@ -135,6 +135,7 @@ void TxConfig::Load()
     uint32_t value;
     uint8_t value8;
     // vtx (v5)
+    value = 0;
     nvs_get_u32(handle, "vtx", &value);
     m_config.vtxBand = value >> 24;
     m_config.vtxChannel = value >> 16;
@@ -142,6 +143,7 @@ void TxConfig::Load()
     m_config.vtxPitmode = value;
 
     // fanthresh (v5)
+    value8 = PWR_250mW;
     nvs_get_u8(handle, "fanthresh", &value8);
     m_config.powerFanThreshold = value8;
 
@@ -154,10 +156,13 @@ void TxConfig::Load()
     if (version >= 6)
     {
         // dvr (v6)
+        value8 = 0;
         nvs_get_u8(handle, "dvraux", &value8);
         m_config.dvrAux = value8;
+        value8 = 0;
         nvs_get_u8(handle, "dvrstartdelay", &value8);
         m_config.dvrStartDelay = value8;
+        value8 = 0;
         nvs_get_u8(handle, "dvrstopdelay", &value8);
         m_config.dvrStopDelay = value8;
     }
@@ -171,6 +176,7 @@ void TxConfig::Load()
     {
         char model[10] = "model";
         itoa(i, model+5, 10);
+        value = 0;
         nvs_get_u32(handle, model, &value);
 
         if (version >= 7)

@@ -10,9 +10,9 @@
 #endif
 
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
-#define CONFIG_MAGIC_MASK   (0b11 << 30)
-#define TX_CONFIG_MAGIC     (0b01 << 30)
-#define RX_CONFIG_MAGIC     (0b10 << 30)
+#define CONFIG_MAGIC_MASK   (0b11U << 30)
+#define TX_CONFIG_MAGIC     (0b01U << 30)
+#define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
 #define RX_CONFIG_VERSION   5U
