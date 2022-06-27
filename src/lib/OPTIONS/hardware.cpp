@@ -66,6 +66,7 @@ static const struct {
     {HARDWARE_button, "button", INT},
     {HARDWARE_led, "led", INT},
     {HARDWARE_led_blue, "led_blue", INT},
+    {HARDWARE_led_blue_invert, "led_blue_invert", BOOL},
     {HARDWARE_led_green, "led_green", INT},
     {HARDWARE_led_green_invert, "led_green_invert", BOOL},
     {HARDWARE_led_green_red, "led_green_red", INT},
