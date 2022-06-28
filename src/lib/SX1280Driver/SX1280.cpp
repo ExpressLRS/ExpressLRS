@@ -559,5 +559,9 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber
             irqClearRadio = SX1280_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
     }
+    else
+    {
+        return;
+    }
     instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, irqClearRadio);
 }
