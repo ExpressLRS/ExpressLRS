@@ -788,6 +788,8 @@ void ExitBindingMode()
     return;
   }
 
+  MspSender.ResetState();
+
   // Reset UID to defined values
   memcpy(UID, MasterUID, UID_LEN);
   OtaUpdateCrcInitFromUid();
