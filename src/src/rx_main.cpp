@@ -1558,6 +1558,8 @@ void ExitBindingMode()
         return;
     }
 
+    MspReceiver.ResetState();
+
     // Prevent any new packets from coming in
     Radio.SetTxIdleMode();
     // Write the values to eeprom
@@ -1588,11 +1590,11 @@ void ExitBindingMode()
     devicesTriggerEvent();
 }
 
-void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* packet)
+void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 {
-    for (int i = 1; i <=4; i++)
+    for (int i = 0; i < 4; i++)
     {
-        UID[i + 1] = packet[i];
+        UID[i + 2] = newUid4[i];
     }
 
     DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
