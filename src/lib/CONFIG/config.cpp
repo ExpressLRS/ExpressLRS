@@ -13,6 +13,7 @@
 #define MAIN_CHANGED        bit(3) // catch-all for global config item
 #define FAN_CHANGED         bit(4)
 #define MOTION_CHANGED      bit(5)
+#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -43,14 +44,69 @@ template<class T> static const uint32_t Model_to_U32(T const * const model)
     return converter.u32;
 }
 
-TxConfig::TxConfig()
+static uint8_t RateV6toV7(uint8_t rateV6)
 {
-    SetDefaults(false);
+#if defined(RADIO_SX127X)
+    if (rateV6 == 0)
+    {
+        // 200Hz stays same
+        return 0;
+    }
+
+    // 100Hz, 50Hz, 25Hz all move up one
+    // to make room for 100Hz Full
+    return rateV6 + 1;
+#else // RADIO_2400
+    switch (rateV6)
+    {
+        case 0: return 4; // 500Hz
+        case 1: return 6; // 250Hz
+        case 2: return 7; // 150Hz
+        case 3: return 9; // 50Hz
+        default: return 4; // 500Hz
+    }
+#endif // RADIO_2400
 }
 
+static uint8_t RatioV6toV7(uint8_t ratioV6)
+{
+    // All shifted up for Std telem
+    return ratioV6 + 1;
+}
+
+static uint8_t SwitchesV6toV7(uint8_t switchesV6)
+{
+    // 0 was removed, Wide(2) became 0, Hybrid(1) became 1
+    switch (switchesV6)
+    {
+        case 1: return (uint8_t)smHybridOr16ch;
+        case 2:
+        default:
+            return (uint8_t)smWideOr8ch;
+    }
+}
+
+static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * const v7)
+{
+    v7->rate = RateV6toV7(v6->rate);
+    v7->tlm = RatioV6toV7(v6->tlm);
+    v7->power = v6->power;
+    v7->switchMode = SwitchesV6toV7(v6->switchMode);
+    v7->modelMatch = v6->modelMatch;
+    v7->dynamicPower = v6->dynamicPower;
+    v7->boostChannel = v6->boostChannel;
+}
+
+TxConfig::TxConfig() :
+    m_model(m_config.model_config)
+{
+}
+
+#if defined(PLATFORM_ESP32)
 void TxConfig::Load()
 {
-#if defined(PLATFORM_ESP32)
+    m_modified = 0;
+
     // Initialize NVS
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -61,60 +117,171 @@ void TxConfig::Load()
     ESP_ERROR_CHECK( err );
     ESP_ERROR_CHECK(nvs_open("ELRS", NVS_READWRITE, &handle));
 
-    // read version field
-    if(nvs_get_u32(handle, "tx_version", &m_config.version) != ESP_ERR_NVS_NOT_FOUND
-        && m_config.version == (TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
+    // Try to load the version and make sure it is a TX config
+    uint32_t version = 0;
+    if (nvs_get_u32(handle, "tx_version", &version) == ESP_OK && ((version & CONFIG_MAGIC_MASK) == TX_CONFIG_MAGIC))
+        version = version & ~CONFIG_MAGIC_MASK;
+    DBGLN("Config version %u", version);
+
+    // Can upgrade from any version 5 to current
+    if (version < 5)
     {
-        DBGLN("Found version %u config", TX_CONFIG_VERSION);
-        uint32_t value;
-        nvs_get_u32(handle, "vtx", &value);
+        SetDefaults(true);
+        return;
+    }
+
+    SetDefaults(false);
+
+    uint32_t value;
+    uint8_t value8;
+    // vtx (v5)
+    if (nvs_get_u32(handle, "vtx", &value) == ESP_OK)
+    {
         m_config.vtxBand = value >> 24;
         m_config.vtxChannel = value >> 16;
         m_config.vtxPower = value >> 8;
         m_config.vtxPitmode = value;
+    }
 
-        nvs_get_u32(handle, "fan", &value);
-        m_config.fanMode = value;
-
-        nvs_get_u32(handle, "motion", &value);
-        m_config.motionMode = value;
-
-        uint8_t value8;
-        nvs_get_u8(handle, "fanthresh", &value8);
+    // fanthresh (v5)
+    if (nvs_get_u8(handle, "fanthresh", &value8) == ESP_OK)
         m_config.powerFanThreshold = value8;
 
-        nvs_get_u8(handle, "dvraux", &value8);
-        m_config.dvrAux = value8;
-        nvs_get_u8(handle, "dvrstartdelay", &value8);
-        m_config.dvrStartDelay = value8;
-        nvs_get_u8(handle, "dvrstopdelay", &value8);
-        m_config.dvrStopDelay = value8;
+    // Both of these were added to config v5 without incrementing the version
+    if (nvs_get_u32(handle, "fan", &value) == ESP_OK)
+        m_config.fanMode = value;
+    if (nvs_get_u32(handle, "motion", &value) == ESP_OK)
+        m_config.motionMode = value;
 
-        for(int i=0 ; i<64 ; i++)
-        {
-            char model[10] = "model";
-            itoa(i, model+5, 10);
-            nvs_get_u32(handle, model, &value);
-            m_config.model_config[i] = { 1, 1, 1, 1, 1, 1, 1, 1 };
-            U32_to_Model(value, &m_config.model_config[i]);
-        }
+    if (version >= 6)
+    {
+        // dvr (v6)
+        if (nvs_get_u8(handle, "dvraux", &value8) == ESP_OK)
+            m_config.dvrAux = value8;
+        if (nvs_get_u8(handle, "dvrstartdelay", &value8) == ESP_OK)
+            m_config.dvrStartDelay = value8;
+        if (nvs_get_u8(handle, "dvrstopdelay", &value8) == ESP_OK)
+            m_config.dvrStopDelay = value8;
     }
     else
     {
-        UpgradeEeprom();
+        // Need to write the dvr defaults
+        m_modified |= MAIN_CHANGED;
     }
+
+    for(unsigned i=0; i<64; i++)
+    {
+        char model[10] = "model";
+        itoa(i, model+5, 10);
+        if (nvs_get_u32(handle, model, &value) == ESP_OK)
+        {
+            if (version >= 7)
+            {
+                U32_to_Model(value, &m_config.model_config[i]);
+            }
+            else
+            {
+                // Upgrade v6 to v7 directly writing to nvs instead of calling Commit() over and over
+                v6_model_config_t v6model;
+                U32_to_Model(value, &v6model);
+                model_config_t * const newModel = &m_config.model_config[i];
+                ModelV6toV7(&v6model, newModel);
+                nvs_set_u32(handle, model, Model_to_U32(newModel));
+            }
+        }
+    } // for each model
+
+    if (version != TX_CONFIG_VERSION)
+    {
+        Commit();
+    }
+}
+#else  // STM32/ESP8266
+void TxConfig::Load()
+{
     m_modified = 0;
-#else
     m_eeprom->Get(0, m_config);
 
-    // Check if version number matches
-    if (m_config.version != (TX_CONFIG_VERSION | TX_CONFIG_MAGIC))
+    uint32_t version = 0;
+    if ((m_config.version & CONFIG_MAGIC_MASK) == TX_CONFIG_MAGIC)
+        version = m_config.version & ~CONFIG_MAGIC_MASK;
+    DBGLN("Config version %u", version);
+
+    // If version is current, all done
+    if (version == TX_CONFIG_VERSION)
+        return;
+
+    // Can't upgrade from version <5, just use defaults
+    if (version < 5)
     {
-        UpgradeEeprom();
+        SetDefaults(true);
+        return;
     }
-    m_modified = 0;
-#endif
+
+    // Upgrade EEPROM, starting with defaults
+    SetDefaults(false);
+
+    if (version == 5)
+    {
+        UpgradeEepromV5ToV6();
+        version = 6;
+    }
+
+    if (version == 6)
+    {
+        UpgradeEepromV6ToV7();
+    }
 }
+
+void TxConfig::UpgradeEepromV5ToV6()
+{
+    v5_tx_config_t v5Config;
+    v6_tx_config_t v6Config = { 0 }; // default the new fields to 0
+
+    // Populate the prev version struct from eeprom
+    m_eeprom->Get(0, v5Config);
+
+    // Copy prev values to current config struct
+    // This only workse because v5 and v6 are the same up to the new fields
+    // which have already been set to 0
+    memcpy(&v6Config, &v5Config, sizeof(v5Config));
+    v6Config.version = 6U | TX_CONFIG_MAGIC;
+    m_eeprom->Put(0, v6Config);
+    m_eeprom->Commit();
+}
+
+void TxConfig::UpgradeEepromV6ToV7()
+{
+    v6_tx_config_t v6Config;
+
+    // Populate the prev version struct from eeprom
+    m_eeprom->Get(0, v6Config);
+
+    // Manual field copying as some fields have moved
+    #define LAZY(member) m_config.member = v6Config.member
+    LAZY(vtxBand);
+    LAZY(vtxChannel);
+    LAZY(vtxPower);
+    LAZY(vtxPitmode);
+    LAZY(powerFanThreshold);
+    LAZY(fanMode);
+    LAZY(motionMode);
+    LAZY(dvrAux);
+    LAZY(dvrStartDelay);
+    LAZY(dvrStopDelay);
+    #undef LAZY
+
+    for (unsigned i=0; i<64; i++)
+    {
+        ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
+    }
+
+    m_modified = ALL_CHANGED;
+
+    // Full Commit now
+    Commit();
+}
+#endif
 
 void
 TxConfig::Commit()
@@ -353,234 +520,42 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
 void
 TxConfig::SetDefaults(bool commit)
 {
+    // Reset everything to 0/false and then just set anything that zero is not appropriate
+    memset(&m_config, 0, sizeof(m_config));
+
+    m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
+    m_config.powerFanThreshold = PWR_250mW;
+
+    if (commit)
+    {
+        m_modified = ALL_CHANGED;
+    }
+
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
-
-    SetVtxBand(0);
-    SetVtxChannel(0);
-    SetVtxPower(0);
-    SetVtxPitmode(0);
-    SetPowerFanThreshold(PWR_250mW);
-    SetFanMode(0);
-    SetMotionMode(0);
-    SetDvrAux(0);
-    SetDvrStartDelay(0);
-    SetDvrStopDelay(0);
-
-    for (int i=0 ; i<64 ; i++) {
+    for (unsigned i=0; i<64; i++)
+    {
         SetModelId(i);
         SetRate(modParams->index);
-        SetTlm(TLM_RATIO_STD);
         SetPower(POWERMGNT::getDefaultPower());
-        SetDynamicPower(0);
-        SetBoostChannel(0);
-        SetSwitchMode((uint8_t)smWideOr8ch);
-        SetModelMatch(false);
 #if defined(PLATFORM_ESP32)
         // ESP32 nvs needs to commit every model
         if (commit)
+        {
+            m_modified |= MODEL_CHANGED;
             Commit();
+        }
 #endif
     }
 
 #if !defined(PLATFORM_ESP32)
     // STM32/ESP8266 just needs one commit
     if (commit)
+    {
         Commit();
+    }
 #endif
 
     SetModelId(0);
-}
-
-void TxConfig::UpgradeEeprom()
-{
-    uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
-    UNUSED(startVersion); // if DEBUG_LOG not defined
-    bool upgraded = false;
-
-    // The upgraders must call Commit() or do their own committing
-    if (m_config.version == (5U | TX_CONFIG_MAGIC))
-    {
-        UpgradeEepromV5ToV6();
-        upgraded = true;
-    }
-    if (m_config.version == (6U | TX_CONFIG_MAGIC))
-    {
-        UpgradeEepromV6ToV7();
-        upgraded = true;
-    }
-
-    if (upgraded)
-    {
-        DBGLN("EEPROM version %u upgraded to %u", startVersion, TX_CONFIG_VERSION);
-    }
-    else
-    {
-        DBGLN("EEPROM version %u could not be upgraded, using defaults", startVersion);
-    }
-}
-
-void TxConfig::UpgradeEepromV5ToV6()
-{
-    // Always succeeds because this is guaranteed to be v5 by the caller
-    m_config.version = 6U | TX_CONFIG_MAGIC;
-
-#if defined(PLATFORM_ESP32)
-    // Nothing is loaded here, assumes UpgradeEepromV6ToV7 will do the actual loading
-    // Because the format of v5 and v6 is the same on ESP32 except for the extra fields
-
-    // dvrAux = 0, dvrStartDelay = 0, dvrStopDelay = 0 are included in MAIN_CHANGED
-    // force write ONLY the default DVR AUX settings and version (m_modified not ORed)
-    m_modified = MAIN_CHANGED;
-
-    Commit();
-#else // STM32/ESP8266
-    v5_tx_config_t v5Config;
-    v6_tx_config_t v6Config = { 0 }; // default the new fields to 0
-
-    // Populate the prev version struct from eeprom
-    m_eeprom->Get(0, v5Config);
-
-    // Copy prev values to current config struct
-    // This only workse because v5 and v6 are the same up to the new fields
-    // which have already been set to 0
-    memcpy(&v6Config, &v5Config, sizeof(v5Config));
-    v6Config.version = 6U | TX_CONFIG_MAGIC;
-    m_eeprom->Put(0, v6Config);
-    m_eeprom->Commit();
-#endif // STM32/ESP8266
-}
-
-static uint8_t RateV6toV7(uint8_t rateV6)
-{
-#if defined(RADIO_SX127X)
-    if (rateV6 == 0)
-    {
-        // 200Hz stays same
-        return 0;
-    }
-
-    // 100Hz, 50Hz, 25Hz all move up one
-    // to make room for 100Hz Full
-    return rateV6 + 1;
-#else // RADIO_2400
-    switch (rateV6)
-    {
-        case 0: return 4; // 500Hz
-        case 1: return 6; // 250Hz
-        case 2: return 7; // 150Hz
-        case 3: return 9; // 50Hz
-        default: return 4; // 500Hz
-    }
-#endif // RADIO_2400
-}
-
-static uint8_t RatioV6toV7(uint8_t ratioV6)
-{
-    // All shifted up for Std telem
-    return ratioV6 + 1;
-}
-
-static uint8_t SwitchesV6toV7(uint8_t switchesV6)
-{
-    // 0 was removed, Wide(2) became 0, Hybrid(1) became 1
-    switch (switchesV6)
-    {
-        case 1: return (uint8_t)smHybridOr16ch;
-        case 2:
-        default:
-            return (uint8_t)smWideOr8ch;
-    }
-}
-
-static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * const v7)
-{
-    v7->rate = RateV6toV7(v6->rate);
-    v7->tlm = RatioV6toV7(v6->tlm);
-    v7->power = v6->power;
-    v7->switchMode = SwitchesV6toV7(v6->switchMode);
-    v7->modelMatch = v6->modelMatch;
-    v7->dynamicPower = v6->dynamicPower;
-    v7->boostChannel = v6->boostChannel;
-}
-
-void TxConfig::UpgradeEepromV6ToV7()
-{
-    // Always succeeds because this is guaranteed to be v6 by the caller
-    m_config.version = 7U | TX_CONFIG_MAGIC;
-
-#if defined(PLATFORM_ESP32)
-    // V5 fields
-    uint32_t value;
-    nvs_get_u32(handle, "vtx", &value);
-    m_config.vtxBand = value >> 24;
-    m_config.vtxChannel = value >> 16;
-    m_config.vtxPower = value >> 8;
-    m_config.vtxPitmode = value;
-
-    nvs_get_u32(handle, "fan", &value);
-    m_config.fanMode = value;
-
-    nvs_get_u32(handle, "motion", &value);
-    m_config.motionMode = value;
-
-    uint8_t value8;
-    nvs_get_u8(handle, "fanthresh", &value8);
-    m_config.powerFanThreshold = value8;
-
-    // V6 fields (may not be there if this was an upgrade from V5)
-    if (nvs_get_u8(handle, "dvraux", &value8) == ESP_OK)
-        m_config.dvrAux = value8;
-    if (nvs_get_u8(handle, "dvrstartdelay", &value8) == ESP_OK)
-        m_config.dvrStartDelay = value8;
-    if (nvs_get_u8(handle, "dvrstopdelay", &value8) == ESP_OK)
-        m_config.dvrStopDelay = value8;
-
-    // Model fields
-    for(unsigned i=0; i<64; i++)
-    {
-        char model[10] = "model";
-        itoa(i, model+5, 10);
-        // Do a straight conversion with a direct read/write
-        // instead of calling Commit() for every model
-        v6_model_config_t v6model;
-        nvs_get_u32(handle, model, &value);
-        U32_to_Model(value, &v6model);
-        model_config_t * const newModel = &m_config.model_config[i];
-        ModelV6toV7(&v6model, newModel);
-        nvs_set_u32(handle, model, Model_to_U32(newModel));
-    }
-#else // STM32/ESP8266
-    v6_tx_config_t v6Config;
-
-    // Populate the prev version struct from eeprom
-    m_eeprom->Get(0, v6Config);
-
-    // Manual field copying as some fields have moved
-    #define LAZY(member) m_config.member = v6Config.member
-    LAZY(vtxBand);
-    LAZY(vtxChannel);
-    LAZY(vtxPower);
-    LAZY(vtxPitmode);
-    LAZY(powerFanThreshold);
-    LAZY(fanMode);
-    LAZY(motionMode);
-    LAZY(dvrAux);
-    LAZY(dvrStartDelay);
-    LAZY(dvrStopDelay);
-    #undef LAZY
-
-    for(unsigned i=0; i<64; i++)
-    {
-        ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
-    }
-
-#endif // STM32/ESP8266
-
-    // Just write MAIN for ESP32, and STM32 always writes everything if anything changed
-    m_modified = MAIN_CHANGED; // not MODEL_CHANGED, VTX_CHANGED, FAN_CHANGED, MOTION_CHANGED
-
-    // Full Commit now
-    Commit();
 }
 
 /**
@@ -608,39 +583,32 @@ TxConfig::SetModelId(uint8_t modelId)
 
 RxConfig::RxConfig()
 {
-    SetDefaults(false);
 }
 
-void
-RxConfig::Load()
+void RxConfig::Load()
 {
-    // Populate the struct from eeprom
+    m_modified = false;
     m_eeprom->Get(0, m_config);
 
-    // Check if version number matches
-    if (m_config.version != (RX_CONFIG_VERSION | RX_CONFIG_MAGIC))
+    uint32_t version = 0;
+    if ((m_config.version & CONFIG_MAGIC_MASK) == RX_CONFIG_MAGIC)
+        version = m_config.version & ~CONFIG_MAGIC_MASK;
+    DBGLN("Config version %u", version);
+
+    // If version is current, all done
+    if (version == RX_CONFIG_VERSION)
+        return;
+
+    // Can't upgrade from version <4, just use defaults
+    if (version < 4)
     {
-        UpgradeEeprom();
+        SetDefaults(true);
+        return;
     }
 
-    m_modified = false;
-}
-
-void RxConfig::UpgradeEeprom()
-{
-    uint32_t startVersion = m_config.version & ~CONFIG_MAGIC_MASK;
-    UNUSED(startVersion); // if DEBUG_LOG not defined
-
-    // The upgraders must call Commit() or do their own committing
-    if (m_config.version == (4U | RX_CONFIG_MAGIC))
-    {
-        UpgradeEepromV4ToV5();
-        DBGLN("EEPROM version %u upgraded to %u", startVersion, RX_CONFIG_VERSION);
-    }
-    else
-    {
-        DBGLN("EEPROM version %u could not be upgraded, using defaults", startVersion);
-    }
+    // Upgrade EEPROM, starting with defaults
+    SetDefaults(false);
+    UpgradeEepromV4ToV5(); // Commit()s
 }
 
 static void PwmConfigV4toV5(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const v5)
@@ -665,7 +633,6 @@ void RxConfig::UpgradeEepromV4ToV5()
         PwmConfigV4toV5(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
     }
 
-    m_config.version = (5U | RX_CONFIG_MAGIC);
     m_modified = true;
     Commit();
 }
@@ -773,27 +740,24 @@ RxConfig::SetAntennaMode(uint8_t antennaMode)
 void
 RxConfig::SetDefaults(bool commit)
 {
-    SetIsBound(false);
-    SetPowerOnCounter(0);
-    SetModelId(0xFF);
-    SetPower(POWERMGNT::getDefaultPower());
+    // Reset everything to 0/false and then just set anything that zero is not appropriate
+    memset(&m_config, 0, sizeof(m_config));
+
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
+    m_config.modelId = 0xff;
+    m_config.power = POWERMGNT::getDefaultPower();
     if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
-    {
-        SetAntennaMode(2); //2 is diversity
-    }
-    else
-    {
-        SetAntennaMode(1); //0 and 1 is use for gpio_antenna_select
-    }
+        m_config.antennaMode = 2; // 2 is diversity
+
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
         SetPwmChannel(ch, 512, ch, false, 0, false);
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
-    SetOnLoan(false);
 
     if (commit)
     {
+        m_modified = true;
         Commit();
     }
 }

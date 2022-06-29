@@ -10,9 +10,9 @@
 #endif
 
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
-#define CONFIG_MAGIC_MASK   (0b11 << 30)
-#define TX_CONFIG_MAGIC     (0b01 << 30)
-#define RX_CONFIG_MAGIC     (0b10 << 30)
+#define CONFIG_MAGIC_MASK   (0b11U << 30)
+#define TX_CONFIG_MAGIC     (0b01U << 30)
+#define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
 #define RX_CONFIG_VERSION   5U
@@ -114,9 +114,10 @@ public:
     bool SetModelId(uint8_t modelId);
 
 private:
-    void UpgradeEeprom();
+#if !defined(PLATFORM_ESP32)
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
+#endif
 
     tx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
@@ -153,14 +154,14 @@ typedef struct {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
     uint8_t     loanUID[UID_LEN];
-    uint16_t    vbatScale;      // FUTURE: Override compiled vbat scale
+    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
     uint8_t     isBound:1,
                 onLoan:1,
                 power:4,
-                antennaMode:2;  // 0=0, 1=1, 2=Diversity
-    uint8_t     powerOnCounter:4,
+                antennaMode:2;      // 0=0, 1=1, 2=Diversity
+    uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                unused:3;       // FUTURE
+                rateInitialIdx:4;   // FUTURE: Rate to start rateCycling at on boot
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
@@ -206,7 +207,6 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
 
 private:
-    void UpgradeEeprom();
     void UpgradeEepromV4ToV5();
 
     rx_config_t m_config;
