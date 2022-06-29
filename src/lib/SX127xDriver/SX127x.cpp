@@ -373,15 +373,15 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool invertIQ, uint8_t payloadLength, uint32_t interval)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength, interval);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, invertIQ, payloadLength, interval);
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool invertIQ, uint8_t payloadLength, uint32_t interval)
 {
-  PayloadLength = PayloadLength;
-  IQinverted = InvertIQ;
+  PayloadLength = payloadLength;
+  IQinverted = invertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetOutputPower(currPWR);
