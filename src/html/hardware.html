@@ -39,38 +39,38 @@
 				<input type="hidden" id="customised" name="customised" value="true"/>
 				<table>
 					<tr><td colspan='2'><b>CRSF Serial Pins</td></tr>
-					<tr><td width="30"></td><td>RX pin (I)</td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td><td>Pin used to receive CRSF signal from the handset</td></tr>
-					<tr><td></td><td>TX pin (O)</td><td><input size='3' id='serial_tx' name='serial_tx' type='text'/></td><td>Pin used to transmit CRSF telemetry to the handset (may be the same as the RX PIN)</td></tr>
+					<tr><td width="30"></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td><td>Pin used to receive CRSF signal from the handset</td></tr>
+					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='serial_tx' name='serial_tx' type='text'/></td><td>Pin used to transmit CRSF telemetry to the handset (may be the same as the RX PIN)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Chip Pins & Options</td></tr>
-					<tr><td></td><td>BUSY pin (I)</td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td><td>GPIO Input connected to SX128x busy pin</td></tr>
-					<tr><td></td><td>DIO0 pin (I)</td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td><td>Unused on SX128x, Interrupt pin for SX127x</td></tr>
-					<tr><td></td><td>DIO1 pin (I)</td><td><input size='3' id='radio_dio1' name='radio_dio1' type='text'/></td><td>Interript pin for SX128x</td></tr>
-					<tr><td></td><td>DIO2 pin (I)</td><td><input size='3' id='radio_dio2' name='radio_dio2' type='text'/></td><td>Unused on SX128x and 127x</td></tr>
-					<tr><td></td><td>MISO pin (I)</td><td><input size='3' id='radio_miso' name='radio_miso' type='text'/></td><td>MISO connected to (possibly) mutiple SX1280/127x</td></tr>
-					<tr><td></td><td>MOSI pin (O)</td><td><input size='3' id='radio_mosi' name='radio_mosi' type='text'/></td><td>MOSI connected to (possibly) mutiple SX1280/127x</td></tr>
-					<tr><td></td><td>NSS pin (O)</td><td><input size='3' id='radio_nss' name='radio_nss' type='text'/></td><td>Chip select pin for first SX1280/127x</td></tr>
-					<tr><td></td><td>RST pin (O)</td><td><input size='3' id='radio_rst' name='radio_rst' type='text'/></td><td>Reset pin connected to (possibly) mutiple SX1280/127x</td></tr>
-					<tr><td></td><td>SCK pin (O)</td><td><input size='3' id='radio_sck' name='radio_sck' type='text'/></td><td>Clock pin connected to (possibly) mutiple SX1280/127x</td></tr>
-					<tr><td></td><td>BUSY_2 pin (I)</td><td><input size='3' id='radio_busy_2' name='radio_busy_2' type='text'/></td><td>Busy pin for second SX1280</td></tr>
-					<tr><td></td><td>DIO1_2 pin (I)</td><td><input size='3' id='radio_dio1_2' name='radio_dio1_2' type='text'/></td><td>Interrupt pin for second SX1280</td></tr>
-					<tr><td></td><td>NSS_2 pin (O)</td><td><input size='3' id='radio_nss_2' name='radio_nss_2' type='text'/></td><td>Chip select pin for second SX1280</td></tr>
+					<tr><td></td><td>BUSY pin<img class="icon-input"/></td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td><td>GPIO Input connected to SX128x busy pin</td></tr>
+					<tr><td></td><td>DIO0 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td><td>Unused on SX128x, Interrupt pin for SX127x</td></tr>
+					<tr><td></td><td>DIO1 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio1' name='radio_dio1' type='text'/></td><td>Interript pin for SX128x</td></tr>
+					<tr><td></td><td>DIO2 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio2' name='radio_dio2' type='text'/></td><td>Unused on SX128x and 127x</td></tr>
+					<tr><td></td><td>MISO pin<img class="icon-input"/></td><td><input size='3' id='radio_miso' name='radio_miso' type='text'/></td><td>MISO connected to (possibly) mutiple SX1280/127x</td></tr>
+					<tr><td></td><td>MOSI pin<img class="icon-output"/></td><td><input size='3' id='radio_mosi' name='radio_mosi' type='text'/></td><td>MOSI connected to (possibly) mutiple SX1280/127x</td></tr>
+					<tr><td></td><td>NSS pin<img class="icon-output"/></td><td><input size='3' id='radio_nss' name='radio_nss' type='text'/></td><td>Chip select pin for first SX1280/127x</td></tr>
+					<tr><td></td><td>RST pin<img class="icon-output"/></td><td><input size='3' id='radio_rst' name='radio_rst' type='text'/></td><td>Reset pin connected to (possibly) mutiple SX1280/127x</td></tr>
+					<tr><td></td><td>SCK pin<img class="icon-output"/></td><td><input size='3' id='radio_sck' name='radio_sck' type='text'/></td><td>Clock pin connected to (possibly) mutiple SX1280/127x</td></tr>
+					<tr><td></td><td>BUSY_2 pin<img class="icon-input"/></td><td><input size='3' id='radio_busy_2' name='radio_busy_2' type='text'/></td><td>Busy pin for second SX1280</td></tr>
+					<tr><td></td><td>DIO1_2 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio1_2' name='radio_dio1_2' type='text'/></td><td>Interrupt pin for second SX1280</td></tr>
+					<tr><td></td><td>NSS_2 pin<img class="icon-output"/></td><td><input size='3' id='radio_nss_2' name='radio_nss_2' type='text'/></td><td>Chip select pin for second SX1280</td></tr>
 					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td><td>Use the SX1280 DC-DC converter rather than LDO voltage regulator (presumes 15uH inductor is present)</td></tr>
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td><td>SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
-					<tr><td></td><td>SELECT pin (O)</td><td><input size='3' id='ant_select' name='ant_select' type='text'/></td><td>On an RX, Pin connected to Antenna select pin on power amplifier</td></tr>
-					<tr><td></td><td>CTRL1 pin (O)</td><td><input size='3' id='ant_ctrl1' name='ant_ctrl1' type='text'/></td><td>Pin connected to Antenna select on a TX module</td></tr>
-					<tr><td></td><td>CTRL2 pin (O)</td><td><input size='3' id='ant_ctrl2' name='ant_ctrl2' type='text'/></td><td>Inverted CTRL1 for TX modules using antenna selectors that need separate pins for A/B selection</td></tr>
+					<tr><td></td><td>SELECT pin<img class="icon-output"/></td><td><input size='3' id='ant_select' name='ant_select' type='text'/></td><td>On an RX, Pin connected to Antenna select pin on power amplifier</td></tr>
+					<tr><td></td><td>CTRL1 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl1' name='ant_ctrl1' type='text'/></td><td>Pin connected to Antenna select on a TX module</td></tr>
+					<tr><td></td><td>CTRL2 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl2' name='ant_ctrl2' type='text'/></td><td>Inverted CTRL1 for TX modules using antenna selectors that need separate pins for A/B selection</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power</td></tr>
-					<tr><td></td><td>PA enable pin (O)</td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td><td>Enable the power amplifier (active high)</td></tr>
-					<!-- <tr><td></td><td>APC1 pin (O)</td><td><input size='3' id='power_apc1' name='power_apc1' type='text'/></td></tr> -->
-					<!-- <tr><td></td><td>APC2 pin (O)</td><td><input size='3' id='power_apc2' name='power_apc2' type='text'/></td></tr> -->
-					<tr><td></td><td>RXEN pin (O)</td><td><input size='3' id='power_rxen' name='power_rxen' type='text'/></td><td>Enable RX mode LNA (active high)</td></tr>
-					<tr><td></td><td>TXEN pin (O)</td><td><input size='3' id='power_txen' name='power_txen' type='text'/></td><td>Enable TX mode PA (active high)</td></tr>
-					<tr><td></td><td>RXEN_2 pin (O)</td><td><input size='3' id='power_rxen_2' name='power_rxen_2' type='text'/></td><td>Enable RX mode LNA on second SX1280 (active high)</td></tr>
-					<tr><td></td><td>TXEN_2 pin (O)</td><td><input size='3' id='power_txen_2' name='power_txen_2' type='text'/></td><td>Enable TX mode PA on second SX1280 (active high)</td></tr>
+					<tr><td></td><td>PA enable pin<img class="icon-output"/></td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td><td>Enable the power amplifier (active high)</td></tr>
+					<!-- <tr><td></td><td>APC1 pin<img class="icon-output"/></td><td><input size='3' id='power_apc1' name='power_apc1' type='text'/></td></tr> -->
+					<!-- <tr><td></td><td>APC2 pin<img class="icon-output"/></td><td><input size='3' id='power_apc2' name='power_apc2' type='text'/></td></tr> -->
+					<tr><td></td><td>RXEN pin<img class="icon-output"/></td><td><input size='3' id='power_rxen' name='power_rxen' type='text'/></td><td>Enable RX mode LNA (active high)</td></tr>
+					<tr><td></td><td>TXEN pin<img class="icon-output"/></td><td><input size='3' id='power_txen' name='power_txen' type='text'/></td><td>Enable TX mode PA (active high)</td></tr>
+					<tr><td></td><td>RXEN_2 pin<img class="icon-output"/></td><td><input size='3' id='power_rxen_2' name='power_rxen_2' type='text'/></td><td>Enable RX mode LNA on second SX1280 (active high)</td></tr>
+					<tr><td></td><td>TXEN_2 pin<img class="icon-output"/></td><td><input size='3' id='power_txen_2' name='power_txen_2' type='text'/></td><td>Enable TX mode PA on second SX1280 (active high)</td></tr>
 					<tr><td></td><td>Min Power</td><td>
 						<select id='power_min' name='power_min'>
 							<option value='0'>10mW</option>
@@ -130,40 +130,40 @@
 					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td><td>Comma seperated list of values that set the power output</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
-					<tr><td></td><td>PDET pin (AI)</td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>
+					<tr><td></td><td>PDET pin<img class="icon-analog"/></td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>
 					<tr><td></td><td>Intercept</td><td><input size='20' id='power_pdet_intercept' name='power_pdet_intercept' type='text'/></td><td>The intercept and Slope are used together to calculate the dBm from th measured mV on the PDET pin</td></tr>
 					<tr><td></td><td>Slope</td><td><input size='20' id='power_pdet_slope' name='power_pdet_slope' type='text'/></td><td>dBm = mV * slope + intercept, this is then used to adjust the actual output power accordingly</td></tr>
 @@if isTX:
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
-					<tr><td></td><td>ADC pin (AI)</td><td><input size='3' id='joystick' name='joystick' type='text'/></td><td>Analog Input (3.3V max) use to read joystick direction using a resistor network</td></tr>
+					<tr><td></td><td>ADC pin<img class="icon-analog"/></td><td><input size='3' id='joystick' name='joystick' type='text'/></td><td>Analog Input (3.3V max) use to read joystick direction using a resistor network</td></tr>
 					<tr><td></td><td>Values</td><td><input size='40' id='joystick_values' name='joystick_values' type='text' class='array'/></td><td>Comma separated list of ADC values (12-bit) for UP, DOWN, LEFT, RIGHT, ENTER, IDLE</td></tr>
 
 					<tr><td colspan='2'><b>Digital Joystick</td></tr>
-					<tr><td></td><td>Pin 1 (I)</td><td><input size='3' id='five_way1' name='five_way1' type='text'/></td><td>These 3 pins create a binary value for the joystick direction</td></tr>
-					<tr><td></td><td>Pin 2 (I)</td><td><input size='3' id='five_way2' name='five_way2' type='text'/></td><td>7 = IDLE, 6 = OK, 5 = DOWN</td></tr>
-					<tr><td></td><td>Pin 3 (I)</td><td><input size='3' id='five_way3' name='five_way3' type='text'/></td><td>4 = RIGHT, 3 = UP, 2 = LEFT</td></tr>
+					<tr><td></td><td>Pin 1<img class="icon-input"/></td><td><input size='3' id='five_way1' name='five_way1' type='text'/></td><td>These 3 pins create a binary value for the joystick direction</td></tr>
+					<tr><td></td><td>Pin 2<img class="icon-input"/></td><td><input size='3' id='five_way2' name='five_way2' type='text'/></td><td>7 = IDLE, 6 = OK, 5 = DOWN</td></tr>
+					<tr><td></td><td>Pin 3<img class="icon-input"/></td><td><input size='3' id='five_way3' name='five_way3' type='text'/></td><td>4 = RIGHT, 3 = UP, 2 = LEFT</td></tr>
 @@end
 					<tr><td colspan='2'><b>Button(s)</td></tr>
-					<tr><td></td><td>Button 1 pin (I)</td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
+					<tr><td></td><td>Button 1 pin<img class="icon-input"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
 
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
-					<tr><td></td><td>RGB LED pin (O)</td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td><td>Signal pin for WS2812 RGB LED or LED strip</td></tr>
+					<tr><td></td><td>RGB LED pin<img class="icon-output"/></td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td><td>Signal pin for WS2812 RGB LED or LED strip</td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td><td>Most WS2812 RGB LEDs are actually GRB</td></tr>
 					<tr><td></td><td>RGB indexes for Status</td><td><input size='40' id='ledidx_rgb_status' name='ledidx_rgb_status' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then only LED at 0 is used)</td></tr>
 @@if not isTX:
 					<tr><td></td><td>RGB indexes for VTX Status</td><td><input size='40' id='ledidx_rgb_vtx' name='ledidx_rgb_vtx' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty then no VTX status)</td></tr>
 @@end
 					<tr><td></td><td>RGB indexes for Boot animation</td><td><input size='40' id='ledidx_rgb_boot' name='ledidx_rgb_boot' type='text' class='array'/></td><td>Indexes into the "string" of RGB LEDs (if empty status indexes are used)</td></tr>
-					<tr><td></td><td>LED pin (O)</td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
-					<tr><td></td><td>Red LED pin (O)</td><td><input size='3' id='led_red' name='led_red' type='text'/></td><td>If there are multiple LEDs, then this is the pin for the RED onw</td></tr>
+					<tr><td></td><td>LED pin<img class="icon-output"/></td><td><input size='3' id='led' name='led' type='text'/></td><td>Only use when only a single LED is used</td></tr>
+					<tr><td></td><td>Red LED pin<img class="icon-output"/></td><td><input size='3' id='led_red' name='led_red' type='text'/></td><td>If there are multiple LEDs, then this is the pin for the RED onw</td></tr>
 					<tr><td></td><td>Red LED inverted</td><td><input size='3' id='led_red_invert' name='led_red_invert' type='checkbox'/></td><td>LEDs are active LOW unless this is checked</td></tr>
-					<tr><td></td><td>Green LED pin (O)</td><td><input size='3' id='led_green' name='led_green' type='text'/></td><td>If there is a GREEN LED as well as RED above</td></tr>
+					<tr><td></td><td>Green LED pin<img class="icon-output"/></td><td><input size='3' id='led_green' name='led_green' type='text'/></td><td>If there is a GREEN LED as well as RED above</td></tr>
 					<tr><td></td><td>Green LED inverted</td><td><input size='3' id='led_green_invert' name='led_green_invert' type='checkbox'/></td><td>Check if the LED is active HIGH</td></tr>
-					<tr><td></td><td>Blue LED pin (O)</td><td><input size='3' id='led_blue' name='led_blue' type='text'/></td><td>Pin for a 3rd, BLUE, LED!</td></tr>
+					<tr><td></td><td>Blue LED pin<img class="icon-output"/></td><td><input size='3' id='led_blue' name='led_blue' type='text'/></td><td>Pin for a 3rd, BLUE, LED!</td></tr>
 					<tr><td></td><td>Blue LED inverted</td><td><input size='3' id='led_blue_invert' name='led_blue_invert' type='checkbox'/></td><td>Check if the LED is active HIGH</td></tr>
 					<!-- SIYI things!
-					<tr><td></td><td>Green/Red LED pin (O)</td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
-					<tr><td></td><td>Red/Green LED pin (O)</td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
+					<tr><td></td><td>Green/Red LED pin<img class="icon-output"/></td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
+					<tr><td></td><td>Red/Green LED pin<img class="icon-output"/></td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
 					-->
 @@if isTX:
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
@@ -177,49 +177,49 @@
 						</select>
 					</td><td>The type of OLED conencted</td></tr>
 					<tr><td></td><td>180 rotation</td><td><input size='3' id='screen_reversed' name='screen_reversed' type='checkbox'/></td><td>Select to rotate the display 180 degrees</td></tr>
-					<tr><td></td><td>CS pin (O)</td><td><input size='3' id='screen_cs' name='screen_cs' type='text'/></td><td>Chip Select (if using SPI)</td></tr>
-					<tr><td></td><td>DC pin (O)</td><td><input size='3' id='screen_dc' name='screen_dc' type='text'/></td><td>Data/Command Select (if using SPI)</td></tr>
-					<tr><td></td><td>MOSI pin (O)</td><td><input size='3' id='screen_mosi' name='screen_mosi' type='text'/></td><td>Data (if using SPI)</td></tr>
-					<tr><td></td><td>RST pin (O)</td><td><input size='3' id='screen_rst' name='screen_rst' type='text'/></td><td>Reset</td></tr>
-					<tr><td></td><td>SCK pin (O)</td><td><input size='3' id='screen_sck' name='screen_sck' type='text'/></td><td>Clock (either SPI or I2C)</td></tr>
-					<tr><td></td><td>SDA pin (IO)</td><td><input size='3' id='screen_sda' name='screen_sda' type='text'/></td><td>Data (I2C)</td></tr>
-					<tr><td></td><td>BL pin (O)</td><td><input size='3' id='screen_bl' name='screen_bl' type='text'/></td><td>Backlight</td></tr>
+					<tr><td></td><td>CS pin<img class="icon-output"/></td><td><input size='3' id='screen_cs' name='screen_cs' type='text'/></td><td>Chip Select (if using SPI)</td></tr>
+					<tr><td></td><td>DC pin<img class="icon-output"/></td><td><input size='3' id='screen_dc' name='screen_dc' type='text'/></td><td>Data/Command Select (if using SPI)</td></tr>
+					<tr><td></td><td>MOSI pin<img class="icon-output"/></td><td><input size='3' id='screen_mosi' name='screen_mosi' type='text'/></td><td>Data (if using SPI)</td></tr>
+					<tr><td></td><td>RST pin<img class="icon-output"/></td><td><input size='3' id='screen_rst' name='screen_rst' type='text'/></td><td>Reset</td></tr>
+					<tr><td></td><td>SCK pin<img class="icon-output"/></td><td><input size='3' id='screen_sck' name='screen_sck' type='text'/></td><td>Clock (either SPI or I2C)</td></tr>
+					<tr><td></td><td>SDA pin<img class="icon-input"/><img class="icon-output"/></td><td><input size='3' id='screen_sda' name='screen_sda' type='text'/></td><td>Data (I2C)</td></tr>
+					<tr><td></td><td>BL pin<img class="icon-output"/></td><td><input size='3' id='screen_bl' name='screen_bl' type='text'/></td><td>Backlight</td></tr>
 
 					<tr><td colspan='2'><b>Backpack / Logging</td></tr>
 					<tr><td></td><td>Enable Backpack</td><td><input size='3' id='use_backpack' name='use_backpack' type='checkbox'/></td><td>If a TX backpack is connected</td></tr>
 					<tr><td></td><td>Baud Rate</td><td><input size='10' id='debug_backpack_baud' name='debug_backpack_baud' type='text'/></td><td>Baud rate used to communicate to the backpack (normally 460800)</td></tr>
-					<tr><td></td><td>RX pin (I)</td><td><input size='3' id='debug_backpack_rx' name='debug_backpack_rx' type='text'/></td><td>Connected to TX pin on backpack</td></tr>
-					<tr><td></td><td>TX pin (O)</td><td><input size='3' id='debug_backpack_tx' name='debug_backpack_tx' type='text'/></td><td>Connected to RX pin on backpack</td></tr>
-					<tr><td></td><td>BOOT pin (O)</td><td><input size='3' id='backpack_boot' name='backpack_boot' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285, allows passthrough flashing</td></tr>
-					<tr><td></td><td>EN pin (O)</td><td><input size='3' id='backpack_en' name='backpack_en' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285, allows passthrough flashing</td></tr>
+					<tr><td></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='debug_backpack_rx' name='debug_backpack_rx' type='text'/></td><td>Connected to TX pin on backpack</td></tr>
+					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='debug_backpack_tx' name='debug_backpack_tx' type='text'/></td><td>Connected to RX pin on backpack</td></tr>
+					<tr><td></td><td>BOOT pin<img class="icon-output"/></td><td><input size='3' id='backpack_boot' name='backpack_boot' type='text'/></td><td>Pin connected to GPIO0 pin on backpack ESP8285, allows passthrough flashing</td></tr>
+					<tr><td></td><td>EN pin<img class="icon-output"/></td><td><input size='3' id='backpack_en' name='backpack_en' type='text'/></td><td>Pin connected to EN pin on backpack ESP8285, allows passthrough flashing</td></tr>
 					<tr><td></td><td>Passthrough baud</td><td><input size='7' id='passthrough_baud' name='passthrough_baud' type='text'/></td><td>Baud rate to flash the backpack ESP8285 (default is to use the baud rate above)</td></tr>
 
 					<tr><td colspan='2'><b>I2C & Misc Devices</td></tr>
-					<tr><td></td><td>SCL pin (O)</td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td><td>I2C clock pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
-					<tr><td></td><td>SDA pin (IO)</td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td><td>I2C data pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
+					<tr><td></td><td>SCL pin<img class="icon-output"/></td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td><td>I2C clock pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
+					<tr><td></td><td>SDA pin<img class="icon-input"/><img class="icon-output"/></td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td><td>I2C data pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
 					<!-- <tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td><td>Pin connected to a PWM controlled buzzer</td></tr> -->
-					<tr><td></td><td>Fan enable pin (O)</td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td><td>Pin used to enable a cooling FAN (active HIGH)</td></tr>
+					<tr><td></td><td>Fan enable pin<img class="icon-output"/></td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td><td>Pin used to enable a cooling FAN (active HIGH)</td></tr>
 					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td><td>Checked if there is a STK8xxx g-sensor on the I2C bus</td></tr>
-					<tr><td></td><td>G-sensor interrupt pin (I)</td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='text'/></td><td>Pin connected the STK8xxx g-sensor for interrupts</td></tr>
+					<tr><td></td><td>G-sensor interrupt pin<img class="icon-input"/></td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='text'/></td><td>Pin connected the STK8xxx g-sensor for interrupts</td></tr>
 					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td><td>Checked if there is a LM75A thermal sensor on the I2C bus</td></tr>
 @@end
 @@if not isTX:
 					<tr><td colspan='2'><b>PWM</td></tr>
-					<tr><td></td><td>PWM output pins (O)</td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text' class='array'/></td><td>Comma separated list of pins used for PWM output</td></tr>
+					<tr><td></td><td>PWM output pins<img class="icon-pwm"/></td><td><input size='40' id='pwm_outputs' name='pwm_outputs' type='text' class='array'/></td><td>Comma separated list of pins used for PWM output</td></tr>
 
 					<tr><td colspan='2'><b>VBat</td></tr>
-					<tr><td></td><td>VBat pin (AI)</td><td><input size='3' id='vbat' name='vbat' type='text'/></td><td>Analog input pin for reading VBAT voltage (1V max on 8285, 3.3V max on ESP32)</td></tr>
+					<tr><td></td><td>VBat pin<img class="icon-analog"/></td><td><input size='3' id='vbat' name='vbat' type='text'/></td><td>Analog input pin for reading VBAT voltage (1V max on 8285, 3.3V max on ESP32)</td></tr>
 					<tr><td></td><td>VBat offset</td><td><input size='7' id='vbat_offset' name='vbat_offset' type='text'/></td><td>Offset and scale are used together with the analog pin to calculate the voltage</td></tr>
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td><td>voltage = (analog - offset) / scale</td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
-					<tr><td></td><td>RF amp PWM pin (O)</td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power ouput level of the VTX PA (value is calvulated based on power and frequency using VPD interpolation values)</td></tr>
-					<tr><td></td><td>RF amp VPD pin (AI)</td><td><input size='3' id='vtx_amp_vpd' name='vtx_amp_vpd' type='text'/></td><td>Analog input for VPD (power detect) from VTX PA</td></tr>
-					<tr><td></td><td>RF amp VREF pin (O)</td><td><input size='3' id='vtx_amp_vref' name='vtx_amp_vref' type='text'/></td><td>Active high enable pin the the VTX PA VREF (voltage reference)</td></tr>
-					<tr><td></td><td>SPI NSS pin (O)</td><td><input size='3' id='vtx_nss' name='vtx_nss' type='text'/></td><td>Chip select for RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
-					<tr><td></td><td>SPI SCK pin (O)</td><td><input size='3' id='vtx_sck' name='vtx_sck' type='text'/></td><td>Clock pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
-					<tr><td></td><td>SPI MISO pin (I)</td><td><input size='3' id='vtx_miso' name='vtx_miso' type='text'/></td><td>MISO pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
-					<tr><td></td><td>SPI MOSI pin (O)</td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td><td>MOSI pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
+					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power ouput level of the VTX PA (value is calvulated based on power and frequency using VPD interpolation values)</td></tr>
+					<tr><td></td><td>RF amp VPD pin<img class="icon-analog"/></td><td><input size='3' id='vtx_amp_vpd' name='vtx_amp_vpd' type='text'/></td><td>Analog input for VPD (power detect) from VTX PA</td></tr>
+					<tr><td></td><td>RF amp VREF pin<img class="icon-output"/></td><td><input size='3' id='vtx_amp_vref' name='vtx_amp_vref' type='text'/></td><td>Active high enable pin the the VTX PA VREF (voltage reference)</td></tr>
+					<tr><td></td><td>SPI NSS pin<img class="icon-output"/></td><td><input size='3' id='vtx_nss' name='vtx_nss' type='text'/></td><td>Chip select for RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
+					<tr><td></td><td>SPI SCK pin<img class="icon-output"/></td><td><input size='3' id='vtx_sck' name='vtx_sck' type='text'/></td><td>Clock pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
+					<tr><td></td><td>SPI MISO pin<img class="icon-input"/></td><td><input size='3' id='vtx_miso' name='vtx_miso' type='text'/></td><td>MISO pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
+					<tr><td></td><td>SPI MOSI pin<img class="icon-output"/></td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td><td>MOSI pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
 					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_25mW' name='vtx_amp_vpd_25mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 25mW</td></tr>
 					<tr><td></td><td>100mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_100mW' name='vtx_amp_vpd_100mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 100mW</td></tr>
 @@end
