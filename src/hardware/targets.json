@@ -440,6 +440,14 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
             },
+            "pa-rgb": {
+                "product_name": "Generic ESP8285 RGB + PA 2.4Ghz RX",
+                "lua_name": "ELRS+RGB 2400RX",
+                "layout_file": "Generic 2400 PA RGB.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
             "diversity": {
                 "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
                 "lua_name": "ELRS+D 2400RX",
