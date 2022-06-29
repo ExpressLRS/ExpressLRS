@@ -1558,6 +1558,8 @@ void ExitBindingMode()
         return;
     }
 
+    MspReceiver.ResetState();
+
     // Prevent any new packets from coming in
     Radio.SetTxIdleMode();
     // Write the values to eeprom
