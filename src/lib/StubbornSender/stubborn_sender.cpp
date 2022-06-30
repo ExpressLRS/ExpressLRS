@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <algorithm>
+#include <cstring>
 #include "stubborn_sender.h"
 
 StubbornSender::StubbornSender()
@@ -65,16 +66,14 @@ uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
     case SENDING:
         {
             bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
-            for (unsigned n = 0; n < bytesLastPayload; ++n)
-            {
-                outData[n] = data[currentOffset + n];
-            }
             // If this is the last data chunk, and there has been at least one other packet
             // skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
             if (currentPackage > 1 && (currentOffset + bytesLastPayload) >= length)
                 packageIndex = 0;
             else
                 packageIndex = currentPackage;
+
+            memcpy(outData, &data[currentOffset], bytesLastPayload);
         }
         break;
     default:

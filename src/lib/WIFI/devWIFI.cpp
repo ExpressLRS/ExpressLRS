@@ -265,8 +265,7 @@ static void HandleReset(AsyncWebServerRequest *request)
     SPIFFS.remove("/options.json");
   }
   if (request->hasArg("model")) {
-    config.SetDefaults();
-    config.Commit();
+    config.SetDefaults(true);
   }
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
   response->addHeader("Connection", "close");
@@ -286,6 +285,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   }
   #if defined(TARGET_RX)
   s += ",\"modelid\":" + String(config.GetModelId());
+  s += ",\"forcetlm\":" + String(config.GetForceTlmOff());
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (GPIO_PIN_PWM_OUTPUTS_COUNT > 0) {
@@ -410,11 +410,18 @@ static void WebUpdateModelId(AsyncWebServerRequest *request)
   config.SetModelId((uint8_t)modelid);
   config.Commit();
 
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Model Match updated, rebooting receiver");
-  response->addHeader("Connection", "close");
-  request->send(response);
-  request->client()->close();
-  rebootTime = millis() + 100;
+  request->send(200, "text/plain", "Model Match updated");
+}
+
+static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
+{
+  long forceTlm = request->arg("force-tlm").toInt();
+
+  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
+  config.SetForceTlmOff(forceTlm != 0);
+  config.Commit();
+
+  request->send(200, "text/plain", "Force telemetry updated");
 }
 #endif
 
@@ -657,6 +664,33 @@ static void startMDNS()
     return;
   }
 
+  String options = "-DAUTO_WIFI_ON_INTERVAL=" + String(firmwareOptions.wifi_auto_on_interval / 1000);
+
+  #ifdef TARGET_TX
+  if (firmwareOptions.unlock_higher_power)
+  {
+    options += " -DUNLOCK_HIGHER_POWER";
+  }
+  if (firmwareOptions.uart_inverted)
+  {
+    options += " -DUART_INVERTED";
+  }
+  options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
+  options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
+  #endif
+
+  #ifdef TARGET_RX
+  if (firmwareOptions.lock_on_first_connection)
+  {
+    options += " -DLOCK_ON_FIRST_CONNECTION";
+  }
+  if (firmwareOptions.invert_tx)
+  {
+    options += " -DRCVR_INVERT_TX";
+  }
+  options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
+  #endif
+
   String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
   #ifdef PLATFORM_ESP8266
@@ -666,7 +700,7 @@ static void startMDNS()
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt(service, "version", VERSION);
-    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt(service, "options", options.c_str());
     MDNS.addServiceTxt(service, "type", "rx");
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
@@ -684,7 +718,7 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
   #endif
 }
@@ -726,6 +760,7 @@ static void startServices()
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
+    server.on("/forceTelemetry", WebUpdateForceTelemetry);
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);

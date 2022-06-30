@@ -325,4 +325,13 @@ body, input, select, textarea {
 
   /*==========================*/
 
+  .elrs-inline-form {
+	  display: flex;
+	  align-items: center;
+  }
+
+  .elrs-inline-form > * {
+	margin-right: 5px;
+  }
+
   @@include("mui.css")

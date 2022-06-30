@@ -36,7 +36,6 @@ typedef enum
     connected,
     tentative,
     disconnected,
-    disconnectPending, // used on modelmatch change to drop the connection
     MODE_STATES,
     // States below here are special mode states
     noCrossfire,
@@ -99,16 +98,22 @@ enum {
     RADIO_TYPE_SX128x_FLRC,
 };
 
+// Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
+#define DYNPOWER_SNR_THRESH_NONE -127
+
 typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
     expresslrs_RFrates_e enum_rate;
-    int16_t RXsensitivity;                // expected RF sensitivity based on
+    int16_t RXsensitivity;                // expected min RF sensitivity
     uint16_t TOA;                         // time on air in microseconds
     uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
     uint16_t RxLockTimeoutMs;             // Max time to go from tentative -> connected state on receiver (ms)
     uint16_t SyncPktIntervalDisconnected; // how often to send the PACKET_TYPE_SYNC (ms) when there is no response from RX
     uint16_t SyncPktIntervalConnected;    // how often to send the PACKET_TYPE_SYNC (ms) when there we have a connection
+    int8_t DynpowerSnrThreshUp;           // Request a raise in power if the reported (average) SNR is at or below this
+                                          // or DYNPOWER_UPTHRESH_SNR_NONE to use RSSI
+    int8_t DynpowerSnrThreshDn;           // Like DynpowerSnrUpThreshold except to lower power
 
 } expresslrs_rf_pref_params_s;
 
@@ -157,6 +162,9 @@ uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 extern uint8_t ExpressLRS_currTlmDenom;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+
+#define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
+#define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
 
 #endif // UNIT_TEST
 

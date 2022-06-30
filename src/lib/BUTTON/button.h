@@ -1,6 +1,9 @@
 #pragma once
 
 #include <functional>
+#include "CRSF.h"
+
+extern CRSF crsf;
 
 class Button
 {
@@ -48,6 +51,9 @@ public:
     // Call this in loop()
     int update()
     {
+        if (crsf.IsArmed())
+            return MS_DEBOUNCE;
+
         const uint32_t now = millis();
 
         // Reset press count if it has been too long since last rising edge

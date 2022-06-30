@@ -88,6 +88,7 @@ ELRS_EEPROM::Commit()
 #elif defined(STM32_USE_FLASH)
     eeprom_buffer_flush();
 #endif
+  // PLATFORM_STM32 with external flash every byte is committed as it is written
 }
 
 #endif /* !TARGET_NATIVE */

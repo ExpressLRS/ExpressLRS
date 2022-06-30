@@ -331,10 +331,6 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
     // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
     currOpmode = SX127x_OPMODE_STANDBY;
   }
-  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
-  // page 87 (note we already do /4 in GetLastPacketSNR())
-  int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
-  LastPacketRSSI += negOffset;
   RXdoneCallback(SX12XX_RX_OK);
 }
 
@@ -361,7 +357,11 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
 {
   LastPacketRSSI = GetLastPacketRSSI();
-  LastPacketSNR = GetLastPacketSNR();
+  LastPacketSNRRaw = GetLastPacketSNRRaw();
+  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
+  // Section 3.5.5 (page 87)
+  int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
+  LastPacketRSSI += negOffset;
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
@@ -373,14 +373,14 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength, interval);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength, interval);
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
 {
-  PayloadLength = PayloadLength;
+  PayloadLength = _PayloadLength;
   IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
@@ -500,10 +500,9 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
   return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNRRaw()
 {
-  int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return (rawSNR / 4);
+  return (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);;
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::GetIrqFlags()

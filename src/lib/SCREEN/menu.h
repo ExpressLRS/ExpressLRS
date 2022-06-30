@@ -33,6 +33,7 @@ enum fsm_state_s {
     // These do not have menu text or icons
     STATE_SPLASH = 100,
     STATE_IDLE,
+    STATE_TELEMETRY_CURR,
 
     STATE_BLE_CONFIRM,
     STATE_BLE_EXECUTE,

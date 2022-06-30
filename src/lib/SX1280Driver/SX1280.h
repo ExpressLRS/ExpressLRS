@@ -5,6 +5,7 @@
 #include "SX1280_hal.h"
 #include "SX12xxDriverCommon.h"
 
+#define RADIO_SNR_SCALE 4 // Units for LastPacketSNRRaw
 
 class SX1280Driver: public SX12xxDriverCommon
 {
@@ -32,7 +33,7 @@ public:
 
 
     bool GetFrequencyErrorbool();
-    bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNR > 0); }
+    bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size);
     void RXnb();
@@ -66,7 +67,8 @@ private:
                              uint8_t PreambleLength,
                              uint8_t PayloadLength,
                              uint32_t syncWord,
-                             uint16_t crcSeed);
+                             uint16_t crcSeed,
+                             uint8_t cr);
 
     void SetDioIrqParams(uint16_t irqMask,
                          uint16_t dio1Mask=SX1280_IRQ_RADIO_NONE,

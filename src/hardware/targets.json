@@ -70,7 +70,7 @@
             "nano": {
                 "product_name": "BETAFPV 2.4GHz Nano RX",
                 "lua_name": "BFPV Nano 2G4RX",
-                "layout_file": "BETAFPV Nano 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
@@ -196,6 +196,18 @@
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
+            },
+            "pa": {
+                "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
+                "lua_name": "ELRS+PA 2400RX",
+                "layout_file": "Generic 2400 PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            },
+            "diversity": {
+                "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
+                "lua_name": "ELRS+D 2400RX",
+                "layout_file": "Generic 2400 PA Diversity.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
             }
         },
         "rx32_2400": {
@@ -378,13 +390,13 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 PA Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24s": {
                 "product_name": "MATEK R24-S 2.4GHz RX",
                 "lua_name": "MATEK R24-S",
-                "layout_file": "MATEK 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24p": {
@@ -492,7 +504,7 @@
             "plain": {
                 "product_name": "Vantac 2.4GHz RX",
                 "lua_name": "Vantac 2400 RX",
-                "layout_file": "Vantac 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }

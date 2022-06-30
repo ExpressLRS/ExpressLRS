@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <algorithm>
+#include <cstring>
 #include "stubborn_receiver.h"
 
 StubbornReceiver::StubbornReceiver()
@@ -72,10 +73,8 @@ void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * c
     if (acceptData)
     {
         uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
-        for (unsigned i = 0; i < len; i++)
-        {
-            data[currentOffset++] = receiveData[i];
-        }
+        memcpy(&data[currentOffset], receiveData, len);
+        currentOffset += len;
         telemetryConfirm = !telemetryConfirm;
     }
 }
