@@ -12,6 +12,8 @@
 #include "hwTimer.h"
 #include "FHSS.h"
 
+extern CRSF crsf;
+
 static char version_domain[20+1+6+1];
 static const char emptySpace[1] = {0};
 static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
@@ -532,21 +534,27 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    if (arg < RATE_MAX)
-    {
-      uint8_t newRate = RATE_MAX - 1 - arg;
-      newRate = adjustPacketRateForBaud(newRate);
-      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
-      // If the switch mode is going to change, block the change while connected
-      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+      if (!crsf.IsArmed())
       {
-        config.SetRate(newRate);
-        config.SetSwitchMode(newSwitchMode);
+        if (arg < RATE_MAX)
+        {
+          uint8_t newRate = RATE_MAX - 1 - arg;
+          newRate = adjustPacketRateForBaud(newRate);
+          uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+            (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
+          // If the switch mode is going to change, block the change while connected
+          if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+          {
+            config.SetRate(newRate);
+            config.SetSwitchMode(newSwitchMode);
+          }
+          else
+            setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        }
       }
       else
-        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-    }
+        setLuaWarningFlag(LUA_FLAG_ERROR_ARMED, true);
+
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;

@@ -270,7 +270,7 @@ void sendELRSstatus()
     "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
     "Not while connected",  //critical warning3, trying to change a protected value while connected
-    "",  //critical warning2, reserved for future use
+    "Not while armed",  //critical warning2, trying to change a protected value while armed
     ""   //critical warning1, reserved for future use
   };
   const char * warningInfo = "";
