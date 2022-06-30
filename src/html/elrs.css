@@ -26,6 +26,7 @@ body, input, select, textarea {
         width:25%;
 		height:25%;
     }
+}
 
 td img.icon-input {
 	content: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg width='700pt' height='700pt' version='1.1' viewBox='0 0 700 700' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m326.67 46.668h46.664v260.54l140-140 32.996 32.992-196.33 196.33-196.33-196.33 32.996-32.992 140 140zm210 396.66v-93.332h46.664v140h-466.66v-140h46.664v93.332z' fill='%2312B0FB' fill-rule='evenodd'/%3E%3C/svg%3E%0A");
