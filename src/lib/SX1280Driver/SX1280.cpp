@@ -246,8 +246,13 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     default:
         hal.WriteRegister(SX1280_REG_SF_ADDITIONAL_CONFIG, 0x32, SX1280_Radio_All); // for SF9, SF10, SF11, SF12
     }
-    // Enable frequency compensation
-    hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x1, SX1280_Radio_All);
+    // Datasheet in LoRa Operation says "After SetModulationParams command:
+    // In all cases 0x1 must be written to the Frequency Error Compensation mode register 0x093C"
+    // However, this causes CRC errors for SF9 when using a high deviation TX (145kHz) and not using Explicit Header mode.
+    // The default register value (0x1b) seems most compatible, so don't mess with it
+    // InvertIQ=0 0x00=No reception 0x01=Poor reception w/o Explicit Header 0x02=OK 0x03=OK
+    // InvertIQ=1 0x00, 0x01, 0x02, and 0x03=Poor reception w/o Explicit Header
+    // hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x03, SX1280_Radio_All);
 }
 
 void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
@@ -322,11 +327,11 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX1280_Radio_All);
 
-    // Set Synch Address Control to zero bit errors permissible 
+    // Set Synch Address Control to zero bit errors permissible
     uint8_t syncAddrCtrl = hal.ReadRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, SX1280_Radio_1);
     syncAddrCtrl &= SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK;  // Preserve the upper 4:7 bits as they are an unknown register.
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, syncAddrCtrl, SX1280_Radio_1);
-    
+
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         syncAddrCtrl = hal.ReadRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, SX1280_Radio_2);
