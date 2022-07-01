@@ -1087,6 +1087,7 @@ static void setupTarget()
         digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
         if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN) 
         {
+            pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
             digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
         }
     }
