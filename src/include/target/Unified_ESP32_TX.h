@@ -58,8 +58,8 @@
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
 
 // Radio Antenna
-#define GPIO_PIN_ANT_CTRL_1 hardware_pin(HARDWARE_ant_ctrl1)
-#define GPIO_PIN_ANT_CTRL_2 hardware_pin(HARDWARE_ant_ctrl2)
+#define GPIO_PIN_ANT_CTRL hardware_pin(HARDWARE_ant_ctrl)
+#define GPIO_PIN_ANT_CTRL_COMPL hardware_pin(HARDWARE_ant_ctrl_compl)
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)

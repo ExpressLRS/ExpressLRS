@@ -106,7 +106,7 @@ device_affinity_t ui_devices[] = {
   {&VTX_device, 1}
 };
 
-#if defined(GPIO_PIN_ANT_CTRL_1)
+#if defined(GPIO_PIN_ANT_CTRL)
     static bool diversityAntennaState = LOW;
 #endif
 
@@ -125,14 +125,14 @@ void EXTI2_TSC_IRQHandler()
 
 void switchDiversityAntennas()
 {
-  if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     diversityAntennaState = !diversityAntennaState;
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
   }
-  if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
   {
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
+    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 }
 
@@ -901,15 +901,15 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-  if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
-    pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+    pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
   }
-  if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
   {
-    pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
+    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 
   setupTargetCommon();

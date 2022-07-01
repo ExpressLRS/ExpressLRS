@@ -503,19 +503,19 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 //////////////////////////////////////////////////////////////
 // flip to the other antenna
-// no-op if GPIO_PIN_ANTENNA_SELECT not defined
+// no-op if GPIO_PIN_ANT_CTRL not defined
 static inline void switchAntenna()
 {
-    if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN && config.GetAntennaMode() == 2)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN && config.GetAntennaMode() == 2)
     {
         // 0 and 1 is use for gpio_antenna_select
         // 2 is diversity
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
-        digitalWrite(GPIO_PIN_ANT_CTRL_1, antenna);
-        if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+        digitalWrite(GPIO_PIN_ANT_CTRL, antenna);
+        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_ANT_CTRL_2, !antenna);
+            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !antenna);
         }
     }
 }
@@ -523,7 +523,7 @@ static inline void switchAntenna()
 static void ICACHE_RAM_ATTR updateDiversity()
 {
 
-    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
         if(config.GetAntennaMode() == 2)
         {
@@ -579,10 +579,10 @@ static void ICACHE_RAM_ATTR updateDiversity()
         }
         else
         {
-            digitalWrite(GPIO_PIN_ANT_CTRL_1, config.GetAntennaMode());
-            if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN) 
+            digitalWrite(GPIO_PIN_ANT_CTRL, config.GetAntennaMode());
+            if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN) 
             {
-                digitalWrite(GPIO_PIN_ANT_CTRL_2, !config.GetAntennaMode());
+                digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !config.GetAntennaMode());
             }
             antenna = config.GetAntennaMode();
         }
@@ -1081,13 +1081,13 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
-    if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-        digitalWrite(GPIO_PIN_ANT_CTRL_1, LOW);
-        if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN) 
+        pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+        digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
+        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN) 
         {
-            digitalWrite(GPIO_PIN_ANT_CTRL_2, HIGH);
+            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
         }
     }
 
