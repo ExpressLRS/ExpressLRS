@@ -513,8 +513,9 @@ static inline void switchAntenna()
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
-        if (GPIO_PIN_ANTENNA_SELECT_2 != UNDEF_PIN) {
-            digitalWrite(GPIO_PIN_ANTENNA_SELECT_2, !antenna);
+        if (GPIO_PIN_ANTENNA_SELECT_COMPL != UNDEF_PIN)
+        {
+            digitalWrite(GPIO_PIN_ANTENNA_SELECT_COMPL, !antenna);
         }
     }
 }
@@ -579,8 +580,9 @@ static void ICACHE_RAM_ATTR updateDiversity()
         else
         {
             digitalWrite(GPIO_PIN_ANTENNA_SELECT, config.GetAntennaMode());
-            if (GPIO_PIN_ANTENNA_SELECT_2 != UNDEF_PIN) {
-                digitalWrite(GPIO_PIN_ANTENNA_SELECT_2, !config.GetAntennaMode());
+            if (GPIO_PIN_ANTENNA_SELECT_COMPL != UNDEF_PIN) 
+            {
+                digitalWrite(GPIO_PIN_ANTENNA_SELECT_COMPL, !config.GetAntennaMode());
             }
             antenna = config.GetAntennaMode();
         }
@@ -1084,8 +1086,9 @@ static void setupTarget()
         pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
 
-        if (GPIO_PIN_ANTENNA_SELECT_2 != UNDEF_PIN) {
-            digitalWrite(GPIO_PIN_ANTENNA_SELECT_2, HIGH);
+        if (GPIO_PIN_ANTENNA_SELECT_COMPL != UNDEF_PIN) 
+        {
+            digitalWrite(GPIO_PIN_ANTENNA_SELECT_COMPL, HIGH);
         }
     }
 

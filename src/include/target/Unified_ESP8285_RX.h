@@ -58,6 +58,7 @@
 
 // Radio Antenna
 #define GPIO_PIN_ANTENNA_SELECT hardware_pin(HARDWARE_ant_select)
+#define GPIO_PIN_ANTENNA_SELECT_COMPL hardware_pin(HARDWARE_ant_select_compl)
 #define GPIO_PIN_ANT_CTRL_1 hardware_pin(HARDWARE_ant_ctrl1)
 #define GPIO_PIN_ANT_CTRL_2 hardware_pin(HARDWARE_ant_ctrl2)
 

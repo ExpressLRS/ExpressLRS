@@ -23,6 +23,7 @@ typedef enum {
 
     // Radio Antenna
     HARDWARE_ant_select,
+    HARDWARE_ant_select_compl,
     HARDWARE_ant_ctrl1,
     HARDWARE_ant_ctrl2,
 
