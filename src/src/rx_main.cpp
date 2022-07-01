@@ -514,7 +514,7 @@ static inline void switchAntenna()
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
         if (GPIO_PIN_ANTENNA_SELECT_2 != UNDEF_PIN) {
-            digitalWrite(GPIO_PIN_ANTENNA_SELECT_2, antenna);
+            digitalWrite(GPIO_PIN_ANTENNA_SELECT_2, !antenna);
         }
     }
 }
