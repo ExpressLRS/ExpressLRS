@@ -26,6 +26,7 @@ void test_ver_to_u32(void)
         {{0x32, 0x2e, 0x32, 0x2e, 0x31, 0x35, 32,73,83,77,50,71,52,0}, 0x0002020f}, // 2.2.15 ISM2G4
         {{0x31, 0x2e, 0x32, 0x2e, 0x33, 0x2e, 0x34, 32,73,83,77,50,71,52,0}, 0x01020304}, // 1.2.3.4 ISM2G4
         {{0x31, 0x30, 0x30, 0x2e, 0x32, 0x35, 0x35, 32,0}, 0x000064ff}, // 100.255(space)
+        {"3.1.2",0x00030102},
         {{0}, 0},
     };
 
@@ -57,12 +58,9 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(DEVICE_INFORMATION_FRAME_SIZE, header->frame_size);
 
     uint8_t *data = deviceInformation + sizeof(crsf_ext_header_t);
-    uint8_t compare [] = {0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67, 0x0, 0x45, 0x4c, 0x52, 0x53, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    uint8_t compare [] = {'t', 'e', 's', 't', 'i', 'n', 'g', 0x0, 0x45, 0x4c, 0x52, 0x53, 0x0, 0x0, 0x0, 0x0, 0x0, 1, 2, 3, 0x0, 0x0};
 
-    for(int i = 0; i < DEVICE_INFORMATION_PAYLOAD_LENGTH; i++)
-    {
-        TEST_ASSERT_EQUAL(compare[i], data[i]);
-    }
+    TEST_ASSERT_EQUAL_INT8_ARRAY(compare, data, sizeof(compare));
 
     TEST_ASSERT_EQUAL(test_crc.calc(&deviceInformation[2], DEVICE_INFORMATION_LENGTH-3), deviceInformation[DEVICE_INFORMATION_LENGTH - 1]);
 }

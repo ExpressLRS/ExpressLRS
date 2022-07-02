@@ -9,7 +9,11 @@
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
 const char commit[] {LATEST_COMMIT, 0};
+#if defined(UNIT_TEST)
+const char version[] = "1.2.3";
+#else
 const char version[] = {LATEST_VERSION, 0};
+#endif
 
 #if defined(TARGET_TX)
 const char *wifi_hostname = "elrs_tx";
