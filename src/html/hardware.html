@@ -65,7 +65,7 @@ td img.icon-pwm {
 	<br>
 	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
 		<div id="custom_config" class="mui-panel" style="display:none; background-color: #FFC107;">
-			This hardware configuration has been customised. This can be safely ignored if this is a custom hardware build or for testing purposes.<br>
+			This hardware configuration has been customized. This can be safely ignored if this is a custom hardware build or for testing purposes.<br>
 			You can <a download href="/hardware.json">download</a> the configuration or <a href="/reset?hardware">reset</a> to pre-configured defaults and reboot.
 		</div>
 		<div class="mui-panel">
@@ -101,7 +101,7 @@ td img.icon-pwm {
 					<tr><td></td><td>BUSY_2 pin<img class="icon-input"/></td><td><input size='3' id='radio_busy_2' name='radio_busy_2' type='text'/></td><td>Busy pin for second SX1280</td></tr>
 					<tr><td></td><td>DIO1_2 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio1_2' name='radio_dio1_2' type='text'/></td><td>Interrupt pin for second SX1280</td></tr>
 					<tr><td></td><td>NSS_2 pin<img class="icon-output"/></td><td><input size='3' id='radio_nss_2' name='radio_nss_2' type='text'/></td><td>Chip select pin for second SX1280</td></tr>
-					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td><td>Use the SX1280 DC-DC converter rather than LDO voltage regulator (presumes 15uH inductor is present)</td></tr>
+					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td><td>Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)</td></tr>
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td><td>SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
@@ -128,7 +128,7 @@ td img.icon-pwm {
 							<option value='6'>1000mW</option>
 							<option value='7'>2000mW</option>
 						</select>
-					</td><td>The minimum selectable power output</td></tr>
+					</td><td>Minimum selectable power output</td></tr>
 					<tr><td></td><td>High Power</td><td>
 						<select id='power_high' name='power_high'>
 							<option value='0'>10mW</option>
@@ -140,7 +140,7 @@ td img.icon-pwm {
 							<option value='6'>1000mW</option>
 							<option value='7'>2000mW</option>
 						</select>
-					</td><td>The highest selectable power output (if option for higher power is NOT enabled)</td></tr>
+					</td><td>Highest selectable power output (if option for higher power is NOT enabled)</td></tr>
 					<tr><td></td><td>Max Power</td><td>
 						<select id='power_max' name='power_max'>
 							<option value='0'>10mW</option>
@@ -152,7 +152,7 @@ td img.icon-pwm {
 							<option value='6'>1000mW</option>
 							<option value='7'>2000mW</option>
 						</select>
-					</td><td>The absolute maximum selectable power output (only available if 'higher power' option is enabled)</td></tr>
+					</td><td>Absolute maximum selectable power output (only available if 'higher power' option is enabled)</td></tr>
 					<tr><td></td><td>Default Power</td><td>
 						<select id='power_default' name='power_default'>
 							<option value='0'>10mW</option>
@@ -164,7 +164,7 @@ td img.icon-pwm {
 							<option value='6'>1000mW</option>
 							<option value='7'>2000mW</option>
 						</select>
-					</td><td>The default power output when resetting or first flashing a module</td></tr>
+					</td><td>Default power output when resetting or first flashing a module</td></tr>
 					<tr><td></td><td>Power Level control</td><td>
 						<select id='power_control' name='power_control'>
 							<option value='0'>via SEMTECH</option>
@@ -177,7 +177,7 @@ td img.icon-pwm {
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
 					<tr><td></td><td>PDET pin<img class="icon-analog"/></td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>
-					<tr><td></td><td>Intercept</td><td><input size='20' id='power_pdet_intercept' name='power_pdet_intercept' type='text'/></td><td>The intercept and Slope are used together to calculate the dBm from the measured mV on the PDET pin</td></tr>
+					<tr><td></td><td>Intercept</td><td><input size='20' id='power_pdet_intercept' name='power_pdet_intercept' type='text'/></td><td>Intercept and Slope are used together to calculate the dBm from the measured mV on the PDET pin</td></tr>
 					<tr><td></td><td>Slope</td><td><input size='20' id='power_pdet_slope' name='power_pdet_slope' type='text'/></td><td>dBm = mV * slope + intercept, this is then used to adjust the actual output power accordingly</td></tr>
 @@if isTX:
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
@@ -221,7 +221,7 @@ td img.icon-pwm {
 							<option value='3'>SPI OLED (small SSD1306 128x32)</option>
 							<option value='4'>SPI TFT (ST7735 160x80)</option>
 						</select>
-					</td><td>The type of OLED connected</td></tr>
+					</td><td>Type of OLED connected</td></tr>
 					<tr><td></td><td>180 rotation</td><td><input size='3' id='screen_reversed' name='screen_reversed' type='checkbox'/></td><td>Select to rotate the display 180 degrees</td></tr>
 					<tr><td></td><td>CS pin<img class="icon-output"/></td><td><input size='3' id='screen_cs' name='screen_cs' type='text'/></td><td>Chip Select (if using SPI)</td></tr>
 					<tr><td></td><td>DC pin<img class="icon-output"/></td><td><input size='3' id='screen_dc' name='screen_dc' type='text'/></td><td>Data/Command Select (if using SPI)</td></tr>
@@ -259,7 +259,7 @@ td img.icon-pwm {
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td><td>voltage = (analog - offset) / scale</td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
-					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power ouput level of the VTX PA (value is calvulated based on power and frequency using VPD interpolation values)</td></tr>
+					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power output level of the VTX PA (value is calculated based on power and frequency using VPD interpolation values)</td></tr>
 					<tr><td></td><td>RF amp VPD pin<img class="icon-analog"/></td><td><input size='3' id='vtx_amp_vpd' name='vtx_amp_vpd' type='text'/></td><td>Analog input for VPD (power detect) from VTX PA</td></tr>
 					<tr><td></td><td>RF amp VREF pin<img class="icon-output"/></td><td><input size='3' id='vtx_amp_vref' name='vtx_amp_vref' type='text'/></td><td>Active high enable pin the the VTX PA VREF (voltage reference)</td></tr>
 					<tr><td></td><td>SPI NSS pin<img class="icon-output"/></td><td><input size='3' id='vtx_nss' name='vtx_nss' type='text'/></td><td>Chip select for RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
