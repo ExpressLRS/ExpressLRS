@@ -1027,26 +1027,32 @@ uint32_t CRSF::VersionStrToU32(const char *verStr)
 #if !defined(FORCE_NO_DEVICE_VERSION)
     uint8_t accumulator = 0;
     char c;
+    bool trailing_data = false;
     while ((c = *verStr))
     {
         ++verStr;
         // A decimal indicates moving to a new version field
-        // and the space after the version ends that field
-        if (c == '.' || c == ' ')
+        if (c == '.')
         {
             retVal = (retVal << 8) | accumulator;
             accumulator = 0;
+            trailing_data = false;
         }
         // Else if this is a number add it up
         else if (c >= '0' && c <= '9')
         {
             accumulator = (accumulator * 10) + (c - '0');
+            trailing_data = true;
         }
-        // Anything except [0-9. ] ends the parsing
+        // Anything except [0-9.] ends the parsing
         else
         {
             break;
         }
+    }
+    if (trailing_data)
+    {
+        retVal = (retVal << 8) | accumulator;
     }
 #endif
     return retVal;
