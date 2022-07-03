@@ -295,6 +295,12 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   s += ",\"product_name\": \"" + String(product_name) + "\"";
   s += ",\"lua_name\": \"" + String(device_name) + "\"";
   s += ",\"reg_domain\": \"" + String(getRegulatoryDomain()) + "\"";
+  s += ",\"uid\": [";
+  for (int i=0 ; i<6 ; i++) {
+    if (i!=0) s += ",";
+    s += String(UID[0], 10);
+  }
+  s+= + "]";
   s += "}";
   request->send(200, "application/json", s);
 }

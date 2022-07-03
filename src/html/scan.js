@@ -130,6 +130,7 @@ function initNetwork() {
       _('modelid').value = storedModelId;
       if (data.product_name) _('product_name').textContent = data.product_name;
       if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
+      if (data.uid) _('uid').textContent = data.uid.toString();
       updatePwmSettings(data.pwm);
 
       if (data.hasOwnProperty('forcetlm') && data.forcetlm) {
