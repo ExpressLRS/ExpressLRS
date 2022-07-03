@@ -580,7 +580,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
         else
         {
             digitalWrite(GPIO_PIN_ANT_CTRL, config.GetAntennaMode());
-            if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN) 
+            if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
             {
                 digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !config.GetAntennaMode());
             }
@@ -1085,7 +1085,7 @@ static void setupTarget()
     {
         pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
         digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
-        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN) 
+        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
         {
             pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
             digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
@@ -1628,4 +1628,3 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 
     // EEPROM commit will happen on the main thread in ExitBindingMode()
 }
-
