@@ -15,7 +15,7 @@ enum lua_Flags{
     LUA_FLAG_WARNING1,
     //bit 5,6,7 are critical warning flag, block the lua screen until user confirm to suppress the warning.
     LUA_FLAG_ERROR_CONNECTED,
-    LUA_FLAG_CRITICAL_WARNING1,
+    LUA_FLAG_ERROR_BAUDRATE,
     LUA_FLAG_CRITICAL_WARNING2,
 };
 
