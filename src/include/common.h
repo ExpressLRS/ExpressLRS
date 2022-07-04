@@ -13,6 +13,10 @@
 
 #endif // UNIT_TEST
 
+// Used to XOR with OtaCrcInitializer and macSeed and break compatibility with previous versions.
+// It should be incremented every major release.
+#define ELRS_MAJOR_VERSION_NUMBER      3
+
 extern uint8_t BindingUID[6];
 extern uint8_t UID[6];
 extern uint8_t MasterUID[6];
