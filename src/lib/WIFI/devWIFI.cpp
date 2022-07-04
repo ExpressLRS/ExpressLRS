@@ -298,7 +298,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   s += ",\"uid\": [";
   for (int i=0 ; i<6 ; i++) {
     if (i!=0) s += ",";
-    s += String(UID[0], 10);
+    s += String(UID[i], 10);
   }
   s+= + "]";
   s += "}";
