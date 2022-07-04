@@ -15,7 +15,13 @@ void setupTargetCommon()
 #if defined(USE_I2C)
   if(GPIO_PIN_SDA != UNDEF_PIN && GPIO_PIN_SCL != UNDEF_PIN)
   {
-    Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
+#if defined(PLATFORM_STM32)
+    Wire.setSCL(GPIO_PIN_SCL);
+    Wire.setSDA(GPIO_PIN_SDA);
+#else
+    Wire.setPins(GPIO_PIN_SDA, GPIO_PIN_SDA);
+#endif
+    Wire.begin();
   }
 #endif
 }
