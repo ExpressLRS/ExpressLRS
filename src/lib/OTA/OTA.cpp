@@ -26,7 +26,7 @@ GeneratePacketCrc_t OtaGeneratePacketCrc;
 void OtaUpdateCrcInitFromUid()
 {
     OtaCrcInitializer = (UID[4] << 8) | UID[5];
-    OtaCrcInitializer ^= ELRS_MAJOR_VERSION_NUMBER;
+    OtaCrcInitializer ^= OTA_VERSION_ID;
 }
 
 static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const nonce)

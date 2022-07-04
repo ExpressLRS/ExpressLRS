@@ -181,7 +181,7 @@ uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate)
 uint32_t uidMacSeedGet(void)
 {
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
-                             ((uint32_t)UID[4] << 8) + UID[5]^ELRS_MAJOR_VERSION_NUMBER;
+                             ((uint32_t)UID[4] << 8) + UID[5]^OTA_VERSION_ID;
     return macSeed;
 }
 
