@@ -30,7 +30,7 @@
 #define GPIO_LED_RED_INVERTED       1
 #define GPIO_LED_GREEN_INVERTED     1
 #define GPIO_PIN_RCSIGNAL_TX        PA2 // UART2 NOTE: Not the "OUT" pinheader pad
-#define GPIO_PIN_ANT_CTRL     PA8 // Low for left, high for right
+#define GPIO_PIN_ANT_CTRL           PA8 // Low for left, high for right
 #if defined(RX_AS_TX)
     #define GPIO_PIN_RCSIGNAL_RX    PA2 // UART2 (half duplex)
 #else
