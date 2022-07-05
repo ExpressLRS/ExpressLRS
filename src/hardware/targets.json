@@ -173,12 +173,6 @@
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
-            "vtx": {
-                "product_name": "Generic ESP8285 + VTx 2.4Ghz RX",
-                "lua_name": "ELRS+VTx 2400RX",
-                "layout_file": "Generic 2400 VTX.json",
-                "upload_methods": ["uart", "wifi", "betaflight"]
-            },
             "pwm5": {
                 "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
