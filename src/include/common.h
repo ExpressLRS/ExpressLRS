@@ -13,8 +13,8 @@
 
 #endif // UNIT_TEST
 
-// Used to XOR with OtaCrcInitializer and macSeed and break compatibility with previous versions.
-// It should be incremented every major release.
+// Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
+// It should be incremented when the OTA packet structure is modified.
 #define OTA_VERSION_ID      3
 
 extern uint8_t BindingUID[6];
