@@ -34,7 +34,7 @@ static struct luaItem_selection luaTlmPower = {
 };
 #endif
 
-#if defined(GPIO_PIN_ANTENNA_SELECT)
+#if defined(GPIO_PIN_ANT_CTRL)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
@@ -116,7 +116,7 @@ static void luadevGeneratePowerOpts()
 static void registerLuaParameters()
 {
 
-  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetAntennaMode(arg);
@@ -152,7 +152,7 @@ static void registerLuaParameters()
 static int event()
 {
 
-  if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
   }
