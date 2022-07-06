@@ -300,7 +300,19 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
     if (i!=0) s += ",";
     s += String(UID[i], 10);
   }
-  s+= + "]";
+  s += + "]";
+  s += ",\"uidtype\": ";
+  #if defined(TARGET_RX)
+  if (config.GetOnLoan()) s += "\"On loan\"";
+  else
+  #endif
+  if (firmwareOptions.hasUID) s += "\"Flashed\"" ;
+  #if defined(TARGET_RX)
+  else if (config.GetIsBound()) s += "\"Traditional\"";
+  else s += "\"Not set\"";
+  #else
+  else s += "\"Not set (using MAC address)\"";
+  #endif
   s += "}";
   request->send(200, "application/json", s);
 }

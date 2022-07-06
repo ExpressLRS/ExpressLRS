@@ -131,6 +131,7 @@ function initNetwork() {
       if (data.product_name) _('product_name').textContent = data.product_name;
       if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
       if (data.uid) _('uid').value = data.uid.toString();
+      if (data.uidtype) _('uid-type').textContent = data.uidtype;
       updatePwmSettings(data.pwm);
 
       if (data.hasOwnProperty('forcetlm') && data.forcetlm) {
