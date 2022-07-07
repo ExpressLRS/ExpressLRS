@@ -43,6 +43,12 @@ static void cyclePower()
 #endif
 
 #if defined(TARGET_RX)
+#if defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#elif defined(PLATFORM_ESP8266)
+#include <FS.h>
+#endif
+
 static void buttonRxLong()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
@@ -58,6 +64,11 @@ static void buttonRxLong()
     {
         config.SetDefaults(true);
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        // Prevent WDT from rebooting too early if
+        // all this flash write is taking too long
+        yield();
+        // Remove options.json and hardware.json
+        SPIFFS.format();
         ESP.restart();
 #elif defined(PLATFORM_STM32)
         HAL_NVIC_SystemReset();
