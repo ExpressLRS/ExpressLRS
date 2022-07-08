@@ -101,7 +101,10 @@ bool SX1280Driver::Begin()
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_1) | 0xC0), SX1280_Radio_1);   //default is low power mode, switch to high sensitivity instead
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All);                              //Enable auto FS
 #if defined(USE_SX1280_DCDC)
-    hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);            // Enable DCDC converter instead of LDO
+    if (OPT_USE_SX1280_DCDC)
+    {
+        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);          // Enable DCDC converter instead of LDO
+    }
 #endif
 
     return true;
