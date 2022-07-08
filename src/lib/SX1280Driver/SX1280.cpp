@@ -103,7 +103,7 @@ bool SX1280Driver::Begin()
 #if defined(USE_SX1280_DCDC)
     if (OPT_USE_SX1280_DCDC)
     {
-        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);          // Enable DCDC converter instead of LDO
+        hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX1280_Radio_All);        // Enable DCDC converter instead of LDO
     }
 #endif
 
