@@ -184,6 +184,7 @@ void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
+extern void setWifiUpdateMode();
 
 static uint8_t minLqForChaos()
 {
@@ -933,7 +934,7 @@ void MspReceiveComplete()
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
         deferExecution(500, []() {
-            connectionState = wifiUpdate;
+            setWifiUpdateMode();
         });
 #endif
     }
