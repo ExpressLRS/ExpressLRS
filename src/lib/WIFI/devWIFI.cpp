@@ -646,6 +646,8 @@ static void startWiFi(unsigned long now)
     connectionState = wifiUpdate;
 
     DBGLN("Stopping Radio");
+    InBindingMode = false;
+    devicesTriggerEvent();
     Radio.End();
   }
 
