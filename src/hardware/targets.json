@@ -246,19 +246,31 @@
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
                 "firmware": "Frsky_TX_R9M",
-                "has_buzzer": true
+                "has_buzzer": true,
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "r9m_bootloader.bin"
+                }
             },
             "r9m-lite": {
                 "product_name": "FrSky R9M Lite 900MHz TX",
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
-                "firmware": "Frsky_TX_R9M_LITE"
+                "firmware": "Frsky_TX_R9M_LITE",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "r9m_bootloader.bin"
+                }
             },
             "r9m-lite-pro": {
                 "product_name": "FrSky R9M Lite Pro 900MHz TX",
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
-                "firmware": "Frsky_TX_R9M_LITE_PRO"
+                "firmware": "Frsky_TX_R9M_LITE_PRO",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9m_lite_pro_bootloader.bin"
+                }
             }
         },
         "rx_900": {
@@ -266,31 +278,51 @@
                 "product_name": "FrSky R9MM/Mini 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "Frsky_RX_R9MM_R9MINI"
+                "firmware": "Frsky_RX_R9MM_R9MINI",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9mm_bootloader.bin"
+                }
             },
             "r9slim": {
                 "product_name": "FrSky R9 Slim 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "Frsky_RX_R9SLIM"
+                "firmware": "Frsky_RX_R9SLIM",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9slim_no_btn_bootloader.bin"
+                }
             },
             "r9slim-plus": {
                 "product_name": "FrSky R9 Slim Plus 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "Frsky_RX_R9SLIMPLUS"
+                "firmware": "Frsky_RX_R9SLIMPLUS",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9slim_plus_bootloader.bin"
+                }
             },
             "r9slim-plus-ota": {
                 "product_name": "FrSky R9 Slim Plus OTA 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "Frsky_RX_R9SLIMPLUS_OTA"
+                "firmware": "Frsky_RX_R9SLIMPLUS_OTA",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9slim_plus_ota_bootloader.bin"
+                }
             },
             "r9mx": {
                 "product_name": "FrSky R9MX 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "Frsky_RX_R9MX"
+                "firmware": "Frsky_RX_R9MX",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9mx_bootloader.bin"
+                }
             }
         }
     },
@@ -341,7 +373,11 @@
                 "product_name": "Generic STM32 PP 2.4Ghz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "DIY_2400_RX_STM32_CCG_Nano_v0_5"
+                "firmware": "DIY_2400_RX_STM32_CCG_Nano_v0_5",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "sx1280_rx_nano_pcb_v0.5_bootloader.bin"
+                }
             },
             "plain": {
                 "product_name": "Generic ESP8285 2.4Ghz RX",
@@ -460,7 +496,11 @@
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
                 "firmware": "HappyModel_TX_ES915TX",
-                "has_buzzer": true
+                "has_buzzer": true,
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "r9m_bootloader.bin"
+                }
             },
             "es900": {
                 "product_name": "HappyModel ES900 TX",
@@ -477,7 +517,11 @@
                 "product_name": "HappyModel ES915 RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "HappyModel_RX_ES915RX"
+                "firmware": "HappyModel_RX_ES915RX",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "r9mm_bootloader.bin"
+                }
             },
             "es900": {
                 "product_name": "HappyModel ES900 RX",
@@ -514,7 +558,11 @@
                 "product_name": "HappyModel PP 2.4GHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "HappyModel_PP_2400_RX"
+                "firmware": "HappyModel_PP_2400_RX",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "sx1280_rx_nano_pcb_v0.5_bootloader.bin"
+                }
             },
             "ep": {
                 "product_name": "HappyModel EP1/2 2.4GHz RX",
@@ -679,14 +727,22 @@
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
                 "firmware": "GHOST_2400_TX",
-                "has_buzzer": true
+                "has_buzzer": true,
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "ghost/ghost_tx_bootloader.bin"
+                }
             },
             "ghost_lite": {
                 "product_name": "Ghost Lite 2.4GHz TX",
                 "upload_methods": ["stlink"],
                 "platform": "stm32",
                 "firmware": "GHOST_2400_TX_LITE",
-                "has_buzzer": true
+                "has_buzzer": true,
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "ghost/ghost_tx_bootloader.bin"
+                }
             }
         },
         "rx_2400": {
@@ -694,7 +750,11 @@
                 "product_name": "Ghost Atto 2.4GHz TX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "GHOST_ATTO_2400_RX"
+                "firmware": "GHOST_ATTO_2400_RX",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "ghost/ghost_atto_bootloader.bin"
+                }
             }
         }
     },
@@ -746,7 +806,10 @@
                 "product_name": "Jumper AION T-Lite 2.4GHz TX",
                 "lua_name": "AION T-Lite TX",
                 "layout_file": "Jumper T-Lite.json",
-                "upload_methods": ["uart", "wifi", "etx"]
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "Jumper_AION_2400_T-Lite_TX"
             },
             "nano": {
                 "product_name": "Jumper AION Nano 2.4GHz TX",
@@ -782,7 +845,11 @@
                 "product_name": "Jumper 900 Mini RX",
                 "upload_methods": ["betaflight"],
                 "platform": "stm32",
-                "firmware": "Jumper_RX_R900MINI"
+                "firmware": "Jumper_RX_R900MINI",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "jumper_r900_bootloader.bin"
+                }
             }
         }
     },
@@ -825,7 +892,11 @@
                 "product_name": "NamimnoRC Voyager 900MHz TX",
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
-                "firmware": "NamimnoRC_VOYAGER_900_TX"
+                "firmware": "NamimnoRC_VOYAGER_900_TX",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "namimnorc/tx/namimnorc_tx_bootloader.bin"
+                }
             },
             "voyager": {
                 "product_name": "NamimnoRC Voyager OLED 900MHz TX",
@@ -842,7 +913,11 @@
                 "product_name": "NamimnoRC Voyager STM 900MHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "NamimnoRC_VOYAGER_900_RX"
+                "firmware": "NamimnoRC_VOYAGER_900_RX",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "namimnorc/rx/voyager_900_bootloader.bin"
+                }
             },
             "voyager": {
                 "product_name": "NamimnoRC Voyager ESP 900MHz RX",
@@ -859,7 +934,11 @@
                 "product_name": "NamimnoRC Flash 2.4GHz TX",
                 "upload_methods": ["stlink", "wifi"],
                 "platform": "stm32",
-                "firmware": "NamimnoRC_FLASH_2400_TX"
+                "firmware": "NamimnoRC_FLASH_2400_TX",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "namimnorc/tx/namimnorc_tx_bootloader.bin"
+                }
             },
             "flash": {
                 "product_name": "NamimnoRC Flash OLED 2.4GHz TX",
@@ -876,7 +955,11 @@
                 "product_name": "NamimnoRC Flash STM 2.4GHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
-                "firmware": "NamimnoRC_FLASH_2400_RX"
+                "firmware": "NamimnoRC_FLASH_2400_RX",
+                "stlink": {
+                    "offset": "0x8000",
+                    "bootloader": "namimnorc/rx/flash_2400_bootloader.bin"
+                }
             },
             "flash": {
                 "product_name": "NamimnoRC Flash ESP 2.4GHz RX",
@@ -993,13 +1076,21 @@
                 "product_name": "SIYI FM30 2.4GHz TX",
                 "upload_methods": ["dfu", "stlink"],
                 "platform": "stm32",
-                "firmware": "FM30_TX"
+                "firmware": "FM30_TX",
+                "stlink": {
+                    "offset": "0x1000",
+                    "bootloader": "fm30_bootloader.bin"
+                }
             },
             "rx_as_tx": {
                 "product_name": "SIYI FM30 Mini 2.4GHz RX as TX",
                 "upload_methods": ["uart", "stlink"],
                 "platform": "stm32",
-                "firmware": "FM30_RX_MINI_AS_TX"
+                "firmware": "FM30_RX_MINI_AS_TX",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "fm30_mini_rxtx_bootloader.bin"
+                }
             }
         },
         "rx_2400": {
@@ -1007,7 +1098,11 @@
                 "product_name": "SIYI FM30 Mini 2.4GHz RX",
                 "upload_methods": ["uart", "stlink"],
                 "platform": "stm32",
-                "firmware": "FM30_RX_MINI"
+                "firmware": "FM30_RX_MINI",
+                "stlink": {
+                    "offset": "0x4000",
+                    "bootloader": "fm30_mini_bootloader.bin"
+                }
             }
         }
     },
