@@ -142,6 +142,9 @@ jobs:
       - name: Copy hardware files to firmware folder
         run: cp -r src/hardware dist/firmware
 
+      - name: Copy bootloader files to firmware folder
+        run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
+
       - name: Update firmware artifact
         uses: actions/upload-artifact@v2
         with:
