@@ -248,6 +248,7 @@
                 "firmware": "Frsky_TX_R9M",
                 "has_buzzer": true,
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x4000",
                     "bootloader": "r9m_bootloader.bin"
                 }
@@ -258,6 +259,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_TX_R9M_LITE",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6"],
                     "offset": "0x4000",
                     "bootloader": "r9m_bootloader.bin"
                 }
@@ -268,6 +270,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_TX_R9M_LITE_PRO",
                 "stlink": {
+                    "cpus": ["STM32F303CCT6"],
                     "offset": "0x8000",
                     "bootloader": "r9m_lite_pro_bootloader.bin"
                 }
@@ -280,6 +283,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_RX_R9MM_R9MINI",
                 "stlink": {
+                    "cpus": ["STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "r9mm_bootloader.bin"
                 }
@@ -290,6 +294,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_RX_R9SLIM",
                 "stlink": {
+                    "cpus": ["STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "r9slim_no_btn_bootloader.bin"
                 }
@@ -300,6 +305,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_RX_R9SLIMPLUS",
                 "stlink": {
+                    "cpus": ["STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "r9slim_plus_bootloader.bin"
                 }
@@ -310,6 +316,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_RX_R9SLIMPLUS_OTA",
                 "stlink": {
+                    "cpus": ["STM32F303CCT6"],
                     "offset": "0x8000",
                     "bootloader": "r9slim_plus_ota_bootloader.bin"
                 }
@@ -320,6 +327,7 @@
                 "platform": "stm32",
                 "firmware": "Frsky_RX_R9MX",
                 "stlink": {
+                    "cpus": ["STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "r9mx_bootloader.bin"
                 }
@@ -375,6 +383,7 @@
                 "platform": "stm32",
                 "firmware": "DIY_2400_RX_STM32_CCG_Nano_v0_5",
                 "stlink": {
+                    "cpus": ["STM32L432KCUx"],
                     "offset": "0x4000",
                     "bootloader": "sx1280_rx_nano_pcb_v0.5_bootloader.bin"
                 }
@@ -498,6 +507,7 @@
                 "firmware": "HappyModel_TX_ES915TX",
                 "has_buzzer": true,
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x4000",
                     "bootloader": "r9m_bootloader.bin"
                 }
@@ -519,6 +529,7 @@
                 "platform": "stm32",
                 "firmware": "HappyModel_RX_ES915RX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "r9mm_bootloader.bin"
                 }
@@ -560,6 +571,7 @@
                 "platform": "stm32",
                 "firmware": "HappyModel_PP_2400_RX",
                 "stlink": {
+                    "cpus": ["STM32L432KCUx"],
                     "offset": "0x4000",
                     "bootloader": "sx1280_rx_nano_pcb_v0.5_bootloader.bin"
                 }
@@ -729,6 +741,7 @@
                 "firmware": "GHOST_2400_TX",
                 "has_buzzer": true,
                 "stlink": {
+                    "cpus": ["STM32F303CCT6"],
                     "offset": "0x4000",
                     "bootloader": "ghost/ghost_tx_bootloader.bin"
                 }
@@ -740,6 +753,7 @@
                 "firmware": "GHOST_2400_TX_LITE",
                 "has_buzzer": true,
                 "stlink": {
+                    "cpus": ["STM32F303CCT6"],
                     "offset": "0x4000",
                     "bootloader": "ghost/ghost_tx_bootloader.bin"
                 }
@@ -752,6 +766,7 @@
                 "platform": "stm32",
                 "firmware": "GHOST_ATTO_2400_RX",
                 "stlink": {
+                    "cpus": ["STM32F303K8Tx"],
                     "offset": "0x4000",
                     "bootloader": "ghost/ghost_atto_bootloader.bin"
                 }
@@ -847,6 +862,7 @@
                 "platform": "stm32",
                 "firmware": "Jumper_RX_R900MINI",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "jumper_r900_bootloader.bin"
                 }
@@ -894,6 +910,7 @@
                 "platform": "stm32",
                 "firmware": "NamimnoRC_VOYAGER_900_TX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x4000",
                     "bootloader": "namimnorc/tx/namimnorc_tx_bootloader.bin"
                 }
@@ -915,6 +932,7 @@
                 "platform": "stm32",
                 "firmware": "NamimnoRC_VOYAGER_900_RX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "namimnorc/rx/voyager_900_bootloader.bin"
                 }
@@ -936,6 +954,7 @@
                 "platform": "stm32",
                 "firmware": "NamimnoRC_FLASH_2400_TX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x4000",
                     "bootloader": "namimnorc/tx/namimnorc_tx_bootloader.bin"
                 }
@@ -957,6 +976,7 @@
                 "platform": "stm32",
                 "firmware": "NamimnoRC_FLASH_2400_RX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x8000",
                     "bootloader": "namimnorc/rx/flash_2400_bootloader.bin"
                 }
@@ -1078,6 +1098,7 @@
                 "platform": "stm32",
                 "firmware": "FM30_TX",
                 "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
                     "offset": "0x1000",
                     "bootloader": "fm30_bootloader.bin"
                 }
@@ -1088,6 +1109,7 @@
                 "platform": "stm32",
                 "firmware": "FM30_RX_MINI_AS_TX",
                 "stlink": {
+                    "cpus": ["STM32F373CCT6"],
                     "offset": "0x4000",
                     "bootloader": "fm30_mini_rxtx_bootloader.bin"
                 }
@@ -1100,6 +1122,7 @@
                 "platform": "stm32",
                 "firmware": "FM30_RX_MINI",
                 "stlink": {
+                    "cpus": ["STM32F373CCT6"],
                     "offset": "0x4000",
                     "bootloader": "fm30_mini_bootloader.bin"
                 }
