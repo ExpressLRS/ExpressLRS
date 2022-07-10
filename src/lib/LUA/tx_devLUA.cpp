@@ -342,9 +342,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
   const char *textRunning;
   if ((void *)item == (void *)&luaWebUpdate)
   {
-    setTargetState = []() {
-      setWifiUpdateMode();
-    };
+    setTargetState = setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
   }

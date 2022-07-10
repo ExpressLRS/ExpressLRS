@@ -91,7 +91,6 @@ void setWifiUpdateMode()
   // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
   connectionState = wifiUpdate;
-  devicesTriggerEvent();
 }
 
 /** Is this an IP? */
@@ -653,12 +652,9 @@ static void startWiFi(unsigned long now)
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
 
-    // Calling this means the LED and other devices will be notified of the change in state.
     setWifiUpdateMode();
 
     DBGLN("Stopping Radio");
-    InBindingMode = false;
-    devicesTriggerEvent();
     Radio.End();
   }
 
