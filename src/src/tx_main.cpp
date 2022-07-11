@@ -331,7 +331,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
   hwTimer.updateInterval(interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), // IS GetInitialFreq REQUIRED HERE? Set separately after Config
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
@@ -356,7 +356,12 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    Radio.SetFrequencyReg(FHSSgetNextFreq());
+    #ifdef GEMINI_MODE
+      Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
+      Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
+    #else
+      Radio.SetFrequencyReg(FHSSgetNextFreq());
+    #endif
   }
 }
 
@@ -443,7 +448,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (ChannelIsClear())
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
+    #ifdef GEMINI_MODE
+      Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, true);
+    #else
+      Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
+    #endif
   }
 }
 
@@ -793,7 +802,7 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_BINDING);
-  Radio.SetFrequencyReg(GetInitialFreq());
+  Radio.SetFrequencyReg(GetInitialFreq()); // FIX FOR GEMNI MODE
   // Start transmitting again
   hwTimer.resume();
 

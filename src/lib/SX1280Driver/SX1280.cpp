@@ -378,14 +378,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     modeSupportsFei = false;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq)
-{
-    uint32_t regfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
-
-    SetFrequencyReg(regfreq);
-}
-
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX1280_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
@@ -393,7 +386,7 @@ void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq)
     buf[1] = (uint8_t)((regfreq >> 8) & 0xFF);
     buf[2] = (uint8_t)(regfreq & 0xFF);
 
-    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf), SX1280_Radio_All);
+    hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf), radioNumber);
 
     currFreq = regfreq;
 }
@@ -452,7 +445,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool geminiMode)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
@@ -462,22 +455,29 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
         return;
     }
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    SX1280_Radio_Number_t radioNumber = SX1280_Radio_All;
+
+    if (!geminiMode)
     {
-        // Make sure the unused radio is in FS mode and will not receive the tx packet.
-        if (lastSuccessfulPacketRadio == SX1280_Radio_1)
+        radioNumber = lastSuccessfulPacketRadio;
+
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN) // Normal diversity mode
         {
-            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
-        }
-        else
-        {
-            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+            // Make sure the unused radio is in FS mode and will not receive the tx packet.
+            if (lastSuccessfulPacketRadio == SX1280_Radio_1)
+            {
+                instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
+            }
+            else
+            {
+                instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
+            }
         }
     }
 
-    hal.TXenable(lastSuccessfulPacketRadio); // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, size, lastSuccessfulPacketRadio); //todo fix offset to equal fifo addr
-    instance->SetMode(SX1280_MODE_TX, lastSuccessfulPacketRadio);
+    hal.TXenable(radioNumber); // do first to allow PA stablise
+    hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
+    instance->SetMode(SX1280_MODE_TX, radioNumber);
 
 #ifdef DEBUG_SX1280_OTA_TIMING
     beginTX = micros();
