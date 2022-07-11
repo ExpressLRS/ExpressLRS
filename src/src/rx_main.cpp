@@ -67,6 +67,7 @@ device_affinity_t ui_devices[] = {
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
+uint8_t geminiMode = 0;
 
 hwTimer hwTimer;
 POWERMGNT POWERMGNT;
@@ -299,7 +300,16 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequencyReg(FHSSgetNextFreq());
+
+    if (geminiMode)
+    {
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
+        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
+    }
+    else
+    {
+        Radio.SetFrequencyReg(FHSSgetNextFreq());
+    }
 
     uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
@@ -404,7 +414,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     if (ChannelIsClear())
 #endif
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
+        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, geminiMode);
     }
     return true;
 }
@@ -598,6 +608,14 @@ static void ICACHE_RAM_ATTR updateDiversity()
     }
 }
 
+static inline void checkGeminiMode()
+{
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        geminiMode = config.GetAntennaMode();
+    }
+}
+
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
@@ -617,6 +635,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     updateDiversity();
+    checkGeminiMode();
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -1610,7 +1629,7 @@ void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(RATE_BINDING);
-    Radio.SetFrequencyReg(GetInitialFreq());
+    Radio.SetFrequencyReg(GetInitialFreq()); // Fix for Gemini Mode
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 
