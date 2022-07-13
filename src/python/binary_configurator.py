@@ -433,7 +433,7 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if config.get('has_buzzer') == True else False,
+            True if 'buzzer' in config['features'] == True else False,
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
