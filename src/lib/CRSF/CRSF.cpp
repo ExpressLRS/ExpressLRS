@@ -2,6 +2,7 @@
 #include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
+#include "common.h"
 #include "logging.h"
 #include "helpers.h"
 
@@ -1053,6 +1054,12 @@ uint32_t CRSF::VersionStrToU32(const char *verStr)
     if (trailing_data)
     {
         retVal = (retVal << 8) | accumulator;
+    }
+    // If the version ID is < 1.0.0, we could not parse it,
+    // just use the OTA version as the major version number
+    if (retVal < 0x010000)
+    {
+        retVal = OTA_VERSION_ID << 16;
     }
 #endif
     return retVal;
