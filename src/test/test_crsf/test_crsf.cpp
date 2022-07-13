@@ -3,6 +3,7 @@
 #include <iostream>
 #include "../test_msp/mock_serial.h"
 
+#include "common.h"
 #include "devCRSF.h"
 
 using namespace std;
@@ -22,11 +23,12 @@ void test_ver_to_u32(void)
         const char verStr[128];
         const uint32_t verU32;
     } VERSION_STRINGS[] = {
-        {{108,117,97,45,102,111,108,100,101,114,45,117,112,100,97,116,101,32,73,83,77,50,71,52,0}, 0}, // lua-folder-update ISM2G4
+        {{108,117,97,45,102,111,108,100,101,114,45,117,112,100,97,116,101,32,73,83,77,50,71,52,0}, (OTA_VERSION_ID << 16)}, // lua-folder-update ISM2G4
         {{0x32, 0x2e, 0x32, 0x2e, 0x31, 0x35, 32,73,83,77,50,71,52,0}, 0x0002020f}, // 2.2.15 ISM2G4
         {{0x31, 0x2e, 0x32, 0x2e, 0x33, 0x2e, 0x34, 32,73,83,77,50,71,52,0}, 0x01020304}, // 1.2.3.4 ISM2G4
-        {{0x31, 0x30, 0x30, 0x2e, 0x32, 0x35, 0x35, 32,0}, 0x000064ff}, // 100.255(space)
+        {{0x31, 0x30, 0x30, 0x2e, 0x32, 0x35, 0x35, 32,0}, (OTA_VERSION_ID << 16)}, // 100.255(space)
         {"3.1.2",0x00030102},
+        {"3.x.x-maint",0x00030000},
         {{0}, 0},
     };
 
