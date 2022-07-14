@@ -194,102 +194,6 @@ def patch_firmware(options, mm, pos, args):
     else:
         patch_unified(args, options)
 
-def print_domain(radio, domain):
-    if radio is RadioType.SX1280:
-        if domain == 0:
-            print('Regulatory Domain is ISM 2.4GHz')
-        else:
-            raise AssertionError('Invalid domain detected!')
-    else:
-        if domain == 0:
-            print('Regulatory Domain is AU 915 MHz')
-        if domain == 1:
-            print('Regulatory Domain is FCC 915 MHz')
-        if domain == 2:
-            print('Regulatory Domain is EU 868 MHz')
-        if domain == 3:
-            print('Regulatory Domain is IN 866 MHz')
-        if domain == 4:
-            print('Regulatory Domain is AU 433 MHz')
-        if domain == 5:
-            print('Regulatory Domain is EU 433 MHz')
-        else:
-            raise AssertionError('Invalid domain detected!')
-
-def print_config(options: FirmwareOptions, mm, pos):
-    mcu = ['STM32', 'ESP32', 'ESP8266', 'Unknown'][options.mcuType.value]
-    device = ['TX', 'RX', 'TX Backpack', 'VRx Backpack', 'Unknown', 'Unknown', 'Unknown', 'Unknown'][options.deviceType.value]
-    radio = ['SX1280', 'SX127X'][options.radioChip.value]
-    print(f'MCU: {mcu}, Device: {device}, Radio: {radio}')
-
-    domain = mm[pos]
-    pos += 1
-    print_domain(options.radioChip, domain)
-
-    hasUID = mm[pos]
-    pos += 1
-    UID = mm[pos:pos+6]
-    pos += 6
-    if hasUID:
-        print(f'Binding phrase was used, UID = {UID[0],UID[1],UID[2],UID[3],UID[4],UID[5]}')
-    else:
-        print('No binding phrase set')
-
-    if options.hasWiFi:
-        (pos, val) = read32(mm, pos)
-        if val == 0xFFFFFFFF:
-            print('WiFi auto on is disabled')
-        else:
-            print(f'WiFi auto on interval = {int(val/1000)} seconds')
-        (pos, ssid) = readString(mm, pos, 33)
-        (pos, password) = readString(mm, pos, 65)
-        print(f'WiFi SSID: {ssid}')
-        print(f'WiFi Password: {password}')
-
-    if options.deviceType is DeviceType.TX:
-        (pos, tlm) = read32(mm, pos)
-        (pos, fan) = read32(mm, pos)
-        val = mm[pos]
-        pos += 1
-        uart_inverted = (val & 1) == 1
-        unlock_higher_power = (val & 2) == 2
-        print(f'Telemetry report interval = {tlm}ms')
-        print(f'Fan minimum run time = {fan}s')
-        print(f'UART_INVERTED is {uart_inverted}')
-        print(f'UNLOCK_HIGHER_POWER is {unlock_higher_power}')
-        if options.hasBuzzer:
-            mode = mm[pos]
-            pos += 1
-            melody = []
-            for x in range(32):
-                (pos, val) = read32(mm, pos)
-                if val != 0:
-                    melody.append([val & 0xFFFF, (val >> 16) & 0xFFFF])
-            if mode == 0:
-                print('Buzzer mode quiet')
-            if mode == 1:
-                print('Buzzer mode beep once')
-            if mode == 2:
-                print('Buzzer mode play tune')
-                print(melody)
-            None
-    elif options.deviceType is DeviceType.RX:
-        (pos, baud) = read32(mm, pos)
-        val = mm[pos]
-        pos += 1
-        invert_tx = (val & 1) == 1
-        lock_on_first_connection = (val & 2) == 2
-        r9mm_mini_sbus = (val & 4) == 4
-        print(f'Receiver CRSF baud rate = {baud}')
-        print(f'RCVR_INVERT_TX is {invert_tx}')
-        print(f'LOCK_ON_FIRST_CONNECTION is {lock_on_first_connection}')
-        print(f'USE_R9MM_MINI_SBUS is {r9mm_mini_sbus}')
-    elif options.deviceType is DeviceType.TX_Backpack:
-        None
-    elif options.deviceType is DeviceType.VRx_Backpack:
-        None
-    return
-
 def patch_unified(args, options):
     json_flags = {}
     if args.phrase is not None:
@@ -364,7 +268,6 @@ def ask_for_firmware(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
-    parser.add_argument('--print', action='store_true', help='Print the current configuration in the firmware')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -438,13 +341,10 @@ def main():
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
         )
-        if args.print:
-            print_config(options, mm, pos)
-        else:
-            patch_firmware(options, mm, pos, args)
-            if args.flash:
-                args.accept = config.get('prior_target_name')
-                return binary_flash.upload(options, args)
+        patch_firmware(options, mm, pos, args)
+        if args.flash:
+            args.accept = config.get('prior_target_name')
+            return binary_flash.upload(options, args)
 
 if __name__ == '__main__':
     try:
