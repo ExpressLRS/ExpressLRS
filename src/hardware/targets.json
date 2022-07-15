@@ -135,6 +135,14 @@
                 "layout_file": "DIY 2400 BLE Joystick.json",
                 "upload_methods": ["uart", "wifi"]
             }
+        },
+        "rx32_2400": {
+            "diy_esp32_e28_pwm_rx": {
+                "product_name": "DIY ESP32 E28 10ch PWM RX",
+                "lua_name": "DIY ESP32 E28 10ch PWM RX",
+                "layout_file": "DIY ESP32 E28 10ch RX.json",
+                "upload_methods": ["uart", "wifi", "betaflight"]
+            }
         }
     },
     "generic": {
