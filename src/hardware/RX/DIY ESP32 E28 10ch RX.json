@@ -16,7 +16,7 @@
     "power_default": 2,
     "power_control": 0,
     "power_values": [-15,-11,-8,-5,-1],
-    "led_rgb": 15, //"led": 2, - for onboard esp32 led (bench test platform)
+    "led_rgb": 15,
     "led_rgb_isgrb": true,
     "pwm_outputs": [12, 25, 33, 32, 35, 13, 2, 16, 17, 22],
     "vbat": 34,
