@@ -17,7 +17,7 @@
     "power_max": 3,
     "power_default": 2,
     "power_control": 0,
-    "power_values": [-10,-6,-3,6],
+    "power_values": [-11,-7,-4,1],
     "use_backpack": false,
     "debug_backpack_baud": 460800,
     "debug_backpack_rx": 13,
