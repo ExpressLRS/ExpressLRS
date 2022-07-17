@@ -32,7 +32,7 @@ def findFirmwareEnd(f):
         pos = pos + 32
     return pos
 
-def appendToFirmware(firmware_file, product_name, lua_name, defines, layout_file):
+def appendToFirmware(firmware_file, product_name, lua_name, defines, config, layout_file):
     product = (product_name.encode() + (b'\0' * 128))[0:128]
     device = (lua_name.encode() + (b'\0' * 16))[0:16]
     end = findFirmwareEnd(firmware_file)
@@ -45,6 +45,8 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, layout_file
         try:
             with open(layout_file) as h:
                 hardware = json.load(h)
+                if 'overlay' in config:
+                    hardware.update(config['overlay'])
                 firmware_file.write(json.JSONEncoder().encode(hardware).encode())
         except EnvironmentError:
             sys.stderr.write(f'Error opening file "{layout_file}"\n')
@@ -87,7 +89,7 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform):
         dir = 'TX' if moduletype == 'tx' else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
-    appendToFirmware(file, product_name, lua_name, defines, layout)
+    appendToFirmware(file, product_name, lua_name, defines, config, layout)
 
 def appendConfiguration(source, target, env):
     target_name = env.get('PIOENV', '').upper()
@@ -135,4 +137,4 @@ if __name__ == '__main__':
         dir = 'TX' if moduletype == 'tx' else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
-    appendToFirmware(args.file, product_name, lua_name, args.options, layout)
+    appendToFirmware(args.file, product_name, lua_name, args.options, config, layout)

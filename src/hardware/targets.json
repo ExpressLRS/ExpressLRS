@@ -112,6 +112,9 @@
                 "product_name": "BETAFPV 2.4GHz Nano RX",
                 "lua_name": "BFPV Nano 2G4RX",
                 "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
@@ -850,6 +853,9 @@
                 "product_name": "Jumper AION Mini 2.4GHz RX",
                 "lua_name": "AION RX24 MINI",
                 "layout_file": "Generic 2400.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
@@ -859,6 +865,9 @@
                 "product_name": "Jumper AION Nano 2.4GHz RX",
                 "lua_name": "AION 2G4NANORX",
                 "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
@@ -1095,6 +1104,9 @@
                 "product_name": "RadioMaster RP3 Diversity 2.4GHz RX",
                 "lua_name": "RadioMstr RP3",
                 "layout_file": "Generic 2400 PA Diversity.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
