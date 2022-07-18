@@ -246,7 +246,7 @@ extern bool VRxBackpackWiFiReadyToSend;
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
-extern void beginWebsever();
+extern void setWifiUpdateMode();
 #endif
 
 static void luadevUpdateRateSensitivity() {
@@ -336,18 +336,21 @@ static void luadevGeneratePowerOpts()
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
+  std::function<void()> setTargetState;
   connectionState_e targetState;
   const char *textConfirm;
   const char *textRunning;
   if ((void *)item == (void *)&luaWebUpdate)
   {
-    targetState = wifiUpdate;
+    setTargetState = setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
   }
   else
   {
-    targetState = bleJoystick;
+    setTargetState = []() {
+      connectionState = bleJoystick;
+    };
     textConfirm = "Start BLE Joystick?";
     textRunning = "Joystick Running...";
   }
@@ -364,7 +367,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 
     case lcsConfirmed:
       sendLuaCommandResponse(cmd, lcsExecuting, textRunning);
-      connectionState = targetState;
+      setTargetState();
       break;
 
     case lcsCancel:

@@ -85,6 +85,14 @@ static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
 
+void setWifiUpdateMode()
+{
+  // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
+  // Need to change this before the mode change event so the LED is updated
+  InBindingMode = false;
+  connectionState = wifiUpdate;
+}
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -643,7 +651,8 @@ static void startWiFi(unsigned long now)
 
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
-    connectionState = wifiUpdate;
+
+    setWifiUpdateMode();
 
     DBGLN("Stopping Radio");
     Radio.End();
@@ -942,7 +951,7 @@ static int timeout()
   // start webupdate, there might be wrong configuration flashed.
   if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
     DBGLN("No CRSF ever detected, starting WiFi");
-    connectionState = wifiUpdate;
+    setWifiUpdateMode();
     return DURATION_IMMEDIATELY;
   }
   #elif defined(TARGET_RX)
@@ -953,10 +962,7 @@ static int timeout()
     // regardless of if .wifi_auto_on_interval is set to less
     if (!InBindingMode || firmwareOptions.wifi_auto_on_interval >= 60000 || pastAutoInterval)
     {
-      // No need to ExitBindingMode(), the radio is about to be stopped. Need
-      // to change this before the mode change event so the LED is updated
-      InBindingMode = false;
-      connectionState = wifiUpdate;
+      setWifiUpdateMode();
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
