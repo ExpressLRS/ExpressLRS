@@ -18,10 +18,10 @@
 #elif !defined(OPT_USE_OLED_SPI_SMALL)
 #define OPT_USE_OLED_SPI_SMALL true
 #endif
-#ifndef OLED_REVERSED
-#define OPT_OLED_REVERSED false
-#elif !defined(OPT_OLED_REVERSED)
-#define OPT_OLED_REVERSED true
+#ifndef SCREEN_REVERSED
+#define OPT_SCREEN_REVERSED false
+#elif !defined(OPT_SCREEN_REVERSED)
+#define OPT_SCREEN_REVERSED true
 #endif
 #ifndef HAS_TFT_SCREEN
 #define OPT_HAS_TFT_SCREEN false
