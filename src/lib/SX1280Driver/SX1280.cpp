@@ -119,7 +119,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     PayloadLength = _PayloadLength;
     IQinverted = InvertIQ;
     packet_mode = mode;
-    SetMode(SX1280_MODE_STDBY_XOSC, SX1280_Radio_All);
+    SetMode(SX1280_MODE_STDBY_RC, SX1280_Radio_All);
     hal.WriteCommand(SX1280_RADIO_SET_PACKETTYPE, mode, SX1280_Radio_All, 20);
     if (mode == SX1280_PACKET_TYPE_FLRC)
     {
@@ -194,6 +194,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Num
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_RC, radioNumber, 1500);
         break;
 
+    // The DC-DC supply regulation is automatically powered in STDBY_XOSC mode.
     case SX1280_MODE_STDBY_XOSC:
         hal.WriteCommand(SX1280_RADIO_SET_STANDBY, SX1280_STDBY_XOSC, radioNumber, 50);
         break;
