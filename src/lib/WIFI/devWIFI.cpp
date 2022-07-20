@@ -477,6 +477,11 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+static void corsPreflightResponse(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse(204, "text/plain");
+  request->send(response);
+}
+
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   if (target_seen) {
     String msg;
@@ -783,7 +788,14 @@ static void startServices()
   server.on("/fwlink", WebUpdateHandleRoot);
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
+  server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
+  server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
+  
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
