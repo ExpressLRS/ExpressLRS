@@ -65,7 +65,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint8_t i = 0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
         if (i % FHSSconfig->freq_count == 0) {
             FHSSsequence[i] = sync_channel;
@@ -76,7 +76,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         }
     }
 
-    for (uint8_t i=0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
     {
         // if it's not the sync channel
         if (i % FHSSconfig->freq_count != 0)
@@ -92,7 +92,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     }
 
     // output FHSS sequence
-    for (uint8_t i=0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
     {
         DBG("%u ",FHSSsequence[i]);
         if (i % 10 == 9)
