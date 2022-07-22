@@ -731,8 +731,8 @@ static void startMDNS()
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt(service, "device", (const char *)&device_name);
-    MDNS.addServiceTxt(service, "product", (const char *)&product_name);
+    MDNS.addServiceTxt(service, "device", (const char *)device_name);
+    MDNS.addServiceTxt(service, "product", (const char *)product_name);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", options.c_str());
     MDNS.addServiceTxt(service, "type", "rx");
