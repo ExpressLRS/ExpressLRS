@@ -388,7 +388,7 @@ function submitOptions(e) {
   xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
     if (_(k) && _(k).type == 'checkbox') {
-      return true; // all checkboxes in FormData are checked
+      return v == 'on' ? true : false;
     }
     if (_(k) && _(k).classList.contains('array')) {
       const arr = v.split(',').map((element) => {
