@@ -731,6 +731,8 @@ static void startMDNS()
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt(service, "device", (const char *)device_name);
+    MDNS.addServiceTxt(service, "product", (const char *)product_name);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", options.c_str());
     MDNS.addServiceTxt(service, "type", "rx");
@@ -749,6 +751,7 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
+    MDNS.addServiceTxt("http", "tcp", "product", (const char *)product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
@@ -791,7 +794,7 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
-  
+
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
