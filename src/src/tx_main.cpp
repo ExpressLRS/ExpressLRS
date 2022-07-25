@@ -11,7 +11,8 @@
 #include "devLED.h"
 #include "devScreen.h"
 #include "devBuzzer.h"
-#include "devBLE.h"
+//#include "devBLE.h"
+#include "devBLETele.h"
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
@@ -81,6 +82,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BLE
   {&BLE_device, 1},
+#endif
+#ifdef HAS_BLET
+  {&BLET_device, 1},
 #endif
 #ifdef HAS_BUZZER
   {&Buzzer_device, 1},
@@ -1066,6 +1070,7 @@ void loop()
   if (TelemetryReceiver.HasFinishedData())
   {
       crsf.sendTelemetryToTX(CRSFinBuffer);
+      BluetoothTelemetrykUpdateValues(CRSFinBuffer);
       TelemetryReceiver.Unlock();
   }
 
