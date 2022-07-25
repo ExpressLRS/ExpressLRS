@@ -613,7 +613,7 @@
             }
         },
         "tx_2400": {
-            "target": {
+            "hermes": {
                 "product_name": "HGLRC Hermes 2.4GHz TX",
                 "lua_name": "HGLRC Hermes",
                 "layout_file": "HGLRC Hermes 2400.json",
