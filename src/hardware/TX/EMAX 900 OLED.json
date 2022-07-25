@@ -17,6 +17,8 @@
     "power_apc2": 26,
     "joystick": 33,
     "joystick_values": [2010, 1230, 635, 2730, 0, 4095],
+    "led_rgb": 27,
+    "led_rgb_isgrb": true,
     "screen_sck": 21,
     "screen_sda": 22,
     "screen_type": 1,
