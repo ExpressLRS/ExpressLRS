@@ -7,6 +7,9 @@
     #error "devThermal not supported on RX"
 #endif
 
+#include "targets.h"
+#include "logging.h"
+
 #include "config.h"
 extern TxConfig config;
 
@@ -35,14 +38,41 @@ bool is_smart_fan_working = false;
 
 #include "POWERMGNT.h"
 
+#if defined(GPIO_PIN_FAN_PWM)
+uint8_t fanSpeeds[] = {
+    31,  // 10mW
+    47,  // 25mW
+    63,  // 50mW
+    95,  // 100mW
+    127, // 250mW
+    191, // 500mW
+    255, // 1000mW
+    255  // 2000mW
+};
+constexpr uint8_t fanChannel = 0;
+#endif
+
+#if !defined(FAN_MIN_RUNTIME)
+    #define FAN_MIN_RUNTIME 30U // intervals (seconds)
+#endif
+
+#define FAN_MIN_CHANGETIME 10U  // intervals (seconds)
+
+#if !defined(TACHO_PULSES_PER_REV)
+#define TACHO_PULSES_PER_REV 4
+#endif
+
+static volatile uint16_t tachoPulses = 0;
+static uint16_t currentRPM = 0;
+
 static void initialize()
 {
-    #if defined(HAS_THERMAL)
+#if defined(HAS_THERMAL)
     if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
         thermal.init();
     }
-    #endif
+#endif
     if (GPIO_PIN_FAN_EN != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_FAN_EN, OUTPUT);
@@ -55,7 +85,7 @@ static void timeoutThermal()
     if(OPT_HAS_THERMAL_LM75A && !CRSF::IsArmed() && connectionState != wifiUpdate)
     {
         thermal.handle();
- #ifdef HAS_SMART_FAN
+#ifdef HAS_SMART_FAN
         if(is_smart_fan_control & !is_smart_fan_working){
             is_smart_fan_working = true;
             thermal.update_threshold(USER_SMARTFAN_OFF);
@@ -78,6 +108,7 @@ static void timeoutThermal()
  ***/
 static void timeoutFan()
 {
+#if defined(HAS_FAN)
     static uint8_t fanStateDuration;
     static bool fanIsOn;
     bool fanShouldBeOn = POWERMGNT::currPower() >= (PowerLevels_e)config.GetPowerFanThreshold();
@@ -86,7 +117,29 @@ static void timeoutFan()
     {
         if (fanShouldBeOn)
         {
+#if defined(PLATFORM_ESP32)
+            if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+            {
+                static PowerLevels_e lastPower = MinPower;
+                if (POWERMGNT::currPower() < lastPower && fanStateDuration < FAN_MIN_CHANGETIME)
+                {
+                    ++fanStateDuration;
+                }
+                if (POWERMGNT::currPower() > lastPower || (POWERMGNT::currPower() < lastPower && fanStateDuration >= FAN_MIN_CHANGETIME))
+                {
+                    ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
+                    DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+                    lastPower = POWERMGNT::currPower();
+                    fanStateDuration = 0; // reset the timeout
+                }
+            }
+            else
+            {
+                fanStateDuration = 0; // reset the timeout
+            }
+#else
             fanStateDuration = 0; // reset the timeout
+#endif
         }
         else if (fanStateDuration < firmwareOptions.fan_min_runtime)
         {
@@ -95,7 +148,16 @@ static void timeoutFan()
         else
         {
             // turn off expired
-            digitalWrite(GPIO_PIN_FAN_EN, LOW);
+            if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_FAN_EN, LOW);
+            }
+#if defined(PLATFORM_ESP32)
+            else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+            {
+                ledcWrite(fanChannel, 0);
+            }
+#endif
             fanStateDuration = 0;
             fanIsOn = false;
         }
@@ -110,11 +172,63 @@ static void timeoutFan()
         }
         else
         {
-            digitalWrite(GPIO_PIN_FAN_EN, HIGH);
+            if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_FAN_EN, HIGH);
+            }
+#if defined(PLATFORM_ESP32)
+            else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+            {
+                ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
+                DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+            }
+#endif
             fanStateDuration = 0;
             fanIsOn = true;
         }
     }
+#endif
+}
+
+uint16_t getCurrentRPM()
+{
+    return currentRPM;
+}
+
+static void timeoutTacho()
+{
+#if defined(PLATFORM_ESP32)
+    uint16_t pulses = tachoPulses;
+    tachoPulses = 0;
+
+    currentRPM = pulses * (60000 / THERMAL_DURATION) / TACHO_PULSES_PER_REV;
+    DBGLN("RPM %d", currentRPM);
+#endif
+}
+
+#if defined(PLATFORM_ESP32)
+static void ICACHE_RAM_ATTR updateTachoCounter()
+{
+    tachoPulses++;
+}
+#endif
+
+static int start()
+{
+#if defined(PLATFORM_ESP32)
+    if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+    {
+        ledcSetup(fanChannel, 25000, 8);
+        ledcAttachPin(GPIO_PIN_FAN_PWM, fanChannel);
+        ledcWrite(fanChannel, 0);
+    }
+    if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
+    {
+        pinMode(GPIO_PIN_FAN_TACHO, INPUT_PULLUP);
+        attachInterrupt(GPIO_PIN_FAN_TACHO, updateTachoCounter, RISING);
+    }
+#endif
+    return DURATION_IMMEDIATELY;
 }
 
 static int event()
@@ -132,7 +246,7 @@ static int event()
 #endif
     }
 #endif
-    return THERMAL_DURATION;
+    return DURATION_IGNORE;
 }
 
 static int timeout()
@@ -143,17 +257,14 @@ static int timeout()
         timeoutThermal();
     }
 #endif
-    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
-    {
-        timeoutFan();
-    }
-
+    timeoutFan();
+    timeoutTacho();
     return THERMAL_DURATION;
 }
 
 device_t Thermal_device = {
     .initialize = initialize,
-    .start = nullptr,
+    .start = start,
     .event = event,
     .timeout = timeout
 };
