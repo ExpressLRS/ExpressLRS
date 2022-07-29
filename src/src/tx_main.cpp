@@ -938,6 +938,23 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+static void cyclePower()
+{
+  // Only change power if we are running normally
+  if (connectionState < MODE_STATES)
+  {
+    PowerLevels_e curr = POWERMGNT::currPower();
+    if (curr == POWERMGNT::getMaxPower())
+    {
+      POWERMGNT::setPower(POWERMGNT::getMinPower());
+    }
+    else
+    {
+      POWERMGNT::incPower();
+    }
+  }
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1005,6 +1022,11 @@ void setup()
       connectionState = noCrossfire;
     }
   }
+
+#if defined(HAS_BUTTON)
+  registerButtonFunction(ACTION_BIND, EnterBindingMode);
+  registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
+#endif
 
   devicesStart();
 }

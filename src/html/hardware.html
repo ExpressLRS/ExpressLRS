@@ -188,9 +188,6 @@ td img.icon-pwm {
 					<tr><td></td><td>Pin 2<img class="icon-input"/></td><td><input size='3' id='five_way2' name='five_way2' type='text'/></td><td>7 = IDLE, 6 = OK, 5 = DOWN</td></tr>
 					<tr><td></td><td>Pin 3<img class="icon-input"/></td><td><input size='3' id='five_way3' name='five_way3' type='text'/></td><td>4 = RIGHT, 3 = UP, 2 = LEFT</td></tr>
 @@end
-					<tr><td colspan='2'><b>Button(s)</td></tr>
-					<tr><td></td><td>Button 1 pin<img class="icon-input"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
-
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
 					<tr><td></td><td>RGB LED pin<img class="icon-output"/></td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td><td>Signal pin for WS2812 RGB LED or LED strip</td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td><td>Most WS2812 RGB LEDs are actually GRB</td></tr>
@@ -210,6 +207,9 @@ td img.icon-pwm {
 					<tr><td></td><td>Green/Red LED pin<img class="icon-output"/></td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
 					<tr><td></td><td>Red/Green LED pin<img class="icon-output"/></td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
 					-->
+					<tr><td colspan='2'><b>Button(s)</td></tr>
+					<tr><td></td><td>Button 1 pin<img class="icon-output"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
+					<tr><td></td><td>Button 2 pin<img class="icon-output"/></td><td><input size='3' id='button2' name='button2' type='text'/></td><td>Second (active low) button</td></tr>
 @@if isTX:
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
 					<tr><td></td><td>Screen type</td><td>

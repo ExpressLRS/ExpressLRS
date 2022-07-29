@@ -55,7 +55,7 @@ def build_common(env, mainfile, isTX):
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
             build_html(mainfile, "INDEX_HTML", out, env, isTX)
-            build_html("scan.js", "SCAN_JS", out, env)
+            build_html("scan.js", "SCAN_JS", out, env, isTX)
             build_html("mui.js", "MUI_JS", out, env)
             build_html("elrs.css", "ELRS_CSS", out, env)
             build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)

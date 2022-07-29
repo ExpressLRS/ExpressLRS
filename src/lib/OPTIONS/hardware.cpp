@@ -63,6 +63,7 @@ static const struct {
     {HARDWARE_five_way2, "five_way2", INT},
     {HARDWARE_five_way3, "five_way3", INT},
     {HARDWARE_button, "button", INT},
+    {HARDWARE_button2, "button2", INT},
     {HARDWARE_led, "led", INT},
     {HARDWARE_led_blue, "led_blue", INT},
     {HARDWARE_led_blue_invert, "led_blue_invert", BOOL},
