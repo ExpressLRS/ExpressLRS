@@ -1,7 +1,11 @@
 #include "targets.h"
-#include "devCRSF.h"
+#include "device.h"
+#include "CRSF.h"
 
 #ifdef CRSF_TX_MODULE
+
+#include "../POWERMGNT/POWERMGNT.h"
+
 static int start()
 {
     CRSF::Begin();

@@ -2,6 +2,8 @@
 #include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
+#include "common.h"
+#include "options.h"
 #include "logging.h"
 #include "helpers.h"
 
