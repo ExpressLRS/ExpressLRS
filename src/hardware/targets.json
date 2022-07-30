@@ -1200,5 +1200,17 @@
                 "prior_target_name": "Vantac_2400_RX"
             }
         }
+    },
+    "experimental": {
+        "tx_2400": {
+            "experiment1": {
+                "product_name": "Experimental 2.4GHz TX",
+                "lua_name": "Experiment",
+                "layout_file": "Experimental.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            }
+        }
     }
 }
