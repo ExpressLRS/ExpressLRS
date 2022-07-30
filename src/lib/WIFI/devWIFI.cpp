@@ -45,6 +45,7 @@
 #include "config.h"
 #if defined(TARGET_TX)
 extern TxConfig config;
+extern void setButtonColors(uint8_t b1, uint8_t b2);
 #else
 extern RxConfig config;
 #endif
@@ -279,12 +280,13 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     button_count = 2;
   for (int button=0 ; button<button_count ; button++)
   {
-    const button_action_t *actions = config.GetButtonActions(button);
+    const tx_button_color_t &buttonColor = config.GetButtonActions(button);
+    json["config"]["button-actions"][button]["color"] = buttonColor.val.color;
     for (int pos=0 ; pos<2 ; pos++)
     {
-      json["config"]["button-actions"][button][pos]["is-long-press"] = actions[pos].pressType ? true : false;
-      json["config"]["button-actions"][button][pos]["count"] = actions[pos].count;
-      json["config"]["button-actions"][button][pos]["action"] = actions[pos].action;
+      json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor.val.actions[pos].pressType ? true : false;
+      json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor.val.actions[pos].count;
+      json["config"]["button-actions"][button]["action"][pos]["action"] = buttonColor.val.actions[pos].action;
     }
   }
 #endif
@@ -331,18 +333,28 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     const JsonArray &array = json["button-actions"].as<JsonArray>();
     for (int button=0 ; button<array.size() ; button++)
     {
-      button_action_t actions[2];
+      tx_button_color_t buttonColor;
       for (int pos=0 ; pos<2 ; pos++)
       {
-        actions[pos].pressType = array[button][pos]["is-long-press"];
-        actions[pos].count = array[button][pos]["count"];
-        actions[pos].action = array[button][pos]["action"];
+        buttonColor.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
+        buttonColor.val.actions[pos].count = array[button]["action"][pos]["count"];
+        buttonColor.val.actions[pos].action = array[button]["action"][pos]["action"];
       }
-      config.SetButtonActions(button, actions);
+      buttonColor.val.color = array[button]["color"];
+      config.SetButtonActions(button, buttonColor);
     }
     config.Commit();
   }
-  request->send(204);
+  request->send(200);
+}
+
+static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  int button1Color = json[0].as<int>();
+  int button2Color = json[1].as<int>();
+  DBGLN("%d %d", button1Color, button2Color);
+  setButtonColors(button1Color, button2Color);
+  request->send(200);
 }
 #endif
 
@@ -835,6 +847,7 @@ static void startServices()
   server.on("/reset", HandleReset);
 
   #if defined(TARGET_TX)
+    server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   #endif
 

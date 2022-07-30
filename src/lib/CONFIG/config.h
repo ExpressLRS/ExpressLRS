@@ -90,7 +90,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
-    button_action_t const *GetButtonActions(uint8_t button) const { return m_config.buttonColors[button].val.actions; }
+    tx_button_color_t const &GetButtonActions(uint8_t button) const { return m_config.buttonColors[button]; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -112,7 +112,7 @@ public:
     void SetDvrAux(uint8_t dvrAux);
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
-    void SetButtonActions(uint8_t button, button_action_t actions[2]);
+    void SetButtonActions(uint8_t button, tx_button_color_t &buttonColor);
 
     // State setters
     bool SetModelId(uint8_t modelId);

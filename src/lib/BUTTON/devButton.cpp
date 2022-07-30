@@ -50,7 +50,7 @@ static void handlePress(uint8_t button, bool longPress, uint8_t count)
     std::list<action_t>::iterator it;
     DBGLN("handle press");
 #if defined(TARGET_TX)
-    const button_action_t *button_actions = config.GetButtonActions(button);
+    const button_action_t *button_actions = config.GetButtonActions(button).val.actions;
 #endif
     for (int i=0 ; i<2 ; i++)
     {
@@ -77,36 +77,46 @@ static int start()
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
         button1.OnLongPress = [](){ handlePress(0, true, button1.getCount()); };
 #if defined(TARGET_TX)
-        const button_action_t *button_actions = config.GetButtonActions(0);
-        if (button_actions[0].action == ACTION_NONE && button_actions[1].action == ACTION_NONE)
+        const tx_button_color_t &buttonColor = config.GetButtonActions(0);
+        if (buttonColor.val.actions[0].action == ACTION_NONE && buttonColor.val.actions[1].action == ACTION_NONE)
         {
             // Set defaults for button 1
-            button_action_t default_actions[2] = {
-                {false, 2, ACTION_BIND},
-                {true, 0, ACTION_INCREASE_POWER}
+            tx_button_color_t defaultColor = {
+                .val = {
+                    .color = 0,
+                    .actions = {
+                        {false, 2, ACTION_BIND},
+                        {true, 0, ACTION_INCREASE_POWER}
+                    }
+                }
             };
-            config.SetButtonActions(0, default_actions);
+            config.SetButtonActions(0, defaultColor);
         }
 #endif
     }
+#if defined(TARGET_TX)
     if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {
         button2.init(GPIO_PIN_BUTTON2, GPIO_BUTTON_INVERTED);
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
         button2.OnLongPress = [](){ handlePress(1, true, button2.getCount()); };
-#if defined(TARGET_TX)
-        const button_action_t *button_actions = config.GetButtonActions(1);
-        if (button_actions[0].action == ACTION_NONE && button_actions[1].action == ACTION_NONE)
+        const tx_button_color_t &buttonColor = config.GetButtonActions(1);
+        if (buttonColor.val.actions[0].action == ACTION_NONE && buttonColor.val.actions[1].action == ACTION_NONE)
         {
-            // Set defaults for button 2
-            button_action_t default_actions[2] = {
-                {false, 1, ACTION_GOTO_VTX_CHANNEL},
-                {true, 0, ACTION_SEND_VTX}
+            // Set defaults for button 1
+            tx_button_color_t defaultColor = {
+                .val = {
+                    .color = 0,
+                    .actions = {
+                        {false, 1, ACTION_GOTO_VTX_CHANNEL},
+                        {true, 0, ACTION_SEND_VTX}
+                    }
+                }
             };
-            config.SetButtonActions(1, default_actions);
+            config.SetButtonActions(1, defaultColor);
         }
-#endif
     }
+#endif
 
     return DURATION_IMMEDIATELY;
 }
