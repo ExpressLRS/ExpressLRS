@@ -955,6 +955,9 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+    if (LQCalc.currentIsSet())
+        return false; // Already received a packet, do not run ProcessRFPacket() again.
+
     return ProcessRFPacket(status);
 }
 
