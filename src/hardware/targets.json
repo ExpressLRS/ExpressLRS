@@ -344,6 +344,7 @@
         }
     },
     "emax": {
+        "name": "EMAX",
         "tx_900": {
             "plain": {
                 "product_name": "EMAX OLED 900MHz TX",
