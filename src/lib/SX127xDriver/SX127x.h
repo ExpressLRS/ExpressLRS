@@ -75,7 +75,9 @@ public:
     void RXnb();
 
 private:
-    static const uint8_t PWRPENDING_NONE = 0xff;
+    // constant used for no power change pending
+    // must not be a valid power register value
+    static const uint8_t PWRPENDING_NONE = 0x00;
 
     SX127x_Bandwidth currBW;
     SX127x_SpreadingFactor currSF;
@@ -88,7 +90,7 @@ private:
     uint8_t pwrPending;
 
     static void IsrCallback();
-    void CommitOutputPower();
     void RXnbISR(); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
+    void CommitOutputPower();
 };
