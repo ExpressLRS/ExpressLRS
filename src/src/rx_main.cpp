@@ -72,8 +72,6 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-unsigned long deferredCommitTime = 0;
-
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
@@ -1335,9 +1333,14 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending(unsigned long now)
 {
-    if (config.IsModified() && !InBindingMode && (deferredCommitTime == 0 || now >= deferredCommitTime))
+    static uint32_t lastCommitTime = 0;
+    uint32_t commitTime = config.GetCommitTime();
+    if (config.IsModified() && commitTime != 0 && lastCommitTime != commitTime) {
+        devicesTriggerEvent();
+        lastCommitTime = commitTime;
+    }
+    if (config.IsModified() && !InBindingMode && (commitTime == 0 || now >= commitTime))
     {
-        deferredCommitTime = 0;
         LostConnection(false);
         config.Commit();
         devicesTriggerEvent();

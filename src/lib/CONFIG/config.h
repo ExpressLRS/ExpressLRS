@@ -206,12 +206,16 @@ public:
     #endif
     void SetForceTlmOff(bool forceTlmOff);
 
+    void DeferCommit(uint32_t deferMs = 200U) { m_commitTime = millis() + deferMs; }
+    uint32_t GetCommitTime() { return m_commitTime; }
+
 private:
     void UpgradeEepromV4ToV5();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;
+    uint32_t    m_commitTime = 0;
 };
 
 extern RxConfig config;

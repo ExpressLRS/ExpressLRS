@@ -14,7 +14,6 @@
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
-extern unsigned long deferredCommitTime;
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
@@ -120,7 +119,6 @@ static void registerLuaParameters()
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-      deferredCommitTime = millis() + 1000;
       config.SetAntennaMode(arg);
       setLuaTextSelectionValue(&luaAntennaMode, arg);
     });
@@ -128,8 +126,7 @@ static void registerLuaParameters()
 #ifdef POWER_OUTPUT_VALUES
   luadevGeneratePowerOpts();
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
-    POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
-    deferredCommitTime = millis() + 1000;
+    POWERMGNT::setPower((PowerLevels_e)arg);
     config.SetPower(arg);
     setLuaTextSelectionValue(&luaTlmPower, arg);
   });
@@ -180,7 +177,9 @@ static int event()
 
 static int timeout()
 {
-  luaHandleUpdateParameter();
+  if (luaHandleUpdateParameter()) {
+    config.DeferCommit(1000);
+  }
   return DURATION_IMMEDIATELY;
 }
 

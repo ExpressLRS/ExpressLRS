@@ -650,6 +650,7 @@ RxConfig::Commit()
     m_eeprom->Put(0, m_config);
     m_eeprom->Commit();
 
+    m_commitTime = 0;
     m_modified = false;
 }
 
