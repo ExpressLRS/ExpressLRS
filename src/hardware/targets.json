@@ -379,7 +379,7 @@
             "plain": {
                 "product_name": "EMAX 2.4GHz RX",
                 "lua_name": "EMAX 2400RX",
-                "layout_file": "BETAFPV Nano 2400.json",
+                "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
