@@ -55,6 +55,9 @@ static uint32_t endTX;
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
+    timeout = 0xffff;
+    currOpmode = SX1280_MODE_SLEEP;
+    lastSuccessfulPacketRadio = SX1280_Radio_1;
 }
 
 void SX1280Driver::End()
@@ -100,6 +103,10 @@ bool SX1280Driver::Begin()
 
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_1) | 0xC0), SX1280_Radio_1);   //default is low power mode, switch to high sensitivity instead
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All);                              //Enable auto FS
+    // Force the next power update, and the lowest power
+    pwrCurrent = PWRPENDING_NONE;
+    SetOutputPower(SX1280_POWER_MIN);
+    CommitOutputPower();
 #if defined(USE_SX1280_DCDC)
     if (OPT_USE_SX1280_DCDC)
     {
@@ -158,14 +165,29 @@ void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
     }
 }
 
+/***
+ * @brief: Schedule an output power change after the next transmit
+ ***/
 void SX1280Driver::SetOutputPower(int8_t power)
 {
-    if (power < -18) power = -18;
-    else if (13 < power) power = 13;
-    uint8_t buf[2] = {(uint8_t)(power + 18), (uint8_t)SX1280_RADIO_RAMP_04_US};
+    uint8_t pwrNew = constrain(power, SX1280_POWER_MIN, SX1280_POWER_MAX) + (-SX1280_POWER_MIN);
+
+    if (pwrCurrent != pwrNew)
+    {
+        pwrPending = pwrNew;
+        DBGLN("SetPower: %u", pwrPending);
+    }
+}
+
+void ICACHE_RAM_ATTR SX1280Driver::CommitOutputPower()
+{
+    if (pwrPending == PWRPENDING_NONE)
+        return;
+
+    pwrCurrent = pwrPending;
+    pwrPending = PWRPENDING_NONE;
+    uint8_t buf[2] = { pwrCurrent, (uint8_t)SX1280_RADIO_RAMP_04_US };
     hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf), SX1280_Radio_All);
-    DBGLN("SetPower: %d", buf[0]);
-    return;
 }
 
 void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Number_t radioNumber)
@@ -417,6 +439,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     endTX = micros();
     DBGLN("TOA: %d", endTX - beginTX);
 #endif
+    CommitOutputPower();
     TXdoneCallback();
 }
 
