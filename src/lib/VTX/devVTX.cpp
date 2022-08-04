@@ -103,7 +103,7 @@ static int event()
 
     if (connectionState == disconnected)
     {
-        // If the VtxSend has completed, wait a before going back to VTXSS_UNKNOWN
+        // If the VtxSend has completed, wait before going back to VTXSS_UNKNOWN
         // to ignore a temporary disconnect after saving EEPROM
         if (VtxSendState == VTXSS_CONFIRMED)
         {
