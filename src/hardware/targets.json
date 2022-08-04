@@ -118,7 +118,7 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
-                "prior_target_name": "BETAFPV_Nano_2400_RX"
+                "prior_target_name": "BETAFPV_2400_RX"
             },
             "pwmp": {
                 "product_name": "BETAFPV PWM 2.4GHz RX",
