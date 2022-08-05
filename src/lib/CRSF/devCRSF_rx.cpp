@@ -1,6 +1,5 @@
 #include "targets.h"
-#include "device.h"
-#include "CRSF.h"
+#include "devCRSF.h"
 
 #ifdef CRSF_RX_MODULE
 extern CRSF crsf;

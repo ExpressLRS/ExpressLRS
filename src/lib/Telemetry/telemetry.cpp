@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <cstring>
-#include "targets.h"
 #include "telemetry.h"
 #include "logging.h"
 

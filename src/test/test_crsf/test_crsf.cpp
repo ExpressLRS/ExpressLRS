@@ -3,7 +3,7 @@
 #include <iostream>
 #include "../test_msp/mock_serial.h"
 
-#include "CRSF.h"
+#include "devCRSF.h"
 
 using namespace std;
 // Mock out the serial port using a string stream
