@@ -2,19 +2,19 @@
 #define H_CRSF
 
 #include "targets.h"
-#include "../CrsfProtocol/crsf_protocol.h"
+#include "crsf_protocol.h"
 #if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
-#include "../CRSF2MSP/crsf2msp.h"
-#include "../CRSF2MSP/msp2crsf.h"
+#include "crsf2msp.h"
+#include "msp2crsf.h"
 #endif
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
-#include "../MSP/msp.h"
-#include "../MSP/msptypes.h"
+#include "msp.h"
+#include "msptypes.h"
 #include "LowPassFilter.h"
 #include "../CRC/crc.h"
-#include "../TelemetryProtocol/telemetry_protocol.h"
+#include "telemetry_protocol.h"
 
 #ifdef PLATFORM_ESP32
 #include "esp32-hal-uart.h"
