@@ -345,6 +345,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
     setTargetState = setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
+    targetState = wifiUpdate;
   }
   else
   {
@@ -353,6 +354,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
     };
     textConfirm = "Start BLE Joystick?";
     textRunning = "Joystick Running...";
+    targetState = bleJoystick;
   }
 
   switch ((luaCmdStep_e)arg)
