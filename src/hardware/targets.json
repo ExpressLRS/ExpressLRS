@@ -212,25 +212,25 @@
         },
         "rx32_2400": {
             "frank": {
-                "product_name": "Generic ESP32 2.4Ghz Franken RX",
+                "product_name": "Generic ESP32 + 2.4Ghz Franken RX",
                 "lua_name": "Frank 2400RX",
                 "layout_file": "Frank 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "rx_vtx": {
-                "product_name": "Generic ESP32 2.4Ghz Rx and VTx",
+                "product_name": "Generic ESP32 + 2.4Ghz Rx and VTx",
                 "lua_name": "Rx+VTx 2400RX",
                 "layout_file": "Generic 2400 Whoop Rx and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity": {
-                "product_name": "Generic ESP32 2.4Ghz Diversity RX",
+                "product_name": "Generic ESP32 + Full Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
                 "layout_file": "Generic 2400 PA Full Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity_vtx": {
-                "product_name": "Generic ESP32 2.4Ghz Diversity and VTx RX",
+                "product_name": "Generic ESP32 + Full Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
                 "layout_file": "Generic 2400 PA Full Diversity and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
