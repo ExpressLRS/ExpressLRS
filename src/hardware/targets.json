@@ -350,6 +350,7 @@
                 "product_name": "EMAX OLED 900MHz TX",
                 "lua_name": "EMAX 900TX",
                 "layout_file": "EMAX 900 OLED.json",
+                "features": ["fan"],
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX"
