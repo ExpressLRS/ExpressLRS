@@ -1423,7 +1423,6 @@ void loop()
 {
     unsigned long now = millis();
 
-    HandleUARTin();
     if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
