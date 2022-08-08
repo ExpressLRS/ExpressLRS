@@ -50,7 +50,7 @@ local maxLineIndex
 local textXoffset
 local textYoffset
 local textSize
-local symbolChars
+local byteToStr
 
 local function allocateFields()
   fields = {}
@@ -97,11 +97,6 @@ local function constrain(x, low, high)
     return high
   end
   return x
-end
-
-local function byteToStr(b)
-  -- Translate b into a string from symbolChars if available, else use string.char
-  return symbolChars and symbolChars[b] or string.char(b)
 end
 
 -- Change display attribute to current field
@@ -830,9 +825,15 @@ local function loadSymbolChars()
   -- On firmwares that have constants defined for the arrow chars, use them in place of
   -- the \xc0 \xc1 chars (which are OpenTX-en)
   if __opentx then
-    symbolChars = {}
-    symbolChars[192] = __opentx.CHAR_UP
-    symbolChars[193] = __opentx.CHAR_DOWN
+    byteToStr = function (b)
+      -- Use the table to convert the char, else use string.char if not in the table
+      return ({
+        [192] = __opentx.CHAR_UP,
+        [193] = __opentx.CHAR_DOWN
+      })[b] or string.char(b)
+    end
+  else
+    byteToStr = string.char
   end
 end
 
