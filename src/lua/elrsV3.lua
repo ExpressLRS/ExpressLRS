@@ -63,7 +63,7 @@ local function allocateFields()
     fields[backButtonId].parent = folderAccess
   end
   exitButtonId = backButtonId + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
 end
 
 local function reloadAllField()
@@ -692,7 +692,7 @@ local function reloadRelatedFields(field)
   fieldTimeout = getTime() + 20
 end
 
-local function handleDevicePageEvent(event, touchState)
+local function handleDevicePageEvent(event)
   if #fields == 0 then --if there is no field yet
     return
   else
@@ -701,7 +701,7 @@ local function handleDevicePageEvent(event, touchState)
     end
   end
 
-  if ((event == EVT_VIRTUAL_EXIT) or (event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft)) then -- Cancel edit / go up a folder / reload all
+  if event == EVT_VIRTUAL_EXIT then -- Cancel edit / go up a folder / reload all
     if edit then
       edit = nil
       reloadCurField(0)
@@ -716,7 +716,7 @@ local function handleDevicePageEvent(event, touchState)
       end
       UIbackExec()
     end
-  elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and (event == EVT_TOUCH_TAP or (event == EVT_TOUCH_SLIDE and touchState.swipeRight)))) then -- toggle editing/selecting current field
+  elseif event == EVT_VIRTUAL_ENTER then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
@@ -741,27 +741,23 @@ local function handleDevicePageEvent(event, touchState)
       end
     end
   elseif edit then
-    if ((event ~= nil) and (event ~= 0)) then
-      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
-        incrField(1)
-      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
-        incrField(-1)
-      end
+    if event == EVT_VIRTUAL_NEXT then
+      incrField(1)
+    elseif event == EVT_VIRTUAL_PREV then
+      incrField(-1)
     end
   else
-    if ((event ~= nil) and (event ~= 0)) then
-      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
-        selectField(1)
-      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
-        selectField(-1)
-      end
+    if event == EVT_VIRTUAL_NEXT then
+      selectField(1)
+    elseif event == EVT_VIRTUAL_PREV then
+      selectField(-1)
     end
   end
 end
 
 -- Main
-local function runDevicePage(event, touchState)
-  handleDevicePageEvent(event, touchState)
+local function runDevicePage(event)
+  handleDevicePageEvent(event)
 
   lcd_title()
 
@@ -795,7 +791,7 @@ local function popupCompat(t, m, e)
   return popupConfirmation(t, e)
 end
 
-local function runPopupPage(event, touchState)
+local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 }) -- lcsCancel
     fieldTimeout = getTime() + 200 -- 2s
@@ -905,6 +901,29 @@ local function setMock()
   fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
 end
 
+local function touch2evt(event, ts)
+  if ts then
+    -- SLIDE are converted to EXIT/PREV/ENTER/NEXT
+    -- reversing PREV/NEXT if in edit mode
+    if event == EVT_TOUCH_SLIDE then
+      if ts.swipeLeft then
+        return EVT_VIRTUAL_EXIT
+      elseif ts.swipeUp then
+        return edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV
+      elseif ts.swipeRight then
+        return EVT_VIRTUAL_ENTER
+      elseif ts.swipeDown then
+        return edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT
+      end
+    -- TAP is ENTER
+    elseif event == EVT_TOUCH_TAP then
+      return EVT_VIRTUAL_ENTER
+    end
+  end
+
+  return event
+end
+
 -- Init
 local function init()
   setLCDvar()
@@ -920,19 +939,16 @@ local function run(event, touchState)
     return 2
   end
 
+  event = touch2evt(event, touchState)
   if fieldPopup ~= nil then
-    runPopupPage(event, touchState)
+    runPopupPage(event)
   else
-    runDevicePage(event, touchState)
+    runDevicePage(event)
   end
 
   refreshNext()
 
-  if exitscript > 0 then
-    return 1
-  end
-
-  return 0
+  return exitscript
 end
 
 return { init=init, run=run }
