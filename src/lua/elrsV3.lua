@@ -898,30 +898,7 @@ local function setMock()
 
   fields_count = fields_count + 1
   exitButtonId = fields_count + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
-end
-
-local function touch2evt(event, ts)
-  if ts then
-    -- SLIDE are converted to EXIT/PREV/ENTER/NEXT
-    -- reversing PREV/NEXT if in edit mode
-    if event == EVT_TOUCH_SLIDE then
-      if ts.swipeLeft then
-        return EVT_VIRTUAL_EXIT
-      elseif ts.swipeUp then
-        return edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV
-      elseif ts.swipeRight then
-        return EVT_VIRTUAL_ENTER
-      elseif ts.swipeDown then
-        return edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT
-      end
-    -- TAP is ENTER
-    elseif event == EVT_TOUCH_TAP then
-      return EVT_VIRTUAL_ENTER
-    end
-  end
-
-  return event
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
 end
 
 -- Init
@@ -939,7 +916,17 @@ local function run(event, touchState)
     return 2
   end
 
-  event = touch2evt(event, touchState)
+  -- Convert swipe events to normal events Left/Right/Up/Down -> EXIT/ENTER/PREV/NEXT
+  -- PREV/NEXT are swapped if editing
+  -- TAP is converted to ENTER
+  touchState = touchState or {}
+  event = (touchState.swipeLeft and EVT_VIRTUAL_EXIT)
+    or (touchState.swipeRight   and EVT_VIRTUAL_ENTER)
+    or (touchState.swipeUp      and (edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV))
+    or (touchState.swipeDown    and (edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT))
+    or (event == EVT_TOUCH_TAP  and EVT_VIRTUAL_ENTER)
+    or event
+
   if fieldPopup ~= nil then
     runPopupPage(event)
   else
