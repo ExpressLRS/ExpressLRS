@@ -836,6 +836,18 @@ local function loadSymbolChars()
   end
 end
 
+local function touch2evt(event, touchState)
+  -- Convert swipe events to normal events Left/Right/Up/Down -> EXIT/ENTER/PREV/NEXT
+  -- PREV/NEXT are swapped if editing
+  -- TAP is converted to ENTER
+  touchState = touchState or {}
+  return (touchState.swipeLeft and EVT_VIRTUAL_EXIT)
+    or (touchState.swipeRight  and EVT_VIRTUAL_ENTER)
+    or (touchState.swipeUp     and (edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV))
+    or (touchState.swipeDown   and (edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT))
+    or (event == EVT_TOUCH_TAP and EVT_VIRTUAL_ENTER)
+end
+
 local function setLCDvar()
   -- Set the title function depending on if LCD is color, and free the other function and
   -- set textselection unit function, use GetLastPost or sizeText
@@ -845,6 +857,7 @@ local function setLCDvar()
   else
     lcd_title = lcd_title_bw
     functions[10].display=fieldTextSelectionDisplay_bw
+    touch2evt = nil
   end
   lcd_title_color = nil
   lcd_title_bw = nil
@@ -916,17 +929,7 @@ local function run(event, touchState)
     return 2
   end
 
-  -- Convert swipe events to normal events Left/Right/Up/Down -> EXIT/ENTER/PREV/NEXT
-  -- PREV/NEXT are swapped if editing
-  -- TAP is converted to ENTER
-  touchState = touchState or {}
-  event = (touchState.swipeLeft and EVT_VIRTUAL_EXIT)
-    or (touchState.swipeRight   and EVT_VIRTUAL_ENTER)
-    or (touchState.swipeUp      and (edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV))
-    or (touchState.swipeDown    and (edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT))
-    or (event == EVT_TOUCH_TAP  and EVT_VIRTUAL_ENTER)
-    or event
-
+  event = (touch2evt and touch2evt(event, touchState)) or event
   if fieldPopup ~= nil then
     runPopupPage(event)
   else
