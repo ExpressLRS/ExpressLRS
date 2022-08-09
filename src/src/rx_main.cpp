@@ -119,7 +119,7 @@ LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
-uint8_t scanIndex = RATE_DEFAULT;
+static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
 uint8_t SwitchModePending;
 
@@ -1163,7 +1163,8 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    SetRFLinkRate(RATE_DEFAULT);
+    scanIndex = config.GetRateInitialIdx();
+    SetRFLinkRate(scanIndex);
     RFmodeCycleMultiplier = 1;
 }
 
@@ -1575,11 +1576,8 @@ void ExitBindingMode()
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
-
-    LostConnection(false);
     LockRFmode = false;
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.RXnb();
+    LostConnection(false);
 
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode

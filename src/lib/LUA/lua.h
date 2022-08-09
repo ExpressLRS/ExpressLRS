@@ -127,8 +127,9 @@ void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, cons
 extern void luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
 extern void luadevGeneratePowerOpts(luaItem_selection *luaPower);
-extern const char emptySpace[];
 extern char strPowerLevels[];
+extern const char emptySpace[];
+extern const char STR_LUA_PACKETRATES[];
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);

@@ -14,8 +14,16 @@ extern CRSF crsf;
 extern Telemetry telemetry;
 #endif
 
-const char emptySpace[1] = { 0 };
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
+const char emptySpace[1] = { 0 };
+const char STR_LUA_PACKETRATES[] =
+#if defined(RADIO_SX127X)
+    "25Hz;50Hz;100Hz;100Hz Full;200Hz";
+#elif defined(RADIO_SX128X)
+    "50Hz;100Hz Full;150Hz;250Hz;333Hz Full;500Hz;D250;D500;F500;F1000";
+#else
+    #error Invalid radio configuration!
+#endif
 
 //LUA VARIABLES//
 

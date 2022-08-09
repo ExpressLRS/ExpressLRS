@@ -28,6 +28,13 @@ static struct luaItem_selection luaTlmPower = {
 };
 #endif
 
+static struct luaItem_selection luaRateInitIdx = {
+    {"Init Rate", CRSF_TEXT_SELECTION},
+    0, // value
+    STR_LUA_PACKETRATES,
+    emptySpace
+};
+
 #if defined(GPIO_PIN_ANTENNA_SELECT)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
@@ -89,6 +96,10 @@ static void registerLuaParameters()
     POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
   });
 #endif
+  registerLUAParameter(&luaRateInitIdx, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    uint8_t newRate = RATE_MAX - 1 - arg;
+    config.SetRateInitialIdx(newRate);
+  });
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -120,6 +131,7 @@ static int event()
 #if defined(POWER_OUTPUT_VALUES)
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
 #endif
+  setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 
   if (config.GetModelId() == 255)
   {

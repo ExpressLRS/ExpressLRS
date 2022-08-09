@@ -188,6 +188,7 @@ public:
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
+    uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -205,6 +206,7 @@ public:
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
+    void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
     void UpgradeEepromV4ToV5();
