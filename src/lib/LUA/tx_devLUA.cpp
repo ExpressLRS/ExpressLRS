@@ -16,6 +16,12 @@ static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 
+#define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
+                               ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
+                               ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
+                               ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
+                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
+
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 static struct luaItem_selection luaAirRate = {
@@ -168,11 +174,7 @@ static struct luaItem_selection luaVtxPwr = {
 static struct luaItem_selection luaVtxPit = {
     {"Pitmode", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On;AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN
-    ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN
-    ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN
-    ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN
-    ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN,
+    "Off;On;" STR_LUA_ALLAUX_UPDOWN,
     STR_EMPTYSPACE
 };
 
@@ -198,9 +200,9 @@ static struct luaItem_folder luaBackpackFolder = {
 };
 
 static struct luaItem_selection luaDvrAux = {
-    {"DVR AUX", CRSF_TEXT_SELECTION},
+    {"DVR Rec", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;AUX1;!AUX1;AUX2;!AUX2;AUX3;!AUX3;AUX4;!AUX4;AUX5;!AUX5;AUX6;!AUX6;AUX7;!AUX7;AUX8;!AUX8;AUX9;!AUX9;AUX10;!AUX10",
+    "Off;" STR_LUA_ALLAUX_UPDOWN,
     STR_EMPTYSPACE};
 
 static struct luaItem_selection luaDvrStartDelay = {
