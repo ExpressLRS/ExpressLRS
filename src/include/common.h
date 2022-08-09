@@ -136,14 +136,14 @@ typedef struct expresslrs_mod_settings_s
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 5
-#define RATE_DEFAULT 0
+#define RATE_DEFAULT 0 // Default TX config to Lora 200Hz
 #define RATE_BINDING 3 // 50Hz bind mode
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_DEFAULT 0  // Default to F1000
+#define RATE_DEFAULT 6  // Default TX config to Lora 250Hz
 #define RATE_BINDING 9  // 50Hz bind mode
 
 extern SX1280Driver Radio;
