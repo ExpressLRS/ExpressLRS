@@ -1,16 +1,6 @@
 #ifdef TARGET_RX
 
-#include "common.h"
-#include "device.h"
-
-#include "CRSF.h"
-#include "POWERMGNT.h"
-#include "config.h"
-#include "logging.h"
-#include "lua.h"
-#include "OTA.h"
-#include "hwTimer.h"
-#include "FHSS.h"
+#include "rxtx_devLua.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
@@ -32,7 +22,7 @@ static struct luaItem_selection luaRateInitIdx = {
     {"Init Rate", CRSF_TEXT_SELECTION},
     0, // value
     STR_LUA_PACKETRATES,
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 #if defined(GPIO_PIN_ANTENNA_SELECT)
@@ -40,7 +30,7 @@ static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna B;Antenna A;Diversity",
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
@@ -68,13 +58,13 @@ static struct luaItem_string luaELRSversion = {
 static struct luaItem_command luaLoanModel = {
     {"Loan Model", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaReturnModel = {
     {"Return Model", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 //---------------------------- Model Loan Out -----------------------------
