@@ -1,8 +1,7 @@
-#include "targets.h"
-#include "common.h"
-#include "device.h"
+#include "devButton.h"
 
 #if defined(GPIO_PIN_BUTTON)
+#include "common.h"
 #include "logging.h"
 #include "button.h"
 
@@ -43,18 +42,41 @@ static void cyclePower()
 };
 #endif
 
-#if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-static void rxWebUpdateReboot()
+#if defined(TARGET_RX)
+#if defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#elif defined(PLATFORM_ESP8266)
+#include <FS.h>
+#endif
+
+extern void setWifiUpdateMode();
+
+static void buttonRxLong()
 {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // ESP/ESP32 goes to wifi mode in 5x longpress
     if (button.getLongCount() > 4 && connectionState != wifiUpdate)
     {
-        connectionState = wifiUpdate;
+        setWifiUpdateMode();
     }
+#endif
+
+    // All RX reset their config in 9x longpress and reboot
     if (button.getLongCount() > 8)
     {
+        config.SetDefaults(true);
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+        // Prevent WDT from rebooting too early if
+        // all this flash write is taking too long
+        yield();
+        // Remove options.json and hardware.json
+        SPIFFS.format();
         ESP.restart();
+#elif defined(PLATFORM_STM32)
+        HAL_NVIC_SystemReset();
+#endif
     }
-};
+}
 #endif
 
 static void initialize()
@@ -66,8 +88,8 @@ static void initialize()
             button.OnShortPress = enterBindMode3Click;
             button.OnLongPress = cyclePower;
         #endif
-        #if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
-            button.OnLongPress = rxWebUpdateReboot;
+        #if defined(TARGET_RX)
+            button.OnLongPress = buttonRxLong;
         #endif
     }
 }

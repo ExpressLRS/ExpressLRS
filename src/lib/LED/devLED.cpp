@@ -16,7 +16,7 @@
 #endif
 #endif
 #ifndef GPIO_PIN_LED
-#define GPIO_PIN_LED UNDEF_PIN
+#define GPIO_PIN_LED GPIO_PIN_LED_RED
 #endif
 #ifndef GPIO_PIN_LED_GREEN
 #define GPIO_PIN_LED_GREEN UNDEF_PIN

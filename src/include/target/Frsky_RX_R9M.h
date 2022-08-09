@@ -58,7 +58,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_RX_ENABLE      PB3
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
-    #define GPIO_PIN_ANTENNA_SELECT PB9
+    #define GPIO_PIN_ANT_CTRL PB9
 #elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green

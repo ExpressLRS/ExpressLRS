@@ -22,6 +22,7 @@ extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
+extern void setWifiUpdateMode();
 
 extern Display *display;
 
@@ -307,7 +308,9 @@ static void executeWiFi(bool init)
         switch (state_machine.getParentState())
         {
             case STATE_WIFI_TX:
-                connectionState = wifiUpdate;
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+                setWifiUpdateMode();
+#endif
                 break;
             case STATE_WIFI_RX:
                 RxWiFiReadyToSend = true;

@@ -106,7 +106,7 @@ device_affinity_t ui_devices[] = {
   {&VTX_device, 1}
 };
 
-#if defined(GPIO_PIN_ANT_CTRL_1)
+#if defined(GPIO_PIN_ANT_CTRL)
     static bool diversityAntennaState = LOW;
 #endif
 
@@ -125,14 +125,14 @@ void EXTI2_TSC_IRQHandler()
 
 void switchDiversityAntennas()
 {
-  if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     diversityAntennaState = !diversityAntennaState;
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
   }
-  if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
   {
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
+    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 }
 
@@ -653,8 +653,10 @@ static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
-  // +2 to account for any rounding down and partial millis()
-  const uint32_t msConnectionLostTimeout = (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  // Must be at least 512ms and +2 to account for any rounding down and partial millis()
+  const uint32_t msConnectionLostTimeout = std::max((uint32_t)512U,
+    (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
+    ) + 2U;
   // Capture the last before now so it will always be <= now
   const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
   const uint32_t now = millis();
@@ -901,15 +903,15 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-  if (GPIO_PIN_ANT_CTRL_1 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
-    pinMode(GPIO_PIN_ANT_CTRL_1, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_1, diversityAntennaState);
+    pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
   }
-  if (GPIO_PIN_ANT_CTRL_2 != UNDEF_PIN)
+  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
   {
-    pinMode(GPIO_PIN_ANT_CTRL_2, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_2, !diversityAntennaState);
+    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 
   setupTargetCommon();
