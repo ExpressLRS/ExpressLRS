@@ -82,8 +82,9 @@ static void registerLuaParameters()
 #if defined(POWER_OUTPUT_VALUES)
   luadevGeneratePowerOpts(&luaTlmPower);
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetPower(arg);
-    POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
+    POWERMGNT::setPower((PowerLevels_e)(arg + MinPower));
+    // POWERMGNT will constrain the value to the proper level
+    config.SetPower(POWERMGNT::currPower());
   });
 #endif
   registerLUAParameter(&luaRateInitIdx, [](struct luaPropertiesCommon* item, uint8_t arg) {
