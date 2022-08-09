@@ -22,9 +22,8 @@ typedef enum {
     HARDWARE_radio_rfo_hf,
 
     // Radio Antenna
-    HARDWARE_ant_select,
-    HARDWARE_ant_ctrl1,
-    HARDWARE_ant_ctrl2,
+    HARDWARE_ant_ctrl,
+    HARDWARE_ant_ctrl_compl,
 
     // Radio power
     HARDWARE_power_enable,

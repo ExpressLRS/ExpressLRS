@@ -136,7 +136,7 @@ def reset_to_bootloader(args) -> int:
         dbg_print("Cannot detect RX target, blindly flashing!")
     elif ignore_incorrect_target:
         dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
-    elif rx_target != flash_target:
+    elif rx_target != flash_target and rx_target != args.accept:
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
         else:
@@ -167,6 +167,8 @@ def main(custom_args = None):
         help="Defines flash target type which is sent to target in reboot command")
     parser.add_argument("-a", "--action", type=str, default="upload",
         help="Upload action: upload (default), or uploadforce to flash even on target mismatch")
+    parser.add_argument("--accept", type=str, default=None,
+        help="Acceptable target to auto-overwrite")
 
     args = parser.parse_args(custom_args)
 
