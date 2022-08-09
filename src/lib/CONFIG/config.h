@@ -161,7 +161,7 @@ typedef struct {
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                rateInitialIdx:4;   // FUTURE: Rate to start rateCycling at on boot
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
