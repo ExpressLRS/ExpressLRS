@@ -124,8 +124,11 @@ void luaRegisterDevicePingCallback(void (*callback)());
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
-extern void ICACHE_RAM_ATTR luaParamUpdateReq();
+extern void luaParamUpdateReq();
 extern bool luaHandleUpdateParameter();
+extern void luadevGeneratePowerOpts(luaItem_selection *luaPower);
+extern const char emptySpace[];
+extern char strPowerLevels[];
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
