@@ -18,6 +18,7 @@
 extern CRSF crsf;
 extern Stream *TxBackpack;
 static uint8_t pitmodeAuxState = 0;
+static bool sendEepromWrite = true;
 
 static enum VtxSendState_e
 {
@@ -47,6 +48,7 @@ void VtxPitmodeSwitchUpdate()
     if (pitmodeAuxState != currentPitmodeAuxState)
     {
         pitmodeAuxState = currentPitmodeAuxState;
+        sendEepromWrite = false;
         VtxTriggerSend();
     }
 }
@@ -146,7 +148,9 @@ static int timeout()
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
-        eepromWriteToMSPOut();
+        if (sendEepromWrite)
+            eepromWriteToMSPOut();
+        sendEepromWrite = true;
     }
     else
     {
