@@ -205,7 +205,22 @@ static uint8_t minLqForChaos()
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     int32_t rssiDBM = Radio.LastPacketRSSI;
-    if (antenna == 0)
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) {
+        int32_t rssiDBM2 = Radio.LastPacketRSSI2;
+
+        #if !defined(DEBUG_RCVR_LINKSTATS)
+        rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
+        rssiDBM2 = LPF_UplinkRSSI1.update(rssiDBM2);
+        #endif
+        if (rssiDBM > 0) rssiDBM = 0;
+        if (rssiDBM2 > 0) rssiDBM2 = 0;
+
+        // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
+        crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+        crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
+    }
+    else if (antenna == 0)
     {
         #if !defined(DEBUG_RCVR_LINKSTATS)
         rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);

@@ -544,21 +544,49 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
-    uint8_t status[2];
-    hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, processingPacketRadio);
+    uint8_t status[2], status2[2];
+    int8_t SNR, SNR2;
+
+    bool radio2 = false;
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        radio2 = true;
+    }
+
+    // hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, processingPacketRadio);
+    hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, SX1280_Radio_1);
+    if (radio2) hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status2, 2, SX1280_Radio_2);
+
     if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
         // No SNR in FLRC mode
         LastPacketRSSI = -(int8_t)(status[1] / 2);
         LastPacketSNRRaw = 0;
+        
+        if (radio2) {
+            LastPacketRSSI2 = -(int8_t)(status2[1] / 2);
+        }
         return;
     }
     // LoRa mode has both RSSI and SNR
     LastPacketRSSI = -(int8_t)(status[0] / 2);
-    LastPacketSNRRaw = (int8_t)status[1];
+    SNR = (int8_t)status[1];
+    
     // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
     // need to subtract SNR from RSSI when SNR <= 0;
-    int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
+    int8_t negOffset = (SNR < 0) ? (SNR / RADIO_SNR_SCALE) : 0;
     LastPacketRSSI += negOffset;
+    LastPacketSNRRaw = SNR;
+
+    if (radio2)
+    {
+        LastPacketRSSI2 = -(int8_t)(status2[0] / 2);
+        SNR2 = -(int8_t)(status[0] / 2);
+
+        negOffset = (SNR2 < 0) ? (SNR2 / RADIO_SNR_SCALE) : 0;
+        LastPacketRSSI2 += negOffset;
+
+        (SNR < SNR2)? LastPacketSNRRaw = SNR : LastPacketSNRRaw = SNR2;
+    }    
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
