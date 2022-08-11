@@ -16,7 +16,7 @@ static int start()
     }
     else
     {
-        ERRLN("CRSF::connteced has not been initialised");
+        ERRLN("CRSF::connected has not been initialised");
     }
 #endif
     return DURATION_IMMEDIATELY;
