@@ -14,7 +14,7 @@
 #define TX_CONFIG_MAGIC     (0b01U << 30)
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
-#define TX_CONFIG_VERSION   8U
+#define TX_CONFIG_VERSION   7U
 #define RX_CONFIG_VERSION   5U
 #define UID_LEN             6
 
@@ -121,7 +121,6 @@ private:
 #if !defined(PLATFORM_ESP32)
     void UpgradeEepromV5ToV6();
     void UpgradeEepromV6ToV7();
-    void UpgradeEepromV7ToV8();
 #endif
 
     tx_config_t m_config;

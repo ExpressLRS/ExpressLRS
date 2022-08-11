@@ -170,6 +170,14 @@ void TxConfig::Load()
         m_modified |= MAIN_CHANGED;
     }
 
+    if (version >= 7) {
+        // load button actions
+        if (nvs_get_u32(handle, "button1", &value) == ESP_OK)
+            m_config.buttonColors[0].raw = value;
+        if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
+            m_config.buttonColors[1].raw = value;
+    }
+
     for(unsigned i=0; i<64; i++)
     {
         char model[10] = "model";
@@ -191,14 +199,6 @@ void TxConfig::Load()
             }
         }
     } // for each model
-
-    if (version >= 8) {
-        // load button actions
-        if (nvs_get_u32(handle, "button1", &value) == ESP_OK)
-            m_config.buttonColors[0].raw = value;
-        if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
-            m_config.buttonColors[1].raw = value;
-    }
 
     if (version != TX_CONFIG_VERSION)
     {
@@ -239,12 +239,6 @@ void TxConfig::Load()
     if (version == 6)
     {
         UpgradeEepromV6ToV7();
-        version = 7;
-    }
-
-    if (version == 7)
-    {
-        UpgradeEepromV7ToV8();
     }
 }
 
@@ -292,14 +286,6 @@ void TxConfig::UpgradeEepromV6ToV7()
     }
 
     m_modified = ALL_CHANGED;
-}
-
-void TxConfig::UpgradeEepromV7ToV8()
-{
-    m_config.buttonColors[0].raw = 0;
-    m_config.buttonColors[1].raw = 0;
-
-    m_modified |= BUTTON_CHANGED;
 
     // Full Commit now
     Commit();
