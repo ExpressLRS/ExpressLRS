@@ -376,12 +376,12 @@
                 "prior_target_name": "DIY_2400_TX_DUPLETX"
             },
             "dupletxesp": {
-                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz RX as TX",
                 "lua_name": "DupleTX ESP",
                 "layout_file": "DIY 2400 DupleTX ESP.json",
                 "upload_methods": ["uart", "wifi"],
-                "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TX",
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_TX",
                 "prior_target_name": "DIY_2400_TX_DUPLETX_ESP"
             }
         },
