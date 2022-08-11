@@ -1,6 +1,7 @@
 #ifdef TARGET_RX
 
 #include "rxtx_devLua.h"
+#include "devCRSF.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
@@ -53,6 +54,60 @@ static struct luaItem_string luaELRSversion = {
 
 //---------------------------- WiFi -----------------------------
 
+//---------------------------- Output Mapping -----------------------------
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+static struct luaItem_folder luaMappingFolder = {
+    {"Output Mapping", CRSF_FOLDER},
+};
+
+static struct luaItem_int8 luaMappingChannelOut = {
+  {"Output Ch", CRSF_UINT8},
+  {
+    .u {
+      .value = 5, // start on AUX1, value is 1-16, not zero-based
+      .min = 1,
+      .max = PWM_MAX_CHANNELS,
+    }
+  },
+  STR_EMPTYSPACE
+};
+
+static struct luaItem_int8 luaMappingChannelIn = {
+  {"Input Ch", CRSF_UINT8},
+  {
+    .u {
+      .min = 1,
+      .max = CRSF_NUM_CHANNELS,
+    }
+  },
+  STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaMappingOutputMode = {
+    {"Output Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;On/Off",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaMappingInverted = {
+    {"Invert", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_command luaSetFailsafe = {
+    {"Set Failsafe Pos", CRSF_COMMAND},
+    lcsIdle, // step
+    STR_EMPTYSPACE
+};
+
+#endif // GPIO_PIN_PWM_OUTPUTS
+
+//---------------------------- Output Mapping -----------------------------
+
 //---------------------------- Model Loan Out -----------------------------
 
 static struct luaItem_command luaLoanModel = {
@@ -69,6 +124,81 @@ static struct luaItem_command luaReturnModel = {
 
 //---------------------------- Model Loan Out -----------------------------
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+
+static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  setLuaUint8Value(&luaMappingChannelOut, arg);
+  // Must trigger an event because this is not a persistent config item
+  devicesTriggerEvent();
+}
+
+static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+  rx_config_pwm_t newPwmCh;
+  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+  newPwmCh.val.inputChannel = arg - 1; // convert 1-16 -> 0-15
+
+  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+  rx_config_pwm_t newPwmCh;
+  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+  newPwmCh.val.mode = arg;
+
+  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+  rx_config_pwm_t newPwmCh;
+  newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+  newPwmCh.val.inverted = arg;
+
+  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
+{
+  luaCmdStep_e newStep;
+  const char *msg;
+  if (arg == lcsClick)
+  {
+    newStep = lcsAskConfirm;
+    msg = "Set failsafe to curr?";
+  }
+  else if (arg == lcsConfirmed)
+  {
+    // This is generally not seen by the user, since we'll disconnect to commit config
+    // and the handset will send another lcdQuery that will overwrite it with idle
+    newStep = lcsExecuting;
+    msg = "Setting failsafe";
+
+    for (unsigned ch=0; ch<(unsigned)GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    {
+      rx_config_pwm_t newPwmCh;
+      newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+      // The value must fit into the 10 bit range of the failsafe
+      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(CRSF::ChannelData[ch], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, CRSF::ChannelData[ch], newPwmCh.val.failsafe+988U);
+      config.SetPwmChannelRaw(ch, newPwmCh.raw);
+    }
+  }
+  else
+  {
+    newStep = lcsIdle;
+    msg = STR_EMPTYSPACE;
+  }
+
+  sendLuaCommandResponse((struct luaItem_command *)item, newStep, msg);
+}
+
+#endif // GPIO_PIN_PWM_OUTPUTS
 
 static void registerLuaParameters()
 {
@@ -91,6 +221,14 @@ static void registerLuaParameters()
     uint8_t newRate = RATE_MAX - 1 - arg;
     config.SetRateInitialIdx(newRate);
   });
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  registerLUAParameter(&luaMappingFolder);
+  registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+  registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+  registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+  registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+  registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+#endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -123,6 +261,13 @@ static int event()
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+  setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+  setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+  setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+#endif
 
   if (config.GetModelId() == 255)
   {
