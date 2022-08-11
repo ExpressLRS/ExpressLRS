@@ -82,7 +82,7 @@ static void initialize()
 #if defined(HAS_THERMAL)
 static void timeoutThermal()
 {
-    if(OPT_HAS_THERMAL_LM75A && !CRSF::IsArmed() && connectionState != wifiUpdate)
+    if(OPT_HAS_THERMAL_LM75A)
     {
         thermal.handle();
 #ifdef HAS_SMART_FAN
@@ -141,12 +141,10 @@ static void timeoutFan()
                 }
             }
             else
+#endif
             {
                 fanStateDuration = 0; // reset the timeout
             }
-#else
-            fanStateDuration = 0; // reset the timeout
-#endif
         }
         else if (fanStateDuration < firmwareOptions.fan_min_runtime)
         {
