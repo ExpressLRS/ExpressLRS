@@ -219,6 +219,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM;
         crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
+        (rssiDBM > rssiDBM2)? antenna=0: antenna=1; // report a better antenna for the reception
     }
     else if (antenna == 0)
     {

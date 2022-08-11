@@ -580,13 +580,13 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     if (radio2)
     {
         LastPacketRSSI2 = -(int8_t)(status2[0] / 2);
-        SNR2 = -(int8_t)(status[0] / 2);
+        SNR2 = (int8_t)status2[1];
 
         negOffset = (SNR2 < 0) ? (SNR2 / RADIO_SNR_SCALE) : 0;
+        
         LastPacketRSSI2 += negOffset;
-
-        (SNR < SNR2)? LastPacketSNRRaw = SNR : LastPacketSNRRaw = SNR2;
-    }    
+        (SNR > SNR2)? LastPacketSNRRaw = SNR : LastPacketSNRRaw = SNR2;
+    }
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
