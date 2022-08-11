@@ -39,7 +39,7 @@ bool is_smart_fan_working = false;
 #include "POWERMGNT.h"
 
 #if defined(GPIO_PIN_FAN_PWM)
-uint8_t fanSpeeds[] = {
+static const uint8_t fanSpeeds[] = {
     31,  // 10mW
     47,  // 25mW
     63,  // 50mW
@@ -101,6 +101,14 @@ static void timeoutThermal()
 }
 #endif
 
+#if defined(PLATFORM_ESP32)
+static void setFanSpeed()
+{
+    ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
+    DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+}
+#endif
+
 /***
  * Checks the PowerFanThreshold vs CurrPower and enables the fan if at or above the threshold
  * using a hysteresis. To turn on it must be at/above the threshold for a small time
@@ -127,8 +135,7 @@ static void timeoutFan()
                 }
                 if (POWERMGNT::currPower() > lastPower || (POWERMGNT::currPower() < lastPower && fanStateDuration >= FAN_MIN_CHANGETIME))
                 {
-                    ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
-                    DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+                    setFanSpeed();
                     lastPower = POWERMGNT::currPower();
                     fanStateDuration = 0; // reset the timeout
                 }
@@ -179,8 +186,7 @@ static void timeoutFan()
 #if defined(PLATFORM_ESP32)
             else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
-                ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
-                DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+                setFanSpeed();
             }
 #endif
             fanStateDuration = 0;
@@ -202,7 +208,7 @@ static void timeoutTacho()
     tachoPulses = 0;
 
     currentRPM = pulses * (60000 / THERMAL_DURATION) / TACHO_PULSES_PER_REV;
-    DBGLN("RPM %d", currentRPM);
+    DBGVLN("RPM %d", currentRPM);
 #endif
 }
 
