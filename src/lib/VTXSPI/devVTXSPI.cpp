@@ -45,8 +45,6 @@
 
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
-extern bool ICACHE_RAM_ATTR IsArmed();
-
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0;
@@ -306,11 +304,6 @@ static int event()
     if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
     {
         return DURATION_NEVER;
-    }
-
-    if (CRSF::IsArmed())
-    {
-        vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
     }
 
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
