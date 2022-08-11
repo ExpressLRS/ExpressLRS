@@ -2,6 +2,7 @@
 
 #include "rxtx_devLua.h"
 #include "devCRSF.h"
+#include "devServoOutput.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
@@ -64,10 +65,10 @@ static struct luaItem_folder luaMappingFolder = {
 static struct luaItem_int8 luaMappingChannelOut = {
   {"Output Ch", CRSF_UINT8},
   {
-    .u {
-      .value = 5, // start on AUX1, value is 1-16, not zero-based
-      .min = 1,
-      .max = PWM_MAX_CHANNELS,
+    {
+      (uint8_t)5,       // value - start on AUX1, value is 1-16, not zero-based
+      1,                // min
+      PWM_MAX_CHANNELS, // max
     }
   },
   STR_EMPTYSPACE
@@ -76,9 +77,10 @@ static struct luaItem_int8 luaMappingChannelOut = {
 static struct luaItem_int8 luaMappingChannelIn = {
   {"Input Ch", CRSF_UINT8},
   {
-    .u {
-      .min = 1,
-      .max = CRSF_NUM_CHANNELS,
+    {
+      0,                 // value
+      1,                 // min
+      CRSF_NUM_CHANNELS, // max
     }
   },
   STR_EMPTYSPACE
@@ -222,12 +224,15 @@ static void registerLuaParameters()
     config.SetRateInitialIdx(newRate);
   });
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-  registerLUAParameter(&luaMappingFolder);
-  registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
-  registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-  registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-  registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-  registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+  if (OPT_HAS_SERVO_OUTPUT)
+  {
+    registerLUAParameter(&luaMappingFolder);
+    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+  }
 #endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
@@ -263,10 +268,13 @@ static int event()
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-  const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
-  setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
-  setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
-  setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+  if (OPT_HAS_SERVO_OUTPUT)
+  {
+    const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+  }
 #endif
 
   if (config.GetModelId() == 255)
