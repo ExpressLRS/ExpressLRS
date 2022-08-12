@@ -130,6 +130,8 @@ function initNetwork() {
       _('modelid').value = storedModelId;
       if (data.product_name) _('product_name').textContent = data.product_name;
       if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
+      if (data.uid) _('uid').value = data.uid.toString();
+      if (data.uidtype) _('uid-type').textContent = data.uidtype;
       updatePwmSettings(data.pwm);
 
       if (data.hasOwnProperty('forcetlm') && data.forcetlm) {
@@ -377,8 +379,13 @@ function submitOptions(e) {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/options.json');
   xhr.setRequestHeader('Content-Type', 'application/json');
-  const formData = new FormData(_('upload_options'));
-  xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v) {
+  // Convert the DOM element into a JSON object containing the form elements
+  const formElem = _('upload_options');
+  const formObject = Object.fromEntries(new FormData(formElem));
+  // Add in all the unchecked checkboxes which will be absent from a FormData object
+  formElem.querySelectorAll('input[type=checkbox]:not(:checked)').forEach((k) => formObject[k.name] = false);
+  // Serialize and send the formObject
+  xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
     if (_(k) && _(k).type == 'checkbox') {
       return v == 'on' ? true : false;

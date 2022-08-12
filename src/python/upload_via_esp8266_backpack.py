@@ -122,4 +122,4 @@ def on_upload(source, target, env):
 
     pio_target = target[0].name
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
-    do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)
+    return do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)

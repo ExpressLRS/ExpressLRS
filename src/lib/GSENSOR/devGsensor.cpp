@@ -39,17 +39,19 @@ extern void deferExecution(uint32_t ms, std::function<void()> f);
 #define MULTIPLE_BUMP_INTERVAL 400U
 #define BUMP_COMMAND_IDLE_TIME 10000U
 
+static bool gSensorOk = false;
+
 static void initialize()
 {
     if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
-        gsensor.init();
+        gSensorOk = gsensor.init();
     }
 }
 
 static int start()
 {
-    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    if (gSensorOk && OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
         return DURATION_IMMEDIATELY;
     }

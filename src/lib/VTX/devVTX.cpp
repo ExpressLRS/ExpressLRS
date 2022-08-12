@@ -10,9 +10,15 @@
 #define PITMODE_OFF     0
 #define PITMODE_ON      1
 
+// Delay after disconnect to preserve the VTXSS_CONFIRMED status
+// Needs to be long enough to reconnect, but short enough to
+// reset between the user switching equipment
+#define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
+
 extern CRSF crsf;
 extern Stream *TxBackpack;
-uint8_t pitmodeAuxState = 0;
+static uint8_t pitmodeAuxState = 0;
+static bool sendEepromWrite = true;
 
 static enum VtxSendState_e
 {
@@ -42,6 +48,7 @@ void VtxPitmodeSwitchUpdate()
     if (pitmodeAuxState != currentPitmodeAuxState)
     {
         pitmodeAuxState = currentPitmodeAuxState;
+        sendEepromWrite = false;
         VtxTriggerSend();
     }
 }
@@ -97,9 +104,22 @@ static int event()
     }
 
     if (connectionState == disconnected)
+    {
+        // If the VtxSend has completed, wait before going back to VTXSS_UNKNOWN
+        // to ignore a temporary disconnect after saving EEPROM
+        if (VtxSendState == VTXSS_CONFIRMED)
+        {
+            VtxSendState = VTXSS_CONFIRMED;
+            return VTX_DISCONNECT_DEBOUNCE_MS;
+        }
         VtxSendState = VTXSS_UNKNOWN;
+    }
+    else if (VtxSendState == VTXSS_CONFIRMED && connectionState == connected)
+    {
+        return DURATION_NEVER;
+    }
 
-    return DURATION_NEVER;
+    return DURATION_IGNORE;
 }
 
 static int timeout()
@@ -108,6 +128,13 @@ static int timeout()
     if (config.GetVtxBand() == 0)
     {
         VtxSendState = VTXSS_CONFIRMED;
+        return DURATION_NEVER;
+    }
+
+    // Can only get here in VTXSS_CONFIRMED state if still disconnected
+    if (VtxSendState == VTXSS_CONFIRMED)
+    {
+        VtxSendState = VTXSS_UNKNOWN;
         return DURATION_NEVER;
     }
 
@@ -121,7 +148,9 @@ static int timeout()
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
-        eepromWriteToMSPOut();
+        if (sendEepromWrite)
+            eepromWriteToMSPOut();
+        sendEepromWrite = true;
     }
     else
     {

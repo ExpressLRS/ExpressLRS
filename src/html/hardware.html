@@ -105,9 +105,8 @@ td img.icon-pwm {
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td><td>SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
-					<tr><td></td><td>SELECT pin<img class="icon-output"/></td><td><input size='3' id='ant_select' name='ant_select' type='text'/></td><td>On an RX, Pin connected to Antenna select pin on power amplifier</td></tr>
-					<tr><td></td><td>CTRL1 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl1' name='ant_ctrl1' type='text'/></td><td>Pin connected to Antenna select on a TX module</td></tr>
-					<tr><td></td><td>CTRL2 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl2' name='ant_ctrl2' type='text'/></td><td>Inverted CTRL1 for TX modules using antenna selectors that need separate pins for A/B selection</td></tr>
+					<tr><td></td><td>CTRL pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl' name='ant_ctrl' type='text'/></td><td>Pin connected to Antenna select pin on power amplifier</td></tr>
+					<tr><td></td><td>CTRL_COMPL pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl_compl' name='ant_ctrl_compl' type='text'/></td><td>Inverted CTRL for devices using antenna selectors that need separate pins for A/B selection</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power</td></tr>
 					<tr><td></td><td>PA enable pin<img class="icon-output"/></td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td><td>Enable the power amplifier (active high)</td></tr>

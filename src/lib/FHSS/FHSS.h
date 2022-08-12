@@ -37,7 +37,7 @@ static inline uint32_t FHSSgetChannelCount(void)
 }
 
 // get the number of entries in the FHSS sequence
-static inline uint8_t FHSSgetSequenceCount()
+static inline uint16_t FHSSgetSequenceCount()
 {
     return (256 / FHSSconfig->freq_count) * FHSSconfig->freq_count;
 }

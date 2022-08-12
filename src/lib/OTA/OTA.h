@@ -3,7 +3,7 @@
 
 #include <functional>
 #include "crc.h"
-#include "CRSF.h"
+#include "devCRSF.h"
 
 #define OTA4_PACKET_SIZE     8U
 #define OTA4_CRC_CALC_LEN    offsetof(OTA_Packet4_s, crcLow)
