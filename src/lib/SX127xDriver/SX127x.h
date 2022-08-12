@@ -17,8 +17,8 @@ public:
     static SX127xDriver *instance;
 
     ///////////Radio Variables////////
-    bool headerExplMode = false;
-    bool crcEnabled = false;
+    bool headerExplMode;
+    bool crcEnabled;
 
     //// Parameters ////
     uint16_t timeoutSymbols;
@@ -75,16 +75,22 @@ public:
     void RXnb();
 
 private:
-    uint8_t currSyncWord = SX127X_SYNC_WORD;
-    uint8_t currPreambleLen = 0;
-    SX127x_Bandwidth currBW = SX127x_BW_125_00_KHZ; //default values from datasheet
-    SX127x_SpreadingFactor currSF = SX127x_SF_7;
-    SX127x_CodingRate currCR = SX127x_CR_4_5;
-    SX127x_RadioOPmodes currOpmode = SX127x_OPMODE_SLEEP;
-    uint8_t currPWR = 0b0000;
-    SX127x_ModulationModes ModFSKorLoRa = SX127x_OPMODE_LORA;
+    // constant used for no power change pending
+    // must not be a valid power register value
+    static const uint8_t PWRPENDING_NONE = 0x00;
+
+    SX127x_Bandwidth currBW;
+    SX127x_SpreadingFactor currSF;
+    SX127x_CodingRate currCR;
+    SX127x_RadioOPmodes currOpmode;
+    SX127x_ModulationModes ModFSKorLoRa;
+    uint8_t currSyncWord;
+    uint8_t currPreambleLen;
+    uint8_t pwrCurrent;
+    uint8_t pwrPending;
 
     static void IsrCallback();
     void RXnbISR(); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
+    void CommitOutputPower();
 };

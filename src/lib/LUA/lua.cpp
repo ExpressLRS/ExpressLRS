@@ -269,7 +269,7 @@ void sendELRSstatus()
     "[ ! Armed ! ]",      //warning2, AUX1 high / armed
     "",           //warning1, reserved for future use
     "Not while connected",  //critical warning3, trying to change a protected value while connected
-    "",  //critical warning2, reserved for future use
+    "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
     ""   //critical warning1, reserved for future use
   };
   const char * warningInfo = "";

@@ -746,7 +746,7 @@ RxConfig::SetDefaults(bool commit)
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_config.modelId = 0xff;
     m_config.power = POWERMGNT::getDefaultPower();
-    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
         m_config.antennaMode = 2; // 2 is diversity
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
