@@ -277,6 +277,10 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                  );
+
+    if (geminiMode)
+        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2); // To be fixed for the initial freq FHSSptr
+
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
