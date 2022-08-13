@@ -5,6 +5,7 @@
 extern CRSF crsf;
 
 static volatile bool sendFrame = false;
+extern void HandleUARTin();
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
@@ -30,6 +31,8 @@ static int timeout()
     }
     #endif
     crsf.RXhandleUARTout();
+    HandleUARTin();
+
     return DURATION_IMMEDIATELY;
 }
 

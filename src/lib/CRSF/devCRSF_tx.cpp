@@ -2,6 +2,9 @@
 #include "devCRSF.h"
 
 #ifdef CRSF_TX_MODULE
+
+#include "../POWERMGNT/POWERMGNT.h"
+
 static int start()
 {
     CRSF::Begin();

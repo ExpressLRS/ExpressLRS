@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include "crsf_protocol.h"
+#include "devCRSF.h"
 
 enum CustomTelemSubTypeID : uint8_t {
     CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,

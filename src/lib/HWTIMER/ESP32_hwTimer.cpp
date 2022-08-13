@@ -58,8 +58,9 @@ void ICACHE_RAM_ATTR hwTimer::resume()
         // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
         // tock() should always be the first event to maintain consistency
         isTick = false;
-        // Fire the timer in 2us to get it started close to now
-        timerAlarmWrite(timer, 2 * HWTIMER_TICKS_PER_US, false);
+        // When using EDGE triggered timer, enabling the timer causes an edge so the interrupt
+        // is fired immediately, so this emulates the STM32 behaviour
+        timerAlarmWrite(timer, HWtimerInterval >> 1, true);
 #endif
         timerAlarmEnable(timer);
         DBGLN("hwTimer resume");
@@ -116,14 +117,12 @@ void ICACHE_RAM_ATTR hwTimer::callback(void)
         if (hwTimer::isTick)
         {
             timerAlarmWrite(timer, NextInterval, true);
-            timerAlarmEnable(timer);
             hwTimer::callbackTick();
         }
         else
         {
             NextInterval += hwTimer::PhaseShift;
             timerAlarmWrite(timer, NextInterval, true);
-            timerAlarmEnable(timer);
             hwTimer::PhaseShift = 0;
             hwTimer::callbackTock();
         }

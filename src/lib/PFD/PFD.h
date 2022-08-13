@@ -8,7 +8,6 @@ class PFD
 private:
     uint32_t intEventTime = 0;
     uint32_t extEventTime = 0;
-    int32_t result;
     bool gotExtEvent;
     bool gotIntEvent;
 
@@ -31,14 +30,15 @@ public:
         gotIntEvent = false;
     }
 
-    inline void calcResult()
+    int32_t calcResult() const
     {
-        result = (gotExtEvent && gotIntEvent) ? (int32_t)(extEventTime - intEventTime) : 0;
+        // Assumes caller has verified hasResult()
+        return (int32_t)(extEventTime - intEventTime);
     }
 
-    inline int32_t getResult()
+    bool hasResult() const
     {
-        return result;
+        return gotExtEvent && gotIntEvent;
     }
 
     volatile uint32_t getIntEventTime() const { return intEventTime; }
