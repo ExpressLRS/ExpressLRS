@@ -1,5 +1,5 @@
 {
-    "serial_rx": 1,
+    "serial_rx": 3,
     "serial_tx": 1,
 
     "radio_miso": 33,
