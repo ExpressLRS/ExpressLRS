@@ -279,7 +279,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  );
 
     if (geminiMode)
-        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2); // To be fixed for the initial freq FHSSptr
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -1636,7 +1636,9 @@ void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(RATE_BINDING);
-    Radio.SetFrequencyReg(GetInitialFreq()); // Fix for Gemini Mode
+    Radio.SetFrequencyReg(GetInitialFreq());
+    if (geminiMode)
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 

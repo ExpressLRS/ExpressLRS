@@ -337,6 +337,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
+               
+  #ifdef GEMINI_MODE
+  Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+  #endif
+
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
   TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
@@ -807,7 +812,10 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_BINDING);
-  Radio.SetFrequencyReg(GetInitialFreq()); // FIX FOR GEMNI MODE
+  Radio.SetFrequencyReg(GetInitialFreq());               
+  #ifdef GEMINI_MODE
+  Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+  #endif
   // Start transmitting again
   hwTimer.resume();
 
