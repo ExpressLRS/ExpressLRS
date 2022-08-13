@@ -39,16 +39,6 @@ bool is_smart_fan_working = false;
 #include "POWERMGNT.h"
 
 #if defined(GPIO_PIN_FAN_PWM)
-static const uint8_t fanSpeeds[] = {
-    31,  // 10mW
-    47,  // 25mW
-    63,  // 50mW
-    95,  // 100mW
-    127, // 250mW
-    191, // 500mW
-    255, // 1000mW
-    255  // 2000mW
-};
 constexpr uint8_t fanChannel = 0;
 #endif
 
@@ -104,16 +94,30 @@ static void timeoutThermal()
 #if defined(PLATFORM_ESP32)
 static void setFanSpeed()
 {
+    const uint8_t fanSpeeds[] = {
+        31,  // 10mW
+        47,  // 25mW
+        63,  // 50mW
+        95,  // 100mW
+        127, // 250mW
+        191, // 500mW
+        255, // 1000mW
+        255  // 2000mW
+    };
     ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
-    DBGLN("Fan speed: %d (power) -> %d (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+    DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
 }
 #endif
 
-/***
- * Checks the PowerFanThreshold vs CurrPower and enables the fan if at or above the threshold
- * using a hysteresis. To turn on it must be at/above the threshold for a small time
- * and then to turn off it must be below the threshold for FAN_MIN_RUNTIME intervals
- ***/
+/*
+ * For enable-only fans:
+ *  Checks the PowerFanThreshold vs CurrPower and enables the fan if at or above the threshold
+ *  using a hysteresis. To turn on it must be at/above the threshold for a small time
+ *  and then to turn off it must be below the threshold for FAN_MIN_RUNTIME intervals.
+ * For PWM fans:
+ *  all of the above applies, but rather than just turning the fan on, the speed of the fan
+ *  is set according to the power output level.
+ */
 static void timeoutFan()
 {
 #if defined(HAS_FAN)
@@ -129,7 +133,7 @@ static void timeoutFan()
             if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
                 static PowerLevels_e lastPower = MinPower;
-                if (POWERMGNT::currPower() < lastPower && fanStateDuration < FAN_MIN_CHANGETIME)
+                if (fanStateDuration < FAN_MIN_CHANGETIME)
                 {
                     ++fanStateDuration;
                 }
@@ -180,14 +184,17 @@ static void timeoutFan()
             if (GPIO_PIN_FAN_EN != UNDEF_PIN)
             {
                 digitalWrite(GPIO_PIN_FAN_EN, HIGH);
+                fanStateDuration = 0;
             }
 #if defined(PLATFORM_ESP32)
             else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
-                setFanSpeed();
+                // bump the fan to full power for one cycle in case
+                // the PWM level is not sufficient to get it moving
+                ledcWrite(fanChannel, 192);
+                fanStateDuration = FAN_MIN_CHANGETIME;
             }
 #endif
-            fanStateDuration = 0;
             fanIsOn = true;
         }
     }
@@ -202,11 +209,14 @@ uint16_t getCurrentRPM()
 static void timeoutTacho()
 {
 #if defined(PLATFORM_ESP32)
-    uint16_t pulses = tachoPulses;
-    tachoPulses = 0;
+    if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
+    {
+        uint16_t pulses = tachoPulses;
+        tachoPulses = 0;
 
-    currentRPM = pulses * (60000 / THERMAL_DURATION) / TACHO_PULSES_PER_REV;
-    DBGVLN("RPM %d", currentRPM);
+        currentRPM = pulses * (60000 / THERMAL_DURATION) / TACHO_PULSES_PER_REV;
+        DBGVLN("RPM %d", currentRPM);
+    }
 #endif
 }
 
