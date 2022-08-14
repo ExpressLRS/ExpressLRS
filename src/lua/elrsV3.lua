@@ -50,7 +50,7 @@ local maxLineIndex
 local textXoffset
 local textYoffset
 local textSize
-local symbolChars
+local byteToStr
 
 local function allocateFields()
   fields = {}
@@ -63,7 +63,7 @@ local function allocateFields()
     fields[backButtonId].parent = folderAccess
   end
   exitButtonId = backButtonId + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
 end
 
 local function reloadAllField()
@@ -97,11 +97,6 @@ local function constrain(x, low, high)
     return high
   end
   return x
-end
-
-local function byteToStr(b)
-  -- Translate b into a string from symbolChars if available, else use string.char
-  return symbolChars and symbolChars[b] or string.char(b)
 end
 
 -- Change display attribute to current field
@@ -692,7 +687,7 @@ local function reloadRelatedFields(field)
   fieldTimeout = getTime() + 20
 end
 
-local function handleDevicePageEvent(event, touchState)
+local function handleDevicePageEvent(event)
   if #fields == 0 then --if there is no field yet
     return
   else
@@ -701,7 +696,7 @@ local function handleDevicePageEvent(event, touchState)
     end
   end
 
-  if ((event == EVT_VIRTUAL_EXIT) or (event ~= nil and event ~= 0 and touchState and event == EVT_TOUCH_SLIDE and touchState.swipeLeft)) then -- Cancel edit / go up a folder / reload all
+  if event == EVT_VIRTUAL_EXIT then -- Cancel edit / go up a folder / reload all
     if edit then
       edit = nil
       reloadCurField(0)
@@ -716,7 +711,7 @@ local function handleDevicePageEvent(event, touchState)
       end
       UIbackExec()
     end
-  elseif ((event == EVT_VIRTUAL_ENTER) or (event ~= nil and touchState and (event == EVT_TOUCH_TAP or (event == EVT_TOUCH_SLIDE and touchState.swipeRight)))) then -- toggle editing/selecting current field
+  elseif event == EVT_VIRTUAL_ENTER then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
       elrsFlags = 0
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x2E, 0x00 })
@@ -741,27 +736,23 @@ local function handleDevicePageEvent(event, touchState)
       end
     end
   elseif edit then
-    if ((event ~= nil) and (event ~= 0)) then
-      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
-        incrField(1)
-      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
-        incrField(-1)
-      end
+    if event == EVT_VIRTUAL_NEXT then
+      incrField(1)
+    elseif event == EVT_VIRTUAL_PREV then
+      incrField(-1)
     end
   else
-    if ((event ~= nil) and (event ~= 0)) then
-      if ((event == EVT_VIRTUAL_NEXT) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeDown)) then
-        selectField(1)
-      elseif ((event == EVT_VIRTUAL_PREV) or (touchState and event == EVT_TOUCH_SLIDE and touchState.swipeUp)) then
-        selectField(-1)
-      end
+    if event == EVT_VIRTUAL_NEXT then
+      selectField(1)
+    elseif event == EVT_VIRTUAL_PREV then
+      selectField(-1)
     end
   end
 end
 
 -- Main
-local function runDevicePage(event, touchState)
-  handleDevicePageEvent(event, touchState)
+local function runDevicePage(event)
+  handleDevicePageEvent(event)
 
   lcd_title()
 
@@ -795,7 +786,7 @@ local function popupCompat(t, m, e)
   return popupConfirmation(t, e)
 end
 
-local function runPopupPage(event, touchState)
+local function runPopupPage(event)
   if event == EVT_VIRTUAL_EXIT then
     crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 }) -- lcsCancel
     fieldTimeout = getTime() + 200 -- 2s
@@ -834,10 +825,28 @@ local function loadSymbolChars()
   -- On firmwares that have constants defined for the arrow chars, use them in place of
   -- the \xc0 \xc1 chars (which are OpenTX-en)
   if __opentx then
-    symbolChars = {}
-    symbolChars[192] = __opentx.CHAR_UP
-    symbolChars[193] = __opentx.CHAR_DOWN
+    byteToStr = function (b)
+      -- Use the table to convert the char, else use string.char if not in the table
+      return ({
+        [192] = __opentx.CHAR_UP,
+        [193] = __opentx.CHAR_DOWN
+      })[b] or string.char(b)
+    end
+  else
+    byteToStr = string.char
   end
+end
+
+local function touch2evt(event, touchState)
+  -- Convert swipe events to normal events Left/Right/Up/Down -> EXIT/ENTER/PREV/NEXT
+  -- PREV/NEXT are swapped if editing
+  -- TAP is converted to ENTER
+  touchState = touchState or {}
+  return (touchState.swipeLeft and EVT_VIRTUAL_EXIT)
+    or (touchState.swipeRight  and EVT_VIRTUAL_ENTER)
+    or (touchState.swipeUp     and (edit and EVT_VIRTUAL_NEXT or EVT_VIRTUAL_PREV))
+    or (touchState.swipeDown   and (edit and EVT_VIRTUAL_PREV or EVT_VIRTUAL_NEXT))
+    or (event == EVT_TOUCH_TAP and EVT_VIRTUAL_ENTER)
 end
 
 local function setLCDvar()
@@ -849,6 +858,7 @@ local function setLCDvar()
   else
     lcd_title = lcd_title_bw
     functions[10].display=fieldTextSelectionDisplay_bw
+    touch2evt = nil
   end
   lcd_title_color = nil
   lcd_title_bw = nil
@@ -902,7 +912,7 @@ local function setMock()
 
   fields_count = fields_count + 1
   exitButtonId = fields_count + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", parent = nil, type=17}
+  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
 end
 
 -- Init
@@ -920,19 +930,16 @@ local function run(event, touchState)
     return 2
   end
 
+  event = (touch2evt and touch2evt(event, touchState)) or event
   if fieldPopup ~= nil then
-    runPopupPage(event, touchState)
+    runPopupPage(event)
   else
-    runDevicePage(event, touchState)
+    runDevicePage(event)
   end
 
   refreshNext()
 
-  if exitscript > 0 then
-    return 1
-  end
-
-  return 0
+  return exitscript
 end
 
 return { init=init, run=run }
