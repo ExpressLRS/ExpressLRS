@@ -9,6 +9,7 @@
 #include "logging.h"
 
 #include <BleGamepad.h>
+#include <NimBLEDevice.h>
 
 #define numOfButtons 0
 #define numOfHatSwitches 0
@@ -26,7 +27,18 @@
 #define enableBrake false
 #define enableSteering false
 
-static BleGamepad *bleGamepad;
+
+class ELRSGamepad : public BleGamepad {
+    public:
+        ELRSGamepad() : BleGamepad("ExpressLRS Joystick", "ELRS", 100) {};
+
+    protected:
+        void onStarted(NimBLEServer *pServer) {
+            NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+        }
+};
+
+static ELRSGamepad *bleGamepad;
 
 void BluetoothJoystickUpdateValues()
 {
@@ -59,7 +71,7 @@ void BluetoothJoystickBegin()
         return;
 
     // construct the BLE immediately to prevent reentry from events/timeout
-    bleGamepad = new BleGamepad("ExpressLRS Joystick", "ELRS", 100);
+    bleGamepad = new ELRSGamepad();
 
     hwTimer::updateInterval(5000);
     CRSF::setSyncParams(5000); // 200hz
