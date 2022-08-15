@@ -110,6 +110,14 @@ def main(argv=None, esp=None):
         default=os.environ.get("ESPTOOL_PORT", None),
     )
 
+    # ELRS vvv
+    parser.add_argument(
+        "--passthrough",
+        help="Doing passthrough flashing, so just use one baudrate for all communications",
+        action="store_true",
+    )
+    # ELRS ^^^
+
     parser.add_argument(
         "--baud",
         "-b",
@@ -631,7 +639,8 @@ def main(argv=None, esp=None):
     if (
         operation_args[0] == "esp"
     ):  # operation function takes an ESPLoader connection object
-        if args.before != "no_reset_no_sync":
+        # if args.before != "no_reset_no_sync":
+        if args.before != "no_reset_no_sync" and not args.passthrough: # ELRS added passthrough
             initial_baud = min(
                 ESPLoader.ESP_ROM_BAUD, args.baud
             )  # don't sync faster than the default baud rate
@@ -681,7 +690,16 @@ def main(argv=None, esp=None):
                 )
                 args.no_stub = True
             else:
+                # ELRS vvv when doing passthrough we can only handle small packets
+                if args.passthrough:
+                    esp.ESP_RAM_BLOCK = 0x0800
+                # ELRS ^^^
                 esp = esp.run_stub()
+
+        # ELRS vvv when doing passthrough we can only handle small packets
+        if args.passthrough:
+            esp.FLASH_WRITE_SIZE = 0x0800
+        # ELRS ^^^
 
         if args.override_vddsdio:
             esp.override_vddsdio(args.override_vddsdio)
