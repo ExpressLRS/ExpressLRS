@@ -22,6 +22,7 @@ static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2";
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
@@ -89,6 +90,15 @@ static struct luaItem_selection luaSwitch = {
     switchmodeOpts4ch,
     emptySpace
 };
+
+#if defined(GPIO_PIN_NSS_2)
+  static struct luaItem_selection luaAntenna = {
+      {"Antenna Mode", CRSF_TEXT_SELECTION},
+      0, // value
+      antennamodeOpts,
+      emptySpace
+  };
+#endif
 
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
@@ -575,6 +585,12 @@ static void registerLuaParameters()
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
     });
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetAntennaMode(arg);
+      });
+    }
     registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
       bool newModelMatch = arg;
       config.SetModelMatch(newModelMatch);
@@ -697,6 +713,10 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+  {
+    setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
+  }
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

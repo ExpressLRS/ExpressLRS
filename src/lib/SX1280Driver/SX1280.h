@@ -35,7 +35,7 @@ public:
     bool GetFrequencyErrorbool();
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
-    void TXnb(uint8_t * data, uint8_t size, bool geminiMode = false);
+    void TXnb(uint8_t * data, uint8_t size, SX1280_Radio_Number_t radioNumber);
     void RXnb();
 
     uint16_t GetIrqStatus(SX1280_Radio_Number_t radioNumber);

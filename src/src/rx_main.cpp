@@ -418,7 +418,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     if (ChannelIsClear())
 #endif
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, geminiMode);
+        SX1280_Radio_Number_t transmittingRadio = SX1280_Radio_Default;
+        if (geminiMode)
+            transmittingRadio = SX1280_Radio_All;
+        
+        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
     }
     return true;
 }
@@ -639,7 +643,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     updateDiversity();
-    checkGeminiMode();
     bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -1571,6 +1574,7 @@ void loop()
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
+    checkGeminiMode();
     debugRcvrLinkstats();
 }
 

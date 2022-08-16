@@ -88,10 +88,6 @@
 #endif
 #ifndef GPIO_PIN_NSS_2
 #define GPIO_PIN_NSS_2 UNDEF_PIN
-#else
-#ifndef Regulatory_Domain_EU_CE_2400 // No LBT with Gemini Mode yet.
-#define GEMINI_MODE
-#endif
 #endif
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN

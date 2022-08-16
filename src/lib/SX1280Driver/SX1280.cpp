@@ -103,9 +103,14 @@ bool SX1280Driver::Begin()
 
     hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX1280_Radio_1) | 0xC0), SX1280_Radio_1);   //default is low power mode, switch to high sensitivity instead
 
-    #ifndef GEMINI_MODE
-    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All);                              //Enable auto FS
-    #endif
+#if defined(TARGET_RX)
+        hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All); //Enable auto FS
+#else
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN) // Do not enable for dual radio TX.
+    {
+        hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX1280_Radio_All); //Enable auto FS
+    }
+#endif
 
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;
@@ -450,7 +455,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool geminiMode)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX1280_Radio_Number_t radioNumber)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
@@ -460,23 +465,20 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool gemin
         return;
     }
 
-    SX1280_Radio_Number_t radioNumber = SX1280_Radio_All;
-
-    if (!geminiMode)
-    {
+    if (radioNumber == SX1280_Radio_Default)
         radioNumber = lastSuccessfulPacketRadio;
-
-        if (GPIO_PIN_NSS_2 != UNDEF_PIN) // Normal diversity mode
+        
+    // Normal diversity mode
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX1280_Radio_All)
+    {
+        // Make sure the unused radio is in FS mode and will not receive the tx packet.
+        if (radioNumber == SX1280_Radio_1)
         {
-            // Make sure the unused radio is in FS mode and will not receive the tx packet.
-            if (lastSuccessfulPacketRadio == SX1280_Radio_1)
-            {
-                instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
-            }
-            else
-            {
-                instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
-            }
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_2);
+        }
+        else
+        {
+            instance->SetMode(SX1280_MODE_FS, SX1280_Radio_1);
         }
     }
 

@@ -331,16 +331,17 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
   hwTimer.updateInterval(interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(), // IS GetInitialFreq REQUIRED HERE? Set separately after Config
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
                
-  #ifdef GEMINI_MODE
-  Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
-  #endif
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+  {
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+  }
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -361,12 +362,15 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    #ifdef GEMINI_MODE
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+    {
       Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
-    #else
+    }
+    else
+    {      
       Radio.SetFrequencyReg(FHSSgetNextFreq());
-    #endif
+    }
   }
 }
 
@@ -453,11 +457,27 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (ChannelIsClear())
 #endif
   {
-    #ifdef GEMINI_MODE
-      Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, true);
-    #else
-      Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
-    #endif
+    SX1280_Radio_Number_t transmittingRadio = SX1280_Radio_Default;
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+      switch (config.GetAntennaMode())
+      {
+      case 0:
+        transmittingRadio = SX1280_Radio_All; // Gemini mode
+        break;
+      case 1:
+        transmittingRadio = SX1280_Radio_1; // Single antenna tx and true diversity rx.
+        break;
+      case 2:
+        transmittingRadio = SX1280_Radio_2; // Single antenna tx and true diversity rx.
+        break;
+      default:
+        break;
+      }
+    }
+
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
   }
 }
 
@@ -813,9 +833,10 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_BINDING);
   Radio.SetFrequencyReg(GetInitialFreq());               
-  #ifdef GEMINI_MODE
-  Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
-  #endif
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+  {
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+  }
   // Start transmitting again
   hwTimer.resume();
 
