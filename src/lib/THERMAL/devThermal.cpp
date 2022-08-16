@@ -124,7 +124,6 @@ static void timeoutFan()
     static uint8_t fanStateDuration;
     static bool fanIsOn;
     bool fanShouldBeOn = POWERMGNT::currPower() >= (PowerLevels_e)config.GetPowerFanThreshold();
-    static PowerLevels_e lastPower = MinPower;
 
     if (fanIsOn)
     {
@@ -133,11 +132,12 @@ static void timeoutFan()
 #if defined(PLATFORM_ESP32)
             if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
-                if (fanStateDuration < FAN_MIN_CHANGETIME)
+                static PowerLevels_e lastPower = MinPower;
+                if (POWERMGNT::currPower() < lastPower && fanStateDuration < FAN_MIN_CHANGETIME)
                 {
                     ++fanStateDuration;
                 }
-                if (POWERMGNT::currPower() > lastPower || (POWERMGNT::currPower() < lastPower && fanStateDuration >= FAN_MIN_CHANGETIME))
+                if (POWERMGNT::currPower() > lastPower || fanStateDuration >= FAN_MIN_CHANGETIME)
                 {
                     setFanSpeed();
                     lastPower = POWERMGNT::currPower();
@@ -193,7 +193,6 @@ static void timeoutFan()
                 // the PWM level is not sufficient to get it moving
                 ledcWrite(fanChannel, 192);
                 fanStateDuration = FAN_MIN_CHANGETIME;
-                lastPower = (PowerLevels_e)(MaxPower + 1);
             }
 #endif
             fanIsOn = true;
