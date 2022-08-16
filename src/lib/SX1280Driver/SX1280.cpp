@@ -558,6 +558,11 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
     return -(int8_t)(status / 2);
 }
 
+SX1280_Radio_Number_t ICACHE_RAM_ATTR SX1280Driver::GetProcessingPacketRadio()
+{
+    return processingPacketRadio;
+}
+
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
     uint8_t status[2];
