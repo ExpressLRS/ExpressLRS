@@ -85,6 +85,7 @@ elif platform in ['espressif32']:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
     if "_ETX" in target_name:
+        env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
         env.AddPreAction("uploadfs", ETXinitPassthrough.init_passthrough)
 
