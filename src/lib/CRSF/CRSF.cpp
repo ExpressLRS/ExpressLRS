@@ -420,8 +420,9 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         packetReceived = true;
     }
 
-    // always execute this check since broadcast needs to be handeled in all cases
-    if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+    // always execute this check since broadcast needs to be handled in all cases
+    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+        (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
         (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
     {
         elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
