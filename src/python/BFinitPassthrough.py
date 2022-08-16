@@ -111,18 +111,18 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     dbg_print("======== PASSTHROUGH DONE ========")
 
 
-def reset_to_bootloader(args) -> int:
+def reset_to_bootloader(port, baud, target, action, accept=None, half_duplex=False, chip_type='ESP82') -> int:
     dbg_print("======== RESET TO BOOTLOADER ========")
-    s = serial.Serial(port=args.port, baudrate=args.baud,
+    s = serial.Serial(port=port, baudrate=baud,
         bytesize=8, parity='N', stopbits=1,
         timeout=1, xonxoff=0, rtscts=0)
     rl = SerialHelper.SerialHelper(s, 3.)
     rl.clear()
-    if args.half_duplex:
-        BootloaderInitSeq = bootloader.get_init_seq('GHST', args.type)
+    if half_duplex:
+        BootloaderInitSeq = bootloader.get_init_seq('GHST', chip_type)
         dbg_print("  * Using half duplex (GHST)")
     else:
-        BootloaderInitSeq = bootloader.get_init_seq('CRSF', args.type)
+        BootloaderInitSeq = bootloader.get_init_seq('CRSF', chip_type)
         dbg_print("  * Using full duplex (CRSF)")
         #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
         rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
@@ -130,13 +130,13 @@ def reset_to_bootloader(args) -> int:
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip()
-    flash_target = re.sub("_VIA_.*", "", args.target.upper())
-    ignore_incorrect_target = args.action == "uploadforce"
+    flash_target = re.sub("_VIA_.*", "", target.upper())
+    ignore_incorrect_target = action == "uploadforce"
     if rx_target == "":
         dbg_print("Cannot detect RX target, blindly flashing!")
     elif ignore_incorrect_target:
         dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
-    elif rx_target != flash_target and rx_target != args.accept:
+    elif rx_target != flash_target and rx_target != accept:
         if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
             dbg_print("Ok, flashing anyway!")
         else:
@@ -149,6 +149,10 @@ def reset_to_bootloader(args) -> int:
 
     return ElrsUploadResult.Success
 
+def init_passthrough(source, target, env):
+    env.AutodetectUploadPort([env])
+    bf_passthrough_init(env['UPLOAD_PORT'], env['UPLOAD_SPEED'])
+    reset_to_bootloader(env['UPLOAD_PORT'], env['UPLOAD_SPEED'], env['PIOENV'], source[0])
 
 def main(custom_args = None):
     parser = argparse.ArgumentParser(
@@ -182,7 +186,7 @@ def main(custom_args = None):
         dbg_print(str(err))
 
     if args.reset_to_bl:
-        returncode = reset_to_bootloader(args)
+        returncode = reset_to_bootloader(args.port, args.baud, args.target, args.action, args.accept, args.half_duplex, args.type)
 
     return returncode
 
