@@ -80,6 +80,15 @@ elif platform in ['espressif8266']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+    elif "_UART" in target_name:
+        env.Replace(
+            UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
+            UPLOAD_SPEED=921600,
+            UPLOADERFLAGS=[
+                "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT",
+                "-c", "esp8266", "--before", "default_reset", "--after", "soft_reset", "write_flash"
+            ]
+        )
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(
             UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
@@ -95,6 +104,11 @@ elif platform in ['espressif32']:
     if "_WIFI" in target_name:
         env.Replace(UPLOAD_PROTOCOL="custom")
         env.Replace(UPLOADCMD=upload_via_esp8266_backpack.on_upload)
+    elif "_UART" in target_name:
+        env.Replace(
+            UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
+            UPLOAD_SPEED=921600
+        )
     if "_ETX" in target_name:
         env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
