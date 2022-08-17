@@ -211,7 +211,7 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (isDualRadio())
     {
         if (Radio.GetProcessingPacketRadio() == SX1280_Radio_1)
             antenna = 0;
@@ -626,7 +626,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 static inline void checkGeminiMode()
 {
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (isDualRadio())
     {
         geminiMode = config.GetAntennaMode();
     }

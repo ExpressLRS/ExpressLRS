@@ -134,7 +134,7 @@ static void registerLuaParameters()
   }
 
   // Gemini Mode
-  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+  if (isDualRadio())
   {
     registerLUAParameter(&luaDiversityMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetAntennaMode(arg); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
@@ -177,7 +177,7 @@ static int event()
   }
 
   // Gemini Mode
-  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+  if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaDiversityMode, config.GetAntennaMode()); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
   }

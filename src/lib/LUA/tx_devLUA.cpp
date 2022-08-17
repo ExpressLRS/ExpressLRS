@@ -585,7 +585,7 @@ static void registerLuaParameters()
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
     });
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (isDualRadio())
     {
       registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
         config.SetAntennaMode(arg);
@@ -713,7 +713,7 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
-  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+  if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
   }

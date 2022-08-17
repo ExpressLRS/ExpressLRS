@@ -192,6 +192,7 @@ extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 uint32_t uidMacSeedGet(void);
 void initUID();
+bool isDualRadio();
 
 #define AUX1 4
 #define AUX2 5

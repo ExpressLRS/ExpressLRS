@@ -338,7 +338,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
                );
                
-  if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+  if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
   }
@@ -362,7 +362,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+    if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
     {
       Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
@@ -459,7 +459,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     SX1280_Radio_Number_t transmittingRadio = SX1280_Radio_Default;
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (isDualRadio())
     {
       switch (config.GetAntennaMode())
       {
@@ -833,7 +833,7 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(RATE_BINDING);
   Radio.SetFrequencyReg(GetInitialFreq());               
-  if (GPIO_PIN_NSS_2 != UNDEF_PIN && config.GetAntennaMode() == 0) // Gemini mode
+  if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
   }
