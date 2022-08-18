@@ -90,13 +90,13 @@
                 "upload_methods": ["uart", "wifi"]
             },
             "e19": {
-                "product_name": "DIY ESP32 + E19 900MHz TX",
+                "product_name": "DIY ESP32 E19 900MHz TX",
                 "lua_name": "DIY900 E19",
                 "layout_file": "DIY 900 E19.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "rfm95": {
-                "product_name": "DIY ESP32 + RFM95 900MHz TX",
+                "product_name": "DIY ESP32 RFM95 900MHz TX",
                 "lua_name": "DIY900 RFM95",
                 "layout_file": "DIY 900 RFM95.json",
                 "upload_methods": ["uart", "wifi"]
@@ -104,7 +104,7 @@
         },
         "rx_900": {
             "huzzah": {
-                "product_name": "DIY Huzzah + RFM95 900MHz TX",
+                "product_name": "DIY Huzzah RFM95 900MHz TX",
                 "lua_name": "ELRS RFM95 900RX",
                 "layout_file": "DIY Huzzah RFM95.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
@@ -112,19 +112,19 @@
         },
         "tx_2400": {
             "mini": {
-                "product_name": "DIY Mini ESP32 + SX1280 2.4GHz TX",
+                "product_name": "DIY Mini ESP32 SX1280 2.4GHz TX",
                 "lua_name": "DIY2400 Mini",
                 "layout_file": "DIY 2400 Mini.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "e28": {
-                "product_name": "DIY ESP32 + E28 2.4GHz TX",
+                "product_name": "DIY ESP32 E28 2.4GHz TX",
                 "lua_name": "DIY2400 E28",
                 "layout_file": "DIY 2400 E28.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "f27": {
-                "product_name": "DIY ESP32 + F27 2.4GHz TX",
+                "product_name": "DIY ESP32 F27 2.4GHz TX",
                 "lua_name": "DIY2400 F27",
                 "layout_file": "DIY 2400 F27.json",
                 "upload_methods": ["uart", "wifi"]
@@ -140,13 +140,13 @@
     "generic": {
         "rx_900": {
             "plain": {
-                "product_name": "Generic ESP8285 + SX127x 900MHz RX",
+                "product_name": "Generic ESP8285 SX127x 900MHz RX",
                 "lua_name": "ELRS 900RX",
                 "layout_file": "Generic 900.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "pwmp": {
-                "product_name": "Generic ESP8285 + SX127x with PWM 900MHz RX",
+                "product_name": "Generic ESP8285 SX127x with PWM 900MHz RX",
                 "lua_name": "ELRS PWMP 900RX",
                 "layout_file": "Generic 900 PWMP.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
@@ -174,65 +174,65 @@
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "vtx": {
-                "product_name": "Generic ESP8285 + VTx 2.4Ghz RX",
+                "product_name": "Generic ESP8285 VTx 2.4Ghz RX",
                 "lua_name": "ELRS+VTx 2400RX",
                 "layout_file": "Generic 2400 VTX.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "pwm5": {
-                "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 5xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP5.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "pwm6": {
-                "product_name": "Generic ESP8285 + 6xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 6xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP6.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "pwm7": {
-                "product_name": "Generic ESP8285 + 7xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 7xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"]
             },
             "pa": {
-                "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
+                "product_name": "Generic ESP8285 PA 2.4Ghz RX",
                 "lua_name": "ELRS+PA 2400RX",
                 "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity": {
-                "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
+                "product_name": "Generic ESP8285 Diversity PA 2.4Ghz RX",
                 "lua_name": "ELRS+D 2400RX",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         },
         "rx32_2400": {
             "frank": {
-                "product_name": "Generic ESP32 + 2.4Ghz Franken RX",
+                "product_name": "Generic ESP32 2.4Ghz Franken RX",
                 "lua_name": "Frank 2400RX",
                 "layout_file": "Frank 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "rx_vtx": {
-                "product_name": "Generic ESP32 + 2.4Ghz Rx and VTx",
+                "product_name": "Generic ESP32 2.4Ghz Rx and VTx",
                 "lua_name": "Rx+VTx 2400RX",
                 "layout_file": "Generic 2400 Whoop Rx and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity": {
-                "product_name": "Generic ESP32 + Full Diversity PA 2.4Ghz RX",
+                "product_name": "Generic ESP32 Full Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
-                "layout_file": "Generic 2400 PA Full Diversity.json",
+                "layout_file": "Generic 2400 Full Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity_vtx": {
-                "product_name": "Generic ESP32 + Full Diversity PA 2.4Ghz RX and VTx",
+                "product_name": "Generic ESP32 Full Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
-                "layout_file": "Generic 2400 PA Full Diversity and VTx.json",
+                "layout_file": "Generic 2400 Full Diversity PA and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
@@ -390,7 +390,7 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "r24s": {
