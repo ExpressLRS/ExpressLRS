@@ -43,11 +43,24 @@
 #define GPIO_PIN_BUTTON2 hardware_pin(HARDWARE_button2)
 
 // Lighting
+#define GPIO_PIN_LED hardware_pin(HARDWARE_led)
+#define GPIO_PIN_LED_BLUE hardware_pin(HARDWARE_led_blue)
+#define GPIO_LED_BLUE_INVERTED hardware_pin(HARDWARE_led_blue_invert)
+#define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
+#define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
+#define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-// No NeoPixelBus for ESP8285 (uses global Serial)
-//#define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
-//#define WS2812_IS_GRB
-//#define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
+#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+#define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
+// #define GPIO_PIN_LED_WS2812_FAST // stm32
+#define WS2812_IS_GRB
+#define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
+#define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_status)
+#define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_status_count)
+#define WS2812_VTX_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_vtx)
+#define WS2812_VTX_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_vtx_count)
+#define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
+#define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)

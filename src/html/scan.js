@@ -6,6 +6,8 @@
 
 document.addEventListener('DOMContentLoaded', init, false);
 let scanTimer = undefined;
+let colorTimer = undefined;
+let colorUpdated  = false;
 let storedModelId = 255;
 let buttonActions = [];
 
@@ -112,6 +114,42 @@ function init() {
   initOptions();
 }
 
+function changeCurrentColors() {
+  if (colorTimer === undefined) {
+    sendCurrentColors();
+    colorTimer = setInterval(timeoutCurrentColors, 50);
+  } else {
+    colorUpdated = true;
+  }
+}
+
+function sendCurrentColors() {
+  const formData = new FormData(_('upload_options'));
+  const data = Object.fromEntries(formData);
+  colors = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (_(k) && _(k).type == 'color') {
+      const index = parseInt(k.substring('6')) - 1;
+      if (_(k + '-div').style.display === 'none') colors[index] = -1;
+      else colors[index] = parseInt(v.substring(1), 16);
+    }
+  }
+  const xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('POST', '/buttons', true);
+  xmlhttp.setRequestHeader('Content-type', 'application/json');
+  xmlhttp.send(JSON.stringify(colors));
+  colorUpdated = false;
+}
+
+function timeoutCurrentColors() {
+  if (colorUpdated) {
+    sendCurrentColors();
+  } else {
+    clearInterval(colorTimer);
+    colorTimer = undefined;
+  }
+}
+
 function updateConfig(data) {
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
@@ -137,6 +175,15 @@ function updateConfig(data) {
   if (data.uidtype) _('uid-type').textContent = data.uidtype;
   updatePwmSettings(data.pwm);
 @@if isTX:
+  if (data.hasOwnProperty['button-colors']) {
+    if (_('button1-color')) _('button1-color').oninput = changeCurrentColors;
+    if (data['button-colors'][0] === -1) _('button1-color-div').style.display = 'none';
+    else _('button1-color').value = color(data['button-colors'][0]);
+
+    if (_('button2-color')) _('button2-color').oninput = changeCurrentColors;
+    if (data['button-colors'][1] === -1) _('button2-color-div').style.display = 'none';
+    else _('button2-color').value = color(data['button-colors'][1]);
+  }
   if (data.hasOwnProperty('button-actions')) {
     updateButtons(data['button-actions']);
   } else {
@@ -388,6 +435,7 @@ function submitOptions(e) {
   // Serialize and send the formObject
   xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
+    if (_(k) && _(k).type == 'color') return undefined;
     if (_(k) && _(k).type == 'checkbox') {
       return v == 'on' ? true : false;
     }
@@ -431,6 +479,9 @@ function submitButtonActions(e) {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/config');
   xhr.setRequestHeader('Content-Type', 'application/json');
+  // put in the colors
+  buttonActions[0].color = to8bit(_(`button1-color`).value)
+  buttonActions[1].color = to8bit(_(`button2-color`).value)
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
@@ -463,19 +514,77 @@ function updateOptions(data) {
 }
 
 @@if isTX:
+function toRGB(c)
+{
+  r = c & 0xE0 ;
+  r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000;
+  g = c & 0x1C;
+  g = ((g<< 11) + (g << 8) + (g << 5)) & 0xFF00;
+  b = ((c & 0x3) << 1) + ((c & 0x3) >> 1);
+  b = (b << 5) + (b << 2) + (b >> 1);
+  s = (r+g+b).toString(16);
+  return '#' + "000000".substring(0, 6-s.length) + s;
+}
+
 function updateButtons(data) {
   buttonActions = data;
   for (const [b, _v] of Object.entries(data)) {
-    for (const [p, v] of Object.entries(_v)) {
+    for (const [p, v] of Object.entries(_v['action'])) {
       appendRow(parseInt(b), parseInt(p), v);
     }
+    _(`button${parseInt(b)+1}-color-div`).style.display = 'block';
+    _(`button${parseInt(b)+1}-color`).value = toRGB(_v['color']);
+  }
+  _('button1-color').oninput = changeCurrentColors;
+  _('button2-color').oninput = changeCurrentColors;
+}
+
+function changeCurrentColors() {
+  if (colorTimer === undefined) {
+    sendCurrentColors();
+    colorTimer = setInterval(timeoutCurrentColors, 50);
+  } else {
+    colorUpdated = true;
+  }
+}
+
+function to8bit(v)
+{
+  v = parseInt(v.substring(1), 16)
+  return ((v >> 16) & 0xE0) + ((v >> (8+3)) & 0x1C) + ((v >> 6) & 0x3)
+}
+
+function sendCurrentColors() {
+  const formData = new FormData(_('button_actions'));
+  const data = Object.fromEntries(formData);
+  colors = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (_(k) && _(k).type == 'color') {
+      const index = parseInt(k.substring('6')) - 1;
+      if (_(k + '-div').style.display === 'none') colors[index] = -1;
+      else colors[index] = to8bit(v);
+    }
+  }
+  const xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('POST', '/buttons', true);
+  xmlhttp.setRequestHeader('Content-type', 'application/json');
+  xmlhttp.send(JSON.stringify(colors));
+  colorUpdated = false;
+}
+
+function timeoutCurrentColors() {
+  if (colorUpdated) {
+    sendCurrentColors();
+  } else {
+    clearInterval(colorTimer);
+    colorTimer = undefined;
   }
 }
 
 function validateSave() {
   let disable = false;
   for (const [b, _v] of Object.entries(buttonActions)) {
-    for (const [p, v] of Object.entries(_v)) {
+    for (const [p, v] of Object.entries(_v['action'])) {
       if (v['action'] !== 0 && (_(`select-press-${b}-${p}`).value === '' || _(`select-long-${b}-${p}`).value === '' || _(`select-short-${b}-${p}`).value === '')) {
         disable = true;
       }
@@ -485,7 +594,7 @@ function validateSave() {
 }
 
 function changeAction(b, p, value) {
-  buttonActions[b][p]['action'] = value;
+  buttonActions[b]['action'][p]['action'] = value;
   if (value === 0) {
     _(`select-press-${b}-${p}`).value = '';
     _(`select-long-${b}-${p}`).value = '';
@@ -495,14 +604,14 @@ function changeAction(b, p, value) {
 }
 
 function changePress(b, p, value) {
-  buttonActions[b][p]['is-long-press'] = (value==='true');
+  buttonActions[b]['action'][p]['is-long-press'] = (value==='true');
   _(`mui-long-${b}-${p}`).style.display = value==='true' ? 'block' : 'none';
   _(`mui-short-${b}-${p}`).style.display = value==='true' ? 'none' : 'block';
   validateSave();
 }
 
 function changeCount(b, p, value) {
-  buttonActions[b][p]['count'] = parseInt(value);
+  buttonActions[b]['action'][p]['count'] = parseInt(value);
   _(`select-long-${b}-${p}`).value = value;
   _(`select-short-${b}-${p}`).value = value;
   validateSave();
@@ -539,7 +648,7 @@ function appendRow(b,p,v) {
   </div>
 </td>
 <td>
-  <div class="mui-select" id="mui-long-${b}-${p}" style="display:${buttonActions[b][p]['is-long-press'] ? "block": "none"};">
+  <div class="mui-select" id="mui-long-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "block": "none"};">
     <select id="select-long-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
       <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
       <option value='0' ${v['count']===0 ? 'selected' : ''}>for 0.5 seconds</option>
@@ -553,7 +662,7 @@ function appendRow(b,p,v) {
     </select>
     <label>Count</label>
   </div>
-  <div class="mui-select" id="mui-short-${b}-${p}" style="display:${buttonActions[b][p]['is-long-press'] ? "none": "block"};">
+  <div class="mui-select" id="mui-short-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "none": "block"};">
     <select id="select-short-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
       <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
       <option value='0' ${v['count']===0 ? 'selected' : ''}>1 time</option>
