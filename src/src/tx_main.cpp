@@ -466,7 +466,7 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
   }
 
   // Do not transmit or advance FHSS/Nonce until in disconnected/connected state
-  if (connectionState == tentative)
+  if (connectionState == awaitingModelId)
     return;
 
   // Tx Antenna Diversity
@@ -545,7 +545,7 @@ static void UARTconnected()
     // When CRSF first connects, always go into a brief delay before
     // starting to transmit, to make sure a ModelID update isn't coming
     // right behind it
-    connectionState = tentative;
+    connectionState = awaitingModelId;
   }
   // But start the timer to get OpenTX sync going and a ModelID update sent
   hwTimer.resume();
@@ -574,9 +574,9 @@ void ModelUpdateReq()
     ModelUpdatePending = true;
   }
 
-  // Jump from tentative to transmitting to break the startup delay now that
-  // the ModelID has been confirmed by the handset
-  if (connectionState == tentative)
+  // Jump from awaitingModelId to transmitting to break the startup delay now
+  // that the ModelID has been confirmed by the handset
+  if (connectionState == awaitingModelId)
   {
     connectionState = disconnected;
   }
@@ -647,7 +647,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-  if (connectionState != tentative)
+  if (connectionState != awaitingModelId)
   {
     HandleFHSS();
     HandlePrepareForTLM();
@@ -685,7 +685,7 @@ static void UpdateConnectDisconnectStatus()
       DBGLN("got downlink conn");
     }
   }
-  // If RX_LOSS_CNT count fails, or in tentative state for longer than DisconnectTimeoutMs, go to disconnected
+  // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
   else if (connectionState == connected ||
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
