@@ -3,8 +3,12 @@
 #include "device.h"
 #include "config.h"
 
-#include <functional>
+typedef void (*ButtonAction_fn)();
 
+// The config mode only allows a maximum of 2 actions per button
+#define MAX_BUTTON_ACTIONS  2
+
+// Limited to 16 possible ACTIONs by config storage currently
 typedef enum : uint8_t {
     ACTION_NONE,
     ACTION_INCREASE_POWER,
@@ -13,7 +17,7 @@ typedef enum : uint8_t {
     ACTION_SEND_VTX,
     ACTION_START_WIFI,
     ACTION_BIND,
-    ACTION_REBOOT,
+    ACTION_RESET_REBOOT,
 
     ACTION_LAST
 } action_e;
@@ -35,9 +39,8 @@ typedef enum : uint8_t {
         action_e action;
     } action_t;
 
-    void registerButtonFunction(action_e action, std::function<void()> function);
-    const std::function<void()> *getButtonFunctions();
+    void registerButtonFunction(action_e action, ButtonAction_fn function);
 
 #else
-    inline void registerButtonFunction(uint8_t action, std::function<void()> function) {}
+    inline void registerButtonFunction(uint8_t action, ButtonAction_fn function) {}
 #endif

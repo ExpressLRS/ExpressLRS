@@ -29,18 +29,13 @@ static constexpr struct {
     action_e action;
 } button_actions[2] = {
     {true, 3, ACTION_START_WIFI},
-    {true, 7, ACTION_REBOOT}
+    {true, 7, ACTION_RESET_REBOOT}
 };
 #endif
 
-static std::function<void()> actions[ACTION_LAST] = { nullptr };
+static ButtonAction_fn actions[ACTION_LAST] = { nullptr };
 
-const std::function<void()> *getButtonFunctions()
-{
-    return actions;
-}
-
-void registerButtonFunction(action_e action, std::function<void()> function)
+void registerButtonFunction(action_e action, ButtonAction_fn function)
 {
     actions[action] = function;
 }
@@ -50,9 +45,9 @@ static void handlePress(uint8_t button, bool longPress, uint8_t count)
     std::list<action_t>::iterator it;
     DBGLN("handle press");
 #if defined(TARGET_TX)
-    const button_action_t *button_actions = config.GetButtonActions(button);
+    const button_action_t *button_actions = config.GetButtonActions(button)->val.actions;
 #endif
-    for (int i=0 ; i<2 ; i++)
+    for (int i=0 ; i<MAX_BUTTON_ACTIONS ; i++)
     {
         if (button_actions[i].action != ACTION_NONE && button_actions[i].pressType == longPress && button_actions[i].count == count-1)
         {
@@ -77,15 +72,20 @@ static int start()
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
         button1.OnLongPress = [](){ handlePress(0, true, button1.getCount()); };
 #if defined(TARGET_TX)
-        const button_action_t *button_actions = config.GetButtonActions(0);
-        if (button_actions[0].action == ACTION_NONE && button_actions[1].action == ACTION_NONE)
+        const tx_button_color_t *button_actions = config.GetButtonActions(0);
+        if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)
         {
             // Set defaults for button 1
-            button_action_t default_actions[2] = {
-                {false, 2, ACTION_BIND},
-                {true, 0, ACTION_INCREASE_POWER}
+            tx_button_color_t default_actions = {
+                .val = {
+                    .color = 0,
+                    .actions = {
+                        {false, 2, ACTION_BIND},
+                        {true, 0, ACTION_INCREASE_POWER}
+                    }
+                }
             };
-            config.SetButtonActions(0, default_actions);
+            config.SetButtonActions(0, &default_actions);
         }
 #endif
     }
@@ -95,15 +95,20 @@ static int start()
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
         button2.OnLongPress = [](){ handlePress(1, true, button2.getCount()); };
 #if defined(TARGET_TX)
-        const button_action_t *button_actions = config.GetButtonActions(1);
-        if (button_actions[0].action == ACTION_NONE && button_actions[1].action == ACTION_NONE)
+        const tx_button_color_t *button_actions = config.GetButtonActions(1);
+        if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)
         {
             // Set defaults for button 2
-            button_action_t default_actions[2] = {
-                {false, 1, ACTION_GOTO_VTX_CHANNEL},
-                {true, 0, ACTION_SEND_VTX}
+            tx_button_color_t default_actions = {
+                .val = {
+                    .color = 0,
+                    .actions = {
+                        {false, 1, ACTION_GOTO_VTX_CHANNEL},
+                        {true, 0, ACTION_SEND_VTX}
+                    }
+                }
             };
-            config.SetButtonActions(1, default_actions);
+            config.SetButtonActions(1, &default_actions);
         }
 #endif
     }

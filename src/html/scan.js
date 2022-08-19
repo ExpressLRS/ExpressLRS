@@ -157,7 +157,6 @@ function initOptions() {
     }
   };
   xmlhttp.open('GET', '/config', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/json');
   xmlhttp.send();
 }
 
@@ -174,7 +173,6 @@ function getNetworks() {
     }
   };
   xmlhttp.open('GET', 'networks.json', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
   xmlhttp.send();
 }
 
@@ -472,7 +470,7 @@ function updateButtons(data) {
   }
 }
 
-function validateSave() {
+function checkEnableButtonActionSave() {
   let disable = false;
   for (const [b, _v] of Object.entries(buttonActions)) {
     for (const [p, v] of Object.entries(_v)) {
@@ -491,21 +489,21 @@ function changeAction(b, p, value) {
     _(`select-long-${b}-${p}`).value = '';
     _(`select-short-${b}-${p}`).value = '';
   }
-  validateSave();
+  checkEnableButtonActionSave();
 }
 
 function changePress(b, p, value) {
   buttonActions[b][p]['is-long-press'] = (value==='true');
   _(`mui-long-${b}-${p}`).style.display = value==='true' ? 'block' : 'none';
   _(`mui-short-${b}-${p}`).style.display = value==='true' ? 'none' : 'block';
-  validateSave();
+  checkEnableButtonActionSave();
 }
 
 function changeCount(b, p, value) {
   buttonActions[b][p]['count'] = parseInt(value);
   _(`select-long-${b}-${p}`).value = value;
   _(`select-short-${b}-${p}`).value = value;
-  validateSave();
+  checkEnableButtonActionSave();
 }
 
 function appendRow(b,p,v) {

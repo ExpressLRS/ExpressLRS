@@ -1367,8 +1367,9 @@ RF_PRE_INIT()
 }
 #endif
 
-void reboot()
+void resetConfigAndReboot()
 {
+    config.SetDefaults(true);
 #if defined(PLATFORM_STM32)
     HAL_NVIC_SystemReset();
 #else
@@ -1438,7 +1439,7 @@ void setup()
 
 #if defined(HAS_BUTTON)
     registerButtonFunction(ACTION_BIND, EnterBindingMode);
-    registerButtonFunction(ACTION_REBOOT, reboot);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
 #endif
 
     devicesStart();

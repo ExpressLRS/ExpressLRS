@@ -279,8 +279,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     button_count = 2;
   for (int button=0 ; button<button_count ; button++)
   {
-    const button_action_t *actions = config.GetButtonActions(button);
-    for (int pos=0 ; pos<2 ; pos++)
+    const button_action_t *actions = config.GetButtonActions(button)->val.actions;
+    for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
     {
       json["config"]["button-actions"][button][pos]["is-long-press"] = actions[pos].pressType ? true : false;
       json["config"]["button-actions"][button][pos]["count"] = actions[pos].count;
@@ -331,14 +331,14 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     const JsonArray &array = json["button-actions"].as<JsonArray>();
     for (int button=0 ; button<array.size() ; button++)
     {
-      button_action_t actions[2];
-      for (int pos=0 ; pos<2 ; pos++)
+      tx_button_color_t action;
+      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
       {
-        actions[pos].pressType = array[button][pos]["is-long-press"];
-        actions[pos].count = array[button][pos]["count"];
-        actions[pos].action = array[button][pos]["action"];
+        action.val.actions[pos].pressType = array[button][pos]["is-long-press"];
+        action.val.actions[pos].count = array[button][pos]["count"];
+        action.val.actions[pos].action = array[button][pos]["action"];
       }
-      config.SetButtonActions(button, actions);
+      config.SetButtonActions(button, &action);
     }
     config.Commit();
   }

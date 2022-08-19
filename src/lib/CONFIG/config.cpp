@@ -532,17 +532,10 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
 }
 
 void
-TxConfig::SetButtonActions(uint8_t button, button_action_t actions[2])
+TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 {
-    if (m_config.buttonColors[button].val.actions[0].action != actions[0].action ||
-        m_config.buttonColors[button].val.actions[0].count != actions[0].count ||
-        m_config.buttonColors[button].val.actions[0].pressType != actions[0].pressType ||
-        m_config.buttonColors[button].val.actions[1].action != actions[1].action ||
-        m_config.buttonColors[button].val.actions[1].count != actions[1].count ||
-        m_config.buttonColors[button].val.actions[1].pressType != actions[1].pressType
-    ) {
-        m_config.buttonColors[button].val.actions[0] = actions[0];
-        m_config.buttonColors[button].val.actions[1] = actions[1];
+    if (m_config.buttonColors[button].raw != action->raw) {
+        m_config.buttonColors[button].raw = action->raw;
         m_modified |= BUTTON_CHANGED;
     }
 }
