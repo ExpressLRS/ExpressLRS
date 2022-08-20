@@ -122,6 +122,7 @@ void SX1280Driver::startCWTest(uint32_t freq, SX1280_Radio_Number_t radio)
     uint8_t buffer;         // we just need a buffer for the write command
     SetFrequencyHz(freq);
     CommitOutputPower();
+    hal.TXenable(radio);
     hal.WriteCommand(SX1280_RADIO_SET_TXCONTINUOUSWAVE, &buffer, 0, radio);
 }
 

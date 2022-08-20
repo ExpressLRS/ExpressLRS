@@ -649,7 +649,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     Radio.Begin();
 
     POWERMGNT::init();
-    POWERMGNT::setPower(PWR_10mW);
+    POWERMGNT::setPower(POWERMGNT::getMinPower());
 
     Radio.startCWTest(2440000000, radio);
   } else {
