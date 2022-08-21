@@ -36,7 +36,7 @@
 					<label>
 						<input type="radio"
 							name="optionsRadios"
-							id="optionsRadios1"
+							id="optionsRadios2"
 							value="2">
 						Radio 2
 					</label>
@@ -49,7 +49,13 @@
 				<label>Center Frequency</label>
 			</div>
 			<div id="result" style="display: none;">
-				Calculated Crystal Frequency <span id="calculated"></span>, offset from ideal <span id="offset"></span>KHz
+				<table class="mui-table mui-table--bordered">
+					<tr><td>Calculated XO Freq</td><td id="calculated"></td></tr>
+					<tr><td>Calculated XO Offset (kHz)</td><td id="offset"></td></tr>
+					<tr><td>Calculated XO Offset (PPM)</td><td id="ppm"></td></tr>
+					<tr><td>Raw Offset (kHz)</td><td id="raw"></td></tr>
+					<tr><td>TL;DR</td><td id="tldr"></td></tr>
+				</table>
 			</div>
 		</div>
 	</div>
