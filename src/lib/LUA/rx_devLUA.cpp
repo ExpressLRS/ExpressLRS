@@ -130,14 +130,14 @@ static void registerLuaParameters()
   });
 #endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
     if (arg == 6) {
       deferExecution(200, [](){ InLoanBindingMode = true; });
     }
     sendLuaCommandResponse(&luaLoanModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
   registerLUAParameter(&luaReturnModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
     if (arg == 6) {
       deferExecution(200, []() { returnModelFromLoan = true; });
     }
