@@ -432,19 +432,19 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    if (connectionState != disconnected)
+    if (connectionState != disconnected && PFDloop.hasResult())
     {
-        PFDloop.calcResult();
-        PFDloop.reset();
-
-        int32_t RawOffset = PFDloop.getResult();
+        int32_t RawOffset = PFDloop.calcResult();
         int32_t Offset = LPF_Offset.update(RawOffset);
         int32_t OffsetDx = LPF_OffsetDx.update(RawOffset - PfdPrevRawOffset);
         PfdPrevRawOffset = RawOffset;
 
-        if (RXtimerState == tim_locked && LQCalc.currentIsSet())
+        if (RXtimerState == tim_locked)
         {
-            if (OtaNonce % 8 == 0) //limit rate of freq offset adjustment slightly
+            // limit rate of freq offset adjustment, use slot 1
+            // because telemetry can fall on slot 1 and will
+            // never get here
+            if (OtaNonce % 8 == 1)
             {
                 if (Offset > 0)
                 {
@@ -469,6 +469,8 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
+
+    PFDloop.reset();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -1421,7 +1423,6 @@ void loop()
 {
     unsigned long now = millis();
 
-    HandleUARTin();
     if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
