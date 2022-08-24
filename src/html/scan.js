@@ -432,7 +432,7 @@ function submitButtonActions(e) {
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState == 4 && this.status == 204) {
       cuteAlert({
         type: 'info',
         title: 'Success',

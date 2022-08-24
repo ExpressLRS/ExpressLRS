@@ -329,7 +329,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 {
   if (json.containsKey("button-actions")) {
     const JsonArray &array = json["button-actions"].as<JsonArray>();
-    for (int button=0 ; button<array.size() ; button++)
+    for (size_t button=0 ; button<array.size() ; button++)
     {
       tx_button_color_t action;
       for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)

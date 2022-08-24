@@ -42,8 +42,7 @@ void registerButtonFunction(action_e action, ButtonAction_fn function)
 
 static void handlePress(uint8_t button, bool longPress, uint8_t count)
 {
-    std::list<action_t>::iterator it;
-    DBGLN("handle press");
+    DBGLN("handlePress(%u, %u, %u)", button, (uint8_t)longPress, count);
 #if defined(TARGET_TX)
     const button_action_t *button_actions = config.GetButtonActions(button)->val.actions;
 #endif
@@ -70,7 +69,7 @@ static int start()
     {
         button1.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
-        button1.OnLongPress = [](){ handlePress(0, true, button1.getCount()); };
+        button1.OnLongPress = [](){ handlePress(0, true, button1.getLongCount()+1); };
 #if defined(TARGET_TX)
         const tx_button_color_t *button_actions = config.GetButtonActions(0);
         if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)
@@ -93,7 +92,7 @@ static int start()
     {
         button2.init(GPIO_PIN_BUTTON2, GPIO_BUTTON_INVERTED);
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
-        button2.OnLongPress = [](){ handlePress(1, true, button2.getCount()); };
+        button2.OnLongPress = [](){ handlePress(1, true, button2.getLongCount()+1); };
 #if defined(TARGET_TX)
         const tx_button_color_t *button_actions = config.GetButtonActions(1);
         if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)

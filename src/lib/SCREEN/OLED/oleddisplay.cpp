@@ -119,8 +119,8 @@ void OLEDDisplay::displaySplashScreen()
 void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
     u8g2->clearBuffer();
-    String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
-    if (dynamic)
+    String power = getValue(STATE_POWER, running_power_index);
+    if (dynamic || power_index != running_power_index)
     {
         power += " *";
     }
