@@ -381,6 +381,9 @@
                 "product_name": "EMAX 2.4GHz PA RX",
                 "lua_name": "EMAX 2400RX",
                 "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
