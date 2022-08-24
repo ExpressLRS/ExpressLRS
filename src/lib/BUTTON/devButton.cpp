@@ -1,7 +1,6 @@
 #include "devButton.h"
 
 #if defined(GPIO_PIN_BUTTON)
-#include "common.h"
 #include "logging.h"
 #include "button.h"
 #include "config.h"
@@ -70,46 +69,12 @@ static int start()
         button1.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
         button1.OnLongPress = [](){ handlePress(0, true, button1.getLongCount()+1); };
-#if defined(TARGET_TX)
-        const tx_button_color_t *button_actions = config.GetButtonActions(0);
-        if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)
-        {
-            // Set defaults for button 1
-            tx_button_color_t default_actions = {
-                .val = {
-                    .color = 0,
-                    .actions = {
-                        {false, 2, ACTION_BIND},
-                        {true, 0, ACTION_INCREASE_POWER}
-                    }
-                }
-            };
-            config.SetButtonActions(0, &default_actions);
-        }
-#endif
     }
     if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {
         button2.init(GPIO_PIN_BUTTON2, GPIO_BUTTON_INVERTED);
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
         button2.OnLongPress = [](){ handlePress(1, true, button2.getLongCount()+1); };
-#if defined(TARGET_TX)
-        const tx_button_color_t *button_actions = config.GetButtonActions(1);
-        if (button_actions->val.actions[0].action == ACTION_NONE && button_actions->val.actions[1].action == ACTION_NONE)
-        {
-            // Set defaults for button 2
-            tx_button_color_t default_actions = {
-                .val = {
-                    .color = 0,
-                    .actions = {
-                        {false, 1, ACTION_GOTO_VTX_CHANNEL},
-                        {true, 0, ACTION_SEND_VTX}
-                    }
-                }
-            };
-            config.SetButtonActions(1, &default_actions);
-        }
-#endif
     }
 
     return DURATION_IMMEDIATELY;

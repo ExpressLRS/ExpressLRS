@@ -554,6 +554,30 @@ TxConfig::SetDefaults(bool commit)
         m_modified = ALL_CHANGED;
     }
 
+    // Set defaults for button 1
+    tx_button_color_t default_actions1 = {
+        .val = {
+            .color = 0,
+            .actions = {
+                {false, 2, ACTION_BIND},
+                {true, 0, ACTION_INCREASE_POWER}
+            }
+        }
+    };
+    m_config.buttonColors[0].raw = default_actions1.raw;
+
+    // Set defaults for button 2
+    tx_button_color_t default_actions2 = {
+        .val = {
+            .color = 0,
+            .actions = {
+                {false, 1, ACTION_GOTO_VTX_CHANNEL},
+                {true, 0, ACTION_SEND_VTX}
+            }
+        }
+    };
+    m_config.buttonColors[1].raw = default_actions2.raw;
+
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     for (unsigned i=0; i<64; i++)
     {
