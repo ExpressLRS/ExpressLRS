@@ -181,7 +181,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
             dbg = str(round((total_packets / filechunks) * 100)) + "%"
             if (error_count > 0):
                 dbg += ", err: " + str(error_count)
-            dbg_print(dbg + "\n")
+            dbg_print(dbg)
 
     def getc(size, timeout=3):
         return s.read(size) or None

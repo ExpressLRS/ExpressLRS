@@ -23,6 +23,10 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
+#if defined(PLATFORM_ESP32)
+#include "esp32_updater.h"
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -1524,6 +1528,9 @@ void reset_into_bootloader(void)
 #elif defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
+#elif defined(PLATFORM_ESP32)
+    delay(100);
+    esp32_xmodem_updater();
 #endif
 }
 
