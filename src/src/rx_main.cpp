@@ -22,10 +22,8 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
+#include "devSerialUpdate.h"
 
-#if defined(PLATFORM_ESP32)
-#include "esp32_updater.h"
-#endif
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -40,6 +38,9 @@
 
 device_affinity_t ui_devices[] = {
   {&CRSF_device, 0},
+#if defined(PLATFORM_ESP32)
+  {&SerialUpdate_device, 0},
+#endif
 #ifdef HAS_LED
   {&LED_device, 1},
 #endif
@@ -1530,7 +1531,7 @@ void reset_into_bootloader(void)
     ESP.rebootIntoUartDownloadMode();
 #elif defined(PLATFORM_ESP32)
     delay(100);
-    esp32_xmodem_updater();
+    connectionState = serialUpdate;
 #endif
 }
 

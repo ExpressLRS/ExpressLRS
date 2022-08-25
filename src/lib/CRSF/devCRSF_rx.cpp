@@ -2,6 +2,8 @@
 #include "devCRSF.h"
 
 #ifdef CRSF_RX_MODULE
+#include "common.h"
+
 extern CRSF crsf;
 
 static volatile bool sendFrame = false;
@@ -23,15 +25,18 @@ static int start()
 
 static int timeout()
 {
-    #if defined(PLATFORM_ESP32)
-    if (sendFrame)
+    if (connectionState != serialUpdate)
     {
-        sendFrame = false;
-        crsf.sendRCFrameToFC();
+        #if defined(PLATFORM_ESP32)
+        if (sendFrame)
+        {
+            sendFrame = false;
+            crsf.sendRCFrameToFC();
+        }
+        #endif
+        crsf.RXhandleUARTout();
+        HandleUARTin();
     }
-    #endif
-    crsf.RXhandleUARTout();
-    HandleUARTin();
 
     return DURATION_IMMEDIATELY;
 }

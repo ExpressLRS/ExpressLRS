@@ -87,6 +87,9 @@ elif platform in ['espressif32']:
     if "_ETX" in target_name:
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
         env.AddPreAction("uploadfs", ETXinitPassthrough.init_passthrough)
+    elif "_BETAFLIGHTPASSTHROUGH" in target_name:
+        env.Replace(UPLOAD_SPEED=420000)
+        env.Replace(UPLOADCMD=UARTupload.on_upload)
 
 if "_WIFI" in target_name:
     add_target_uploadoption("uploadconfirm", "Do not upload, just send confirm")
