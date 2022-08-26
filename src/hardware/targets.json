@@ -246,6 +246,22 @@
             }
         }
     },
+    "foxeer": {
+        "name": "Foxeer",
+        "rx_2400": {
+            "pa-rgb": {
+                "product_name": "Foxeer 2.4Ghz RX",
+                "lua_name": "Foxeer 2400 RX",
+                "layout_file": "Generic 2400 PA RGB.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "frsky": {
         "name": "Frsky",
         "tx_900": {
@@ -436,6 +452,14 @@
                 "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
                 "lua_name": "ELRS+PA 2400RX",
                 "layout_file": "Generic 2400 PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "pa-rgb": {
+                "product_name": "Generic ESP8285 RGB + PA 2.4Ghz RX",
+                "lua_name": "ELRS+RGB 2400RX",
+                "layout_file": "Generic 2400 PA RGB.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
