@@ -59,7 +59,7 @@ void startPassthrough()
     delay(100);
     digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
     delay(50);
-    digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
+    // digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW);
 
     CRSF::Port.flush();
     backpack.flush();
