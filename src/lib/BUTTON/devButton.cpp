@@ -11,8 +11,13 @@ static Button button;
 #define GPIO_BUTTON_INVERTED false
 #endif
 
+// only check every second if the device is in-use, i.e. RX conencted, or TX is armed
+static constexpr int MS_IN_USE = 1000;
+
 #if defined(TARGET_TX)
+#include "CRSF.h"
 #include "POWERMGNT.h"
+
 void EnterBindingMode();
 
 static void enterBindMode3Click()
@@ -109,6 +114,14 @@ static int timeout()
     {
         return DURATION_NEVER;
     }
+#if defined(TARGET_TX)
+    if (CRSF::IsArmed())
+        return MS_IN_USE;
+#else
+    if (connectionState == connected)
+        return MS_IN_USE;
+#endif
+
     return button.update();
 }
 
