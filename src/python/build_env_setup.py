@@ -112,6 +112,16 @@ elif platform in ['espressif32']:
     if "_ETX" in target_name:
         env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
+    elif "_BETAFLIGHTPASSTHROUGH" in target_name:
+        env.Replace(
+            UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
+            UPLOAD_SPEED=420000,
+            UPLOADERFLAGS=[
+                "--passthrough", "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT", "--no-stub",
+                "-c", "esp32", "--before", "no_reset", "--after", "soft_reset", "write_flash"
+            ]
+        )
+        env.AddPreAction("upload", BFinitPassthrough.init_passthrough)
 
 if "_WIFI" in target_name:
     add_target_uploadoption("uploadconfirm", "Do not upload, just send confirm")

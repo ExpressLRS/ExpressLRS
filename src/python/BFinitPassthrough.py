@@ -130,20 +130,21 @@ def reset_to_bootloader(port, baud, target, action, accept=None, half_duplex=Fal
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip()
-    flash_target = re.sub("_VIA_.*", "", target.upper())
-    ignore_incorrect_target = action == "uploadforce"
-    if rx_target == "":
-        dbg_print("Cannot detect RX target, blindly flashing!")
-    elif ignore_incorrect_target:
-        dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
-    elif rx_target != flash_target and rx_target != accept:
-        if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
-            dbg_print("Ok, flashing anyway!")
-        else:
-            dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
-            return ElrsUploadResult.ErrorMismatch
-    elif flash_target != "":
-        dbg_print("Verified RX target '%s'" % (flash_target))
+    if target is not None:
+        flash_target = re.sub("_VIA_.*", "", target.upper())
+        ignore_incorrect_target = action == "uploadforce"
+        if rx_target == "":
+            dbg_print("Cannot detect RX target, blindly flashing!")
+        elif ignore_incorrect_target:
+            dbg_print(f"Force flashing {flash_target}, detected {rx_target}")
+        elif rx_target != flash_target and rx_target != accept:
+            if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (rx_target, flash_target)):
+                dbg_print("Ok, flashing anyway!")
+            else:
+                dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (rx_target, flash_target))
+                return ElrsUploadResult.ErrorMismatch
+        elif flash_target != "":
+            dbg_print("Verified RX target '%s'" % (flash_target))
     time.sleep(.5)
     s.close()
 
@@ -151,7 +152,10 @@ def reset_to_bootloader(port, baud, target, action, accept=None, half_duplex=Fal
 
 def init_passthrough(source, target, env):
     env.AutodetectUploadPort([env])
-    bf_passthrough_init(env['UPLOAD_PORT'], env['UPLOAD_SPEED'])
+    try:
+        bf_passthrough_init(env['UPLOAD_PORT'], env['UPLOAD_SPEED'])
+    except PassthroughEnabled as err:
+        dbg_print(str(err))
     reset_to_bootloader(env['UPLOAD_PORT'], env['UPLOAD_SPEED'], env['PIOENV'], source[0])
 
 def main(custom_args = None):
