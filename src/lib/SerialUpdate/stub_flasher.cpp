@@ -15,6 +15,9 @@
  *
  * Actual command handlers are implemented in stub_commands.c
  */
+
+#if defined(PLATFORM_ESP32) && defined(TARGET_RX)
+
 #include "stub_flasher.h"
 #include "slip.h"
 #include "soc_support.h"
@@ -249,3 +252,4 @@ void stub_handle_rx_byte(char byte)
         ub.read = 0;
     }
 }
+#endif

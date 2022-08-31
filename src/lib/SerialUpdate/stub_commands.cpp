@@ -6,6 +6,8 @@
 
 #include "targets.h"
 
+#if defined(PLATFORM_ESP32) && defined(TARGET_RX)
+
 #include <stdlib.h>
 #include "stub_commands.h"
 #include "stub_flasher.h"
@@ -23,3 +25,4 @@ esp_command_error handle_get_security_info()
   return ret;
 }
 #endif // ESP32S2_OR_LATER
+#endif

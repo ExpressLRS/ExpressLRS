@@ -6,6 +6,8 @@
  * SPDX-FileContributor: 2016-2022 Espressif Systems (Shanghai) CO LTD
  */
 
+#if defined(PLATFORM_ESP32) && defined(TARGET_RX)
+
 #include "stub_write_flash.h"
 #include "soc_support.h"
 #include "stub_flasher.h"
@@ -110,3 +112,4 @@ esp_command_error handle_flash_end(void)
     }
     return fs.last_error;
 }
+#endif
