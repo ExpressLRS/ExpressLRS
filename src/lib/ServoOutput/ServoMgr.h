@@ -11,8 +11,10 @@ public:
 
     // Initialize the pins for output
     void initialize();
-    // Start/Update PWM
+    // Start/Update PWM by pulse width
     void writeMicroseconds(uint8_t ch, uint16_t valueUs);
+    // Start/Update PWM by duty
+    void writeDuty(uint8_t ch, uint16_t duty);
     // Stop PWM
     void stopPwm(uint8_t ch);
     // Stop any active PWM channels (and set LOW)
@@ -32,6 +34,8 @@ private:
     const uint8_t _outputCnt;
     uint16_t *_refreshInterval;
     uint32_t _activePwmChannels;
+
+    uint8_t *_resolution_bits;
 };
 
 #endif
