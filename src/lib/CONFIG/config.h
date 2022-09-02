@@ -145,7 +145,7 @@ typedef union {
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:3,      // Narrow output mode (half pulse width)
-                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:11;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
