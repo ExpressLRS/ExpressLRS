@@ -1,5 +1,6 @@
 
 #if defined(PLATFORM_STM32)
+#if !defined(TARGET_TX_FLYSKY_FRM301)
 
 #include <stm32_def.h>
 #include <string.h>
@@ -39,4 +40,5 @@ void __attribute__((used)) initVariant(void)
     /* This can be used to run some init before \ref setup() */
 }
 
+#endif
 #endif // PLATFORM_STM32
