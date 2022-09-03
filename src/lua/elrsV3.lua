@@ -569,7 +569,7 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
     end
     linkstatTimeout = time + 100
-  elseif time > fieldTimeout and fields_count ~= 0 and not edit then
+  elseif time > fieldTimeout and fields_count ~= 0 then
     if #loadQ > 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, loadQ[#loadQ], fieldChunk })
       fieldTimeout = time + 50 -- 0.5s
