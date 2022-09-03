@@ -69,14 +69,28 @@ static void displayIdleScreen(bool init)
     }
 #endif
 
-    message_index_t disp_message = CRSF::IsArmed() ? MSG_ARMED : ((connectionState == connected) ? (connectionHasModelMatch ? MSG_CONNECTED : MSG_MISMATCH) : MSG_NONE);
-    uint8_t changed = init ? 0xFF : 0;
+    uint8_t changed = init ? CHANGED_ALL : 0;
+    message_index_t disp_message;
+    if (connectionState == noCrossfire || connectionState > FAILURE_STATES) {
+        disp_message = MSG_ERROR;
+    } else if(CRSF::IsArmed()) {
+        disp_message = MSG_ARMED;
+    } else if(connectionState == connected) {
+        if (connectionHasModelMatch) {
+            disp_message = MSG_CONNECTED;
+        } else {
+            disp_message = MSG_MISMATCH;
+        }
+    } else {
+        disp_message = MSG_NONE;
+    }
+
     // compute log2(ExpressLRS_currTlmDenom) (e.g. 128=7, 64=6, etc)
     uint8_t tlmIdx = __builtin_ffs(ExpressLRS_currTlmDenom) - 1;
     if (changed == 0)
     {
-        changed |= last_message != disp_message ? CHANGED_MESSAGE : 0;
-        changed |= last_temperature != temperature ? CHANGED_MESSAGE : 0;
+        changed |= last_message != disp_message ? CHANGED_ALL : 0;
+        changed |= last_temperature != temperature ? CHANGED_TEMP : 0;
         changed |= last_rate != config.GetRate() ? CHANGED_RATE : 0;
         changed |= last_power != config.GetPower() ? CHANGED_POWER : 0;
         changed |= last_dynamic != config.GetDynamicPower() ? CHANGED_POWER : 0;

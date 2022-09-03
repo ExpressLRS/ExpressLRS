@@ -30,12 +30,13 @@
 #endif
 
 
-#define CHANGED_MESSAGE bit(0)
+#define CHANGED_TEMP bit(0)
 #define CHANGED_RATE bit(1)
 #define CHANGED_POWER bit(2)
 #define CHANGED_TELEMETRY bit(3)
 #define CHANGED_MOTION bit(4)
 #define CHANGED_FAN bit(5)
+#define CHANGED_ALL 0xFF
 
 typedef enum fsm_state_s menu_item_t;
 
