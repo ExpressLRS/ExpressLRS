@@ -10,8 +10,14 @@ static int start()
     CRSF::Begin();
 #if defined(DEBUG_TX_FREERUN)
     CRSF::CRSFstate = true;
-    extern void UARTconnected();
-    UARTconnected();
+    if (CRSF::connected)
+    {
+        CRSF::connected();
+    }
+    else
+    {
+        ERRLN("CRSF::connteced has not been initialised");
+    }
 #endif
     return DURATION_IMMEDIATELY;
 }
