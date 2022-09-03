@@ -14,6 +14,9 @@
 #define SX1280_XTAL_FREQ 52000000
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))  // 198.3642578125
 
+#define SX1280_POWER_MIN (-18)
+#define SX1280_POWER_MAX (13)
+
 typedef enum
 {
     SX1280_Radio_1 = 1 << 0,

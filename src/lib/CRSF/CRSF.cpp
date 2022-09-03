@@ -2,6 +2,7 @@
 #include "device.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
+#include "common.h"
 #include "logging.h"
 #include "helpers.h"
 
@@ -419,8 +420,9 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         packetReceived = true;
     }
 
-    // always execute this check since broadcast needs to be handeled in all cases
-    if ((SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
+    // always execute this check since broadcast needs to be handled in all cases
+    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+        (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
         (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
     {
         elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
@@ -1027,26 +1029,38 @@ uint32_t CRSF::VersionStrToU32(const char *verStr)
 #if !defined(FORCE_NO_DEVICE_VERSION)
     uint8_t accumulator = 0;
     char c;
+    bool trailing_data = false;
     while ((c = *verStr))
     {
         ++verStr;
         // A decimal indicates moving to a new version field
-        // and the space after the version ends that field
-        if (c == '.' || c == ' ')
+        if (c == '.')
         {
             retVal = (retVal << 8) | accumulator;
             accumulator = 0;
+            trailing_data = false;
         }
         // Else if this is a number add it up
         else if (c >= '0' && c <= '9')
         {
             accumulator = (accumulator * 10) + (c - '0');
+            trailing_data = true;
         }
-        // Anything except [0-9. ] ends the parsing
+        // Anything except [0-9.] ends the parsing
         else
         {
             break;
         }
+    }
+    if (trailing_data)
+    {
+        retVal = (retVal << 8) | accumulator;
+    }
+    // If the version ID is < 1.0.0, we could not parse it,
+    // just use the OTA version as the major version number
+    if (retVal < 0x010000)
+    {
+        retVal = OTA_VERSION_ID << 16;
     }
 #endif
     return retVal;

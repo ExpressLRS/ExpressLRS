@@ -246,7 +246,7 @@ extern bool VRxBackpackWiFiReadyToSend;
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
-extern void beginWebsever();
+extern void setWifiUpdateMode();
 #endif
 
 static void luadevUpdateRateSensitivity() {
@@ -336,20 +336,25 @@ static void luadevGeneratePowerOpts()
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
+  std::function<void()> setTargetState;
   connectionState_e targetState;
   const char *textConfirm;
   const char *textRunning;
   if ((void *)item == (void *)&luaWebUpdate)
   {
-    targetState = wifiUpdate;
+    setTargetState = setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
+    targetState = wifiUpdate;
   }
   else
   {
-    targetState = bleJoystick;
+    setTargetState = []() {
+      connectionState = bleJoystick;
+    };
     textConfirm = "Start BLE Joystick?";
     textRunning = "Joystick Running...";
+    targetState = bleJoystick;
   }
 
   switch ((luaCmdStep_e)arg)
@@ -364,7 +369,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 
     case lcsConfirmed:
       sendLuaCommandResponse(cmd, lcsExecuting, textRunning);
-      connectionState = targetState;
+      setTargetState();
       break;
 
     case lcsCancel:
@@ -534,15 +539,19 @@ static void registerLuaParameters()
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
     if (arg < RATE_MAX)
     {
-      uint8_t newRate = RATE_MAX - 1 - arg;
-      newRate = adjustPacketRateForBaud(newRate);
+      uint8_t selectedRate = RATE_MAX - 1 - arg;
+      uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(newRate)->PayloadLength);
+        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
       // If the switch mode is going to change, block the change while connected
       if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
-        config.SetRate(newRate);
+        config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
+        if (actualRate != selectedRate)
+        {
+          setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
+        }
       }
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);

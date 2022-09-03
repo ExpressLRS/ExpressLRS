@@ -18,7 +18,13 @@ const fhss_config_t domains[] = {
 #include "SX1280Driver.h"
 
 const fhss_config_t domains[] = {
-    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
+    {    
+    #if defined(Regulatory_Domain_EU_CE_2400)
+        "CE_LBT",
+    #elif defined(Regulatory_Domain_ISM_2400)
+        "ISM2G4",
+    #endif
+    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
 };
 #endif
 
@@ -65,7 +71,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint8_t i = 0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
         if (i % FHSSconfig->freq_count == 0) {
             FHSSsequence[i] = sync_channel;
@@ -76,7 +82,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         }
     }
 
-    for (uint8_t i=0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
     {
         // if it's not the sync channel
         if (i % FHSSconfig->freq_count != 0)
@@ -92,7 +98,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     }
 
     // output FHSS sequence
-    for (uint8_t i=0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
     {
         DBG("%u ",FHSSsequence[i]);
         if (i % 10 == 9)

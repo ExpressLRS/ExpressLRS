@@ -5,9 +5,7 @@
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
-#include "CRSF.h"
 extern TCPSOCKET wifi2tcp;
-extern CRSF crsf;
 #endif
 
 #if defined(UNIT_TEST)
@@ -16,8 +14,6 @@ using namespace std;
 #endif
 
 #if CRSF_RX_MODULE
-
-#include "CRSF.h"
 
 Telemetry::Telemetry()
 {
@@ -259,7 +255,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
                 {
                     DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    crsf.crsf2msp.parse(package);
+                    CRSF::crsf2msp.parse(package);
                 }
                 else // if no TCP client we just want to forward MSP over the link
             #endif
