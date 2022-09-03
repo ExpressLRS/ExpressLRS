@@ -25,6 +25,7 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
         case som160Hz: return (1000000U / 160U);
         case som333Hz: return (1000000U / 333U);
         case som400Hz: return (1000000U / 400U);
+        case som10KHz: return (1000000U / 10000U);
         default:
             return 0;
     }
@@ -40,7 +41,11 @@ static void servosFailsafe()
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
-        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+        if((eServerPulseWidthMode) chConfig->val.narrow == duty){
+            servoMgr->writeDuty(ch, us-1000); 
+        }else{
+            servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+        } 
     }
 }
 
@@ -67,8 +72,14 @@ static int servosUpdate(unsigned long now)
 
             if ((eServoOutputMode)chConfig->val.mode == somOnOff)
                 servoMgr->writeDigital(ch, us > 1500U);
-            else
-                servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+            else{
+                if((eServerPulseWidthMode) chConfig->val.narrow == duty){
+                    servoMgr->writeDuty(ch, us-1000);
+                }else{
+                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+                }
+            }
+                
         } /* for each servo */
     } /* if newChannelsAvailable */
 
