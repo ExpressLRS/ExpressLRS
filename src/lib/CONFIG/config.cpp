@@ -525,11 +525,7 @@ TxConfig::SetDefaults(bool commit)
 
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
-
-    if (commit)
-    {
-        m_modified = ALL_CHANGED;
-    }
+    m_modified = ALL_CHANGED;
 
     expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     for (unsigned i=0; i<64; i++)
@@ -556,6 +552,7 @@ TxConfig::SetDefaults(bool commit)
 #endif
 
     SetModelId(0);
+    m_modified = 0;
 }
 
 /**
