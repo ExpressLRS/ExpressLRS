@@ -4,7 +4,6 @@
 #include <waveform_8266.h>
 #include <math.h>
 
-
 ServoMgr::ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval)
   : _pins(pins), _outputCnt(outputCnt), _refreshInterval(new uint16_t[outputCnt]), _activePwmChannels(0),_resolution_bits(new uint8_t[outputCnt])
 {
@@ -13,6 +12,16 @@ ServoMgr::ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t
         _refreshInterval[ch] = defaultInterval;
     }
 }
+
+#if defined(PLATFORM_ESP32)
+uint8_t ServoMgr::getLedcChn(uint8_t ch)
+{
+    uint8_t start_index= ch<8?0:8;
+    return ch%4 * 2  + ch/4  + start_index;
+    // map 0->0  1->2   2->4  3->6  4->1  5->3  6->5  7->7  
+    // so that we can get different freq at ch0 ~ ch3 
+}
+#endif
 
 void ServoMgr::initialize()
 {
@@ -34,7 +43,7 @@ void ServoMgr::writeMicroseconds(uint8_t ch, uint16_t valueUs)
         return;
     _activePwmChannels |= (1 << pin);
 #if defined(PLATFORM_ESP32)
-    ledcWrite(ch, map(valueUs, 0, _refreshInterval[ch], 0, (1<<_resolution_bits[ch])-1));
+    ledcWrite(getLedcChn(ch), map(valueUs, 0, _refreshInterval[ch], 0, (1<<_resolution_bits[ch])-1));
 #else
     startWaveform8266(pin, valueUs, _refreshInterval[ch] - valueUs);
 #endif
@@ -45,9 +54,10 @@ void ServoMgr::writeDuty(uint8_t ch, uint16_t duty)
     const uint8_t pin = _pins[ch];
     if (pin == PIN_DISCONNECTED)
         return;
+    duty= duty>1000 ? 0 : duty; // prevent wraping around
     _activePwmChannels |= (1 << pin);
 #if defined(PLATFORM_ESP32)
-    ledcWrite(ch, map(duty, 0, 1000, 0, (1<<_resolution_bits[ch])-1));
+    ledcWrite(getLedcChn(ch), map(duty, 0, 1000, 0, (1<<_resolution_bits[ch])-1));
 #else
     uint16_t high=map(duty, 0, 1000, 0, _refreshInterval[ch]);
     startWaveform8266(pin, high, _refreshInterval[ch] - high);
@@ -62,14 +72,18 @@ void ServoMgr::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
         _refreshInterval[ch] = intervalUs;
 #if defined(PLATFORM_ESP32)
         const uint8_t pin = _pins[ch];
+        if (pin == PIN_DISCONNECTED)
+            return;
+
+        uint8_t ledc_chn=getLedcChn(ch);
 
         float target_freq=1000000U / intervalUs;
         _resolution_bits[ch]= (uint16_t) (log2f(80000000.0f / target_freq) ); // 80MHz
         if(_resolution_bits[ch]>16){
             _resolution_bits[ch]=16;
         }
-        ledcSetup(ch, target_freq, _resolution_bits[ch]);
-        ledcAttachPin(pin, ch);
+        ledcSetup(ledc_chn, target_freq, _resolution_bits[ch]);
+        ledcAttachPin(pin, ledc_chn);
 #endif
     }
 }

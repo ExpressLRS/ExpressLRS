@@ -30,6 +30,10 @@ public:
 
     const uint8_t PIN_DISCONNECTED = 0xff;
 private:
+
+#if defined(PLATFORM_ESP32)
+    uint8_t getLedcChn(uint8_t ch);
+#endif
     const uint8_t * const _pins;
     const uint8_t _outputCnt;
     uint16_t *_refreshInterval;

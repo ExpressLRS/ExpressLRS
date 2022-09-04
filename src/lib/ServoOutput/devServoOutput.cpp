@@ -42,7 +42,7 @@ static void servosFailsafe()
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
         if((eServerPulseWidthMode) chConfig->val.narrow == duty){
-            servoMgr->writeDuty(ch, us-1000); 
+            servoMgr->writeDuty(ch, chConfig->val.failsafe);  // directly use failsafe val in duty mode, so at this mode ,FAILSAFE shoud < 1000. TODO: add wrong value warning at JS
         }else{
             servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
         } 
@@ -64,12 +64,12 @@ static int servosUpdate(unsigned long now)
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
                 continue;
+           
             uint16_t us = CRSF_to_US(crsfVal);
             // Flip the output around the mid value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
                 us = 3000U - us;
-
             if ((eServoOutputMode)chConfig->val.mode == somOnOff)
                 servoMgr->writeDigital(ch, us > 1500U);
             else{
