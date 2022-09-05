@@ -1182,7 +1182,9 @@ static void setupRadio()
 
     scanIndex = config.GetRateInitialIdx();
     SetRFLinkRate(scanIndex);
-    RFmodeCycleMultiplier = 1;
+    // Start slow on the selected rate to give it the best chance
+    // to connect before beginning rate cycling
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
 }
 
 static void updateTelemetryBurst()
