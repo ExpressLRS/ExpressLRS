@@ -15,7 +15,7 @@
     "power_max": 6,
     "power_default": 2,
     "power_control": 0,
-    "power_values": [-18,-16,-13,-9,-5,-2,3],
+    "power_values": [-18,-15,-12,-9,-4,-1,3],
     "joystick": 35,
     "joystick_values": [1905, 1160, 580, 2580, 0, 4095],
     "led_rgb": 12,
