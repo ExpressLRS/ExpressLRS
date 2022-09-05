@@ -531,7 +531,7 @@ TxConfig::SetDefaults(bool commit)
         m_modified = ALL_CHANGED;
     }
 
-    expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
+    expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(enumRatetoIndex(RATE_DEFAULT));
     for (unsigned i=0; i<64; i++)
     {
         SetModelId(i);

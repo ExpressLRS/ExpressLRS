@@ -1559,7 +1559,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_BINDING);
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
