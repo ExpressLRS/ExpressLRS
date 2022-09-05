@@ -359,6 +359,53 @@
             }
         }
     },
+    "emax": {
+        "name": "EMAX",
+        "tx_900": {
+            "plain": {
+                "product_name": "EMAX OLED 900MHz TX",
+                "lua_name": "EMAX 900TX",
+                "layout_file": "EMAX 900 OLED.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX"
+            }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "EMAX 900MHz RX",
+                "lua_name": "EMAX 900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX"
+            }
+        },
+        "tx_2400": {
+            "plain": {
+                "product_name": "EMAX OLED 2.4GHz TX",
+                "lua_name": "EMAX 2400TX",
+                "layout_file": "EMAX 2400 OLED.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            }
+        },
+        "rx_2400": {
+            "pa": {
+                "product_name": "EMAX 2.4GHz PA RX",
+                "lua_name": "EMAX 2400RX",
+                "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "generic": {
         "name": "Generic targets used as a base",
         "rx_900": {
