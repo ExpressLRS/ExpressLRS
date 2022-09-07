@@ -667,6 +667,14 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "HappyModel_EP_2400_RX"
+            },
+            "ep-dual": {
+                "product_name": "HappyModel EP Dual 2.4GHz RX",
+                "lua_name": "HM EP Dual 2400",
+                "layout_file": "Generic 2400 Diversity.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
