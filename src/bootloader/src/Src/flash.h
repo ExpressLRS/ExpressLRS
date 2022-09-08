@@ -16,6 +16,8 @@
 #include "stm32l1xx_hal.h"
 #elif defined(STM32L4xx)
 #include "stm32l4xx_hal.h"
+#elif defined(STM32F030x8)
+#include "stm32f0xx_hal.h"
 #elif defined(STM32F1)
 #include "stm32f1xx_hal.h"
 #elif defined(STM32F3xx)

@@ -290,7 +290,9 @@ void flash_jump_to_app(void)
   HAL_DeInit();
   /* Change the main stack pointer. */
   asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)FLASH_APP_START_ADDRESS));
+  #if !defined(STM32F030x8)
   SCB->VTOR = (__IO uint32_t)(FLASH_APP_START_ADDRESS);
+  #endif
   //__set_MSP(*(volatile uint32_t *)FLASH_APP_START_ADDRESS);
   jump_to_app();
 
