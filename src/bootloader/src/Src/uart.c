@@ -538,15 +538,23 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx,
 
   IRQn_Type irq = usart_get_irq(uart_ptr_rx);
   if (irq) {
+#if defined(STM32F030x8)
+    NVIC_SetPriority(irq,2);
+#else
     NVIC_SetPriority(irq,
         NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+#endif
     NVIC_EnableIRQ(irq);
   }
   if (uart_ptr_rx != uart_ptr) {
     irq = usart_get_irq(uart_ptr);
     if (irq) {
+#if defined(STM32F030x8)
+    NVIC_SetPriority(irq,2);
+#else
       NVIC_SetPriority(irq,
           NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+#endif
       NVIC_EnableIRQ(irq);
     }
  }
