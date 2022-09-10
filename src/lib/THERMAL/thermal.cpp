@@ -58,6 +58,12 @@ uint8_t Thermal::read_temp()
 
 void Thermal::update_threshold(int index)
 {
+    static int prevIndex = -1;
+    if (index == prevIndex)
+    {
+        return;
+    }
+    prevIndex = index;
     if(thermal_status != THERMAL_STATUS_NORMAL)
     {
         ERRLN("thermal not ready!");

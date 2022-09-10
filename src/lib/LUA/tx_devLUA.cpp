@@ -18,7 +18,6 @@ static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
-static char rateSensitivity[] = " (-130dbm)";
 static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
@@ -30,13 +29,14 @@ static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
 #if defined(RADIO_SX127X)
-    "25Hz;50Hz;100Hz;100Hz Full;200Hz",
+    "25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)",
 #elif defined(RADIO_SX128X)
-    "50Hz;100Hz Full;150Hz;250Hz;333Hz Full;500Hz;D250;D500;F500;F1000",
+    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"
+    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)",
 #else
     #error Invalid radio configuration!
 #endif
-    rateSensitivity
+    emptySpace
 };
 
 static struct luaItem_selection luaTlmRate = {
@@ -248,11 +248,6 @@ extern bool VRxBackpackWiFiReadyToSend;
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
 #endif
-
-static void luadevUpdateRateSensitivity() {
-  itoa(ExpressLRS_currAirRate_RFperfParams->RXsensitivity, rateSensitivity+2, 10);
-  strcat(rateSensitivity, "dBm)");
-}
 
 static void luadevUpdateModelID() {
   itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
@@ -516,7 +511,6 @@ void luadevUpdateFolderNames()
   updateFolderName_VtxAdmin();
 
   // These aren't folder names, just string labels slapped in the units field generally
-  luadevUpdateRateSensitivity();
   luadevUpdateTlmBandwidth();
 }
 
