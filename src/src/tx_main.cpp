@@ -68,28 +68,28 @@ StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
+  {&CRSF_device, 1},
 #ifdef HAS_LED
-  {&LED_device, 1},
+  {&LED_device, 0},
 #endif
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
 #if defined(USE_TX_BACKPACK)
-  {&Backpack_device, 1},
+  {&Backpack_device, 0},
 #endif
 #ifdef HAS_BLE
-  {&BLE_device, 1},
+  {&BLE_device, 0},
 #endif
 #ifdef HAS_BUZZER
-  {&Buzzer_device, 1},
+  {&Buzzer_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
@@ -101,9 +101,9 @@ device_affinity_t ui_devices[] = {
   {&Thermal_device, 0},
 #endif
 #if defined(GPIO_PIN_PA_PDET)
-  {&PDET_device, 1},
+  {&PDET_device, 0},
 #endif
-  {&VTX_device, 1}
+  {&VTX_device, 0}
 };
 
 #if defined(GPIO_PIN_ANT_CTRL)
