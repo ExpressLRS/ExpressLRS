@@ -106,6 +106,7 @@ typedef enum
 #define SX127X_OUTPUT_POWER 0b00001111     //  3     0     output power: P_out = 17 - (15 - OUTPUT_POWER) [dBm] for PA_SELECT_BOOST
 #define SX127X_MAX_OUTPUT_POWER_RFO_HF 0b00000000 //       Max output power when using RFO_HF
 #define SX127X_MAX_OUTPUT_POWER 0b01110000 //              Enable max output power
+#define SX127X_MAX_OUTPUT_POWER_INVALID 0b00010000 //      A value for the MaxPower field that is not used by ExpressLRS
 // SX127X_REG_OCP
 #define SX127X_OCP_OFF 0b00000000   //  5     5     PA overload current protection disabled
 #define SX127X_OCP_ON 0b00100000    //  5     5     PA overload current protection enabled

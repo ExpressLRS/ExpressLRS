@@ -423,6 +423,31 @@ void fullres_fillChannelData()
     crsf.ChannelData[15] = 0xDCFE & 0b11111111111;
 }
 
+void test_encodingFullresPowerLevels()
+{
+    uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
+    uint32_t ChannelsIn[16];
+    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+
+    OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
+
+    for (uint8_t pwr=PWR_10mW; pwr<PWR_COUNT; ++pwr)
+    {
+        memset(TXdataBuffer, 0, sizeof(TXdataBuffer));
+        fullres_fillChannelData();
+
+        // This is what we're testing here, just the power
+        uint8_t crsfPower = powerToCrsfPower((PowerLevels_e)pwr);
+        crsf.LinkStatistics.uplink_TX_Power = crsfPower;
+
+        OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+        OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+
+        TEST_ASSERT_EQUAL(crsfPower, crsf.LinkStatistics.uplink_TX_Power);
+    }
+}
+
 void test_encodingFullres8ch()
 {
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
@@ -457,7 +482,7 @@ void test_encodingFullres8ch()
     // Check the header bits
     TEST_ASSERT_EQUAL(PACKET_TYPE_RCDATA, otaPktPtr->full.rc.packetType);
     TEST_ASSERT_EQUAL(false, otaPktPtr->full.rc.telemetryStatus);
-    TEST_ASSERT_EQUAL(PWR_250mW, otaPktPtr->full.rc.uplinkPower);
+    TEST_ASSERT_EQUAL(PWR_250mW, otaPktPtr->full.rc.uplinkPower + 1);
     TEST_ASSERT_EQUAL(false, otaPktPtr->full.rc.isHighAux);
     TEST_ASSERT_EQUAL(CRSF_to_BIT(ChannelsIn[4]), otaPktPtr->full.rc.ch4);
 }
@@ -643,6 +668,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_decodingHybridWide_AUXX_high);
     RUN_TEST(test_decodingHybridWide_AUXX_low);
 
+    RUN_TEST(test_encodingFullresPowerLevels);
     RUN_TEST(test_encodingFullres8ch);
     RUN_TEST(test_encodingFullres16ch);
     RUN_TEST(test_encodingFullres12ch);

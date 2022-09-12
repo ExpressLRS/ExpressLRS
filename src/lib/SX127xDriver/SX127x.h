@@ -77,7 +77,7 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0x00;
+    static const uint8_t PWRPENDING_NONE = SX127X_MAX_OUTPUT_POWER_INVALID;
 
     SX127x_Bandwidth currBW;
     SX127x_SpreadingFactor currSF;

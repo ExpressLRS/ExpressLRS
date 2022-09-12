@@ -92,7 +92,7 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     telemetryStatus: 1,
-                    uplinkPower: 3, // PowerLevels_e
+                    uplinkPower: 3, // CRSF_power_level - 1 (1-8 is 0-7 in the air)
                     isHighAux: 1, // true if chHigh are AUX6-9
                     ch4: 1;   // AUX1, included up here so ch0 starts on a byte boundary
             OTA_Channels_4x10 chLow;  // CH0-CH3

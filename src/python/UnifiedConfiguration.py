@@ -54,7 +54,7 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
     firmware_file.write(b'\0')
     firmware_file.truncate(firmware_file.tell())
 
-def doConfiguration(file, defines, config, moduletype, frequency, platform):
+def doConfiguration(file, defines, config, moduletype, frequency, platform, device_name):
     product_name = "Unified"
     lua_name = "Unified"
     layout = None
@@ -89,10 +89,12 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform):
         dir = 'TX' if moduletype == 'tx' else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
+    lua_name = lua_name if device_name is None else device_name
     appendToFirmware(file, product_name, lua_name, defines, config, layout)
 
 def appendConfiguration(source, target, env):
     target_name = env.get('PIOENV', '').upper()
+    device_name = env.get('DEVICE_NAME', None)
     config = env.GetProjectOption('board_config', None)
     if 'UNIFIED_' not in target_name and config is None:
         return
@@ -111,7 +113,7 @@ def appendConfiguration(source, target, env):
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 
     with open(str(target[0]), "r+b") as firmware_file:
-        doConfiguration(firmware_file, defines, config, moduletype, frequency, platform)
+        doConfiguration(firmware_file, defines, config, moduletype, frequency, platform, device_name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Configure Unified Firmware")
