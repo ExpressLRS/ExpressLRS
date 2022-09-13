@@ -183,19 +183,13 @@ void TFTDisplay::displaySplashScreen()
 
 void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t power_index, uint8_t ratio_index, uint8_t motion_index, uint8_t fan_index, bool dynamic, uint8_t running_power_index, uint8_t temperature, message_index_t message_index)
 {
-    if (connectionState == radioFailed || connectionState == noCrossfire)
-    {
-        changed = 0xFF;
-        message_index = MSG_ERROR;
-    }
-
-    if (changed == 0xFF)
+    if (changed == CHANGED_ALL)
     {
         // Everything has changed! So clear the right side
         gfx->fillRect(SCREEN_X/2, 0, SCREEN_X/2, SCREEN_Y, WHITE);
     }
 
-    if (changed & CHANGED_MESSAGE)
+    if (changed & CHANGED_TEMP)
     {
         // Left side logo, version, and temp
         gfx->fillRect(0, 0, SCREEN_X/2, SCREEN_Y, elrs_banner_bgColor[message_index]);

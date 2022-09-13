@@ -4,7 +4,7 @@
 #include "logging.h"
 #include "button.h"
 #include "config.h"
-#include "devButton.h"
+#include "CRSF.h"
 
 #ifndef GPIO_BUTTON_INVERTED
 #define GPIO_BUTTON_INVERTED false
@@ -20,6 +20,9 @@ static Button button1;
 #if defined(GPIO_PIN_BUTTON2)
 static Button button2;
 #endif
+
+// only check every second if the device is in-use, i.e. RX connected, or TX is armed
+static constexpr int MS_IN_USE = 1000;
 
 #if defined(TARGET_RX)
 static constexpr struct {
@@ -86,6 +89,14 @@ static int timeout()
     {
         return DURATION_NEVER;
     }
+#if defined(TARGET_TX)
+    if (CRSF::IsArmed())
+        return MS_IN_USE;
+#else
+    if (connectionState == connected)
+        return MS_IN_USE;
+#endif
+
 #if defined(GPIO_PIN_BUTTON2)
     if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {

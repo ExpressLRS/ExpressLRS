@@ -38,7 +38,8 @@ typedef enum : uint8_t
 typedef enum
 {
     connected,
-    tentative,
+    tentative,        // RX only
+    awaitingModelId,  // TX only
     disconnected,
     MODE_STATES,
     // States below here are special mode states

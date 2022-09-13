@@ -774,7 +774,11 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "product", (const char *)product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
+  #ifdef TARGET_TX
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #else
+    MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  #endif
   #endif
 }
 

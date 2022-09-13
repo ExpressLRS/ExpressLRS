@@ -44,6 +44,8 @@ typedef enum
     PWR_COUNT = 8
 } PowerLevels_e;
 
+uint8_t powerToCrsfPower(PowerLevels_e Power);
+
 class PowerLevelContainer
 {
 protected:
