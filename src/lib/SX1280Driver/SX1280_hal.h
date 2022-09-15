@@ -73,4 +73,9 @@ public:
             BusyDelayDuration = duration;
         }
     }
+
+private:
+    bool rx_enabled;
+    bool tx1_enabled;
+    bool tx2_enabled;
 };
