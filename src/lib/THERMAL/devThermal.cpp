@@ -52,8 +52,10 @@ constexpr uint8_t fanChannel = 0;
 #define TACHO_PULSES_PER_REV 4
 #endif
 
-static volatile uint16_t tachoPulses = 0;
 static uint16_t currentRPM = 0;
+
+void init_rpm_counter(int pin);
+uint32_t get_rpm();
 
 static void initialize()
 {
@@ -211,21 +213,11 @@ static void timeoutTacho()
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
     {
-        uint16_t pulses = tachoPulses;
-        tachoPulses = 0;
-
-        currentRPM = pulses * (60000 / THERMAL_DURATION) / TACHO_PULSES_PER_REV;
+        currentRPM = get_rpm();
         DBGVLN("RPM %d", currentRPM);
     }
 #endif
 }
-
-#if defined(PLATFORM_ESP32)
-static void ICACHE_RAM_ATTR updateTachoCounter()
-{
-    tachoPulses++;
-}
-#endif
 
 static int start()
 {
@@ -238,8 +230,7 @@ static int start()
     }
     if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_FAN_TACHO, INPUT_PULLUP);
-        attachInterrupt(GPIO_PIN_FAN_TACHO, updateTachoCounter, RISING);
+        init_rpm_counter(GPIO_PIN_FAN_TACHO);
     }
 #endif
     return DURATION_IMMEDIATELY;
