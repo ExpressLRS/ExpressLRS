@@ -46,7 +46,7 @@ void SX1280Hal::init()
 {
     DBGLN("Hal Init");
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #define SET_BIT(n) ((n != UNDEF_PIN) ? 1ULL << n : 0)
 
     txrx_disable_clr_bits = 0;
@@ -79,6 +79,9 @@ void SX1280Hal::init()
     rx_enable_set_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
     rx_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
     rx_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
+
+    nss1_pin_bit = SET_BIT(GPIO_PIN_NSS);
+    nss2_pin_bit = SET_BIT(GPIO_PIN_NSS_2);
 #else
     rx_enabled = false;
     tx1_enabled = false;
@@ -173,8 +176,45 @@ void SX1280Hal::init()
 
 void ICACHE_RAM_ATTR SX1280Hal::setNss(uint8_t radioNumber, bool state)
 {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    uint64_t nss;
+    switch (radioNumber)
+    {
+    case SX1280_Radio_1:
+        nss = nss1_pin_bit;
+        break;
+    case SX1280_Radio_2:
+        nss = nss2_pin_bit;
+        break;
+    default:
+        nss = nss1_pin_bit | nss2_pin_bit;
+        break;
+    }
+    #if defined(PLATFORM_ESP32)
+        if (state)
+        {
+            GPIO.out_w1ts = nss;
+            GPIO.out1_w1ts.data = nss >> 32;
+        }
+        else
+        {
+            GPIO.out_w1tc = nss;
+            GPIO.out1_w1tc.data = nss >> 32;
+        }
+    #else
+        if (state)
+        {
+            GPOS = nss;
+        }
+        else
+        {
+            GPOC = nss;
+        }
+    #endif
+#else
     if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, state);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX1280_Radio_2) digitalWrite(GPIO_PIN_NSS_2, state);
+#endif
 }
 
 void SX1280Hal::reset(void)
@@ -418,6 +458,17 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX1280_Radio_Number_t radioNumber)
         GPIO.out1_w1ts.data = tx1_enable_set_bits >> 32;
         GPIO.out1_w1tc.data = tx1_enable_clr_bits >> 32;
     }
+#elif defined(PLATFORM_ESP8266)
+    if (radioNumber == SX1280_Radio_2)
+    {
+        GPOS = tx2_enable_set_bits;
+        GPOC = tx2_enable_clr_bits;
+    }
+    else
+    {
+        GPOS = tx1_enable_set_bits;
+        GPOC = tx1_enable_clr_bits;
+    }
 #else
     if (!tx1_enabled && !tx2_enabled && !rx_enabled)
     {
@@ -461,6 +512,9 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 
     GPIO.out1_w1ts.data = rx_enable_set_bits >> 32;
     GPIO.out1_w1tc.data = rx_enable_clr_bits >> 32;
+#elif defined(PLATFORM_ESP8266)
+    GPOS = rx_enable_set_bits;
+    GPOC = rx_enable_clr_bits;
 #else
     if (!rx_enabled)
     {
@@ -494,6 +548,8 @@ void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 #if defined(PLATFORM_ESP32)
     GPIO.out_w1tc = txrx_disable_clr_bits;
     GPIO.out1_w1tc.data = txrx_disable_clr_bits >> 32;
+#elif defined(PLATFORM_ESP8266)
+    GPOC = txrx_disable_clr_bits;
 #else
     if (rx_enabled)
     {

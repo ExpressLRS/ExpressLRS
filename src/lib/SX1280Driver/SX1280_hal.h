@@ -75,7 +75,7 @@ public:
     }
 
 private:
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     uint64_t txrx_disable_clr_bits;
     uint64_t tx1_enable_set_bits;
     uint64_t tx1_enable_clr_bits;
@@ -83,6 +83,8 @@ private:
     uint64_t tx2_enable_clr_bits;
     uint64_t rx_enable_set_bits;
     uint64_t rx_enable_clr_bits;
+    uint64_t nss1_pin_bit;
+    uint64_t nss2_pin_bit;
 #else
     bool rx_enabled;
     bool tx1_enabled;
