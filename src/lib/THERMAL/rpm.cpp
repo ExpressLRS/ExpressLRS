@@ -52,6 +52,7 @@ uint32_t get_rpm()
     pcnt_counter_clear(PCNT_UNIT_0);
     uint32_t now = millis();
     uint32_t rpm = ((overflow * 30000) + counter) * 60000 / 4 / (now - lastTime);
+    overflow = 0;
     lastTime = now;
     return rpm;
 }
