@@ -575,22 +575,26 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX1280_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
+    SX1280_Radio_Number_t irqClearRadio = radioNumber;
 
     uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
-    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber);
     if (irqStatus & SX1280_IRQ_TX_DONE)
     {
+        hal.TXRXdisable();
         instance->TXnbISR();
+        irqClearRadio = SX1280_Radio_All;
     }
     else if (irqStatus & SX1280_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
-            if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
-            {
-                instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, radioNumber == SX1280_Radio_1 ? SX1280_Radio_2 : SX1280_Radio_1);
-            }
+            irqClearRadio = SX1280_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
     }
+    else
+    {
+        return;
+    }
+    instance->ClearIrqStatus(SX1280_IRQ_RADIO_ALL, irqClearRadio);
 }
