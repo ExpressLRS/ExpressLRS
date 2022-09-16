@@ -46,9 +46,44 @@ void SX1280Hal::init()
 {
     DBGLN("Hal Init");
 
+#if defined(PLATFORM_ESP32)
+    #define SET_BIT(n) ((n != UNDEF_PIN) ? 1ULL << n : 0)
+
+    txrx_disable_clr_bits = 0;
+    txrx_disable_clr_bits |= SET_BIT(GPIO_PIN_PA_ENABLE);
+    txrx_disable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
+    txrx_disable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
+    txrx_disable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
+    txrx_disable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
+
+    tx1_enable_set_bits = 0;
+    tx1_enable_clr_bits = 0;
+    tx1_enable_set_bits |= SET_BIT(GPIO_PIN_PA_ENABLE);
+    tx1_enable_set_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
+    tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
+    tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
+    tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
+
+    tx2_enable_set_bits = 0;
+    tx2_enable_clr_bits = 0;
+    tx2_enable_set_bits |= SET_BIT(GPIO_PIN_PA_ENABLE);
+    tx2_enable_set_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
+    tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
+    tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
+    tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
+
+    rx_enable_set_bits = 0;
+    rx_enable_clr_bits = 0;
+    rx_enable_set_bits |= SET_BIT(GPIO_PIN_PA_ENABLE);
+    rx_enable_set_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
+    rx_enable_set_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
+    rx_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
+    rx_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
+#else
     rx_enabled = false;
     tx1_enabled = false;
     tx2_enabled = false;
+#endif
 
     if (GPIO_PIN_BUSY != UNDEF_PIN)
     {
@@ -366,6 +401,24 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
 
 void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX1280_Radio_Number_t radioNumber)
 {
+#if defined(PLATFORM_ESP32)
+    if (radioNumber == SX1280_Radio_2)
+    {
+        GPIO.out_w1ts = tx2_enable_set_bits;
+        GPIO.out_w1tc = tx2_enable_clr_bits;
+
+        GPIO.out1_w1ts.data = tx2_enable_set_bits >> 32;
+        GPIO.out1_w1tc.data = tx2_enable_clr_bits >> 32;
+    }
+    else
+    {
+        GPIO.out_w1ts = tx1_enable_set_bits;
+        GPIO.out_w1tc = tx1_enable_clr_bits;
+
+        GPIO.out1_w1ts.data = tx1_enable_set_bits >> 32;
+        GPIO.out1_w1tc.data = tx1_enable_clr_bits >> 32;
+    }
+#else
     if (!tx1_enabled && !tx2_enabled && !rx_enabled)
     {
         if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
@@ -397,10 +450,18 @@ void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX1280_Radio_Number_t radioNumber)
         tx1_enabled = false;
         tx2_enabled = true;
     }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 {
+#if defined(PLATFORM_ESP32)
+    GPIO.out_w1ts = rx_enable_set_bits;
+    GPIO.out_w1tc = rx_enable_clr_bits;
+
+    GPIO.out1_w1ts.data = rx_enable_set_bits >> 32;
+    GPIO.out1_w1tc.data = rx_enable_clr_bits >> 32;
+#else
     if (!rx_enabled)
     {
         if (!tx1_enabled && !tx2_enabled && GPIO_PIN_PA_ENABLE != UNDEF_PIN)
@@ -425,10 +486,15 @@ void ICACHE_RAM_ATTR SX1280Hal::RXenable()
 
         rx_enabled = true;
     }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
 {
+#if defined(PLATFORM_ESP32)
+    GPIO.out_w1tc = txrx_disable_clr_bits;
+    GPIO.out1_w1tc.data = txrx_disable_clr_bits >> 32;
+#else
     if (rx_enabled)
     {
         if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
@@ -453,6 +519,7 @@ void ICACHE_RAM_ATTR SX1280Hal::TXRXdisable()
             digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
         tx2_enabled = false;
     }
+#endif
 }
 
 #endif // UNIT_TEST
