@@ -515,7 +515,7 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx,
   /* TX USART peripheral config */
   usart_hw_init(uart_ptr, baud, 0, halfduplex);
 
-#if defined(STM32F3xx)
+#if defined(STM32F3xx) || defined(STM32F0)
   /* F3 can swap Rx and Tx pins */
   if (swapped) {
     LL_USART_SetTXRXSwap(uart_ptr, LL_USART_TXRX_SWAPPED);
