@@ -265,6 +265,20 @@ flash_status flash_write_halfword(uint32_t address, uint16_t *data,
   return status;
 }
 
+#if defined(STM32F0)
+volatile uint32_t VectorTable[48] __attribute__((section(".RAMVectorTable")));
+//copy the vector table to SRAM
+void flash_copy_vectors_to_sram( void )
+{
+    uint32_t vecIndex = 0;
+ 
+    for(vecIndex = 0; vecIndex < 48; vecIndex++){
+        VectorTable[vecIndex] = *(volatile uint32_t*)(FLASH_APP_START_ADDRESS + (vecIndex << 2));
+    }
+ }
+#endif
+
+
 /**
  * @brief   Actually jumps to the user application.
  * @param   void
@@ -288,9 +302,16 @@ void flash_jump_to_app(void)
   /* Remove configs before jump. */
   uart_deinit();
   HAL_DeInit();
+  #if defined(STM32F0)
+  flash_copy_vectors_to_sram();
+  #endif
   /* Change the main stack pointer. */
   asm volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)FLASH_APP_START_ADDRESS));
-  #if !defined(STM32F030x8)
+  #if defined(STM32F0)
+  __disable_irq();
+  __HAL_SYSCFG_REMAPMEMORY_SRAM();
+  __enable_irq();
+  #else
   SCB->VTOR = (__IO uint32_t)(FLASH_APP_START_ADDRESS);
   #endif
   //__set_MSP(*(volatile uint32_t *)FLASH_APP_START_ADDRESS);

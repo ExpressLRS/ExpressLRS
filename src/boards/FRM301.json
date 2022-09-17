@@ -11,7 +11,7 @@
   },
   "debug": {
     "default_tools": [
-      "stlink"
+      "jlink"
     ],
     "jlink_device": "STM32F030C8",
     "openocd_target": "stm32f0x",
@@ -28,7 +28,7 @@
   "upload": {
     "maximum_ram_size": 8192,
     "maximum_size": 65536,
-    "protocol": "stlink",
+    "protocol": "jlink",
     "protocols": [
       "jlink",
       "cmsis-dap",
