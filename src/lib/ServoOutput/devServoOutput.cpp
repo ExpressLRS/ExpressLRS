@@ -41,10 +41,10 @@ static void servosFailsafe()
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
-        if((eServerPulseWidthMode) chConfig->val.narrow == duty){
-            servoMgr->writeDuty(ch, chConfig->val.failsafe);  // directly use failsafe val in duty mode, so at this mode ,FAILSAFE shoud < 1000. TODO: add wrong value warning at JS
+        if((eServerPulseWidthMode) chConfig->val.pulseWidthMode == duty){
+            servoMgr->writeDuty(ch, chConfig->val.failsafe);  // directly use raw failsafe val in duty mode, so at this mode ,FAILSAFE shoud < 1000. TODO: add wrong value warning at JS
         }else{
-            servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+            servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
         } 
     }
 }
@@ -73,10 +73,10 @@ static int servosUpdate(unsigned long now)
             if ((eServoOutputMode)chConfig->val.mode == somOnOff)
                 servoMgr->writeDigital(ch, us > 1500U);
             else{
-                if((eServerPulseWidthMode) chConfig->val.narrow == duty){
+                if((eServerPulseWidthMode) chConfig->val.pulseWidthMode == duty){
                     servoMgr->writeDuty(ch, us-1000);
                 }else{
-                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
                 }
             }
                 
@@ -89,7 +89,7 @@ static int servosUpdate(unsigned long now)
         servosFailsafe();
         lastUpdate = 0;
     }
-
+    
     return DURATION_IMMEDIATELY;
 }
 
