@@ -2,8 +2,18 @@
 #pragma once
 
 #include <Arduino.h>
+#if defined(PLATFORM_ESP32)
+struct timerConfig{
+    uint32_t freq;
+    uint8_t ch1;
+    uint8_t ch2;
+
+    timerConfig():freq(0),ch1(255),ch2(255){};
+};
+
 
 class ServoMgr
+#endif
 {
 public:
     ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
@@ -32,7 +42,9 @@ public:
 private:
 
 #if defined(PLATFORM_ESP32)
-    uint8_t getLedcChn(uint8_t ch);
+    timerConfig _timerConfigs[8];
+    uint8_t _chnMap[16];
+    uint8_t allocateLedcChn(uint8_t ch, uint16_t intervalUs,uint8_t pin);
 #endif
     const uint8_t * const _pins;
     const uint8_t _outputCnt;
