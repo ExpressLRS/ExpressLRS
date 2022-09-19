@@ -15,6 +15,6 @@
     "power_control": 0,
     "power_values": [13],
     "led": 2,
-    "pwm_outputs": [9, 25,5 , 33, 22, 23, 32, 21],
+    "pwm_outputs": [22, 5,25 , 33, 9, 23, 32, 21],
     "button": 0
 }
