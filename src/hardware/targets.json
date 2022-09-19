@@ -457,7 +457,7 @@
                 "firmware": "Unified_ESP32_2400_RX"
             },
             "mos": {
-                "product_name": "Generic ESP32 2.4Ghz RX with MOS",
+                "product_name": "Generic ESP32 2.4Ghz ESP32 RX WITH MOS",
                 "lua_name": "ESP32MOS 2400RX",
                 "layout_file": "DIY ESP32 PWM5 MOS.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
