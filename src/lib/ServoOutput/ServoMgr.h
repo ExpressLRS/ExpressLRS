@@ -11,9 +11,9 @@ struct timerConfig{
     timerConfig():freq(0),ch1(255),ch2(255){};
 };
 
+#endif
 
 class ServoMgr
-#endif
 {
 public:
     ServoMgr(const uint8_t * const pins, const uint8_t outputCnt, uint32_t defaultInterval = 20000U);
