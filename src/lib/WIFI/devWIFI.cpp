@@ -865,7 +865,13 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
@@ -874,8 +880,13 @@ static void HandleWebUpdate()
       case WIFI_STA:
         DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
+        #endif
         changeTime = now;
         WiFi.begin(station_ssid, station_password);
         startServices();
