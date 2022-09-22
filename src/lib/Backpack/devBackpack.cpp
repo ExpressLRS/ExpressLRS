@@ -84,9 +84,11 @@ void startPassthrough()
         CRSF::Port.write(buf, r);
     }
 }
+#endif
 
 void checkBackpackUpdate()
 {
+#if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         if (!digitalRead(0))
@@ -94,8 +96,8 @@ void checkBackpackUpdate()
             startPassthrough();
         }
     }
-}
 #endif
+}
 
 static void BackpackWiFiToMSPOut(uint16_t command)
 {
