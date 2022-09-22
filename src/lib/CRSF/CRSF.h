@@ -134,6 +134,7 @@ private:
     /// OpenTX mixer sync ///
     static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
+    static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
