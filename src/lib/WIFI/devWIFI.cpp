@@ -48,6 +48,8 @@ extern TxConfig config;
 #else
 extern RxConfig config;
 #endif
+
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern unsigned long rebootTime;
 
 static char station_ssid[33];
@@ -145,6 +147,8 @@ static struct {
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
+  {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
+  {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -650,6 +654,30 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+#ifdef RADIO_SX128X
+static void HandleContinuousWave(AsyncWebServerRequest *request) {
+  if (request->hasArg("radio")) {
+    SX1280_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX1280_Radio_1 : SX1280_Radio_2;
+
+    AsyncWebServerResponse *response = request->beginResponse(204);
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+
+    Radio.TXdoneCallback = [](){};
+    Radio.Begin();
+
+    POWERMGNT::init();
+    POWERMGNT::setPower(POWERMGNT::getMinPower());
+
+    Radio.startCWTest(2440000000, radio);
+  } else {
+    int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
+    request->send(200, "application/json", String("{\"radios\": ") + radios + "}");
+  }
+}
+#endif
+
 static void initialize()
 {
   wifiStarted = false;
@@ -818,6 +846,11 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
+  #ifdef RADIO_SX128X
+  server.on("/cw.html", WebUpdateSendContent);
+  server.on("/cw.js", WebUpdateSendContent);
+  server.on("/cw", HandleContinuousWave);
+  #endif
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");

@@ -202,6 +202,8 @@ void POWERMGNT::LoadCalibration()
 
 void POWERMGNT::init()
 {
+    PowerLevelContainer::CurrentPower = PWR_COUNT;
+
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     powerValues = POWER_OUTPUT_VALUES;
 #endif
