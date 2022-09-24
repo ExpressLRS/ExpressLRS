@@ -220,7 +220,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
+    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(busyDelay);
@@ -265,7 +265,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
+    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -320,7 +320,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     WaitOnBusy(radioNumber);
 
     setNss(radioNumber, LOW);
-    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
+    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
