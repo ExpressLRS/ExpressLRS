@@ -101,11 +101,12 @@ void SX1280Hal::init()
     }
 
     pinMode(GPIO_PIN_NSS, OUTPUT);
+    digitalWrite(GPIO_PIN_NSS, HIGH);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_NSS_2, OUTPUT);
+        digitalWrite(GPIO_PIN_NSS_2, HIGH);
     }
-    setNss(SX1280_Radio_All, HIGH);
 
     if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     {
@@ -143,9 +144,12 @@ void SX1280Hal::init()
     }
 
 #ifdef PLATFORM_ESP32
-    SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, -1); // sck, miso, mosi, ss (ss can be any GPIO)
+    SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
     SPI.setFrequency(10000000);
+    SPI.setHwCs(true);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
+    spiEnableSSPins(SPI.bus(), SX1280_Radio_All);
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
     SPI.begin();
@@ -173,8 +177,13 @@ void SX1280Hal::init()
 
 void ICACHE_RAM_ATTR SX1280Hal::setNss(uint8_t radioNumber, bool state)
 {
+    #if defined(PLATFORM_ESP32)
+    spiDisableSSPins(SPI.bus(), ~radioNumber);
+    spiEnableSSPins(SPI.bus(), radioNumber);
+    #else
     if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, state);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX1280_Radio_2) digitalWrite(GPIO_PIN_NSS_2, state);
+    #endif
 }
 
 void SX1280Hal::reset(void)
@@ -211,7 +220,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(busyDelay);
@@ -256,7 +265,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -311,7 +320,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     WaitOnBusy(radioNumber);
 
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPI.transferBytes(OutBuffer, NULL, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
