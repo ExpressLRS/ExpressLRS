@@ -30,6 +30,7 @@ public:
     void SetFrequencyReg(uint32_t freq);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
+    void startCWTest(uint32_t freq, SX1280_Radio_Number_t radio);
 
 
     bool GetFrequencyErrorbool();

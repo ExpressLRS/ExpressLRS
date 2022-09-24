@@ -93,6 +93,15 @@ void OLEDDisplay::doScreenBackLight(screen_backlight_t state)
         digitalWrite(GPIO_PIN_OLED_BL, state);
     }
     #endif
+    if (state == SCREEN_BACKLIGHT_OFF)
+    {
+        u8g2->clearDisplay();
+        u8g2->setPowerSave(true);
+    }
+    else
+    {
+        u8g2->setPowerSave(false);
+    }
 }
 
 void OLEDDisplay::printScreenshot()
