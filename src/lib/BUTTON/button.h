@@ -62,7 +62,7 @@ public:
         {
             if (!_isLongPress)
             {
-                DBGLN("Button short");
+                DBGVLN("Button short");
                 ++_pressCount;
                 if (OnShortPress)
                     OnShortPress();
@@ -80,7 +80,7 @@ public:
         {
             if (now - _lastFallingEdge > MS_LONG)
             {
-                DBGLN("Button long %d", _longCount);
+                DBGVLN("Button long %d", _longCount);
                 _isLongPress = true;
                 if (OnLongPress)
                     OnLongPress();

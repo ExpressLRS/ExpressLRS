@@ -7,6 +7,8 @@
 #include "msp.h"
 #include "logging.h"
 
+#include "devButton.h"
+
 #define PITMODE_OFF     0
 #define PITMODE_ON      1
 
@@ -94,6 +96,11 @@ static void VtxConfigToMSPOut()
     }
 }
 
+static void initialize()
+{
+    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+}
+
 static int event()
 {
     if (VtxSendState == VTXSS_MODIFIED ||
@@ -164,7 +171,7 @@ static int timeout()
 }
 
 device_t VTX_device = {
-    .initialize = NULL,
+    .initialize = initialize,
     .start = NULL,
     .event = event,
     .timeout = timeout

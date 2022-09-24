@@ -232,8 +232,8 @@ void TFTDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t 
 
         if (changed & CHANGED_POWER)
         {
-            String power = getValue(STATE_POWER, dynamic ? running_power_index : power_index);
-            if (dynamic)
+            String power = getValue(STATE_POWER, running_power_index);
+            if (dynamic || power_index != running_power_index)
             {
                 power += " *";
             }

@@ -23,6 +23,12 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#elif defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -1388,6 +1394,21 @@ RF_PRE_INIT()
 }
 #endif
 
+void resetConfigAndReboot()
+{
+    config.SetDefaults(true);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#else
+    // Prevent WDT from rebooting too early if
+    // all this flash write is taking too long
+    yield();
+    // Remove options.json and hardware.json
+    SPIFFS.format();
+    ESP.restart();
+#endif
+}
+
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
@@ -1442,6 +1463,11 @@ void setup()
             hwTimer.init();
         }
     }
+
+#if defined(HAS_BUTTON)
+    registerButtonFunction(ACTION_BIND, EnterBindingMode);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
 
     devicesStart();
 }

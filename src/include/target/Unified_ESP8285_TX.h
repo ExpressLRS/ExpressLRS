@@ -40,6 +40,7 @@
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
+#define GPIO_PIN_BUTTON2 hardware_pin(HARDWARE_button2)
 
 // Lighting
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
@@ -50,4 +51,3 @@
 //#define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
 
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
-
