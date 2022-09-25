@@ -77,6 +77,7 @@ uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
+int32_t CRSF::OpenTXsyncWindow = 0;
 volatile uint32_t CRSF::dataLastRecv = 0;
 bool CRSF::OpentxSyncActive = true;
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us
@@ -314,7 +315,8 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     if (delta >= (int32_t)CRSF::RequestedRCpacketInterval)
     {
         // missing/late packet, force resync
-        CRSF::OpenTXsyncOffset = -(delta % CRSF::RequestedRCpacketInterval);
+        CRSF::OpenTXsyncOffset = -(delta % CRSF::RequestedRCpacketInterval) * 10;
+        CRSF::OpenTXsyncWindow = 0;
         CRSF::OpenTXsyncLastSent -= OpenTXsyncPacketInterval;
 #ifdef DEBUG_OPENTX_SYNC
         DBGLN("Missed packet, forced resync (%d)!", delta);
@@ -322,7 +324,8 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     }
     else
     {
-        CRSF::OpenTXsyncOffset = delta / 2;
+        CRSF::OpenTXsyncWindow = std::min(CRSF::OpenTXsyncWindow + 1, 10);   // maximum of 10 measurements
+        CRSF::OpenTXsyncOffset = ((CRSF::OpenTXsyncOffset * (CRSF::OpenTXsyncWindow-1)) + delta * 10) / CRSF::OpenTXsyncWindow;
     }
 }
 
@@ -342,7 +345,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     if (CRSF::CRSFstate && (now - OpenTXsyncLastSent) >= OpenTXsyncPacketInterval)
     {
         uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
-        int32_t offset = CRSF::OpenTXsyncOffset * 10 - CRSF::OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
+        int32_t offset = CRSF::OpenTXsyncOffset - CRSF::OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
 #ifdef DEBUG_OPENTX_SYNC
         DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
 #endif
