@@ -73,12 +73,14 @@ static int start()
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
         button1.OnLongPress = [](){ handlePress(0, true, button1.getLongCount()+1); };
     }
+#if defined(TARGET_TX)
     if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {
         button2.init(GPIO_PIN_BUTTON2, GPIO_BUTTON_INVERTED);
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
         button2.OnLongPress = [](){ handlePress(1, true, button2.getLongCount()+1); };
     }
+#endif
 
     return DURATION_IMMEDIATELY;
 }

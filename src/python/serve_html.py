@@ -42,32 +42,37 @@ config = {
             "Generic ESP8285 + 5xPWM 2.4Ghz RX",
             "lua_name":"ELRS+PWM 2400RX",
             "reg_domain":"ISM2G4",
-            "button-colors": [-1,255*256],
             "button-actions": [
-                [
-                    {
-                        "is-long-press": False,
-                        "count": 3,
-                        "action": 6
-                    },
-                    {
-                        "is-long-press": True,
-                        "count": 5,
-                        "action": 1
-                    }
-                ],
-                [
-                    {
-                        "is-long-press": False,
-                        "count": 2,
-                        "action": 3
-                    },
-                    {
-                        "is-long-press": True,
-                        "count": 0,
-                        "action": 4
-                    }
-                ]
+                {
+                    "color" : 255,
+                    "action": [
+                        {
+                            "is-long-press": False,
+                            "count": 3,
+                            "action": 6
+                        },
+                        {
+                            "is-long-press": True,
+                            "count": 5,
+                            "action": 1
+                        }
+                    ]
+                },
+                {
+                    "color" : 224,
+                    "action": [
+                        {
+                            "is-long-press": False,
+                            "count": 2,
+                            "action": 3
+                        },
+                        {
+                            "is-long-press": True,
+                            "count": 0,
+                            "action": 4
+                        }
+                    ]
+                }
             ]
         }
     }

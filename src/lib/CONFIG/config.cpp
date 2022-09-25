@@ -558,7 +558,7 @@ TxConfig::SetDefaults(bool commit)
     // Set defaults for button 1
     tx_button_color_t default_actions1 = {
         .val = {
-            .color = 0,
+            .color = 226,   // R:255 G:0 B:182
             .actions = {
                 {false, 2, ACTION_BIND},
                 {true, 0, ACTION_INCREASE_POWER}
@@ -570,7 +570,7 @@ TxConfig::SetDefaults(bool commit)
     // Set defaults for button 2
     tx_button_color_t default_actions2 = {
         .val = {
-            .color = 0,
+            .color = 3,     // R:0 G:0 B:255
             .actions = {
                 {false, 1, ACTION_GOTO_VTX_CHANNEL},
                 {true, 0, ACTION_SEND_VTX}
