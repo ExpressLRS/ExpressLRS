@@ -77,7 +77,8 @@ uint32_t CRSF::OpenTXsyncLastSent = 0;
 uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
-int32_t CRSF::OpenTXsyncWindow = 0;
+volatile int32_t CRSF::OpenTXsyncWindow = 0;
+volatile int32_t CRSF::OpenTXsyncWindowSize = 0;
 volatile uint32_t CRSF::dataLastRecv = 0;
 bool CRSF::OpentxSyncActive = true;
 uint32_t CRSF::OpenTXsyncOffsetSafeMargin = 1000; // 100us
@@ -296,6 +297,8 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
 {
     CRSF::RequestedRCpacketInterval = PacketInterval;
     CRSF::OpenTXsyncOffset = 0;
+    CRSF::OpenTXsyncWindow = 0;
+    CRSF::OpenTXsyncWindowSize = (int32_t)(20000/CRSF::RequestedRCpacketInterval);
     CRSF::OpenTXsyncLastSent -= OpenTXsyncPacketInterval;
     adjustMaxPacketSize();
 }
@@ -324,7 +327,9 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     }
     else
     {
-        CRSF::OpenTXsyncWindow = std::min(CRSF::OpenTXsyncWindow + 1, 10);   // maximum of 10 measurements
+        // The number of packets in the sync window is how many if in 20ms
+        // This gives quite coarse for 50Hz, but more fine grained changes at 1000Hz
+        CRSF::OpenTXsyncWindow = std::min(CRSF::OpenTXsyncWindow + 1, (int32_t)CRSF::OpenTXsyncWindowSize);
         CRSF::OpenTXsyncOffset = ((CRSF::OpenTXsyncOffset * (CRSF::OpenTXsyncWindow-1)) + delta * 10) / CRSF::OpenTXsyncWindow;
     }
 }
