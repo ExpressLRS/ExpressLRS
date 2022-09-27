@@ -1211,6 +1211,14 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
                 "prior_target_name": "RadioMaster_Zorro_2400_TX"
+            },
+            "ranger": {
+                "product_name": "RadioMaster Ranger 2.4GHz TX",
+                "lua_name": "RadioMstr Ranger",
+                "layout_file": "Radiomaster Ranger.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
