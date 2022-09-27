@@ -104,6 +104,8 @@ static const struct {
     {HARDWARE_misc_gsensor_int, "misc_gsensor_int", INT},
     {HARDWARE_misc_buzzer, "misc_buzzer", INT},
     {HARDWARE_misc_fan_en, "misc_fan_en", INT},
+    {HARDWARE_misc_fan_pwm, "misc_fan_pwm", INT},
+    {HARDWARE_misc_fan_tacho, "misc_fan_tacho", INT},
     {HARDWARE_gsensor_stk8xxx, "gsensor_stk8xxx", BOOL},
     {HARDWARE_thermal_lm75a, "thermal_lm75a", BOOL},
     {HARDWARE_pwm_outputs, "pwm_outputs", ARRAY},

@@ -106,6 +106,8 @@ typedef enum {
     HARDWARE_misc_gsensor_int,
     HARDWARE_misc_buzzer,  // stm32 only
     HARDWARE_misc_fan_en,
+    HARDWARE_misc_fan_pwm,
+    HARDWARE_misc_fan_tacho,
     HARDWARE_gsensor_stk8xxx,
     HARDWARE_thermal_lm75a,
 
