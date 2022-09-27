@@ -1,9 +1,6 @@
 #pragma once
 
 #include <functional>
-#include "CRSF.h"
-
-extern CRSF crsf;
 
 class Button
 {
@@ -51,9 +48,6 @@ public:
     // Call this in loop()
     int update()
     {
-        if (crsf.IsArmed())
-            return MS_DEBOUNCE;
-
         const uint32_t now = millis();
 
         // Reset press count if it has been too long since last rising edge
@@ -68,7 +62,7 @@ public:
         {
             if (!_isLongPress)
             {
-                DBGLN("Button short");
+                DBGVLN("Button short");
                 ++_pressCount;
                 if (OnShortPress)
                     OnShortPress();
@@ -86,7 +80,7 @@ public:
         {
             if (now - _lastFallingEdge > MS_LONG)
             {
-                DBGLN("Button long %d", _longCount);
+                DBGVLN("Button long %d", _longCount);
                 _isLongPress = true;
                 if (OnLongPress)
                     OnLongPress();
