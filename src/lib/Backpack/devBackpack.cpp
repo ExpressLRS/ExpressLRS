@@ -86,6 +86,19 @@ void startPassthrough()
 }
 #endif
 
+void checkBackpackUpdate()
+{
+#if defined(GPIO_PIN_BACKPACK_EN)
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        if (!digitalRead(0))
+        {
+            startPassthrough();
+        }
+    }
+#endif
+}
+
 static void BackpackWiFiToMSPOut(uint16_t command)
 {
     mspPacket_t packet;
@@ -211,17 +224,6 @@ static int timeout()
         VRxBackpackWiFiReadyToSend = false;
         BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
     }
-
-#ifdef GPIO_PIN_BACKPACK_EN
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
-    {
-        if (!digitalRead(0))
-        {
-            startPassthrough();
-            return DURATION_NEVER;
-        }
-    }
-#endif
     return BACKPACK_TIMEOUT;
 }
 

@@ -30,14 +30,16 @@ typedef struct {
                 txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
 } model_config_t;
 
-// FUTURE: Designed to hold one RGB LED color in 6-level color, and 2 custom button actions.
-// This struct can change entirely depending on how the button/RGB is implemented
-// across platforms.
+typedef struct {
+    uint8_t     pressType:1,    // 0 short, 1 long
+                count:3,        // 1-8 click count for short, .5sec hold count for long
+                action:4;       // action to execute
+} button_action_t;
+
 typedef union {
     struct {
-        uint8_t color;
-        uint8_t pressShort;
-        uint8_t pressLong;
+        uint8_t color;                  // RRRGGGBB
+        button_action_t actions[2];
         uint8_t unused;
     } val;
     uint32_t raw;
@@ -88,6 +90,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
+    tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -109,6 +112,7 @@ public:
     void SetDvrAux(uint8_t dvrAux);
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
+    void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
 
     // State setters
     bool SetModelId(uint8_t modelId);

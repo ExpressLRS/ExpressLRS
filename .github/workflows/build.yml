@@ -114,7 +114,7 @@ jobs:
         esac
         # copy the common ESP32 files
         if [[ ${{matrix.target}} == *ESP32* ]] ; then
-          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
           cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ~/artifacts/firmware/
           mv .pio/build/${{ matrix.target }}/partitions.bin ~/artifacts/firmware/
         fi

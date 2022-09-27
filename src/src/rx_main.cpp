@@ -23,6 +23,12 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#elif defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -121,7 +127,7 @@ MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
-uint8_t SwitchModePending;
+int8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
@@ -773,6 +779,38 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     }
 }
 
+static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode)
+{
+    if (OtaSwitchModeCurrent == newSwitchMode)
+    {
+        // Cancel any switch if pending
+        SwitchModePending = 0;
+        return;
+    }
+
+    // One is added to the mode because SwitchModePending==0 means no switch pending
+    // and that's also a valid switch mode. The 1 is removed when this is handled.
+    // A negative SwitchModePending means not to switch yet
+    int8_t newSwitchModePending = -(int8_t)newSwitchMode - 1;
+
+    // Switch mode can be changed while disconnected
+    // OR there are two sync packets with the same new switch mode,
+    // as a "confirm". No RC packets are processed until
+    if (connectionState == disconnected ||
+        SwitchModePending == newSwitchModePending)
+    {
+        // Add one to the mode because SwitchModePending==0 means no switch pending
+        // and that's also a valid switch mode. The 1 is removed when this is handled
+        SwitchModePending = newSwitchMode + 1;
+    }
+    else
+    {
+        // Save the negative version of the new switch mode to compare
+        // against on the next SYNC packet, but do not switch yet
+        SwitchModePending = newSwitchModePending;
+    }
+}
+
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
@@ -792,13 +830,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
-    // Switch mode can only change when disconnected, and happens on the main thread
-    if (connectionState == disconnected)
-    {
-        // Add one to the mode because SwitchModePending==0 means no switch pending
-        // and that's also a valid switch mode. The 1 is removed when this is handled
-        SwitchModePending = otaSync->switchEncMode + 1;
-    }
+    updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
@@ -1329,7 +1361,8 @@ static void debugRcvrLinkstats()
 
 static void updateSwitchMode()
 {
-    if (!SwitchModePending)
+    // Negative value means waiting for confirm of the new switch mode while connected
+    if (SwitchModePending <= 0)
         return;
 
     OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -1363,6 +1396,21 @@ RF_PRE_INIT()
     #endif
 }
 #endif
+
+void resetConfigAndReboot()
+{
+    config.SetDefaults(true);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#else
+    // Prevent WDT from rebooting too early if
+    // all this flash write is taking too long
+    yield();
+    // Remove options.json and hardware.json
+    SPIFFS.format();
+    ESP.restart();
+#endif
+}
 
 void setup()
 {
@@ -1418,6 +1466,11 @@ void setup()
             hwTimer.init();
         }
     }
+
+#if defined(HAS_BUTTON)
+    registerButtonFunction(ACTION_BIND, EnterBindingMode);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
 
     devicesStart();
 }

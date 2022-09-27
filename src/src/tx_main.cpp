@@ -68,28 +68,28 @@ StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
+  {&CRSF_device, 1},
 #ifdef HAS_LED
-  {&LED_device, 1},
+  {&LED_device, 0},
 #endif
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
 #if defined(USE_TX_BACKPACK)
-  {&Backpack_device, 1},
+  {&Backpack_device, 0},
 #endif
 #ifdef HAS_BLE
-  {&BLE_device, 1},
+  {&BLE_device, 0},
 #endif
 #ifdef HAS_BUZZER
-  {&Buzzer_device, 1},
+  {&Buzzer_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
@@ -101,9 +101,9 @@ device_affinity_t ui_devices[] = {
   {&Thermal_device, 0},
 #endif
 #if defined(GPIO_PIN_PA_PDET)
-  {&PDET_device, 1},
+  {&PDET_device, 0},
 #endif
-  {&VTX_device, 1}
+  {&VTX_device, 0}
 };
 
 #if defined(GPIO_PIN_ANT_CTRL)
@@ -465,6 +465,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     crsf.JustSentRFpacket();
   }
 
+  // Do not transmit or advance FHSS/Nonce until in disconnected/connected state
+  if (connectionState == awaitingModelId)
+    return;
+
   // Tx Antenna Diversity
   if ((OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == 0 || // Swicth with new packet data
       OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) && // Swicth in the middle of DVDA sends
@@ -538,8 +542,12 @@ static void UARTconnected()
   SetRFLinkRate(config.GetRate());
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
-    connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
+    // When CRSF first connects, always go into a brief delay before
+    // starting to transmit, to make sure a ModelID update isn't coming
+    // right behind it
+    connectionState = awaitingModelId;
   }
+  // But start the timer to get OpenTX sync going and a ModelID update sent
   hwTimer.resume();
 }
 
@@ -557,15 +565,20 @@ static void ChangeRadioParams()
 #endif
 }
 
-void ICACHE_RAM_ATTR ModelUpdateReq()
+void ModelUpdateReq()
 {
-  // There's a near 100% chance we started up transmitting at Model 0's
-  // rate before we got the set modelid command from the handset, so do the
-  // normal way of switching rates with syncspam first (but only if changing)
+  // Force synspam with the current rate parameters in case already have a connection established
   if (config.SetModelId(crsf.getModelID()))
   {
     syncSpamCounter = syncSpamAmount;
     ModelUpdatePending = true;
+  }
+
+  // Jump from awaitingModelId to transmitting to break the startup delay now
+  // that the ModelID has been confirmed by the handset
+  if (connectionState == awaitingModelId)
+  {
+    connectionState = disconnected;
   }
 }
 
@@ -634,18 +647,21 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-  HandleFHSS();
-  HandlePrepareForTLM();
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if (TelemetryRcvPhase != ttrpPreReceiveGap)
+  if (connectionState != awaitingModelId)
   {
-    // Start RX for Listen Before Talk early because it takes about 100us
-    // from RX enable to valid instant RSSI values are returned.
-    // If rx was already started by TLM prepare above, this call will let RX
-    // continue as normal.
-    BeginClearChannelAssessment();
-  }
+    HandleFHSS();
+    HandlePrepareForTLM();
+#if defined(Regulatory_Domain_EU_CE_2400)
+    if (TelemetryRcvPhase != ttrpPreReceiveGap)
+    {
+      // Start RX for Listen Before Talk early because it takes about 100us
+      // from RX enable to valid instant RSSI values are returned.
+      // If rx was already started by TLM prepare above, this call will let RX
+      // continue as normal.
+      BeginClearChannelAssessment();
+    }
 #endif // non-CE
+  }
   busyTransmitting = false;
 }
 
@@ -669,7 +685,9 @@ static void UpdateConnectDisconnectStatus()
       DBGLN("got downlink conn");
     }
   }
-  else
+  // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
+  else if (connectionState == connected ||
+    (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
     connectionHasModelMatch = true;
@@ -938,6 +956,23 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+static void cyclePower()
+{
+  // Only change power if we are running normally
+  if (connectionState < MODE_STATES)
+  {
+    PowerLevels_e curr = POWERMGNT::currPower();
+    if (curr == POWERMGNT::getMaxPower())
+    {
+      POWERMGNT::setPower(POWERMGNT::getMinPower());
+    }
+    else
+    {
+      POWERMGNT::incPower();
+    }
+  }
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1006,6 +1041,11 @@ void setup()
     }
   }
 
+#if defined(HAS_BUTTON)
+  registerButtonFunction(ACTION_BIND, EnterBindingMode);
+  registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
+#endif
+
   devicesStart();
 }
 
@@ -1027,6 +1067,9 @@ void loop()
 
   // Update UI devices
   devicesUpdate(now);
+
+  // Not a device because it must be run on the loop core
+  checkBackpackUpdate();
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

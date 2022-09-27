@@ -23,6 +23,9 @@
 			<ul class="mui-tabs__bar mui-tabs__bar--justified">
 				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-4">WiFi</a></li>
+@@if isTX:
+				<li id="button-tab"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Buttons</a></li>
+@@end
 @@if not isTX:
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Model</a></li>
 @@end
@@ -89,10 +92,10 @@
 							<label><input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/> Invert TX pin</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/> Lock on first conenction</label>
+							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/> Lock on first connection</label>
 						</div>
 @@end
-						<input id='submit-options' type='button' value='Save & Reboot' class="mui-btn mui-btn--primary">
+						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>
 					</form>
 				</div>
 				<div class="mui-panel">
@@ -110,7 +113,7 @@
 					<form id='upload_form' method='POST' enctype='multipart/form-data'>
 						<div class="group">
 							<input id='firmware_file' type='file' name='update'>
-							<input id='upload_btn' type='submit' value='Update' class="mui-btn mui-btn--primary">
+							<button id='upload_btn' type='submit' class="mui-btn mui-btn--primary">Update</button>
 						</div>
 						<br/>
 						<h3 id="status"></h3>
@@ -119,11 +122,35 @@
 				</div>
 			</div>
 
+@@if isTX:
+			<div class="mui-tabs__pane" id="pane-justified-3">
+				<div class="mui-panel">
+					<h2>Button Actions</h2>
+					Specify which actions to perform when clicking or long pressing module buttons.
+					<br/><br/>
+					<form class="mui-form" id='button_actions'>
+						<table class="mui-table">
+							<tbody id="button-actions"></tbody>
+						</table>
+						<div id="button1-color-div" style="display: none;">
+							<input id='button1-color' name='button1-color' type='color'/>
+							<label>User button 1 color</label>
+						</div>
+						<div id ="button2-color-div" style="display: none;">
+							<input id='button2-color' name='button2-color' type='color'/>
+							<label>User button 2 color</label>
+						</div>
+						<button id="submit-actions" class="mui-btn mui-btn--primary">Save</button>
+					</form>
+				</div>
+			</div>
+@@end
+@@if not isTX:
 			<div class="mui-tabs__pane" id="pane-justified-3">
 				<div class="mui-panel">
 					<h2>Model Match</h2>
 					Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
-					in the ELRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
+					in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
 					<br/><br/>
 					<form class="mui-form--inline elrs-inline-form" action='/modelmatch' id='modelmatch' method='POST'>
 						<div class="mui-checkbox">
@@ -133,7 +160,7 @@
 							<input id='modelid' type='text' name='modelid' value="255" required/>
 							<label>Model ID</label>
 						</div>
-						<input type='submit' value='Save' class="mui-btn mui-btn--small mui-btn--primary">
+						<button type='submit' class="mui-btn mui-btn--small mui-btn--primary">Save</button>
 					</form>
 				</div>
 				<div id="pwm_tab" class="mui-panel">
@@ -158,7 +185,7 @@
 				</div>
 				<div class="mui-panel">
 					<h2>Force telemetry off</h2>
-					When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the Telem Ratio setting on the TX and never send telemetry from this receiver.
+					When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the "Telem Ratio" setting on the TX and never send telemetry from this receiver.
 					<br/><br/>
 					<form class="mui-form--inline elrs-inline-form" action='/forceTelemetry' id='forcetlm' method='POST'>
 						<div class="mui-checkbox">
@@ -171,6 +198,7 @@
 					<a id="reset-model" href="#">Reset all model settings to defaults.</a>
 				</div>
 			</div>
+@@end
 
 			<div class="mui-tabs__pane" id="pane-justified-4">
 				<div class="mui-panel">
