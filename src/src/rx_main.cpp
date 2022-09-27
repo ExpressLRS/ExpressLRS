@@ -23,6 +23,12 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#elif defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -121,7 +127,7 @@ MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
-uint8_t SwitchModePending;
+int8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
@@ -184,6 +190,7 @@ void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
+extern void setWifiUpdateMode();
 
 static uint8_t minLqForChaos()
 {
@@ -431,19 +438,19 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    if (connectionState != disconnected)
+    if (connectionState != disconnected && PFDloop.hasResult())
     {
-        PFDloop.calcResult();
-        PFDloop.reset();
-
-        int32_t RawOffset = PFDloop.getResult();
+        int32_t RawOffset = PFDloop.calcResult();
         int32_t Offset = LPF_Offset.update(RawOffset);
         int32_t OffsetDx = LPF_OffsetDx.update(RawOffset - PfdPrevRawOffset);
         PfdPrevRawOffset = RawOffset;
 
-        if (RXtimerState == tim_locked && LQCalc.currentIsSet())
+        if (RXtimerState == tim_locked)
         {
-            if (OtaNonce % 8 == 0) //limit rate of freq offset adjustment slightly
+            // limit rate of freq offset adjustment, use slot 1
+            // because telemetry can fall on slot 1 and will
+            // never get here
+            if (OtaNonce % 8 == 1)
             {
                 if (Offset > 0)
                 {
@@ -468,6 +475,8 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
+
+    PFDloop.reset();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -503,23 +512,27 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
 //////////////////////////////////////////////////////////////
 // flip to the other antenna
-// no-op if GPIO_PIN_ANTENNA_SELECT not defined
+// no-op if GPIO_PIN_ANT_CTRL not defined
 static inline void switchAntenna()
 {
-    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN && config.GetAntennaMode() == 2)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN && config.GetAntennaMode() == 2)
     {
         // 0 and 1 is use for gpio_antenna_select
         // 2 is diversity
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, antenna);
+        digitalWrite(GPIO_PIN_ANT_CTRL, antenna);
+        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
+        {
+            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !antenna);
+        }
     }
 }
 
 static void ICACHE_RAM_ATTR updateDiversity()
 {
 
-    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
         if(config.GetAntennaMode() == 2)
         {
@@ -575,7 +588,11 @@ static void ICACHE_RAM_ATTR updateDiversity()
         }
         else
         {
-            digitalWrite(GPIO_PIN_ANTENNA_SELECT, config.GetAntennaMode());
+            digitalWrite(GPIO_PIN_ANT_CTRL, config.GetAntennaMode());
+            if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
+            {
+                digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !config.GetAntennaMode());
+            }
             antenna = config.GetAntennaMode();
         }
     }
@@ -762,6 +779,38 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     }
 }
 
+static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode)
+{
+    if (OtaSwitchModeCurrent == newSwitchMode)
+    {
+        // Cancel any switch if pending
+        SwitchModePending = 0;
+        return;
+    }
+
+    // One is added to the mode because SwitchModePending==0 means no switch pending
+    // and that's also a valid switch mode. The 1 is removed when this is handled.
+    // A negative SwitchModePending means not to switch yet
+    int8_t newSwitchModePending = -(int8_t)newSwitchMode - 1;
+
+    // Switch mode can be changed while disconnected
+    // OR there are two sync packets with the same new switch mode,
+    // as a "confirm". No RC packets are processed until
+    if (connectionState == disconnected ||
+        SwitchModePending == newSwitchModePending)
+    {
+        // Add one to the mode because SwitchModePending==0 means no switch pending
+        // and that's also a valid switch mode. The 1 is removed when this is handled
+        SwitchModePending = newSwitchMode + 1;
+    }
+    else
+    {
+        // Save the negative version of the new switch mode to compare
+        // against on the next SYNC packet, but do not switch yet
+        SwitchModePending = newSwitchModePending;
+    }
+}
+
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
@@ -781,13 +830,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
-    // Switch mode can only change when disconnected, and happens on the main thread
-    if (connectionState == disconnected)
-    {
-        // Add one to the mode because SwitchModePending==0 means no switch pending
-        // and that's also a valid switch mode. The 1 is removed when this is handled
-        SwitchModePending = otaSync->switchEncMode + 1;
-    }
+    updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
@@ -925,7 +968,7 @@ void MspReceiveComplete()
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
         deferExecution(500, []() {
-            connectionState = wifiUpdate;
+            setWifiUpdateMode();
         });
 #endif
     }
@@ -1073,11 +1116,17 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
-    if (GPIO_PIN_ANTENNA_SELECT != UNDEF_PIN)
+    if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_ANTENNA_SELECT, OUTPUT);
-        digitalWrite(GPIO_PIN_ANTENNA_SELECT, LOW);
+        pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+        digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
+        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
+            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
+        }
     }
+
 #if defined(TARGET_RX_FM30_MINI)
     pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
     digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
@@ -1200,7 +1249,7 @@ static void cycleRfMode(unsigned long now)
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
-        INFOLN("%u", ExpressLRS_currAirRate_Modparams->interval);
+        DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -1309,7 +1358,8 @@ static void debugRcvrLinkstats()
 
 static void updateSwitchMode()
 {
-    if (!SwitchModePending)
+    // Negative value means waiting for confirm of the new switch mode while connected
+    if (SwitchModePending <= 0)
         return;
 
     OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -1343,6 +1393,21 @@ RF_PRE_INIT()
     #endif
 }
 #endif
+
+void resetConfigAndReboot()
+{
+    config.SetDefaults(true);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#else
+    // Prevent WDT from rebooting too early if
+    // all this flash write is taking too long
+    yield();
+    // Remove options.json and hardware.json
+    SPIFFS.format();
+    ESP.restart();
+#endif
+}
 
 void setup()
 {
@@ -1399,6 +1464,11 @@ void setup()
         }
     }
 
+#if defined(HAS_BUTTON)
+    registerButtonFunction(ACTION_BIND, EnterBindingMode);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
+
     devicesStart();
 }
 
@@ -1406,7 +1476,6 @@ void loop()
 {
     unsigned long now = millis();
 
-    HandleUARTin();
     if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
@@ -1614,4 +1683,3 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 
     // EEPROM commit will happen on the main thread in ExitBindingMode()
 }
-

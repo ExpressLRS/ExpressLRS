@@ -72,5 +72,7 @@ enum fsm_state_s {
 #define EVENT_LONG_RIGHT (EVENT_RIGHT | LONG_PRESSED)
 
 extern fsm_state_entry_t const entry_fsm[];
+extern fsm_state_entry_t const vtx_menu_fsm[];
+extern fsm_state_entry_t const value_select_fsm[];
 
 fsm_state_t getInitialState();

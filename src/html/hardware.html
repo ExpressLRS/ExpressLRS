@@ -105,9 +105,8 @@ td img.icon-pwm {
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td><td>SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
-					<tr><td></td><td>SELECT pin<img class="icon-output"/></td><td><input size='3' id='ant_select' name='ant_select' type='text'/></td><td>On an RX, Pin connected to Antenna select pin on power amplifier</td></tr>
-					<tr><td></td><td>CTRL1 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl1' name='ant_ctrl1' type='text'/></td><td>Pin connected to Antenna select on a TX module</td></tr>
-					<tr><td></td><td>CTRL2 pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl2' name='ant_ctrl2' type='text'/></td><td>Inverted CTRL1 for TX modules using antenna selectors that need separate pins for A/B selection</td></tr>
+					<tr><td></td><td>CTRL pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl' name='ant_ctrl' type='text'/></td><td>Pin connected to Antenna select pin on power amplifier</td></tr>
+					<tr><td></td><td>CTRL_COMPL pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl_compl' name='ant_ctrl_compl' type='text'/></td><td>Inverted CTRL for devices using antenna selectors that need separate pins for A/B selection</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power</td></tr>
 					<tr><td></td><td>PA enable pin<img class="icon-output"/></td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td><td>Enable the power amplifier (active high)</td></tr>
@@ -189,9 +188,6 @@ td img.icon-pwm {
 					<tr><td></td><td>Pin 2<img class="icon-input"/></td><td><input size='3' id='five_way2' name='five_way2' type='text'/></td><td>7 = IDLE, 6 = OK, 5 = DOWN</td></tr>
 					<tr><td></td><td>Pin 3<img class="icon-input"/></td><td><input size='3' id='five_way3' name='five_way3' type='text'/></td><td>4 = RIGHT, 3 = UP, 2 = LEFT</td></tr>
 @@end
-					<tr><td colspan='2'><b>Button(s)</td></tr>
-					<tr><td></td><td>Button 1 pin<img class="icon-input"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
-
 					<tr><td colspan='2'><b>Mood Lighting</td></tr>
 					<tr><td></td><td>RGB LED pin<img class="icon-output"/></td><td><input size='3' id='led_rgb' name='led_rgb' type='text'/></td><td>Signal pin for WS2812 RGB LED or LED strip</td></tr>
 					<tr><td></td><td>RGB LED is GRB</td><td><input size='3' id='led_rgb_isgrb' name='led_rgb_isgrb' type='checkbox'/></td><td>Most WS2812 RGB LEDs are actually GRB</td></tr>
@@ -211,6 +207,11 @@ td img.icon-pwm {
 					<tr><td></td><td>Green/Red LED pin<img class="icon-output"/></td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
 					<tr><td></td><td>Red/Green LED pin<img class="icon-output"/></td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
 					-->
+					<tr><td colspan='2'><b>Button(s)</td></tr>
+					<tr><td></td><td>Button 1 pin<img class="icon-output"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
+					<tr><td></td><td>Button 1 RGB Index</td><td><input size='3' id='button_led_index' name='button_led_index' type='text'/></td><td>Index of button LED in RGB string, leave empty for no RGB LED</td></tr>
+					<tr><td></td><td>Button 2 pin<img class="icon-output"/></td><td><input size='3' id='button2' name='button2' type='text'/></td><td>Second (active low) button</td></tr>
+					<tr><td></td><td>Button 2 RGB Index</td><td><input size='3' id='button2_led_index' name='button2_led_index' type='text'/></td><td>Index of button LED in RGB string, leave empty for no RGB LED</td></tr>
 @@if isTX:
 					<tr><td colspan='2'><b>OLED/TFT (Crotch TV)</td></tr>
 					<tr><td></td><td>Screen type</td><td>
@@ -245,6 +246,8 @@ td img.icon-pwm {
 					<tr><td></td><td>SDA pin<img class="icon-input"/><img class="icon-output"/></td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td><td>I2C data pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
 					<!-- <tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td><td>Pin connected to a PWM controlled buzzer</td></tr> -->
 					<tr><td></td><td>Fan enable pin<img class="icon-output"/></td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td><td>Pin used to enable a cooling FAN (active HIGH)</td></tr>
+					<tr><td></td><td>Fan PWM pin<img class="icon-pwm"/></td><td><input size='3' id='misc_fan_pwm' name='misc_fan_pwm' type='text'/></td><td>If the fan is controlled by PWM</td></tr>
+					<tr><td></td><td>Fan TACHO pin<img class="icon-input"/></td><td><input size='3' id='misc_fan_tacho' name='misc_fan_tacho' type='text'/></td><td>If the fan has a "tachometer" interrupt pin</td></tr>
 					<tr><td></td><td>Has STK8xxx G-sensor</td><td><input size='3' id='gsensor_stk8xxx' name='gsensor_stk8xxx' type='checkbox'/></td><td>Checked if there is a STK8xxx g-sensor on the I2C bus</td></tr>
 					<tr><td></td><td>G-sensor interrupt pin<img class="icon-input"/></td><td><input size='3' id='misc_gsensor_int' name='misc_gsensor_int' type='text'/></td><td>Pin connected the STK8xxx g-sensor for interrupts</td></tr>
 					<tr><td></td><td>Has LM75A Thermal sensor</td><td><input size='3' id='thermal_lm75a' name='thermal_lm75a' type='checkbox'/></td><td>Checked if there is a LM75A thermal sensor on the I2C bus</td></tr>

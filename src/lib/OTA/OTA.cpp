@@ -26,6 +26,7 @@ GeneratePacketCrc_t OtaGeneratePacketCrc;
 void OtaUpdateCrcInitFromUid()
 {
     OtaCrcInitializer = (UID[4] << 8) | UID[5];
+    OtaCrcInitializer ^= OTA_VERSION_ID;
 }
 
 static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const nonce)
@@ -228,7 +229,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     // All channel data is 10 bit apart from AUX1 which is 1 bit
     ota8->rc.packetType = PACKET_TYPE_RCDATA;
     ota8->rc.telemetryStatus = TelemetryStatus;
-    ota8->rc.uplinkPower = crsf->LinkStatistics.uplink_TX_Power;
+    // uplinkPower has 8 items but only 3 bits, but 0 is 0 power which we never use, shift 1-8 -> 0-7
+    ota8->rc.uplinkPower = constrain(crsf->LinkStatistics.uplink_TX_Power, 1, 8) - 1;
     ota8->rc.isHighAux = isHighAux;
     ota8->rc.ch4 = CRSF_to_BIT(crsf->ChannelData[4]);
 #if defined(DEBUG_RCVR_LINKSTATS)
@@ -474,7 +476,8 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &crsf->ChannelData[chDstLow]);
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &crsf->ChannelData[chDstHigh]);
 #endif
-    crsf->LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower;
+    // Restore the uplink_TX_Power range 0-7 -> 1-8
+    crsf->LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower + 1;
     return ota8->rc.telemetryStatus;
 }
 #endif

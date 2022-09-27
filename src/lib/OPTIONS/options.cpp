@@ -9,7 +9,11 @@
 const unsigned char target_name[] = "\xBE\xEF\xCA\xFE" STR(TARGET_NAME);
 const uint8_t target_name_size = sizeof(target_name);
 const char commit[] {LATEST_COMMIT, 0};
+#if defined(UNIT_TEST)
+const char version[] = "1.2.3";
+#else
 const char version[] = {LATEST_VERSION, 0};
+#endif
 
 #if defined(TARGET_TX)
 const char *wifi_hostname = "elrs_tx";
@@ -27,38 +31,10 @@ const char *product_name = (const char *)(target_name+4);
 
 __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
-    ._version_ = 0,
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    ._hasWiFi = 1,
-#else
-    ._hasWiFi = 0,
-#endif
-#if defined(GPIO_PIN_BUZZER)
-    ._hasBuzzer = 1,
-#else
-    ._hasBuzzer = 0,
-#endif
-#if defined(PLATFORM_STM32) || defined(UNIT_TEST)
-    ._mcu_type = 0,
-#elif defined(PLATFORM_ESP32)
-    ._mcu_type = 1,
-#elif defined(PLATFORM_ESP8266)
-    ._mcu_type = 2,
-#else
-    #error Unsupported MCU type
-#endif
-#if defined(TARGET_TX) || defined(UNIT_TEST)
-    ._device_type = 0,
-#elif defined(TARGET_RX)
-    ._device_type = 1,
-#else
-    #error Unsupported device type
-#endif
+    ._version_ = 1,
 #if defined(Regulatory_Domain_ISM_2400)
-    ._radio_chip = 1,
     .domain = 0,
 #else
-    ._radio_chip = 0,
     #if defined(Regulatory_Domain_AU_915)
     .domain = 0,
     #elif defined(Regulatory_Domain_FCC_915)
@@ -166,6 +142,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
 #include <ArduinoJson.h>
+#include <StreamString.h>
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
@@ -211,21 +188,47 @@ uint32_t myGetSketchSize()
 }
 #endif
 
-static String builtinOptions;
+static StreamString builtinOptions;
 String& getOptions()
 {
-    File file = SPIFFS.open("/options.json", "r");
-    if (!file || file.isDirectory())
-    {
-        if (file)
-        {
-            file.close();
-        }
-        // Try JSON at the end of the firmware
-        return builtinOptions;
-    }
-    builtinOptions = file.readString();
     return builtinOptions;
+}
+
+void saveOptions(Stream &stream)
+{
+    DynamicJsonDocument doc(1024);
+
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
+    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.home_wifi_ssid[0])
+    {
+        doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
+        doc["wifi-password"] = firmwareOptions.home_wifi_password;
+    }
+    #if defined(TARGET_UNIFIED_TX)
+    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
+    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
+    doc["uart-inverted"] = firmwareOptions.uart_inverted;
+    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+    #else
+    doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
+    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
+    doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
+    #endif
+    doc["domain"] = firmwareOptions.domain;
+
+    serializeJson(doc, stream);
+}
+
+void saveOptions()
+{
+    File options = SPIFFS.open("/options.json", "w");
+    saveOptions(options);
+    options.close();
 }
 
 bool options_init()
@@ -273,13 +276,11 @@ bool options_init()
             file.close();
         }
         // Try JSON at the end of the firmware
-        builtinOptions.clear();
         DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16 + 128, strnlen(((const char *)buf) + 16 + 128, 512));
         if (error)
         {
             return false;
         }
-        serializeJson(doc, builtinOptions);
     }
     else
     {
@@ -300,7 +301,8 @@ bool options_init()
     {
         firmwareOptions.hasUID = false;
     }
-    firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 60) * 1000;
+    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
+    firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     #if defined(TARGET_UNIFIED_TX)
@@ -315,41 +317,13 @@ bool options_init()
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
 
+    builtinOptions.clear();
+    saveOptions(builtinOptions);
+
     debugFreeInitLogger();
 
     return hardware_inited;
 }
 
-void saveOptions()
-{
-    DynamicJsonDocument doc(1024);
-
-    if (firmwareOptions.hasUID)
-    {
-        JsonArray uid = doc.createNestedArray("uid");
-        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
-    }
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
-    if (firmwareOptions.home_wifi_ssid[0])
-    {
-        doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
-        doc["wifi-password"] = firmwareOptions.home_wifi_password;
-    }
-    #if defined(TARGET_UNIFIED_TX)
-    doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
-    doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["uart-inverted"] = firmwareOptions.uart_inverted;
-    doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
-    #else
-    doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
-    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
-    doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
-    #endif
-    doc["domain"] = firmwareOptions.domain;
-
-    File options = SPIFFS.open("/options.json", "w");
-    serializeJson(doc, options);
-    options.close();
-}
 
 #endif

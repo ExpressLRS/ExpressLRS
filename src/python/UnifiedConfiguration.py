@@ -1,6 +1,7 @@
+#!/usr/bin/python
+
 import argparse
 import json
-import re
 import struct
 import sys
 
@@ -31,68 +32,31 @@ def findFirmwareEnd(f):
         pos = pos + 32
     return pos
 
-def appendToFirmware(firmware_file, product_name, lua_name, options, layout_file):
+def appendToFirmware(firmware_file, product_name, lua_name, defines, config, layout_file):
     product = (product_name.encode() + (b'\0' * 128))[0:128]
     device = (lua_name.encode() + (b'\0' * 16))[0:16]
     end = findFirmwareEnd(firmware_file)
     firmware_file.seek(end, 0)
     firmware_file.write(product)
     firmware_file.write(device)
-    options = (options.encode() + (b'\0' * 512))[0:512]
-    firmware_file.write(options)
+    defines = (defines.encode() + (b'\0' * 512))[0:512]
+    firmware_file.write(defines)
     if layout_file is not None:
         try:
             with open(layout_file) as h:
                 hardware = json.load(h)
+                if 'overlay' in config:
+                    hardware.update(config['overlay'])
                 firmware_file.write(json.JSONEncoder().encode(hardware).encode())
         except EnvironmentError:
             sys.stderr.write(f'Error opening file "{layout_file}"\n')
             exit(1)
     firmware_file.write(b'\0')
+    firmware_file.truncate(firmware_file.tell())
 
-
-def configureFirmware(file, config, options):
-    targets = {}
-    with open('hardware/targets.json') as f:
-        targets = json.load(f)
-
-    moduletype = 'tx' if '.tx_' in config else 'rx'
-
-    config ='.'.join(map(lambda s: f'"{s}"', config.split('.')))
-    config = jmespath.search(config, targets)
-
-    if config is not None:
-        product_name = config['product_name']
-        lua_name = config['lua_name']
-        dir = 'TX' if moduletype == 'tx' else 'RX'
-        layout = f"hardware/{dir}/{config['layout_file']}"
-
-    appendToFirmware(file, product_name, lua_name, options, layout)
-
-
-def appendConfiguration(source, target, env):
-    target_name = env.get('PIOENV', '').upper()
-    config = env.GetProjectOption('board_config', None)
-    if 'UNIFIED_' not in target_name and config is None:
-        return
-
-    moduletype = ''
-    frequency = ''
-    if config is not None:
-        moduletype = 'tx' if '.tx_' in config else 'rx'
-        frequency = '2400' if '_2400.' in config else '900'
-    else:
-        moduletype = 'tx' if '_TX_' in target_name else 'rx'
-        frequency = '2400' if '_2400_' in target_name else '900'
-
-    platform = '32' if moduletype == 'rx' and env.get('PIOPLATFORM', '') in ['espressif32'] else ''
-
-    parts = re.search('(.*)_VIA_.*', target_name)
-    if parts and parts.group(1):
-        target_name = parts.group(1).replace('_', ' ')
-
-    product_name = target_name
-    lua_name = target_name
+def doConfiguration(file, defines, config, moduletype, frequency, platform, device_name):
+    product_name = "Unified"
+    lua_name = "Unified"
     layout = None
 
     targets = {}
@@ -109,7 +73,7 @@ def appendConfiguration(source, target, env):
     else:
         products = []
         i = 0
-        for k in jmespath.search(f'*."{moduletype}{platform}_{frequency}".*[].product_name', targets):
+        for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][].product_name', targets):
             i += 1
             products.append(k)
             print(f"{i}) {k}")
@@ -117,7 +81,7 @@ def appendConfiguration(source, target, env):
         choice = input()
         if choice != "":
             config = products[int(choice)-1]
-            config = jmespath.search(f'[[*."{moduletype}{platform}_{frequency}"][].*][][?product_name==`{config}`][]', targets)[0]
+            config = jmespath.search(f'[*."{moduletype}_{frequency}".*][][?product_name==`{config}`][]', targets)[0]
 
     if config is not None:
         product_name = config['product_name']
@@ -125,9 +89,31 @@ def appendConfiguration(source, target, env):
         dir = 'TX' if moduletype == 'tx' else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
-    options = json.JSONEncoder().encode(env['OPTIONS_JSON'])
+    lua_name = lua_name if device_name is None else device_name
+    appendToFirmware(file, product_name, lua_name, defines, config, layout)
+
+def appendConfiguration(source, target, env):
+    target_name = env.get('PIOENV', '').upper()
+    device_name = env.get('DEVICE_NAME', None)
+    config = env.GetProjectOption('board_config', None)
+    if 'UNIFIED_' not in target_name and config is None:
+        return
+
+    moduletype = ''
+    frequency = ''
+    if config is not None:
+        moduletype = 'tx' if '.tx_' in config else 'rx'
+        frequency = '2400' if '_2400.' in config else '900'
+    else:
+        moduletype = 'tx' if '_TX_' in target_name else 'rx'
+        frequency = '2400' if '_2400_' in target_name else '900'
+
+    platform = 'esp32' if env.get('PIOPLATFORM', '') in ['espressif32'] else 'esp8285'
+
+    defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
+
     with open(str(target[0]), "r+b") as firmware_file:
-        appendToFirmware(firmware_file, product_name, lua_name, options, layout)
+        doConfiguration(firmware_file, defines, config, moduletype, frequency, platform, device_name)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Configure Unified Firmware")
@@ -138,4 +124,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    configureFirmware(args.file, args.target, args.options)
+    targets = {}
+    with open('hardware/targets.json') as f:
+        targets = json.load(f)
+
+    moduletype = 'tx' if '.tx_' in args.target else 'rx'
+
+    config ='.'.join(map(lambda s: f'"{s}"', args.target.split('.')))
+    config = jmespath.search(config, targets)
+
+    if config is not None:
+        product_name = config['product_name']
+        lua_name = config['lua_name']
+        dir = 'TX' if moduletype == 'tx' else 'RX'
+        layout = f"hardware/{dir}/{config['layout_file']}"
+
+    appendToFirmware(args.file, product_name, lua_name, args.options, config, layout)

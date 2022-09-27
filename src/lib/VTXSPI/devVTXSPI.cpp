@@ -8,7 +8,7 @@
 #include "logging.h"
 #include <SPI.h>
 #if defined(PLATFORM_ESP32)
-#include <analogWrite.h>
+#include <pwmWrite.h>
 #endif
 
 #define SYNTHESIZER_REGISTER_A                  0x00
@@ -25,15 +25,13 @@
 
 #define POWER_AMP_ON                            0b00000100111110111111
 #define POWER_AMP_OFF                           0x00
-#if defined(PLATFORM_ESP32)
-// ESP32 DAC pins are 0-4095
-#define MIN_PWM                                 1 // Testing required.
-#define MAX_PWM                                 250 // Absolute max is 4095.  But above 250 does nothing.
-#else
-// ESP8285 PWM is 0-4095
+// ESP32 DAC pins are 0-255
+#define MIN_DAC                                 1 // Testing required.
+#define MAX_DAC                                 250 // Absolute max is 255.  But above 250 does nothing.
+// PWM is 0-4095
 #define MIN_PWM                                 1000 // Testing required.
 #define MAX_PWM                                 3600 // Absolute max is 4095.  But above 3500 does nothing.
-#endif
+
 #define VPD_BUFFER                              5
 
 #define READ_BIT                                0x00
@@ -45,8 +43,6 @@
 
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
-extern bool ICACHE_RAM_ATTR IsArmed();
-
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0;
@@ -54,6 +50,8 @@ static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
 static uint8_t RfAmpVrefState = 0;
 static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t vtxMinPWM = MAX_PWM;
+static uint16_t vtxMaxPWM = MIN_PWM;
 static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
@@ -79,6 +77,9 @@ static const uint16_t freqTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
+#if defined(PLATFORM_ESP32)
+static Pwm pwm;
+#endif
 static SPIClass *vtxSPI;
 static void rtc6705WriteRegister(uint32_t regData)
 {
@@ -149,24 +150,40 @@ static void RfAmpVrefOff()
     RfAmpVrefState = 0;
 }
 
+static void setPWM()
+{
+#if defined(PLATFORM_ESP32)
+    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    {
+        dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM >> 4);
+    }
+    else
+    {
+        pwm.write(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    }
+#else
+    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+#endif
+}
+
 void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
-    vtxSPIPWM = MAX_PWM;
-    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    vtxSPIPWM = vtxMaxPWM;
+    setPWM();
 }
 
 static void VTxOutputIncrease()
 {
-    if (vtxSPIPWM > MIN_PWM) vtxSPIPWM -= 1;
-    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
+    setPWM();
 }
 
 static void VTxOutputDecrease()
 {
-    if (vtxSPIPWM < MAX_PWM) vtxSPIPWM += 1;
-    analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+    if (vtxSPIPWM < vtxMaxPWM) vtxSPIPWM += 1;
+    setPWM();
 }
 
 static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
@@ -277,11 +294,22 @@ static void initialize()
         #if defined(PLATFORM_ESP8266)
             pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
             analogWriteFreq(10000); // 10kHz
+            analogWriteResolution(12); // 0 - 4095
         #else
-            analogWriteFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
+            // If using a DAC pin then adjust min/max and initial value
+            if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+            {
+                vtxMinPWM = MIN_DAC;
+                vtxMaxPWM = MAX_DAC;
+                vtxSPIPWM = vtxMaxPWM;
+            }
+            else
+            {
+                pwm.writeFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
+                pwm.writeResolution(12); // 0 - 4095
+            }
         #endif
-        analogWriteResolution(12); // 0 - 4095
-        analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+        setPWM();
 
         delay(RTC6705_BOOT_DELAY);
     }
@@ -306,11 +334,6 @@ static int event()
     if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
     {
         return DURATION_NEVER;
-    }
-
-    if (CRSF::IsArmed())
-    {
-        vtxSPIBandChannelIdx = vtxSPIBandChannelIdxCurrent; // Do not allow frequency changed while armed.
     }
 
     if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)

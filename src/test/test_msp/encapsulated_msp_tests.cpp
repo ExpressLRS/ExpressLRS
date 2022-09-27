@@ -3,7 +3,7 @@
 #include "msptypes.h"
 #include "mock_serial.h"
 
-#include "CRSF.h"
+#include "devCRSF.h"
 
 // Mock out the serial port using a string stream
 std::string buf;
