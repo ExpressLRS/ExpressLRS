@@ -224,15 +224,15 @@
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity": {
-                "product_name": "Generic ESP32 Full Diversity PA 2.4Ghz RX",
+                "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
-                "layout_file": "Generic 2400 Full Diversity PA.json",
+                "layout_file": "Generic 2400 True Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             },
             "diversity_vtx": {
-                "product_name": "Generic ESP32 Full Diversity PA 2.4Ghz RX and VTx",
+                "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
-                "layout_file": "Generic 2400 Full Diversity PA and VTx.json",
+                "layout_file": "Generic 2400 True Diversity PA and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"]
             }
         }
