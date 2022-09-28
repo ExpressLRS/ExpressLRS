@@ -640,13 +640,18 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  bool packetSuccessful = ProcessTLMpacket(status);
+  if (LQCalc.currentIsSet())
+    return false; // Already received tlm, do not run ProcessTLMpacket() again.
+
   busyTransmitting = false;
-  return packetSuccessful;
+  return ProcessTLMpacket(status);
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  if (!busyTransmitting)
+    return; // Already finished transmission and do not call HandleFHSS() a second time, which may hop the frequency!
+
   if (connectionState != awaitingModelId)
   {
     HandleFHSS();
