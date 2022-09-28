@@ -43,31 +43,31 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
+  {&CRSF_device, 1},
 #if defined(PLATFORM_ESP32)
-  {&SerialUpdate_device, 0},
+  {&SerialUpdate_device, 1},
 #endif
 #ifdef HAS_LED
-  {&LED_device, 1},
+  {&LED_device, 0},
 #endif
-  {&LUA_device, 1},
+  {&LUA_device, 0},
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 1},
+  {&VTxSPI_device, 0},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 1},
+  {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
-  {&ServoOut_device, 0},
+  {&ServoOut_device, 1},
 #endif
 };
 

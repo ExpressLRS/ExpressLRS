@@ -12,7 +12,6 @@
 #include "telemetry.h"
 
 extern void stub_handle_rx_byte(char byte);
-extern void cmd_loop();
 
 static bool running = false;
 
@@ -44,10 +43,14 @@ static int timeout()
         return DURATION_NEVER;
     }
 
-    int count = Serial.available();
-    while (count--)
+    while (true)
     {
-        stub_handle_rx_byte(Serial.read());
+        uint8_t buf[64];
+        int count = Serial.read(buf, sizeof(buf));
+        for (int i=0 ; i<count ; i++)
+        {
+            stub_handle_rx_byte(buf[i]);
+        }
     }
     return DURATION_IMMEDIATELY;
 }

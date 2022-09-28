@@ -102,7 +102,7 @@ static void execute_command()
         SLIP_send_frame_data(ESP_BAD_DATA_LEN);
         SLIP_send_frame_data(0xEE);
         SLIP_send_frame_delimiter();
-        Serial.flush();
+        Serial.flush(true);
         return;
     }
 
@@ -222,11 +222,11 @@ static void execute_command()
     SLIP_send_frame_data(0);
     SLIP_send_frame_data(0);
     SLIP_send_frame_delimiter();
-    Serial.flush();
+    Serial.flush(true);
 
     if (status == ESP_UPDATE_OK && (command->op == ESP_FLASH_DEFLATED_END || command->op == ESP_FLASH_END))
     {
-        /* passing 0 as parameter for ESP_FLASH_END means reboot now, or the begin was passed 0 size to we use that as a reboot too */
+        /* passing 0 as parameter for ESP_FLASH_END means reboot now, or the begin was passed 0 size so use that as a reboot too */
         if (data_words[0] == 0 || need_reboot)
         {
             delayMicroseconds(10000);
