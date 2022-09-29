@@ -388,6 +388,13 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     modeSupportsFei = false;
 }
 
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq)
+{
+    uint32_t regfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
+
+    SetFrequencyReg(regfreq, SX1280_Radio_All);
+}
+
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX1280_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
