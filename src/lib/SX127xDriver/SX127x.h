@@ -47,7 +47,7 @@ public:
 
     #define FREQ_STEP 61.03515625
     void SetFrequencyHz(uint32_t freq);
-    void SetFrequencyReg(uint32_t freq);
+    void SetFrequencyReg(uint32_t freq, SX1280_Radio_Number_t radioNumber = SX1280_Radio_1);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
@@ -68,9 +68,10 @@ public:
     int8_t GetLastPacketSNRRaw();
     int8_t GetCurrRSSI();
     void GetLastPacketStats();
+    SX1280_Radio_Number_t GetProcessingPacketRadio(){return SX1280_Radio_1;}
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size);
+    void TXnb(uint8_t * data, uint8_t size, SX1280_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 
