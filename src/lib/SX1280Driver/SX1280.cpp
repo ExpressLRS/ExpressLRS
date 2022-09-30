@@ -127,13 +127,13 @@ bool SX1280Driver::Begin()
     return true;
 }
 
-void SX1280Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radio)
+void SX1280Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t buffer;         // we just need a buffer for the write command
-    SetFrequencyHz(freq);
+    SetFrequencyHz(freq, radioNumber);
     CommitOutputPower();
-    hal.TXenable(radio);
-    hal.WriteCommand(SX1280_RADIO_SET_TXCONTINUOUSWAVE, &buffer, 0, radio);
+    hal.TXenable(radioNumber);
+    hal.WriteCommand(SX1280_RADIO_SET_TXCONTINUOUSWAVE, &buffer, 0, radioNumber);
 }
 
 void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
@@ -388,11 +388,11 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     modeSupportsFei = false;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     uint32_t regfreq = (uint32_t)((double)freq / (double)FREQ_STEP);
 
-    SetFrequencyReg(regfreq, SX12XX_Radio_All);
+    SetFrequencyReg(regfreq, radioNumber);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber)
