@@ -340,7 +340,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
                
   if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
   {
-    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
@@ -364,8 +364,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
   {
     if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
     {
-      Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
-      Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
+      Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+      Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
     }
     else
     {      
@@ -457,20 +457,20 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (ChannelIsClear())
 #endif
   {
-    SX1280_Radio_Number_t transmittingRadio = SX1280_Radio_Default;
+    SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
 
     if (isDualRadio())
     {
       switch (config.GetAntennaMode())
       {
       case 0:
-        transmittingRadio = SX1280_Radio_All; // Gemini mode
+        transmittingRadio = SX12XX_Radio_All; // Gemini mode
         break;
       case 1:
-        transmittingRadio = SX1280_Radio_1; // Single antenna tx and true diversity rx.
+        transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx.
         break;
       case 2:
-        transmittingRadio = SX1280_Radio_2; // Single antenna tx and true diversity rx.
+        transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx.
         break;
       default:
         break;
@@ -835,7 +835,7 @@ void EnterBindingMode()
   Radio.SetFrequencyReg(GetInitialFreq());               
   if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
   {
-    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
   // Start transmitting again
   hwTimer.resume();

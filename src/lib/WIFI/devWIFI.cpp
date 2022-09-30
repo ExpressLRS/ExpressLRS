@@ -669,7 +669,7 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
 #ifdef RADIO_SX128X
 static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
-    SX1280_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX1280_Radio_1 : SX1280_Radio_2;
+    SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 
     AsyncWebServerResponse *response = request->beginResponse(204);
     response->addHeader("Connection", "close");

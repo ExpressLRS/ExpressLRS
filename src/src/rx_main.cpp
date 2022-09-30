@@ -213,7 +213,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 {
     if (isDualRadio())
     {
-        if (Radio.GetProcessingPacketRadio() == SX1280_Radio_1)
+        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
             antenna = 0;
         else
             antenna = 1;
@@ -287,7 +287,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  );
 
     if (geminiMode)
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -315,8 +315,8 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX1280_Radio_1);
-        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX1280_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
     }
     else
     {
@@ -426,9 +426,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     if (ChannelIsClear())
 #endif
     {
-        SX1280_Radio_Number_t transmittingRadio = SX1280_Radio_Default;
+        SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
         if (geminiMode)
-            transmittingRadio = SX1280_Radio_All;
+            transmittingRadio = SX12XX_Radio_All;
         
         Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
     }
@@ -1650,7 +1650,7 @@ void EnterBindingMode()
     SetRFLinkRate(RATE_BINDING);
     Radio.SetFrequencyReg(GetInitialFreq());
     if (geminiMode)
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX1280_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 
