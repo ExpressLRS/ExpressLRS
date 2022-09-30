@@ -470,7 +470,7 @@ function submitOptions(e) {
 
 _('submit-options').addEventListener('click', submitOptions);
 
-
+@@if isTX:
 function submitButtonActions(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -492,8 +492,8 @@ function submitButtonActions(e) {
     }
   };
 }
-
 _('submit-actions').addEventListener('click', submitButtonActions);
+@@end
 
 function updateOptions(data) {
   for (const [key, value] of Object.entries(data)) {
