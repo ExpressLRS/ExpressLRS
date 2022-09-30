@@ -31,7 +31,7 @@
    (used for flashing throughput.) */
 typedef struct
 {
-    uint8_t reading_buf[MAX_WRITE_BLOCK + 64];
+    uint8_t *reading_buf;
     uint16_t read; /* how many bytes have we read in the frame */
     slip_state_t state;
 } uart_buf_t;
@@ -175,7 +175,29 @@ static void execute_command()
         need_reboot = data_words[0] == 0;
         flash_method = handle_flash_data;
         break;
+    case ESP_FLASH_DEFLATED_BEGIN:
+        /* parameters:
+            0 - uncompressed size
+            1 - num_blocks (based on compressed size)
+            2 - block_size (should be MAX_WRITE_BLOCK, total bytes over serial = num_blocks * block_size)
+            3 - offset (used as-is)
+        */
+        if (command->data_len == 16 && data_words[2] > MAX_WRITE_BLOCK)
+        {
+            status = ESP_BAD_BLOCKSIZE;
+            break;
+        }
+        status = verify_data_len(command, 16);
+        if (status != ESP_UPDATE_OK)
+        {
+            break;
+        }
+        status = handle_flash_deflated_begin(data_words[0], data_words[1] * data_words[2], data_words[3]);
+        need_reboot = data_words[0] == 0;
+        flash_method = handle_flash_deflated_data;
+        break;
     case ESP_FLASH_DATA:
+    case ESP_FLASH_DEFLATED_DATA:
         if (!is_in_flash_mode())
         {
             status = ESP_NOT_IN_FLASH_MODE;
@@ -200,14 +222,12 @@ static void execute_command()
         flash_method(command->data_buf + 16, command->data_len - 16);
         break;
     case ESP_FLASH_END:
+    case ESP_FLASH_DEFLATED_END:
         status = handle_flash_end();
         break;
     case ESP_READ_REG:
         status = verify_data_len(command, 4);
         break;
-    case ESP_FLASH_DEFLATED_END:
-    case ESP_FLASH_DEFLATED_BEGIN:
-    case ESP_FLASH_DEFLATED_DATA:
     case ESP_FLASH_ENCRYPT_DATA:
     case ESP_MEM_BEGIN:
     case ESP_MEM_DATA:
@@ -220,8 +240,6 @@ static void execute_command()
     }
 
     SLIP_send_frame_status(status);
-    SLIP_send_frame_data(0);
-    SLIP_send_frame_data(0);
     SLIP_send_frame_delimiter();
     Serial.flush(true);
 
@@ -234,6 +252,11 @@ static void execute_command()
             ESP.restart();
         }
     }
+}
+
+void start_esp_upload()
+{
+    ub.reading_buf = static_cast<uint8_t *>(malloc(32768 + 64));
 }
 
 void stub_handle_rx_byte(char byte)

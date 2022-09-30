@@ -117,8 +117,8 @@ elif platform in ['espressif32']:
             UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
             UPLOAD_SPEED=420000,
             UPLOADERFLAGS=[
-                "--passthrough", "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT", "--no-stub",
-                "-c", "esp32", "--before", "no_reset", "--after", "soft_reset", "write_flash"
+                "--passthrough", "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT",
+                "-c", "esp32", "--before", "no_reset", "--after", "hard_reset", "write_flash"
             ]
         )
         env.AddPreAction("upload", BFinitPassthrough.init_passthrough)

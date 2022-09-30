@@ -11,6 +11,7 @@
 
 #include "telemetry.h"
 
+extern void start_esp_upload();
 extern void stub_handle_rx_byte(char byte);
 
 static bool running = false;
@@ -43,6 +44,7 @@ static int timeout()
         return DURATION_NEVER;
     }
 
+    start_esp_upload();
     while (true)
     {
         uint8_t buf[64];
