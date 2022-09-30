@@ -9,9 +9,9 @@
 #if defined(PLATFORM_ESP32) && defined(TARGET_RX)
 
 #include "stub_write_flash.h"
+#include "slip.h"
 #include "soc_support.h"
 #include "stub_flasher.h"
-#include "slip.h"
 #include "targets.h"
 
 #include <Update.h>
@@ -47,19 +47,23 @@ esp_command_error get_flash_error(void)
     return fs.last_error;
 }
 
-esp_command_error handle_flash_get_md5sum(uint32_t addr, uint32_t len) {
-  /* ESP32 ROM sends as hex, but stub just send raw bytes - esptool.py can handle either. */
-  fs.md5.add(fs.last_buf, len - fs.last_end);
-  fs.md5.calculate();
-  const char *md5 = fs.md5.toString().c_str();
-  SLIP_send_frame_data_buf(md5, strlen(md5));
-  return ESP_UPDATE_OK;
+esp_command_error handle_flash_get_md5sum(uint32_t addr, uint32_t len)
+{
+    /* ESP32 ROM sends as hex, but stub just send raw bytes - esptool.py can handle either. */
+    fs.md5.add(fs.last_buf, len - fs.last_end);
+    fs.md5.calculate();
+    uint8_t md5[16];
+    fs.md5.getBytes(md5);
+    SLIP_send_frame_data_buf(md5, sizeof(md5));
+    return ESP_UPDATE_OK;
 }
 
 esp_command_error handle_flash_begin(uint32_t total_size, uint32_t offset)
 {
     fs.in_flash_mode = true;
-    if (total_size != 0) {
+    fs.remaining = total_size;
+    if (total_size != 0)
+    {
         Update.begin(total_size);
         fs.md5.begin();
     }
@@ -75,8 +79,15 @@ void handle_flash_data(uint8_t *data_buf, uint32_t length)
         fs.md5.add(fs.last_buf, fs.last_length);
         fs.last_end += fs.last_length;
     }
+    if (length > fs.remaining)
+    {
+        /* Trim the final block, as it may have padding beyond
+            the length we are writing */
+        length = fs.remaining;
+    }
     memcpy(fs.last_buf, data_buf, length);
     fs.last_length = length;
+    fs.remaining -= length;
     Update.write(data_buf, length);
 
     fs.last_error = ESP_UPDATE_OK;

@@ -38,6 +38,7 @@ typedef struct
 static uart_buf_t ub;
 
 static bool need_reboot = false;
+static void  (*flash_method)(uint8_t *, uint32_t) = handle_flash_data;
 
 /* esptool protcol "checksum" is XOR of 0xef and each byte of
    data payload. */
@@ -70,7 +71,6 @@ static void execute_command()
         .value = 0,
     };
 
-    void  (*flash_method)(uint8_t *, uint32_t) = handle_flash_data;
 
     /* Some commands need to set resp.len_ret or resp.value before it is sent back */
     switch (command->op)
@@ -173,6 +173,7 @@ static void execute_command()
         }
         status = handle_flash_begin(data_words[0], data_words[3]);
         need_reboot = data_words[0] == 0;
+        flash_method = handle_flash_data;
         break;
     case ESP_FLASH_DATA:
         if (!is_in_flash_mode())
@@ -199,15 +200,15 @@ static void execute_command()
         flash_method(command->data_buf + 16, command->data_len - 16);
         break;
     case ESP_FLASH_END:
-    case ESP_FLASH_DEFLATED_END:
         status = handle_flash_end();
         break;
     case ESP_READ_REG:
         status = verify_data_len(command, 4);
         break;
-    case ESP_FLASH_ENCRYPT_DATA:
+    case ESP_FLASH_DEFLATED_END:
     case ESP_FLASH_DEFLATED_BEGIN:
     case ESP_FLASH_DEFLATED_DATA:
+    case ESP_FLASH_ENCRYPT_DATA:
     case ESP_MEM_BEGIN:
     case ESP_MEM_DATA:
     case ESP_MEM_END:
