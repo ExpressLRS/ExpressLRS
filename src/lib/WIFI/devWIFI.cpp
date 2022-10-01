@@ -1032,6 +1032,15 @@ static int event()
       return DURATION_IMMEDIATELY;
     }
   }
+  else if (wifiStarted)
+  {
+    wifiStarted = false;
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    #if defined(PLATFORM_ESP8266)
+    WiFi.forceSleepBegin();
+    #endif
+  }
   return DURATION_IGNORE;
 }
 
