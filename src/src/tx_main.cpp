@@ -643,8 +643,9 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
   if (LQCalc.currentIsSet())
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
 
+  bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
-  return ProcessTLMpacket(status);
+  return packetSuccessful;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
