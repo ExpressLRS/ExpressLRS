@@ -59,19 +59,19 @@ function updatePwmSettings(arPwm) {
     const mode = (item >> 15) & 15; // 4 bits
     const pluseWidthMode = (item >> 19) & 7;  // 3 bits 
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
-        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz','10KHz', 'On/Off']);
+        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHz', 'On/Off']);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
           'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
           'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
     const pluseModeSelect = enumSelectGenerate(`pwm_${index}_pluse_width_mode`, pluseWidthMode,
-          ['normal','half','duty']);
+          ['normal','narrow','duty-cycle']);
     htmlFields.push(`<tr><th class="mui--text-center">${index+1}</th>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
-            <td>${pluseModeSelect}</td> 
+            <td>${pluseModeSelect}</td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
   });
   htmlFields.push('</table></div><input type="submit" class="mui-btn mui-btn--primary" value="Set PWM Output">');

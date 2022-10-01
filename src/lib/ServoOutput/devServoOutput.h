@@ -20,7 +20,7 @@ enum eServoOutputMode {
 
 enum eServerPulseWidthMode{
     normal,
-    half,
+    narrow,
     duty
 };
 

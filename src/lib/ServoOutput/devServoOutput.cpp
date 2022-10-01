@@ -72,12 +72,12 @@ static int servosUpdate(unsigned long now)
                 us = 3000U - us;
             if ((eServoOutputMode)chConfig->val.mode == somOnOff)
                 servoMgr->writeDigital(ch, us > 1500U);
-            else{
-                if((eServerPulseWidthMode) chConfig->val.pulseWidthMode == duty){
+            else
+            {
+                if ((eServerPulseWidthMode) chConfig->val.pulseWidthMode == duty)
                     servoMgr->writeDuty(ch, us-1000);
-                }else{
+                else
                     servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
-                }
             }
                 
         } /* for each servo */

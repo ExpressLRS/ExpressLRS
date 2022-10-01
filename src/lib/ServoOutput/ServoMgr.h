@@ -3,12 +3,12 @@
 
 #include <Arduino.h>
 #if defined(PLATFORM_ESP32)
-struct timerConfig{
+struct timerConfig {
     uint32_t freq;
     uint8_t ch1;
     uint8_t ch2;
 
-    timerConfig():freq(0),ch1(255),ch2(255){};
+    timerConfig() : freq(0), ch1(255), ch2(255) {};
 };
 
 #endif
@@ -44,13 +44,12 @@ private:
 #if defined(PLATFORM_ESP32)
     timerConfig _timerConfigs[8];
     uint8_t _chnMap[16];
-    uint8_t allocateLedcChn(uint8_t ch, uint16_t intervalUs,uint8_t pin);
+    uint8_t allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin);
 #endif
     const uint8_t * const _pins;
     const uint8_t _outputCnt;
     uint16_t *_refreshInterval;
     uint32_t _activePwmChannels;
-
     uint8_t *_resolution_bits;
 };
 
