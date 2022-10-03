@@ -35,6 +35,7 @@
 #include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
