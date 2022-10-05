@@ -71,7 +71,7 @@ void SX1280Hal::init()
 #ifdef PLATFORM_ESP32
     SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
-    SPI.setFrequency(10000000);
+    SPI.setFrequency(17500000);
     SPI.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN) spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
     spiEnableSSPins(SPI.bus(), SX12XX_Radio_All);
@@ -81,7 +81,7 @@ void SX1280Hal::init()
     SPI.setHwCs(true);
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
-    SPI.setFrequency(10000000);
+    SPI.setFrequency(17500000);
 #elif defined(PLATFORM_STM32)
     DBGLN("Config SPI");
     SPI.setMOSI(GPIO_PIN_MOSI);
