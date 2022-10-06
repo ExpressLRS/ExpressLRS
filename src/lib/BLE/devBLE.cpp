@@ -73,9 +73,9 @@ void BluetoothJoystickBegin()
     // construct the BLE immediately to prevent reentry from events/timeout
     bleGamepad = new ELRSGamepad();
 
-    hwTimer::updateInterval(5000);
-    CRSF::setSyncParams(5000); // 200hz
-    CRSF::disableOpentxSync();
+    hwTimer::updateInterval(10000);
+    CRSF::setSyncParams(10000); // 100hz
+    // CRSF::disableOpentxSync();
     POWERMGNT::setPower(MinPower);
     Radio.End();
     CRSF::RCdataCallback = BluetoothJoystickUpdateValues;
