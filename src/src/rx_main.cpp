@@ -1211,7 +1211,7 @@ static void setupRadio()
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    LBTEnabled = (MaxPower > PWR_10mW);
+    LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
 
     Radio.RXdoneCallback = &RXdoneISR;
@@ -1378,6 +1378,9 @@ static void CheckConfigChangePending()
         LostConnection(false);
         config.Commit();
         devicesTriggerEvent();
+#if defined(Regulatory_Domain_EU_CE_2400)
+        LBTEnabled = (config.GetPower() > PWR_10mW);
+#endif
         Radio.RXnb();
     }
 }
