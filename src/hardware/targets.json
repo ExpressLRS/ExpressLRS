@@ -555,7 +555,7 @@
                 "product_name": "Generic ESP32 2.4Ghz Diversity and VTx RX",
                 "lua_name": "Div+VTx 2.4RX",
                 "layout_file": "Generic 2400 Diversity and VTx.json",
-                "upload_methods": ["uart", "wifi", "betaflight"]
+                "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
@@ -563,7 +563,7 @@
                 "product_name": "DIY ESP32 E28 10ch PWM RX",
                 "lua_name": "DIY ESP32 E28 10ch PWM RX",
                 "layout_file": "DIY ESP32 E28 10ch RX.json",
-                "upload_methods": ["uart", "wifi", "betaflight"]
+                "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             }
