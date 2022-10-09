@@ -404,14 +404,6 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
             }
-        },
-        "rx32_2400": {
-            "diy_esp32_e28_pwm_rx": {
-                "product_name": "DIY ESP32 E28 10ch PWM RX",
-                "lua_name": "DIY ESP32 E28 10ch PWM RX",
-                "layout_file": "DIY ESP32 E28 10ch RX.json",
-                "upload_methods": ["uart", "wifi", "betaflight"]
-            }
         }
     },
     "generic": {
