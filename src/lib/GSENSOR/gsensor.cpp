@@ -41,17 +41,18 @@ ICACHE_RAM_ATTR void handleGsensorInterrupt()
     interrupt = true;
 }
 
-void Gsensor::init()
+bool Gsensor::init()
 {
-    uint8_t id = -1;
+    int16_t id = -1;
     if (OPT_HAS_GSENSOR_STK8xxx)
         id = stk8xxx.STK8xxx_Initialization();
     else
-        return;
+        return false;
 
     if(id == -1)
     {
         ERRLN("Gsensor failed!");
+        return false;
     }
     else
     {
@@ -71,6 +72,7 @@ void Gsensor::init()
 
     system_state = GSENSOR_SYSTEM_STATE_MOVING;
     is_flipped = false;
+    return true;
 }
 
 float get_data_average(float *data, int length)

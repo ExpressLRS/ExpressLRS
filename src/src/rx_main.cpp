@@ -121,7 +121,7 @@ MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
 uint8_t scanIndex = RATE_DEFAULT;
 uint8_t ExpressLRS_nextAirRateIndex;
-uint8_t SwitchModePending;
+int8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
@@ -184,6 +184,7 @@ void reset_into_bootloader(void);
 void EnterBindingMode();
 void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
+extern void setWifiUpdateMode();
 
 static uint8_t minLqForChaos()
 {
@@ -431,19 +432,19 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 
 void ICACHE_RAM_ATTR updatePhaseLock()
 {
-    if (connectionState != disconnected)
+    if (connectionState != disconnected && PFDloop.hasResult())
     {
-        PFDloop.calcResult();
-        PFDloop.reset();
-
-        int32_t RawOffset = PFDloop.getResult();
+        int32_t RawOffset = PFDloop.calcResult();
         int32_t Offset = LPF_Offset.update(RawOffset);
         int32_t OffsetDx = LPF_OffsetDx.update(RawOffset - PfdPrevRawOffset);
         PfdPrevRawOffset = RawOffset;
 
-        if (RXtimerState == tim_locked && LQCalc.currentIsSet())
+        if (RXtimerState == tim_locked)
         {
-            if (OtaNonce % 8 == 0) //limit rate of freq offset adjustment slightly
+            // limit rate of freq offset adjustment, use slot 1
+            // because telemetry can fall on slot 1 and will
+            // never get here
+            if (OtaNonce % 8 == 1)
             {
                 if (Offset > 0)
                 {
@@ -468,6 +469,8 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
+
+    PFDloop.reset();
 }
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
@@ -770,6 +773,38 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     }
 }
 
+static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode)
+{
+    if (OtaSwitchModeCurrent == newSwitchMode)
+    {
+        // Cancel any switch if pending
+        SwitchModePending = 0;
+        return;
+    }
+
+    // One is added to the mode because SwitchModePending==0 means no switch pending
+    // and that's also a valid switch mode. The 1 is removed when this is handled.
+    // A negative SwitchModePending means not to switch yet
+    int8_t newSwitchModePending = -(int8_t)newSwitchMode - 1;
+
+    // Switch mode can be changed while disconnected
+    // OR there are two sync packets with the same new switch mode,
+    // as a "confirm". No RC packets are processed until
+    if (connectionState == disconnected ||
+        SwitchModePending == newSwitchModePending)
+    {
+        // Add one to the mode because SwitchModePending==0 means no switch pending
+        // and that's also a valid switch mode. The 1 is removed when this is handled
+        SwitchModePending = newSwitchMode + 1;
+    }
+    else
+    {
+        // Save the negative version of the new switch mode to compare
+        // against on the next SYNC packet, but do not switch yet
+        SwitchModePending = newSwitchModePending;
+    }
+}
+
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
@@ -789,13 +824,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
-    // Switch mode can only change when disconnected, and happens on the main thread
-    if (connectionState == disconnected)
-    {
-        // Add one to the mode because SwitchModePending==0 means no switch pending
-        // and that's also a valid switch mode. The 1 is removed when this is handled
-        SwitchModePending = otaSync->switchEncMode + 1;
-    }
+    updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
@@ -933,7 +962,7 @@ void MspReceiveComplete()
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
         deferExecution(500, []() {
-            connectionState = wifiUpdate;
+            setWifiUpdateMode();
         });
 #endif
     }
@@ -1214,7 +1243,7 @@ static void cycleRfMode(unsigned long now)
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
-        INFOLN("%u", ExpressLRS_currAirRate_Modparams->interval);
+        DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -1323,7 +1352,8 @@ static void debugRcvrLinkstats()
 
 static void updateSwitchMode()
 {
-    if (!SwitchModePending)
+    // Negative value means waiting for confirm of the new switch mode while connected
+    if (SwitchModePending <= 0)
         return;
 
     OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -1420,7 +1450,6 @@ void loop()
 {
     unsigned long now = millis();
 
-    HandleUARTin();
     if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();

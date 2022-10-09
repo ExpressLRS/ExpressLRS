@@ -6,8 +6,9 @@
     "radio_miso": 12,
     "radio_mosi": 13,
     "radio_nss": 15,
-    "radio_rst": 2,
+    "radio_rst": 16,
     "radio_sck": 14,
+    "radio_dcdc": true,
     "power_rxen": 9,
     "power_txen": 10,
     "power_min": 0,
@@ -17,5 +18,6 @@
     "power_control": 0,
     "power_values": [-10,-6,-3,1],
     "button": 0,
-    "led": 16
+    "led_rgb": 2,
+    "led_rgb_isgrb": 1
 }

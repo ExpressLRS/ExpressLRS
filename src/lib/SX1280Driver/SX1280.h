@@ -14,7 +14,7 @@ public:
 
 
     ///////////Radio Variables////////
-    uint16_t timeout = 0xFFFF;
+    uint16_t timeout;
 
     ///////////////////////////////////
 
@@ -48,11 +48,17 @@ public:
     void GetLastPacketStats();
 
 private:
-    SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+    // constant used for no power change pending
+    // must not be a valid power register value
+    static const uint8_t PWRPENDING_NONE = 0xff;
+
+    SX1280_RadioOperatingModes_t currOpmode;
     uint8_t packet_mode;
     bool modeSupportsFei;
     SX1280_Radio_Number_t processingPacketRadio;
-    SX1280_Radio_Number_t lastSuccessfulPacketRadio = SX1280_Radio_1;
+    SX1280_Radio_Number_t lastSuccessfulPacketRadio;
+    uint8_t pwrCurrent;
+    uint8_t pwrPending;
 
     void SetMode(SX1280_RadioOperatingModes_t OPmode, SX1280_Radio_Number_t radioNumber);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
@@ -80,4 +86,5 @@ private:
     static void IsrCallback(SX1280_Radio_Number_t radioNumber);
     bool RXnbISR(uint16_t irqStatus, SX1280_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
+    void CommitOutputPower();
 };

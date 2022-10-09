@@ -355,8 +355,8 @@ function setupNetwork(event) {
   }
 }
 
-_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred reseting model settings', '/reset?model', null));
-_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred reseting runtime options', '/reset?options', null));
+_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred resetting model settings', '/reset?model', null));
+_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred resetting runtime options', '/reset?options', null));
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
@@ -379,8 +379,13 @@ function submitOptions(e) {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/options.json');
   xhr.setRequestHeader('Content-Type', 'application/json');
-  const formData = new FormData(_('upload_options'));
-  xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v) {
+  // Convert the DOM element into a JSON object containing the form elements
+  const formElem = _('upload_options');
+  const formObject = Object.fromEntries(new FormData(formElem));
+  // Add in all the unchecked checkboxes which will be absent from a FormData object
+  formElem.querySelectorAll('input[type=checkbox]:not(:checked)').forEach((k) => formObject[k.name] = false);
+  // Serialize and send the formObject
+  xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
     if (_(k) && _(k).type == 'checkbox') {
       return v == 'on' ? true : false;

@@ -85,6 +85,14 @@ static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
 
+void setWifiUpdateMode()
+{
+  // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
+  // Need to change this before the mode change event so the LED is updated
+  InBindingMode = false;
+  connectionState = wifiUpdate;
+}
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -469,6 +477,11 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+static void corsPreflightResponse(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse(204, "text/plain");
+  request->send(response);
+}
+
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   if (target_seen) {
     String msg;
@@ -501,7 +514,8 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     if (target_found.length() != 0) {
       message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
     }
-    message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
+    message += "<br/>It looks like you are flashing firmware with a different name to the current  firmware.  This sometimes happens because the hardware was flashed from the factory with an early version that has a different name. Or it may have even changed between major releases.";
+    message += "<br/><br/>Please double check you are uploading the correct target, then proceed with 'Flash Anyway'.\"}";
     request->send(200, "application/json", message);
   }
 }
@@ -643,7 +657,8 @@ static void startWiFi(unsigned long now)
 
     // Set transmit power to minimum
     POWERMGNT::setPower(MinPower);
-    connectionState = wifiUpdate;
+
+    setWifiUpdateMode();
 
     DBGLN("Stopping Radio");
     Radio.End();
@@ -717,6 +732,8 @@ static void startMDNS()
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt(service, "device", (const char *)device_name);
+    MDNS.addServiceTxt(service, "product", (const char *)product_name);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", options.c_str());
     MDNS.addServiceTxt(service, "type", "rx");
@@ -735,6 +752,7 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
+    MDNS.addServiceTxt("http", "tcp", "product", (const char *)product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
@@ -774,7 +792,14 @@ static void startServices()
   server.on("/fwlink", WebUpdateHandleRoot);
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
+  server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
+  server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
+
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
@@ -942,7 +967,7 @@ static int timeout()
   // start webupdate, there might be wrong configuration flashed.
   if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
     DBGLN("No CRSF ever detected, starting WiFi");
-    connectionState = wifiUpdate;
+    setWifiUpdateMode();
     return DURATION_IMMEDIATELY;
   }
   #elif defined(TARGET_RX)
@@ -953,10 +978,7 @@ static int timeout()
     // regardless of if .wifi_auto_on_interval is set to less
     if (!InBindingMode || firmwareOptions.wifi_auto_on_interval >= 60000 || pastAutoInterval)
     {
-      // No need to ExitBindingMode(), the radio is about to be stopped. Need
-      // to change this before the mode change event so the LED is updated
-      InBindingMode = false;
-      connectionState = wifiUpdate;
+      setWifiUpdateMode();
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;

@@ -525,17 +525,16 @@ TxConfig::SetDefaults(bool commit)
 
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
+    m_modified = ALL_CHANGED;
 
-    if (commit)
-    {
-        m_modified = ALL_CHANGED;
-    }
-
-    expresslrs_mod_settings_s *const modParams = get_elrs_airRateConfig(RATE_DEFAULT);
     for (unsigned i=0; i<64; i++)
     {
         SetModelId(i);
-        SetRate(modParams->index);
+        #if defined(RADIO_SX127X)
+            SetRate(enumRatetoIndex(RATE_LORA_200HZ));
+        #elif defined(RADIO_SX128X)
+            SetRate(enumRatetoIndex(RATE_LORA_250HZ));
+        #endif
         SetPower(POWERMGNT::getDefaultPower());
 #if defined(PLATFORM_ESP32)
         // ESP32 nvs needs to commit every model
@@ -556,6 +555,7 @@ TxConfig::SetDefaults(bool commit)
 #endif
 
     SetModelId(0);
+    m_modified = 0;
 }
 
 /**

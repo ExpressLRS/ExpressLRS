@@ -465,6 +465,10 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     crsf.JustSentRFpacket();
   }
 
+  // Do not transmit or advance FHSS/Nonce until in disconnected/connected state
+  if (connectionState == awaitingModelId)
+    return;
+
   // Tx Antenna Diversity
   if ((OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == 0 || // Swicth with new packet data
       OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) && // Swicth in the middle of DVDA sends
@@ -538,8 +542,12 @@ static void UARTconnected()
   SetRFLinkRate(config.GetRate());
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
-    connectionState = disconnected; // set here because SetRFLinkRate may have early exited and not set the state
+    // When CRSF first connects, always go into a brief delay before
+    // starting to transmit, to make sure a ModelID update isn't coming
+    // right behind it
+    connectionState = awaitingModelId;
   }
+  // But start the timer to get OpenTX sync going and a ModelID update sent
   hwTimer.resume();
 }
 
@@ -557,15 +565,20 @@ static void ChangeRadioParams()
 #endif
 }
 
-void ICACHE_RAM_ATTR ModelUpdateReq()
+void ModelUpdateReq()
 {
-  // There's a near 100% chance we started up transmitting at Model 0's
-  // rate before we got the set modelid command from the handset, so do the
-  // normal way of switching rates with syncspam first (but only if changing)
+  // Force synspam with the current rate parameters in case already have a connection established
   if (config.SetModelId(crsf.getModelID()))
   {
     syncSpamCounter = syncSpamAmount;
     ModelUpdatePending = true;
+  }
+
+  // Jump from awaitingModelId to transmitting to break the startup delay now
+  // that the ModelID has been confirmed by the handset
+  if (connectionState == awaitingModelId)
+  {
+    connectionState = disconnected;
   }
 }
 
@@ -634,18 +647,21 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-  HandleFHSS();
-  HandlePrepareForTLM();
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if (TelemetryRcvPhase != ttrpPreReceiveGap)
+  if (connectionState != awaitingModelId)
   {
-    // Start RX for Listen Before Talk early because it takes about 100us
-    // from RX enable to valid instant RSSI values are returned.
-    // If rx was already started by TLM prepare above, this call will let RX
-    // continue as normal.
-    BeginClearChannelAssessment();
-  }
+    HandleFHSS();
+    HandlePrepareForTLM();
+#if defined(Regulatory_Domain_EU_CE_2400)
+    if (TelemetryRcvPhase != ttrpPreReceiveGap)
+    {
+      // Start RX for Listen Before Talk early because it takes about 100us
+      // from RX enable to valid instant RSSI values are returned.
+      // If rx was already started by TLM prepare above, this call will let RX
+      // continue as normal.
+      BeginClearChannelAssessment();
+    }
 #endif // non-CE
+  }
   busyTransmitting = false;
 }
 
@@ -653,8 +669,10 @@ static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
-  // +2 to account for any rounding down and partial millis()
-  const uint32_t msConnectionLostTimeout = (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT) + 2;
+  // Must be at least 512ms and +2 to account for any rounding down and partial millis()
+  const uint32_t msConnectionLostTimeout = std::max((uint32_t)512U,
+    (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
+    ) + 2U;
   // Capture the last before now so it will always be <= now
   const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
   const uint32_t now = millis();
@@ -667,7 +685,9 @@ static void UpdateConnectDisconnectStatus()
       DBGLN("got downlink conn");
     }
   }
-  else
+  // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
+  else if (connectionState == connected ||
+    (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
     connectionHasModelMatch = true;

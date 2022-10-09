@@ -49,13 +49,15 @@ static void cyclePower()
 #include <FS.h>
 #endif
 
+extern void setWifiUpdateMode();
+
 static void buttonRxLong()
 {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     // ESP/ESP32 goes to wifi mode in 5x longpress
     if (button.getLongCount() > 4 && connectionState != wifiUpdate)
     {
-        connectionState = wifiUpdate;
+        setWifiUpdateMode();
     }
 #endif
 
