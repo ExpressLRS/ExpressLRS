@@ -324,6 +324,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   #else
   else json["config"]["uidtype"] = "Not set (using MAC address)";
   #endif
+  json["config"]["has-highpower"] = (MaxPower != HighPower);
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
