@@ -56,7 +56,7 @@ static struct luaItem_selection luaDynamicPower = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_FAN_EN)
+#if defined(GPIO_PIN_FAN_EN) || defined(GPIO_PIN_FAN_PWM)
 static struct luaItem_selection luaFanThreshold = {
     {"Fan Thresh", CRSF_TEXT_SELECTION},
     0, // value
@@ -559,7 +559,7 @@ static void registerLuaParameters()
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
     }, luaPowerFolder.common.id);
   }
-  if (GPIO_PIN_FAN_EN != UNDEF_PIN) {
+  if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN) {
     registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
       config.SetPowerFanThreshold(arg);
     }, luaPowerFolder.common.id);
@@ -657,7 +657,7 @@ static int event()
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
-  if (GPIO_PIN_FAN_EN != UNDEF_PIN)
+  if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
   }

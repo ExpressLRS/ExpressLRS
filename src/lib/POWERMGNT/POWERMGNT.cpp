@@ -223,10 +223,6 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
-    if (GPIO_PIN_FAN_EN != UNDEF_PIN)
-    {
-        pinMode(GPIO_PIN_FAN_EN, OUTPUT);
-    }
     LoadCalibration();
     setDefaultPower();
 }
