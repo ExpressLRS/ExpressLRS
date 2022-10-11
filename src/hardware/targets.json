@@ -535,7 +535,7 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TR"
             },
-            "diversity": {
+            "true_diversity": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
                 "layout_file": "Generic 2400 True Diversity PA.json",
