@@ -143,6 +143,12 @@
 #ifndef GPIO_PIN_FAN_EN
 #define GPIO_PIN_FAN_EN UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_FAN_PWM
+#define GPIO_PIN_FAN_PWM UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_FAN_TACHO
+#define GPIO_PIN_FAN_TACHO UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_OLED_MOSI
 #define GPIO_PIN_OLED_MOSI UNDEF_PIN
 #endif
