@@ -271,7 +271,11 @@ td img.icon-pwm {
 					<tr><td></td><td>SPI MOSI pin<img class="icon-output"/></td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td><td>MOSI pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
 					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_25mW' name='vtx_amp_vpd_25mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 25mW</td></tr>
 					<tr><td></td><td>100mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_100mW' name='vtx_amp_vpd_100mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 100mW</td></tr>
-@@end
+
+					<tr><td colspan='2'><b>I2C</td></tr>
+					<tr><td></td><td>SCL pin<img class="icon-output"/></td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td><td>I2C clock pin used to communicate with I2C devices</td></tr>
+					<tr><td></td><td>SDA pin<img class="icon-input"/><img class="icon-output"/></td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td><td>I2C data pin used to communicate with I2C devices</td></tr>
+	@@end
 				</table>
 				<br>
 				<input type='button' value='Save Target Configuration' class='mui-btn mui-btn--primary' onclick="submitHardwareSettings()"/>
