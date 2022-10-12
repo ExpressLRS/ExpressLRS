@@ -15,7 +15,10 @@ static uint32_t rxStartTime;
 bool LBTEnabled = false;
 static bool LBTStarted = false;
 
-uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF)
+static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
+  SX1280_RadioLoRaSpreadingFactors_t SF,
+  uint8_t radio_type
+)
 {
   // The necessary wait time from RX start to valid instant RSSI reading
   // changes with the spreading factor setting.
@@ -34,17 +37,30 @@ uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSprea
   // SF7 ~218us (60us + SF7 symbol time)
   // SF9 ~218us (Odd one out, measured to same as SF7 wait time)
 
-  switch(SF)
-    {
-      case SX1280_LORA_SF5: return 100;
-      case SX1280_LORA_SF6: return 141;
-      case SX1280_LORA_SF7: return 218;
-      case SX1280_LORA_SF9: return 218;
-      default: return 218; // Values above 100mW are not relevant, default to 100mW threshold
-    }
+  if (radio_type == RADIO_TYPE_SX128x_LORA)
+  {
+    switch(SF)
+      {
+        case SX1280_LORA_SF5: return 100;
+        case SX1280_LORA_SF6: return 141;
+        case SX1280_LORA_SF7: return 218;
+        case SX1280_LORA_SF8: return 218;
+        default: return 218;
+      }
+  }
+  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  {
+    // case SX1280_FLRC_BT_1: 
+    return 60 + 20; // switching time + 20us settling time (seems fine when testing)
+  }
+  else
+  {
+    ERRLN("LBT not support on this radio type");
+    return 0;
+  }
 }
 
-int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
+static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t radio_type)
 {
   // Calculated from EN 300 328, adjusted for 800kHz BW for sx1280
   // TL = -70 dBm/MHz + 10*log10(0.8MHz) + 10 × log10 (100 mW / Pout) (Pout in mW e.i.r.p.)
@@ -53,14 +69,34 @@ int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower)
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
 
-  switch(txPower)
+  if (radio_type == RADIO_TYPE_SX128x_LORA)
   {
-    case PWR_10mW: return -61 + LBT_RSSI_THRESHOLD_OFFSET_DB;
-    case PWR_25mW: return -65 + LBT_RSSI_THRESHOLD_OFFSET_DB;
-    case PWR_50mW: return -68 + LBT_RSSI_THRESHOLD_OFFSET_DB;
-    case PWR_100mW: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
-    // Values above 100mW are not relevant, default to 100mW threshold
-    default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+    switch(txPower)
+    {
+      case PWR_10mW: return -61 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_25mW: return -65 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_50mW: return -68 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_100mW: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      // Values above 100mW are not relevant, default to 100mW threshold
+      default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+    }
+  }
+  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  {
+    switch(txPower)
+    {
+      case PWR_10mW: return -63 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_25mW: return -67 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_50mW: return -70 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_100mW: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      // Values above 100mW are not relevant, default to 100mW threshold
+      default: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+    }
+  }
+  else
+  {
+    ERRLN("LBT not support on this radio type");
+    return 0;
   }
 }
 
@@ -103,7 +139,8 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  uint32_t validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf);
+  uint32_t validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf,
+      ExpressLRS_currAirRate_Modparams->radio_type);
   uint32_t elapsed = micros() - rxStartTime;
   if(elapsed < validRSSIdelayUs)
   {
@@ -112,7 +149,8 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
 
   int8_t rssiInst = Radio.GetRssiInst();
   Radio.SetTxIdleMode();
-  bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower());
+  bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(),
+        ExpressLRS_currAirRate_Modparams->radio_type);
   
   // Useful to debug if and how long the rssi wait is, and rssi threshold level
   // DBGLN("wait: %d, rssi: %d", delayRemaining, rssiInst);
