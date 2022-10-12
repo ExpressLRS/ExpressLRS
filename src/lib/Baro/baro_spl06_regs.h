@@ -43,4 +43,4 @@
 #define SPL06_PRESSURE_RESULT_BIT_SHIFT         (1<<2)  // necessary for pressure oversampling > 8
 #define SPL06_TEMPERATURE_RESULT_BIT_SHIFT      (1<<3)  // necessary for temperature oversampling > 8
 
-#define SPL06_MEASUREMENT_TIME(oversampling)   ((2 + lrintf(oversampling * 1.6)) + 1) // ms
+#define SPL06_MEASUREMENT_TIME(oversampling)   ((2 + (unsigned)(oversampling * 1.6)) + 1) // ms
