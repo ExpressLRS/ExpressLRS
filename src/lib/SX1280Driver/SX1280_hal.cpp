@@ -65,7 +65,7 @@ void SX1280Hal::init()
     {
         pinMode(GPIO_PIN_NSS_2, OUTPUT);
     }
-    setNss(SX1280_Radio_All, HIGH);
+    setNss(SX12XX_Radio_All, HIGH);
 
     if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     {
@@ -133,8 +133,8 @@ void SX1280Hal::init()
 
 void ICACHE_RAM_ATTR SX1280Hal::setNss(uint8_t radioNumber, bool state)
 {
-    if (radioNumber & SX1280_Radio_1) digitalWrite(GPIO_PIN_NSS, state);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX1280_Radio_2) digitalWrite(GPIO_PIN_NSS_2, state);
+    if (radioNumber & SX12XX_Radio_1) digitalWrite(GPIO_PIN_NSS, state);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2) digitalWrite(GPIO_PIN_NSS_2, state);
 }
 
 void SX1280Hal::reset(void)
@@ -151,18 +151,18 @@ void SX1280Hal::reset(void)
     }
 
     BusyDelay(10000); // 10ms delay if GPIO_PIN_BUSY is undefined
-    WaitOnBusy(SX1280_Radio_All);
+    WaitOnBusy(SX12XX_Radio_All);
 
     //this->BusyState = SX1280_NOT_BUSY;
     DBGLN("SX1280 Ready!");
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val, SX1280_Radio_Number_t radioNumber, uint32_t busyDelay)
+void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
     WriteCommand(command, &val, 1, radioNumber, busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber, uint32_t busyDelay)
+void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1];
 
@@ -177,7 +177,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     BusyDelay(busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
     #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
@@ -204,7 +204,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
     setNss(radioNumber, HIGH);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
 
@@ -222,12 +222,12 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     BusyDelay(15);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value, SX12XX_Radio_Number_t radioNumber)
 {
     WriteRegister(address, &value, 1, radioNumber);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4];
 
@@ -245,14 +245,14 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     setNss(radioNumber, HIGH);
 }
 
-uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX1280_Radio_Number_t radioNumber)
+uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t data;
     ReadRegister(address, &data, 1, radioNumber);
     return data;
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t localbuf[size];
 
@@ -277,7 +277,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     BusyDelay(15);
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
     uint8_t localbuf[size];
@@ -300,7 +300,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     }
 }
 
-bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
 {
     if (GPIO_PIN_BUSY != UNDEF_PIN)
     {
@@ -309,15 +309,15 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
 
         while (true)
         {
-            if (radioNumber == SX1280_Radio_1)
+            if (radioNumber == SX12XX_Radio_1)
             {
                 if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
             }
-            else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX1280_Radio_2)
+            else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX12XX_Radio_2)
             {
                 if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
             }
-            else if (radioNumber == SX1280_Radio_All)
+            else if (radioNumber == SX12XX_Radio_All)
             {
                 if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
                 {
@@ -359,19 +359,19 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
         instance->IsrCallback_2();
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX1280_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX12XX_Radio_Number_t radioNumber)
 {
     if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
 
     if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
         digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN && radioNumber & SX1280_Radio_1)
+    if (GPIO_PIN_TX_ENABLE != UNDEF_PIN && radioNumber & SX12XX_Radio_1)
         digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
         
     if (GPIO_PIN_RX_ENABLE_2 != UNDEF_PIN)
         digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
-    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN && radioNumber & SX1280_Radio_2)
+    if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
         digitalWrite(GPIO_PIN_TX_ENABLE_2, HIGH);
 }
 
