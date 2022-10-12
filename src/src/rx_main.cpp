@@ -210,6 +210,11 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        antenna = (Radio.GetProcessingPacketRadio() == SX1280_Radio_1) ? 0 : 1;
+    }
+    
     int32_t rssiDBM = Radio.LastPacketRSSI;
     if (antenna == 0)
     {
