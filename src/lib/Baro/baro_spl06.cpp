@@ -1,5 +1,13 @@
 #include <Wire.h>
 
+/****
+ * Calculations used in this code taken from iNav's SPL006 (sic) implementation
+ * https://github.com/iNavFlight/inav/pull/5028
+ *
+ * Code reused under GPL License, see the iNav project for full license information
+ * https://github.com/iNavFlight/inav
+ ****/
+
 #include "baro_spl06.h"
 #include "baro_spl06_regs.h"
 
