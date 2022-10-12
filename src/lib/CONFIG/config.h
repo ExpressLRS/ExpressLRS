@@ -189,7 +189,7 @@ public:
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
+    const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
