@@ -138,7 +138,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
                         gotBootloader = True
                         break
 
-                    elif "_RX_" in line:
+                    elif "_RX" in line:
                         if line != target and line != accept and not ignore_incorrect_target:
                             if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (line, target)):
                                 ignore_incorrect_target = True
@@ -181,7 +181,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
             dbg = str(round((total_packets / filechunks) * 100)) + "%"
             if (error_count > 0):
                 dbg += ", err: " + str(error_count)
-            dbg_print(dbg + "\n")
+            dbg_print(dbg)
 
     def getc(size, timeout=3):
         return s.read(size) or None

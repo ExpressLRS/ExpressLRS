@@ -44,6 +44,7 @@ constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500ms off
 constexpr uint8_t LEDSEQ_WIFI_UPDATE[] = { 2, 3 };     // 20ms on, 30ms off
 constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 2x 100ms blink, 1s pause
 constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x 100ms blink, 1s pause
+constexpr uint8_t LEDSEQ_UPDATE[] = { 20, 5, 5, 5, 5, 40 };   // 200ms on, 2x 50ms off/on, 400ms off
 
 static uint8_t _pin = -1;
 static uint8_t _pin_inverted;
@@ -295,6 +296,11 @@ static int event()
         {
             // technically nocrossfire is {10,100} but {20,100} is close enough
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
+    case serialUpdate:
+        if (GPIO_PIN_LED_RED != UNDEF_PIN)
+        {
+            return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_UPDATE, sizeof(LEDSEQ_UPDATE));
         }
     default:
         return DURATION_NEVER;
