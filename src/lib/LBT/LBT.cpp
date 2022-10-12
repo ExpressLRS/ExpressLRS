@@ -100,7 +100,12 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
   }
 }
 
-void ICACHE_RAM_ATTR BeginClearChannelAssessment(void)
+void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
+{
+  rxStartTime = micros();
+}
+
+void ICACHE_RAM_ATTR BeginClearChannelAssessment()
 {
   if (!LBTEnabled)
   {
@@ -153,7 +158,7 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
         ExpressLRS_currAirRate_Modparams->radio_type);
   
   // Useful to debug if and how long the rssi wait is, and rssi threshold level
-  // DBGLN("wait: %d, rssi: %d", delayRemaining, rssiInst);
+  // DBGLN("wait: %d, rssi: %d, %s", validRSSIdelayUs - elapsed, rssiInst, channelClear ? "clear" : "in use");
 
   if(channelClear)
   {

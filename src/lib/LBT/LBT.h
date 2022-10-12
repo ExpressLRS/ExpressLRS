@@ -8,6 +8,7 @@
 extern LQCALC<100> LBTSuccessCalc;
 extern bool LBTEnabled;
 
+void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void);
 void ICACHE_RAM_ATTR BeginClearChannelAssessment(void);
 bool ICACHE_RAM_ATTR ChannelIsClear(void);
 #endif

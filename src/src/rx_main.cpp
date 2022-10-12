@@ -136,6 +136,7 @@ const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can cons
 
 ///////////////////////////////////////////////
 
+bool didFHSS = false;
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
@@ -300,6 +301,9 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
+#if defined(Regulatory_Domain_EU_CE_2400)
+    SetClearChannelAssessmentTime();
+#endif
 
     uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
@@ -600,24 +604,16 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    PFDloop.intEvent(micros()); // our internal osc just fired
+    if (!didFHSS) didFHSS = HandleFHSS();
+
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
         crsfRCFrameAvailable();
         servoNewChannelsAvaliable();
     }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    // Emulate that TX just happened, even if it didn't because channel is not clear
-    if(!LBTSuccessCalc.currentIsSet())
-    {
-        Radio.TXdoneCallback();
-    }
-#endif
-
-    PFDloop.intEvent(micros()); // our internal osc just fired
-
     updateDiversity();
-    bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
@@ -628,6 +624,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         Radio.SetPPMoffsetReg(FreqCorrection);
     #endif /* RADIO_SX127X */
     }
+    didFHSS = false;
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -941,12 +938,21 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
         return false; // Already received a packet, do not run ProcessRFPacket() again.
     }
 
-    return ProcessRFPacket(status);
+    if (ProcessRFPacket(status))
+    {
+        didFHSS = HandleFHSS();
+        return true;
+    }
+    return false;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    BeginClearChannelAssessment();
+#else
     Radio.RXnb();
+#endif
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
