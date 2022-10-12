@@ -62,7 +62,10 @@ SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 
 void SX1280Driver::End()
 {
-    SetMode(SX1280_MODE_SLEEP, SX12XX_Radio_All);
+    if (currOpmode != SX1280_MODE_SLEEP)
+    {
+        SetMode(SX1280_MODE_SLEEP, SX12XX_Radio_All);
+    }
     hal.end();
     RemoveCallbacks();
     currFreq = (uint32_t)((double)2400000000 / (double)FREQ_STEP);

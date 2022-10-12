@@ -165,7 +165,7 @@ typedef struct {
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                rateInitialIdx:4;   // FUTURE: Rate to start rateCycling at on boot
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
@@ -192,6 +192,7 @@ public:
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
+    uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -209,6 +210,7 @@ public:
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
+    void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
     void UpgradeEepromV4ToV5();

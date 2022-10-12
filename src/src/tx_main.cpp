@@ -802,7 +802,7 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_BINDING);
+  SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
   Radio.SetFrequencyReg(GetInitialFreq());
   // Start transmitting again
   hwTimer.resume();

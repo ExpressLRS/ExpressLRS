@@ -22,6 +22,8 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
+#include "devSerialUpdate.h"
+
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -41,28 +43,31 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
-#ifdef HAS_LED
-  {&LED_device, 1},
+  {&CRSF_device, 1},
+#if defined(PLATFORM_ESP32)
+  {&SerialUpdate_device, 1},
 #endif
-  {&LUA_device, 1},
+#ifdef HAS_LED
+  {&LED_device, 0},
+#endif
+  {&LUA_device, 0},
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 1},
+  {&VTxSPI_device, 0},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 1},
+  {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
-  {&ServoOut_device, 0},
+  {&ServoOut_device, 1},
 #endif
 };
 
@@ -125,7 +130,7 @@ LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
-uint8_t scanIndex = RATE_DEFAULT;
+static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
 int8_t SwitchModePending;
 
@@ -1222,8 +1227,11 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    SetRFLinkRate(RATE_DEFAULT);
-    RFmodeCycleMultiplier = 1;
+    scanIndex = config.GetRateInitialIdx();
+    SetRFLinkRate(scanIndex);
+    // Start slow on the selected rate to give it the best chance
+    // to connect before beginning rate cycling
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
 }
 
 static void updateTelemetryBurst()
@@ -1587,6 +1595,9 @@ void reset_into_bootloader(void)
 #elif defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
+#elif defined(PLATFORM_ESP32)
+    delay(100);
+    connectionState = serialUpdate;
 #endif
 }
 
@@ -1619,7 +1630,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_BINDING);
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
@@ -1654,11 +1665,8 @@ void ExitBindingMode()
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
-
-    LostConnection(false);
     LockRFmode = false;
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.RXnb();
+    LostConnection(false);
 
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
