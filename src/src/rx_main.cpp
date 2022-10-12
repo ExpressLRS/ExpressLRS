@@ -22,6 +22,7 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
+#include "devBaro.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -63,6 +64,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 0},
+#endif
+#ifdef HAS_BARO
+  {&Baro_device, 1}, // must come after AnalogVbat_device to slow updates
 #endif
 };
 
