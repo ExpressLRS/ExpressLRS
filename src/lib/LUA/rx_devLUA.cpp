@@ -1,31 +1,15 @@
 #ifdef TARGET_RX
 
-#include "common.h"
-#include "device.h"
-
-#include "CRSF.h"
-#include "POWERMGNT.h"
-#include "config.h"
-#include "logging.h"
-#include "lua.h"
-#include "OTA.h"
-#include "hwTimer.h"
-#include "FHSS.h"
+#include "rxtx_devLua.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
-static const char emptySpace[1] = {0};
 static char modelString[] = "000";
 
-#ifdef POWER_OUTPUT_VALUES
-static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
-#endif
-
-
-#ifdef POWER_OUTPUT_VALUES
+#if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
@@ -34,12 +18,19 @@ static struct luaItem_selection luaTlmPower = {
 };
 #endif
 
+static struct luaItem_selection luaRateInitIdx = {
+    {"Init Rate", CRSF_TEXT_SELECTION},
+    0, // value
+    STR_LUA_PACKETRATES,
+    STR_EMPTYSPACE
+};
+
 #if defined(GPIO_PIN_ANT_CTRL)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna B;Antenna A;Diversity",
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
@@ -67,51 +58,17 @@ static struct luaItem_string luaELRSversion = {
 static struct luaItem_command luaLoanModel = {
     {"Loan Model", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaReturnModel = {
     {"Return Model", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 //---------------------------- Model Loan Out -----------------------------
 
-
-extern RxConfig config;
-
-#ifdef POWER_OUTPUT_VALUES
-static void luadevGeneratePowerOpts()
-{
-  // This function modifies the strPowerLevels in place and must not
-  // be called more than once!
-  char *out = strPowerLevels;
-  PowerLevels_e pwr = PWR_10mW;
-  // Count the semicolons to move `out` to point to the MINth item
-  while (pwr < MinPower)
-  {
-    while (*out++ != ';') ;
-    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
-  }
-  // There is no min field, compensate by shifting the index when sending/receiving
-  // luaPower.min = (uint8_t)MinPower;
-  luaTlmPower.options = (const char *)out;
-
-  // Continue until after than MAXth item and drop a null in the orginal
-  // string on the semicolon (not after like the previous loop)
-  while (pwr <= MaxPower)
-  {
-    // If out still points to a semicolon from the last loop move past it
-    if (*out)
-      ++out;
-    while (*out && *out != ';')
-      ++out;
-    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
-  }
-  *out = '\0';
-}
-#endif
 
 static void registerLuaParameters()
 {
@@ -122,13 +79,18 @@ static void registerLuaParameters()
       config.SetAntennaMode(arg);
     });
   }
-#ifdef POWER_OUTPUT_VALUES
-  luadevGeneratePowerOpts();
+#if defined(POWER_OUTPUT_VALUES)
+  luadevGeneratePowerOpts(&luaTlmPower);
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetPower(arg);
-    POWERMGNT::setPower((PowerLevels_e)constrain(arg + MinPower, MinPower, MaxPower));
+    POWERMGNT::setPower((PowerLevels_e)(arg + MinPower));
+    // POWERMGNT will constrain the value to the proper level
+    config.SetPower(POWERMGNT::currPower());
   });
 #endif
+  registerLUAParameter(&luaRateInitIdx, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    uint8_t newRate = RATE_MAX - 1 - arg;
+    config.SetRateInitialIdx(newRate);
+  });
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -157,9 +119,10 @@ static int event()
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
   }
 
-#ifdef POWER_OUTPUT_VALUES
+#if defined(POWER_OUTPUT_VALUES)
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
 #endif
+  setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 
   if (config.GetModelId() == 255)
   {
