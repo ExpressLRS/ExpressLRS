@@ -45,6 +45,8 @@ void ServoMgr::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
         _refreshInterval[ch] = intervalUs;
 #if defined(PLATFORM_ESP32)
         const uint8_t pin = _pins[ch];
+        if (pin == PIN_DISCONNECTED)
+            return;
         ledcSetup(ch, 1000000U / intervalUs, 16);
         ledcAttachPin(pin, ch);
 #endif
@@ -62,6 +64,7 @@ void ServoMgr::stopPwm(uint8_t ch)
 #else
     stopWaveform8266(pin);
 #endif
+    digitalWrite(pin, LOW);
 }
 
 void ServoMgr::stopAllPwm()
@@ -69,8 +72,6 @@ void ServoMgr::stopAllPwm()
     for (uint8_t ch=0; ch<_outputCnt; ++ch)
     {
         stopPwm(ch);
-        const uint8_t pin = _pins[ch];
-        digitalWrite(pin, LOW);
     }
     _activePwmChannels = 0;
 }

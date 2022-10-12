@@ -92,7 +92,7 @@ static void initialize()
     for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if defined(DEBUG_LOG) && defined(PLATFORM_ESP8266)
+#if defined(DEBUG_LOG) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
         {
