@@ -328,7 +328,7 @@ void ICACHE_RAM_ATTR CRSF::JustSentRFpacket()
     else
     {
         // The number of packets in the sync window is how many will fit in 20ms.
-        // This quite quite coarse changes for 50Hz, but more fine grained changes at 1000Hz.
+        // This gives quite quite coarse changes for 50Hz, but more fine grained changes at 1000Hz.
         CRSF::OpenTXsyncWindow = std::min(CRSF::OpenTXsyncWindow + 1, (int32_t)CRSF::OpenTXsyncWindowSize);
         CRSF::OpenTXsyncOffset = ((CRSF::OpenTXsyncOffset * (CRSF::OpenTXsyncWindow-1)) + delta * 10) / CRSF::OpenTXsyncWindow;
     }
