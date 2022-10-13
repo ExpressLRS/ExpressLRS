@@ -605,7 +605,6 @@ static void ICACHE_RAM_ATTR updateDiversity()
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
-    if (!didFHSS) didFHSS = HandleFHSS();
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
@@ -613,6 +612,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         servoNewChannelsAvaliable();
     }
 
+    if (!didFHSS) didFHSS = HandleFHSS();
+    
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 

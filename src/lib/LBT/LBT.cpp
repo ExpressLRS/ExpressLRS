@@ -50,8 +50,7 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   }
   else if (radio_type == RADIO_TYPE_SX128x_FLRC)
   {
-    // case SX1280_FLRC_BT_1: 
-    return 60 + 20; // switching time + 20us settling time (seems fine when testing)
+    return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
   else
   {
