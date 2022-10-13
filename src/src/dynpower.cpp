@@ -73,7 +73,7 @@ void DynamicPower_Update(uint32_t now)
   if (!config.GetDynamicPower())
   {
     // if RSSI is dropped enough, inc power back to the configured power
-    if (newTlmAvail && (rssi <= -20))
+    if (newTlmAvail && (rssi <= -20) &&  POWERMGNT::currPower() < (PowerLevels_e)config.GetPower())
     {
       DynamicPower_SetToConfigPower();
     }

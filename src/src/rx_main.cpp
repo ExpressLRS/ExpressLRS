@@ -22,6 +22,14 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
+#include "devSerialUpdate.h"
+
+
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#elif defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#endif
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -35,28 +43,31 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
-#ifdef HAS_LED
-  {&LED_device, 1},
+  {&CRSF_device, 1},
+#if defined(PLATFORM_ESP32)
+  {&SerialUpdate_device, 1},
 #endif
-  {&LUA_device, 1},
+#ifdef HAS_LED
+  {&LED_device, 0},
+#endif
+  {&LUA_device, 0},
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 1},
+  {&VTxSPI_device, 0},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 1},
+  {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
-  {&ServoOut_device, 0},
+  {&ServoOut_device, 1},
 #endif
 };
 
@@ -119,9 +130,9 @@ LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
-uint8_t scanIndex = RATE_DEFAULT;
+static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
-uint8_t SwitchModePending;
+int8_t SwitchModePending;
 
 int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
@@ -204,6 +215,11 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
+    }
+    
     int32_t rssiDBM = Radio.LastPacketRSSI;
     if (antenna == 0)
     {
@@ -773,6 +789,38 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     }
 }
 
+static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode)
+{
+    if (OtaSwitchModeCurrent == newSwitchMode)
+    {
+        // Cancel any switch if pending
+        SwitchModePending = 0;
+        return;
+    }
+
+    // One is added to the mode because SwitchModePending==0 means no switch pending
+    // and that's also a valid switch mode. The 1 is removed when this is handled.
+    // A negative SwitchModePending means not to switch yet
+    int8_t newSwitchModePending = -(int8_t)newSwitchMode - 1;
+
+    // Switch mode can be changed while disconnected
+    // OR there are two sync packets with the same new switch mode,
+    // as a "confirm". No RC packets are processed until
+    if (connectionState == disconnected ||
+        SwitchModePending == newSwitchModePending)
+    {
+        // Add one to the mode because SwitchModePending==0 means no switch pending
+        // and that's also a valid switch mode. The 1 is removed when this is handled
+        SwitchModePending = newSwitchMode + 1;
+    }
+    else
+    {
+        // Save the negative version of the new switch mode to compare
+        // against on the next SYNC packet, but do not switch yet
+        SwitchModePending = newSwitchModePending;
+    }
+}
+
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
@@ -792,13 +840,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
-    // Switch mode can only change when disconnected, and happens on the main thread
-    if (connectionState == disconnected)
-    {
-        // Add one to the mode because SwitchModePending==0 means no switch pending
-        // and that's also a valid switch mode. The 1 is removed when this is handled
-        SwitchModePending = otaSync->switchEncMode + 1;
-    }
+    updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
@@ -904,6 +946,11 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+    if (LQCalc.currentIsSet() && connectionState == connected)
+    {
+        return false; // Already received a packet, do not run ProcessRFPacket() again.
+    }
+
     return ProcessRFPacket(status);
 }
 
@@ -1180,8 +1227,11 @@ static void setupRadio()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    SetRFLinkRate(RATE_DEFAULT);
-    RFmodeCycleMultiplier = 1;
+    scanIndex = config.GetRateInitialIdx();
+    SetRFLinkRate(scanIndex);
+    // Start slow on the selected rate to give it the best chance
+    // to connect before beginning rate cycling
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
 }
 
 static void updateTelemetryBurst()
@@ -1326,7 +1376,8 @@ static void debugRcvrLinkstats()
 
 static void updateSwitchMode()
 {
-    if (!SwitchModePending)
+    // Negative value means waiting for confirm of the new switch mode while connected
+    if (SwitchModePending <= 0)
         return;
 
     OtaUpdateSerializers((OtaSwitchMode_e)(SwitchModePending - 1), ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -1360,6 +1411,21 @@ RF_PRE_INIT()
     #endif
 }
 #endif
+
+void resetConfigAndReboot()
+{
+    config.SetDefaults(true);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#else
+    // Prevent WDT from rebooting too early if
+    // all this flash write is taking too long
+    yield();
+    // Remove options.json and hardware.json
+    SPIFFS.format();
+    ESP.restart();
+#endif
+}
 
 void setup()
 {
@@ -1415,6 +1481,11 @@ void setup()
             hwTimer.init();
         }
     }
+
+#if defined(HAS_BUTTON)
+    registerButtonFunction(ACTION_BIND, EnterBindingMode);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
 
     devicesStart();
 }
@@ -1524,6 +1595,9 @@ void reset_into_bootloader(void)
 #elif defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
+#elif defined(PLATFORM_ESP32)
+    delay(100);
+    connectionState = serialUpdate;
 #endif
 }
 
@@ -1556,7 +1630,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_BINDING);
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
@@ -1591,11 +1665,8 @@ void ExitBindingMode()
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
-
-    LostConnection(false);
     LockRFmode = false;
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.RXnb();
+    LostConnection(false);
 
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode

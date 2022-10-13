@@ -153,7 +153,7 @@
                 "prior_target_name": "DIY_900_TX_TTGO_V2_SX127x"
             },
             "e19": {
-                "product_name": "DIY ESP32 + E19 900MHz TX",
+                "product_name": "DIY ESP32 E19 900MHz TX",
                 "lua_name": "DIY900 E19",
                 "layout_file": "DIY 900 E19.json",
                 "upload_methods": ["uart", "wifi"],
@@ -162,7 +162,7 @@
                 "prior_target_name": "DIY_900_TX_ESP32_SX127x_E19"
             },
             "rfm95": {
-                "product_name": "DIY ESP32 + RFM95 900MHz TX",
+                "product_name": "DIY ESP32 RFM95 900MHz TX",
                 "lua_name": "DIY900 RFM95",
                 "layout_file": "DIY 900 RFM95.json",
                 "upload_methods": ["uart", "wifi"],
@@ -173,7 +173,7 @@
         },
         "rx_900": {
             "huzzah": {
-                "product_name": "DIY Huzzah + RFM95 900MHz TX",
+                "product_name": "DIY Huzzah RFM95 900MHz TX",
                 "lua_name": "ELRS RFM95 900RX",
                 "layout_file": "DIY Huzzah RFM95.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
@@ -184,7 +184,7 @@
         },
         "tx_2400": {
             "mini": {
-                "product_name": "DIY Mini ESP32 + SX1280 2.4GHz TX",
+                "product_name": "DIY Mini ESP32 SX1280 2.4GHz TX",
                 "lua_name": "DIY2400 Mini",
                 "layout_file": "DIY 2400 Mini.json",
                 "upload_methods": ["uart", "wifi"],
@@ -193,7 +193,7 @@
                 "prior_target_name": "DIY_2400_TX_ESP32_SX1280_Mini"
             },
             "e28": {
-                "product_name": "DIY ESP32 + E28 2.4GHz TX",
+                "product_name": "DIY ESP32 E28 2.4GHz TX",
                 "lua_name": "DIY2400 E28",
                 "layout_file": "DIY 2400 E28.json",
                 "features": ["fan"],
@@ -203,7 +203,7 @@
                 "prior_target_name": "DIY_2400_TX_ESP32_SX1280_E28"
             },
             "f27": {
-                "product_name": "DIY ESP32 + F27 2.4GHz TX",
+                "product_name": "DIY ESP32 F27 2.4GHz TX",
                 "lua_name": "DIY2400 F27",
                 "layout_file": "DIY 2400 F27.json",
                 "features": ["fan"],
@@ -243,6 +243,22 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
+            }
+        }
+    },
+    "foxeer": {
+        "name": "Foxeer",
+        "rx_2400": {
+            "pa-rgb": {
+                "product_name": "Foxeer 2.4Ghz RX",
+                "lua_name": "Foxeer 2400 RX",
+                "layout_file": "Generic 2400 PA RGB.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
             }
         }
     },
@@ -343,11 +359,58 @@
             }
         }
     },
+    "emax": {
+        "name": "EMAX",
+        "tx_900": {
+            "plain": {
+                "product_name": "EMAX OLED 900MHz TX",
+                "lua_name": "EMAX 900TX",
+                "layout_file": "EMAX 900 OLED.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX"
+            }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "EMAX 900MHz RX",
+                "lua_name": "EMAX 900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX"
+            }
+        },
+        "tx_2400": {
+            "plain": {
+                "product_name": "EMAX OLED 2.4GHz TX",
+                "lua_name": "EMAX 2400TX",
+                "layout_file": "EMAX 2400 OLED.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            }
+        },
+        "rx_2400": {
+            "pa": {
+                "product_name": "EMAX 2.4GHz PA RX",
+                "lua_name": "EMAX 2400RX",
+                "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "generic": {
         "name": "Generic targets used as a base",
         "rx_900": {
             "plain": {
-                "product_name": "Generic ESP8285 + SX127x 900MHz RX",
+                "product_name": "Generic ESP8285 SX127x 900MHz RX",
                 "lua_name": "ELRS 900RX",
                 "layout_file": "Generic 900.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
@@ -356,7 +419,7 @@
                 "prior_target_name": "DIY_900_RX_ESP8285_SX127x"
             },
             "pwmp": {
-                "product_name": "Generic ESP8285 + SX127x with PWM 900MHz RX",
+                "product_name": "Generic ESP8285 SX127x with PWM 900MHz RX",
                 "lua_name": "ELRS PWMP 900RX",
                 "layout_file": "Generic 900 PWMP.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
@@ -376,12 +439,12 @@
                 "prior_target_name": "DIY_2400_TX_DUPLETX"
             },
             "dupletxesp": {
-                "product_name": "Generic ESP8285 Full-duplex 2.4GHz TX",
+                "product_name": "Generic ESP8285 Full-duplex 2.4GHz RX as TX",
                 "lua_name": "DupleTX ESP",
                 "layout_file": "DIY 2400 DupleTX ESP.json",
                 "upload_methods": ["uart", "wifi"],
-                "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TX",
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_TX",
                 "prior_target_name": "DIY_2400_TX_DUPLETX_ESP"
             }
         },
@@ -407,7 +470,7 @@
                 "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
             },
             "pwm5": {
-                "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 5xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP5.json",
                 "upload_methods": ["uart", "wifi"],
@@ -416,7 +479,7 @@
                 "prior_target_name": "DIY_2400_RX_PWMP"
             },
             "pwm6": {
-                "product_name": "Generic ESP8285 + 6xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 6xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP6.json",
                 "upload_methods": ["uart", "wifi"],
@@ -425,7 +488,7 @@
                 "prior_target_name": "DIY_2400_RX_PWMPEX"
             },
             "pwm7": {
-                "product_name": "Generic ESP8285 + 7xPWM 2.4Ghz RX",
+                "product_name": "Generic ESP8285 7xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
                 "layout_file": "Generic 2400 PWMP7.json",
                 "upload_methods": ["uart", "wifi"],
@@ -433,17 +496,25 @@
                 "firmware": "Unified_ESP8285_2400_RX"
             },
             "pa": {
-                "product_name": "Generic ESP8285 + PA 2.4Ghz RX",
+                "product_name": "Generic ESP8285 PA 2.4Ghz RX",
                 "lua_name": "ELRS+PA 2400RX",
                 "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
             },
+            "pa-rgb": {
+                "product_name": "Generic ESP8285 RGB + PA 2.4Ghz RX",
+                "lua_name": "ELRS+RGB 2400RX",
+                "layout_file": "Generic 2400 PA RGB.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
             "diversity": {
-                "product_name": "Generic ESP8285 + Diversity PA 2.4Ghz RX",
+                "product_name": "Generic ESP8285 Diversity PA 2.4Ghz RX",
                 "lua_name": "ELRS+D 2400RX",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
@@ -465,17 +536,17 @@
                 "firmware": "Unified_ESP32_2400_TR"
             },
             "true_diversity": {
-                "product_name": "Generic ESP32 2.4Ghz Diversity RX",
+                "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
-                "layout_file": "Generic 2400 Diversity.json",
+                "layout_file": "Generic 2400 True Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
             "diversity_vtx": {
-                "product_name": "Generic ESP32 2.4Ghz Diversity and VTx RX",
+                "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
-                "layout_file": "Generic 2400 Diversity and VTx.json",
+                "layout_file": "Generic 2400 True Diversity PA and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
@@ -596,6 +667,14 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "HappyModel_EP_2400_RX"
+            },
+            "ep-dual": {
+                "product_name": "HappyModel EP Dual 2.4GHz RX",
+                "lua_name": "HM EP Dual 2400",
+                "layout_file": "Generic 2400 True Diversity PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
@@ -893,7 +972,7 @@
             "r24d": {
                 "product_name": "MATEK R24-D 2.4GHz RX",
                 "lua_name": "MATEK R24-D",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",

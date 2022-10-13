@@ -301,7 +301,8 @@ bool options_init()
     {
         firmwareOptions.hasUID = false;
     }
-    firmwareOptions.wifi_auto_on_interval = (doc["wifi-on-interval"] | 60) * 1000;
+    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
+    firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     #if defined(TARGET_UNIFIED_TX)

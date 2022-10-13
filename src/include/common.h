@@ -38,12 +38,14 @@ typedef enum : uint8_t
 typedef enum
 {
     connected,
-    tentative,
+    tentative,        // RX only
+    awaitingModelId,  // TX only
     disconnected,
     MODE_STATES,
     // States below here are special mode states
     noCrossfire,
     wifiUpdate,
+    serialUpdate,
     bleJoystick,
     // Failure states go below here to display immediately
     FAILURE_STATES,
@@ -137,18 +139,33 @@ typedef struct expresslrs_mod_settings_s
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
+// The config mode only allows a maximum of 2 actions per button
+#define MAX_BUTTON_ACTIONS  2
+
+// Limited to 16 possible ACTIONs by config storage currently
+typedef enum : uint8_t {
+    ACTION_NONE,
+    ACTION_INCREASE_POWER,
+    ACTION_GOTO_VTX_BAND,
+    ACTION_GOTO_VTX_CHANNEL,
+    ACTION_SEND_VTX,
+    ACTION_START_WIFI,
+    ACTION_BIND,
+    ACTION_RESET_REBOOT,
+
+    ACTION_LAST
+} action_e;
+
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 5
-#define RATE_DEFAULT 0
-#define RATE_BINDING 3 // 50Hz bind mode
+#define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_DEFAULT 0  // Default to F1000
-#define RATE_BINDING 9  // 50Hz bind mode
+#define RATE_BINDING RATE_LORA_50HZ
 
 extern SX1280Driver Radio;
 #endif
