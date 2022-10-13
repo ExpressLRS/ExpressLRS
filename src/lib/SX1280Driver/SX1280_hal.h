@@ -73,4 +73,19 @@ public:
             BusyDelayDuration = duration;
         }
     }
+
+private:
+#if defined(PLATFORM_ESP32)
+    uint64_t txrx_disable_clr_bits;
+    uint64_t tx1_enable_set_bits;
+    uint64_t tx1_enable_clr_bits;
+    uint64_t tx2_enable_set_bits;
+    uint64_t tx2_enable_clr_bits;
+    uint64_t rx_enable_set_bits;
+    uint64_t rx_enable_clr_bits;
+#else
+    bool rx_enabled;
+    bool tx1_enabled;
+    bool tx2_enabled;
+#endif
 };

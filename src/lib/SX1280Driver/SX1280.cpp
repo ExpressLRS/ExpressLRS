@@ -459,8 +459,9 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size)
 {
     if (currOpmode == SX1280_MODE_TX) //catch TX timeout
     {
-        //DBGLN("Timeout!");
+        DBGLN("Timeout!");
         SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
+        ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX12XX_Radio_All);
         TXnbISR();
         return;
     }
