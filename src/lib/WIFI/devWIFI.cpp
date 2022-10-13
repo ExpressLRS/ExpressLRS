@@ -324,6 +324,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   #else
   else json["config"]["uidtype"] = "Not set (using MAC address)";
   #endif
+  json["config"]["has-highpower"] = (MaxPower != HighPower);
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
@@ -1031,6 +1032,15 @@ static int event()
       startWiFi(millis());
       return DURATION_IMMEDIATELY;
     }
+  }
+  else if (wifiStarted)
+  {
+    wifiStarted = false;
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    #if defined(PLATFORM_ESP8266)
+    WiFi.forceSleepBegin();
+    #endif
   }
   return DURATION_IGNORE;
 }

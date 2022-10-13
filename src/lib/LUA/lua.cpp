@@ -13,8 +13,6 @@ extern CRSF crsf;
 extern Telemetry telemetry;
 #endif
 
-static volatile bool UpdateParamReq = false;
-
 //LUA VARIABLES//
 
 #ifdef TARGET_TX
@@ -23,6 +21,7 @@ static void (*devicePingCallback)() = nullptr;
 #endif
 
 #define LUA_MAX_PARAMS 32
+static volatile bool UpdateParamReq = false;
 static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static uint8_t lastLuaField = 0;

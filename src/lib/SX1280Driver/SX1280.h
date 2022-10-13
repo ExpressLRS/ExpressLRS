@@ -47,7 +47,7 @@ public:
     uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst();
     void GetLastPacketStats();
-    SX12XX_Radio_Number_t GetProcessingPacketRadio();
+    SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
 
 private:
     // constant used for no power change pending

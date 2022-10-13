@@ -879,4 +879,15 @@ RxConfig::SetForceTlmOff(bool forceTlmOff)
     }
 }
 
+void
+RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
+{
+    if (m_config.rateInitialIdx != rateInitialIdx)
+    {
+        m_config.rateInitialIdx = rateInitialIdx;
+        m_modified = true;
+    }
+}
+
+
 #endif

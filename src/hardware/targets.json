@@ -544,7 +544,7 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TR"
             },
-            "diversity": {
+            "true_diversity": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
                 "lua_name": "Diversity 2.4RX",
                 "layout_file": "Generic 2400 True Diversity PA.json",
@@ -680,7 +680,7 @@
             "ep-dual": {
                 "product_name": "HappyModel EP Dual 2.4GHz RX",
                 "lua_name": "HM EP Dual 2400",
-                "layout_file": "Generic 2400 Diversity.json",
+                "layout_file": "Generic 2400 True Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"

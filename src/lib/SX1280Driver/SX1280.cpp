@@ -88,6 +88,8 @@ bool SX1280Driver::Begin()
         return false;
     }
 
+    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX12XX_Radio_1) | 0xC0), SX12XX_Radio_1);   //default is low power mode, switch to high sensitivity instead
+
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX12XX_Radio_2)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX12XX_Radio_2)));
@@ -101,10 +103,8 @@ bool SX1280Driver::Begin()
         hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX12XX_Radio_2) | 0xC0), SX12XX_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
 
-    hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX12XX_Radio_1) | 0xC0), SX12XX_Radio_1);   //default is low power mode, switch to high sensitivity instead
-
 #if defined(TARGET_RX)
-        hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
+    hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
 #else
     if (GPIO_PIN_NSS_2 == UNDEF_PIN) // Do not enable for dual radio TX.
     {
@@ -563,11 +563,6 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
 
     hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, (uint8_t *)&status, 1, lastSuccessfulPacketRadio);
     return -(int8_t)(status / 2);
-}
-
-SX12XX_Radio_Number_t ICACHE_RAM_ATTR SX1280Driver::GetProcessingPacketRadio()
-{
-    return processingPacketRadio;
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
