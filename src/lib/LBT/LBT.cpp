@@ -106,29 +106,27 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 
 void ICACHE_RAM_ATTR BeginClearChannelAssessment()
 {
-  if (!LBTEnabled)
-  {
-    return;
-  }
-
   if(!LBTStarted)
   {
     Radio.RXnb();
-    rxStartTime = micros();
-    LBTStarted = true;
+    if (LBTEnabled)
+    {
+      rxStartTime = micros();
+      LBTStarted = true;
+    }
   }
 }
 
 bool ICACHE_RAM_ATTR ChannelIsClear(void)
 {
   LBTSuccessCalc.inc(); // Increment count for every channel check
+  LBTStarted = false;
+
   if (!LBTEnabled)
   {
     LBTSuccessCalc.add();
     return true;
   }
-
-  LBTStarted = false;
 
   // Read rssi after waiting the minimum RSSI valid delay.
   // If this function is called long enough after RX enable,

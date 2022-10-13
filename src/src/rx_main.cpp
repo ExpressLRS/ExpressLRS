@@ -304,14 +304,6 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 #if defined(Regulatory_Domain_EU_CE_2400)
     SetClearChannelAssessmentTime();
 #endif
-
-    uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
-
-    if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
-    {
-        Radio.RXnb();
-    }
-
     return true;
 }
 
