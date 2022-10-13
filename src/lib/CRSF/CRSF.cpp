@@ -298,7 +298,7 @@ void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
     CRSF::RequestedRCpacketInterval = PacketInterval;
     CRSF::OpenTXsyncOffset = 0;
     CRSF::OpenTXsyncWindow = 0;
-    CRSF::OpenTXsyncWindowSize = (int32_t)(20000/CRSF::RequestedRCpacketInterval);
+    CRSF::OpenTXsyncWindowSize = std::max(1, (int32_t)(20000/CRSF::RequestedRCpacketInterval));
     CRSF::OpenTXsyncLastSent -= OpenTXsyncPacketInterval;
     adjustMaxPacketSize();
 }
