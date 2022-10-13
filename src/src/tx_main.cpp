@@ -640,6 +640,11 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+  if (LQCalc.currentIsSet())
+  {
+    return false; // Already received tlm, do not run ProcessTLMpacket() again.
+  }
+
   bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
   return packetSuccessful;
@@ -647,6 +652,11 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  if (!busyTransmitting)
+  {
+    return; // Already finished transmission and do not call HandleFHSS() a second time, which may hop the frequency!
+  }
+
   if (connectionState != awaitingModelId)
   {
     HandleFHSS();
@@ -792,7 +802,7 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_BINDING);
+  SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
   Radio.SetFrequencyReg(GetInitialFreq());
   // Start transmitting again
   hwTimer.resume();

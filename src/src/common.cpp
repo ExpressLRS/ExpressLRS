@@ -1,11 +1,6 @@
 #include "common.h"
 #include "OTA.h"
 
-// Sanity checks
-static_assert(RATE_DEFAULT < RATE_MAX, "Default rate must be below RATE_MAX");
-static_assert(RATE_BINDING < RATE_MAX, "Binding rate must be below RATE_MAX");
-
-
 #if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
