@@ -13,7 +13,8 @@
 #define MAIN_CHANGED        bit(3) // catch-all for global config item
 #define FAN_CHANGED         bit(4)
 #define MOTION_CHANGED      bit(5)
-#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED)
+#define BUTTON_CHANGED      bit(6)
+#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED | BUTTON_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -167,6 +168,14 @@ void TxConfig::Load()
     {
         // Need to write the dvr defaults
         m_modified |= MAIN_CHANGED;
+    }
+
+    if (version >= 7) {
+        // load button actions
+        if (nvs_get_u32(handle, "button1", &value) == ESP_OK)
+            m_config.buttonColors[0].raw = value;
+        if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
+            m_config.buttonColors[1].raw = value;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -326,6 +335,11 @@ TxConfig::Commit()
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
+    }
+    if (m_modified & BUTTON_CHANGED)
+    {
+        nvs_set_u32(handle, "button1", m_config.buttonColors[0].raw);
+        nvs_set_u32(handle, "button2", m_config.buttonColors[1].raw);
     }
     nvs_set_u32(handle, "tx_version", m_config.version);
     nvs_commit(handle);
@@ -518,6 +532,15 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
 }
 
 void
+TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
+{
+    if (m_config.buttonColors[button].raw != action->raw) {
+        m_config.buttonColors[button].raw = action->raw;
+        m_modified |= BUTTON_CHANGED;
+    }
+}
+
+void
 TxConfig::SetDefaults(bool commit)
 {
     // Reset everything to 0/false and then just set anything that zero is not appropriate
@@ -526,6 +549,35 @@ TxConfig::SetDefaults(bool commit)
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
     m_modified = ALL_CHANGED;
+
+    if (commit)
+    {
+        m_modified = ALL_CHANGED;
+    }
+
+    // Set defaults for button 1
+    tx_button_color_t default_actions1 = {
+        .val = {
+            .color = 226,   // R:255 G:0 B:182
+            .actions = {
+                {false, 2, ACTION_BIND},
+                {true, 0, ACTION_INCREASE_POWER}
+            }
+        }
+    };
+    m_config.buttonColors[0].raw = default_actions1.raw;
+
+    // Set defaults for button 2
+    tx_button_color_t default_actions2 = {
+        .val = {
+            .color = 3,     // R:0 G:0 B:255
+            .actions = {
+                {false, 1, ACTION_GOTO_VTX_CHANNEL},
+                {true, 0, ACTION_SEND_VTX}
+            }
+        }
+    };
+    m_config.buttonColors[1].raw = default_actions2.raw;
 
     for (unsigned i=0; i<64; i++)
     {
@@ -816,5 +868,16 @@ RxConfig::SetForceTlmOff(bool forceTlmOff)
         m_modified = true;
     }
 }
+
+void
+RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
+{
+    if (m_config.rateInitialIdx != rateInitialIdx)
+    {
+        m_config.rateInitialIdx = rateInitialIdx;
+        m_modified = true;
+    }
+}
+
 
 #endif

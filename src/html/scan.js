@@ -1,10 +1,15 @@
+@@require(isTX)
+
 /* eslint-disable comma-dangle */
 /* eslint-disable max-len */
 /* eslint-disable require-jsdoc */
 
 document.addEventListener('DOMContentLoaded', init, false);
 let scanTimer = undefined;
+let colorTimer = undefined;
+let colorUpdated  = false;
 let storedModelId = 255;
+let buttonActions = [];
 
 function _(el) {
   return document.getElementById(el);
@@ -72,14 +77,16 @@ function updatePwmSettings(arPwm) {
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
   });
-  htmlFields.push('</table></div><input type="submit" class="mui-btn mui-btn--primary" value="Set PWM Output">');
+  htmlFields.push('</table></div><button type="submit" class="mui-btn mui-btn--primary">Set PWM Output</button>');
 
   const grp = document.createElement('DIV');
   grp.setAttribute('class', 'group');
   grp.innerHTML = htmlFields.join('');
 
+@@if not isTX:
   _('pwm').appendChild(grp);
   _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
+@@end
 }
 
 function init() {
@@ -88,7 +95,7 @@ function init() {
   _('nt1').onclick = () => _('credentials').style.display = 'block';
   _('nt2').onclick = () => _('credentials').style.display = 'none';
   _('nt3').onclick = () => _('credentials').style.display = 'none';
-
+@@if not isTX:
   // setup model match checkbox handler
   _('model-match').onclick = () => {
     if (_('model-match').checked) {
@@ -103,46 +110,87 @@ function init() {
       _('modelid').value = '255';
     }
   };
-
+@@end
   initOptions();
 }
 
-function initNetwork() {
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      if (data.mode==='STA') {
-        _('stamode').style.display = 'block';
-        _('ssid').textContent = data.ssid;
-      } else {
-        _('apmode').style.display = 'block';
-      }
-      if (data.hasOwnProperty('modelid') && data.modelid != 255) {
-        _('modelid').style.display = 'block';
-        _('model-match').checked = true;
-        storedModelId = data.modelid;
-      } else {
-        _('modelid').style.display = 'none';
-        _('model-match').checked = false;
-        storedModelId = 255;
-      }
-      _('modelid').value = storedModelId;
-      if (data.product_name) _('product_name').textContent = data.product_name;
-      if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
-      if (data.uid) _('uid').value = data.uid.toString();
-      if (data.uidtype) _('uid-type').textContent = data.uidtype;
-      updatePwmSettings(data.pwm);
+function changeCurrentColors() {
+  if (colorTimer === undefined) {
+    sendCurrentColors();
+    colorTimer = setInterval(timeoutCurrentColors, 50);
+  } else {
+    colorUpdated = true;
+  }
+}
 
-      if (data.hasOwnProperty('forcetlm') && data.forcetlm) {
-        _('force-tlm').checked = true;
-      }
-      scanTimer = setInterval(getNetworks, 2000);
+function sendCurrentColors() {
+  const formData = new FormData(_('upload_options'));
+  const data = Object.fromEntries(formData);
+  colors = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (_(k) && _(k).type == 'color') {
+      const index = parseInt(k.substring('6')) - 1;
+      if (_(k + '-div').style.display === 'none') colors[index] = -1;
+      else colors[index] = parseInt(v.substring(1), 16);
     }
-  };
-  xmlhttp.open('POST', 'mode.json', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  xmlhttp.send();
+  }
+  const xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('POST', '/buttons', true);
+  xmlhttp.setRequestHeader('Content-type', 'application/json');
+  xmlhttp.send(JSON.stringify(colors));
+  colorUpdated = false;
+}
+
+function timeoutCurrentColors() {
+  if (colorUpdated) {
+    sendCurrentColors();
+  } else {
+    clearInterval(colorTimer);
+    colorTimer = undefined;
+  }
+}
+
+function updateConfig(data) {
+  if (data.mode==='STA') {
+    _('stamode').style.display = 'block';
+    _('ssid').textContent = data.ssid;
+  } else {
+    _('apmode').style.display = 'block';
+  }
+@@if not isTX:
+  if (data.hasOwnProperty('modelid') && data.modelid != 255) {
+    _('modelid').style.display = 'block';
+    _('model-match').checked = true;
+    storedModelId = data.modelid;
+  } else {
+    _('modelid').style.display = 'none';
+    _('model-match').checked = false;
+    storedModelId = 255;
+  }
+  _('modelid').value = storedModelId;
+@@end
+  if (data.product_name) _('product_name').textContent = data.product_name;
+  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
+  if (data.uid) _('uid').value = data.uid.toString();
+  if (data.uidtype) _('uid-type').textContent = data.uidtype;
+  updatePwmSettings(data.pwm);
+@@if isTX:
+  if (data.hasOwnProperty['button-colors']) {
+    if (_('button1-color')) _('button1-color').oninput = changeCurrentColors;
+    if (data['button-colors'][0] === -1) _('button1-color-div').style.display = 'none';
+    else _('button1-color').value = color(data['button-colors'][0]);
+
+    if (_('button2-color')) _('button2-color').oninput = changeCurrentColors;
+    if (data['button-colors'][1] === -1) _('button2-color-div').style.display = 'none';
+    else _('button2-color').value = color(data['button-colors'][1]);
+  }
+  if (data.hasOwnProperty('button-actions')) {
+    updateButtons(data['button-actions']);
+  } else {
+    _('button-tab').style.display = 'none';
+  }
+  if (data['has-highpower'] === true) _('has-highpower').style.display = 'block';
+@@end
 }
 
 function initOptions() {
@@ -151,15 +199,12 @@ function initOptions() {
   xmlhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      updateOptions(data);
-      if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
-      else _('connect').style.display = 'none';
-      if (data['customised']) _('reset-options').style.display = 'block';
-      initNetwork();
+      updateOptions(data['options']);
+      updateConfig(data['config']);
+      scanTimer = setInterval(getNetworks, 2000);
     }
   };
-  xmlhttp.open('GET', '/options.json', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xmlhttp.open('GET', '/config', true);
   xmlhttp.send();
 }
 
@@ -175,8 +220,7 @@ function getNetworks() {
       }
     }
   };
-  xmlhttp.open('POST', 'networks.json', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xmlhttp.open('GET', 'networks.json', true);
   xmlhttp.send();
 }
 
@@ -355,8 +399,10 @@ function setupNetwork(event) {
   }
 }
 
-_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred resetting model settings', '/reset?model', null));
-_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred resetting runtime options', '/reset?options', null));
+@@if not isTX:
+_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred reseting model settings', '/reset?model', null));
+@@end
+_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred reseting runtime options', '/reset?options', null));
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
@@ -368,9 +414,9 @@ if (_('modelmatch') != undefined) {
 }
 if (_('forcetlm') != undefined) {
   _('forcetlm').addEventListener('submit', callback('Set force telemetry', 'An error occurred updating the force telemetry setting', '/forceTelemetry',
-      () => {
-        return new FormData(_('forcetlm'));
-      }));
+    () => {
+      return new FormData(_('forcetlm'));
+    }));
 }
 
 function submitOptions(e) {
@@ -384,9 +430,11 @@ function submitOptions(e) {
   const formObject = Object.fromEntries(new FormData(formElem));
   // Add in all the unchecked checkboxes which will be absent from a FormData object
   formElem.querySelectorAll('input[type=checkbox]:not(:checked)').forEach((k) => formObject[k.name] = false);
+
   // Serialize and send the formObject
   xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
+    if (_(k) && _(k).type == 'color') return undefined;
     if (_(k) && _(k).type == 'checkbox') {
       return v == 'on' ? true : false;
     }
@@ -396,8 +444,10 @@ function submitOptions(e) {
       });
       return arr.length == 0 ? undefined : arr;
     }
+    if (typeof v === 'boolean') return v;
     return isNaN(v) ? v : +v;
   }));
+
   xhr.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       cuteAlert({
@@ -421,6 +471,31 @@ function submitOptions(e) {
 
 _('submit-options').addEventListener('click', submitOptions);
 
+@@if isTX:
+function submitButtonActions(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/config');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  // put in the colors
+  buttonActions[0].color = to8bit(_(`button1-color`).value)
+  buttonActions[1].color = to8bit(_(`button2-color`).value)
+  xhr.send(JSON.stringify({'button-actions': buttonActions}));
+
+  xhr.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 204) {
+      cuteAlert({
+        type: 'info',
+        title: 'Success',
+        message: 'Button actions have been saved'
+      });
+    }
+  };
+}
+_('submit-actions').addEventListener('click', submitButtonActions);
+@@end
+
 function updateOptions(data) {
   for (const [key, value] of Object.entries(data)) {
     if (_(key)) {
@@ -432,7 +507,178 @@ function updateOptions(data) {
       }
     }
   }
+  if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
+  else _('connect').style.display = 'none';
+  if (data['customised']) _('reset-options').style.display = 'block';
 }
+
+@@if isTX:
+function toRGB(c)
+{
+  r = c & 0xE0 ;
+  r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000;
+  g = c & 0x1C;
+  g = ((g<< 11) + (g << 8) + (g << 5)) & 0xFF00;
+  b = ((c & 0x3) << 1) + ((c & 0x3) >> 1);
+  b = (b << 5) + (b << 2) + (b >> 1);
+  s = (r+g+b).toString(16);
+  return '#' + "000000".substring(0, 6-s.length) + s;
+}
+
+function updateButtons(data) {
+  buttonActions = data;
+  for (const [b, _v] of Object.entries(data)) {
+    for (const [p, v] of Object.entries(_v['action'])) {
+      appendRow(parseInt(b), parseInt(p), v);
+    }
+    _(`button${parseInt(b)+1}-color-div`).style.display = 'block';
+    _(`button${parseInt(b)+1}-color`).value = toRGB(_v['color']);
+  }
+  _('button1-color').oninput = changeCurrentColors;
+  _('button2-color').oninput = changeCurrentColors;
+}
+
+function changeCurrentColors() {
+  if (colorTimer === undefined) {
+    sendCurrentColors();
+    colorTimer = setInterval(timeoutCurrentColors, 50);
+  } else {
+    colorUpdated = true;
+  }
+}
+
+function to8bit(v)
+{
+  v = parseInt(v.substring(1), 16)
+  return ((v >> 16) & 0xE0) + ((v >> (8+3)) & 0x1C) + ((v >> 6) & 0x3)
+}
+
+function sendCurrentColors() {
+  const formData = new FormData(_('button_actions'));
+  const data = Object.fromEntries(formData);
+  colors = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (_(k) && _(k).type == 'color') {
+      const index = parseInt(k.substring('6')) - 1;
+      if (_(k + '-div').style.display === 'none') colors[index] = -1;
+      else colors[index] = to8bit(v);
+    }
+  }
+  const xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('POST', '/buttons', true);
+  xmlhttp.setRequestHeader('Content-type', 'application/json');
+  xmlhttp.send(JSON.stringify(colors));
+  colorUpdated = false;
+}
+
+function timeoutCurrentColors() {
+  if (colorUpdated) {
+    sendCurrentColors();
+  } else {
+    clearInterval(colorTimer);
+    colorTimer = undefined;
+  }
+}
+
+function checkEnableButtonActionSave() {
+  let disable = false;
+  for (const [b, _v] of Object.entries(buttonActions)) {
+    for (const [p, v] of Object.entries(_v['action'])) {
+      if (v['action'] !== 0 && (_(`select-press-${b}-${p}`).value === '' || _(`select-long-${b}-${p}`).value === '' || _(`select-short-${b}-${p}`).value === '')) {
+        disable = true;
+      }
+    }
+  }
+  _('submit-actions').disabled = disable;
+}
+
+function changeAction(b, p, value) {
+  buttonActions[b]['action'][p]['action'] = value;
+  if (value === 0) {
+    _(`select-press-${b}-${p}`).value = '';
+    _(`select-long-${b}-${p}`).value = '';
+    _(`select-short-${b}-${p}`).value = '';
+  }
+  checkEnableButtonActionSave();
+}
+
+function changePress(b, p, value) {
+  buttonActions[b]['action'][p]['is-long-press'] = (value==='true');
+  _(`mui-long-${b}-${p}`).style.display = value==='true' ? 'block' : 'none';
+  _(`mui-short-${b}-${p}`).style.display = value==='true' ? 'none' : 'block';
+  checkEnableButtonActionSave();
+}
+
+function changeCount(b, p, value) {
+  buttonActions[b]['action'][p]['count'] = parseInt(value);
+  _(`select-long-${b}-${p}`).value = value;
+  _(`select-short-${b}-${p}`).value = value;
+  checkEnableButtonActionSave();
+}
+
+function appendRow(b,p,v) {
+  const row = _('button-actions').insertRow();
+  row.innerHTML = `
+<td>
+  Button ${parseInt(b)+1}
+</td>
+<td>
+  <div class="mui-select">
+    <select onchange="changeAction(${b}, ${p}, parseInt(this.value));">
+      <option value='0' ${v['action']===0 ? 'selected' : ''}>Unused</option>
+      <option value='1' ${v['action']===1 ? 'selected' : ''}>Increase Power</option>
+      <option value='2' ${v['action']===2 ? 'selected' : ''}>Go to VTX Band Menu</option>
+      <option value='3' ${v['action']===3 ? 'selected' : ''}>Go to VTX Channel Menu</option>
+      <option value='4' ${v['action']===4 ? 'selected' : ''}>Send VTX Settings</option>
+      <option value='5' ${v['action']===5 ? 'selected' : ''}>Start WiFi</option>
+      <option value='6' ${v['action']===6 ? 'selected' : ''}>Enter Binding Mode</option>
+    </select>
+    <label>Action</label>
+  </div>
+</td>
+<td>
+  <div class="mui-select">
+    <select id="select-press-${b}-${p}" onchange="changePress(${b}, ${p}, this.value);">
+      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
+      <option value='false' ${v['is-long-press']===false ? 'selected' : ''}>Short press (click)</option>
+      <option value='true' ${v['is-long-press']===true ? 'selected' : ''}>Long press (hold)</option>
+    </select>
+    <label>Press</label>
+  </div>
+</td>
+<td>
+  <div class="mui-select" id="mui-long-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "block": "none"};">
+    <select id="select-long-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
+      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
+      <option value='0' ${v['count']===0 ? 'selected' : ''}>for 0.5 seconds</option>
+      <option value='1' ${v['count']===1 ? 'selected' : ''}>for 1 second</option>
+      <option value='2' ${v['count']===2 ? 'selected' : ''}>for 1.5 seconds</option>
+      <option value='3' ${v['count']===3 ? 'selected' : ''}>for 2 seconds</option>
+      <option value='4' ${v['count']===4 ? 'selected' : ''}>for 2.5 seconds</option>
+      <option value='5' ${v['count']===5 ? 'selected' : ''}>for 3 seconds</option>
+      <option value='6' ${v['count']===6 ? 'selected' : ''}>for 3.5 seconds</option>
+      <option value='7' ${v['count']===7 ? 'selected' : ''}>for 4 seconds</option>
+    </select>
+    <label>Count</label>
+  </div>
+  <div class="mui-select" id="mui-short-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "none": "block"};">
+    <select id="select-short-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
+      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
+      <option value='0' ${v['count']===0 ? 'selected' : ''}>1 time</option>
+      <option value='1' ${v['count']===1 ? 'selected' : ''}>2 times</option>
+      <option value='2' ${v['count']===2 ? 'selected' : ''}>3 times</option>
+      <option value='3' ${v['count']===3 ? 'selected' : ''}>4 times</option>
+      <option value='4' ${v['count']===4 ? 'selected' : ''}>5 times</option>
+      <option value='5' ${v['count']===5 ? 'selected' : ''}>6 times</option>
+      <option value='6' ${v['count']===6 ? 'selected' : ''}>7 times</option>
+      <option value='7' ${v['count']===7 ? 'selected' : ''}>8 times</option>
+    </select>
+    <label>Count</label>
+  </div>
+</td>
+`
+}
+@@end
 
 md5 = function() {
   const k = [];
