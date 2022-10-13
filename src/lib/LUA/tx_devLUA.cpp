@@ -87,7 +87,7 @@ static struct luaItem_selection luaSwitch = {
       {"Antenna Mode", CRSF_TEXT_SELECTION},
       0, // value
       antennamodeOpts,
-      emptySpace
+      STR_EMPTYSPACE
   };
 #endif
 

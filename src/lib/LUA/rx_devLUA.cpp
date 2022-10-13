@@ -42,7 +42,7 @@ static struct luaItem_selection luaDiversityMode = {
     {"Rx Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Diversity;Gemini",
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
