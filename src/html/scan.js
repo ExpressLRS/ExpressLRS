@@ -189,6 +189,7 @@ function updateConfig(data) {
   } else {
     _('button-tab').style.display = 'none';
   }
+  if (data['has-highpower'] === true) _('has-highpower').style.display = 'block';
 @@end
 }
 
@@ -470,7 +471,7 @@ function submitOptions(e) {
 
 _('submit-options').addEventListener('click', submitOptions);
 
-
+@@if isTX:
 function submitButtonActions(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -492,8 +493,8 @@ function submitButtonActions(e) {
     }
   };
 }
-
 _('submit-actions').addEventListener('click', submitButtonActions);
+@@end
 
 function updateOptions(data) {
   for (const [key, value] of Object.entries(data)) {

@@ -111,3 +111,7 @@
 # on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
 # Dynamic power must be off, else it will adjust based on the FreqCorrection reported in SNR
 #-DDEBUG_FREQ_CORRECTION
+
+# Enable reporting offsets sent to Open/EdgeTX for packet synchronisation.
+# Also logs forced resyncs when a packet is delayed or missed.
+#-DDEBUG_OPENTX_SYNC

@@ -1,20 +1,12 @@
 #ifdef TARGET_TX
 
-#include "common.h"
-#include "device.h"
-
+#include "rxtx_devLua.h"
 #include "CRSF.h"
-#include "POWERMGNT.h"
-#include "config.h"
 #include "logging.h"
-#include "lua.h"
 #include "OTA.h"
-#include "hwTimer.h"
 #include "FHSS.h"
 
 static char version_domain[20+1+6+1];
-static const char emptySpace[1] = {0};
-static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
@@ -23,20 +15,19 @@ static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 
+#define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
+                               ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
+                               ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
+                               ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
+                               ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
+
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-#if defined(RADIO_SX127X)
-    "25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)",
-#elif defined(RADIO_SX128X)
-    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"
-    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)",
-#else
-    #error Invalid radio configuration!
-#endif
-    emptySpace
+    STR_LUA_PACKETRATES,
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaTlmRate = {
@@ -62,7 +53,7 @@ static struct luaItem_selection luaDynamicPower = {
     {"Dynamic", CRSF_TEXT_SELECTION},
     0, // value
     "Off;Dyn;AUX9;AUX10;AUX11;AUX12",
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 #if defined(GPIO_PIN_FAN_EN) || defined(GPIO_PIN_FAN_PWM)
@@ -70,14 +61,14 @@ static struct luaItem_selection luaFanThreshold = {
     {"Fan Thresh", CRSF_TEXT_SELECTION},
     0, // value
     "10mW;25mW;50mW;100mW;250mW;500mW;1000mW;2000mW;Never",
-    emptySpace // units embedded so it won't display "NevermW"
+    STR_EMPTYSPACE // units embedded so it won't display "NevermW"
 };
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
     {"100mW CE LIMIT", CRSF_INFO},
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
@@ -87,7 +78,7 @@ static struct luaItem_selection luaSwitch = {
     {"Switch Mode", CRSF_TEXT_SELECTION},
     0, // value
     switchmodeOpts4ch,
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaModelMatch = {
@@ -100,12 +91,12 @@ static struct luaItem_selection luaModelMatch = {
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_string luaInfo = {
     {"Bad/Good", (crsf_value_type_e)(CRSF_INFO | CRSF_FIELD_ELRS_HIDDEN)},
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_string luaELRSversion = {
@@ -122,26 +113,26 @@ static struct luaItem_folder luaWiFiFolder = {
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaTxBackpackUpdate = {
     {"Enable Backpack WiFi", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaVRxBackpackUpdate = {
     {"Enable VRx WiFi", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 //---------------------------- WiFi -----------------------------
 
@@ -149,7 +140,7 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
@@ -162,38 +153,34 @@ static struct luaItem_selection luaVtxBand = {
     {"Band", CRSF_TEXT_SELECTION},
     0, // value
     "Off;A;B;E;F;R;L",
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaVtxChannel = {
     {"Channel", CRSF_TEXT_SELECTION},
     0, // value
     "1;2;3;4;5;6;7;8",
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaVtxPwr = {
     {"Pwr Lvl", CRSF_TEXT_SELECTION},
     0, // value
     "-;1;2;3;4;5;6;7;8",
-    emptySpace
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaVtxPit = {
     {"Pitmode", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On;AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN
-    ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN
-    ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN
-    ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN
-    ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN,
-    emptySpace
+    "Off;On;" STR_LUA_ALLAUX_UPDOWN,
+    STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaVtxSend = {
     {"Send VTx", CRSF_COMMAND},
     lcsIdle, // step
-    emptySpace
+    STR_EMPTYSPACE
 };
 //----------------------------VTX ADMINISTRATOR------------------
 
@@ -202,7 +189,7 @@ struct luaItem_selection luaBluetoothTelem = {
     {"BT Telemetry", CRSF_TEXT_SELECTION},
     0, // value
     "Off;On",
-    emptySpace
+    STR_EMPTYSPACE
 };
 #endif
 
@@ -212,22 +199,22 @@ static struct luaItem_folder luaBackpackFolder = {
 };
 
 static struct luaItem_selection luaDvrAux = {
-    {"DVR AUX", CRSF_TEXT_SELECTION},
+    {"DVR Rec", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;AUX1;!AUX1;AUX2;!AUX2;AUX3;!AUX3;AUX4;!AUX4;AUX5;!AUX5;AUX6;!AUX6;AUX7;!AUX7;AUX8;!AUX8;AUX9;!AUX9;AUX10;!AUX10",
-    emptySpace};
+    "Off;" STR_LUA_ALLAUX_UPDOWN,
+    STR_EMPTYSPACE};
 
 static struct luaItem_selection luaDvrStartDelay = {
     {"DVR Srt Dly", CRSF_TEXT_SELECTION},
     0, // value
     "0s;5s;15s;30s;45s;1min;2min",
-    emptySpace};
+    STR_EMPTYSPACE};
 
 static struct luaItem_selection luaDvrStopDelay = {
     {"DVR Stp Dly", CRSF_TEXT_SELECTION},
     0, // value
     "0s;5s;15s;30s;45s;1min;2min",
-    emptySpace};
+    STR_EMPTYSPACE};
 
 //---------------------------- BACKPACK ------------------
 
@@ -297,36 +284,6 @@ static void luadevUpdateTlmBandwidth()
   }
 }
 
-static void luadevGeneratePowerOpts()
-{
-  // This function modifies the strPowerLevels in place and must not
-  // be called more than once!
-  char *out = strPowerLevels;
-  PowerLevels_e pwr = PWR_10mW;
-  // Count the semicolons to move `out` to point to the MINth item
-  while (pwr < MinPower)
-  {
-    while (*out++ != ';') ;
-    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
-  }
-  // There is no min field, compensate by shifting the index when sending/receiving
-  // luaPower.min = (uint8_t)MinPower;
-  luaPower.options = (const char *)out;
-
-  // Continue until after than MAXth item and drop a null in the orginal
-  // string on the semicolon (not after like the previous loop)
-  while (pwr <= POWERMGNT::getMaxPower())
-  {
-    // If out still points to a semicolon from the last loop move past it
-    if (*out)
-      ++out;
-    while (*out && *out != ';')
-      ++out;
-    pwr = (PowerLevels_e)((unsigned int)pwr + 1);
-  }
-  *out = '\0';
-}
-
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
@@ -368,7 +325,7 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
       break;
 
     case lcsCancel:
-      sendLuaCommandResponse(cmd, lcsIdle, emptySpace);
+      sendLuaCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
       if (connectionState == targetState)
       {
         rebootTime = millis() + 400;
@@ -416,7 +373,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
   } /* if doExecute */
   else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
   {
-    sendLuaCommandResponse((struct luaItem_command *)item, lcsIdle, emptySpace);
+    sendLuaCommandResponse((struct luaItem_command *)item, lcsIdle, STR_EMPTYSPACE);
   }
 }
 
@@ -593,7 +550,7 @@ static void registerLuaParameters()
 
     // POWER folder
     registerLUAParameter(&luaPowerFolder);
-    luadevGeneratePowerOpts();
+    luadevGeneratePowerOpts(&luaPower);
     registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
     }, luaPowerFolder.common.id);

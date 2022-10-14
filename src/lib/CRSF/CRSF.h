@@ -46,7 +46,7 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static uint32_t ChannelData[CRSF_NUM_CHANNELS];
+    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
 
     /////Variables/////
 
@@ -134,7 +134,10 @@ private:
     /// OpenTX mixer sync ///
     static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
+    static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
+    static volatile int32_t OpenTXsyncWindow;
+    static volatile int32_t OpenTXsyncWindowSize;
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
