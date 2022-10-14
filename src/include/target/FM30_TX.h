@@ -15,7 +15,7 @@
 #define GPIO_PIN_SCK            PB13
 #define GPIO_PIN_RST            PB3
 #define GPIO_PIN_TX_ENABLE      PB9 // CTX on SE2431L
-#define GPIO_PIN_ANT_CTRL       PB4 // Low for left (stock), high for right (empty)
+#define GPIO_PIN_ANT_CTRL_FIXED PB4 // Low for left (stock), high for right (empty). Named _FIXED to prevent auto-switching
 #define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1
 #define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1
 #define GPIO_PIN_BUFFER_OE      PB7
