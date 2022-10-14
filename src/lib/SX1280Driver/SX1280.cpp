@@ -62,7 +62,10 @@ SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 
 void SX1280Driver::End()
 {
-    SetMode(SX1280_MODE_SLEEP, SX12XX_Radio_All);
+    if (currOpmode != SX1280_MODE_SLEEP)
+    {
+        SetMode(SX1280_MODE_SLEEP, SX12XX_Radio_All);
+    }
     hal.end();
     RemoveCallbacks();
     currFreq = (uint32_t)((double)2400000000 / (double)FREQ_STEP);
@@ -116,7 +119,6 @@ bool SX1280Driver::Begin()
     pwrCurrent = PWRPENDING_NONE;
     SetOutputPower(SX1280_POWER_MIN);
     CommitOutputPower();
-
 #if defined(USE_SX1280_DCDC)
     if (OPT_USE_SX1280_DCDC)
     {
@@ -474,7 +476,9 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
     if (radioNumber == SX12XX_Radio_Default)
+    {
         radioNumber = lastSuccessfulPacketRadio;
+    }
         
     // Normal diversity mode
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)

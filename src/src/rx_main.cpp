@@ -289,7 +289,9 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  );
 
     if (geminiMode)
+    {
         Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    }
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -428,10 +430,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     if (ChannelIsClear())
 #endif
     {
-        SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
-        if (geminiMode)
-            transmittingRadio = SX12XX_Radio_All;
-        
+        SX12XX_Radio_Number_t transmittingRadio = (geminiMode) ? SX12XX_Radio_All : SX12XX_Radio_Default;        
         Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
     }
     return true;
@@ -1660,7 +1659,9 @@ void EnterBindingMode()
     SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
     if (geminiMode)
+    {
         Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    }
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 

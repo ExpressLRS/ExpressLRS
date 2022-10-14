@@ -467,10 +467,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         transmittingRadio = SX12XX_Radio_All; // Gemini mode
         break;
       case 1:
-        transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx.
+        transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
         break;
       case 2:
-        transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx.
+        transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
         break;
       default:
         break;
@@ -681,7 +681,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
   bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
-  return ProcessTLMpacket(status);
+  return packetSuccessful;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
