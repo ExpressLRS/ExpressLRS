@@ -38,7 +38,12 @@ static int start()
 static void reportVbat()
 {
     uint32_t adc = vbatSmooth.calc_scaled();
-    uint16_t vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
+    uint16_t vbat;
+    // For negative offsets, anything between abs(OFFSET)*CNT and 0 is considered 0
+    if (ANALOG_VBAT_OFFSET < 0 && adc <= (ANALOG_VBAT_OFFSET * -VBAT_SMOOTH_CNT))
+        vbat = 0;
+    else
+        vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
 
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
     // Values are MSB first (BigEndian)
