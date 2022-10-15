@@ -4,7 +4,7 @@
         "tx_2400": {
             "thor": {
                 "product_name": "AXIS Thor 2.4GHz TX",
-                "lua_name": "AXIS THOR 2400TX",
+                "lua_name": "AXIS THOR 2G4TX",
                 "layout_file": "AXIS Thor 2400.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
@@ -717,13 +717,15 @@
     "hiyounger": {
         "name": "HiYOUNGER",
         "tx_2400": {
-            "product_name": "HiYOUNGER 2.4GHz TX",
-            "lua_name": "HiYOUNGER TX2G4",
-            "layout_file": "BETAFPV 2400 Nano.json",
-            "upload_methods": ["uart", "wifi"],
-            "platform": "esp32",
-            "firmware": "Unified_ESP32_2400_TX",
-            "prior_target_name": "BETAFPV_2400_TX"
+            "plain": {
+                "product_name": "HiYOUNGER 2.4GHz TX",
+                "lua_name": "HiYOUNGER TX2G4",
+                "layout_file": "BETAFPV 2400 Nano.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "BETAFPV_2400_TX"
+            }
         },
         "rx_2400": {
             "rx24t": {
@@ -755,13 +757,15 @@
             }
         },
         "tx_900": {
-            "product_name": "HiYOUNGER 900 TX",
-            "lua_name": "HiYOUNGER 900 TX",
-            "layout_file": "BETAFPV 900 Nano.json",
-            "upload_methods": ["uart", "wifi"],
-            "platform": "esp32",
-            "firmware": "Unified_ESP32_900_TX",
-            "prior_target_name": "BETAFPV_900_TX"
+            "plain": {
+                "product_name": "HiYOUNGER 900 TX",
+                "lua_name": "HiYOUNGER 900 TX",
+                "layout_file": "BETAFPV 900 Nano.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "BETAFPV_900_TX"
+            }
         },
         "rx_900": {
             "plain": {
@@ -955,7 +959,7 @@
         "rx_900": {
             "mini": {
                 "product_name": "Jumper 900 Mini RX",
-                "upload_methods": ["betaflight"],
+                "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
                 "firmware": "Jumper_RX_R900MINI",
                 "stlink": {
@@ -1191,7 +1195,7 @@
             "rp3": {
                 "product_name": "RadioMaster RP3 Diversity 2.4GHz RX",
                 "lua_name": "RadioMstr RP3",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "overlay": {
                     "radio_dcdc": true
                 },
