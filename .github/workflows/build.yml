@@ -39,6 +39,18 @@ jobs:
         cd src
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
 
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Validate target files
+      run: |
+        cd src
+        python python/targets_validator.py
+
   targets:
     runs-on: ubuntu-latest
     outputs:
@@ -127,7 +139,7 @@ jobs:
       continue-on-error: true
 
   firmware:
-    needs: build
+    needs: [build, validation, test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -152,6 +164,7 @@ jobs:
           path: dist/**/*
 
   installer:
+    needs: [validation, test]
     strategy:
       fail-fast: false
       matrix:
