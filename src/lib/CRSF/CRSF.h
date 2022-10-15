@@ -134,7 +134,10 @@ private:
     /// OpenTX mixer sync ///
     static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
+    static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
+    static volatile int32_t OpenTXsyncWindow;
+    static volatile int32_t OpenTXsyncWindowSize;
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];

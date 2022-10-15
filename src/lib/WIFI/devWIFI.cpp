@@ -550,7 +550,8 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     if (target_found.length() != 0) {
       message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
     }
-    message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
+    message += "<br/>It looks like you are flashing firmware with a different name to the current  firmware.  This sometimes happens because the hardware was flashed from the factory with an early version that has a different name. Or it may have even changed between major releases.";
+    message += "<br/><br/>Please double check you are uploading the correct target, then proceed with 'Flash Anyway'.\"}";
     request->send(200, "application/json", message);
   }
 }
@@ -699,7 +700,10 @@ static void initialize()
   #if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
   #endif
-  registerButtonFunction(ACTION_START_WIFI, [](){ connectionState = wifiUpdate; });
+  registerButtonFunction(ACTION_START_WIFI, [](){
+    setWifiUpdateMode();
+    devicesTriggerEvent();
+  });
 }
 
 static void startWiFi(unsigned long now)
