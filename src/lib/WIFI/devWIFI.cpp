@@ -700,7 +700,10 @@ static void initialize()
   #if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
   #endif
-  registerButtonFunction(ACTION_START_WIFI, [](){ connectionState = wifiUpdate; });
+  registerButtonFunction(ACTION_START_WIFI, [](){
+    setWifiUpdateMode();
+    devicesTriggerEvent();
+  });
 }
 
 static void startWiFi(unsigned long now)
