@@ -4,7 +4,7 @@
         "tx_2400": {
             "thor": {
                 "product_name": "AXIS Thor 2.4GHz TX",
-                "lua_name": "AXIS THOR 2G4TX",
+                "lua_name": "AXIS THOR 2400TX",
                 "layout_file": "AXIS Thor 2400.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
