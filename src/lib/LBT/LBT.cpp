@@ -108,7 +108,7 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment()
 {
   if(!LBTStarted)
   {
-    Radio.RXnb();
+    Radio.RXnb(SX1280_MODE_RX_CONT);
     if (LBTEnabled)
     {
       rxStartTime = micros();
@@ -150,7 +150,6 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   }
 
   int8_t rssiInst = Radio.GetRssiInst();
-  Radio.SetTxIdleMode();
   bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(),
         ExpressLRS_currAirRate_Modparams->radio_type);
   

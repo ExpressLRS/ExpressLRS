@@ -244,6 +244,13 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
         break;
 
+    case SX1280_MODE_RX_CONT:
+        buf[0] = RX_TIMEOUT_PERIOD_BASE;
+        buf[1] = 0xFFFF >> 8;
+        buf[2] = 0xFFFF & 0xFF;
+        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
+        break;        
+
     case SX1280_MODE_TX:
         //uses timeout Time-out duration = periodBase * periodBaseCount
         buf[0] = RX_TIMEOUT_PERIOD_BASE;
@@ -516,10 +523,10 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Numb
     return RXdoneCallback(fail);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::RXnb()
+void ICACHE_RAM_ATTR SX1280Driver::RXnb(SX1280_RadioOperatingModes_t rxMode)
 {
     hal.RXenable();
-    SetMode(SX1280_MODE_RX, SX12XX_Radio_All);
+    SetMode(rxMode, SX12XX_Radio_All);
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber)
