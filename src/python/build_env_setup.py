@@ -110,7 +110,10 @@ elif platform in ['espressif32']:
             UPLOAD_SPEED=460800
         )
     if "_ETX" in target_name:
-        env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
+        env.Replace(
+            UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
+            UPLOAD_SPEED=230400
+        )
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
         env.Replace(
