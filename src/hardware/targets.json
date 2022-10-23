@@ -491,7 +491,7 @@
                 "product_name": "Generic ESP32 PWM Vario 2.4Ghz RX",
                 "lua_name": "Vario 2400RX",
                 "layout_file": "Vario 2400.json",
-                "upload_methods": ["uart", "wifi", "betaflight"],
+                "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
