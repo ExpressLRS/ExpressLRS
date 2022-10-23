@@ -533,7 +533,7 @@
                 "layout_file": "Generic 2400 Whoop Rx and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TR"
+                "firmware": "Unified_ESP32_2400_RX"
             },
             "true_diversity": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
