@@ -32,6 +32,7 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 Stream *TxBackpack;
+Stream *TxUSB;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -189,6 +190,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   Radio.GetLastPacketStats();
   crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+
+  #if defined(USE_AIRPORT_AT_BAUD)
+    OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+    return true;
+  #endif
 
   // Full res mode
   if (OtaIsFullRes)
@@ -432,7 +438,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
-      OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+
+      #if defined(USE_AIRPORT_AT_BAUD)
+        OtaPackAirportData(&otaPkt, &apInputBuffer);
+      #else
+        OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+      #endif
     }
   }
 
@@ -693,6 +704,11 @@ static void UpdateConnectDisconnectStatus()
       connectionState = connected;
       crsf.ForwardDevicePings = true;
       DBGLN("got downlink conn");
+
+      #if defined(USE_AIRPORT_AT_BAUD)
+        apInputBuffer.flush();
+        apOutputBuffer.flush();
+      #endif
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -869,14 +885,54 @@ void ProcessMSPPacket(mspPacket_t *packet)
 #endif
 }
 
-static void setupTxBackpack()
+static void HandleUARTout()
+{
+  #if defined(USE_AIRPORT_AT_BAUD)
+    if (apOutputBuffer.size())
+    {
+      TxUSB->write(apOutputBuffer.pop());
+    }
+  #endif
+}
+
+static void setupSerial()
 {  /*
-   * Setup the logging/backpack serial port.
+   * Setup the logging/backpack serial port, and the USB serial port.
    * This is always done because we need a place to send data even if there is no backpack!
    */
+  bool portConflict = false;
+
+#if defined(USE_AIRPORT_AT_BAUD)
+  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    // Airport enabled - set TxUSB port to pins 1 and 3
+    #define GPIO_PIN_USB_RX   3
+    #define GPIO_PIN_USB_TX   1
+    #define USB_BAUD          USE_AIRPORT_AT_BAUD
+
+    #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+      if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
+      {
+        // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
+        // TxUSB takes priority over TxBackpack
+        portConflict = true;
+      }
+    #endif
+  #else
+    // For STM targets, assume GPIO_PIN_DEBUG defines point to USB
+    #define GPIO_PIN_USB_RX   GPIO_PIN_DEBUG_RX
+    #define GPIO_PIN_USB_TX   GPIO_PIN_DEBUG_TX
+  #endif
+#else
+  // No airport - set TxUSB port to null
+  #define GPIO_PIN_USB_RX   UNDEF_PIN
+  #define GPIO_PIN_USB_TX   UNDEF_PIN
+  #define USB_BAUD          460800
+#endif
+
+// Setup TxBackpack
 #if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
   Stream *serialPort;
-  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN && !portConflict)
   {
     serialPort = new HardwareSerial(2);
     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -904,6 +960,23 @@ static void setupTxBackpack()
   Stream *serialPort = new NullStream();
 #endif
   TxBackpack = serialPort;
+
+// Setup TxUSB
+#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_USB_RX) && defined(GPIO_PIN_USB_TX)
+  Stream *usbPort;
+  if (GPIO_PIN_USB_RX != UNDEF_PIN && GPIO_PIN_USB_TX != UNDEF_PIN)
+  {
+    usbPort = new HardwareSerial(1);
+    ((HardwareSerial *)usbPort)->begin(USB_BAUD, SERIAL_8N1, GPIO_PIN_USB_RX, GPIO_PIN_USB_TX);
+  }
+  else
+  {
+    usbPort = new NullStream();
+  }
+#else
+  Stream *usbPort = new NullStream();
+#endif
+  TxUSB = usbPort;
 }
 
 /**
@@ -943,7 +1016,7 @@ static void setupTarget()
   }
 
   setupTargetCommon();
-  setupTxBackpack();
+  setupSerial();
 }
 
 bool setupHardwareFromOptions()
@@ -1001,7 +1074,9 @@ void setup()
     Radio.TXdoneCallback = &TXdoneISR;
 
     crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-    crsf.disconnected = &UARTdisconnected;
+    #if !defined(USE_AIRPORT_AT_BAUD)
+      crsf.disconnected = &UARTdisconnected;
+    #endif
     crsf.RecvModelUpdate = &ModelUpdateReq;
     hwTimer.callbackTock = &timerCallbackNormal;
     DBGLN("ExpressLRS TX Module Booted...");
@@ -1057,11 +1132,19 @@ void setup()
 #endif
 
   devicesStart();
+
+  #if defined(USE_AIRPORT_AT_BAUD)
+    config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
+    config.SetMotionMode(0); // Ensure motion detection is off
+    UARTconnected();
+  #endif
 }
 
 void loop()
 {
   uint32_t now = millis();
+
+  HandleUARTout(); // Only used for non-CRSF output
 
   #if defined(USE_BLE_JOYSTICK)
   if (connectionState != bleJoystick && connectionState != noCrossfire) // Wait until the correct crsf baud has been found
@@ -1099,6 +1182,16 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
+
+  if (TxUSB->available())
+  {
+    #if defined(USE_AIRPORT_AT_BAUD)
+      if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+      {
+        apInputBuffer.push(TxUSB->read());
+      }
+    #endif
+  }
 
   if (TxBackpack->available())
   {

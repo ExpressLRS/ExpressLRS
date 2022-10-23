@@ -357,7 +357,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK
+    #if !defined(USE_AIRPORT_AT_BAUD)
+        || !TelemetrySender.IsActive()
+    #endif
+        )
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -393,19 +397,23 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (OtaIsFullRes)
-        {
-            otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.full.tlm_dl.payload,
-                sizeof(otaPkt.full.tlm_dl.payload));
-        }
-        else
-        {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-            otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.std.tlm_dl.payload,
-                sizeof(otaPkt.std.tlm_dl.payload));
-        }
+        #if defined(USE_AIRPORT_AT_BAUD)
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        #else
+            if (OtaIsFullRes)
+            {
+                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.full.tlm_dl.payload,
+                    sizeof(otaPkt.full.tlm_dl.payload));
+            }
+            else
+            {
+                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.std.tlm_dl.payload,
+                    sizeof(otaPkt.std.tlm_dl.payload));
+            }
+        #endif
     }
 
     OtaGeneratePacketCrc(&otaPkt);
@@ -719,6 +727,11 @@ void GotConnection(unsigned long now)
     webserverPreventAutoStart = true;
     #endif
 
+    #if defined(USE_AIRPORT_AT_BAUD)
+        apInputBuffer.flush();
+        apOutputBuffer.flush();
+    #endif
+
     DBGLN("got conn");
 }
 
@@ -728,6 +741,11 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     // during sync, where packets can be received before connection
     if (connectionState != connected || SwitchModePending)
         return;
+
+    #if defined(USE_AIRPORT_AT_BAUD)
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        return;
+    #endif
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -896,7 +914,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PDF calculation since TX does not send such data and tlm frames from other rx are not in sync
+    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
     if (otaPktPtr->std.type == PACKET_TYPE_TLM)
     {
         return true;
@@ -1177,8 +1195,16 @@ void HandleUARTin()
     {
         return;
     }
-    while (CRSF_RX_SERIAL.available())
+    if (CRSF_RX_SERIAL.available())
     {
+        #if defined(USE_AIRPORT_AT_BAUD)
+            if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+            {
+                apInputBuffer.push(CRSF_RX_SERIAL.read());
+            }
+            return;
+        #endif
+
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
 
         if (telemetry.ShouldCallBootloader())
@@ -1201,6 +1227,16 @@ void HandleUARTin()
             crsf.sendMSPFrameToFC(deviceInformation);
         }
     }
+}
+
+static void HandleUARTout()
+{
+    #if defined(USE_AIRPORT_AT_BAUD)
+        if (apOutputBuffer.size())
+        {
+            Serial.write(apOutputBuffer.pop());
+        }
+    #endif
 }
 
 static void setupRadio()
@@ -1500,6 +1536,11 @@ void loop()
     }
 
     devicesUpdate(now);
+
+    #if defined(USE_AIRPORT_AT_BAUD)
+        HandleUARTin();
+        HandleUARTout();
+    #endif
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

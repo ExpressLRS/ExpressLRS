@@ -76,7 +76,9 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     #endif
 #endif
 #if defined(TARGET_RX)
-#if defined(RCVR_UART_BAUD)
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
     .uart_baud = 420000,
