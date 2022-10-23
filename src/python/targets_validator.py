@@ -3,6 +3,7 @@ import json
 import glob
 
 hadError = False
+firmwares = set()
 
 def error(msg):
     global hadError
@@ -59,10 +60,15 @@ def validate_devices(vendor, type, devname, device):
         error(f'device tag "{devname}" should be lowercase')
     if 'product_name' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "product_name" child element')
-    if 'firmware' not in device:
-        error(f'device "{vendor}.{type}.{devname}" must have a "firmware" child element')
     if 'upload_methods' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "upload_methods" child element')
+
+    if 'firmware' not in device:
+        error(f'device "{vendor}.{type}.{devname}" must have a "firmware" child element')
+    else:
+        firmware = device['firmware']
+        if firmware not in firmwares:
+            error(f'device "{vendor}.{type}.{devname}" has an invalid firmware file "{firmware}"')
 
     if 'platform' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "platform" child element')
@@ -101,6 +107,17 @@ if __name__ == '__main__':
     with open('hardware/targets.json') as f:
         targets = json.load(f)
 
+        for inifile in glob.iglob('targets/*.ini'):
+            with open(inifile) as ini:
+                for line in ini:
+                    if line.startswith('[env:'):
+                        try:
+                            firmware_file = line[5:line.index('_via_')]
+                            firmwares.add(firmware_file)
+                        except ValueError:
+                            print(line)
+                            None
+
         for vendor in targets:
             validate_vendor(vendor, targets[vendor])
 
@@ -114,17 +131,17 @@ if __name__ == '__main__':
                         board = line[eq+1:].strip()
                         parts = board.split('.')
                         if len(parts) != 3:
-                            error('board_config must have 3 parts')
+                            error(f'{inifile}: board_config must have 3 parts')
                         else:
                             vendor = parts[0]
                             type = parts[1]
                             device = parts[2]
                             if vendor not in targets:
-                                error(f'targets.json file does not contain vendor {vendor}')
+                                error(f'{inifile}: targets.json file does not contain vendor {vendor}')
                             elif type not in targets[vendor]:
-                                error(f'targets.json "{vendor}" does not contain type {type}')
+                                error(f'{inifile}: targets.json "{vendor}" does not contain type {type}')
                             elif device not in targets[vendor][type]:
-                                error(f'targets.json "{vendor}.{type}" does not contain device {device}')
+                                error(f'{inifile}: targets.json "{vendor}.{type}" does not contain device {device}')
     if hadError:
         sys.exit(1)
     sys.exit(0)
