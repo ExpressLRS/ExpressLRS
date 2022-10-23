@@ -184,7 +184,7 @@ void SX1280Driver::SetOutputPower(int8_t power)
 {
     uint8_t pwrNew = constrain(power, SX1280_POWER_MIN, SX1280_POWER_MAX) + (-SX1280_POWER_MIN);
 
-    if (pwrCurrent != pwrNew)
+    if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
     {
         pwrPending = pwrNew;
         DBGLN("SetPower: %u", pwrPending);
