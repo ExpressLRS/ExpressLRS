@@ -117,7 +117,7 @@ void ICACHE_RAM_ATTR BeginClearChannelAssessment()
   }
 }
 
-bool ICACHE_RAM_ATTR ChannelIsClear(void)
+SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
 {
   LBTSuccessCalc.inc(); // Increment count for every channel check
   LBTStarted = false;
@@ -125,7 +125,7 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
   if (!LBTEnabled)
   {
     LBTSuccessCalc.add();
-    return true;
+    return SX12XX_Radio_All;
   }
 
   // Read rssi after waiting the minimum RSSI valid delay.
@@ -149,18 +149,35 @@ bool ICACHE_RAM_ATTR ChannelIsClear(void)
     delayMicroseconds(validRSSIdelayUs - elapsed);
   }
 
-  int8_t rssiInst = Radio.GetRssiInst();
-  bool channelClear = rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(),
-        ExpressLRS_currAirRate_Modparams->radio_type);
+  int8_t rssiInst = 0;
+  SX12XX_Radio_Number_t clearChannelsMask = 0x00;
+
+  if (radioNumber & SX12XX_Radio_1 || (Radio.GetLastSuccessfulPacketRadio() == SX12XX_Radio_1 && radioNumber == SX12XX_Radio_1))
+  {
+    rssiInst = Radio.GetRssiInst(SX12XX_Radio_1);
+    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+    {
+      clearChannelsMask |= SX12XX_Radio_1;
+    }
+  }
+
+  if (radioNumber & SX12XX_Radio_2 || (Radio.GetLastSuccessfulPacketRadio() == SX12XX_Radio_2 && radioNumber == SX12XX_Radio_2))
+  {
+    rssiInst = Radio.GetRssiInst(SX12XX_Radio_2);
+    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+    {
+      clearChannelsMask |= SX12XX_Radio_2;
+    }
+  }
   
   // Useful to debug if and how long the rssi wait is, and rssi threshold level
-  // DBGLN("wait: %d, rssi: %d, %s", validRSSIdelayUs - elapsed, rssiInst, channelClear ? "clear" : "in use");
+  // DBGLN("wait: %d, rssi: %d, %s", validRSSIdelayUs - elapsed, rssiInst, clearChannelsMask ? "clear" : "in use");
 
-  if(channelClear)
+  if(clearChannelsMask)
   {
     LBTSuccessCalc.add(); // Add success only when actually preparing for TX
   }
 
-  return channelClear;
+  return clearChannelsMask;
 }
 #endif

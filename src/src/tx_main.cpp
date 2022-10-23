@@ -453,31 +453,33 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
+  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
+
+  if (isDualRadio())
+  {
+    switch (config.GetAntennaMode())
+    {
+    case 0:
+      transmittingRadio = SX12XX_Radio_All; // Gemini mode  
+      break;
+    case 1:
+      transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
+      break;
+    case 2:
+      transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
+      break;
+    default:
+      break;
+    }
+  }
+
+  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if (ChannelIsClear())
+  clearChannelsMask = ChannelIsClear(transmittingRadio);
+  if (clearChannelsMask)
 #endif
   {
-    SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
-
-    if (isDualRadio())
-    {
-      switch (config.GetAntennaMode())
-      {
-      case 0:
-        transmittingRadio = SX12XX_Radio_All; // Gemini mode
-        break;
-      case 1:
-        transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
-        break;
-      case 2:
-        transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
-        break;
-      default:
-        break;
-      }
-    }
-
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
   }
 }
 

@@ -569,11 +569,11 @@ bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
         return !IQinverted;
 }
 
-int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst()
+int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status = 0;
 
-    hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, (uint8_t *)&status, 1, lastSuccessfulPacketRadio);
+    hal.ReadCommand(SX1280_RADIO_GET_RSSIINST, (uint8_t *)&status, 1, radioNumber);
     return -(int8_t)(status / 2);
 }
 
