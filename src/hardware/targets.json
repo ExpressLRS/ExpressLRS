@@ -1295,6 +1295,14 @@
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX"
+			},
+            "boxer": {
+                "product_name": "RadioMaster Boxer Internal 2.4GHz TX",
+                "lua_name": "RadioMstr Boxer",
+                "layout_file": "Radiomaster Boxer.json",
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
