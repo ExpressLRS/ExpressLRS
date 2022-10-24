@@ -23,7 +23,7 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 #include "devSerialUpdate.h"
-
+#include "devBaro.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -68,6 +68,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
+#endif
+#ifdef HAS_BARO
+  {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
 #endif
 };
 
@@ -219,7 +222,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     {
         antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
     }
-    
+
     int32_t rssiDBM = Radio.LastPacketRSSI;
     if (antenna == 0)
     {
