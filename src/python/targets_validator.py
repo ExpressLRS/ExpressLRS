@@ -69,6 +69,10 @@ def validate_devices(vendor, type, devname, device):
         firmware = device['firmware']
         if firmware not in firmwares:
             error(f'device "{vendor}.{type}.{devname}" has an invalid firmware file "{firmware}"')
+        elif (firmware.endswith('_TX') and 'tx_' not in type):
+            error(f'device "{vendor}.{type}.{devname}" has an invalid firmware file "{firmware}", it must be a TX target firmware')
+        elif (firmware.endswith('_RX') and 'rx_' not in type):
+            error(f'device "{vendor}.{type}.{devname}" has an invalid firmware file "{firmware}", it must be an RX target firmware')
 
     if 'platform' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "platform" child element')
