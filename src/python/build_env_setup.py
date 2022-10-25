@@ -1,4 +1,5 @@
 Import("env", "projenv")
+import os
 import stlink
 import UARTupload
 import opentx
@@ -133,4 +134,9 @@ if "_WIFI" in target_name:
 if platform != 'native':
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
 
+# Remove stale binary so the platform is forced to build a new one and attach options/hardware-layout files
+try:
+    os.remove(env['PROJECT_BUILD_DIR'] + '/' + env['PIOENV'] +'/'+ env['PROGNAME'] + '.bin')
+except FileNotFoundError:
+    None
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)
