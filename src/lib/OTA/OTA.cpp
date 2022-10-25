@@ -582,24 +582,19 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 #if defined(USE_AIRPORT_AT_BAUD)
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
 {
+    uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
-        uint8_t count = inputBuffer->size() > ELRS8_TELEMETRY_BYTES_PER_CALL ? ELRS8_TELEMETRY_BYTES_PER_CALL : inputBuffer->size();
+        count = std::min(count, (uint8_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->full.airport.count = count;
-        for (uint8_t i = 0; i < count; ++i)
-        {
-            otaPktPtr->full.airport.payload[i] = inputBuffer->pop();
-        }
+        inputBuffer->popBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
+        count = std::min(count, (uint8_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_DATA;
-        uint8_t count = inputBuffer->size() > ELRS4_TELEMETRY_BYTES_PER_CALL ? ELRS4_TELEMETRY_BYTES_PER_CALL : inputBuffer->size();
         otaPktPtr->std.airport.count = count;
-        for (uint8_t i = 0; i < count; ++i)
-        {
-            otaPktPtr->std.airport.payload[i] = inputBuffer->pop();
-        }
+        inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
     }
 }
 
@@ -608,20 +603,12 @@ void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_
     if (OtaIsFullRes)
     {
         uint8_t count = otaPktPtr->full.airport.count;
-        for (uint8_t i = 0; i < count; ++i)
-        {
-            if (outputBuffer->size() < AP_MAX_BUF_LEN)
-                outputBuffer->push(otaPktPtr->full.airport.payload[i]);
-        }
+        outputBuffer->pushBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
         uint8_t count = otaPktPtr->std.airport.count;
-        for (uint8_t i = 0; i < count; ++i)
-        {
-            if (outputBuffer->size() < AP_MAX_BUF_LEN)
-                outputBuffer->push(otaPktPtr->std.airport.payload[i]);
-        }
+        outputBuffer->pushBytes(otaPktPtr->std.airport.payload, count);
     }
 }
 #endif // USE_AIRPORT_AT_BAUD

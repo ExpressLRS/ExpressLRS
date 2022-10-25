@@ -37,10 +37,19 @@ template <uint32_t FIFO_SIZE>
 class FIFO_GENERIC
 {
 private:
-    uint32_t head;
-    uint32_t tail;
-    uint32_t numElements;
+    volatile uint32_t head;
+    volatile uint32_t tail;
+    volatile uint32_t numElements;
     uint8_t buffer[FIFO_SIZE] = {0};
+#if defined(PLATFORM_ESP32)
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+#define ENTER_CRITICAL  portENTER_CRITICAL(&mux)
+#define EXIT_CRITICAL   portEXIT_CRITICAL(&mux)
+#endif
+#if defined(PLATFORM_ESP8266)
+#define ENTER_CRITICAL  noInterrupts()
+#define EXIT_CRITICAL   interrupts()
+#endif
 
 public:
     FIFO_GENERIC()
@@ -59,12 +68,11 @@ public:
             flush();
             return;
         }
-        else
-        {
-            numElements++;
-            buffer[tail] = data;
-            tail = (tail + 1) % FIFO_SIZE;
-        }
+        ENTER_CRITICAL;
+        buffer[tail] = data;
+        tail = (tail + 1) % FIFO_SIZE;
+        numElements++;
+        EXIT_CRITICAL;
     }
 
     void pushBytes(const uint8_t *data, uint32_t len)
@@ -75,12 +83,14 @@ public:
             flush();
             return;
         }
+        ENTER_CRITICAL;
         for (uint32_t i = 0; i < len; i++)
         {
             buffer[tail] = data[i];
             tail = (tail + 1) % FIFO_SIZE;
         }
         numElements += len;
+        EXIT_CRITICAL;
     }
 
     uint8_t pop()
@@ -90,13 +100,12 @@ public:
             // DBGLN(F("Buffer empty"));
             return 0;
         }
-        else
-        {
-            numElements--;
-            uint8_t data = buffer[head];
-            head = (head + 1) % FIFO_SIZE;
-            return data;
-        }
+        ENTER_CRITICAL;
+        uint8_t data = buffer[head];
+        head = (head + 1) % FIFO_SIZE;
+        numElements--;
+        EXIT_CRITICAL;
+        return data;
     }
 
     void popBytes(uint8_t *data, uint32_t len)
@@ -105,16 +114,16 @@ public:
         {
             // DBGLN(F("Buffer underrun"));
             flush();
+            return;
         }
-        else
+        ENTER_CRITICAL;
+        for (uint32_t i = 0; i < len; i++)
         {
-            numElements -= len;
-            for (uint32_t i = 0; i < len; i++)
-            {
-                data[i] = buffer[head];
-                head = (head + 1) % FIFO_SIZE;
-            }
+            data[i] = buffer[head];
+            head = (head + 1) % FIFO_SIZE;
         }
+        numElements -= len;
+        EXIT_CRITICAL;
     }
 
     uint8_t peek()
@@ -167,8 +176,10 @@ public:
 
     void flush()
     {
+        ENTER_CRITICAL;
         head = 0;
         tail = 0;
         numElements = 0;
+        EXIT_CRITICAL;
     }
 };

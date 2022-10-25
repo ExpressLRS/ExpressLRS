@@ -888,7 +888,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
 static void HandleUARTout()
 {
   #if defined(USE_AIRPORT_AT_BAUD)
-    if (apOutputBuffer.size())
+    while (apOutputBuffer.size())
     {
       TxUSB->write(apOutputBuffer.pop());
     }
