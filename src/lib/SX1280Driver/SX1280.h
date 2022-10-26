@@ -37,7 +37,7 @@ public:
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size);
-    void RXnb();
+    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX);
 
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);

@@ -33,6 +33,7 @@ typedef enum {
     HARDWARE_power_txen,
     HARDWARE_power_rxen_2,
     HARDWARE_power_txen_2,
+    HARDWARE_power_lna_gain,
     HARDWARE_power_min,
     HARDWARE_power_high,
     HARDWARE_power_max,
