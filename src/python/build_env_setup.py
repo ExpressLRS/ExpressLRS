@@ -1,4 +1,5 @@
 Import("env", "projenv")
+import os
 import stlink
 import UARTupload
 import opentx
@@ -83,7 +84,7 @@ elif platform in ['espressif8266']:
     elif "_UART" in target_name:
         env.Replace(
             UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
-            UPLOAD_SPEED=921600,
+            UPLOAD_SPEED=460800,
             UPLOADERFLAGS=[
                 "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT",
                 "-c", "esp8266", "--before", "default_reset", "--after", "soft_reset", "write_flash"
@@ -107,7 +108,7 @@ elif platform in ['espressif32']:
     elif "_UART" in target_name:
         env.Replace(
             UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
-            UPLOAD_SPEED=921600
+            UPLOAD_SPEED=460800
         )
     if "_ETX" in target_name:
         env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
@@ -133,4 +134,9 @@ if "_WIFI" in target_name:
 if platform != 'native':
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
 
+# Remove stale binary so the platform is forced to build a new one and attach options/hardware-layout files
+try:
+    os.remove(env['PROJECT_BUILD_DIR'] + '/' + env['PIOENV'] +'/'+ env['PROGNAME'] + '.bin')
+except FileNotFoundError:
+    None
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)
