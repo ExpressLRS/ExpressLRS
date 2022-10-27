@@ -20,6 +20,7 @@
     "power_rxen_2": 9,
     "power_txen_2": 15,
 
+    "power_lna_gain": 12,
     "power_min": 0,
     "power_high": 4,
     "power_max": 4,
