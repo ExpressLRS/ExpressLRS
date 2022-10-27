@@ -45,10 +45,15 @@ private:
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 #define ENTER_CRITICAL  portENTER_CRITICAL(&mux)
 #define EXIT_CRITICAL   portEXIT_CRITICAL(&mux)
-#endif
-#if defined(PLATFORM_ESP8266)
+#elif defined(PLATFORM_ESP8266)
 #define ENTER_CRITICAL  noInterrupts()
 #define EXIT_CRITICAL   interrupts()
+#elif defined(PLATFORM_STM32)
+#define ENTER_CRITICAL  noInterrupts()
+#define EXIT_CRITICAL   interrupts()
+#else
+#define ENTER_CRITICAL
+#define EXIT_CRITICAL
 #endif
 
 public:
