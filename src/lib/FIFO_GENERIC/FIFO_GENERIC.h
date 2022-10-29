@@ -37,9 +37,9 @@ template <uint32_t FIFO_SIZE>
 class FIFO_GENERIC
 {
 private:
-    volatile uint32_t head;
-    volatile uint32_t tail;
-    volatile uint32_t numElements;
+    uint32_t head;
+    uint32_t tail;
+    uint32_t numElements;
     uint8_t buffer[FIFO_SIZE] = {0};
 #if defined(PLATFORM_ESP32)
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;

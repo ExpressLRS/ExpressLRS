@@ -39,9 +39,9 @@
 class FIFO
 {
 private:
-    volatile uint8_t head;
-    volatile uint8_t tail;
-    volatile uint16_t numElements;
+    uint8_t head;
+    uint8_t tail;
+    uint16_t numElements;
     uint8_t buffer[FIFO_SIZE] = {0};
 #if defined(PLATFORM_ESP32)
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
