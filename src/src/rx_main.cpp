@@ -1130,10 +1130,11 @@ static void setupConfigAndPocCheck()
         else
         {
             // We haven't reached our binding mode power cycles
-            // and we've been powered on for 2s, reset the power on counter
-            delay(2000);
-            config.SetPowerOnCounter(0);
-            config.Commit();
+            // and we've been powered on for 2s, reset the power on counter.
+            // config.Commit() is done in the loop with CheckConfigChangePending().
+            deferExecution(2000, []() {
+                config.SetPowerOnCounter(0);
+            });
         }
     }
 
