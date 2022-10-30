@@ -2,6 +2,7 @@
 
 #include <dynpower.h>
 #include <common.h>
+#include <LBT.h>
 
 // LQ-based boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
@@ -125,6 +126,10 @@ void DynamicPower_Update(uint32_t now)
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
+#if defined(Regulatory_Domain_EU_CE_2400)
+  // make adjustment for packets not sent because the channel was not clear
+  lq_current = lq_current * 100 / LBTSuccessCalc.getLQ();
+#endif
   uint32_t lq_avg = dynpower_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
   dynpower_mavg_lq.add(lq_current);

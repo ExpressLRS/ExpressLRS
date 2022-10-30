@@ -126,7 +126,7 @@ enum {
 enum {
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
     CRSF_FRAME_VARIO_PAYLOAD_SIZE = 2,
-    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 2,
+    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 4, // TBS version is 2, ELRS is 4 (combines vario)
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
     CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
@@ -266,16 +266,21 @@ union inBuffer_U
 
 typedef struct crsf_channels_s crsf_channels_t;
 
-// Used by extended header frames (type in range 0x28 to 0x96)
+//CRSF_FRAMETYPE_BATTERY_SENSOR
 typedef struct crsf_sensor_battery_s
 {
-    unsigned voltage : 16;  // mv * 100
+    unsigned voltage : 16;  // mv * 100 BigEndian
     unsigned current : 16;  // ma * 100
     unsigned capacity : 24; // mah
     unsigned remaining : 8; // %
-} PACKED crsf_sensor_battery_s;
+} PACKED crsf_sensor_battery_t;
 
-typedef struct crsf_sensor_battery_s crsf_sensor_battery_t;
+// CRSF_FRAMETYPE_BARO_ALTITUDE
+typedef struct crsf_sensor_baro_vario_s
+{
+    uint16_t altitude; // Altitude in decimeters + 10000dm, or Altitude in meters if high bit is set, BigEndian
+    int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
+} PACKED crsf_sensor_baro_vario_t;
 
 /*
  * 0x14 Link statistics

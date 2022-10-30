@@ -223,6 +223,83 @@
             }
         }
     },
+    "emax": {
+        "name": "EMAX",
+        "tx_900": {
+            "plain": {
+                "product_name": "EMAX OLED 900MHz TX",
+                "lua_name": "EMAX 900TX",
+                "layout_file": "EMAX 900 OLED.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX"
+            },
+            "nano": {
+                "product_name": "EMAX Nano 900MHz TX",
+                "lua_name": "EMAX NANO 900TX",
+                "layout_file": "EMAX 900 Nano.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX"
+            }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "EMAX 900MHz RX",
+                "lua_name": "EMAX 900RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX"
+            }
+        },
+        "tx_2400": {
+            "plain": {
+                "product_name": "EMAX OLED 2.4GHz TX",
+                "lua_name": "EMAX 2400TX",
+                "layout_file": "EMAX 2400 OLED.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            },
+            "nano": {
+                "product_name": "EMAX Nano 2.4GHz TX",
+                "lua_name": "EMAX NANO 2G4TX",
+                "layout_file": "EMAX 2400 Nano.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            }
+        },
+        "rx_2400": {
+            "plain": {
+                "product_name": "EMAX 2.4GHz RX",
+                "lua_name": "EMAX 2400RX",
+                "layout_file": "Generic 2400.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "pa": {
+                "product_name": "EMAX 2.4GHz PA RX",
+                "lua_name": "EMAX 2400RX",
+                "layout_file": "Generic 2400 PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "flywoo": {
         "name": "Flywoo",
         "rx_2400": {
@@ -359,53 +436,6 @@
             }
         }
     },
-    "emax": {
-        "name": "EMAX",
-        "tx_900": {
-            "plain": {
-                "product_name": "EMAX OLED 900MHz TX",
-                "lua_name": "EMAX 900TX",
-                "layout_file": "EMAX 900 OLED.json",
-                "features": ["fan"],
-                "upload_methods": ["uart", "wifi"],
-                "platform": "esp32",
-                "firmware": "Unified_ESP32_900_TX"
-            }
-        },
-        "rx_900": {
-            "plain": {
-                "product_name": "EMAX 900MHz RX",
-                "lua_name": "EMAX 900RX",
-                "layout_file": "Generic 900.json",
-                "upload_methods": ["uart", "wifi", "betaflight"],
-                "platform": "esp8285",
-                "firmware": "Unified_ESP8285_900_RX"
-            }
-        },
-        "tx_2400": {
-            "plain": {
-                "product_name": "EMAX OLED 2.4GHz TX",
-                "lua_name": "EMAX 2400TX",
-                "layout_file": "EMAX 2400 OLED.json",
-                "upload_methods": ["uart", "wifi"],
-                "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TX"
-            }
-        },
-        "rx_2400": {
-            "pa": {
-                "product_name": "EMAX 2.4GHz PA RX",
-                "lua_name": "EMAX 2400RX",
-                "layout_file": "Generic 2400 PA.json",
-                "overlay": {
-                    "radio_dcdc": true
-                },
-                "upload_methods": ["uart", "wifi", "betaflight"],
-                "platform": "esp8285",
-                "firmware": "Unified_ESP8285_2400_RX"
-            }
-        }
-    },
     "generic": {
         "name": "Generic targets used as a base",
         "rx_900": {
@@ -487,6 +517,14 @@
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_PWMPEX"
             },
+            "pwm-vario": {
+                "product_name": "Generic ESP32 PWM Vario 2.4Ghz RX",
+                "lua_name": "Vario 2400RX",
+                "layout_file": "Vario 2400.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
             "pwm7": {
                 "product_name": "Generic ESP8285 7xPWM 2.4Ghz RX",
                 "lua_name": "ELRS+PWM 2400RX",
@@ -533,7 +571,7 @@
                 "layout_file": "Generic 2400 Whoop Rx and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TR"
+                "firmware": "Unified_ESP32_2400_RX"
             },
             "true_diversity": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX",
@@ -717,13 +755,15 @@
     "hiyounger": {
         "name": "HiYOUNGER",
         "tx_2400": {
-            "product_name": "HiYOUNGER 2.4GHz TX",
-            "lua_name": "HiYOUNGER TX2G4",
-            "layout_file": "BETAFPV 2400 Nano.json",
-            "upload_methods": ["uart", "wifi"],
-            "platform": "esp32",
-            "firmware": "Unified_ESP32_2400_TX",
-            "prior_target_name": "BETAFPV_2400_TX"
+            "plain": {
+                "product_name": "HiYOUNGER 2.4GHz TX",
+                "lua_name": "HiYOUNGER TX2G4",
+                "layout_file": "BETAFPV 2400 Nano.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "BETAFPV_2400_TX"
+            }
         },
         "rx_2400": {
             "rx24t": {
@@ -755,13 +795,15 @@
             }
         },
         "tx_900": {
-            "product_name": "HiYOUNGER 900 TX",
-            "lua_name": "HiYOUNGER 900 TX",
-            "layout_file": "BETAFPV 900 Nano.json",
-            "upload_methods": ["uart", "wifi"],
-            "platform": "esp32",
-            "firmware": "Unified_ESP32_900_TX",
-            "prior_target_name": "BETAFPV_900_TX"
+            "plain": {
+                "product_name": "HiYOUNGER 900 TX",
+                "lua_name": "HiYOUNGER 900 TX",
+                "layout_file": "BETAFPV 900 Nano.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "BETAFPV_900_TX"
+            }
         },
         "rx_900": {
             "plain": {
@@ -955,7 +997,7 @@
         "rx_900": {
             "mini": {
                 "product_name": "Jumper 900 Mini RX",
-                "upload_methods": ["betaflight"],
+                "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
                 "firmware": "Jumper_RX_R900MINI",
                 "stlink": {
@@ -1191,7 +1233,7 @@
             "rp3": {
                 "product_name": "RadioMaster RP3 Diversity 2.4GHz RX",
                 "lua_name": "RadioMstr RP3",
-                "layout_file": "Generic 2400 PA Diversity.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "overlay": {
                     "radio_dcdc": true
                 },

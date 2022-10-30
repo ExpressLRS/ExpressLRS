@@ -12,6 +12,7 @@
     "power_enable": 25,
     "power_rxen": 32,
     "power_txen": 33,
+    "power_lna_gain": 12,
     "power_min": 1,
     "power_high": 6,
     "power_max": 6,
