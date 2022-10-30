@@ -128,6 +128,17 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_PWMP"
+            },
+            "superd": {
+                "product_name": "BETAFPV 2.4GHz SuperD RX",
+                "lua_name": "BFPV SuperD 2G4",
+                "layout_file": "Generic 2400 True Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
