@@ -5,10 +5,10 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 const char STR_EMPTYSPACE[] = { 0 };
 const char STR_LUA_PACKETRATES[] =
 #if defined(RADIO_SX127X)
-    "L25(-123dBm);L50(-120dBm);L100(-117dBm);L100F(-112dBm);L200(-112dBm)";
+    "L25(-123);L50(-120);L100(-117);L100F(-112);L200(-112)";
 #elif defined(RADIO_SX128X)
-    "L50(-115dBm);L100F(-112dBm);L150(-112dBm);L250(-108dBm);L333F(-105dBm);L500(-105dBm);"
-    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)";
+    "L50(-115);L100F(-112);L150(-112);L250(-108);L333F(-105);L500(-105);"
+    "D250(-104);D500(-104);F500(-104);F1000(-104)";
 #else
     #error Invalid radio configuration!
 #endif
