@@ -8,7 +8,7 @@ const char STR_LUA_PACKETRATES[] =
     "L25(-123);L50(-120);L100(-117);L100F(-112);L200(-112)";
 #elif defined(RADIO_SX128X)
     "L50(-115);L100F(-112);L150(-112);L250(-108);L333F(-105);L500(-105);"
-    "D250(-104);D500(-104);F500(-104);F1000(-104)";
+    "F250D(-104);F500D(-104);F500(-104);F1000(-104)";
 #else
     #error Invalid radio configuration!
 #endif
