@@ -338,7 +338,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
                );
                
-  if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
+  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
@@ -362,7 +362,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
+    if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
     {
       Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -459,13 +459,13 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     switch (config.GetAntennaMode())
     {
-    case 0:
+    case TX_RADIO_MODE_GEMINI:
       transmittingRadio = SX12XX_Radio_All; // Gemini mode  
       break;
-    case 1:
+    case TX_RADIO_MODE_ANT_1:
       transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
       break;
-    case 2:
+    case TX_RADIO_MODE_ANT_2:
       transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
       break;
     default:
@@ -840,7 +840,7 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
   Radio.SetFrequencyReg(GetInitialFreq());
-  if (isDualRadio() && config.GetAntennaMode() == 0) // Gemini mode
+  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }

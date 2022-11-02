@@ -104,6 +104,13 @@ enum {
     RADIO_TYPE_SX128x_FLRC,
 };
 
+typedef enum : uint8_t
+{
+    TX_RADIO_MODE_GEMINI = 0,
+    TX_RADIO_MODE_ANT_1 = 1,
+    TX_RADIO_MODE_ANT_2 = 2
+} tx_radio_mode_e;
+
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
 
