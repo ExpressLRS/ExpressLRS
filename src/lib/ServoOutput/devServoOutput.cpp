@@ -1,6 +1,6 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 #include "devServoOutput.h"
-#include "common.h"
+#include "rxtx_intf.h"
 #include "config.h"
 #include "CRSF.h"
 #include "helpers.h"
@@ -44,13 +44,13 @@ static void servosFailsafe()
     }
 }
 
-static int servosUpdate(unsigned long now)
+static int servosUpdate()
 {
-    static uint32_t lastUpdate;
+    static bool servosActive;
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
-        lastUpdate = now;
+        servosActive = true;
         for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -72,11 +72,11 @@ static int servosUpdate(unsigned long now)
         } /* for each servo */
     } /* if newChannelsAvailable */
 
-    else if (lastUpdate && (now - lastUpdate) > 1000U && connectionState == connected)
+    else if (servosActive && getLq() == 0)
     {
-        // No update for 1s, go to failsafe
+        // LQ goes to 0, go to failsafe (100 packets missed in a row)
         servosFailsafe();
-        lastUpdate = 0;
+        servosActive = false;
     }
 
     return DURATION_IMMEDIATELY;
@@ -137,7 +137,7 @@ static int event()
 
 static int timeout()
 {
-    return servosUpdate(millis());
+    return servosUpdate();
 }
 
 device_t ServoOut_device = {
