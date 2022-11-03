@@ -30,6 +30,15 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
     }
 }
 
+static void servoWrite(uint8_t ch, uint16_t us)
+{
+    const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+    if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+        servoMgr->writeDigital(ch, us > 1500U);
+    else
+        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+}
+
 static void servosFailsafe()
 {
     constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
@@ -40,7 +49,7 @@ static void servosFailsafe()
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
-        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+        servoWrite(ch, us);
     }
 }
 
@@ -65,10 +74,7 @@ static int servosUpdate()
             if (chConfig->val.inverted)
                 us = 3000U - us;
 
-            if ((eServoOutputMode)chConfig->val.mode == somOnOff)
-                servoMgr->writeDigital(ch, us > 1500U);
-            else
-                servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+            servoWrite(ch, us);
         } /* for each servo */
     } /* if newChannelsAvailable */
 
