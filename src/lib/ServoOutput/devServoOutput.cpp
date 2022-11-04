@@ -9,6 +9,8 @@ static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
+// Absolute max failsafe time if no update is received, regardless of LQ
+static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
 void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
 {
@@ -53,13 +55,13 @@ static void servosFailsafe()
     }
 }
 
-static int servosUpdate()
+static int servosUpdate(unsigned long now)
 {
-    static bool servosActive;
+    static uint32_t lastUpdate;
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
-        servosActive = true;
+        lastUpdate = now;
         for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
@@ -78,11 +80,14 @@ static int servosUpdate()
         } /* for each servo */
     } /* if newChannelsAvailable */
 
-    else if (servosActive && getLq() == 0)
+    // LQ goes to 0 (100 packets missed in a row)
+    // OR last update older than FAILSAFE_ABS_TIMEOUT_MS
+    // go to failsafe
+    else if (lastUpdate &&
+        ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
     {
-        // LQ goes to 0, go to failsafe (100 packets missed in a row)
         servosFailsafe();
-        servosActive = false;
+        lastUpdate = 0;
     }
 
     return DURATION_IMMEDIATELY;
@@ -143,7 +148,7 @@ static int event()
 
 static int timeout()
 {
-    return servosUpdate();
+    return servosUpdate(millis());
 }
 
 device_t ServoOut_device = {
