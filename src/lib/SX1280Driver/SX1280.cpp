@@ -109,7 +109,13 @@ bool SX1280Driver::Begin()
 #if defined(TARGET_RX)
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
 #else
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN) // Do not enable for dual radio TX.
+/*
+Do not enable for dual radio TX.
+When SX1280_RADIO_SET_AUTOFS is set and tlm received by only 1 of the 2 radios,  that radio will go into FS mode and the other
+into Standby mode.  After the following SPI command for tx mode, busy will go high for differing periods of time because 1 is
+transitioning from FS mode and the other from Standby mode. This causes the tx done dio of the 2 radios to occur at very different times.
+*/
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN)
     {
         hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
     }
