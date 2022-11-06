@@ -22,7 +22,6 @@ sx127x = False
 config = {
         "options": {
             'uid': [1,2,3,4,5,6],
-            'wifi-on-interval': 60,
             "tlm-interval": 240,
             "fan-runtime": 30,
             "no-sync-on-arm": False,
@@ -31,10 +30,13 @@ config = {
             "rcvr-uart-baud": 400000,
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
-            "domain": 1
+            "domain": 1,
+            "wifi-on-interval": 60,
+            "wifi-password": "w1f1-pAssw0rd",
+            "wifi-ssid": "network-ssid"
         },
         "config": {
-            "ssid":"ConnectedNetwork",
+            "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
             "pwm":[512,1536,2048,3584,4608],
@@ -135,6 +137,11 @@ def options():
 def update_config():
     if (request.json['button-actions'] is not None):
         config['config']['button-actions'] = request.json['button-actions']
+
+@route('/sethome', method='POST')
+def options():
+    response.content_type = 'application/json; charset=latin9'
+    return "Connecting to network '" + request.forms.get('network') + "', connect to http://elrs_tx.local from a browser on that network"
 
 @route('/networks.json')
 def mode():

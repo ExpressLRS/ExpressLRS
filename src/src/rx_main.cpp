@@ -201,6 +201,11 @@ void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
 extern void setWifiUpdateMode();
 
+uint8_t getLq()
+{
+    return LQCalc.getLQ();
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
@@ -627,7 +632,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     if (!didFHSS) didFHSS = HandleFHSS();
-    
+
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 

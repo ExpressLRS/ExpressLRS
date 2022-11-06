@@ -351,7 +351,7 @@ _('upload_form').addEventListener('submit', (e) => {
 
 // =========================================================
 
-function callback(title, msg, url, getdata) {
+function callback(title, msg, url, getdata, success) {
   return function(e) {
     e.stopPropagation();
     e.preventDefault();
@@ -359,6 +359,7 @@ function callback(title, msg, url, getdata) {
     xmlhttp.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
+          if (success) success();
           cuteAlert({
             type: 'info',
             title: title,
@@ -384,6 +385,9 @@ function setupNetwork(event) {
   if (_('nt0').checked) {
     callback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function() {
       return new FormData(_('sethome'));
+    }, function() {
+      _('wifi-ssid').value = _('network').value;
+      _('wifi-password').value = _('password').value;
     })(event);
   }
   if (_('nt1').checked) {
