@@ -1,9 +1,8 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "devServoOutput.h"
-
 #include "CRSF.h"
-#include "common.h"
+#include "rxtx_intf.h"
 #include "config.h"
 #include "helpers.h"
 
@@ -11,6 +10,8 @@ static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
+// Absolute max failsafe time if no update is received, regardless of LQ
+static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
 void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
 {
@@ -40,6 +41,26 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
     }
 }
 
+static void servoWrite(uint8_t ch, uint16_t us)
+{
+    const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+    if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+    {
+        servoMgr->writeDigital(ch, us > 1500U);
+    }
+    else
+    {
+        if ((eServerPulseWidthMode)chConfig->val.pulseWidthMode == duty)
+        {
+            servoMgr->writeDuty(ch, us - 1000);
+        }
+        else
+        {
+            servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
+        }
+    }
+}
+
 static void servosFailsafe()
 {
     constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
@@ -50,14 +71,7 @@ static void servosFailsafe()
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
         // Always write the failsafe position even if the servo never has been started,
         // so all the servos go to their expected position
-        if ((eServerPulseWidthMode)chConfig->val.pulseWidthMode == duty)
-        {
-            servoMgr->writeDuty(ch, chConfig->val.failsafe); // directly use raw failsafe val in duty mode, so at this mode ,FAILSAFE shoud < 1000. TODO: add wrong value warning at JS
-        }
-        else
-        {
-            servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
-        }
+        servoWrite(ch, us);
     }
 }
 
@@ -86,27 +100,16 @@ static int servosUpdate(unsigned long now)
             {
                 us = 3000U - us;
             }
-            if ((eServoOutputMode)chConfig->val.mode == somOnOff)
-            {
-                servoMgr->writeDigital(ch, us > 1500U);
-            }
-            else
-            {
-                if ((eServerPulseWidthMode)chConfig->val.pulseWidthMode == duty)
-                {
-                    servoMgr->writeDuty(ch, us - 1000);
-                }
-                else
-                {
-                    servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
-                }
-            }
-
+            servoWrite(ch, us);
         } /* for each servo */
-    }     /* if newChannelsAvailable */
-    else if (lastUpdate && (now - lastUpdate) > 1000U && connectionState == connected)
+    } /* if newChannelsAvailable */
+
+    // LQ goes to 0 (100 packets missed in a row)
+    // OR last update older than FAILSAFE_ABS_TIMEOUT_MS
+    // go to failsafe
+    else if (lastUpdate &&
+        ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
     {
-        // No update for 1s, go to failsafe
         servosFailsafe();
         lastUpdate = 0;
     }
