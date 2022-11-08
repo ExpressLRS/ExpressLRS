@@ -803,8 +803,8 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false, 0, 0);
-    SetPwmChannel(2, 0, 2, false, 0, 0); // ch2 is throttle, failsafe it to 988
+        SetPwmChannel(ch, 512, ch, false, 0, false);
+    SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 
     if (commit)
@@ -825,7 +825,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t pulseWidthMode)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
@@ -836,7 +836,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
     newConfig.val.inputChannel = inputCh;
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
-    newConfig.val.pulseWidthMode = pulseWidthMode;
+    newConfig.val.narrow = narrow;
     if (pwm->raw == newConfig.raw)
         return;
 

@@ -1,9 +1,9 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "devServoOutput.h"
-#include "CRSF.h"
 #include "rxtx_intf.h"
 #include "config.h"
+#include "CRSF.h"
 #include "helpers.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
@@ -34,7 +34,7 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
         return (1000000U / 333U);
     case som400Hz:
         return (1000000U / 400U);
-    case som10KHz:
+    case som10KHzDuty:
         return (1000000U / 10000U);
     default:
         return 0;
@@ -50,13 +50,13 @@ static void servoWrite(uint8_t ch, uint16_t us)
     }
     else
     {
-        if ((eServerPulseWidthMode)chConfig->val.pulseWidthMode == duty)
+        if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
         {
-            servoMgr->writeDuty(ch, us - 1000);
+            servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
         }
         else
         {
-            servoMgr->writeMicroseconds(ch, us / (chConfig->val.pulseWidthMode + 1));
+            servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
         }
     }
 }

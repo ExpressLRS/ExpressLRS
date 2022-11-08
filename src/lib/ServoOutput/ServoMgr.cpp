@@ -1,9 +1,7 @@
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
 #include "ServoMgr.h"
-
 #include <math.h>
-
 #include "logging.h"
 #include "waveform_8266.h"
 
@@ -88,7 +86,6 @@ void ServoMgr::writeDuty(uint8_t ch, uint16_t duty)
     {
         return;
     }
-    duty = duty > 1000 ? 0 : duty; // prevent wraping around
     _activePwmChannels |= (1 << pin);
 #if defined(PLATFORM_ESP32)
     ledcWrite(_chnMap[ch], map(duty, 0, 1000, 0, (1 << _resolution_bits[ch]) - 1));

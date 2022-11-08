@@ -13,18 +13,11 @@ enum eServoOutputMode
     som160Hz,
     som333Hz,
     som400Hz,
-    som10KHz,
+    som10KHzDuty,
     somOnOff,  // Digital 0/1 mode
     somPwm,    // True PWM mode (NOT SUPPORTED)
     somCrsfTx, // CRSF output TX (NOT SUPPORTED)
     somCrsfRx, // CRSF output RX (NOT SUPPORTED)
-};
-
-enum eServerPulseWidthMode
-{
-    normal,
-    narrow,
-    duty
 };
 
 extern device_t ServoOut_device;
