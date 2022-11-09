@@ -64,7 +64,7 @@ function updatePwmSettings(arPwm) {
     const mode = (item >> 15) & 15; // 4 bits
     const narrow = (item >> 19) & 1;
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
-        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', 'On/Off']);
+        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off']);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
