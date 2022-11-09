@@ -1,9 +1,9 @@
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
 #include "ServoMgr.h"
-#include <math.h>
 #include "logging.h"
 #include "waveform_8266.h"
+#include <math.h>
 
 ServoMgr::ServoMgr(const uint8_t *const pins, const uint8_t outputCnt, uint32_t defaultInterval)
     : _pins(pins), _outputCnt(outputCnt), _refreshInterval(new uint16_t[outputCnt]), _activePwmChannels(0), _resolution_bits(new uint8_t[outputCnt])
@@ -25,7 +25,6 @@ uint8_t ServoMgr::allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin)
         _resolution_bits[ch] = 16;
     }
 
-    // for(int i=0;i<8;++i){
     for (int i = 7; i >= 0; --i)
     {
         if (_timerConfigs[i].freq == 0)

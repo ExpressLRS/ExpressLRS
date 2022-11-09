@@ -1,10 +1,10 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "devServoOutput.h"
-#include "rxtx_intf.h"
-#include "config.h"
 #include "CRSF.h"
+#include "config.h"
 #include "helpers.h"
+#include "rxtx_intf.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
@@ -102,13 +102,13 @@ static int servosUpdate(unsigned long now)
             }
             servoWrite(ch, us);
         } /* for each servo */
-    } /* if newChannelsAvailable */
+    }     /* if newChannelsAvailable */
 
     // LQ goes to 0 (100 packets missed in a row)
     // OR last update older than FAILSAFE_ABS_TIMEOUT_MS
     // go to failsafe
     else if (lastUpdate &&
-        ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
+             ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
     {
         servosFailsafe();
         lastUpdate = 0;
@@ -129,8 +129,7 @@ static void initialize()
     for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) \
-    && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
         {
