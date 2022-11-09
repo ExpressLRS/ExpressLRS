@@ -11,7 +11,7 @@ extern void HandleUARTin();
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
-    #if defined(PLATFORM_ESP32)
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
     sendFrame = true;
     #else
     crsf.sendRCFrameToFC();
