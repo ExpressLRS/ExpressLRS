@@ -1219,6 +1219,25 @@
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX"
+            },
+            "ranger-micro": {
+                "product_name": "Ranger Micro 2.4GHz TX",
+                "lua_name": "RM Ranger Micro",
+                "layout_file": "Ranger Micro.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            },
+            "ranger-nano": {
+                "product_name": "Ranger Nano 2.4GHz TX",
+                "lua_name": "RM Ranger Nano",
+                "layout_file": "Ranger Micro.json",
+                "overlay": {
+                    "power_values": [-18,-15,-12,-8,-5,0]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
