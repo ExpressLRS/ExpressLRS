@@ -99,6 +99,15 @@
             }
         },
         "rx_2400": {
+            "aio": {
+                "product_name": "BETAFPV 2.4GHz AIO RX",
+                "lua_name": "BFPV AIO 2G4RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
+            },
             "lite": {
                 "product_name": "BETAFPV 2.4GHz Lite RX",
                 "lua_name": "BFPV Lite 2G4RX",
@@ -128,6 +137,17 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_PWMP"
+            },
+            "superd": {
+                "product_name": "BETAFPV 2.4GHz SuperD RX",
+                "lua_name": "BFPV SuperD 2G4",
+                "layout_file": "Generic 2400 True Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
@@ -336,6 +356,15 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "lite": {
+                "product_name": "Foxeer Lite 2.4GHz RX",
+                "lua_name": "Foxeer Lite 2G4",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
             }
         }
     },
@@ -677,6 +706,16 @@
             "es24pro": {
                 "product_name": "HappyModel ES24 Pro 2.4GHz TX",
                 "lua_name": "HM ES24TX Pro",
+                "layout_file": "HappyModel ES24 Pro.json",
+                "features": ["fan"],
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "HappyModel_ES24TX_Pro_Series_2400_TX"
+            },
+            "es24slimpro": {
+                "product_name": "HappyModel ES24 Slim Pro 2.4GHz TX",
+                "lua_name": "HM ES24 SlimPro",
                 "layout_file": "HappyModel ES24 Pro.json",
                 "features": ["fan"],
                 "upload_methods": ["uart", "wifi"],
@@ -1168,6 +1207,15 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
                 "prior_target_name": "QuadKopters_JR_2400_TX"
+            },
+            "slim": {
+                "product_name": "QuadKopters Slim 2.4GHz TX",
+                "lua_name": "QuadKopters 2G4",
+                "layout_file": "QuadKopters JR 2400.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "QuadKopters_SLIM_2400_TX"
             }
         },
         "rx_2400": {
