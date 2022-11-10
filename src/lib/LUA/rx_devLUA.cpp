@@ -99,7 +99,7 @@ static struct luaItem_int8 luaMappingChannelIn = {
 static struct luaItem_selection luaMappingOutputMode = {
     {"Output Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;On/Off",
+    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off",
     STR_EMPTYSPACE
 };
 

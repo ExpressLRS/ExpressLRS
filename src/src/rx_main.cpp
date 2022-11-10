@@ -202,6 +202,11 @@ void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
 extern void setWifiUpdateMode();
 
+uint8_t getLq()
+{
+    return LQCalc.getLQ();
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
@@ -654,7 +659,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     if (!didFHSS) didFHSS = HandleFHSS();
-    
+
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -1157,10 +1162,11 @@ static void setupConfigAndPocCheck()
         else
         {
             // We haven't reached our binding mode power cycles
-            // and we've been powered on for 2s, reset the power on counter
-            delay(2000);
-            config.SetPowerOnCounter(0);
-            config.Commit();
+            // and we've been powered on for 2s, reset the power on counter.
+            // config.Commit() is done in the loop with CheckConfigChangePending().
+            deferExecution(2000, []() {
+                config.SetPowerOnCounter(0);
+            });
         }
     }
 
