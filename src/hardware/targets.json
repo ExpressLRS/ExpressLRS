@@ -1221,7 +1221,7 @@
                 "firmware": "Unified_ESP32_2400_TX"
             },
             "ranger-micro": {
-                "product_name": "Ranger Micro 2.4GHz TX",
+                "product_name": "RadioMaster Ranger Micro 2.4GHz TX",
                 "lua_name": "RM Ranger Micro",
                 "layout_file": "Ranger Micro.json",
                 "upload_methods": ["uart", "wifi"],
@@ -1229,7 +1229,7 @@
                 "firmware": "Unified_ESP32_2400_TX"
             },
             "ranger-nano": {
-                "product_name": "Ranger Nano 2.4GHz TX",
+                "product_name": "RadioMaster Ranger Nano 2.4GHz TX",
                 "lua_name": "RM Ranger Nano",
                 "layout_file": "Ranger Micro.json",
                 "overlay": {
