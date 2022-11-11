@@ -342,7 +342,9 @@ def main():
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
-            config['lua_name']
+            config['lua_name'] if 'lua_name' in config else '',
+            config['stlink']['bootloader'] if 'stlink' in config else '',
+            config['stlink']['offset'] if 'stlink' in config else 0
         )
         patch_firmware(options, mm, pos, args)
         if args.flash:
