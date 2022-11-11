@@ -372,18 +372,6 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
 
     hal.WriteRegister(SX1280_REG_FLRC_SYNC_WORD, buf, 4, SX12XX_Radio_All);
 
-    // Set Synch Address Control to zero bit errors permissible
-    uint8_t syncAddrCtrl = hal.ReadRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, SX12XX_Radio_1);
-    syncAddrCtrl &= SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK;  // Preserve the upper 4:7 bits as they are an unknown register.
-    hal.WriteRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, syncAddrCtrl, SX12XX_Radio_1);
-
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        syncAddrCtrl = hal.ReadRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, SX12XX_Radio_2);
-        syncAddrCtrl &= SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK;  // Preserve the upper 4:7 bits as they are an unknown register.
-        hal.WriteRegister(SX1280_REG_FLRC_SYNC_ADDR_CTRL, syncAddrCtrl, SX12XX_Radio_2);
-    }
-
     // FEI only works in Lora and Ranging mode
     modeSupportsFei = false;
 }
