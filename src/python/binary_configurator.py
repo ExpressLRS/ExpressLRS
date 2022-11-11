@@ -230,7 +230,8 @@ def patch_unified(args, options):
         args.target,
         'tx' if options.deviceType is DeviceType.TX else 'rx',
         '2400' if options.radioChip is RadioType.SX1280 else '900',
-        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else ''
+        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
+        options.luaName
     )
 
 def length_check(l, f):
@@ -261,9 +262,10 @@ def ask_for_firmware(args):
                 config = products[int(choice)-1]
                 for v in targets:
                     for t in targets[v]:
-                        for m in targets[v][t]:
-                            if targets[v][t][m]['product_name'] == config['product_name']:
-                                target = f'{v}.{t}.{m}'
+                        if t != 'name':
+                            for m in targets[v][t]:
+                                if targets[v][t][m]['product_name'] == config['product_name']:
+                                    target = f'{v}.{t}.{m}'
     return target, config
 
 def main():
@@ -336,10 +338,11 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if 'buzzer' in config['features'] == True else False,
+            True if 'features' in config and 'buzzer' in config['features'] == True else False,
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
-            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
+            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
+            config['lua_name']
         )
         patch_firmware(options, mm, pos, args)
         if args.flash:
