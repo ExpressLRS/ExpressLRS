@@ -11,6 +11,11 @@ import UARTupload
 import upload_via_esp8266_backpack
 import stlink
 from firmware import DeviceType, FirmwareOptions, MCUType
+
+import sys
+from os.path import dirname
+sys.path.append(dirname(__file__) + '/external/esptool')
+
 from external.esptool import esptool
 
 bootloader_args = {
