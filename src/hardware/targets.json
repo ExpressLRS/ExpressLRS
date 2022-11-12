@@ -1259,9 +1259,45 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
                 "prior_target_name": "RadioMaster_Zorro_2400_TX"
+            },
+            "ranger": {
+                "product_name": "RadioMaster Ranger 2.4GHz TX",
+                "lua_name": "RadioMstr Ranger",
+                "layout_file": "Radiomaster Ranger.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            },
+            "ranger-micro": {
+                "product_name": "RadioMaster Ranger Micro 2.4GHz TX",
+                "lua_name": "RM Ranger Micro",
+                "layout_file": "Radiomaster Ranger Micro.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+            },
+            "ranger-nano": {
+                "product_name": "RadioMaster Ranger Nano 2.4GHz TX",
+                "lua_name": "RM Ranger Nano",
+                "layout_file": "Radiomaster Ranger Micro.json",
+                "overlay": {
+                    "power_values": [-18,-15,-12,-8,-5,0]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
+            "er5": {
+                "product_name": "RadioMaster ER5A/C 2.4GHz PWM RX",
+                "lua_name": "RadioMstr ER5A/C",
+                "layout_file": "Generic 2400 PWMP5.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_PWMP"
+            },
             "rp1": {
                 "product_name": "RadioMaster RP1 2.4GHz RX",
                 "lua_name": "RadioMstr RP1",
