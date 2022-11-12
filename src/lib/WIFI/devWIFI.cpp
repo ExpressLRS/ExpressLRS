@@ -270,11 +270,16 @@ static void HandleReset(AsyncWebServerRequest *request)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-  DynamicJsonDocument json(2048);
+  DynamicJsonDocument json(32768);
 
-  DynamicJsonDocument options(2048);
-  deserializeJson(options, getOptions());
-  json["options"] = options;
+  bool exportMode = request->hasArg("export");
+
+  if (!exportMode)
+  {
+    DynamicJsonDocument options(2048);
+    deserializeJson(options, getOptions());
+    json["options"] = options;
+  }
 
 #if defined(TARGET_TX)
   int button_count = 0;
@@ -293,38 +298,67 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       json["config"]["button-actions"][button]["action"][pos]["action"] = buttonColor->val.actions[pos].action;
     }
   }
-#endif
-
-  json["config"]["ssid"] = station_ssid;
-  json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
-  #if defined(TARGET_RX)
-  json["config"]["modelid"] = config.GetModelId();
-  json["config"]["forcetlm"] = config.GetForceTlmOff();
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
-  for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+  if (exportMode)
   {
-    json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
+    json["config"]["fan-mode"] = config.GetFanMode();
+    json["config"]["power-fan-threshold"] = config.GetPowerFanThreshold();
+
+    json["config"]["motion-mode"] = config.GetMotionMode();
+
+    json["config"]["vtx-admin"]["band"] = config.GetVtxBand();
+    json["config"]["vtx-admin"]["channel"] = config.GetVtxChannel();
+    json["config"]["vtx-admin"]["pitmode"] = config.GetVtxPitmode();
+    json["config"]["vtx-admin"]["power"] = config.GetVtxPower();
+    json["config"]["vtx-admin"]["dvr-start-delay"] = config.GetDvrStartDelay();
+    json["config"]["vtx-admin"]["dvr-stop-delay"] = config.GetDvrStopDelay();
+    json["config"]["vtx-admin"]["dvr-aux-channel"] = config.GetDvrAux();
+
+    for (int model = 0 ; model < 64 ; model++)
+    {
+      json["config"]["model"][model]["packet-rate"] = config.GetModelConfig(model).rate;
+      json["config"]["model"][model]["telemetry-ratio"] = config.GetModelConfig(model).tlm;
+      json["config"]["model"][model]["switch-mode"] = config.GetModelConfig(model).switchMode;
+      json["config"]["model"][model]["power"]["max-power"] = config.GetModelConfig(model).power;
+      json["config"]["model"][model]["power"]["dynamic-power"] = config.GetModelConfig(model).dynamicPower;
+      json["config"]["model"][model]["power"]["boost-channel"] = config.GetModelConfig(model).boostChannel;
+      json["config"]["model"][model]["model-match"] = config.GetModelConfig(model).modelMatch;
+      json["config"]["model"][model]["tx-antenna"] = config.GetModelConfig(model).txAntenna;
+    }
   }
-  #endif
-  #endif
-  json["config"]["product_name"] = product_name;
-  json["config"]["lua_name"] = device_name;
-  json["config"]["reg_domain"] = getRegulatoryDomain();
+#endif
   JsonArray uid = json["config"].createNestedArray("uid");
   copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+  if (!exportMode)
+  {
+    json["config"]["ssid"] = station_ssid;
+    json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    #if defined(TARGET_RX)
+    json["config"]["modelid"] = config.GetModelId();
+    json["config"]["forcetlm"] = config.GetForceTlmOff();
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    {
+      json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
+    }
+    #endif
+    #endif
+    json["config"]["product_name"] = product_name;
+    json["config"]["lua_name"] = device_name;
+    json["config"]["reg_domain"] = getRegulatoryDomain();
 
-  #if defined(TARGET_RX)
-  if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
-  else
-  #endif
-  if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
-  #if defined(TARGET_RX)
-  else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
-  else json["config"]["uidtype"] = "Not set";
-  #else
-  else json["config"]["uidtype"] = "Not set (using MAC address)";
-  #endif
-  json["config"]["has-highpower"] = (MaxPower != HighPower);
+    #if defined(TARGET_RX)
+    if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
+    else
+    #endif
+    if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+    #if defined(TARGET_RX)
+    else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
+    else json["config"]["uidtype"] = "Not set";
+    #else
+    else json["config"]["uidtype"] = "Not set (using MAC address)";
+    #endif
+    json["config"]["has-highpower"] = (MaxPower != HighPower);
+  }
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
@@ -332,6 +366,51 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 }
 
 #if defined(TARGET_TX)
+static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (json.containsKey("config"))
+  {
+    json = json["config"];
+  }
+
+  if (json.containsKey("fan-mode")) config.SetFanMode(json["fan-mode"]);
+  if (json.containsKey("power-fan-threshold")) config.SetPowerFanThreshold(json["power-fan-threshold"]);
+  if (json.containsKey("motion-mode")) config.SetMotionMode(json["motion-mode"]);
+
+  if (json.containsKey("vtx-admin"))
+  {
+    if (json["vtx-admin"].containsKey("band")) config.SetVtxBand(json["vtx-admin"]["band"]);
+    if (json["vtx-admin"].containsKey("channel")) config.SetVtxChannel(json["vtx-admin"]["channel"]);
+    if (json["vtx-admin"].containsKey("pitmode")) config.SetVtxPitmode(json["vtx-admin"]["pitmode"]);
+    if (json["vtx-admin"].containsKey("power")) config.SetVtxPower(json["vtx-admin"]["power"]);
+    if (json["vtx-admin"].containsKey("dvr-start-delay")) config.SetDvrStartDelay(json["vtx-admin"]["dvr-start-delay"]);
+    if (json["vtx-admin"].containsKey("dvr-stop-delay")) config.SetDvrStopDelay(json["vtx-admin"]["dvr-stop-delay"]);
+    if (json["vtx-admin"].containsKey("dvr-aux-channel")) config.SetDvrAux(json["vtx-admin"]["dvr-aux-channel"]);
+  }
+
+  if (json.containsKey("model"))
+  {
+    const JsonArray &array = json["model"].as<JsonArray>();
+    for (int model = 0 ; model < array.size() ; model++)
+    {
+      config.SetModelId(model);
+      if (array[model].containsKey("packet-rate")) config.SetRate(array[model]["packet-rate"]);
+      if (array[model].containsKey("telemetry-ratio")) config.SetTlm(array[model]["telemetry-ratio"]);
+      if (array[model].containsKey("switch-mode")) config.SetSwitchMode(array[model]["switch-mode"]);
+      if (array[model].containsKey("power"))
+      {
+        if (array[model]["power"].containsKey("max-power")) config.SetPower(array[model]["power"]["max-power"]);
+        if (array[model]["power"].containsKey("dynamic-power")) config.SetDynamicPower(array[model]["power"]["dynamic-power"]);
+        if (array[model]["power"].containsKey("boost-channel")) config.SetBoostChannel(array[model]["power"]["boost-channel"]);
+      }
+      if (array[model].containsKey("model-match")) config.SetModelMatch(array[model]["model-match"]);
+      // if (array[model].containsKey("tx-antenna")) config.SetTxAntenna(array[model]["tx-antenna"]);
+    }
+  }
+
+  UpdateConfiguration(request, json);
+}
+
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (json.containsKey("button-actions")) {
@@ -348,8 +427,8 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
       action.val.color = array[button]["color"];
       config.SetButtonActions(button, &action);
     }
-    config.Commit();
   }
+  config.Commit();
   request->send(200);
 }
 
@@ -891,6 +970,7 @@ static void startServices()
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
+    server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration));
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
