@@ -315,14 +315,15 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 
     for (int model = 0 ; model < 64 ; model++)
     {
-      json["config"]["model"][model]["packet-rate"] = config.GetModelConfig(model).rate;
-      json["config"]["model"][model]["telemetry-ratio"] = config.GetModelConfig(model).tlm;
-      json["config"]["model"][model]["switch-mode"] = config.GetModelConfig(model).switchMode;
-      json["config"]["model"][model]["power"]["max-power"] = config.GetModelConfig(model).power;
-      json["config"]["model"][model]["power"]["dynamic-power"] = config.GetModelConfig(model).dynamicPower;
-      json["config"]["model"][model]["power"]["boost-channel"] = config.GetModelConfig(model).boostChannel;
-      json["config"]["model"][model]["model-match"] = config.GetModelConfig(model).modelMatch;
-      json["config"]["model"][model]["tx-antenna"] = config.GetModelConfig(model).txAntenna;
+      const JsonVariant &modelJson = json["config"]["model"][String(model)];
+      modelJson["packet-rate"] = config.GetModelConfig(model).rate;
+      modelJson["telemetry-ratio"] = config.GetModelConfig(model).tlm;
+      modelJson["switch-mode"] = config.GetModelConfig(model).switchMode;
+      modelJson["power"]["max-power"] = config.GetModelConfig(model).power;
+      modelJson["power"]["dynamic-power"] = config.GetModelConfig(model).dynamicPower;
+      modelJson["power"]["boost-channel"] = config.GetModelConfig(model).boostChannel;
+      modelJson["model-match"] = config.GetModelConfig(model).modelMatch;
+      modelJson["tx-antenna"] = config.GetModelConfig(model).txAntenna;
     }
   }
 #endif
@@ -366,6 +367,27 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 }
 
 #if defined(TARGET_TX)
+static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (json.containsKey("button-actions")) {
+    const JsonArray &array = json["button-actions"].as<JsonArray>();
+    for (size_t button=0 ; button<array.size() ; button++)
+    {
+      tx_button_color_t action;
+      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+      {
+        action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
+        action.val.actions[pos].count = array[button]["action"][pos]["count"];
+        action.val.actions[pos].action = array[button]["action"][pos]["action"];
+      }
+      action.val.color = array[button]["color"];
+      config.SetButtonActions(button, &action);
+    }
+  }
+  config.Commit();
+  request->send(200, "text/plain", "Import/update complete");
+}
+
 static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (json.containsKey("config"))
@@ -390,46 +412,27 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   if (json.containsKey("model"))
   {
-    const JsonArray &array = json["model"].as<JsonArray>();
-    for (int model = 0 ; model < array.size() ; model++)
+    for(const auto& kv : json["model"].as<JsonObject>())
     {
+      uint8_t model = String(kv.key().c_str()).toInt();
+      const JsonObject &modelJson = kv.value();
+
       config.SetModelId(model);
-      if (array[model].containsKey("packet-rate")) config.SetRate(array[model]["packet-rate"]);
-      if (array[model].containsKey("telemetry-ratio")) config.SetTlm(array[model]["telemetry-ratio"]);
-      if (array[model].containsKey("switch-mode")) config.SetSwitchMode(array[model]["switch-mode"]);
-      if (array[model].containsKey("power"))
+      if (modelJson.containsKey("packet-rate")) config.SetRate(modelJson["packet-rate"]);
+      if (modelJson.containsKey("telemetry-ratio")) config.SetTlm(modelJson["telemetry-ratio"]);
+      if (modelJson.containsKey("switch-mode")) config.SetSwitchMode(modelJson["switch-mode"]);
+      if (modelJson.containsKey("power"))
       {
-        if (array[model]["power"].containsKey("max-power")) config.SetPower(array[model]["power"]["max-power"]);
-        if (array[model]["power"].containsKey("dynamic-power")) config.SetDynamicPower(array[model]["power"]["dynamic-power"]);
-        if (array[model]["power"].containsKey("boost-channel")) config.SetBoostChannel(array[model]["power"]["boost-channel"]);
+        if (modelJson["power"].containsKey("max-power")) config.SetPower(modelJson["power"]["max-power"]);
+        if (modelJson["power"].containsKey("dynamic-power")) config.SetDynamicPower(modelJson["power"]["dynamic-power"]);
+        if (modelJson["power"].containsKey("boost-channel")) config.SetBoostChannel(modelJson["power"]["boost-channel"]);
       }
-      if (array[model].containsKey("model-match")) config.SetModelMatch(array[model]["model-match"]);
-      // if (array[model].containsKey("tx-antenna")) config.SetTxAntenna(array[model]["tx-antenna"]);
+      if (modelJson.containsKey("model-match")) config.SetModelMatch(modelJson["model-match"]);
+      // if (modelJson.containsKey("tx-antenna")) config.SetTxAntenna(modelJson["tx-antenna"]);
     }
   }
 
   UpdateConfiguration(request, json);
-}
-
-static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
-{
-  if (json.containsKey("button-actions")) {
-    const JsonArray &array = json["button-actions"].as<JsonArray>();
-    for (size_t button=0 ; button<array.size() ; button++)
-    {
-      tx_button_color_t action;
-      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
-      {
-        action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
-        action.val.actions[pos].count = array[button]["action"][pos]["count"];
-        action.val.actions[pos].action = array[button]["action"][pos]["action"];
-      }
-      action.val.color = array[button]["color"];
-      config.SetButtonActions(button, &action);
-    }
-  }
-  config.Commit();
-  request->send(200);
 }
 
 static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &json)
@@ -970,7 +973,7 @@ static void startServices()
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
-    server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration));
+    server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);

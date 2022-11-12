@@ -99,7 +99,20 @@
 					</form>
 				</div>
 				<div class="mui-panel">
-					<a id="reset-options" href="#">Reset all runtime options to defaults.</a>
+					<div>
+						<a id="reset-options" class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
+					</div>
+					<div>
+						<a href="/config?export" download="models.json" target="_blank" class="mui-btn mui-btn--small mui-btn--dark">Download model configurations</a>
+					</div>
+					<div>
+						<form action="" method="POST" enctype="multipart/form-data">
+							<div>
+								<label for="fileselect">Select a models configuration JSON file to upload</label>
+								<input type="file" id="fileselect" name="fileselect[]" />
+							</div>
+						</form>
+					</div>
 				</div>
 			</div>
 
