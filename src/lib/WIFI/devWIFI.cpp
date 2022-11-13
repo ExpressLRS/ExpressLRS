@@ -429,6 +429,8 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
       }
       if (modelJson.containsKey("model-match")) config.SetModelMatch(modelJson["model-match"]);
       // if (modelJson.containsKey("tx-antenna")) config.SetTxAntenna(modelJson["tx-antenna"]);
+      // have to commmit after each model is updated
+      config.Commit();
     }
   }
 
