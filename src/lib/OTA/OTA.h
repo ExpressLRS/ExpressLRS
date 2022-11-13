@@ -141,7 +141,8 @@ typedef struct {
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t packetType: 2,
-                    count: 6;
+                    containsLinkStats: 1,
+                    count: 5;
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
     };

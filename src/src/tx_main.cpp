@@ -191,11 +191,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
-  #if defined(USE_AIRPORT_AT_BAUD)
-    OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-    return true;
-  #endif
-
   // Full res mode
   if (OtaIsFullRes)
   {
@@ -210,6 +205,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
     else
     {
+      #if defined(USE_AIRPORT_AT_BAUD)
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        return true;
+      #endif
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
@@ -226,6 +225,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
+        #if defined(USE_AIRPORT_AT_BAUD)
+          OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+          return true;
+        #endif
         TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
