@@ -309,9 +309,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["vtx-admin"]["channel"] = config.GetVtxChannel();
     json["config"]["vtx-admin"]["pitmode"] = config.GetVtxPitmode();
     json["config"]["vtx-admin"]["power"] = config.GetVtxPower();
-    json["config"]["vtx-admin"]["dvr-start-delay"] = config.GetDvrStartDelay();
-    json["config"]["vtx-admin"]["dvr-stop-delay"] = config.GetDvrStopDelay();
-    json["config"]["vtx-admin"]["dvr-aux-channel"] = config.GetDvrAux();
+    json["config"]["backpack"]["dvr-start-delay"] = config.GetDvrStartDelay();
+    json["config"]["backpack"]["dvr-stop-delay"] = config.GetDvrStopDelay();
+    json["config"]["backpack"]["dvr-aux-channel"] = config.GetDvrAux();
 
     for (int model = 0 ; model < 64 ; model++)
     {
@@ -405,9 +405,13 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     if (json["vtx-admin"].containsKey("channel")) config.SetVtxChannel(json["vtx-admin"]["channel"]);
     if (json["vtx-admin"].containsKey("pitmode")) config.SetVtxPitmode(json["vtx-admin"]["pitmode"]);
     if (json["vtx-admin"].containsKey("power")) config.SetVtxPower(json["vtx-admin"]["power"]);
-    if (json["vtx-admin"].containsKey("dvr-start-delay")) config.SetDvrStartDelay(json["vtx-admin"]["dvr-start-delay"]);
-    if (json["vtx-admin"].containsKey("dvr-stop-delay")) config.SetDvrStopDelay(json["vtx-admin"]["dvr-stop-delay"]);
-    if (json["vtx-admin"].containsKey("dvr-aux-channel")) config.SetDvrAux(json["vtx-admin"]["dvr-aux-channel"]);
+  }
+
+  if (json.containsKey("backpack"))
+  {
+    if (json["backpack"].containsKey("dvr-start-delay")) config.SetDvrStartDelay(json["backpack"]["dvr-start-delay"]);
+    if (json["backpack"].containsKey("dvr-stop-delay")) config.SetDvrStopDelay(json["backpack"]["dvr-stop-delay"]);
+    if (json["backpack"].containsKey("dvr-aux-channel")) config.SetDvrAux(json["backpack"]["dvr-aux-channel"]);
   }
 
   if (json.containsKey("model"))
