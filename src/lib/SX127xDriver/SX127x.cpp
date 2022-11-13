@@ -184,7 +184,7 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
     pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
   }
 
-  if (pwrCurrent != pwrNew)
+  if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
   {
     pwrPending = pwrNew;
   }

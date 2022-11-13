@@ -992,8 +992,8 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
   pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
   digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-  pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL, LOW); // LEFT antenna
+  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
+  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
   HardwareSerial *uart2 = new HardwareSerial(USART2);
   uart2->begin(57600);
   CRSF::PortSecondary = uart2;

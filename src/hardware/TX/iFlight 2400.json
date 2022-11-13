@@ -11,6 +11,7 @@
     "radio_dcdc": true,
     "power_rxen": 21,
     "power_txen": 4,
+    "power_lna_gain": 12,
     "power_min": 0,
     "power_high": 5,
     "power_max": 5,

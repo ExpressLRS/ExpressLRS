@@ -36,6 +36,7 @@ typedef enum
     SX1280_MODE_STDBY_XOSC,   //! The radio is in standby mode with XOSC oscillator
     SX1280_MODE_FS,           //! The radio is in frequency synthesis mode
     SX1280_MODE_RX,           //! The radio is in receive mode
+    SX1280_MODE_RX_CONT,      //! The radio is in continuous receive mode
     SX1280_MODE_TX,           //! The radio is in transmit mode
     SX1280_MODE_CAD           //! The radio is in channel activity detection mode
 } SX1280_RadioOperatingModes_t;

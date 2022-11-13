@@ -64,7 +64,7 @@ function updatePwmSettings(arPwm) {
     const mode = (item >> 15) & 15; // 4 bits
     const narrow = (item >> 19) & 1;
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
-        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', 'On/Off']);
+        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off']);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
@@ -351,7 +351,7 @@ _('upload_form').addEventListener('submit', (e) => {
 
 // =========================================================
 
-function callback(title, msg, url, getdata) {
+function callback(title, msg, url, getdata, success) {
   return function(e) {
     e.stopPropagation();
     e.preventDefault();
@@ -359,6 +359,7 @@ function callback(title, msg, url, getdata) {
     xmlhttp.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
+          if (success) success();
           cuteAlert({
             type: 'info',
             title: title,
@@ -384,6 +385,9 @@ function setupNetwork(event) {
   if (_('nt0').checked) {
     callback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function() {
       return new FormData(_('sethome'));
+    }, function() {
+      _('wifi-ssid').value = _('network').value;
+      _('wifi-password').value = _('password').value;
     })(event);
   }
   if (_('nt1').checked) {

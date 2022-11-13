@@ -6,15 +6,24 @@
 #include "telemetry.h"
 #include "median.h"
 
-// Sample 5x samples over 500ms
+// Sample 5x samples over 500ms (unless SlowUpdate)
 #define VBAT_SMOOTH_CNT         5
 #define VBAT_SAMPLE_INTERVAL    100U
 
 typedef uint16_t vbatAnalogStorage_t;
 static MedianAvgFilter<vbatAnalogStorage_t, VBAT_SMOOTH_CNT>vbatSmooth;
+static uint8_t vbatUpdateScale;
 
 /* Shameful externs */
 extern Telemetry telemetry;
+
+/**
+ * @brief: Enable SlowUpdate mode to reduce the frequency Vbat telemetry is sent
+ ***/
+void Vbat_enableSlowUpdate(bool enable)
+{
+    vbatUpdateScale = enable ? 2 : 1;
+}
 
 static int start()
 {
@@ -22,13 +31,19 @@ static int start()
     {
         return DURATION_NEVER;
     }
+    vbatUpdateScale = 1;
     return VBAT_SAMPLE_INTERVAL;
 }
 
 static void reportVbat()
 {
     uint32_t adc = vbatSmooth.calc_scaled();
-    uint16_t vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
+    uint16_t vbat;
+    // For negative offsets, anything between abs(OFFSET)*CNT and 0 is considered 0
+    if (ANALOG_VBAT_OFFSET < 0 && adc <= (ANALOG_VBAT_OFFSET * -VBAT_SMOOTH_CNT))
+        vbat = 0;
+    else
+        vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
 
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
     // Values are MSB first (BigEndian)
@@ -52,7 +67,7 @@ static int timeout()
     if (idx == 0 && connectionState == connected)
         reportVbat();
 
-    return VBAT_SAMPLE_INTERVAL;
+    return VBAT_SAMPLE_INTERVAL * vbatUpdateScale;
 }
 
 device_t AnalogVbat_device = {
