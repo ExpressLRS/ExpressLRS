@@ -63,7 +63,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - id: set-targets
-      run: echo "::set-output name=targets::[$( (grep "\[env:.*UART\]" src/targets/unified.ini ; grep -r "\[env:.*STLINK\]" src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
+      run: echo "targets=[$( (grep '\[env:.*UART\]' src/targets/unified.ini ; grep -r '\[env:.*STLINK\]' src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]" >> $GITHUB_OUTPUT
 
   build:
     needs: targets
