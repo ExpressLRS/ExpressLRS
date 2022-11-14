@@ -1,9 +1,10 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
+
 #include "devServoOutput.h"
-#include "rxtx_intf.h"
-#include "config.h"
 #include "CRSF.h"
+#include "config.h"
 #include "helpers.h"
+#include "rxtx_intf.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
@@ -21,14 +22,22 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 {
     switch (mode)
     {
-        case som50Hz: return (1000000U / 50U);
-        case som60Hz: return (1000000U / 60U);
-        case som100Hz: return (1000000U / 100U);
-        case som160Hz: return (1000000U / 160U);
-        case som333Hz: return (1000000U / 333U);
-        case som400Hz: return (1000000U / 400U);
-        default:
-            return 0;
+    case som50Hz:
+        return (1000000U / 50U);
+    case som60Hz:
+        return (1000000U / 60U);
+    case som100Hz:
+        return (1000000U / 100U);
+    case som160Hz:
+        return (1000000U / 160U);
+    case som333Hz:
+        return (1000000U / 333U);
+    case som400Hz:
+        return (1000000U / 400U);
+    case som10KHzDuty:
+        return (1000000U / 10000U);
+    default:
+        return 0;
     }
 }
 
@@ -36,15 +45,26 @@ static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
     if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+    {
         servoMgr->writeDigital(ch, us > 1500U);
+    }
     else
-        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+    {
+        if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        {
+            servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
+        }
+        else
+        {
+            servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+        }
+    }
 }
 
 static void servosFailsafe()
 {
     constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
-    for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
@@ -62,29 +82,33 @@ static int servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+        for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = CRSF::ChannelData[chConfig->val.inputChannel];
             // crsfVal might 0 if this is a switch channel and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
+            {
                 continue;
+            }
+
             uint16_t us = CRSF_to_US(crsfVal);
             // Flip the output around the mid value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
+            {
                 us = 3000U - us;
-
+            }
             servoWrite(ch, us);
         } /* for each servo */
-    } /* if newChannelsAvailable */
+    }     /* if newChannelsAvailable */
 
     // LQ goes to 0 (100 packets missed in a row)
     // OR last update older than FAILSAFE_ABS_TIMEOUT_MS
     // go to failsafe
     else if (lastUpdate &&
-        ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
+             ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
     {
         servosFailsafe();
         lastUpdate = 0;
@@ -96,15 +120,16 @@ static int servosUpdate(unsigned long now)
 static void initialize()
 {
     if (!OPT_HAS_SERVO_OUTPUT)
+    {
         return;
+    }
 
     servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
 
-    for (unsigned ch=0; ch<servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) \
-    && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
         {
@@ -120,7 +145,7 @@ static void initialize()
 
 static int start()
 {
-    for (unsigned ch=0; servoMgr && ch<servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch = 0; servoMgr && ch < servoMgr->getOutputCnt(); ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
@@ -142,8 +167,7 @@ static int event()
         servoMgr->stopAllPwm();
         return DURATION_NEVER;
     }
-    else
-        return DURATION_IMMEDIATELY;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
@@ -152,10 +176,10 @@ static int timeout()
 }
 
 device_t ServoOut_device = {
-  .initialize = initialize,
-  .start = start,
-  .event = event,
-  .timeout = timeout
+    .initialize = initialize,
+    .start = start,
+    .event = event,
+    .timeout = timeout,
 };
 
 #endif

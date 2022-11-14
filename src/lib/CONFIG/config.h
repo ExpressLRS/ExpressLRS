@@ -15,7 +15,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   5U
+#define RX_CONFIG_VERSION   6U
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -214,6 +214,7 @@ public:
 
 private:
     void UpgradeEepromV4ToV5();
+    void UpgradeEepromV5ToV6();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

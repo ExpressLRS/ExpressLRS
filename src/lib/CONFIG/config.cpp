@@ -660,7 +660,10 @@ void RxConfig::Load()
 
     // Upgrade EEPROM, starting with defaults
     SetDefaults(false);
-    UpgradeEepromV4ToV5(); // Commit()s
+    UpgradeEepromV4ToV5();
+    UpgradeEepromV5ToV6();
+    m_modified = true;
+    Commit();
 }
 
 static void PwmConfigV4toV5(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const v5)
@@ -675,18 +678,34 @@ void RxConfig::UpgradeEepromV4ToV5()
     v4_rx_config_t v4Config;
     m_eeprom->Get(0, v4Config);
 
-    m_config.isBound = v4Config.isBound;
-    m_config.modelId = v4Config.modelId;
-    memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
-
-    // OG PWMP had only 8 channels
-    for (unsigned ch=0; ch<8; ++ch)
+    if (v4Config.version == 4)
     {
-        PwmConfigV4toV5(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
-    }
+        m_config.isBound = v4Config.isBound;
+        m_config.modelId = v4Config.modelId;
+        memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
 
-    m_modified = true;
-    Commit();
+        // OG PWMP had only 8 channels
+        for (unsigned ch=0; ch<8; ++ch)
+        {
+            PwmConfigV4toV5(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+        }
+    }
+}
+
+void RxConfig::UpgradeEepromV5ToV6()
+{
+    rx_config_t v5Config;
+    m_eeprom->Get(0, v5Config);
+    if (v5Config.version == 5)
+    {
+        for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch)
+        {
+            if (v5Config.pwmChannels[ch].val.mode > som400Hz)
+            {
+                m_config.pwmChannels[ch].val.mode = v5Config.pwmChannels[ch].val.mode + 1;
+            }
+        }
+    }
 }
 
 void
