@@ -41,7 +41,7 @@ uint8_t ServoMgr::allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin)
             break;
         }
     }
-    DBGLN("allocate ch%d in ledc_ch%d,bits:%d", ch, ledc_chn, _resolution_bits[ch]);
+    DBGLN("allocate ch%d on pin %d in ledc_ch%d,bits:%d", ch, pin, ledc_chn, _resolution_bits[ch]);
     _chnMap[ch] = ledc_chn;
     ledcSetup(ledc_chn, target_freq, _resolution_bits[ch]);
     ledcAttachPin(pin, ledc_chn);
@@ -70,7 +70,7 @@ void ServoMgr::writeMicroseconds(uint8_t ch, uint16_t valueUs)
     {
         return;
     }
-    _activePwmChannels |= (1 << pin);
+    _activePwmChannels |= (1 << ch);
 #if defined(PLATFORM_ESP32)
     ledcWrite(_chnMap[ch], map(valueUs, 0, _refreshInterval[ch], 0, (1 << _resolution_bits[ch]) - 1));
 #else
@@ -85,7 +85,7 @@ void ServoMgr::writeDuty(uint8_t ch, uint16_t duty)
     {
         return;
     }
-    _activePwmChannels |= (1 << pin);
+    _activePwmChannels |= (1 << ch);
 #if defined(PLATFORM_ESP32)
     ledcWrite(_chnMap[ch], map(duty, 0, 1000, 0, (1 << _resolution_bits[ch]) - 1));
 #else
@@ -117,7 +117,7 @@ void ServoMgr::stopPwm(uint8_t ch)
     {
         return;
     }
-    _activePwmChannels &= ~(1 << pin);
+    _activePwmChannels &= ~(1 << ch);
 #if defined(PLATFORM_ESP32)
     ledcDetachPin(pin);
 #else
