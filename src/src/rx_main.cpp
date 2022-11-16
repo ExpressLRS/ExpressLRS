@@ -207,6 +207,14 @@ uint8_t getLq()
     return LQCalc.getLQ();
 }
 
+static inline void checkGeminiMode()
+{
+    if (isDualRadio())
+    {
+        geminiMode = config.GetAntennaMode();
+    }
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
@@ -297,6 +305,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
                  );
 
+    checkGeminiMode();
     if (geminiMode)
     {
         Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
@@ -637,14 +646,6 @@ static void ICACHE_RAM_ATTR updateDiversity()
             }
             antenna = config.GetAntennaMode();
         }
-    }
-}
-
-static inline void checkGeminiMode()
-{
-    if (isDualRadio())
-    {
-        geminiMode = config.GetAntennaMode();
     }
 }
 
