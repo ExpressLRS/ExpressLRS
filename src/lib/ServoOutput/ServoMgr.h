@@ -45,8 +45,7 @@ public:
 private:
 #if defined(PLATFORM_ESP32)
     timerConfig _timerConfigs[8];
-    uint8_t _chnMap[16];
-    uint8_t allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin);
+    void allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin);
 #endif
     const uint8_t *const _pins;
     const uint8_t _outputCnt;
