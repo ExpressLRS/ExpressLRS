@@ -587,18 +587,38 @@ static void UARTconnected()
   hwTimer.resume();
 }
 
-static void ChangeRadioParams()
+void ResetPower()
 {
-  ModelUpdatePending = false;
-
-  SetRFLinkRate(config.GetRate());
   // Dynamic Power starts at MinPower unless armed
   // (user may be turning up the power while flying and dropping the power may compromise the link)
-  POWERMGNT.setPower((config.GetDynamicPower() && !crsf.IsArmed()) ? MinPower : (PowerLevels_e)config.GetPower());
+  if (config.GetDynamicPower())
+  {
+    if (!crsf.IsArmed())
+    {
+      // if dynamic power enabled and not armed then set to MinPower
+      POWERMGNT.setPower(MinPower);
+    }
+    else if (POWERMGNT.currPower() < config.GetPower())
+    {
+      // if the new config is a higher power then set it, otherwise leave it alone
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
+  }
+  else
+  {
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  }
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
   LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
+}
+
+static void ChangeRadioParams()
+{
+  ModelUpdatePending = false;
+  SetRFLinkRate(config.GetRate());
+  ResetPower();
 }
 
 void ModelUpdateReq()

@@ -232,6 +232,7 @@ static char luaBadGoodString[10];
 
 extern TxConfig config;
 extern void VtxTriggerSend();
+extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
@@ -569,6 +570,10 @@ static void registerLuaParameters()
     luadevGeneratePowerOpts(&luaPower);
     registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
+      if (!config.IsModified())
+      {
+          ResetPower();
+      }
     }, luaPowerFolder.common.id);
     registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetDynamicPower(arg > 0);
