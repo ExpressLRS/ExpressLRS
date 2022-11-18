@@ -77,12 +77,12 @@ void ServoMgr::allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin)
     for (int i = 0; i <= 3; i++)
     {
         uint8_t timer_idx = group * 4 + i;
-        if (_timerConfigs[timer_idx].freq == 0)
+        if (_timerConfigs[timer_idx] == 0)
         {
-            _timerConfigs[timer_idx].freq = target_freq;
+            _timerConfigs[timer_idx] = target_freq;
             ledcSetupEx(ch, (ledc_timer_t)i, target_freq, _resolution_bits[ch]);
         }
-        if (_timerConfigs[i].freq == target_freq)
+        if (_timerConfigs[timer_idx] == target_freq)
         {
             ledcAttachPinEx(pin, ch, (ledc_timer_t)i);
             DBGLN("allocate ledc_ch %d on pin %d using group: %d, ledc_tim: %d, bits: %d", ch, pin, group, i, _resolution_bits[ch]);
