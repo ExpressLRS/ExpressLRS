@@ -7,6 +7,8 @@
 #include "msp.h"
 #include "logging.h"
 
+#include "devButton.h"
+
 #define PITMODE_OFF     0
 #define PITMODE_ON      1
 
@@ -18,6 +20,7 @@
 extern CRSF crsf;
 extern Stream *TxBackpack;
 static uint8_t pitmodeAuxState = 0;
+static bool sendEepromWrite = true;
 
 static enum VtxSendState_e
 {
@@ -47,6 +50,7 @@ void VtxPitmodeSwitchUpdate()
     if (pitmodeAuxState != currentPitmodeAuxState)
     {
         pitmodeAuxState = currentPitmodeAuxState;
+        sendEepromWrite = false;
         VtxTriggerSend();
     }
 }
@@ -90,6 +94,11 @@ static void VtxConfigToMSPOut()
     {
         MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
     }
+}
+
+static void initialize()
+{
+    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
 }
 
 static int event()
@@ -146,7 +155,9 @@ static int timeout()
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
-        eepromWriteToMSPOut();
+        if (sendEepromWrite)
+            eepromWriteToMSPOut();
+        sendEepromWrite = true;
     }
     else
     {
@@ -160,7 +171,7 @@ static int timeout()
 }
 
 device_t VTX_device = {
-    .initialize = NULL,
+    .initialize = initialize,
     .start = NULL,
     .event = event,
     .timeout = timeout

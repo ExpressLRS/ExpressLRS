@@ -68,28 +68,28 @@ StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
+  {&CRSF_device, 1},
 #ifdef HAS_LED
-  {&LED_device, 1},
+  {&LED_device, 0},
 #endif
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
 #if defined(USE_TX_BACKPACK)
-  {&Backpack_device, 1},
+  {&Backpack_device, 0},
 #endif
 #ifdef HAS_BLE
-  {&BLE_device, 1},
+  {&BLE_device, 0},
 #endif
 #ifdef HAS_BUZZER
-  {&Buzzer_device, 1},
+  {&Buzzer_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
@@ -101,9 +101,9 @@ device_affinity_t ui_devices[] = {
   {&Thermal_device, 0},
 #endif
 #if defined(GPIO_PIN_PA_PDET)
-  {&PDET_device, 1},
+  {&PDET_device, 0},
 #endif
-  {&VTX_device, 1}
+  {&VTX_device, 0}
 };
 
 #if defined(GPIO_PIN_ANT_CTRL)
@@ -551,18 +551,38 @@ static void UARTconnected()
   hwTimer.resume();
 }
 
-static void ChangeRadioParams()
+void ResetPower()
 {
-  ModelUpdatePending = false;
-
-  SetRFLinkRate(config.GetRate());
   // Dynamic Power starts at MinPower unless armed
   // (user may be turning up the power while flying and dropping the power may compromise the link)
-  POWERMGNT.setPower((config.GetDynamicPower() && !crsf.IsArmed()) ? MinPower : (PowerLevels_e)config.GetPower());
+  if (config.GetDynamicPower())
+  {
+    if (!crsf.IsArmed())
+    {
+      // if dynamic power enabled and not armed then set to MinPower
+      POWERMGNT.setPower(MinPower);
+    }
+    else if (POWERMGNT.currPower() < config.GetPower())
+    {
+      // if the new config is a higher power then set it, otherwise leave it alone
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
+  }
+  else
+  {
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  }
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
   LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
+}
+
+static void ChangeRadioParams()
+{
+  ModelUpdatePending = false;
+  SetRFLinkRate(config.GetRate());
+  ResetPower();
 }
 
 void ModelUpdateReq()
@@ -640,6 +660,11 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+  if (LQCalc.currentIsSet())
+  {
+    return false; // Already received tlm, do not run ProcessTLMpacket() again.
+  }
+
   bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
   return packetSuccessful;
@@ -647,6 +672,11 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+  if (!busyTransmitting)
+  {
+    return; // Already finished transmission and do not call HandleFHSS() a second time, which may hop the frequency!
+  }
+
   if (connectionState != awaitingModelId)
   {
     HandleFHSS();
@@ -792,7 +822,7 @@ void EnterBindingMode()
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
-  SetRFLinkRate(RATE_BINDING);
+  SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
   Radio.SetFrequencyReg(GetInitialFreq());
   // Start transmitting again
   hwTimer.resume();
@@ -956,6 +986,23 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+static void cyclePower()
+{
+  // Only change power if we are running normally
+  if (connectionState < MODE_STATES)
+  {
+    PowerLevels_e curr = POWERMGNT::currPower();
+    if (curr == POWERMGNT::getMaxPower())
+    {
+      POWERMGNT::setPower(POWERMGNT::getMinPower());
+    }
+    else
+    {
+      POWERMGNT::incPower();
+    }
+  }
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1024,6 +1071,11 @@ void setup()
     }
   }
 
+#if defined(HAS_BUTTON)
+  registerButtonFunction(ACTION_BIND, EnterBindingMode);
+  registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
+#endif
+
   devicesStart();
 }
 
@@ -1045,6 +1097,9 @@ void loop()
 
   // Update UI devices
   devicesUpdate(now);
+
+  // Not a device because it must be run on the loop core
+  checkBackpackUpdate();
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

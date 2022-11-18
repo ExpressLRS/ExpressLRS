@@ -15,7 +15,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   5U
+#define RX_CONFIG_VERSION   6U
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -30,14 +30,16 @@ typedef struct {
                 txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
 } model_config_t;
 
-// FUTURE: Designed to hold one RGB LED color in 6-level color, and 2 custom button actions.
-// This struct can change entirely depending on how the button/RGB is implemented
-// across platforms.
+typedef struct {
+    uint8_t     pressType:1,    // 0 short, 1 long
+                count:3,        // 1-8 click count for short, .5sec hold count for long
+                action:4;       // action to execute
+} button_action_t;
+
 typedef union {
     struct {
-        uint8_t color;
-        uint8_t pressShort;
-        uint8_t pressLong;
+        uint8_t color;                  // RRRGGGBB
+        button_action_t actions[2];
         uint8_t unused;
     } val;
     uint32_t raw;
@@ -88,6 +90,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
+    tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -109,6 +112,7 @@ public:
     void SetDvrAux(uint8_t dvrAux);
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
+    void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
 
     // State setters
     bool SetModelId(uint8_t modelId);
@@ -161,7 +165,7 @@ typedef struct {
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                rateInitialIdx:4;   // FUTURE: Rate to start rateCycling at on boot
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
@@ -185,9 +189,10 @@ public:
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    const rx_config_pwm_t *GetPwmChannel(uint8_t ch) { return &m_config.pwmChannels[ch]; }
+    const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
+    uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -205,9 +210,11 @@ public:
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
+    void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
     void UpgradeEepromV4ToV5();
+    void UpgradeEepromV5ToV6();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

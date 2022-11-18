@@ -9,6 +9,7 @@
 #include "logging.h"
 
 #include <BleGamepad.h>
+#include <NimBLEDevice.h>
 
 #define numOfButtons 0
 #define numOfHatSwitches 0
@@ -26,7 +27,18 @@
 #define enableBrake false
 #define enableSteering false
 
-static BleGamepad *bleGamepad;
+
+class ELRSGamepad : public BleGamepad {
+    public:
+        ELRSGamepad() : BleGamepad("ExpressLRS Joystick", "ELRS", 100) {};
+
+    protected:
+        void onStarted(NimBLEServer *pServer) {
+            NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+        }
+};
+
+static ELRSGamepad *bleGamepad;
 
 void BluetoothJoystickUpdateValues()
 {
@@ -36,7 +48,7 @@ void BluetoothJoystickUpdateValues()
 
         for (uint8_t i = 0; i < 8; i++)
         {
-            data[i] = map(CRSF::ChannelData[i], CRSF_CHANNEL_VALUE_MIN - 1, CRSF_CHANNEL_VALUE_MAX + 1, -32768, 32768);
+            data[i] = map(CRSF::ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
         }
 
         bleGamepad->setX(data[0]);
@@ -59,19 +71,24 @@ void BluetoothJoystickBegin()
         return;
 
     // construct the BLE immediately to prevent reentry from events/timeout
-    bleGamepad = new BleGamepad("ExpressLRS Joystick", "ELRS", 100);
-    bleGamepad->setAutoReport(false);
-    bleGamepad->setControllerType(CONTROLLER_TYPE_GAMEPAD);
+    bleGamepad = new ELRSGamepad();
 
-    hwTimer::updateInterval(5000);
-    CRSF::setSyncParams(5000); // 200hz
-    CRSF::disableOpentxSync();
+    hwTimer::updateInterval(10000);
+    CRSF::setSyncParams(10000); // 100hz
+    // CRSF::disableOpentxSync();
     POWERMGNT::setPower(MinPower);
     Radio.End();
     CRSF::RCdataCallback = BluetoothJoystickUpdateValues;
 
+    BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
+    gamepadConfig->setAutoReport(false);
+    gamepadConfig->setButtonCount(0);
+    gamepadConfig->setHatSwitchCount(0);
+    gamepadConfig->setWhichAxes(enableX, enableY, enableZ, enableRX, enableRY, enableRZ, enableSlider1, enableSlider2);
+    gamepadConfig->setWhichSimulationControls(enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
+
     DBGLN("Starting BLE Joystick!");
-    bleGamepad->begin(numOfButtons, numOfHatSwitches, enableX, enableY, enableZ, enableRZ, enableRX, enableRY, enableSlider1, enableSlider2, enableRudder, enableThrottle, enableAccelerator, enableBrake, enableSteering);
+    bleGamepad->begin(gamepadConfig);
 }
 
 static int timeout()

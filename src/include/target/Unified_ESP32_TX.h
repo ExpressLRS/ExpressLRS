@@ -69,6 +69,7 @@
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
 #define GPIO_PIN_RX_ENABLE_2 hardware_pin(HARDWARE_power_rxen_2)
 #define GPIO_PIN_TX_ENABLE_2 hardware_pin(HARDWARE_power_txen_2)
+#define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
 #define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
@@ -97,16 +98,21 @@
 #define GPIO_PIN_FIVE_WAY_INPUT3 hardware_pin(HARDWARE_five_way3)
 
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
+#define USER_BUTTON_LED hardware_pin(HARDWARE_button_led_index)
+#define GPIO_PIN_BUTTON2 hardware_pin(HARDWARE_button2)
+#define USER_BUTTON2_LED hardware_pin(HARDWARE_button2_led_index)
 
 // Lighting
 #define GPIO_PIN_LED hardware_pin(HARDWARE_led)
 #define GPIO_PIN_LED_BLUE hardware_pin(HARDWARE_led_blue)
+#define GPIO_LED_BLUE_INVERTED hardware_pin(HARDWARE_led_blue_invert)
 #define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
 #define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
 #define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
 #define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
 #define WS2812_IS_GRB
@@ -165,7 +171,10 @@
 // Misc sensors & things
 #define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
 // #define GPIO_PIN_BUZZER hardware_pin(HARDWARE_misc_buzzer)  // stm32 only
+#define define HAS_FAN
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
+#define GPIO_PIN_FAN_PWM hardware_pin(HARDWARE_misc_fan_pwm)
+#define GPIO_PIN_FAN_TACHO hardware_pin(HARDWARE_misc_fan_tacho)
 
 #define HAS_GSENSOR
 #define HAS_GSENSOR_STK8xxx

@@ -33,6 +33,7 @@ typedef enum {
     HARDWARE_power_txen,
     HARDWARE_power_rxen_2,
     HARDWARE_power_txen_2,
+    HARDWARE_power_lna_gain,
     HARDWARE_power_min,
     HARDWARE_power_high,
     HARDWARE_power_max,
@@ -45,7 +46,6 @@ typedef enum {
     HARDWARE_power_control,
     HARDWARE_power_values,
 
-
     // Input
     HARDWARE_joystick,
     HARDWARE_joystick_values,
@@ -55,10 +55,14 @@ typedef enum {
     HARDWARE_five_way3,
 
     HARDWARE_button,
+    HARDWARE_button_led_index,
+    HARDWARE_button2,
+    HARDWARE_button2_led_index,
 
     // Lighting
     HARDWARE_led,
     HARDWARE_led_blue,
+    HARDWARE_led_blue_invert,
     HARDWARE_led_green,
     HARDWARE_led_green_invert,
     HARDWARE_led_green_red,
@@ -103,6 +107,8 @@ typedef enum {
     HARDWARE_misc_gsensor_int,
     HARDWARE_misc_buzzer,  // stm32 only
     HARDWARE_misc_fan_en,
+    HARDWARE_misc_fan_pwm,
+    HARDWARE_misc_fan_tacho,
     HARDWARE_gsensor_stk8xxx,
     HARDWARE_thermal_lm75a,
 

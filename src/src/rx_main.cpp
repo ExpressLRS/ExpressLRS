@@ -22,6 +22,14 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
+#include "devSerialUpdate.h"
+#include "devBaro.h"
+
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#elif defined(PLATFORM_ESP32)
+#include <SPIFFS.h>
+#endif
 
 ///LUA///
 #define LUA_MAX_PARAMS 32
@@ -35,28 +43,34 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 0},
-#ifdef HAS_LED
-  {&LED_device, 1},
+  {&CRSF_device, 1},
+#if defined(PLATFORM_ESP32)
+  {&SerialUpdate_device, 1},
 #endif
-  {&LUA_device, 1},
+#ifdef HAS_LED
+  {&LED_device, 0},
+#endif
+  {&LUA_device, 0},
 #ifdef HAS_RGB
-  {&RGB_device, 1},
+  {&RGB_device, 0},
 #endif
 #ifdef HAS_WIFI
-  {&WIFI_device, 1},
+  {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
-  {&Button_device, 1},
+  {&Button_device, 0},
 #endif
 #ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 1},
+  {&VTxSPI_device, 0},
 #endif
 #ifdef USE_ANALOG_VBAT
-  {&AnalogVbat_device, 1},
+  {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
-  {&ServoOut_device, 0},
+  {&ServoOut_device, 1},
+#endif
+#ifdef HAS_BARO
+  {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
 #endif
 };
 
@@ -119,7 +133,7 @@ LPF LPF_UplinkRSSI0(5);  // track rssi per antenna
 LPF LPF_UplinkRSSI1(5);
 MeanAccumulator<int32_t, int8_t, -16> SnrMean;
 
-uint8_t scanIndex = RATE_DEFAULT;
+static uint8_t scanIndex;
 uint8_t ExpressLRS_nextAirRateIndex;
 int8_t SwitchModePending;
 
@@ -130,6 +144,7 @@ const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can cons
 
 ///////////////////////////////////////////////
 
+bool didFHSS = false;
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
@@ -186,6 +201,11 @@ void ExitBindingMode();
 void OnELRSBindMSP(uint8_t* packet);
 extern void setWifiUpdateMode();
 
+uint8_t getLq()
+{
+    return LQCalc.getLQ();
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
@@ -204,6 +224,11 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
+    }
+
     int32_t rssiDBM = Radio.LastPacketRSSI;
     if (antenna == 0)
     {
@@ -295,13 +320,17 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
     Radio.SetFrequencyReg(FHSSgetNextFreq());
 
+#if defined(RADIO_SX127X)
+    // SX127x radio has to reset receive mode after hopping
     uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
-
     if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
     }
-
+#endif
+#if defined(Regulatory_Domain_EU_CE_2400)
+    SetClearChannelAssessmentTime();
+#endif
     return true;
 }
 
@@ -594,24 +623,17 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    PFDloop.intEvent(micros()); // our internal osc just fired
+
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
         crsfRCFrameAvailable();
         servoNewChannelsAvaliable();
     }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    // Emulate that TX just happened, even if it didn't because channel is not clear
-    if(!LBTSuccessCalc.currentIsSet())
-    {
-        Radio.TXdoneCallback();
-    }
-#endif
-
-    PFDloop.intEvent(micros()); // our internal osc just fired
+    if (!didFHSS) didFHSS = HandleFHSS();
 
     updateDiversity();
-    bool didFHSS = HandleFHSS();
     bool tlmSent = HandleSendTelemetryResponse();
 
     if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
@@ -622,6 +644,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         Radio.SetPPMoffsetReg(FreqCorrection);
     #endif /* RADIO_SX127X */
     }
+    didFHSS = false;
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -930,12 +953,26 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-    return ProcessRFPacket(status);
+    if (LQCalc.currentIsSet() && connectionState == connected)
+    {
+        return false; // Already received a packet, do not run ProcessRFPacket() again.
+    }
+
+    if (ProcessRFPacket(status))
+    {
+        didFHSS = HandleFHSS();
+        return true;
+    }
+    return false;
 }
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    BeginClearChannelAssessment();
+#else
     Radio.RXnb();
+#endif
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
@@ -1098,10 +1135,11 @@ static void setupConfigAndPocCheck()
         else
         {
             // We haven't reached our binding mode power cycles
-            // and we've been powered on for 2s, reset the power on counter
-            delay(2000);
-            config.SetPowerOnCounter(0);
-            config.Commit();
+            // and we've been powered on for 2s, reset the power on counter.
+            // config.Commit() is done in the loop with CheckConfigChangePending().
+            deferExecution(2000, []() {
+                config.SetPowerOnCounter(0);
+            });
         }
     }
 
@@ -1200,14 +1238,17 @@ static void setupRadio()
     POWERMGNT.setPower((PowerLevels_e)config.GetPower());
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    LBTEnabled = (MaxPower > PWR_10mW);
+    LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    SetRFLinkRate(RATE_DEFAULT);
-    RFmodeCycleMultiplier = 1;
+    scanIndex = config.GetRateInitialIdx();
+    SetRFLinkRate(scanIndex);
+    // Start slow on the selected rate to give it the best chance
+    // to connect before beginning rate cycling
+    RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
 }
 
 static void updateTelemetryBurst()
@@ -1367,6 +1408,9 @@ static void CheckConfigChangePending()
         LostConnection(false);
         config.Commit();
         devicesTriggerEvent();
+#if defined(Regulatory_Domain_EU_CE_2400)
+        LBTEnabled = (config.GetPower() > PWR_10mW);
+#endif
         Radio.RXnb();
     }
 }
@@ -1387,6 +1431,21 @@ RF_PRE_INIT()
     #endif
 }
 #endif
+
+void resetConfigAndReboot()
+{
+    config.SetDefaults(true);
+#if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+#else
+    // Prevent WDT from rebooting too early if
+    // all this flash write is taking too long
+    yield();
+    // Remove options.json and hardware.json
+    SPIFFS.format();
+    ESP.restart();
+#endif
+}
 
 void setup()
 {
@@ -1442,6 +1501,11 @@ void setup()
             hwTimer.init();
         }
     }
+
+#if defined(HAS_BUTTON)
+    registerButtonFunction(ACTION_BIND, EnterBindingMode);
+    registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
 
     devicesStart();
 }
@@ -1551,6 +1615,9 @@ void reset_into_bootloader(void)
 #elif defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
+#elif defined(PLATFORM_ESP32)
+    delay(100);
+    connectionState = serialUpdate;
 #endif
 }
 
@@ -1583,7 +1650,7 @@ void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(RATE_BINDING);
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
@@ -1618,11 +1685,8 @@ void ExitBindingMode()
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
     RFmodeLastCycled = 0;
-
-    LostConnection(false);
     LockRFmode = false;
-    SetRFLinkRate(RATE_DEFAULT);
-    Radio.RXnb();
+    LostConnection(false);
 
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode

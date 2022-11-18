@@ -6,7 +6,7 @@
 [![Build Status](https://img.shields.io/github/workflow/status/ExpressLRS/ExpressLRS/Build%20ExpressLRS?logo=github&style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/actions)
 [![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/blob/master/LICENSE)
 [![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/stargazers)
-[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/dS6ReFY)
+[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/expresslrs)
 
 </center>
 
@@ -24,7 +24,7 @@ For general information on the project please refer to our guides on the [websit
 
 ## About
 
-ExpressLRS is an open source Radio Link for Radio Control applications. Designed to be the best FPV Racing link, it is based on the fantastic Semtech **SX127x**/**SX1280** LoRa hardware combined with an Espressif or STM32 Processor. Using LoRa modulation as well as reduced packet size it achieves best in class range and latency. It achieves this using a highly optimized over-the-air packet structure, giving simultaneous range and latency advantages. It supports both 900 MHz and 2.4 GHz links, each with their own benefits. 900 MHz supports a maximum of 200 Hz packet rate, with higher penetration. 2.4 GHz supports a blistering fast 500 Hz on [EdgeTX](http://edgetx.org/). With over 60 different hardware targets and 13 hardware manufacuturers, the choice of hardware is ever growing, with different hardware suited to different requirements.
+ExpressLRS is an open source Radio Link for Radio Control applications. Designed to be the best FPV Racing link, it is based on the fantastic Semtech **SX127x**/**SX1280** LoRa hardware combined with an Espressif or STM32 Processor. Using LoRa modulation as well as reduced packet size it achieves best in class range and latency. It achieves this using a highly optimized over-the-air packet structure, giving simultaneous range and latency advantages. It supports both 900 MHz and 2.4 GHz links, each with their own benefits. 900 MHz supports a maximum of 200 Hz packet rate, with higher penetration. 2.4 GHz supports a blistering fast 1000 Hz on [EdgeTX](http://edgetx.org/). With over 60 different hardware targets and 13 hardware manufacuturers, the choice of hardware is ever growing, with different hardware suited to different requirements.
 
 ## Configurator
 To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, which is found here:
@@ -32,13 +32,13 @@ To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, 
 https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/
 
 ## Community
-We have both a [Discord Server](https://discord.gg/dS6ReFY) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
+We have both a [Discord Server](https://discord.gg/expresslrs) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
 
 ## Features
 
 ExpressLRS has the following features:
 
-- 500 Hz Packet Rate 
+- 1000 Hz Packet Rate 
 - Telemetry (Betaflight Lua Compatibility)
 - Wifi Updates
 - Bluetooth Sim Joystick
@@ -58,6 +58,6 @@ For an exhaustive list of hardware targets and their user guides, check out the 
 
 ## Developers
 
-If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/ExpressLRS) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to a submit a Pull Request to the GitHub Repository. 
+If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/expresslrs) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to a submit a Pull Request to the GitHub Repository. 
 
 ![](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/community.png?raw=true)

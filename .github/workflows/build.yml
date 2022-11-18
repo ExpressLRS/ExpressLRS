@@ -12,7 +12,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' 
 
     - name: Cache pip
       uses: actions/cache@v2
@@ -38,6 +40,20 @@ jobs:
         platformio platform update
         cd src
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
+
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Validate target files
+      run: |
+        cd src
+        python python/targets_validator.py
 
   targets:
     runs-on: ubuntu-latest
@@ -65,7 +81,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
     - name: Cache pip
       uses: actions/cache@v2
@@ -114,7 +132,7 @@ jobs:
         esac
         # copy the common ESP32 files
         if [[ ${{matrix.target}} == *ESP32* ]] ; then
-          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
           cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ~/artifacts/firmware/
           mv .pio/build/${{ matrix.target }}/partitions.bin ~/artifacts/firmware/
         fi
@@ -127,7 +145,7 @@ jobs:
       continue-on-error: true
 
   firmware:
-    needs: build
+    needs: [build, validation, test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -152,6 +170,7 @@ jobs:
           path: dist/**/*
 
   installer:
+    needs: [validation, test]
     strategy:
       fail-fast: false
       matrix:
@@ -159,7 +178,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.7
 

@@ -2,13 +2,22 @@
 #include "devCRSF.h"
 
 #ifdef CRSF_TX_MODULE
+
+#include "../POWERMGNT/POWERMGNT.h"
+
 static int start()
 {
     CRSF::Begin();
 #if defined(DEBUG_TX_FREERUN)
     CRSF::CRSFstate = true;
-    extern void UARTconnected();
-    UARTconnected();
+    if (CRSF::connected)
+    {
+        CRSF::connected();
+    }
+    else
+    {
+        ERRLN("CRSF::connected has not been initialised");
+    }
 #endif
     return DURATION_IMMEDIATELY;
 }

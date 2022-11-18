@@ -8,21 +8,12 @@
 #define SX1280_REG_FREQ_ERR_CORRECTION              0x93C
 #define SX1280_REG_FLRC_CRC_SEED                    0x9C8
 #define SX1280_REG_FLRC_SYNC_WORD                   0x9CF
-#define SX1280_REG_FLRC_SYNC_ADDR_CTRL              0x9CD
-#define SX1280_REG_FLRC_SYNC_ADDR_CTRL_ZERO_MASK    0b11110000
 
 #define SX1280_XTAL_FREQ 52000000
 #define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))  // 198.3642578125
 
 #define SX1280_POWER_MIN (-18)
 #define SX1280_POWER_MAX (13)
-
-typedef enum
-{
-    SX1280_Radio_1 = 1 << 0,
-    SX1280_Radio_2 = 1 << 1,
-    SX1280_Radio_All = 0xFF,
-} SX1280_Radio_Number_t;
 
 typedef enum
 {
@@ -43,6 +34,7 @@ typedef enum
     SX1280_MODE_STDBY_XOSC,   //! The radio is in standby mode with XOSC oscillator
     SX1280_MODE_FS,           //! The radio is in frequency synthesis mode
     SX1280_MODE_RX,           //! The radio is in receive mode
+    SX1280_MODE_RX_CONT,      //! The radio is in continuous receive mode
     SX1280_MODE_TX,           //! The radio is in transmit mode
     SX1280_MODE_CAD           //! The radio is in channel activity detection mode
 } SX1280_RadioOperatingModes_t;

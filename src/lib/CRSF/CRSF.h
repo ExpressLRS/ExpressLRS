@@ -46,7 +46,7 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static uint32_t ChannelData[CRSF_NUM_CHANNELS];
+    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
 
     /////Variables/////
 
@@ -80,9 +80,9 @@ public:
     static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
-    static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
 
     #ifdef CRSF_TX_MODULE
+    static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
@@ -134,7 +134,10 @@ private:
     /// OpenTX mixer sync ///
     static uint32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
+    static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
+    static volatile int32_t OpenTXsyncWindow;
+    static volatile int32_t OpenTXsyncWindowSize;
     static uint32_t OpenTXsyncOffsetSafeMargin;
     static bool OpentxSyncActive;
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN];
