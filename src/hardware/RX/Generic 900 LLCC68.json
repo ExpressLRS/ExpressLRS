@@ -1,6 +1,7 @@
 {
     "serial_rx": 3,
     "serial_tx": 1,
+    "radio_busy": 2,
     "radio_dio1": 15,
     "radio_miso": 16,
     "radio_mosi": 17,
@@ -9,7 +10,6 @@
     "radio_sck": 5,
     "power_rxen": 14,
     "power_txen": 12,
-    "power_lna_gain": 12,
     "power_min": 0,
     "power_high": 0,
     "power_max": 0,

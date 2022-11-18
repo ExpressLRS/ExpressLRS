@@ -3,7 +3,9 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX126X)
+#include "SX126xDriver.h"
+#elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
@@ -99,9 +101,8 @@ typedef enum : uint8_t
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
-    RADIO_TYPE_SX127x_LORA,
-    RADIO_TYPE_SX128x_LORA,
-    RADIO_TYPE_SX128x_FLRC,
+    RADIO_TYPE_LORA,
+    RADIO_TYPE_FLRC,
 };
 
 typedef enum : uint8_t
@@ -179,7 +180,13 @@ enum eServoOutputMode : uint8_t
 };
 
 #ifndef UNIT_TEST
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX126X)
+#define RATE_MAX 5
+#define RATE_BINDING RATE_LORA_50HZ
+
+extern SX126xDriver Radio;
+
+#elif defined(RADIO_SX127X)
 #define RATE_MAX 5
 #define RATE_BINDING RATE_LORA_50HZ
 
