@@ -10,5 +10,5 @@ extern bool LBTEnabled;
 
 void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void);
 void ICACHE_RAM_ATTR BeginClearChannelAssessment(void);
-bool ICACHE_RAM_ATTR ChannelIsClear(void);
+SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber);
 #endif

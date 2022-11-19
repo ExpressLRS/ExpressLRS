@@ -47,7 +47,7 @@ public:
 
     #define FREQ_STEP 61.03515625
     void SetFrequencyHz(uint32_t freq);
-    void SetFrequencyReg(uint32_t freq);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
@@ -71,7 +71,7 @@ public:
     SX12XX_Radio_Number_t GetProcessingPacketRadio(){return SX12XX_Radio_1;}
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size);
+    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 
