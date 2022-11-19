@@ -414,6 +414,16 @@ TxConfig::SetSwitchMode(uint8_t switchMode)
 }
 
 void
+TxConfig::SetAntennaMode(uint8_t txAntenna)
+{
+    if (GetAntennaMode() != txAntenna)
+    {
+        m_model->txAntenna = txAntenna;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetModelMatch(bool modelMatch)
 {
     if (GetModelMatch() != modelMatch)

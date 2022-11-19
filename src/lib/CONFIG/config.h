@@ -78,6 +78,7 @@ public:
     bool GetDynamicPower() const { return m_model->dynamicPower; }
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
+    uint8_t GetAntennaMode() const { return m_model->txAntenna; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
@@ -99,6 +100,7 @@ public:
     void SetDynamicPower(bool dynamicPower);
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
+    void SetAntennaMode(uint8_t txAntenna);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
