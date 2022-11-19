@@ -72,3 +72,22 @@ static inline const char *getRegulatoryDomain()
 {
     return FHSSconfig->domain;
 }
+
+// Get frequency offset by half of the domain frequency range
+static inline uint32_t FHSSGeminiFreq(uint8_t FHSSsequenceIdx)
+{
+    uint32_t numfhss = FHSSgetChannelCount();
+    uint8_t offSetIdx = (FHSSsequenceIdx + (numfhss / 2)) % numfhss;  
+    uint32_t freq = FHSSconfig->freq_start + (freq_spread * offSetIdx / FREQ_SPREAD_SCALE) - FreqCorrection;
+    return freq;
+}
+
+static inline uint32_t FHSSgetGeminiFreq()
+{
+    return FHSSGeminiFreq(FHSSsequence[FHSSgetCurrIndex()]);
+}
+
+static inline uint32_t FHSSgetInitialGeminiFreq()
+{
+    return FHSSGeminiFreq(sync_channel);
+}

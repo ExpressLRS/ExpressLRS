@@ -62,15 +62,18 @@ void SX1280Hal::init()
     tx1_enable_set_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
     tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
     tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
-    tx1_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
 
     tx2_enable_set_bits = 0;
     tx2_enable_clr_bits = 0;
     tx2_enable_set_bits |= SET_BIT(GPIO_PIN_PA_ENABLE);
     tx2_enable_set_bits |= SET_BIT(GPIO_PIN_TX_ENABLE_2);
     tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE_2);
-    tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_TX_ENABLE);
     tx2_enable_clr_bits |= SET_BIT(GPIO_PIN_RX_ENABLE);
+
+    tx_all_enable_set_bits = 0;
+    tx_all_enable_clr_bits = 0; 
+    tx_all_enable_set_bits = tx1_enable_set_bits | tx2_enable_set_bits;
+    tx_all_enable_clr_bits = tx1_enable_clr_bits | tx2_enable_clr_bits; 
 
     rx_enable_set_bits = 0;
     rx_enable_clr_bits = 0;
@@ -411,7 +414,15 @@ void ICACHE_RAM_ATTR SX1280Hal::dioISR_2()
 void ICACHE_RAM_ATTR SX1280Hal::TXenable(SX12XX_Radio_Number_t radioNumber)
 {
 #if defined(PLATFORM_ESP32)
-    if (radioNumber == SX12XX_Radio_2)
+    if (radioNumber == SX12XX_Radio_All)
+    {
+        GPIO.out_w1ts = tx_all_enable_set_bits;
+        GPIO.out_w1tc = tx_all_enable_clr_bits;
+
+        GPIO.out1_w1ts.data = tx_all_enable_set_bits >> 32;
+        GPIO.out1_w1tc.data = tx_all_enable_clr_bits >> 32;
+    }
+    else if (radioNumber == SX12XX_Radio_2)
     {
         GPIO.out_w1ts = tx2_enable_set_bits;
         GPIO.out_w1tc = tx2_enable_clr_bits;

@@ -244,7 +244,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
   hal.writeRegisterBurst(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
   currFreq = freq;
   SetMode(SX127x_OPMODE_STANDBY);
@@ -341,7 +341,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {

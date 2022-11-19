@@ -204,3 +204,8 @@ void initUID()
     memcpy(UID, MasterUID, sizeof(UID));
     OtaUpdateCrcInitFromUid();
 }
+
+bool ICACHE_RAM_ATTR isDualRadio()
+{    
+    return GPIO_PIN_NSS_2 != UNDEF_PIN;
+}
