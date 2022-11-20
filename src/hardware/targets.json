@@ -626,6 +626,14 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
+            },
+            "true_diversity_pwm16": {
+                "product_name": "Generic ESP32 True Diversity 16xPWM 2.4Ghz RX ",
+                "lua_name": "16PWM TD 2.4RX",
+                "layout_file": "Generic 2400 True Diversity PWM 16.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
