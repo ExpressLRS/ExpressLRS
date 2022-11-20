@@ -24,5 +24,9 @@
     "ledidx_rgb_status":[0],
     "ledidx_rgb_boot":[0],
     
-    "pwm_outputs":[14,12,13,15,2,0,4,9,10,5,18,23,19,22,3,1]
+    "pwm_outputs":[14,12,13,15,2,0,4,9,10,5,18,23,19,22,3,1],
+
+    "vbat": 36,
+    "vbat_offset": 0,
+    "vbat_scale": 1200
 }
