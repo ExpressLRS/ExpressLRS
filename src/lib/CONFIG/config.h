@@ -213,8 +213,8 @@ public:
     void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
-    void UpgradeEepromV4ToV5();
-    void UpgradeEepromV5ToV6();
+    void UpgradeEepromV4();
+    void UpgradeEepromV5();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

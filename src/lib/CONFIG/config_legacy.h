@@ -78,3 +78,32 @@ typedef struct {
     char        password[33];
     v4_rx_config_pwm_t pwmChannels[8];
 } v4_rx_config_t;
+
+// V5
+typedef union {
+    struct {
+        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+                 inputChannel:4, // 0-based input channel
+                 inverted:1,     // invert channel output
+                 mode:4,         // Output mode (eServoOutputMode)
+                 narrow:1,       // Narrow output mode (half pulse width)
+                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+    } val;
+    uint32_t raw;
+} v5_rx_config_pwm_t;
+
+typedef struct {
+    uint32_t    version;
+    uint8_t     uid[UID_LEN];
+    uint8_t     loanUID[UID_LEN];
+    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
+    uint8_t     isBound:1,
+                onLoan:1,
+                power:4,
+                antennaMode:2;      // 0=0, 1=1, 2=Diversity
+    uint8_t     powerOnCounter:3,
+                forceTlmOff:1,
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
+    uint8_t     modelId;
+    v5_rx_config_pwm_t pwmChannels[16];
+} v5_rx_config_t;
