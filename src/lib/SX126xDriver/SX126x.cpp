@@ -122,6 +122,35 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     SetRxTimeoutUs(interval);
 
+	uint8_t calFreq[2];
+    uint32_t freq = regfreq * FREQ_STEP;
+	if (freq > 900000000)
+	{
+		calFreq[0] = 0xE1;
+		calFreq[1] = 0xE9;
+	}
+	else if (freq > 850000000)
+	{
+		calFreq[0] = 0xD7;
+		calFreq[1] = 0xDB;
+	}
+	else if (freq > 770000000)
+	{
+		calFreq[0] = 0xC1;
+		calFreq[1] = 0xC5;
+	}
+	else if (freq > 460000000)
+	{
+		calFreq[0] = 0x75;
+		calFreq[1] = 0x81;
+	}
+	else if (freq > 425000000)
+	{
+		calFreq[0] = 0x6B;
+		calFreq[1] = 0x6F;
+	}
+	hal.WriteCommand(SX126x_RADIO_CALIBRATEIMAGE, calFreq, sizeof(calFreq), SX12XX_Radio_All);
+
     uint8_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
     uint8_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_CRC_ERROR;
     SetDioIrqParams(irqMask, dio1Mask);
