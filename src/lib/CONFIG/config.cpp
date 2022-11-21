@@ -698,6 +698,15 @@ void RxConfig::UpgradeEepromV5ToV6()
     m_eeprom->Get(0, v5Config);
     if (v5Config.version == 5)
     {
+        memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
+        m_config.vbatScale = v5Config.vbatScale;
+        m_config.isBound = v5Config.isBound;
+        m_config.power = v5Config.power;
+        m_config.antennaMode = v5Config.antennaMode;
+        m_config.forceTlmOff = v5Config.forceTlmOff;
+        m_config.rateInitialIdx = v5Config.rateInitialIdx;
+        m_config.modelId = v5Config.modelId;
+
         for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch)
         {
             if (v5Config.pwmChannels[ch].val.mode > som400Hz)
