@@ -124,8 +124,8 @@ void TxConfig::Load()
         version = version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
-    // Can upgrade from any version 5 to current
-    if (version < 5)
+    // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
+    if (version < 5 || version > TX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
@@ -220,8 +220,8 @@ void TxConfig::Load()
     if (version == TX_CONFIG_VERSION)
         return;
 
-    // Can't upgrade from version <5, just use defaults
-    if (version < 5)
+    // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
+    if (version < 5 || version > TX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
@@ -651,8 +651,8 @@ void RxConfig::Load()
     if (version == RX_CONFIG_VERSION)
         return;
 
-    // Can't upgrade from version <4, just use defaults
-    if (version < 4)
+    // Can't upgrade from version <4, or when flashing a previous version, just use defaults.
+    if (version < 4 || version > RX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
