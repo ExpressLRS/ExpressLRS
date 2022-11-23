@@ -660,25 +660,28 @@ void RxConfig::Load()
 
     // Upgrade EEPROM, starting with defaults
     SetDefaults(false);
-    UpgradeEepromV4ToV5();
-    UpgradeEepromV5ToV6();
+    UpgradeEepromV4();
+    UpgradeEepromV5();
     m_modified = true;
     Commit();
 }
 
-static void PwmConfigV4toV5(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const v5)
+// ========================================================
+// V4 Upgrade
+
+static void PwmConfigV4(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const current)
 {
-    v5->val.failsafe = v4->val.failsafe;
-    v5->val.inputChannel = v4->val.inputChannel;
-    v5->val.inverted = v4->val.inverted;
+    current->val.failsafe = v4->val.failsafe;
+    current->val.inputChannel = v4->val.inputChannel;
+    current->val.inverted = v4->val.inverted;
 }
 
-void RxConfig::UpgradeEepromV4ToV5()
+void RxConfig::UpgradeEepromV4()
 {
     v4_rx_config_t v4Config;
     m_eeprom->Get(0, v4Config);
 
-    if (v4Config.version == 4)
+    if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
     {
         m_config.isBound = v4Config.isBound;
         m_config.modelId = v4Config.modelId;
@@ -687,26 +690,50 @@ void RxConfig::UpgradeEepromV4ToV5()
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
-            PwmConfigV4toV5(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+            PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
     }
 }
 
-void RxConfig::UpgradeEepromV5ToV6()
+// ========================================================
+// V5 Upgrade
+
+static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * const current)
 {
-    rx_config_t v5Config;
-    m_eeprom->Get(0, v5Config);
-    if (v5Config.version == 5)
+    current->val.failsafe = v5->val.failsafe;
+    current->val.inputChannel = v5->val.inputChannel;
+    current->val.inverted = v5->val.inverted;
+    current->val.narrow = v5->val.narrow;
+    current->val.mode = v5->val.mode;
+    if (v5->val.mode > som400Hz)
     {
-        for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch)
+        current->val.mode += 1;
+    }
+}
+
+void RxConfig::UpgradeEepromV5()
+{
+    v5_rx_config_t v5Config;
+    m_eeprom->Get(0, v5Config);
+    if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
+    {
+        memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
+        m_config.vbatScale = v5Config.vbatScale;
+        m_config.isBound = v5Config.isBound;
+        m_config.power = v5Config.power;
+        m_config.antennaMode = v5Config.antennaMode;
+        m_config.forceTlmOff = v5Config.forceTlmOff;
+        m_config.rateInitialIdx = v5Config.rateInitialIdx;
+        m_config.modelId = v5Config.modelId;
+
+        for (unsigned ch=0; ch<16; ++ch)
         {
-            if (v5Config.pwmChannels[ch].val.mode > som400Hz)
-            {
-                m_config.pwmChannels[ch].val.mode = v5Config.pwmChannels[ch].val.mode + 1;
-            }
+            PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
     }
 }
+
+// ========================================================
 
 void
 RxConfig::Commit()

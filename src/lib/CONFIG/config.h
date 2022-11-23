@@ -149,7 +149,7 @@ typedef union {
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
-                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:12;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
@@ -213,8 +213,8 @@ public:
     void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
-    void UpgradeEepromV4ToV5();
-    void UpgradeEepromV5ToV6();
+    void UpgradeEepromV4();
+    void UpgradeEepromV5();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
