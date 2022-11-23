@@ -1116,7 +1116,7 @@ static void setupSerial()
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else
 #if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
-    if (firmwareOptions.r9mm_mini_sbus)
+    if (firmwareOptions.r9mm_mini_sbus || firmwareOptions.sbus_protocol)
     {
         CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
         CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
@@ -1141,8 +1141,17 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
+    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud, firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1);
 #endif /* PLATFORM_STM32 */
+#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
+    if (firmwareOptions.sbus_protocol)
+    {
+        LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN);
+        USART2->CR1 &= ~USART_CR1_UE;
+        USART2->CR2 |= USART_CR2_TXINV;
+        USART2->CR1 |= USART_CR1_UE;
+    }
+#endif
 
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
@@ -1151,13 +1160,14 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    Serial.begin(firmwareOptions.uart_baud);
-    if (firmwareOptions.invert_tx)
-    {
-        USC0(UART0) |= BIT(UCTXI);
-    }
+    SerialConfig config = firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1;
+    SerialMode mode = firmwareOptions.sbus_protocol ? SERIAL_TX_ONLY : SERIAL_FULL;
+    bool invert = firmwareOptions.invert_tx || firmwareOptions.sbus_protocol;
+    Serial.begin(firmwareOptions.uart_baud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    Serial.begin(firmwareOptions.uart_baud, SERIAL_8N1, -1, -1, firmwareOptions.invert_tx);
+    uint32_t config = firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1;
+    bool invert = firmwareOptions.invert_tx || firmwareOptions.sbus_protocol;
+    Serial.begin(firmwareOptions.uart_baud, config, -1, -1, invert);
 #endif
 
     SerialLogger = &Serial;

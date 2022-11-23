@@ -35,6 +35,7 @@ typedef struct _options {
     bool        lock_on_first_connection:1;
     bool        r9mm_mini_sbus:1;
     bool        is_airport:1;
+    bool        sbus_protocol:1;
 #endif
 #if defined(TARGET_TX)
     uint32_t    tlm_report_interval;

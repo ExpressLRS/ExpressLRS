@@ -932,7 +932,7 @@ bool CRSF::UARTwdt()
 bool CRSF::RXhandleUARTout()
 {
     bool retVal = false;
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol)
     {
         // don't write more than 128 bytes at a time to avoid RX buffer overflow
         const int maxBytesPerCall = 128;
@@ -968,7 +968,7 @@ bool CRSF::RXhandleUARTout()
 void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol && !firmwareOptions.is_airport)
     {
         constexpr uint8_t outBuffer[] = {
             LinkStatisticsFrameLength + 4,
@@ -1021,21 +1021,29 @@ void CRSF::sendRCFrameToFC()
     PackedRCdataOut.ch14 = ChannelData[14];
     PackedRCdataOut.ch15 = ChannelData[15];
 
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+    if (firmwareOptions.sbus_protocol)
+    {
+        this->_dev->write(0x0F);    // HEADER
+        this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+        this->_dev->write((uint8_t)0x00);    // ch 17, 18, lost packet, failsafe
+        this->_dev->write((uint8_t)0x00);    // FOOTER
+    }
+    else
+    {
+        uint8_t crc = crsf_crc.calc(outBuffer[2]);
+        crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
-    //SerialOutFIFO.push(RCframeLength + 4);
-    //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-    this->_dev->write(outBuffer, sizeof(outBuffer));
-    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
-    this->_dev->write(crc);
+        this->_dev->write(outBuffer, sizeof(outBuffer));
+        this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
+        this->_dev->write(crc);
+    }
 #endif // CRSF_RCVR_NO_SERIAL
 }
 
 void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol && !firmwareOptions.is_airport)
     {
         const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)

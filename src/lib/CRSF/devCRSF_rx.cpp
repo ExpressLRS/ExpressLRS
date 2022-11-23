@@ -11,11 +11,7 @@ extern void HandleUARTin();
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
     sendFrame = true;
-    #else
-    crsf.sendRCFrameToFC();
-    #endif
 }
 
 static int start()
@@ -27,13 +23,15 @@ static int timeout()
 {
     if (connectionState != serialUpdate)
     {
-        #if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
         if (sendFrame)
         {
             sendFrame = false;
             crsf.sendRCFrameToFC();
         }
-        #endif
+        if (firmwareOptions.sbus_protocol)
+        {
+            return 9;   // call us in 9ms please!
+        }
         crsf.RXhandleUARTout();
         HandleUARTin();
     }

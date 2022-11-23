@@ -41,8 +41,11 @@
 
 ### COMPATIBILITY OPTIONS: ###
 
+# Use SBUS protocol rather than CRSF
+#-DUSE_SBUS_PROTOCOL
+
 # Invert the TX/RX half-duplex pin in the transmitter code. Handset external
-# modules are almost all inverted. ESP32 targets only
+# modules are almost all inverted. ESP32/8286 targets only
 -DUART_INVERTED
 
 # Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
@@ -56,7 +59,7 @@
 #-DRCVR_INVERT_TX
 
 # Use the SBUS **pin** on R9MM receiver hardware, which is inverted.
-# Does not output SBUS protocol, just inverted CRSF.
+# Only outputs SBUS protocol if USE_SBUS_PROTOCOL is also defined. Otherwise the pin has inverted CRSF.
 #-DUSE_R9MM_R9MINI_SBUS
 
 #-DTLM_REPORT_INTERVAL_MS=240LU
