@@ -227,11 +227,6 @@ static void registerLuaParameters()
   if (OPT_HAS_SERVO_OUTPUT)
   {
     registerLUAParameter(&luaMappingFolder);
-    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
   }
 #endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -248,6 +243,16 @@ static void registerLuaParameters()
     }
     sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  if (OPT_HAS_SERVO_OUTPUT)
+  {
+    registerLUAParameter(&luaMappingChannelOut, luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingChannelIn, luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingOutputMode, luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingInverted, luaparamMappingInverted, luaMappingFolder.common.id);
+    registerLUAParameter(&luaSetFailsafe, luaparamSetFalisafe);
+  }
+#endif
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
