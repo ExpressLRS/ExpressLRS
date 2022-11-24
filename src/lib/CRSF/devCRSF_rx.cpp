@@ -8,6 +8,7 @@ extern CRSF crsf;
 
 static volatile bool sendFrame = false;
 extern void HandleUARTin();
+extern bool sbusSerialOutput;
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
@@ -28,7 +29,7 @@ static int timeout()
             sendFrame = false;
             crsf.sendRCFrameToFC();
         }
-        if (firmwareOptions.sbus_protocol)
+        if (sbusSerialOutput)
         {
             return 9;   // call us in 9ms please!
         }

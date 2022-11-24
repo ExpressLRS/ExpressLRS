@@ -234,7 +234,9 @@
 #endif
 
 #if defined(TARGET_UNIFIED_RX)
-#define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN)
+extern bool pwmSerialDefined;
+
+#define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN && !pwmSerialDefined)
 #else
 #if defined(CRSF_RCVR_NO_SERIAL)
 #define OPT_CRSF_RCVR_NO_SERIAL true

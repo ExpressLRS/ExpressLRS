@@ -166,17 +166,19 @@ typedef enum : uint8_t {
 
 enum eServoOutputMode : uint8_t
 {
-    som50Hz,  // Hz modes are "Servo PWM" where the signal is 988-2012us
-    som60Hz,  // and the mode sets the refresh interval
-    som100Hz, // 50Hz must be mode=0 for default in config
+    som50Hz,    // Hz modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,    // and the mode sets the refresh interval
+    som100Hz,   // 50Hz must be mode=0 for default in config
     som160Hz,
     som333Hz,
     som400Hz,
     som10KHzDuty,
-    somOnOff,  // Digital 0/1 mode
-    somPwm,    // True PWM mode (NOT SUPPORTED)
-    somCrsfTx, // CRSF output TX (NOT SUPPORTED)
-    somCrsfRx, // CRSF output RX (NOT SUPPORTED)
+    somOnOff,   // Digital 0/1 mode
+    somPwm,     // True PWM mode (NOT SUPPORTED)
+    somCrsfTx,  // CRSF output TX
+    somCrsfRx,  // CRSF input RX
+    somSbusTx,  // SBUS output TX
+    somDisabled // pin is disabled (e.g. RX pin with SBUS is used)
 };
 
 #ifndef UNIT_TEST

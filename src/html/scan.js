@@ -44,7 +44,8 @@ function enumSelectGenerate(id, val, arOptions) {
   // Generate a <select> item with every option in arOptions, and select the val element (0-based)
   const retVal = `<div class="mui-select"><select id="${id}">` +
         arOptions.map((item, idx) => {
-          return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
+          if (item) return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
+          return '';
         }).join('') + '</select></div>';
   return retVal;
 }
@@ -54,16 +55,33 @@ function updatePwmSettings(arPwm) {
     if (_('pwm_tab')) _('pwm_tab').style.display = 'none';
     return;
   }
+  var pin1Index = undefined;
+  var pin3Index = undefined;
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
   const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="mui--text-center">Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
   arPwm.forEach((item, index) => {
-    const failsafe = (item & 1023) + 988; // 10 bits
-    const ch = (item >> 10) & 15; // 4 bits
-    const inv = (item >> 14) & 1;
-    const mode = (item >> 15) & 15; // 4 bits
-    const narrow = (item >> 19) & 1;
-    const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode,
-        ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off']);
+    const failsafe = (item.config & 1023) + 988; // 10 bits
+    const ch = (item.config >> 10) & 15; // 4 bits
+    const inv = (item.config >> 14) & 1;
+    const mode = (item.config >> 15) & 15; // 4 bits
+    const narrow = (item.config >> 19) & 1;
+    const pin = item.pin;
+    const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
+    if (pin == 1) {
+      modes.push(undefined);  // true PWM
+      modes.push('CRSF Out');
+      modes.push(undefined);  // CRSF In
+      modes.push('SBUS Out');
+      modes.push(undefined);  // disabled
+    }
+    if (pin == 3) {
+      modes.push(undefined);  // true PWM
+      modes.push(undefined);  // CRSF out
+      modes.push('CRSF In');
+      modes.push(undefined);  // SBUS out
+      modes.push('Disabled'); // disabled
+    }
+    const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
@@ -75,6 +93,9 @@ function updatePwmSettings(arPwm) {
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
+    // Save pin 1/3 PWM index
+    if (pin == 1) pin1Index = index;
+    if (pin == 3) pin3Index = index;
   });
   htmlFields.push('</table></div><button type="submit" class="mui-btn mui-btn--primary">Set PWM Output</button>');
 
@@ -85,6 +106,32 @@ function updatePwmSettings(arPwm) {
 @@if not isTX:
   _('pwm').appendChild(grp);
   _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
+
+  // put some contraints on pin1/3 mode selects
+  if (pin1Index !== undefined && pin3Index !== undefined) {
+    const pin1Element = _(`pwm_${pin1Index}_mode`);
+    const pin3Element = _(`pwm_${pin3Index}_mode`);
+    pin1Element.onchange = () => {
+      if (pin1Element.value == 9) { // CRSF Out
+        pin3Element.value = 10;
+        pin3Element.disabled = true;
+      }
+      else if (pin1Element.value == 11) { // SBUS Out
+        pin3Element.value = 12;
+        pin3Element.disabled = true;
+      }
+      else {
+        pin3Element.value = 0;
+        pin3Element.disabled = false;
+      }
+    }
+    pin3Element.onchange = () => {
+      if (pin3Element.value == 10) { // CRSF In
+        pin1Element.value = 9;
+        pin3Element.disabled = true;
+      }
+    }
+  }
 @@end
 }
 
@@ -167,8 +214,20 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
-
   _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
+  if (data['protocol-select'] === true) {
+    _('protocol-select').style.display = 'block';
+    _('sbus-protocol').onchange = () => {
+      if (_('sbus-protocol').value === 'false') {
+        _('rcvr-uart-baud').disabled = false;
+        _('rcvr-uart-baud').value = '420000';
+      }
+      else {
+        _('rcvr-uart-baud').disabled = true;
+        _('rcvr-uart-baud').value = '100000';
+      }
+    }
+  }
 @@end
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
@@ -200,8 +259,8 @@ function initOptions() {
   xmlhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      updateOptions(data['options']);
       updateConfig(data['config']);
+      updateOptions(data['options']);
       setTimeout(getNetworks, 2000);
     }
   };
@@ -474,15 +533,16 @@ function submitOptions(e) {
   // Serialize and send the formObject
   xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
-    if (_(k) && _(k).type == 'color') return undefined;
-    if (_(k) && _(k).type == 'checkbox') {
-      return v == 'on' ? true : false;
-    }
-    if (_(k) && _(k).classList.contains('array')) {
-      const arr = v.split(',').map((element) => {
-        return Number(element);
-      });
-      return arr.length == 0 ? undefined : arr;
+    if (_(k)) {
+      if (_(k).type == 'color') return undefined;
+      if (_(k).type == 'checkbox') return v === 'on';
+      if (_(k).classList.contains('datatype-boolean')) return v === 'true';
+      if (_(k).classList.contains('array')) {
+        const arr = v.split(',').map((element) => {
+          return Number(element);
+        });
+        return arr.length == 0 ? undefined : arr;
+      }
     }
     if (typeof v === 'boolean') return v;
     return isNaN(v) ? v : +v;
@@ -545,6 +605,7 @@ function updateOptions(data) {
         if (Array.isArray(value)) _(key).value = value.toString();
         else _(key).value = value;
       }
+      if(_(key).onchange) _(key).onchange();
     }
   }
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];

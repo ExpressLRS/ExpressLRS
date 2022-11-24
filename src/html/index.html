@@ -88,6 +88,13 @@
 							<label>AirPort UART baud</label>
 						</div>
 @@else:
+						<div id="protocol-select" class="mui-select" style="display: none;">
+							<select id='sbus-protocol' name='sbus-protocol' class='datatype-boolean'>
+								<option value='false'>CRSF</option>
+								<option value='true'>SBUS</option>
+							</select>
+							<label>Serial protocol</label>
+						</div>
 						<div class="mui-textfield">
 							<input size='7' id='rcvr-uart-baud' name='rcvr-uart-baud' type='text'/>
 							<label>UART baud</label>
@@ -190,7 +197,7 @@
 					Set PWM output mode and failsafe positions.
 					<ul>
 						<li><b>Output:</b> Receiver output pin</li>
-						<li><b>Mode:</b> Output frequency or binary On/Off mode</li>
+						<li><b>Mode:</b> Output frequency, binary On/Off, CRSF or SBUS mode</li>
 						<li><b>Input:</b> Input channel from the handset</li>
 						<li><b>Invert:</b> Invert input channel position</li>
 						<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>

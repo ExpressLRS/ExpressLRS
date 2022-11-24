@@ -345,7 +345,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-      json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
+    json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
+    json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
     }
     #endif
     #endif
@@ -354,6 +355,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["reg_domain"] = getRegulatoryDomain();
 
     #if defined(TARGET_RX)
+    json["config"]["protocol-select"] = GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN;
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif

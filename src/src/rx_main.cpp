@@ -90,7 +90,9 @@ bool hardwareConfigured = true;
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
+bool pwmSerialDefined = false;
 #endif
+bool sbusSerialOutput = false;
 
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
@@ -1116,7 +1118,7 @@ static void setupSerial()
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else
 #if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
-    if (firmwareOptions.r9mm_mini_sbus || firmwareOptions.sbus_protocol)
+    if (firmwareOptions.r9mm_mini_sbus || sbusSerialOutput)
     {
         CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
         CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
@@ -1141,10 +1143,10 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud, firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1);
+    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
 #endif /* PLATFORM_STM32 */
 #if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
-    if (firmwareOptions.sbus_protocol)
+    if (sbusSerialOutput)
     {
         LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN);
         USART2->CR1 &= ~USART_CR1_UE;
@@ -1160,13 +1162,13 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1;
-    SerialMode mode = firmwareOptions.sbus_protocol ? SERIAL_TX_ONLY : SERIAL_FULL;
-    bool invert = firmwareOptions.invert_tx || firmwareOptions.sbus_protocol;
+    SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    SerialMode mode = sbusSerialOutput ? SERIAL_TX_ONLY : SERIAL_FULL;
+    bool invert = firmwareOptions.invert_tx || sbusSerialOutput;
     Serial.begin(firmwareOptions.uart_baud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = firmwareOptions.sbus_protocol ? SERIAL_8E2 : SERIAL_8N1;
-    bool invert = firmwareOptions.invert_tx || firmwareOptions.sbus_protocol;
+    uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    bool invert = firmwareOptions.invert_tx || sbusSerialOutput;
     Serial.begin(firmwareOptions.uart_baud, config, -1, -1, invert);
 #endif
 
@@ -1555,9 +1557,28 @@ void setup()
         setupTarget();
         // serial setup must be done before anything as some libs write
         // to the serial port and they'll block if the buffer fills
+        sbusSerialOutput = firmwareOptions.sbus_protocol;
         setupSerial();
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
+        #if defined(OPT_HAS_SERVO_OUTPUT)
+        // If serial is not already defined, then see if there is serial output configured for pin 1 in the PWM configuration
+        if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
+        {
+            for (int i=0 ; i<GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
+            {
+                eServoOutputMode pinMode = (eServoOutputMode)config.GetPwmChannel(i)->val.mode;
+                if (GPIO_PIN_PWM_OUTPUTS[i] == 1 && (pinMode == somCrsfTx || pinMode == somSbusTx))
+                {
+                    pwmSerialDefined = true;
+                    sbusSerialOutput = (pinMode == somSbusTx);
+                    firmwareOptions.uart_baud = 100000;
+                    setupSerial();
+                    break;
+                }
+            }
+        }
+        #endif
 
         INFOLN("ExpressLRS Module Booting...");
 

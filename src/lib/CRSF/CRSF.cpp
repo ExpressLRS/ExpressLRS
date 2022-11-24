@@ -33,9 +33,12 @@ HardwareSerial CRSF::Port = Serial;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
-#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
+#if defined(CRSF_RX_MODULE)
+extern bool sbusSerialOutput;
+#if defined(USE_MSP_WIFI)
 CROSSFIRE2MSP CRSF::crsf2msp;
 MSP2CROSSFIRE CRSF::msp2crsf;
+#endif
 #endif
 
 /// Out FIFO to buffer messages///
@@ -932,7 +935,7 @@ bool CRSF::UARTwdt()
 bool CRSF::RXhandleUARTout()
 {
     bool retVal = false;
-    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !sbusSerialOutput)
     {
         // don't write more than 128 bytes at a time to avoid RX buffer overflow
         const int maxBytesPerCall = 128;
@@ -968,7 +971,7 @@ bool CRSF::RXhandleUARTout()
 void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol && !firmwareOptions.is_airport)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !sbusSerialOutput && !firmwareOptions.is_airport)
     {
         constexpr uint8_t outBuffer[] = {
             LinkStatisticsFrameLength + 4,
@@ -1021,7 +1024,7 @@ void CRSF::sendRCFrameToFC()
     PackedRCdataOut.ch14 = ChannelData[14];
     PackedRCdataOut.ch15 = ChannelData[15];
 
-    if (firmwareOptions.sbus_protocol)
+    if (sbusSerialOutput)
     {
         this->_dev->write(0x0F);    // HEADER
         this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
@@ -1043,7 +1046,7 @@ void CRSF::sendRCFrameToFC()
 void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.sbus_protocol && !firmwareOptions.is_airport)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !sbusSerialOutput && !firmwareOptions.is_airport)
     {
         const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)

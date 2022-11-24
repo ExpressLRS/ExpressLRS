@@ -33,13 +33,36 @@ config = {
             "domain": 1,
             "wifi-on-interval": 60,
             "wifi-password": "w1f1-pAssw0rd",
-            "wifi-ssid": "network-ssid"
+            "wifi-ssid": "network-ssid",
+            "sbus-protocol": True
         },
         "config": {
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
-            "pwm":[512,1536,2048,3584,4608],
+            "protocol-select": True,
+            "pwm":[
+                {
+                    "config": 512,
+                    "pin": 0
+                },
+                {
+                    "config": 1536,
+                    "pin": 4
+                },
+                {
+                    "config": 2048,
+                    "pin": 5
+                },
+                {
+                    "config": 3584,
+                    "pin": 1
+                },
+                {
+                    "config": 4608,
+                    "pin": 3
+                }
+            ],
             "product_name":
             "Generic ESP8285 + 5xPWM 2.4Ghz RX",
             "lua_name":"ELRS+PWM 2400RX",
