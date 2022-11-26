@@ -44,7 +44,7 @@ function enumSelectGenerate(id, val, arOptions) {
   // Generate a <select> item with every option in arOptions, and select the val element (0-based)
   const retVal = `<div class="mui-select"><select id="${id}">` +
         arOptions.map((item, idx) => {
-          if (item) return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
+          if (item) return `<option value="${idx}"${(idx == val) ? ' selected' : ''} ${item == 'Disabled' ? 'disabled' : ''}>${item}</option>`;
           return '';
         }).join('') + '</select></div>';
   return retVal;
@@ -73,6 +73,7 @@ function updatePwmSettings(arPwm) {
       modes.push(undefined);  // CRSF In
       modes.push('SBUS Out');
       modes.push(undefined);  // disabled
+      pin1Index = index;
     }
     if (pin == 3) {
       modes.push(undefined);  // true PWM
@@ -80,6 +81,7 @@ function updatePwmSettings(arPwm) {
       modes.push('CRSF In');
       modes.push(undefined);  // SBUS out
       modes.push('Disabled'); // disabled
+      pin3Index = index;
     }
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
@@ -93,9 +95,6 @@ function updatePwmSettings(arPwm) {
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
-    // Save pin 1/3 PWM index
-    if (pin == 1) pin1Index = index;
-    if (pin == 3) pin3Index = index;
   });
   htmlFields.push('</table></div><button type="submit" class="mui-btn mui-btn--primary">Set PWM Output</button>');
 
@@ -107,28 +106,42 @@ function updatePwmSettings(arPwm) {
   _('pwm').appendChild(grp);
   _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
 
+  var setDisabled = (index, onoff) => {
+    _(`pwm_${index}_ch`).disabled = onoff;
+    _(`pwm_${index}_inv`).disabled = onoff;
+    _(`pwm_${index}_nar`).disabled = onoff;
+    _(`pwm_${index}_fs`).disabled = onoff;
+  }
   // put some contraints on pin1/3 mode selects
   if (pin1Index !== undefined && pin3Index !== undefined) {
-    const pin1Element = _(`pwm_${pin1Index}_mode`);
-    const pin3Element = _(`pwm_${pin3Index}_mode`);
-    pin1Element.onchange = () => {
-      if (pin1Element.value == 9) { // CRSF Out
-        pin3Element.value = 10;
-        pin3Element.disabled = true;
+    const pin1Mode = _(`pwm_${pin1Index}_mode`);
+    const pin3Mode = _(`pwm_${pin3Index}_mode`);
+    pin1Mode.onchange = () => {
+      if (pin1Mode.value == 9) { // CRSF Out
+        pin3Mode.value = 10;
+        setDisabled(pin1Index, true);
+        setDisabled(pin3Index, true);
+        pin3Mode.disabled = true;
       }
-      else if (pin1Element.value == 11) { // SBUS Out
-        pin3Element.value = 12;
-        pin3Element.disabled = true;
+      else if (pin1Mode.value == 11) { // SBUS Out
+        pin3Mode.value = 12;
+        setDisabled(pin1Index, true);
+        setDisabled(pin3Index, true);
+        pin3Mode.disabled = true;
       }
       else {
-        pin3Element.value = 0;
-        pin3Element.disabled = false;
+        pin3Mode.value = 0;
+        setDisabled(pin1Index, false);
+        setDisabled(pin3Index, false);
+        pin3Mode.disabled = false;
       }
     }
-    pin3Element.onchange = () => {
-      if (pin3Element.value == 10) { // CRSF In
-        pin1Element.value = 9;
-        pin3Element.disabled = true;
+    pin3Mode.onchange = () => {
+      if (pin3Mode.value == 10) { // CRSF In
+        pin1Mode.value = 9;
+        setDisabled(pin1Index, true);
+        setDisabled(pin3Index, true);
+        pin3Mode.disabled = true;
       }
     }
   }
