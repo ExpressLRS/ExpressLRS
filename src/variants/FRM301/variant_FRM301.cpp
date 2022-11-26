@@ -147,6 +147,25 @@ WEAK void SystemClock_Config(void)
   //}
 }
 
+#ifndef FLASH_BASE
+#define FLASH_BASE ((uint32_t)0x08000000u)
+#endif
+#define FLASH_VECTOR_TAB_START_ADDRESS (FLASH_BASE + VECT_TAB_OFFSET)
+
+volatile uint32_t VectorTable[48] __attribute__((section(".RAMVectorTable")));
+
+void __attribute__((used)) initVariant(void)
+{
+    uint32_t vecIndex = 0;
+ 
+    for(vecIndex = 0; vecIndex < 48; vecIndex++){
+        VectorTable[vecIndex] = *(volatile uint32_t*)(FLASH_VECTOR_TAB_START_ADDRESS + (vecIndex << 2));
+    }
+    __disable_irq();
+  __HAL_SYSCFG_REMAPMEMORY_SRAM();
+  __enable_irq();
+
+}
 #ifdef __cplusplus
 }
 #endif

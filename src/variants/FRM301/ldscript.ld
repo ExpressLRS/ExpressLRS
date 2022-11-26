@@ -36,6 +36,7 @@ _Min_Stack_Size = 0x400 ;	/* required amount of stack */
 /* Memories definition */
 MEMORY
 {
+  VTRAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 0xC0
   RAM    (xrw)    : ORIGIN = 0x200000C0,   LENGTH = 8K - 0xC0  /* leave room for the vector table */
   FLASH    (rx)    : ORIGIN = 0x8000000 + + FLASH_APP_OFFSET,   LENGTH = 64K - + FLASH_APP_OFFSET
 }
@@ -119,6 +120,11 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
     . = ALIGN(4);
   } >FLASH
+
+ .RAMVectorTable(NOLOAD):
+  {
+    KEEP(*(.RAMVectorTable))
+  } > VTRAM
 
   /* Used by the startup to initialize data */
   _sidata = LOADADDR(.data);
