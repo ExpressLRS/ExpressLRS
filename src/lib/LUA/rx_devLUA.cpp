@@ -99,7 +99,7 @@ static struct luaItem_int8 luaMappingChannelIn = {
 static struct luaItem_selection luaMappingOutputMode = {
     {"Output Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off",
+    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;CRSF TX;CRSF RX;SBUS;Disabled",
     STR_EMPTYSPACE
 };
 
@@ -161,6 +161,47 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   rx_config_pwm_t newPwmCh;
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
   newPwmCh.val.mode = arg;
+
+  // Check if pin == 1/3 and do other pin adjustment accordingly
+
+  if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
+  {
+    for (int pin3ch=0 ; pin3ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; pin3ch++)
+    {
+      if (GPIO_PIN_PWM_OUTPUTS[pin3ch] == 3)
+      {
+        // set pin 3 channel settings based on pin 1 settings
+        rx_config_pwm_t newPin3Config;
+        if (arg == somCrsfTx)
+        {
+          newPin3Config.val.mode = somCrsfRx;
+        }
+        else if (arg == somSbusTx)
+        {
+          newPin3Config.val.mode = somDisabled;
+        }
+        config.SetPwmChannelRaw(pin3ch, newPin3Config.raw);
+        break;
+      }
+    }
+  }
+  else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
+  {
+    for (int pin1ch=0 ; pin1ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; pin1ch++)
+    {
+      if (GPIO_PIN_PWM_OUTPUTS[pin1ch] == 1)
+      {
+        // set pin 1 channel settings based on pin 3 settings
+        rx_config_pwm_t newPin1Config;
+        if (arg == somCrsfRx)
+        {
+          newPin1Config.val.mode = somCrsfTx;
+        }
+        config.SetPwmChannelRaw(pin1ch, newPin1Config.raw);
+        break;
+      }
+    }
+  }
 
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }

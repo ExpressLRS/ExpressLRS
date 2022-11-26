@@ -68,19 +68,19 @@ function updatePwmSettings(arPwm) {
     const pin = item.pin;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (pin == 1) {
-      modes.push(undefined);  // true PWM
       modes.push('CRSF Out');
       modes.push(undefined);  // CRSF In
       modes.push('SBUS Out');
       modes.push(undefined);  // disabled
+      modes.push(undefined);  // true PWM
       pin1Index = index;
     }
     if (pin == 3) {
-      modes.push(undefined);  // true PWM
       modes.push(undefined);  // CRSF out
       modes.push('CRSF In');
       modes.push(undefined);  // SBUS out
       modes.push('Disabled'); // disabled
+      modes.push(undefined);  // true PWM
       pin3Index = index;
     }
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
@@ -117,14 +117,14 @@ function updatePwmSettings(arPwm) {
     const pin1Mode = _(`pwm_${pin1Index}_mode`);
     const pin3Mode = _(`pwm_${pin3Index}_mode`);
     pin1Mode.onchange = () => {
-      if (pin1Mode.value == 9) { // CRSF Out
-        pin3Mode.value = 10;
+      if (pin1Mode.value == 8) { // CRSF Out
+        pin3Mode.value = 9;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
       }
-      else if (pin1Mode.value == 11) { // SBUS Out
-        pin3Mode.value = 12;
+      else if (pin1Mode.value == 10) { // SBUS Out
+        pin3Mode.value = 11;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -137,8 +137,8 @@ function updatePwmSettings(arPwm) {
       }
     }
     pin3Mode.onchange = () => {
-      if (pin3Mode.value == 10) { // CRSF In
-        pin1Mode.value = 9;
+      if (pin3Mode.value == 9) { // CRSF In
+        pin1Mode.value = 8;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
