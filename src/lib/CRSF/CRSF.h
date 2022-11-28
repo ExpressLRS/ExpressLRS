@@ -111,7 +111,7 @@ public:
 
     #ifdef CRSF_RX_MODULE
     bool RXhandleUARTout();
-    void sendRCFrameToFC();
+    void sendRCFrameToFC(uint8_t extraData = 0);
     void sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
     void setLinkQualityStats(uint16_t lq, uint16_t rssi);

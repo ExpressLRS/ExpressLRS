@@ -994,7 +994,7 @@ void CRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
     rssiDBM = rssi;
 }
 
-void CRSF::sendRCFrameToFC()
+void CRSF::sendRCFrameToFC(uint8_t extraData)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (OPT_CRSF_RCVR_NO_SERIAL || firmwareOptions.is_airport)
@@ -1029,7 +1029,7 @@ void CRSF::sendRCFrameToFC()
     {
         this->_dev->write(0x0F);    // HEADER
         this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
-        this->_dev->write((uint8_t)0x00);    // ch 17, 18, lost packet, failsafe
+        this->_dev->write((uint8_t)extraData);    // ch 17, 18, lost packet, failsafe
         this->_dev->write((uint8_t)0x00);    // FOOTER
     }
     else
