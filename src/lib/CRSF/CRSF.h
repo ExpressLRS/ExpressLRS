@@ -42,12 +42,7 @@ public:
     #endif
     #endif
 
-    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
-
     /////Variables/////
-
-
-    static uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
     static HardwareSerial Port;
@@ -57,7 +52,7 @@ public:
     static void (*connected)();
 
     static void (*RecvModelUpdate)();
-    static void (*RecvParameterUpdate)();
+    static void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg);
     static void (*RCdataCallback)();
 
     // The model ID as received from the Transmitter
@@ -116,19 +111,23 @@ public:
 
     #ifdef CRSF_RX_MODULE
     bool RXhandleUARTout();
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
+    void sendRCFrameToFC();
+    void sendMSPFrameToFC(uint8_t* data);
     void sendLinkStatisticsToFC();
+    void setLinkQualityStats(uint16_t lq, uint16_t rssi);
     #endif
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
+    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
 
 private:
     static inBuffer_U inBuffer;
 
-#if CRSF_RX_MODULE
+#ifdef CRSF_RX_MODULE
     Stream *_dev;
+    uint16_t linkQuality;
+    uint16_t rssiDBM;
 #endif
 
 #if CRSF_TX_MODULE

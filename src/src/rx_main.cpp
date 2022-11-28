@@ -265,13 +265,11 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    // In 16ch mode, do not output RSSI/LQ on channels
-    if (!SwitchModePending && (!OtaIsFullRes || OtaSwitchModeCurrent == smWideOr8ch))
-    {
-        crsf.ChannelData[15] = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
-        crsf.ChannelData[14] = UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023));
-    }
+    crsf.setLinkQualityStats(
+        UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
+        UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
+    );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     crsf.LinkStatistics.active_antenna = antenna;
@@ -1086,10 +1084,11 @@ void MspReceiveComplete()
 
         if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
         {
-            crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
-            crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
-            crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
-            luaParamUpdateReq();
+            luaParamUpdateReq(
+                MspData[CRSF_TELEMETRY_TYPE_INDEX],
+                MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
+                MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]
+            );
         }
     }
 

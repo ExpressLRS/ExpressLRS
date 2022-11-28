@@ -50,8 +50,6 @@ inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
 
-uint8_t CRSF::ParameterUpdateData[3] = {0};
-
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
@@ -61,7 +59,7 @@ static FIFO MspWriteFIFO;
 void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
 void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
 
-void (*CRSF::RecvParameterUpdate)() = nullptr; // called when recv parameter update req, ie from LUA
+void (*CRSF::RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
 void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
 void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
 
@@ -470,10 +468,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         }
         else
         {
-            ParameterUpdateData[0] = packetType;
-            ParameterUpdateData[1] = SerialInBuffer[5];
-            ParameterUpdateData[2] = SerialInBuffer[6];
-            if (RecvParameterUpdate) RecvParameterUpdate();
+            if (RecvParameterUpdate) RecvParameterUpdate(packetType, SerialInBuffer[5], SerialInBuffer[6]);
         }
 
         packetReceived = true;
@@ -993,6 +988,12 @@ void CRSF::sendLinkStatisticsToFC()
 #endif // DEBUG_CRSF_NO_OUTPUT
 }
 
+void CRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
+{
+    linkQuality = lq;
+    rssiDBM = rssi;
+}
+
 void CRSF::sendRCFrameToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
@@ -1033,6 +1034,10 @@ void CRSF::sendRCFrameToFC()
     }
     else
     {
+        // Send LQ & RSSI dBm in channels 14/15 respectively
+        PackedRCdataOut.ch14 = linkQuality;
+        PackedRCdataOut.ch15 = rssiDBM;
+
         uint8_t crc = crsf_crc.calc(outBuffer[2]);
         crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
 
