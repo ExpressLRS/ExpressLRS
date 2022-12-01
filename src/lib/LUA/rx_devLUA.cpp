@@ -223,12 +223,6 @@ static void registerLuaParameters()
     uint8_t newRate = RATE_MAX - 1 - arg;
     config.SetRateInitialIdx(newRate);
   });
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-  if (OPT_HAS_SERVO_OUTPUT)
-  {
-    registerLUAParameter(&luaMappingFolder);
-  }
-#endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -246,11 +240,12 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
-    registerLUAParameter(&luaMappingChannelOut, luaparamMappingChannelOut, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingChannelIn, luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingOutputMode, luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingInverted, luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, luaparamSetFalisafe);
+    registerLUAParameter(&luaMappingFolder);
+    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
   }
 #endif
 
