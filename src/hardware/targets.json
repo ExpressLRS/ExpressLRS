@@ -1,5 +1,6 @@
 {
     "anyleaf": {
+        "name": "AnyLeaf",
         "rx_2400": {
             "single-radio": {
                 "product_name": "Anyleaf 2.4GHz single radio RX",
