@@ -11,6 +11,13 @@ extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
 
+static struct luaItem_selection luaSerialProtocol = {
+    {"Protocol", CRSF_TEXT_SELECTION},
+    0, // value
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS",
+    STR_EMPTYSPACE
+};
+
 #if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
@@ -99,7 +106,7 @@ static struct luaItem_int8 luaMappingChannelIn = {
 static struct luaItem_selection luaMappingOutputMode = {
     {"Output Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;CRSF TX;CRSF RX;SBUS;Disabled",
+    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX;Serial RX",
     STR_EMPTYSPACE
 };
 
@@ -172,13 +179,9 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
       {
         // set pin 3 channel settings based on pin 1 settings
         rx_config_pwm_t newPin3Config;
-        if (arg == somCrsfTx)
+        if (arg == somSerialTx)
         {
-          newPin3Config.val.mode = somCrsfRx;
-        }
-        else if (arg == somSbusTx)
-        {
-          newPin3Config.val.mode = somDisabled;
+          newPin3Config.val.mode = somSerialRx;
         }
         config.SetPwmChannelRaw(pin3ch, newPin3Config.raw);
         break;
@@ -193,9 +196,9 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
       {
         // set pin 1 channel settings based on pin 3 settings
         rx_config_pwm_t newPin1Config;
-        if (arg == somCrsfRx)
+        if (arg == somSerialRx)
         {
-          newPin1Config.val.mode = somCrsfTx;
+          newPin1Config.val.mode = somSerialTx;
         }
         config.SetPwmChannelRaw(pin1ch, newPin1Config.raw);
         break;
@@ -255,6 +258,9 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
 
 static void registerLuaParameters()
 {
+  registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetSerialProtocol((eSerialProtocol)arg);
+  });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -316,6 +322,7 @@ static void registerLuaParameters()
 
 static int event()
 {
+  setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {

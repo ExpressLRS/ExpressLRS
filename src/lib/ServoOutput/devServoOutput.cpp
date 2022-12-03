@@ -136,7 +136,7 @@ static void initialize()
 #endif
         // Mark servo pins that are being used for serial as disconnected
         eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-        if (mode == somCrsfRx || mode == somCrsfTx || mode == somSbusTx || mode == somDisabled)
+        if (mode == somSerialRx || mode == somSerialTx)
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }

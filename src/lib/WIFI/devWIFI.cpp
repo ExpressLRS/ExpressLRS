@@ -877,10 +877,6 @@ static void startMDNS()
   {
     options += " -DLOCK_ON_FIRST_CONNECTION";
   }
-  if (firmwareOptions.invert_tx)
-  {
-    options += " -DRCVR_INVERT_TX";
-  }
   options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
   #endif
 

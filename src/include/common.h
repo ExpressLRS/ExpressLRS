@@ -174,11 +174,17 @@ enum eServoOutputMode : uint8_t
     som400Hz,
     som10KHzDuty,
     somOnOff,   // Digital 0/1 mode
-    somCrsfTx,  // CRSF output TX
-    somCrsfRx,  // CRSF input RX
-    somSbusTx,  // SBUS output TX
-    somDisabled,// pin is disabled (e.g. RX pin with SBUS is used)
+    somSerialTx,// Serial output TX
+    somSerialRx,// Serial input RX
     somPwm,     // True PWM mode (NOT SUPPORTED)
+};
+
+enum eSerialProtocol : uint8_t
+{
+    PROTOCOL_CRSF,
+    PROTOCOL_INVERTED_CRSF,
+    PROTOCOL_SBUS,
+    PROTOCOL_INVERTED_SBUS
 };
 
 #ifndef UNIT_TEST

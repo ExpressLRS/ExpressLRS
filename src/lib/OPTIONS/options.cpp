@@ -85,11 +85,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .uart_baud = 420000,
 #endif
-#if defined(RCVR_INVERT_TX)
-    .invert_tx = true,
-#else
-    .invert_tx = false,
-#endif
+    ._unused = false,
 #if defined(LOCK_ON_FIRST_CONNECTION)
     .lock_on_first_connection = true,
 #else
@@ -104,10 +100,6 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .is_airport = true,
 #else
     .is_airport = false,
-#if defined(USE_SBUS_PROTOCOL)
-    .sbus_protocol = true,
-#else
-    .sbus_protocol = false,
 #endif
 #endif
 #if defined(TARGET_TX)
@@ -240,9 +232,7 @@ void saveOptions(Stream &stream)
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
-    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
-    doc["sbus-protocol"] = firmwareOptions.sbus_protocol;
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
@@ -349,12 +339,9 @@ bool options_init()
     firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | USE_AIRPORT_AT_BAUD;
     firmwareOptions.is_airport = doc["is-airport"] | true;
     #else
-    firmwareOptions.sbus_protocol = doc["sbus-protocol"] | false;
-    uint32_t default_baud = firmwareOptions.sbus_protocol ? 100000 : 420000;
-    firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | default_baud;
+    firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
     firmwareOptions.is_airport = doc["is-airport"] | false;
     #endif
-    firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;

@@ -93,6 +93,7 @@ extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
 #endif
 bool sbusSerialOutput = false;
+uint32_t serialBaud;
 
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
@@ -1099,9 +1100,9 @@ static void setupSerial()
 {
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
-        // For PWM receivers with no CRSF I/O, only turn on the Serial port if logging is on
+        // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
-        Serial.begin(firmwareOptions.uart_baud);
+        Serial.begin(serialBaud);
         SerialLogger = &Serial;
         #else
         SerialLogger = new NullStream();
@@ -1109,15 +1110,22 @@ static void setupSerial()
         return;
     }
 
+    if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS)
+    {
+        sbusSerialOutput = true;
+        serialBaud = 100000;
+    }
+    bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF;
+
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
     CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(firmwareOptions.uart_baud);
+    CRSF_RX_SERIAL.begin(serialBaud);
 
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else
 #if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
-    if (firmwareOptions.r9mm_mini_sbus || sbusSerialOutput)
+    if (invert)
     {
         CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
         CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
@@ -1133,7 +1141,7 @@ static void setupSerial()
     // USART1 is used for RX (half duplex)
     CRSF_RX_SERIAL.setHalfDuplex();
     CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(firmwareOptions.uart_baud);
+    CRSF_RX_SERIAL.begin(serialBaud);
     CRSF_RX_SERIAL.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
@@ -1142,10 +1150,10 @@ static void setupSerial()
     CRSF_TX_SERIAL.setRx((PinName)NC);
     CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
+    CRSF_TX_SERIAL.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
 #endif /* PLATFORM_STM32 */
 #if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
-    if (sbusSerialOutput)
+    if (invert)
     {
         LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN);
         USART2->CR1 &= ~USART_CR1_UE;
@@ -1157,18 +1165,16 @@ static void setupSerial()
 #if defined(TARGET_RX_FM30_MINI)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(firmwareOptions.uart_baud); // Same baud as CRSF for simplicity
+    Serial.begin(serialBaud); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
     SerialMode mode = sbusSerialOutput ? SERIAL_TX_ONLY : SERIAL_FULL;
-    bool invert = firmwareOptions.invert_tx || sbusSerialOutput;
-    Serial.begin(firmwareOptions.uart_baud, config, mode, -1, invert);
+    Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
-    bool invert = firmwareOptions.invert_tx || sbusSerialOutput;
-    Serial.begin(firmwareOptions.uart_baud, config, -1, -1, invert);
+    Serial.begin(serialBaud, config, -1, -1, invert);
 #endif
 
     SerialLogger = &Serial;
@@ -1552,12 +1558,22 @@ void setup()
 
     if (hardwareConfigured)
     {
+        // default to CRSF protocol and the compiled baud rate
+        sbusSerialOutput = false;
+        serialBaud = firmwareOptions.uart_baud;
+
+        // pre-initialise serial must be done before anything as some libs write
+        // to the serial port and they'll block if the buffer fills
+        #if defined(DEBUG_LOG)
+        Serial.begin(serialBaud);
+        SerialLogger = &Serial;
+        #else
+        SerialLogger = new NullStream();
+        #endif
+
         initUID();
         setupTarget();
-        // serial setup must be done before anything as some libs write
-        // to the serial port and they'll block if the buffer fills
-        sbusSerialOutput = firmwareOptions.sbus_protocol;
-        setupSerial();
+
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
         #if defined(OPT_HAS_SERVO_OUTPUT)
@@ -1567,17 +1583,15 @@ void setup()
             for (int i=0 ; i<GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
                 eServoOutputMode pinMode = (eServoOutputMode)config.GetPwmChannel(i)->val.mode;
-                if (GPIO_PIN_PWM_OUTPUTS[i] == 1 && (pinMode == somCrsfTx || pinMode == somSbusTx))
+                if (GPIO_PIN_PWM_OUTPUTS[i] == 1 && (pinMode == somSerialTx))
                 {
                     pwmSerialDefined = true;
-                    sbusSerialOutput = (pinMode == somSbusTx);
-                    firmwareOptions.uart_baud = 100000;
-                    setupSerial();
                     break;
                 }
             }
         }
         #endif
+        setupSerial();
 
         INFOLN("ExpressLRS Module Booting...");
 

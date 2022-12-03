@@ -68,18 +68,14 @@ function updatePwmSettings(arPwm) {
     const pin = item.pin;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (pin == 1) {
-      modes.push('CRSF Out');
-      modes.push(undefined);  // CRSF In
-      modes.push('SBUS Out');
-      modes.push(undefined);  // disabled
+      modes.push('Serial TX');
+      modes.push(undefined);  // SerialRX
       modes.push(undefined);  // true PWM
       pin1Index = index;
     }
     if (pin == 3) {
-      modes.push(undefined);  // CRSF out
-      modes.push('CRSF In');
-      modes.push(undefined);  // SBUS out
-      modes.push('Disabled'); // disabled
+      modes.push(undefined);  // SerialTX
+      modes.push('Serial RX');
       modes.push(undefined);  // true PWM
       pin3Index = index;
     }
