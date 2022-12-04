@@ -87,15 +87,15 @@ typedef union {
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
-                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:12;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } v5_rx_config_pwm_t;
 
 typedef struct {
     uint32_t    version;
-    uint8_t     uid[UID_LEN];
-    uint8_t     loanUID[UID_LEN];
+    uint8_t     uid[6];             // Hardcoding in case UID_LEN changes.
+    uint8_t     loanUID[6];         // Hardcoding in case UID_LEN changes.
     uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
     uint8_t     isBound:1,
                 onLoan:1,

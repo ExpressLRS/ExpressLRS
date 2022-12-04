@@ -288,6 +288,7 @@ void TxConfig::UpgradeEepromV6ToV7()
     m_modified = ALL_CHANGED;
 
     // Full Commit now
+    m_config.version = 7U | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif
@@ -662,6 +663,7 @@ void RxConfig::Load()
     SetDefaults(false);
     UpgradeEepromV4();
     UpgradeEepromV5();
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
 }
