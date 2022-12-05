@@ -31,7 +31,7 @@ static struct luaItem_selection luaRateInitIdx = {
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Antenna B;Antenna A;Diversity",
+    "Antenna A;Antenna B;Diversity",
     STR_EMPTYSPACE
 };
 #endif
