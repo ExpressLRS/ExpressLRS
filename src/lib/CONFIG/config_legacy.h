@@ -94,8 +94,8 @@ typedef union {
 
 typedef struct {
     uint32_t    version;
-    uint8_t     uid[UID_LEN];
-    uint8_t     loanUID[UID_LEN];
+    uint8_t     uid[6];             // Hardcoding in case UID_LEN changes.
+    uint8_t     loanUID[6];         // Hardcoding in case UID_LEN changes.
     uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
     uint8_t     isBound:1,
                 onLoan:1,
