@@ -31,7 +31,7 @@ static struct luaItem_selection luaRateInitIdx = {
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Antenna B;Antenna A;Diversity",
+    "Antenna A;Antenna B;Diversity",
     STR_EMPTYSPACE
 };
 #endif
@@ -242,17 +242,6 @@ static void registerLuaParameters()
     uint8_t newRate = RATE_MAX - 1 - arg;
     config.SetRateInitialIdx(newRate);
   });
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-  if (OPT_HAS_SERVO_OUTPUT)
-  {
-    registerLUAParameter(&luaMappingFolder);
-    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
-  }
-#endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -267,6 +256,17 @@ static void registerLuaParameters()
     }
     sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  if (OPT_HAS_SERVO_OUTPUT)
+  {
+    registerLUAParameter(&luaMappingFolder);
+    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+  }
+#endif
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
