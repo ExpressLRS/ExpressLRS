@@ -101,6 +101,9 @@
 #ifndef GPIO_PIN_DIO0
 #define GPIO_PIN_DIO0 UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_DIO0_2
+#define GPIO_PIN_DIO0_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_DIO1
 #define GPIO_PIN_DIO1 UNDEF_PIN
 #endif
