@@ -337,8 +337,16 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        if (OtaNonce %2 == 0)
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        }
+        else
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+        }
     }
     else
     {
