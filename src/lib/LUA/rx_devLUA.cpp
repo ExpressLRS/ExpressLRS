@@ -5,6 +5,7 @@
 #include "devServoOutput.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
+extern void reconfigureSerial();
 
 extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
@@ -260,6 +261,11 @@ static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSerialProtocol((eSerialProtocol)arg);
+    if (config.IsModified()) {
+      deferExecution(100, [](){
+        reconfigureSerial();
+      });
+    }
   });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)

@@ -1180,6 +1180,25 @@ static void setupSerial()
     SerialLogger = &Serial;
 }
 
+static void serialShutdown()
+{
+    SerialLogger = new NullStream();
+#ifdef PLATFORM_STM32
+#if defined(TARGET_R9SLIMPLUS_RX) || defined(TARGET_RX_GHOST_ATTO_V1)
+    CRSF_RX_SERIAL.end();
+#endif
+    CRSF_TX_SERIAL.end();
+#else
+    Serial.end();
+#endif
+}
+
+void reconfigureSerial()
+{
+    serialShutdown();
+    setupSerial();
+}
+
 static void setupConfigAndPocCheck()
 {
     eeprom.Begin();
