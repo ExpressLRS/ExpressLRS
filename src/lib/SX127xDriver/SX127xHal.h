@@ -25,27 +25,11 @@ public:
     void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
 
-    void ICACHE_RAM_ATTR TXenable(SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
-    void ICACHE_RAM_ATTR RXenable();
-    void ICACHE_RAM_ATTR TXRXdisable();
-
     static ICACHE_RAM_ATTR void dioISR_1();
     static ICACHE_RAM_ATTR void dioISR_2();
     void (*IsrCallback_1)(); // function pointer for callback
     void (*IsrCallback_2)(); // function pointer for callback
 
 private:
-#if defined(PLATFORM_ESP32)
-    uint64_t txrx_disable_clr_bits;
-    uint64_t tx1_enable_set_bits;
-    uint64_t tx1_enable_clr_bits;
-    uint64_t tx2_enable_set_bits;
-    uint64_t tx2_enable_clr_bits;
-    uint64_t rx_enable_set_bits;
-    uint64_t rx_enable_clr_bits;
-#else
-    bool rx_enabled;
-    bool tx1_enabled;
-    bool tx2_enabled;
-#endif
+
 };

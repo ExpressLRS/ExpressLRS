@@ -1,8 +1,11 @@
 #include "SX127x.h"
 #include "logging.h"
+#include "RFAMP_hal.h"
 
 SX127xHal hal;
 SX127xDriver *SX127xDriver::instance = NULL;
+
+RFAMP_hal RFAMP;
 
 #ifdef USE_SX1276_RFO_HF
   #ifndef OPT_USE_SX1276_RFO_HF
@@ -55,6 +58,8 @@ bool SX127xDriver::Begin()
   hal.reset();
   DBGLN("SX127x Begin");
 
+  RFAMP.init();
+
   if (DetectChip())
   {
     ConfigLoraDefaults();
@@ -75,6 +80,7 @@ void SX127xDriver::End()
 {
   SetMode(SX127x_OPMODE_SLEEP);
   hal.end();
+  RFAMP.TXRXdisable();
   RemoveCallbacks();
 }
 
@@ -352,7 +358,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   // }
   SetMode(SX127x_OPMODE_STANDBY);
 
-  hal.TXenable();
+  RFAMP.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
   hal.writeRegister(SX127X_REG_FIFO, data, size);
 
@@ -381,7 +387,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   //   return; // we were already TXing so abort
   // }
   SetMode(SX127x_OPMODE_STANDBY);
-  hal.RXenable();
+  RFAMP.RXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
   if (timeoutSymbols)
   {
@@ -611,7 +617,7 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback()
     instance->ClearIrqFlags();
     if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_TX_DONE) && (instance->currOpmode == SX127x_OPMODE_TX))
     {
-        hal.TXRXdisable();
+        RFAMP.TXRXdisable();
         instance->TXnbISR();
     }
     if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE) && ((instance->currOpmode == SX127x_OPMODE_RXSINGLE) || (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)))
