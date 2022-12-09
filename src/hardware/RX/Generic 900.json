@@ -9,11 +9,11 @@
     "radio_rst": 2,
     "radio_sck": 14,
     "power_min": 0,
-    "power_high": 0,
-    "power_max": 0,
-    "power_default": 0,
+    "power_high": 2,
+    "power_max": 2,
+    "power_default": 2,
     "power_control": 0,
-    "power_values": [15],
+    "power_values": [8,12,15],
     "led": 16,
     "button": 0
 }
