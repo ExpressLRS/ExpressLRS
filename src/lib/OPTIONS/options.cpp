@@ -85,17 +85,13 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .uart_baud = 420000,
 #endif
-    ._unused = false,
+    ._unused1 = false,
 #if defined(LOCK_ON_FIRST_CONNECTION)
     .lock_on_first_connection = true,
 #else
     .lock_on_first_connection = false,
 #endif
-#if defined(USE_R9MM_R9MINI_SBUS)
-    .r9mm_mini_sbus = true,
-#else
-    .r9mm_mini_sbus = false,
-#endif
+    ._unused2 = false,
 #if defined(USE_AIRPORT_AT_BAUD)
     .is_airport = true,
 #else
