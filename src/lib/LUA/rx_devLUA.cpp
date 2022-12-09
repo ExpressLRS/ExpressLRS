@@ -163,50 +163,56 @@ static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t a
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
+static uint8_t configureSerialPin(uint8_t pin, uint8_t mode, uint8_t sibling, uint8_t siblingMode, uint8_t oldMode, uint8_t newMode)
+{
+  if (newMode == siblingMode)
+  {
+    return oldMode;
+  }
+  for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
+  {
+    if (GPIO_PIN_PWM_OUTPUTS[ch] == sibling)
+    {
+      // set sibling pin channel settings based on "configuring" pin settings
+      rx_config_pwm_t newPin3Config;
+      if (newMode == mode)
+      {
+        newPin3Config.val.mode = siblingMode;
+      }
+      config.SetPwmChannelRaw(ch, newPin3Config.raw);
+      break;
+    }
+  }
+  if ((oldMode == mode && newMode != mode) || (oldMode != mode && newMode == mode))
+  {
+    deferExecution(100, [](){
+      reconfigureSerial();
+    });
+  }
+  return newMode;
+}
+
 static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t arg)
 {
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
   rx_config_pwm_t newPwmCh;
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+  uint8_t oldMode = newPwmCh.val.mode;
   newPwmCh.val.mode = arg;
 
   // Check if pin == 1/3 and do other pin adjustment accordingly
-
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
-    for (int pin3ch=0 ; pin3ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; pin3ch++)
-    {
-      if (GPIO_PIN_PWM_OUTPUTS[pin3ch] == 3)
-      {
-        // set pin 3 channel settings based on pin 1 settings
-        rx_config_pwm_t newPin3Config;
-        if (arg == somSerialTx)
-        {
-          newPin3Config.val.mode = somSerialRx;
-        }
-        config.SetPwmChannelRaw(pin3ch, newPin3Config.raw);
-        break;
-      }
-    }
+    newPwmCh.val.mode = configureSerialPin(1, somSerialTx, 3, somSerialRx, oldMode, arg);
   }
   else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
   {
-    for (int pin1ch=0 ; pin1ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; pin1ch++)
-    {
-      if (GPIO_PIN_PWM_OUTPUTS[pin1ch] == 1)
-      {
-        // set pin 1 channel settings based on pin 3 settings
-        rx_config_pwm_t newPin1Config;
-        if (arg == somSerialRx)
-        {
-          newPin1Config.val.mode = somSerialTx;
-        }
-        config.SetPwmChannelRaw(pin1ch, newPin1Config.raw);
-        break;
-      }
-    }
+    newPwmCh.val.mode = configureSerialPin(3, somSerialRx, 1, somSerialTx, oldMode, arg);
   }
-
+  else if (arg == somSerialRx || arg == somSerialTx)
+  {
+    newPwmCh.val.mode = oldMode;
+  }
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
