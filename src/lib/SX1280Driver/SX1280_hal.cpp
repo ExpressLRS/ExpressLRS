@@ -328,13 +328,10 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX1280_Radio_Number_t radioNumber)
                     if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
                 }
             }
-            else
-            {
-                // Use this time to call micros().
-                uint32_t now = micros();
-                if (startTime == 0) startTime = now;
-                if ((now - startTime) > wtimeoutUS) return false;
-            }
+            // Use this time to call micros().
+            uint32_t now = micros();
+            if (startTime == 0) startTime = now;
+            if ((now - startTime) > wtimeoutUS) return false;
         }
     }
     else
