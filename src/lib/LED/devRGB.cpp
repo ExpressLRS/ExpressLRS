@@ -1,6 +1,7 @@
 #include "targets.h"
 #include "common.h"
 #include "devLED.h"
+#include "config.h"
 
 #ifdef HAS_RGB
 
@@ -23,7 +24,9 @@
 #define WS2812_PIXEL_COUNT 1
 #endif
 constexpr uint8_t pixelCount = WS2812_PIXEL_COUNT;
+static uint8_t statusLEDcount = WS2812_PIXEL_COUNT;
 static uint8_t statusLEDs[] = { 0 };
+static uint8_t bootLEDcount = WS2812_PIXEL_COUNT;
 static uint8_t *bootLEDs = statusLEDs;
 #endif
 
@@ -37,8 +40,11 @@ static uint8_t *bootLEDs = statusLEDs;
 
 static uint8_t pixelCount;
 static uint8_t *statusLEDs;
+static uint8_t statusLEDcount;
 static uint8_t *vtxStatusLEDs;
+static uint8_t vtxLEDcount;
 static uint8_t *bootLEDs;
+static uint8_t bootLEDcount;
 
 #if defined(PLATFORM_ESP32)
     #define METHOD Neo800KbpsMethod
@@ -67,19 +73,31 @@ void WS281Binit()
     }
 }
 
+void WS281BsetLED(int index, uint32_t color)
+{
+    if (OPT_WS2812_IS_GRB)
+    {
+        stripgrb->SetPixelColor(index, RgbColor(HtmlColor(color)));
+        stripgrb->Show();
+    }
+    else
+    {
+        striprgb->SetPixelColor(index, RgbColor(HtmlColor(color)));
+        striprgb->Show();
+    }
+}
+
 void WS281BsetLED(uint32_t color)
 {
-    for (int i=0 ; i<sizeof(statusLEDs) ; i++)
+    for (int i=0 ; i<statusLEDcount ; i++)
     {
         if (OPT_WS2812_IS_GRB)
         {
             stripgrb->SetPixelColor(statusLEDs[i], RgbColor(HtmlColor(color)));
-            stripgrb->Show();
         }
         else
         {
             striprgb->SetPixelColor(statusLEDs[i], RgbColor(HtmlColor(color)));
-            striprgb->Show();
         }
     }
     if (OPT_WS2812_IS_GRB)
@@ -231,6 +249,31 @@ uint16_t flashLED(blinkyColor_t &blinkyColor, uint8_t onLightness, uint8_t offLi
     return durations[counter++] * 10;
 }
 
+uint32_t toRGB(uint8_t c)
+{
+  uint32_t r = c & 0xE0 ;
+  r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000;
+  uint32_t g = c & 0x1C;
+  g = ((g<< 11) + (g << 8) + (g << 5)) & 0xFF00;
+  uint32_t b = ((c & 0x3) << 1) + ((c & 0x3) >> 1);
+  b = (b << 5) + (b << 2) + (b >> 1);
+  return r+g+b;
+}
+
+void setButtonColors(uint8_t b1, uint8_t b2)
+{
+    #if defined(PLATFORM_ESP32) && defined(TARGET_TX)
+    if (USER_BUTTON_LED != -1)
+    {
+        WS281BsetLED(USER_BUTTON_LED, toRGB(b1));
+    }
+    if (USER_BUTTON2_LED != -1)
+    {
+        WS281BsetLED(USER_BUTTON2_LED, toRGB(b2));
+    }
+    #endif
+}
+
 static enum {
     STARTUP = 0,
     NORMAL = 1
@@ -241,6 +284,7 @@ constexpr uint8_t LEDSEQ_DISCONNECTED[] = { 50, 50 };  // 500ms on, 500ms off
 constexpr uint8_t LEDSEQ_NO_CROSSFIRE[] = {  10, 100 }; // 1 blink, 1s pause (one blink/s)
 constexpr uint8_t LEDSEQ_BINDING[] = { 10, 10, 10, 100 };   // 2x 100ms blink, 1s pause
 constexpr uint8_t LEDSEQ_MODEL_MISMATCH[] = { 10, 10, 10, 10, 10, 100 };   // 3x 100ms blink, 1s pause
+constexpr uint8_t LEDSEQ_UPDATE[] = { 20, 5, 5, 5, 5, 40 };   // 200ms on, 2x 50ms off/on, 400ms off
 
 #define NORMAL_UPDATE_INTERVAL 50
 
@@ -258,9 +302,9 @@ static int blinkyUpdate() {
     else
     {
         blinkyColor_t c = blinkyColor;
-        for (int i=0 ; i<sizeof(bootLEDs) ; i++)
+        for (int i=0 ; i<bootLEDcount ; i++)
         {
-            c.h += 16;//256/sizeof(bootLEDs);
+            c.h += 16;
             if (OPT_WS2812_IS_GRB)
             {
                 stripgrb->SetPixelColor(bootLEDs[i], RgbColor(HtmlColor(HsvToRgb(c))));
@@ -298,6 +342,9 @@ static int blinkyUpdate() {
                 }
             }
             #endif
+            #if defined(TARGET_TX)
+            setButtonColors(config.GetButtonActions(0)->val.color, config.GetButtonActions(1)->val.color);
+            #endif
             return NORMAL_UPDATE_INTERVAL;
         }
         blinkyColor.v -= lightnessStep;
@@ -313,39 +360,41 @@ static void initialize()
     {
         #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         pixelCount = 1;
-        int count = WS2812_STATUS_LEDS_COUNT;
-        if (count == 0)
+        statusLEDcount = WS2812_STATUS_LEDS_COUNT;
+        if (statusLEDcount == 0)
         {
             statusLEDs = new uint8_t[1];
             statusLEDs[0] = 0;
+            statusLEDcount = 1;
         }
         else
         {
-            statusLEDs = new uint8_t[count];
-            for (int i=0 ; i<count ; i++)
+            statusLEDs = new uint8_t[statusLEDcount];
+            for (int i=0 ; i<statusLEDcount ; i++)
             {
                 statusLEDs[i] = WS2812_STATUS_LEDS[i];
                 pixelCount = max((int)pixelCount, statusLEDs[i]+1);
             }
         }
 
-        count = WS2812_VTX_STATUS_LEDS_COUNT;
-        vtxStatusLEDs = new uint8_t[count];
-        for (int i=0 ; i<count ; i++)
+        vtxLEDcount = WS2812_VTX_STATUS_LEDS_COUNT;
+        vtxStatusLEDs = new uint8_t[vtxLEDcount];
+        for (int i=0 ; i<vtxLEDcount ; i++)
         {
             vtxStatusLEDs[i] = WS2812_VTX_STATUS_LEDS[i];
             pixelCount = max((int)pixelCount, vtxStatusLEDs[i]+1);
         }
 
-        count = WS2812_BOOT_LEDS_COUNT;
-        if (count == 0)
+        bootLEDcount = WS2812_BOOT_LEDS_COUNT;
+        if (bootLEDcount == 0)
         {
             bootLEDs = statusLEDs;
+            bootLEDcount = statusLEDcount;
         }
         else
         {
-            bootLEDs = new uint8_t[count];
-            for (int i=0 ; i<count ; i++)
+            bootLEDs = new uint8_t[bootLEDcount];
+            for (int i=0 ; i<bootLEDcount ; i++)
             {
                 bootLEDs[i] = WS2812_BOOT_LEDS[i];
                 pixelCount = max((int)pixelCount, bootLEDs[i]+1);
@@ -370,6 +419,9 @@ static int start()
     // Only do the blinkies if it was NOT a software reboot
     if (esp_reset_reason() == ESP_RST_SW) {
         blinkyState = NORMAL;
+        #if defined(TARGET_TX)
+        setButtonColors(config.GetButtonActions(0)->val.color, config.GetButtonActions(1)->val.color);
+        #endif
         return NORMAL_UPDATE_INTERVAL;
     }
     #endif
@@ -427,6 +479,9 @@ static int timeout()
     case wifiUpdate:
         hueFadeLED(blinkyColor, 85, 85-30, 128, 2);      // Yellow->Green cross-fade
         return 5;
+    case serialUpdate:
+        blinkyColor.h = 172;
+        return flashLED(blinkyColor, 192, 0, LEDSEQ_UPDATE, sizeof(LEDSEQ_UPDATE));
     case bleJoystick:
         hueFadeLED(blinkyColor, 170, 170+30, 128, 2);    // Blue cross-fade
         return 5;

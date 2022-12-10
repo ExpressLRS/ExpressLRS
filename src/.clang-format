@@ -1,3 +1,5 @@
 BasedOnStyle: Microsoft
 ColumnLimit: 0
+AccessModifierOffset: -4
 IndentWidth: 4
+AllowShortFunctionsOnASingleLine: Inline

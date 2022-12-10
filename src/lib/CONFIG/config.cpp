@@ -13,7 +13,8 @@
 #define MAIN_CHANGED        bit(3) // catch-all for global config item
 #define FAN_CHANGED         bit(4)
 #define MOTION_CHANGED      bit(5)
-#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED)
+#define BUTTON_CHANGED      bit(6)
+#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED | BUTTON_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -123,8 +124,8 @@ void TxConfig::Load()
         version = version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
-    // Can upgrade from any version 5 to current
-    if (version < 5)
+    // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
+    if (version < 5 || version > TX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
@@ -169,6 +170,14 @@ void TxConfig::Load()
         m_modified |= MAIN_CHANGED;
     }
 
+    if (version >= 7) {
+        // load button actions
+        if (nvs_get_u32(handle, "button1", &value) == ESP_OK)
+            m_config.buttonColors[0].raw = value;
+        if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
+            m_config.buttonColors[1].raw = value;
+    }
+
     for(unsigned i=0; i<64; i++)
     {
         char model[10] = "model";
@@ -211,8 +220,8 @@ void TxConfig::Load()
     if (version == TX_CONFIG_VERSION)
         return;
 
-    // Can't upgrade from version <5, just use defaults
-    if (version < 5)
+    // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
+    if (version < 5 || version > TX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
@@ -279,6 +288,7 @@ void TxConfig::UpgradeEepromV6ToV7()
     m_modified = ALL_CHANGED;
 
     // Full Commit now
+    m_config.version = 7U | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif
@@ -326,6 +336,11 @@ TxConfig::Commit()
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
+    }
+    if (m_modified & BUTTON_CHANGED)
+    {
+        nvs_set_u32(handle, "button1", m_config.buttonColors[0].raw);
+        nvs_set_u32(handle, "button2", m_config.buttonColors[1].raw);
     }
     nvs_set_u32(handle, "tx_version", m_config.version);
     nvs_commit(handle);
@@ -394,6 +409,16 @@ TxConfig::SetSwitchMode(uint8_t switchMode)
     if (GetSwitchMode() != switchMode)
     {
         m_model->switchMode = switchMode;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
+TxConfig::SetAntennaMode(uint8_t txAntenna)
+{
+    if (GetAntennaMode() != txAntenna)
+    {
+        m_model->txAntenna = txAntenna;
         m_modified |= MODEL_CHANGED;
     }
 }
@@ -518,6 +543,15 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
 }
 
 void
+TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
+{
+    if (m_config.buttonColors[button].raw != action->raw) {
+        m_config.buttonColors[button].raw = action->raw;
+        m_modified |= BUTTON_CHANGED;
+    }
+}
+
+void
 TxConfig::SetDefaults(bool commit)
 {
     // Reset everything to 0/false and then just set anything that zero is not appropriate
@@ -526,6 +560,35 @@ TxConfig::SetDefaults(bool commit)
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
     m_modified = ALL_CHANGED;
+
+    if (commit)
+    {
+        m_modified = ALL_CHANGED;
+    }
+
+    // Set defaults for button 1
+    tx_button_color_t default_actions1 = {
+        .val = {
+            .color = 226,   // R:255 G:0 B:182
+            .actions = {
+                {false, 2, ACTION_BIND},
+                {true, 0, ACTION_INCREASE_POWER}
+            }
+        }
+    };
+    m_config.buttonColors[0].raw = default_actions1.raw;
+
+    // Set defaults for button 2
+    tx_button_color_t default_actions2 = {
+        .val = {
+            .color = 3,     // R:0 G:0 B:255
+            .actions = {
+                {false, 1, ACTION_GOTO_VTX_CHANNEL},
+                {true, 0, ACTION_SEND_VTX}
+            }
+        }
+    };
+    m_config.buttonColors[1].raw = default_actions2.raw;
 
     for (unsigned i=0; i<64; i++)
     {
@@ -599,8 +662,8 @@ void RxConfig::Load()
     if (version == RX_CONFIG_VERSION)
         return;
 
-    // Can't upgrade from version <4, just use defaults
-    if (version < 4)
+    // Can't upgrade from version <4, or when flashing a previous version, just use defaults.
+    if (version < 4 || version > RX_CONFIG_VERSION)
     {
         SetDefaults(true);
         return;
@@ -608,34 +671,81 @@ void RxConfig::Load()
 
     // Upgrade EEPROM, starting with defaults
     SetDefaults(false);
-    UpgradeEepromV4ToV5(); // Commit()s
+    UpgradeEepromV4();
+    UpgradeEepromV5();
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
+    m_modified = true;
+    Commit();
 }
 
-static void PwmConfigV4toV5(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const v5)
+// ========================================================
+// V4 Upgrade
+
+static void PwmConfigV4(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const current)
 {
-    v5->val.failsafe = v4->val.failsafe;
-    v5->val.inputChannel = v4->val.inputChannel;
-    v5->val.inverted = v4->val.inverted;
+    current->val.failsafe = v4->val.failsafe;
+    current->val.inputChannel = v4->val.inputChannel;
+    current->val.inverted = v4->val.inverted;
 }
 
-void RxConfig::UpgradeEepromV4ToV5()
+void RxConfig::UpgradeEepromV4()
 {
     v4_rx_config_t v4Config;
     m_eeprom->Get(0, v4Config);
 
-    m_config.isBound = v4Config.isBound;
-    m_config.modelId = v4Config.modelId;
-    memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
-
-    // OG PWMP had only 8 channels
-    for (unsigned ch=0; ch<8; ++ch)
+    if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
     {
-        PwmConfigV4toV5(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
-    }
+        m_config.isBound = v4Config.isBound;
+        m_config.modelId = v4Config.modelId;
+        memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
 
-    m_modified = true;
-    Commit();
+        // OG PWMP had only 8 channels
+        for (unsigned ch=0; ch<8; ++ch)
+        {
+            PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+        }
+    }
 }
+
+// ========================================================
+// V5 Upgrade
+
+static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * const current)
+{
+    current->val.failsafe = v5->val.failsafe;
+    current->val.inputChannel = v5->val.inputChannel;
+    current->val.inverted = v5->val.inverted;
+    current->val.narrow = v5->val.narrow;
+    current->val.mode = v5->val.mode;
+    if (v5->val.mode > som400Hz)
+    {
+        current->val.mode += 1;
+    }
+}
+
+void RxConfig::UpgradeEepromV5()
+{
+    v5_rx_config_t v5Config;
+    m_eeprom->Get(0, v5Config);
+    if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
+    {
+        memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
+        m_config.vbatScale = v5Config.vbatScale;
+        m_config.isBound = v5Config.isBound;
+        m_config.power = v5Config.power;
+        m_config.antennaMode = v5Config.antennaMode;
+        m_config.forceTlmOff = v5Config.forceTlmOff;
+        m_config.rateInitialIdx = v5Config.rateInitialIdx;
+        m_config.modelId = v5Config.modelId;
+
+        for (unsigned ch=0; ch<16; ++ch)
+        {
+            PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+        }
+    }
+}
+
+// ========================================================
 
 void
 RxConfig::Commit()
@@ -816,5 +926,16 @@ RxConfig::SetForceTlmOff(bool forceTlmOff)
         m_modified = true;
     }
 }
+
+void
+RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
+{
+    if (m_config.rateInitialIdx != rateInitialIdx)
+    {
+        m_config.rateInitialIdx = rateInitialIdx;
+        m_modified = true;
+    }
+}
+
 
 #endif

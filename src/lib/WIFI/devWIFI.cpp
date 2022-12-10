@@ -2,13 +2,12 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#include <AsyncJson.h>
 #include <ArduinoJson.h>
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
 #else
 #include <SPIFFS.h>
-#endif
 #endif
 
 #if defined(PLATFORM_ESP32)
@@ -28,6 +27,8 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
+#include "AsyncJson.h"
+#include "ArduinoJson.h"
 
 #include "common.h"
 #include "POWERMGNT.h"
@@ -37,15 +38,19 @@
 #include "options.h"
 #include "helpers.h"
 #include "devVTXSPI.h"
+#include "devButton.h"
 
 #include "WebContent.h"
 
 #include "config.h"
 #if defined(TARGET_TX)
 extern TxConfig config;
+extern void setButtonColors(uint8_t b1, uint8_t b2);
 #else
 extern RxConfig config;
 #endif
+
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern unsigned long rebootTime;
 
 static char station_ssid[33];
@@ -141,10 +146,10 @@ static struct {
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
-#endif
+  {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
+  {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -168,13 +173,11 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   }
   force_update = request->hasArg("force");
   AsyncWebServerResponse *response;
-  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   if (connectionState == hardwareUndefined)
   {
     response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
   }
   else
-  #endif
   {
     response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
   }
@@ -186,22 +189,6 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-static String WebGetPwmStr()
-{
-  // Output is raw integers, the Javascript side needs to parse it
-  // ,"pwm":[49664,50688,51200] = 3 channels, 0=512, 1=512, 2=0
-  String pwmStr(",\"pwm\":[");
-  for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-  {
-    if (ch > 0)
-      pwmStr.concat(',');
-    pwmStr.concat(config.GetPwmChannel(ch)->raw);
-  }
-  pwmStr.concat(']');
-
-  return pwmStr;
-}
-
 static void WebUpdatePwm(AsyncWebServerRequest *request)
 {
   String pwmStr = request->arg("pwm");
@@ -228,7 +215,6 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 }
 #endif
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
@@ -272,7 +258,7 @@ static void HandleReset(AsyncWebServerRequest *request)
   if (request->hasArg("options")) {
     SPIFFS.remove("/options.json");
   }
-  if (request->hasArg("model")) {
+  if (request->hasArg("model") || request->hasArg("config")) {
     config.SetDefaults(true);
   }
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
@@ -281,59 +267,113 @@ static void HandleReset(AsyncWebServerRequest *request)
   request->client()->close();
   rebootTime = millis() + 100;
 }
+
+static void GetConfiguration(AsyncWebServerRequest *request)
+{
+  DynamicJsonDocument json(2048);
+
+  DynamicJsonDocument options(2048);
+  deserializeJson(options, getOptions());
+  json["options"] = options;
+
+#if defined(TARGET_TX)
+  int button_count = 0;
+  if (GPIO_PIN_BUTTON != UNDEF_PIN)
+    button_count = 1;
+  if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
+    button_count = 2;
+  for (int button=0 ; button<button_count ; button++)
+  {
+    const tx_button_color_t *buttonColor = config.GetButtonActions(button);
+    json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+    {
+      json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
+      json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor->val.actions[pos].count;
+      json["config"]["button-actions"][button]["action"][pos]["action"] = buttonColor->val.actions[pos].action;
+    }
+  }
 #endif
 
-static void WebUpdateSendMode(AsyncWebServerRequest *request)
-{
-  String s = String("{\"ssid\":\"") + station_ssid + "\",\"mode\":\"";
-  if (wifiMode == WIFI_STA) {
-    s += "STA\"";
-  } else {
-    s += "AP\"";
-  }
+  json["config"]["ssid"] = station_ssid;
+  json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
   #if defined(TARGET_RX)
-  s += ",\"modelid\":" + String(config.GetModelId());
-  s += ",\"forcetlm\":" + String(config.GetForceTlmOff());
-  #endif
+  json["config"]["modelid"] = config.GetModelId();
+  json["config"]["forcetlm"] = config.GetForceTlmOff();
   #if defined(GPIO_PIN_PWM_OUTPUTS)
-  if (GPIO_PIN_PWM_OUTPUTS_COUNT > 0) {
-    s += WebGetPwmStr();
+  for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+  {
+    json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
   }
   #endif
-  s += ",\"product_name\": \"" + String(product_name) + "\"";
-  s += ",\"lua_name\": \"" + String(device_name) + "\"";
-  s += ",\"reg_domain\": \"" + String(getRegulatoryDomain()) + "\"";
-  s += ",\"uid\": [";
-  for (int i=0 ; i<6 ; i++) {
-    if (i!=0) s += ",";
-    s += String(UID[i], 10);
-  }
-  s += + "]";
-  s += ",\"uidtype\": ";
+  #endif
+  json["config"]["product_name"] = product_name;
+  json["config"]["lua_name"] = device_name;
+  json["config"]["reg_domain"] = getRegulatoryDomain();
+  JsonArray uid = json["config"].createNestedArray("uid");
+  copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+
   #if defined(TARGET_RX)
-  if (config.GetOnLoan()) s += "\"On loan\"";
+  if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
   else
   #endif
-  if (firmwareOptions.hasUID) s += "\"Flashed\"" ;
+  if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
   #if defined(TARGET_RX)
-  else if (config.GetIsBound()) s += "\"Traditional\"";
-  else s += "\"Not set\"";
+  else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
+  else json["config"]["uidtype"] = "Not set";
   #else
-  else s += "\"Not set (using MAC address)\"";
+  else json["config"]["uidtype"] = "Not set (using MAC address)";
   #endif
-  s += "}";
-  request->send(200, "application/json", s);
+  json["config"]["has-highpower"] = (MaxPower != HighPower);
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
+
+#if defined(TARGET_TX)
+static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (json.containsKey("button-actions")) {
+    const JsonArray &array = json["button-actions"].as<JsonArray>();
+    for (size_t button=0 ; button<array.size() ; button++)
+    {
+      tx_button_color_t action;
+      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+      {
+        action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
+        action.val.actions[pos].count = array[button]["action"][pos]["count"];
+        action.val.actions[pos].action = array[button]["action"][pos]["action"];
+      }
+      action.val.color = array[button]["color"];
+      config.SetButtonActions(button, &action);
+    }
+    config.Commit();
+  }
+  request->send(200);
+}
+
+static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  int button1Color = json[0].as<int>();
+  int button2Color = json[1].as<int>();
+  DBGLN("%d %d", button1Color, button2Color);
+  setButtonColors(button1Color, button2Color);
+  request->send(200);
+}
+#endif
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\"" +
-    ",\"version\": \"" + VERSION + "\"" +
-    ",\"product_name\": \"" + product_name + "\"" +
-    ",\"lua_name\": \"" + device_name + "\"" +
-    ",\"reg_domain\": \"" + getRegulatoryDomain() + "\"" +
-    "}";
-  request->send(200, "application/json", s);
+  DynamicJsonDocument json(2048);
+  json["target"] = &target_name[4];
+  json["version"] = VERSION;
+  json["product_name"] = product_name;
+  json["lua_name"] = device_name;
+  json["reg_domain"] = getRegulatoryDomain();
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
 
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
@@ -403,24 +443,20 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   if (request->hasArg("save")) {
     strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
     saveOptions();
   }
-#endif
   WebUpdateConnect(request);
 }
 
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
   DBGLN("Forget network");
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
   firmwareOptions.home_wifi_ssid[0] = 0;
   firmwareOptions.home_wifi_password[0] = 0;
   saveOptions();
-#endif
   station_ssid[0] = 0;
   station_password[0] = 0;
   String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
@@ -514,7 +550,8 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     if (target_found.length() != 0) {
       message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
     }
-    message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
+    message += "<br/>It looks like you are flashing firmware with a different name to the current  firmware.  This sometimes happens because the hardware was flashed from the factory with an early version that has a different name. Or it may have even changed between major releases.";
+    message += "<br/><br/>Please double check you are uploading the correct target, then proceed with 'Flash Anyway'.\"}";
     request->send(200, "application/json", message);
   }
 }
@@ -631,7 +668,31 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
-static void wifiOff()
+#ifdef RADIO_SX128X
+static void HandleContinuousWave(AsyncWebServerRequest *request) {
+  if (request->hasArg("radio")) {
+    SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+
+    AsyncWebServerResponse *response = request->beginResponse(204);
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+
+    Radio.TXdoneCallback = [](){};
+    Radio.Begin();
+
+    POWERMGNT::init();
+    POWERMGNT::setPower(POWERMGNT::getMinPower());
+
+    Radio.startCWTest(2440000000, radio);
+  } else {
+    int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
+    request->send(200, "application/json", String("{\"radios\": ") + radios + "}");
+  }
+}
+#endif
+
+static void initialize()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -639,6 +700,10 @@ static void wifiOff()
   #if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
   #endif
+  registerButtonFunction(ACTION_START_WIFI, [](){
+    setWifiUpdateMode();
+    devicesTriggerEvent();
+  });
 }
 
 static void startWiFi(unsigned long now)
@@ -776,11 +841,11 @@ static void startServices()
   server.on("/elrs.css", WebUpdateSendContent);
   server.on("/mui.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
-  server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
+  server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
   server.on("/firmware.bin", WebUpdateGetFirmware);
@@ -798,6 +863,11 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
+  #ifdef RADIO_SX128X
+  server.on("/cw.html", WebUpdateSendContent);
+  server.on("/cw.js", WebUpdateSendContent);
+  server.on("/cw", HandleContinuousWave);
+  #endif
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
@@ -811,13 +881,16 @@ static void startServices()
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
   #endif
-  #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-    server.on("/hardware.html", WebUpdateSendContent);
-    server.on("/hardware.js", WebUpdateSendContent);
-    server.on("/hardware.json", getFile).onBody(putFile);
-    server.on("/options.json", getFile).onBody(putFile);
-    server.on("/reboot", HandleReboot);
-    server.on("/reset", HandleReset);
+  server.on("/hardware.html", WebUpdateSendContent);
+  server.on("/hardware.js", WebUpdateSendContent);
+  server.on("/hardware.json", getFile).onBody(putFile);
+  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/reboot", HandleReboot);
+  server.on("/reset", HandleReset);
+
+  #if defined(TARGET_TX)
+    server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
+    server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -869,7 +942,13 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
@@ -878,8 +957,13 @@ static void HandleWebUpdate()
       case WIFI_STA:
         DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
+        #endif
         changeTime = now;
         WiFi.begin(station_ssid, station_password);
         startServices();
@@ -953,6 +1037,15 @@ static int event()
       return DURATION_IMMEDIATELY;
     }
   }
+  else if (wifiStarted)
+  {
+    wifiStarted = false;
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    #if defined(PLATFORM_ESP8266)
+    WiFi.forceSleepBegin();
+    #endif
+  }
   return DURATION_IGNORE;
 }
 
@@ -992,7 +1085,7 @@ static int timeout()
 }
 
 device_t WIFI_device = {
-  .initialize = wifiOff,
+  .initialize = initialize,
   .start = start,
   .event = event,
   .timeout = timeout

@@ -7,6 +7,8 @@
 #include "OLED/oleddisplay.h"
 #include "TFT/tftdisplay.h"
 
+#include "devButton.h"
+
 FiniteStateMachine state_machine(entry_fsm);
 
 Display *display;
@@ -26,6 +28,9 @@ static bool is_pre_screen_flipped = false;
 #define SCREEN_DURATION 20
 
 extern void jumpToWifiRunning();
+
+static bool jumpToBandSelect = false;
+static bool jumpToChannelSelect = false;
 
 static int handle(void)
 {
@@ -47,6 +52,7 @@ static int handle(void)
     else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
     {
         display->doScreenBackLight(SCREEN_BACKLIGHT_ON);
+        state_machine.start(millis(), STATE_IDLE);
     }
     is_pre_screen_flipped = is_screen_flipped;
     if (is_screen_flipped)
@@ -101,7 +107,22 @@ static int handle(void)
             Display::printScreenshot();
         }
 #endif
-        state_machine.handleEvent(now, fsm_event);
+        if (jumpToBandSelect)
+        {
+            state_machine.jumpTo(vtx_menu_fsm, STATE_VTX_BAND);
+            state_machine.jumpTo(value_select_fsm, STATE_VALUE_INIT);
+            jumpToBandSelect = false;
+        }
+        else if (jumpToChannelSelect)
+        {
+            state_machine.jumpTo(vtx_menu_fsm, STATE_VTX_CHANNEL);
+            state_machine.jumpTo(value_select_fsm, STATE_VALUE_INIT);
+            jumpToChannelSelect = false;
+        }
+        else
+        {
+            state_machine.handleEvent(now, fsm_event);
+        }
     }
     else
 #endif
@@ -129,6 +150,15 @@ static void initialize()
         display->init();
         state_machine.start(millis(), getInitialState());
     }
+
+    registerButtonFunction(ACTION_GOTO_VTX_BAND, [](){
+        jumpToBandSelect = true;
+        devicesTriggerEvent();
+    });
+    registerButtonFunction(ACTION_GOTO_VTX_CHANNEL, [](){
+        jumpToChannelSelect = true;
+        devicesTriggerEvent();
+    });
 }
 
 static int start()

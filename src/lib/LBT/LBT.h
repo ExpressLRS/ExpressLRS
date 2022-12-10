@@ -8,8 +8,7 @@
 extern LQCALC<100> LBTSuccessCalc;
 extern bool LBTEnabled;
 
-uint32_t SpreadingFactorToRSSIvalidDelayUs(SX1280_RadioLoRaSpreadingFactors_t SF);
-int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower);
+void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void);
 void ICACHE_RAM_ATTR BeginClearChannelAssessment(void);
-bool ICACHE_RAM_ATTR ChannelIsClear(void);
+SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber);
 #endif

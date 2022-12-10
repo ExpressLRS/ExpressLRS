@@ -45,6 +45,7 @@ typedef enum
     // States below here are special mode states
     noCrossfire,
     wifiUpdate,
+    serialUpdate,
     bleJoystick,
     // Failure states go below here to display immediately
     FAILURE_STATES,
@@ -103,6 +104,13 @@ enum {
     RADIO_TYPE_SX128x_FLRC,
 };
 
+typedef enum : uint8_t
+{
+    TX_RADIO_MODE_GEMINI = 0,
+    TX_RADIO_MODE_ANT_1 = 1,
+    TX_RADIO_MODE_ANT_2 = 2
+} tx_radio_mode_e;
+
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
 
@@ -138,18 +146,48 @@ typedef struct expresslrs_mod_settings_s
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
 
+// The config mode only allows a maximum of 2 actions per button
+#define MAX_BUTTON_ACTIONS  2
+
+// Limited to 16 possible ACTIONs by config storage currently
+typedef enum : uint8_t {
+    ACTION_NONE,
+    ACTION_INCREASE_POWER,
+    ACTION_GOTO_VTX_BAND,
+    ACTION_GOTO_VTX_CHANNEL,
+    ACTION_SEND_VTX,
+    ACTION_START_WIFI,
+    ACTION_BIND,
+    ACTION_RESET_REBOOT,
+
+    ACTION_LAST
+} action_e;
+
+enum eServoOutputMode : uint8_t
+{
+    som50Hz,  // Hz modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,  // and the mode sets the refresh interval
+    som100Hz, // 50Hz must be mode=0 for default in config
+    som160Hz,
+    som333Hz,
+    som400Hz,
+    som10KHzDuty,
+    somOnOff,  // Digital 0/1 mode
+    somPwm,    // True PWM mode (NOT SUPPORTED)
+    somCrsfTx, // CRSF output TX (NOT SUPPORTED)
+    somCrsfRx, // CRSF output RX (NOT SUPPORTED)
+};
+
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 5
-#define RATE_DEFAULT 0
-#define RATE_BINDING 3 // 50Hz bind mode
+#define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_DEFAULT 0  // Default to F1000
-#define RATE_BINDING 9  // 50Hz bind mode
+#define RATE_BINDING RATE_LORA_50HZ
 
 extern SX1280Driver Radio;
 #endif
@@ -175,6 +213,7 @@ extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 uint32_t uidMacSeedGet(void);
 void initUID();
+bool isDualRadio();
 
 #define AUX1 4
 #define AUX2 5
