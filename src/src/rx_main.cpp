@@ -14,7 +14,13 @@
 #include "options.h"
 #include "MeanAccumulator.h"
 
-#include "devCRSF.h"
+#include "rx-serial/SerialIO.h"
+#include "rx-serial/SerialNOOP.h"
+#include "rx-serial/SerialCRSF.h"
+#include "rx-serial/SerialSBUS.h"
+#include "rx-serial/SerialAirPort.h"
+
+#include "rx-serial/devSerialIO.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -43,7 +49,7 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&CRSF_device, 1},
+  {&Serial_device, 1},
 #if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
@@ -87,12 +93,19 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
+#if defined(USE_MSP_WIFI)
+#include "crsf2msp.h"
+#include "msp2crsf.h"
+
+CROSSFIRE2MSP crsf2msp;
+MSP2CROSSFIRE msp2crsf;
+#endif
+
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
 #endif
-bool sbusSerialOutput = false;
 uint32_t serialBaud;
 
 /* CRSF_TX_SERIAL is used by CRSF output */
@@ -101,7 +114,7 @@ uint32_t serialBaud;
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
-CRSF crsf(CRSF_TX_SERIAL);
+SerialIO *serialIO;
 
 /* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
@@ -115,10 +128,6 @@ CRSF crsf(CRSF_TX_SERIAL);
 #else
     #define CRSF_RX_SERIAL Serial
 #endif
-
-// Variables / constants for Airport //
-FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
-FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
 
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
@@ -253,7 +262,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         #endif
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        crsf.LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
     }
     else
     {
@@ -263,31 +272,31 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         // May be overwritten below if DEBUG_BF_LINK_STATS is set
-        crsf.LinkStatistics.uplink_RSSI_2 = -rssiDBM;
+        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    crsf.setLinkQualityStats(
+    serialIO->setLinkQualityStats(
         UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
         UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
     );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
-    crsf.LinkStatistics.active_antenna = antenna;
-    crsf.LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
-    //crsf.LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
-    crsf.LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
-    //DBGLN(crsf.LinkStatistics.uplink_RSSI_1);
+    CRSF::LinkStatistics.active_antenna = antenna;
+    CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
+    //CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
+    CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
+    //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    crsf.LinkStatistics.downlink_RSSI = debug1;
-    crsf.LinkStatistics.downlink_Link_quality = debug2;
-    crsf.LinkStatistics.downlink_SNR = debug3;
-    crsf.LinkStatistics.uplink_RSSI_2 = debug4;
+    CRSF::LinkStatistics.downlink_RSSI = debug1;
+    CRSF::LinkStatistics.downlink_Link_quality = debug2;
+    CRSF::LinkStatistics.downlink_SNR = debug3;
+    CRSF::LinkStatistics.uplink_RSSI_2 = debug4;
     #endif
 
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
-    crsf.LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
+    CRSF::LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
     debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
@@ -377,11 +386,11 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     // The value in linkstatistics is "positivized" (inverted polarity)
     // and must be inverted on the TX side. Positive values are used
     // so save a bit to encode which antenna is in use
-    ls->uplink_RSSI_1 = crsf.LinkStatistics.uplink_RSSI_1;
-    ls->uplink_RSSI_2 = crsf.LinkStatistics.uplink_RSSI_2;
+    ls->uplink_RSSI_1 = CRSF::LinkStatistics.uplink_RSSI_1;
+    ls->uplink_RSSI_2 = CRSF::LinkStatistics.uplink_RSSI_2;
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
-    ls->lq = crsf.LinkStatistics.uplink_Link_quality;
+    ls->lq = CRSF::LinkStatistics.uplink_Link_quality;
     ls->mspConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
@@ -572,7 +581,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalcDVDA.inc();
     }
 
-    crsf.LinkStatistics.uplink_Link_quality = uplinkLQ;
+    CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
         LQCalc.inc();
@@ -791,7 +800,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         return;
     }
 
-    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf, ExpressLRS_currTlmDenom);
+    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, CRSF::ChannelData, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // No channels packets to the FC or PWM pins if no model match
@@ -1080,7 +1089,7 @@ void MspReceiveComplete()
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
-            crsf.sendMSPFrameToFC(MspData);
+            serialIO->sendMSPFrameToFC(MspData);
         }
 
         if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
@@ -1098,6 +1107,8 @@ void MspReceiveComplete()
 
 static void setupSerial()
 {
+    bool sbusSerialOutput = false;
+
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
@@ -1107,6 +1118,7 @@ static void setupSerial()
         #else
         SerialLogger = new NullStream();
         #endif
+        serialIO = new SerialNOOP();
         return;
     }
 
@@ -1177,6 +1189,18 @@ static void setupSerial()
     Serial.begin(serialBaud, config, -1, -1, invert);
 #endif
 
+    if (firmwareOptions.is_airport)
+    {
+        serialIO = new SerialAirPort(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+    }
+    else if (sbusSerialOutput)
+    {
+        serialIO = new SerialSBUS(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+    }
+    else
+    {
+        serialIO = new SerialCRSF(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+    }
     SerialLogger = &Serial;
 }
 
@@ -1191,6 +1215,7 @@ static void serialShutdown()
 #else
     Serial.end();
 #endif
+    delete serialIO;
 }
 
 void reconfigureSerial()
@@ -1275,60 +1300,6 @@ static void setupBindingFromConfig()
 
     DBGLN("UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
     OtaUpdateCrcInitFromUid();
-}
-
-void HandleUARTin()
-{
-    // If the hardware is not configured we want to be able to allow BF passthrough to work
-    if (hardwareConfigured && OPT_CRSF_RCVR_NO_SERIAL)
-    {
-        return;
-    }
-    while (CRSF_RX_SERIAL.available())
-    {
-        if (firmwareOptions.is_airport)
-        {
-            uint8_t v = CRSF_RX_SERIAL.read();
-            if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
-            {
-                apInputBuffer.push(v);
-            }
-            continue;
-        }
-
-        telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-        if (telemetry.ShouldCallEnterBind())
-        {
-            EnterBindingMode();
-        }
-        if (telemetry.ShouldCallUpdateModelMatch())
-        {
-            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
-        }
-        if (telemetry.ShouldSendDeviceFrame())
-        {
-            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-            crsf.GetDeviceInformation(deviceInformation, 0);
-            crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            crsf.sendMSPFrameToFC(deviceInformation);
-        }
-    }
-}
-
-static void HandleUARTout()
-{
-    if (firmwareOptions.is_airport)
-    {
-        while (apOutputBuffer.size())
-        {
-            Serial.write(apOutputBuffer.pop());
-        }
-    }
 }
 
 static void setupRadio()
@@ -1466,7 +1437,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            crsf.sendLinkStatisticsToFC();
+            serialIO->sendLinkStatisticsToFC();
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
@@ -1578,7 +1549,6 @@ void setup()
     if (hardwareConfigured)
     {
         // default to CRSF protocol and the compiled baud rate
-        sbusSerialOutput = false;
         serialBaud = firmwareOptions.uart_baud;
 
         // pre-initialise serial must be done before anything as some libs write
@@ -1633,7 +1603,6 @@ void setup()
 
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            crsf.Begin();
             hwTimer.init();
         }
     }
@@ -1656,12 +1625,6 @@ void loop()
     }
 
     devicesUpdate(now);
-
-    if (firmwareOptions.is_airport)
-    {
-        HandleUARTin();
-        HandleUARTout();
-    }
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

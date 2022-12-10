@@ -3,10 +3,6 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
-#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
-#include "crsf2msp.h"
-#include "msp2crsf.h"
-#endif
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
@@ -29,19 +25,6 @@ class CRSF
 {
 
 public:
-    #if CRSF_RX_MODULE
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    #if defined(USE_MSP_WIFI)
-    static CROSSFIRE2MSP crsf2msp;
-    static MSP2CROSSFIRE msp2crsf;
-    #endif
-    #endif
-
     /////Variables/////
 
     #ifdef CRSF_TX_MODULE
@@ -109,26 +92,12 @@ public:
     static void ICACHE_RAM_ATTR RcPacketToChannelsData();
     #endif
 
-    #ifdef CRSF_RX_MODULE
-    bool RXhandleUARTout();
-    void sendRCFrameToFC(uint8_t extraData = 0);
-    void sendMSPFrameToFC(uint8_t* data);
-    void sendLinkStatisticsToFC();
-    void setLinkQualityStats(uint16_t lq, uint16_t rssi);
-    #endif
-
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
     static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
 
 private:
     static inBuffer_U inBuffer;
-
-#ifdef CRSF_RX_MODULE
-    Stream *_dev;
-    uint16_t linkQuality;
-    uint16_t rssiDBM;
-#endif
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///

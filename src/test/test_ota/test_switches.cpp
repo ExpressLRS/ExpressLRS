@@ -17,7 +17,8 @@
 #include <OTA.h>
 #include "crsf_sysmocks.h"
 
-CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
+CRSF crsf;  // need an instance to provide the fields used by the code under test
+uint32_t channelData[16];
 uint8_t UID[6] = {1,2,3,4,5,6};
 
 void test_crsf_endpoints()
@@ -133,7 +134,7 @@ void test_encodingHybrid8(bool highResChannel)
 
     // encode it
     OtaUpdateSerializers(smHybridOr16ch, OTA4_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -213,10 +214,10 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
     // use the encoding method to pack it into TXdataBuffer
     OtaUpdateSerializers(smHybridOr16ch, OTA4_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaUnpackChannelData(otaPktPtr, crsf.ChannelData, 0);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
@@ -280,7 +281,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaUpdateSerializers(smWideOr8ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
-    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, nonce % 2, tlmDenom);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -365,13 +366,13 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaUpdateSerializers(smWideOr8ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
-    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, nonce % 2, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
     crsf.LinkStatistics.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
-    bool telemResult = OtaUnpackChannelData(otaPktPtr, &crsf, tlmDenom);
+    bool telemResult = OtaUnpackChannelData(otaPktPtr, crsf.ChannelData, tlmDenom);
 
     // compare the unpacked results with the input data
     TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
@@ -441,8 +442,8 @@ void test_encodingFullresPowerLevels()
         uint8_t crsfPower = powerToCrsfPower((PowerLevels_e)pwr);
         crsf.LinkStatistics.uplink_TX_Power = crsfPower;
 
-        OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-        OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+        OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
+        OtaUnpackChannelData(otaPktPtr, crsf.ChannelData, 0);
 
         TEST_ASSERT_EQUAL(crsfPower, crsf.LinkStatistics.uplink_TX_Power);
     }
@@ -461,7 +462,7 @@ void test_encodingFullres8ch()
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
     OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
 
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
@@ -503,7 +504,7 @@ void test_encodingFullres16ch()
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
@@ -522,7 +523,7 @@ void test_encodingFullres16ch()
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
     // Low 4ch (CH9-CH12)
     expected[0] = ((ChannelsIn[8] >> 1) >> 0);
     expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[9] >> 1) << 2);
@@ -555,7 +556,7 @@ void test_encodingFullres12ch()
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
@@ -574,7 +575,7 @@ void test_encodingFullres12ch()
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
     expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
@@ -607,8 +608,8 @@ void test_decodingFullres16chLow()
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
+    OtaUnpackChannelData(otaPktPtr, crsf.ChannelData, 0);
     for (unsigned ch=0; ch<8; ++ch)
     {
         TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, crsf.ChannelData[ch]);
@@ -616,8 +617,8 @@ void test_decodingFullres16chLow()
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaPackChannelData(otaPktPtr, crsf.ChannelData, false, 0);
+    OtaUnpackChannelData(otaPktPtr, crsf.ChannelData, 0);
     for (unsigned ch=9; ch<16; ++ch)
     {
         TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, crsf.ChannelData[ch]);

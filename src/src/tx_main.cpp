@@ -468,7 +468,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        OtaPackChannelData(&otaPkt, CRSF::ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
   }

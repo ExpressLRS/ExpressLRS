@@ -71,10 +71,11 @@ static DNSServer dnsServer;
 static IPAddress ipAddress;
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#include "crsf2msp.h"
+#include "msp2crsf.h"
+
 #include "tcpsocket.h"
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
-#include "CRSF.h"
-extern CRSF crsf;
 #endif
 
 static AsyncWebServer server(80);
@@ -1094,11 +1095,11 @@ void HandleMSP2WIFI()
 {
   #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
   // check is there is any data to write out
-  if (crsf.crsf2msp.FIFOout.peekSize() > 0)
+  if (crsf2msp.FIFOout.peekSize() > 0)
   {
-    const uint16_t len = crsf.crsf2msp.FIFOout.popSize();
+    const uint16_t len = crsf2msp.FIFOout.popSize();
     uint8_t data[len];
-    crsf.crsf2msp.FIFOout.popBytes(data, len);
+    crsf2msp.FIFOout.popBytes(data, len);
     wifi2tcp.write(data, len);
   }
 
@@ -1108,7 +1109,7 @@ void HandleMSP2WIFI()
   {
     uint8_t data[bytesReady];
     wifi2tcp.read(data);
-    crsf.msp2crsf.parse(data, bytesReady);
+    msp2crsf.parse(data, bytesReady);
   }
 
   wifi2tcp.handle();
