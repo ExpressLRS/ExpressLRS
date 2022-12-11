@@ -162,6 +162,7 @@ typedef enum
 #define SX127X_DIO1_CAD_DETECTED 0b00100000        //  5     4
 
 // SX127X_REG_IRQ_FLAGS
+#define SX127X_CLEAR_IRQ_FLAG_ALL 0b11111111
 #define SX127X_CLEAR_IRQ_FLAG_RX_TIMEOUT 0b10000000          //  7     7     timeout
 #define SX127X_CLEAR_IRQ_FLAG_RX_DONE 0b01000000             //  6     6     packet reception complete
 #define SX127X_CLEAR_IRQ_FLAG_PAYLOAD_CRC_ERROR 0b00100000   //  5     5     payload CRC error
@@ -170,6 +171,7 @@ typedef enum
 #define SX127X_CLEAR_IRQ_FLAG_CAD_DONE 0b00000100            //  2     2     CAD complete
 #define SX127X_CLEAR_IRQ_FLAG_FHSS_CHANGE_CHANNEL 0b00000010 //  1     1     FHSS change channel
 #define SX127X_CLEAR_IRQ_FLAG_CAD_DETECTED 0b00000001        //  0     0     valid LoRa signal detected during CAD operation
+#define SX127X_CLEAR_IRQ_FLAG_NONE 0b00000000
 
 // SX127X_REG_IRQ_FLAGS_MASK
 #define SX127X_MASK_IRQ_FLAG_RX_TIMEOUT 0b01111111          //  7     7     timeout

@@ -53,32 +53,41 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
 bool SX127xDriver::Begin()
 {
   hal.init();
-  hal.IsrCallback_1 = &SX127xDriver::IsrCallback;
+  hal.IsrCallback_1 = &SX127xDriver::IsrCallback_1;
+  hal.IsrCallback_2 = &SX127xDriver::IsrCallback_2;
 
   hal.reset();
   DBGLN("SX127x Begin");
 
   RFAMP.init();
+  
+  SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
-  if (DetectChip())
-  {
-    ConfigLoraDefaults();
-    // Force the next power update
-    pwrCurrent = PWRPENDING_NONE;
-    SetOutputPower(0);
-    CommitOutputPower();
-
-    return true;
-  }
-  else
+  if (!DetectChip(SX12XX_Radio_1))
   {
     return false;
   }
+
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+  {
+    if (!DetectChip(SX12XX_Radio_2))
+    {
+      return false;
+    }
+  }
+
+  ConfigLoraDefaults();
+  // Force the next power update
+  pwrCurrent = PWRPENDING_NONE;
+  SetOutputPower(0);
+  CommitOutputPower();
+
+  return true;
 }
 
 void SX127xDriver::End()
 {
-  SetMode(SX127x_OPMODE_SLEEP);
+  SetMode(SX127x_OPMODE_SLEEP, SX12XX_Radio_All);
   hal.end();
   RFAMP.TXRXdisable();
   RemoveCallbacks();
@@ -86,20 +95,20 @@ void SX127xDriver::End()
 
 void SX127xDriver::ConfigLoraDefaults()
 {
-  hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP);
-  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa); //must be written in sleep mode
-  SetMode(SX127x_OPMODE_STANDBY);
+  hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, SX12XX_Radio_All);
+  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa, SX12XX_Radio_All); //must be written in sleep mode
+  SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
-  hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, PayloadLength);
+  hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, PayloadLength, SX12XX_Radio_All);
   SetSyncWord(currSyncWord);
-  hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, SX127X_FIFO_RX_BASE_ADDR_MAX);
-  hal.writeRegisterValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
-  hal.writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
-  hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
-  hal.writeRegisterValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
+  hal.writeRegister(SX127X_REG_FIFO_TX_BASE_ADDR, (uint8_t)SX127X_FIFO_TX_BASE_ADDR_MAX, SX12XX_Radio_All);
+  hal.writeRegister(SX127X_REG_FIFO_RX_BASE_ADDR, (uint8_t)SX127X_FIFO_RX_BASE_ADDR_MAX, SX12XX_Radio_All);
+  hal.writeRegisterValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, SX12XX_Radio_All, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
+  hal.writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON, SX12XX_Radio_All);
+  hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF, SX12XX_Radio_All);
+  hal.writeRegisterValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, SX12XX_Radio_All, 5, 0); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
-  hal.writeRegisterValue(SX127X_REG_INVERT_IQ, (uint8_t)IQinverted, 6, 6);
+  hal.writeRegisterValue(SX127X_REG_INVERT_IQ, (uint8_t)IQinverted, SX12XX_Radio_All, 6, 6);
 }
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
@@ -108,39 +117,39 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
   {
     if (currSF == SX127x_SF_6) // set SF6 optimizations
     {
-      hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
-      hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
+      hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
+      hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX12XX_Radio_All, 2, 2);
     }
     else
     {
       if (headerExplMode)
       {
-        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE);
+        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE, SX12XX_Radio_All);
       }
       else
       {
-        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE);
+        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
       }
 
       if (crcEnabled)
       {
-        hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, 2, 2);
+        hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX12XX_Radio_All, 2, 2);
       }
       else
       {
-        hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, 2, 2);
+        hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX12XX_Radio_All, 2, 2);
       }
     }
 
     if (bw == SX127x_BW_500_00_KHZ)
     {
       //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
-      hal.writeRegister(0x36, 0x02);
-      hal.writeRegister(0x3a, 0x64);
+      hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
+      hal.writeRegister(0x3a, 0x64, SX12XX_Radio_All);
     }
     else
     {
-      hal.writeRegister(0x36, 0x03);
+      hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
     }
     currCR = cr;
     currBW = bw;
@@ -172,7 +181,7 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
     DBGLN("Using syncword: %d instead of: %d", _syncWord, syncWord);
   }
 
-  hal.writeRegister(SX127X_REG_SYNC_WORD, _syncWord);
+  hal.writeRegister(SX127X_REG_SYNC_WORD, _syncWord, SX12XX_Radio_All);
   currSyncWord = _syncWord;
 }
 
@@ -205,14 +214,14 @@ void ICACHE_RAM_ATTR SX127xDriver::CommitOutputPower()
 
   pwrCurrent = pwrPending;
   pwrPending = PWRPENDING_NONE;
-  hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent);
+  hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent, SX12XX_Radio_All);
 }
 
 void SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
 {
   if (currPreambleLen != PreambleLen)
   {
-    hal.writeRegister(SX127X_REG_PREAMBLE_LSB, PreambleLen);
+    hal.writeRegister(SX127X_REG_PREAMBLE_LSB, PreambleLen, SX12XX_Radio_All);
     currPreambleLen = PreambleLen;
   }
 }
@@ -221,49 +230,40 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
 {
   if (currSF != sf)
   {
-    hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, 7, 3);
+    hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, sf | SX127X_TX_MODE_SINGLE, SX12XX_Radio_All, 7, 3);
     if (sf == SX127x_SF_6)
     {
-      hal.writeRegisterValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, 2, 0);
-      hal.writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6);
+      hal.writeRegisterValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_6, SX12XX_Radio_All, 2, 0);
+      hal.writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_6, SX12XX_Radio_All);
     }
     else
     {
-      hal.writeRegisterValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, 2, 0);
-      hal.writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12);
+      hal.writeRegisterValue(SX127X_REG_DETECT_OPTIMIZE, SX127X_DETECT_OPTIMIZE_SF_7_12, SX12XX_Radio_All, 2, 0);
+      hal.writeRegister(SX127X_REG_DETECTION_THRESHOLD, SX127X_DETECTION_THRESHOLD_SF_7_12, SX12XX_Radio_All);
     }
     currSF = sf;
   }
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq)
-{
-  currFreq = freq;
-  SetMode(SX127x_OPMODE_STANDBY);
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
+{  
+  int32_t regfreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
-  int32_t FRQ = ((uint32_t)((double)freq / (double)FREQ_STEP));
-
-  uint8_t FRQ_MSB = (uint8_t)((FRQ >> 16) & 0xFF);
-  uint8_t FRQ_MID = (uint8_t)((FRQ >> 8) & 0xFF);
-  uint8_t FRQ_LSB = (uint8_t)(FRQ & 0xFF);
-
-  WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
-
-  hal.writeRegister(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+  SetFrequencyReg(regfreq, radioNumber);
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber)
 {
-  currFreq = freq;
-  SetMode(SX127x_OPMODE_STANDBY);
+  currFreq = regfreq;
+  SetMode(SX127x_OPMODE_STANDBY, radioNumber);
 
-  uint8_t FRQ_MSB = (uint8_t)((freq >> 16) & 0xFF);
-  uint8_t FRQ_MID = (uint8_t)((freq >> 8) & 0xFF);
-  uint8_t FRQ_LSB = (uint8_t)(freq & 0xFF);
+  uint8_t FRQ_MSB = (uint8_t)((regfreq >> 16) & 0xFF);
+  uint8_t FRQ_MID = (uint8_t)((regfreq >> 8) & 0xFF);
+  uint8_t FRQ_LSB = (uint8_t)(regfreq & 0xFF);
 
   WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
-  hal.writeRegister(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff));
+  hal.writeRegister(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff), radioNumber);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
@@ -298,19 +298,20 @@ void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
     }
     uint32_t symbolTimeUs = ((uint32_t)(1 << spread)) * 1000000 / GetCurrBandwidth();
     timeoutSymbols = interval / symbolTimeUs;
-    hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, timeoutSymbols >> 8, 1, 0);  // set the timeout MSB
-    hal.writeRegisterValue(SX127X_REG_SYMB_TIMEOUT_LSB, timeoutSymbols & 0xFF);
+    hal.writeRegisterValue(SX127X_REG_MODEM_CONFIG_2, timeoutSymbols >> 8, SX12XX_Radio_All, 1, 0);  // set the timeout MSB
+    hal.writeRegisterValue(SX127X_REG_SYMB_TIMEOUT_LSB, timeoutSymbols & 0xFF, SX12XX_Radio_All);
     DBGLN("SetRxTimeout(%u), symbolTime=%uus symbols=%u", interval, (uint32_t)symbolTimeUs, timeoutSymbols)
   }
 }
 
-bool SX127xDriver::DetectChip()
+bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
 {
+  DBG("Detecting radio %x... ", radioNumber);
   uint8_t i = 0;
   bool flagFound = false;
   while ((i < 3) && !flagFound)
   {
-    uint8_t version = hal.readRegister(SX127X_REG_VERSION);
+    uint8_t version = hal.readRegister(SX127X_REG_VERSION, radioNumber);
     DBG("%x", version);
     if (version == 0x12)
     {
@@ -333,7 +334,7 @@ bool SX127xDriver::DetectChip()
   {
     DBGLN(" found! (match by REG_VERSION == 0x12)");
   }
-  hal.writeRegisterValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, 2, 0);
+  hal.writeRegisterValue(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, radioNumber, 2, 0);
   return true;
 }
 
@@ -356,46 +357,49 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   //   DBGLN("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
-  SetMode(SX127x_OPMODE_STANDBY);
+  SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
-  RFAMP.TXenable();
-  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegister(SX127X_REG_FIFO, data, size);
+  if (radioNumber == SX12XX_Radio_Default)
+  {
+      radioNumber = lastSuccessfulPacketRadio;
+  }
 
-  SetMode(SX127x_OPMODE_TX);
+  RFAMP.TXenable(radioNumber);
+  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
+  hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
+
+  SetMode(SX127x_OPMODE_TX, radioNumber);
 }
 
 ///////////////////////////////////RX Functions Non-Blocking///////////////////////////////////////////
 
-void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
+bool ICACHE_RAM_ATTR SX127xDriver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 {
-  hal.readRegister(SX127X_REG_FIFO, RXdataBuffer, PayloadLength);
+  uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radioNumber);
+  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radioNumber);
+  hal.readRegister(SX127X_REG_FIFO, RXdataBuffer, PayloadLength, radioNumber);
+
   if (timeoutSymbols)
   {
     // From page 42 of the datasheet rev 7
     // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
     currOpmode = SX127x_OPMODE_STANDBY;
   }
-  RXdoneCallback(SX12XX_RX_OK);
+
+  return RXdoneCallback(SX12XX_RX_OK);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
-  // if (currOpmode == SX127x_OPMODE_RXCONTINUOUS)
-  // {
-  //   DBGLN("abort RX");
-  //   return; // we were already TXing so abort
-  // }
-  SetMode(SX127x_OPMODE_STANDBY);
   RFAMP.RXenable();
-  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_RX_BASE_ADDR_MAX);
+  
   if (timeoutSymbols)
   {
-    SetMode(SX127x_OPMODE_RXSINGLE);
+    SetMode(SX127x_OPMODE_RXSINGLE, SX12XX_Radio_All);
   }
   else
   {
-    SetMode(SX127x_OPMODE_RXCONTINUOUS);
+    SetMode(SX127x_OPMODE_RXCONTINUOUS, SX12XX_Radio_All);
   }
 }
 
@@ -409,13 +413,19 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
   LastPacketRSSI += negOffset;
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
-{ //if radio is not already in the required mode set it to the requested mod
-  if (currOpmode != mode)
-  {
-    hal.writeRegister(SX127X_REG_OP_MODE, mode);
-    currOpmode = mode;
-  }
+void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode, SX12XX_Radio_Number_t radioNumber)
+{
+  /*
+  Comment out since it is difficult to keep track of dual radios.
+  When checking SPI it is also useful to see every possible SPI transaction to make sure it fits when required.
+  */
+  // if (mode == currOpmode)
+  // {
+  //    return;
+  // }
+  
+  hal.writeRegister(SX127X_REG_OP_MODE, mode, radioNumber);
+  currOpmode = mode;
 }
 
 void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
@@ -500,19 +510,19 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
 void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset)
 {
   int8_t offsetPPM = (offset * 1e6 / currFreq) * 95 / 100;
-  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM);
+  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, processingPacketRadio);
 }
 
 bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool()
 {
-  return (hal.readRegister(SX127X_REG_FEI_MSB) & 0b1000) >> 3; // returns true if pos freq error, neg if false
+  return (hal.readRegister(SX127X_REG_FEI_MSB, processingPacketRadio) & 0b1000) >> 3; // returns true if pos freq error, neg if false
 }
 
 int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
 {
 
   WORD_ALIGNED_ATTR uint8_t reg[3] = {0x0, 0x0, 0x0};
-  hal.readRegister(SX127X_REG_FEI_MSB, reg, sizeof(reg));
+  hal.readRegister(SX127X_REG_FEI_MSB, reg, sizeof(reg), processingPacketRadio);
 
   uint32_t RegFei = ((reg[0] & 0b0111) << 16) + (reg[1] << 8) + reg[2];
 
@@ -529,34 +539,73 @@ int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
   return fErrorHZ;
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
+uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI(SX12XX_Radio_Number_t radioNumber)
 {
-  return (hal.readRegisterValue(SX127X_REG_PKT_RSSI_VALUE));
+  return hal.readRegisterValue(SX127X_REG_PKT_RSSI_VALUE, radioNumber);
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
-  return (-157 + hal.readRegisterValue(SX127X_REG_PKT_RSSI_VALUE));
+  return (-157 + hal.readRegisterValue(SX127X_REG_PKT_RSSI_VALUE, processingPacketRadio));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI(SX12XX_Radio_Number_t radioNumber)
 {
-  return (-157 + hal.readRegisterValue(SX127X_REG_RSSI_VALUE));
+  return (-157 + hal.readRegisterValue(SX127X_REG_RSSI_VALUE, radioNumber));
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNRRaw()
 {
-  return (int8_t)hal.readRegisterValue(SX127X_REG_PKT_SNR_VALUE);;
+  return (int8_t)hal.readRegisterValue(SX127X_REG_PKT_SNR_VALUE, processingPacketRadio);
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xDriver::GetIrqFlags()
+uint8_t ICACHE_RAM_ATTR SX127xDriver::GetIrqFlags(SX12XX_Radio_Number_t radioNumber)
 {
-  return hal.readRegisterValue(SX127X_REG_IRQ_FLAGS);
+  return hal.readRegisterValue(SX127X_REG_IRQ_FLAGS, radioNumber);
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::ClearIrqFlags()
+void ICACHE_RAM_ATTR SX127xDriver::ClearIrqFlags(SX12XX_Radio_Number_t radioNumber)
 {
-  hal.writeRegister(SX127X_REG_IRQ_FLAGS, 0b11111111);
+  hal.writeRegister(SX127X_REG_IRQ_FLAGS, SX127X_CLEAR_IRQ_FLAG_ALL, radioNumber);
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::IsrCallback_1()
+{
+    instance->IsrCallback(SX12XX_Radio_1);
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::IsrCallback_2()
+{
+    instance->IsrCallback(SX12XX_Radio_2);
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
+{
+    instance->processingPacketRadio = radioNumber;
+    SX12XX_Radio_Number_t irqClearRadio = radioNumber;
+
+    uint8_t irqStatus = instance->GetIrqFlags(radioNumber);
+    if (irqStatus & SX127X_CLEAR_IRQ_FLAG_TX_DONE)
+    {
+        RFAMP.TXRXdisable();
+        instance->TXnbISR();
+        irqClearRadio = SX12XX_Radio_All;
+    }
+    else if (irqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
+    {
+        if (instance->RXnbISR(radioNumber))
+        {
+            instance->lastSuccessfulPacketRadio = radioNumber;
+            irqClearRadio = SX12XX_Radio_All;
+        }
+
+    }
+    else if (irqStatus == SX127X_CLEAR_IRQ_FLAG_NONE)
+    {
+        return;
+    }
+    
+    instance->ClearIrqFlags(irqClearRadio);
 }
 
 // int16_t MeasureNoiseFloor() TODO disabled for now
@@ -610,16 +659,3 @@ void ICACHE_RAM_ATTR SX127xDriver::ClearIrqFlags()
 //   ClearIrqFlags();
 //   return (CHANNEL_FREE);
 // }
-
-void ICACHE_RAM_ATTR SX127xDriver::IsrCallback()
-{
-    uint8_t irqStatus = instance->GetIrqFlags();
-    instance->ClearIrqFlags();
-    if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_TX_DONE) && (instance->currOpmode == SX127x_OPMODE_TX))
-    {
-        RFAMP.TXRXdisable();
-        instance->TXnbISR();
-    }
-    if ((irqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE) && ((instance->currOpmode == SX127x_OPMODE_RXSINGLE) || (instance->currOpmode == SX127x_OPMODE_RXCONTINUOUS)))
-        instance->RXnbISR();
-}

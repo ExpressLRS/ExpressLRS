@@ -858,6 +858,8 @@ RxConfig::SetDefaults(bool commit)
     m_config.power = POWERMGNT::getDefaultPower();
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
         m_config.antennaMode = 2; // 2 is diversity
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        m_config.antennaMode = 0; // 0 is diversity for dual radio
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)

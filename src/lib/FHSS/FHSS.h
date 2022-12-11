@@ -23,6 +23,7 @@ typedef struct {
 extern volatile uint8_t FHSSptr;
 extern uint32_t freq_spread;
 extern int32_t FreqCorrection;
+extern int32_t FreqCorrection_2;
 extern uint8_t FHSSsequence[];
 extern uint_fast8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
@@ -78,7 +79,7 @@ static inline uint32_t FHSSGeminiFreq(uint8_t FHSSsequenceIdx)
 {
     uint32_t numfhss = FHSSgetChannelCount();
     uint8_t offSetIdx = (FHSSsequenceIdx + (numfhss / 2)) % numfhss;  
-    uint32_t freq = FHSSconfig->freq_start + (freq_spread * offSetIdx / FREQ_SPREAD_SCALE) - FreqCorrection;
+    uint32_t freq = FHSSconfig->freq_start + (freq_spread * offSetIdx / FREQ_SPREAD_SCALE) - FreqCorrection_2;
     return freq;
 }
 

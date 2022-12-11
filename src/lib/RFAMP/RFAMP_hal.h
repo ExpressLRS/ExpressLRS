@@ -11,7 +11,7 @@ public:
     RFAMP_hal();
 
     void init();
-    void ICACHE_RAM_ATTR TXenable(SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
+    void ICACHE_RAM_ATTR TXenable(SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
 
@@ -22,6 +22,8 @@ private:
     uint64_t tx1_enable_clr_bits;
     uint64_t tx2_enable_set_bits;
     uint64_t tx2_enable_clr_bits;
+    uint64_t tx_all_enable_set_bits;
+    uint64_t tx_all_enable_clr_bits;
     uint64_t rx_enable_set_bits;
     uint64_t rx_enable_clr_bits;
 #else
