@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 #include "RFAMP_hal.h"
 #include "logging.h"
 
@@ -209,3 +211,5 @@ void ICACHE_RAM_ATTR RFAMP_hal::TXRXdisable()
     }
 #endif
 }
+
+#endif // UNIT_TEST
