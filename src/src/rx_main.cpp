@@ -679,8 +679,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (!didFHSS)
     {
         HandleFHSS();
-        didFHSS = false;
     }
+    didFHSS = false;
 
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
