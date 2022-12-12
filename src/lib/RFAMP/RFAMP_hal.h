@@ -22,6 +22,8 @@ private:
     uint64_t tx1_enable_clr_bits;
     uint64_t tx2_enable_set_bits;
     uint64_t tx2_enable_clr_bits;
+    uint64_t tx_all_enable_set_bits;
+    uint64_t tx_all_enable_clr_bits;
     uint64_t rx_enable_set_bits;
     uint64_t rx_enable_clr_bits;
 #else
