@@ -45,6 +45,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   currFreq = 0;
   headerExplMode = false;
   crcEnabled = false;
+  lowFrequencyMode = SX1278_HIGH_FREQ;
 }
 
 bool SX127xDriver::Begin()
@@ -52,6 +53,9 @@ bool SX127xDriver::Begin()
   DBGLN("SX127x Driver Begin");
   hal.IsrCallback = &SX127xDriver::IsrCallback;
   hal.init();
+
+  // currFreq must be set before calling Radio.Begin so that lowFrequencyMode can be set correctly.
+  if (currFreq < (uint32_t)((double)500000000 / (double)FREQ_STEP)) lowFrequencyMode = SX1278_LOW_FREQ;
 
   if (DetectChip())
   {
@@ -128,7 +132,7 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
     {
       //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
       hal.writeRegister(0x36, 0x02);
-      hal.writeRegister(0x3a, 0x64);
+      hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64);
     }
     else
     {
@@ -405,7 +409,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (currOpmode != mode)
   {
-    hal.writeRegister(SX127X_REG_OP_MODE, mode);
+    hal.writeRegister(SX127X_REG_OP_MODE, mode | lowFrequencyMode);
     currOpmode = mode;
   }
 }
@@ -528,12 +532,12 @@ uint8_t ICACHE_RAM_ATTR SX127xDriver::UnsignedGetLastPacketRSSI()
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketRSSI()
 {
-  return (-157 + hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE));
+  return ((lowFrequencyMode ? -164 : -157) + hal.getRegValue(SX127X_REG_PKT_RSSI_VALUE));
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
 {
-  return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
+  return ((lowFrequencyMode ? -164 : -157) + hal.getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
 int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNRRaw()

@@ -89,6 +89,7 @@ private:
     uint8_t currPreambleLen;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
+    bool lowFrequencyMode;
 
     static void IsrCallback();
     void RXnbISR(); // ISR for non-blocking RX routine
