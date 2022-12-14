@@ -55,7 +55,11 @@ bool SX127xDriver::Begin()
   hal.init();
 
   // currFreq must be set before calling Radio.Begin so that lowFrequencyMode can be set correctly.
-  if (currFreq < (uint32_t)((double)500000000 / (double)FREQ_STEP)) lowFrequencyMode = SX1278_LOW_FREQ;
+  if (currFreq < (uint32_t)((double)500000000 / (double)FREQ_STEP))
+  {
+    lowFrequencyMode = SX1278_LOW_FREQ;
+    DBGLN("Setting 'lowFrequencyMode' used for 433MHz.");
+  }
 
   if (DetectChip())
   {
