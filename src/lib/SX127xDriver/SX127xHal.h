@@ -17,11 +17,11 @@ public:
 
     void ICACHE_RAM_ATTR setNss(uint8_t radioNumber, bool state);
 
-    uint8_t ICACHE_RAM_ATTR readRegisterValue(uint8_t reg, uint8_t msb = 7, uint8_t lsb = 0, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
+    uint8_t ICACHE_RAM_ATTR readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     void ICACHE_RAM_ATTR readRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
 
-    void ICACHE_RAM_ATTR writeRegisterValue(uint8_t reg, uint8_t value, uint8_t msb = 7, uint8_t lsb = 0, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
+    void ICACHE_RAM_ATTR writeRegisterBits(uint8_t reg, uint8_t value, uint8_t mask, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t data, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
     void ICACHE_RAM_ATTR writeRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_1);
 
