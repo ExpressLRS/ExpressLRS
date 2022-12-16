@@ -249,6 +249,66 @@ typedef struct deviceInformationPacket_s
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
+// https://github.com/betaflight/betaflight/blob/master/src/main/msp/msp.c#L1949
+typedef struct mspVtxConfigPacket_s
+{
+    uint8_t vtxType;
+    uint8_t band;
+    uint8_t channel;
+    uint8_t power;
+    uint8_t pitmode;
+    uint16_t freq;
+    uint8_t deviceIsReady;
+    uint8_t lowPowerDisarm;
+    uint16_t pitModeFreq;
+    uint8_t vtxTableAvailable;
+    uint8_t bands;
+    uint8_t channels;
+    uint8_t powerLevels;
+} PACKED mspVtxConfigPacket_t;
+
+typedef struct mspVtxPowerLevelPacket_s
+{
+    uint8_t powerLevel;
+    uint16_t powerValue;
+    uint8_t powerLabelLength;
+    uint8_t label1;
+    uint8_t label2;
+    uint8_t label3;
+} PACKED mspVtxPowerLevelPacket_t;
+
+typedef struct mspVtxBandPacket_s
+{
+    uint8_t band;
+    uint8_t bandNameLength;
+    uint8_t bandName1;
+    uint8_t bandName2;
+    uint8_t bandName3;
+    uint8_t bandName4;
+    uint8_t bandName5;
+    uint8_t bandName6;
+    uint8_t bandName7;
+    uint8_t bandName8;
+    uint8_t bandLetter;
+    uint8_t isFactoryBand;
+    uint8_t channels;
+    uint16_t channel1;
+    uint16_t channel2;
+    uint16_t channel3;
+    uint16_t channel4;
+    uint16_t channel5;
+    uint16_t channel6;
+    uint16_t channel7;
+    uint16_t channel8;
+} PACKED mspVtxBandPacket_t;
+
+#define MSP_REQUEST_PAYLOAD_LENGTH(len) 7 + len // status + flags + 2 function + 2 length + crc + payload
+#define MSP_REQUEST_LENGTH(len) (sizeof(crsf_ext_header_t) + MSP_REQUEST_PAYLOAD_LENGTH(len) + CRSF_FRAME_CRC_SIZE)
+#define MSP_REQUEST_FRAME_SIZE(len) (MSP_REQUEST_PAYLOAD_LENGTH(len) + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
+
+#define MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH 15
+#define MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH 29
+#define MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH 7
 /**
  * Union to allow accessing the input buffer as different data shapes
  * without generating compiler warnings (and relying on undefined C++ behaviour!)

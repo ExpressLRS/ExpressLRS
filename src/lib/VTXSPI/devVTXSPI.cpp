@@ -336,7 +336,7 @@ static int event()
         return DURATION_NEVER;
     }
 
-    if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
+    if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -351,8 +351,9 @@ static int timeout()
         return DURATION_NEVER;
     }
 
-    if (!hwTimer::isTick) // Only run spi and analog reads during rx free time.
+    if (hwTimer::running && !hwTimer::isTick)
     {
+        // Only run spi and analog reads during rx free time or when disconnected.
         return DURATION_IMMEDIATELY;
     }
 

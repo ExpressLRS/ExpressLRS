@@ -24,6 +24,7 @@
 #include "devAnalogVbat.h"
 #include "devSerialUpdate.h"
 #include "devBaro.h"
+#include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -71,6 +72,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
+#ifdef HAS_MSP_VTX
+  {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
 };
 
@@ -1036,18 +1040,19 @@ void MspReceiveComplete()
         loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
     }
-    else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
-    {
-        vtxSPIBandChannelIdx = MspData[8];
-        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-        {
-            vtxSPIPowerIdx = MspData[10];
-            vtxSPIPitmode = MspData[11];
-        }
-        devicesTriggerEvent();
-    }
     else
     {
+        if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+        {
+            vtxSPIBandChannelIdx = MspData[8];
+            if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+            {
+                vtxSPIPowerIdx = MspData[10];
+                vtxSPIPitmode = MspData[11];
+            }
+            devicesTriggerEvent();
+        }
+
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
 
         // No MSP data to the FC if no model match

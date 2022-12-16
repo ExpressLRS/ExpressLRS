@@ -8,6 +8,7 @@
 #include "hwTimer.h"
 #include "POWERMGNT.h"
 #include "devVTXSPI.h"
+#include "devMSPVTX.h"
 
 #include "telemetry.h"
 
@@ -29,6 +30,9 @@ static int event()
         hwTimer::stop();
 #ifdef HAS_VTX_SPI
         VTxOutputMinimum();
+#endif
+#ifdef HAS_MSP_VTX
+        disableMspVtx();
 #endif
         POWERMGNT::setPower(MinPower);
         Radio.End();

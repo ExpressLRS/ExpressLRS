@@ -92,7 +92,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
             if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
             config = re.search('serial ([0-9]+) ([0-9]+) ', line)
-            if config and config.group(2) == "64":
+            if config and (config.group(2) == "64" or config.group(2) == "131136"):
                 dbg_print("    ** Serial RX config detected: '%s'" % line)
                 SerialRXindex = config.group(1)
                 if not SCRIPT_DEBUG:
