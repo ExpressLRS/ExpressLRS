@@ -315,15 +315,17 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 
     for (int model = 0 ; model < 64 ; model++)
     {
-      const JsonVariant &modelJson = json["config"]["model"][String(model)];
-      modelJson["packet-rate"] = config.GetModelConfig(model).rate;
-      modelJson["telemetry-ratio"] = config.GetModelConfig(model).tlm;
-      modelJson["switch-mode"] = config.GetModelConfig(model).switchMode;
-      modelJson["power"]["max-power"] = config.GetModelConfig(model).power;
-      modelJson["power"]["dynamic-power"] = config.GetModelConfig(model).dynamicPower;
-      modelJson["power"]["boost-channel"] = config.GetModelConfig(model).boostChannel;
-      modelJson["model-match"] = config.GetModelConfig(model).modelMatch;
-      modelJson["tx-antenna"] = config.GetModelConfig(model).txAntenna;
+      const model_config_t &modelConfig = config.GetModelConfig(model);
+      String strModel(model);
+      const JsonObject &modelJson = json["config"]["model"].createNestedObject(strModel);
+      modelJson["packet-rate"] = modelConfig.rate;
+      modelJson["telemetry-ratio"] = modelConfig.tlm;
+      modelJson["switch-mode"] = modelConfig.switchMode;
+      modelJson["power"]["max-power"] = modelConfig.power;
+      modelJson["power"]["dynamic-power"] = modelConfig.dynamicPower;
+      modelJson["power"]["boost-channel"] = modelConfig.boostChannel;
+      modelJson["model-match"] = modelConfig.modelMatch;
+      modelJson["tx-antenna"] = modelConfig.txAntenna;
     }
   }
 #endif
