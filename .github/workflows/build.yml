@@ -74,7 +74,7 @@ jobs:
         id: create-release
         uses: softprops/action-gh-release@v1
         with:
-          name: 'ExpressLRS Unified Firmwares v${GITHUB_REF#refs/*/}'
+          name: 'ExpressLRS Unified Firmwares v${{ GITHUB_REF#refs/*/ }}'
           tag_name: ${GITHUB_REF#refs/*/}
           body: 'Unified target firmware release.'
           draft: true
@@ -169,7 +169,7 @@ jobs:
       continue-on-error: true
 
   firmware:
-    needs: [build, validation, test]
+    needs: [build, validation, test, release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -201,6 +201,13 @@ jobs:
         with:
           release_id: ${{ needs.release.outputs.id }}
           file: dist/firmware/*
+
+      - name: Publish Release
+        uses: StuYarrow/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          id: ${{ needs.release.outputs.id }}
 
   installer:
     needs: [validation, test]
