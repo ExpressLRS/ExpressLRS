@@ -226,10 +226,10 @@ function getNetworks() {
 
 // =========================================================
 
-function uploadFile() {
+function uploadFile(overrideFile) {
   _('upload_btn').disabled = true
   try {
-    const file = _('firmware_file').files[0];
+    const file = overrideFile ?? _('firmware_file').files[0];
     const formdata = new FormData();
     formdata.append('upload', file, file.name);
     const ajax = new XMLHttpRequest();

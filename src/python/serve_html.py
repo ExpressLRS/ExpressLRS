@@ -103,6 +103,12 @@ def index():
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 
+@route('/axios.min.js')
+def axios_min():
+    response.content_type = 'text/javascript; charset=latin9'
+    with open('html/axios.min.js') as file:
+        return file.read()
+
 @route('/elrs.css')
 def elrs():
     response.content_type = 'text/css; charset=latin9'
@@ -112,6 +118,11 @@ def elrs():
 def scan():
     response.content_type = 'text/javascript; charset=latin9'
     return apply_template('scan.js')
+
+@route('/auto_updater.js')
+def auto_updater():
+    response.content_type = 'text/javascript; charset=latin9'
+    return apply_template('auto_updater.js')
 
 @route('/mui.js')
 def mui():

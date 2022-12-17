@@ -11,7 +11,7 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+-DMY_BINDING_PHRASE="Awezoom1337"
 
 
 ### REGULATORY DOMAIN: ###
@@ -23,7 +23,7 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
-#-DRegulatory_Domain_ISM_2400
+-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
 
 ### PERFORMANCE OPTIONS: ###
@@ -64,13 +64,14 @@
 ### OTHER OPTIONS: ###
 
 -DAUTO_WIFI_ON_INTERVAL=60
-#-DHOME_WIFI_SSID=""
-#-DHOME_WIFI_PASSWORD=""
+-DHOME_WIFI_SSID="Trickkiste"
+-DHOME_WIFI_PASSWORD="12Ich34Bin56Dein78Vater"
 
 # Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
 # The device target should enable this automatically for devices that come with this, but can be added
 # to any device.
-#-DUSE_TX_BACKPACK
+-DUSE_TX_BACKPACK
+-DUSE_BP_ESP8266
 
 # Silence the buzzer
 #-DDISABLE_ALL_BEEPS
@@ -82,14 +83,14 @@
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
 #If commented out the LED is RGB otherwise GRB
-#-DWS2812_IS_GRB
+-DWS2812_IS_GRB
 
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
-#-DDEBUG_LOG
+-DDEBUG_LOG
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
-#-DDEBUG_LOG_VERBOSE
+-DDEBUG_LOG_VERBOSE
 
 # Print a letter for each packet received or missed (RX debugging)
 #-DDEBUG_RX_SCOREBOARD

@@ -27,18 +27,24 @@ def compress(data):
         f.write(data)
     return buf.getvalue()
 
-def build_html(mainfile, var, out, env, isTX=False):
+def build_html(mainfile, var, out, env, isTX=False, isUNIFIED=False):
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
     )
-    template = engine.get_template(mainfile)
-    data = template.render({
-            'VERSION': get_version(env),
-            'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
-            'isTX': isTX,
-            'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
-        })
+    if 'min.js' in mainfile:
+        rawData = open('html/' + mainfile)
+        data = rawData.read()
+    else:
+        template = engine.get_template(mainfile)
+        data = template.render({
+                'VERSION': get_version(env),
+                'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
+                'isTX': isTX,
+                'isUNIFIED': isUNIFIED,
+                'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
+            })
+    
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data)
     if mainfile.endswith('.css'):
@@ -49,14 +55,16 @@ def build_html(mainfile, var, out, env, isTX=False):
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
-def build_common(env, mainfile, isTX):
+def build_common(env, mainfile, isTX, isUNIFIED):
     fd, path = tempfile.mkstemp()
     try:
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
-            build_html(mainfile, "INDEX_HTML", out, env, isTX)
+            build_html(mainfile, "INDEX_HTML", out, env, isTX, isUNIFIED)
             build_html("scan.js", "SCAN_JS", out, env, isTX)
             build_html("mui.js", "MUI_JS", out, env)
+            build_html("axios.min.js", "AXIOS_JS", out, env)
+            build_html("auto_updater.js", "AU_JS", out, env, isTX)
             build_html("elrs.css", "ELRS_CSS", out, env)
             build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)
             build_html("hardware.js", "HARDWARE_JS", out, env)
@@ -69,4 +77,13 @@ def build_common(env, mainfile, isTX):
         os.remove(path)
 
 target_name = env['PIOENV'].upper()
-build_common(env, "index.html", not '_RX_' in target_name)
+
+isUnified = 'Unified' in target_name
+if not isUnified:
+    for flag in env['BUILD_FLAGS']:
+        if 'Unified' in flag:
+            print("IS UNIFIED")
+            isUnified = True
+            break
+
+build_common(env, "index.html", not '_RX_' in target_name, isUnified)

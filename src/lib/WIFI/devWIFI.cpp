@@ -145,6 +145,8 @@ static struct {
 } files[] = {
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
+  {"/axios.min.js", "text/javascript", (uint8_t *)AXIOS_JS, sizeof(AXIOS_JS)},
+  {"/auto_updater.js", "text/javascript", (uint8_t *)AU_JS, sizeof(AU_JS)},
   {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
@@ -841,6 +843,8 @@ static void startServices()
   server.on("/elrs.css", WebUpdateSendContent);
   server.on("/mui.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
+  server.on("/axios.min.js", WebUpdateSendContent);
+  server.on("/auto_updater.js", WebUpdateSendContent);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
