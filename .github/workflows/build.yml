@@ -55,6 +55,22 @@ jobs:
         cd src
         python python/targets_validator.py
 
+  release:
+    needs: [validation, test]
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.create-release.outputs.id }}
+    steps:
+      - name: create empty release
+        if: startsWith(github.event.ref, 'refs/tags/')
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: 'ExpressLRS Unified Firmwares v${GITHUB_REF#refs/*/}'
+          tag_name: ${GITHUB_REF#refs/*/}
+          body: 'Unified target firmware release.'
+          draft: true
+
   targets:
     runs-on: ubuntu-latest
     outputs:
@@ -64,9 +80,9 @@ jobs:
       uses: actions/checkout@v2
     - id: set-targets
       run: echo "::set-output name=targets::[$( (grep "\[env:.*UART\]" src/targets/unified.ini ; grep -r "\[env:.*STLINK\]" src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
-
+      
   build:
-    needs: targets
+    needs: [targets, release]
     strategy:
       fail-fast: false
       matrix:
@@ -168,6 +184,15 @@ jobs:
         with:
           name: firmware
           path: dist/**/*
+
+      - name: Upload firmware to release
+        if: startsWith(github.event.ref, 'refs/tags/')
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          release_id: ${{ needs.release.outputs.id }}
+          file: dist/firmware/*
 
   installer:
     needs: [validation, test]
