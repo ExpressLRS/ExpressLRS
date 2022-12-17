@@ -367,7 +367,7 @@ _('fileselect').addEventListener('change', (e) => {
           cuteAlert({
             type: 'error',
             title: 'Upload Model Configuration',
-            message: 'An error occurred while upload model configuration file'
+            message: 'An error occurred while uploading model configuration file'
           });
         }
       }
