@@ -1,9 +1,13 @@
 name: Build ExpressLRS
 on:
   push:
+    tags:
+      - '*.*.*'
+    branches:
+      - '**'
   pull_request:
-  tags:
-    - '*.*.*'
+    branches:
+      - '**'
 jobs:
   test:
     runs-on: ubuntu-latest
