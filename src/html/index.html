@@ -104,6 +104,24 @@
 			</div>
 
 			<div class="mui-tabs__pane" id="pane-justified-2">
+@@if isUNIFIED:
+				<div class="mui-panel">
+					<h2>Remote Updater</h2>
+					Automatic updates to the last unified version.
+					<br /><br />
+					<form class="mui-form" id='auto_updater'>
+						<div class="mui-select">
+							<select id="au_version_select" onchange="changeSelectedVersion(event)">
+								<option value="null">Select version</option>
+							</select>
+							<label>Version</label>
+						</div>
+					</form>
+					<button class="mui-btn mui-btn--primary" id="au_update" onclick="startAutoUpdate()" disabled>Update</button>
+					<h3 id="auStatus"></h3>
+					<progress id="auProgressBar" value="0" max="100" style="width:100%;"></progress>
+				</div>
+@@end
 				<div class="mui-panel">
 					<h2>Firmware Update</h2>
 					Choose a file to update module firmware. Select the correct .bin file for @@{PLATFORM} otherwise a bad flash may occur.
@@ -120,22 +138,6 @@
 						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
 					</form>
 				</div>
-@@if isUNIFIED:
-				<div class="mui-panel">
-					<h2>Auto Updater</h2>
-					Automatic updates to the last unified version.
-					<br /><br />
-					<form class="mui-form" id='auto_updater'>
-						<div class="mui-select">
-							<select id="au_version_select" onchange="changeSelectedVersion(event)">
-								<option value="null">Select version</option>
-							</select>
-							<label>Version</label>
-						</div>
-					</form>
-					<button class="mui-btn mui-btn--primary" id="au_update" onclick="startAutoUpdate()" disabled>Update</button>
-				</div>
-@@end
 			</div>
 
 @@if isTX:

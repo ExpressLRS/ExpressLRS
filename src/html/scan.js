@@ -226,7 +226,7 @@ function getNetworks() {
 
 // =========================================================
 
-function uploadFile(overrideFile) {
+function uploadFile(overrideFile, error_cb) {
   _('upload_btn').disabled = true
   try {
     const file = overrideFile ?? _('firmware_file').files[0];
@@ -236,6 +236,9 @@ function uploadFile(overrideFile) {
     ajax.upload.addEventListener('progress', progressHandler, false);
     ajax.addEventListener('load', completeHandler, false);
     ajax.addEventListener('error', errorHandler, false);
+    if (error_cb && typeof error_cb === 'function') {
+      ajax.addEventListener('error', error_cb, false);
+    }
     ajax.addEventListener('abort', abortHandler, false);
     ajax.open('POST', '/update');
     ajax.setRequestHeader('X-FileSize', file.size);
@@ -243,6 +246,9 @@ function uploadFile(overrideFile) {
   }
   catch (e) {
     _('upload_btn').disabled = false
+    if (error_cb && typeof error_cb === 'function') {
+      error_cb(e);
+    }
   }
 }
 

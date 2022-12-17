@@ -10,8 +10,6 @@ let isTransmitter = false;
     isTransmitter = true;
 @@end
 
-console.log(isTransmitter);
-
 let selectedVersion = null;
 
 let versions = {
@@ -63,7 +61,6 @@ async function initAutoUpdater() {
         const val = `${versions.data[i].version_major}.${versions.data[i].version_minor}.${versions.data[i].version_patch}`;
         option.setAttribute('value', i);
         option.innerText = `v${val}`;
-        console.log(option);
         el.appendChild(option);
     }
 }
@@ -81,13 +78,24 @@ function changeSelectedVersion(event) {
 
 async function startAutoUpdate() {
     document.getElementById('au_update').disabled = true;
+
     const bin = await axios({
         url: selectedVersion.downloads.find(d => d.mode === (isTransmitter ? 'transmitter' : 'receiver')).download,
         method: 'GET',
-        responseType: 'blob'
+        responseType: 'blob',
+        onDownloadProgress: progress => {
+            const percentCompleted = Math.floor(progress.loaded / progress.total * 100);
+            document.getElementById('auProgressBar').value = percentCompleted;
+            document.getElementById('auStatus').innerHTML = percentCompleted + '% downloaded... please wait';
+        }
+    }).finally(() => {
+        document.getElementById('auProgressBar').value = 0;
+        document.getElementById('auStatus').innerHTML = 'Firmware downloaded, continue with uploading.';
     });
     const local_file = new File([bin.data], 'firmware.bin');
-    uploadFile(local_file);
+    uploadFile(local_file, function() {
+        document.getElementById('au_update').disabled = false;
+    });
 }
 
 (function() {
