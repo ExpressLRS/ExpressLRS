@@ -7,6 +7,7 @@ A simple http server for testing/debugging the web-UI
 open http://localhost:8080/
 add the following query params for TX and/or 900Mhz testing
     isTX
+    isUNIFIED
     sx127x
 """
 
@@ -17,6 +18,7 @@ from external.wheezy.template.loader import FileLoader
 
 net_counter = 0
 isTX = False
+isUNIFIED = False
 sx127x = False
 
 config = {
@@ -80,7 +82,7 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, sx127x
+    global isTX, sx127x, isUNIFIED
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -90,16 +92,18 @@ def apply_template(mainfile):
             'VERSION': 'testing (xxxxxx)',
             'PLATFORM': '',
             'isTX': isTX,
+            'isUNIFIED': isUNIFIED,
             'sx127x': sx127x
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, sx127x
+    global net_counter, isTX, sx127x, isUNIFIED
     net_counter = 0
     isTX = 'isTX' in request.query
     sx127x = 'sx127x' in request.query
+    isUNIFIED = 'isUNIFIED' in request.query
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 
