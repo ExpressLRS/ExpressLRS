@@ -1,5 +1,13 @@
 name: Build ExpressLRS
-on: [push, pull_request]
+on:
+  push:
+    tags:
+      - '*.*.*'
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -55,6 +63,23 @@ jobs:
         cd src
         python python/targets_validator.py
 
+  release:
+    needs: [validation, test]
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.create-release.outputs.id }}
+    steps:
+      - name: create empty release
+        if: startsWith(github.event.ref, 'refs/tags/')
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: 'ExpressLRS Unified Firmwares v${{ github.ref_name }}'
+          tag_name: ${{ github.ref_name }}
+          body: 'Unified target firmware release.'
+          generate_release_notes: true
+          draft: true
+
   targets:
     runs-on: ubuntu-latest
     outputs:
@@ -64,9 +89,9 @@ jobs:
       uses: actions/checkout@v2
     - id: set-targets
       run: echo "::set-output name=targets::[$( (grep "\[env:.*UART\]" src/targets/unified.ini ; grep -r "\[env:.*STLINK\]" src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
-
+      
   build:
-    needs: targets
+    needs: [targets, release]
     strategy:
       fail-fast: false
       matrix:
@@ -104,10 +129,12 @@ jobs:
         key: ${{ runner.os }}-platformio
 
     - name: Run PlatformIO
+      id: pio-run
       run: |
         platformio platform update
         platformio platform install native
         mkdir -p ~/artifacts/firmware
+        mkdir -p ~/release
         cd src
         case ${{matrix.target}} in
           *2400* | FM30*)
@@ -137,6 +164,12 @@ jobs:
           mv .pio/build/${{ matrix.target }}/partitions.bin ~/artifacts/firmware/
         fi
 
+        if [[ ${{matrix.target}} == *Unified* ]] ; then
+          OUTFILE_RELEASE=~/release/`echo ${{ matrix.target }} | sed s/_via.*//`.bin
+          cp $OUTDIR/firmware.bin $OUTFILE_RELEASE >& /dev/null || :
+          echo "outfile=${OUTFILE_RELEASE}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:
@@ -144,8 +177,17 @@ jobs:
         path: ~/artifacts/**/*
       continue-on-error: true
 
+    - name: Upload firmware to release
+      if: ${{ startsWith(github.event.ref, 'refs/tags/') && steps.pio-run.outputs.outfile != '' }}
+      uses: xresloader/upload-to-github-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        release_id: ${{ needs.release.outputs.id }}
+        file: ${{ steps.pio-run.outputs.outfile }}
+
   firmware:
-    needs: [build, validation, test]
+    needs: [build, validation, test, release]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -168,6 +210,13 @@ jobs:
         with:
           name: firmware
           path: dist/**/*
+
+      - name: Publish Release
+        uses: StuYarrow/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          id: ${{ needs.release.outputs.id }}
 
   installer:
     needs: [validation, test]
