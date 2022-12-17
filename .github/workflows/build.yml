@@ -3,7 +3,7 @@ on:
   push:
   pull_request:
   tags:
-    - *.*.*
+    - '*.*.*'
 jobs:
   test:
     runs-on: ubuntu-latest
