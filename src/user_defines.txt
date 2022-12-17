@@ -1,21 +1,21 @@
 ### The Legal Stuff ###
-
+ 
 # The use and operation of this type of device may require a license and some countries may forbid its use entirely.
 # It is entirely up to the end user to ensure compliance with local regulations. No claim of regulatory compliance is made. In most cases a HAM license is required.
 # This is experimental software/hardware and there is no guarantee of stability or reliability. USE AT YOUR OWN RISK
-
+ 
 # HOW TO USE THIS FILE: https://www.expresslrs.org/1.0/software/user-defines/
 # SIMPLY SEARCH WHICH DEFINE YOU NEED HELP WITH
-
-
+ 
+ 
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
--DMY_BINDING_PHRASE="Awezoom1337"
-
-
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+ 
+ 
 ### REGULATORY DOMAIN: ###
-
+ 
 # Domain is used to define correct frequency band for 900MHz hardware.
 #-DRegulatory_Domain_AU_915
 #-DRegulatory_Domain_EU_868
@@ -23,56 +23,55 @@
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_FCC_915
--DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
-
+ 
 ### PERFORMANCE OPTIONS: ###
-
+ 
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
 #-DUNLOCK_HIGHER_POWER
-
+ 
 -DLOCK_ON_FIRST_CONNECTION
-
+ 
 # For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
 # dropped below the configured Fan Threshold. This prevents the fan from turning on and off every
 # few seconds if the power level is constantly changing.
 # Default is 30 seconds if not defined, value can be 0-254.
 #-DFAN_MIN_RUNTIME=30
-
+ 
 ### COMPATIBILITY OPTIONS: ###
-
+ 
 # Invert the TX/RX half-duplex pin in the transmitter code. Handset external
 # modules are almost all inverted. ESP32 targets only
 -DUART_INVERTED
-
+ 
 # Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
 # If not defined, will default to 420000
 #-DRCVR_UART_BAUD=400000
-
+ 
 # Invert the TX pin in the receiver code to allow an inverted RX pin on the
 # FC to be used (usually labeled SBUS input or RXI). Inverted CRSF output.
 # RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will
 # not work, only via_Wifi. ESP8266/8285 targets only
 #-DRCVR_INVERT_TX
-
+ 
 # Use the SBUS **pin** on R9MM receiver hardware, which is inverted.
 # Does not output SBUS protocol, just inverted CRSF.
 #-DUSE_R9MM_R9MINI_SBUS
-
+ 
 #-DTLM_REPORT_INTERVAL_MS=240LU
-
+ 
 ### OTHER OPTIONS: ###
-
+ 
 -DAUTO_WIFI_ON_INTERVAL=60
--DHOME_WIFI_SSID="Trickkiste"
--DHOME_WIFI_PASSWORD="12Ich34Bin56Dein78Vater"
-
+#-DHOME_WIFI_SSID=""
+#-DHOME_WIFI_PASSWORD=""
+ 
 # Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
 # The device target should enable this automatically for devices that come with this, but can be added
 # to any device.
--DUSE_TX_BACKPACK
--DUSE_BP_ESP8266
-
+#-DUSE_TX_BACKPACK
+ 
 # Silence the buzzer
 #-DDISABLE_ALL_BEEPS
 # Disables the startup tune and crsf connect/disconnct do beep-boop
@@ -81,38 +80,38 @@
 #-DJUST_BEEP_ONCE
 # Startup plays you own custom tune and crsf connect/disconnct do beep-boop
 #-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
-
+ 
 #If commented out the LED is RGB otherwise GRB
--DWS2812_IS_GRB
-
+#-DWS2812_IS_GRB
+ 
 ### Debugging options ###
-
+ 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
--DDEBUG_LOG
+#-DDEBUG_LOG
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
--DDEBUG_LOG_VERBOSE
-
+#-DDEBUG_LOG_VERBOSE
+ 
 # Print a letter for each packet received or missed (RX debugging)
 #-DDEBUG_RX_SCOREBOARD
-
+ 
 # Don't send RC msgs over UART
 #-DDEBUG_CRSF_NO_OUTPUT
-
+ 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
-
+ 
 # Prints a log line for every channels packet recieved at the RX:
 #    ID,Antenna,RSSI,LQ,SNR,PWR,FHSS,TimingOffset
 # The ID is generated on the TX side and overwrites CH1-CH4 and increments once for every
 # channels packet. Writes directly to Serial, does not require DEBUG_LOG.
 # Flash both TX & RX with this enbled to use it if the ID is required.
 #-DDEBUG_RCVR_LINKSTATS
-
+ 
 # Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
 # on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
 # Dynamic power must be off, else it will adjust based on the FreqCorrection reported in SNR
 #-DDEBUG_FREQ_CORRECTION
-
+ 
 # Enable reporting offsets sent to Open/EdgeTX for packet synchronisation.
 # Also logs forced resyncs when a packet is delayed or missed.
 #-DDEBUG_OPENTX_SYNC

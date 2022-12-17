@@ -74,8 +74,8 @@ jobs:
         id: create-release
         uses: softprops/action-gh-release@v1
         with:
-          name: 'ExpressLRS Unified Firmwares v${{ GITHUB_REF#refs/*/ }}'
-          tag_name: ${GITHUB_REF#refs/*/}
+          name: 'ExpressLRS Unified Firmwares v${{ github.ref_name }}'
+          tag_name: ${{ github.ref_name }}
           body: 'Unified target firmware release.'
           draft: true
 
