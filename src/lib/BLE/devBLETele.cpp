@@ -12,17 +12,10 @@
 #include "options.h"
 
 NimBLEServer *pServer;
-NimBLECharacteristic *rcState;
 NimBLECharacteristic *rcCRSF;
-NimBLECharacteristic *rcLink;
-
-NimBLEService *rcTemp;
-NimBLECharacteristic *cTemp;
 
 unsigned short const TELEMETRY_SVC_UUID = 0x1819;
-unsigned short const TELEMETRY_STATE_UUID = 0x2B05;
-unsigned short const TELEMETRY_CRSF_UUID = 0x2A4D;
-unsigned short const TELEMETRY_LINK_UUID = 0x2BBD;
+unsigned short const TELEMETRY_CRSF_UUID = 0x2BBD;
 
 unsigned short const DEVICE_INFO_SVC_UUID = 0x180A;
 unsigned short const MODEL_NUMBER_SVC_UUID = 0x2A24;
@@ -30,14 +23,6 @@ unsigned short const SERIAL_NUMBER_SVC_UUID = 0x2A25;
 unsigned short const SOFTWARE_NUMBER_SVC_UUID = 0x2A28;
 unsigned short const HARDWARE_NUMBER_SVC_UUID = 0x2A27;
 unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
-
-unsigned short const TEMP_SVC_UUID = 0x181A;
-unsigned short const TEMP_C_UUID = 0x2A1C;
-
-#ifdef HAS_THERMAL
-#include "thermal.h"
-extern Thermal thermal;
-#endif
 
 extern CRSF crsf;
 
@@ -48,25 +33,105 @@ String getMasterUIDString()
     return String(muids);
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetrykUpdateValues(uint8_t *data)
+void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
 {
-    rcState->setValue(connectionState);
-    rcState->notify(true);
-
     if (data != nullptr)
     {
-        rcCRSF->setValue(data);
-        rcCRSF->notify();
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (size <= CRSF_MAX_PACKET_LEN)
+        {
+            rcCRSF->setValue(data, size);
+            rcCRSF->notify();
+        }
+    }
+}
+
+void ICACHE_RAM_ATTR BluetoothTelemetrySendLinkStatsPacketEx(uint8_t* outBuffer)
+{
+    outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    outBuffer[CRSF_TELEMETRY_LENGTH_INDEX] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
+    outBuffer[CRSF_TELEMETRY_TYPE_INDEX] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1 + LinkStatisticsFrameLength] = crsf_crc.calc((byte *)&outBuffer[CRSF_TELEMETRY_TYPE_INDEX], LinkStatisticsFrameLength + 1);
+
+    rcCRSF->setValue(outBuffer, LinkStatisticsFrameLength + 4);
+    rcCRSF->notify();
+}
+
+void ICACHE_RAM_ATTR BluetoothTelemetrySendEmptyLinkStatsPacket()
+{
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    memset(&outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1], 0, LinkStatisticsFrameLength);
+
+    crsfPayloadLinkstatistics_s* pStats = (crsfPayloadLinkstatistics_s*)(&outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1]);
+    pStats->uplink_RSSI_1 = 120;  
+    pStats->uplink_RSSI_2 = 120;
+    pStats->downlink_RSSI = 120;
+    pStats->uplink_SNR = -20;
+    pStats->downlink_SNR = -20;
+    pStats->rf_Mode = CRSF::LinkStatistics.rf_Mode;
+    pStats->uplink_TX_Power = CRSF::LinkStatistics.uplink_TX_Power;
+
+    BluetoothTelemetrySendLinkStatsPacketEx(outBuffer);
+}
+
+
+void ICACHE_RAM_ATTR BluetoothTelemetrySendLinkStatsPacket()
+{
+    if (!CRSF::CRSFstate)
+    {
+        return;
     }
 
-    cTemp->setValue(thermal.read_temp());
-    cTemp->notify();
-
-    uint8_t linkstats[sizeof(crsfPayloadLinkstatistics_s)];
-    memcpy(linkstats, (byte *)&CRSF::LinkStatistics, sizeof(crsfPayloadLinkstatistics_s));
-    rcLink->setValue(linkstats);
-    rcLink->notify();
+    uint8_t outBuffer[LinkStatisticsFrameLength + 4];
+    memcpy(&outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1], (byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
+    //CRSF::LinkStatistics.uplink_RSSI_1 is negative number
+    //we send negative numbers to handset. OpenTX handles it as signed byte.
+    //Over BLE we send positive numbers, like inav/betaflight expects (unsigned byte, positive value = -dbm)
+    crsfPayloadLinkstatistics_s* pStats = (crsfPayloadLinkstatistics_s*)(&outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1]);
+    pStats->uplink_RSSI_1 = -pStats->uplink_RSSI_1;  
+    pStats->uplink_RSSI_2 = -pStats->uplink_RSSI_2;  
+    pStats->downlink_RSSI = -pStats->downlink_RSSI;  
+    BluetoothTelemetrySendLinkStatsPacketEx(outBuffer);
 }
+
+void ICACHE_RAM_ATTR BluetoothTelemetrySendRCFrame()
+{
+    if (!CRSF::CRSFstate)
+    {
+        return;
+    }
+
+    uint8_t outBuffer[RCframeLength + 4];
+
+    rcPacket_t* p = (rcPacket_t*)(&outBuffer[0]);
+
+    p->header.device_addr = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    p->header.frame_size = RCframeLength + 2;
+    p->header.type = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
+
+    p->channels.ch0 = CRSF::ChannelData[0];
+    p->channels.ch1 = CRSF::ChannelData[1];
+    p->channels.ch2 = CRSF::ChannelData[2];
+    p->channels.ch3 = CRSF::ChannelData[3];
+    p->channels.ch4 = CRSF::ChannelData[4];
+    p->channels.ch5 = CRSF::ChannelData[5];
+    p->channels.ch6 = CRSF::ChannelData[6];
+    p->channels.ch7 = CRSF::ChannelData[7];
+    p->channels.ch8 = CRSF::ChannelData[8];
+    p->channels.ch9 = CRSF::ChannelData[9];
+    p->channels.ch10 = CRSF::ChannelData[10];
+    p->channels.ch11 = CRSF::ChannelData[11];
+    p->channels.ch12 = CRSF::ChannelData[12];
+    p->channels.ch13 = CRSF::ChannelData[13];
+    p->channels.ch14 = CRSF::ChannelData[14];
+    p->channels.ch15 = CRSF::ChannelData[15];
+
+    outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1 + RCframeLength] = crsf_crc.calc((byte *)&outBuffer[CRSF_TELEMETRY_TYPE_INDEX], RCframeLength + 1 );
+
+    rcCRSF->setValue(outBuffer, RCframeLength + 4);
+    rcCRSF->notify();
+}
+
 
 void BluetoothTelemetryBegin()
 {
@@ -77,21 +142,16 @@ void BluetoothTelemetryBegin()
 
     NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
 
+    //Set MTU to max packet length + 3 bytes to be able to send packets longer then default 20 bytes.
+    //Should be set on both ends - smaller from two is used.
+    BLEDevice::setMTU(CRSF_MAX_PACKET_LEN + 3);
+
     /** Set low transmit power, default is 6db */
     BLEDevice::setPower(ESP_PWR_LVL_P6);
     pServer = NimBLEDevice::createServer();
     NimBLEService *rcService = pServer->createService(TELEMETRY_SVC_UUID);
-    rcState = rcService->createCharacteristic(TELEMETRY_STATE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
     rcCRSF = rcService->createCharacteristic(TELEMETRY_CRSF_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, CRSF_MAX_PACKET_LEN);
-    rcLink = rcService->createCharacteristic(TELEMETRY_LINK_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, LinkStatisticsFrameLength);
     rcService->start();
-
-#ifdef HAS_THERMAL
-    rcTemp = pServer->createService(TEMP_SVC_UUID);
-    cTemp = rcTemp->createCharacteristic(TEMP_C_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
-    cTemp->setValue(String(thermal.getTempValue()));
-    rcTemp->start();
-#endif
 
     auto dInfo = pServer->createService(DEVICE_INFO_SVC_UUID);
     dInfo
@@ -115,10 +175,6 @@ void BluetoothTelemetryBegin()
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(rcService->getUUID());
 
-#ifdef HAS_THERMAL
-    pAdvertising->addServiceUUID(rcTemp->getUUID());
-#endif
-
     pAdvertising->addServiceUUID(dInfo->getUUID());
     pAdvertising->start();
 
@@ -133,7 +189,7 @@ static int start()
 
 static int timeout()
 {
-    BluetoothTelemetrykUpdateValues(nullptr);
+    BluetoothTelemetryUpdateValues(nullptr);
     return 500;
 }
 
