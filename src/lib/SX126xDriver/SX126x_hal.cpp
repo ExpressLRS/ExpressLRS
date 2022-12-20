@@ -194,9 +194,8 @@ void SX126xHal::reset(void)
     {
         pinMode(GPIO_PIN_RST, OUTPUT);
         digitalWrite(GPIO_PIN_RST, LOW);
-        delay(50);
+        delay(1);
         digitalWrite(GPIO_PIN_RST, HIGH);
-        delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
     }
 
     BusyDelay(10000); // 10ms delay if GPIO_PIN_BUSY is undefined

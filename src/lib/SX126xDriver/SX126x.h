@@ -26,17 +26,17 @@ public:
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,
                 uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0);
-    void SetFrequencyHz(uint32_t freq);
-    void SetFrequencyReg(uint32_t freq);
+    void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
-    void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radio);
+    void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
     bool GetFrequencyErrorbool();
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
-    void TXnb(uint8_t * data, uint8_t size);
+    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     void RXnb(SX126x_RadioOperatingModes_t rxMode = SX126x_MODE_RX);
 
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
@@ -45,9 +45,10 @@ public:
     void GetStatus(SX12XX_Radio_Number_t radioNumber);
 
     uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
-    int8_t GetRssiInst();
+    int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
     SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
+    SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
 
 private:
     // constant used for no power change pending
