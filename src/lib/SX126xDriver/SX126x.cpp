@@ -148,7 +148,7 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 	hal.WriteCommand(SX126x_RADIO_CALIBRATEIMAGE, calFreq, sizeof(calFreq), SX12XX_Radio_All);
 
     uint8_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
-    uint8_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_CRC_ERROR;
+    uint8_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
     SetDioIrqParams(irqMask, dio1Mask);
 }
 
