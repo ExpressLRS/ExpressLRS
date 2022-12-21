@@ -92,11 +92,11 @@ bool SX126xDriver::Begin()
         if (loraSyncword != 0x1424) {
             return false;
         }
-
-        hal.WriteRegister(0x8AC, 0x96, SX12XX_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
 
-    hal.WriteRegister(0x8AC, 0x96, SX12XX_Radio_1);   //default is low power mode, switch to high sensitivity instead
+    hal.WriteRegister(0x8AC, 0x96, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
+    hal.WriteRegister(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, 1, SX12XX_Radio_All);
+
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;
     SetOutputPower(SX126x_POWER_MIN);
@@ -175,13 +175,10 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
 void SX126xDriver::SetRxTimeoutUs(uint32_t interval)
 {
+    timeout = 0xFFFFFF; // no timeout, continuous mode
     if (interval)
     {
         timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS; // number of periods for the SX126x to timeout
-    }
-    else
-    {
-        timeout = 0;   // no timeout, continuous mode
     }
 }
 
@@ -250,9 +247,9 @@ void SX126xDriver::SetMode(SX126x_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
         break;
 
     case SX126x_MODE_RX_CONT:
-        buf[0] = 0x00;
-        buf[1] = 0x00;
-        buf[2] = 0x00;
+        buf[0] = 0xFF;
+        buf[1] = 0xFF;
+        buf[2] = 0xFF;
         hal.WriteCommand(SX126x_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
         break;
 
@@ -330,7 +327,8 @@ void SX126xDriver::SetPacketParamsLoRa(uint8_t PreambleLength, SX126x_RadioLoRaP
     buf[2] = HeaderType;
     buf[3] = PayloadLength;
     buf[4] = SX126x_LORA_CRC_OFF;
-    buf[5] = InvertIQ ? SX126x_LORA_IQ_INVERTED : SX126x_LORA_IQ_NORMAL;
+    // buf[5] = InvertIQ ? SX126x_LORA_IQ_INVERTED : SX126x_LORA_IQ_NORMAL; // This is broken for the sx1276 and never gets set.
+    buf[5] = SX126x_LORA_IQ_NORMAL;
 
     hal.WriteCommand(SX126x_RADIO_SET_PACKETPARAMS, buf, sizeof(buf), SX12XX_Radio_All, 20);
 
@@ -533,7 +531,7 @@ void ICACHE_RAM_ATTR SX126xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
 {
     instance->processingPacketRadio = radioNumber;
     SX12XX_Radio_Number_t irqClearRadio = radioNumber;
-DBGLN("cb");
+
     uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & SX126x_IRQ_TX_DONE)
     {

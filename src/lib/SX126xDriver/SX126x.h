@@ -14,7 +14,7 @@ public:
 
 
     ///////////Radio Variables////////
-    uint16_t timeout;
+    uint32_t timeout;
 
     ///////////////////////////////////
 
