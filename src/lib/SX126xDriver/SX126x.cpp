@@ -8,27 +8,6 @@ SX126xDriver *SX126xDriver::instance = NULL;
 
 //DEBUG_SX126x_OTA_TIMING
 
-/* Steps for startup
-
-1. If not in STDBY_RC mode, then go to this mode by sending the command:
-SetStandby(STDBY_RC)
-
-2. Define the LoRa® packet type by sending the command:
-SetPacketType(PACKET_TYPE_LORA)
-
-3. Define the RF frequency by sending the command:
-SetRfFrequency(rfFrequency)
-The LSB of rfFrequency is equal to the PLL step i.e. 32e6/2^25 Hz. SetRfFrequency() defines the Tx frequency.
-
-4. Indicate the addresses where the packet handler will read (txBaseAddress in Tx) or write (rxBaseAddress in Rx) the first
-byte of the data payload by sending the command:
-SetBufferBaseAddress(txBaseAddress, rxBaseAddress)
-Note:
-txBaseAddress and rxBaseAddress are offset relative to the beginning of the data memory map.
-
-5. Define the modulation parameter signal BW SF CR
-*/
-
 #if defined(DEBUG_SX126x_OTA_TIMING)
 static uint32_t beginTX;
 static uint32_t endTX;
@@ -94,8 +73,8 @@ bool SX126xDriver::Begin()
         }
     }
 
-    hal.WriteRegister(0x8AC, 0x96, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
-    hal.WriteRegister(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, 1, SX12XX_Radio_All);
+    hal.WriteRegister(SX126x_RADIO_RX_GAIN, SX126x_RX_BOOSTED_GAIN, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
+    hal.WriteRegister(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, SX126x_DIO2ASSWITCHCTRL_ON, SX12XX_Radio_All);
 
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;

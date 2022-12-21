@@ -143,6 +143,18 @@ typedef enum
     SX126x_LORA_CRC_ON = 0x01,  //!< CRC activated
 } SX126x_RadioLoRaCrcModes_t;
 
+typedef enum
+{
+    SX126x_DIO2ASSWITCHCTRL_OFF = 0x00,
+    SX126x_DIO2ASSWITCHCTRL_ON = 0x01,
+} SX126x_DIO2AsSwitchCtrlModes_t;
+
+typedef enum
+{
+    SX126x_RX_POWER_SAVING_GAIN = 0x94,
+    SX126x_RX_BOOSTED_GAIN = 0x96,
+} SX126x_RxGain_t;
+
 typedef enum RadioCommands_u
 {
     SX126x_RADIO_WRITE_REGISTER = 0x0D,
@@ -190,6 +202,8 @@ typedef enum RadioCommands_u
     SX126x_RADIO_CLR_DEVICEERRORS = 0x07,
     SX126x_RADIO_GET_STATS = 0x10,
     SX126x_RADIO_CLR_STATS = 0x00,
+
+    SX126x_RADIO_RX_GAIN = 0x8AC,
 } SX126x_RadioCommands_t;
 
 typedef enum
