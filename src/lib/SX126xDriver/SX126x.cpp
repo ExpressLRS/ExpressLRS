@@ -511,10 +511,6 @@ void ICACHE_RAM_ATTR SX126xDriver::GetLastPacketStats()
     // LoRa mode has both RSSI and SNR
     LastPacketRSSI = -(int8_t)(status[0] / 2);
     LastPacketSNRRaw = (int8_t)status[1];
-    // https://www.mouser.com/datasheet/2/761/DS_SX126x-1_V2.2-1511144.pdf p84
-    // need to subtract SNR from RSSI when SNR <= 0;
-    int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
-    LastPacketRSSI += negOffset;
 }
 
 void ICACHE_RAM_ATTR SX126xDriver::IsrCallback_1()
