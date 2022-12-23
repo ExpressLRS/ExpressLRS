@@ -26,7 +26,7 @@ static uint32_t endTX;
 SX126xDriver::SX126xDriver(): SX12xxDriverCommon()
 {
     instance = this;
-    timeout = 0xffff;
+    timeout = 0xFFFFFF;
     currOpmode = SX126x_MODE_SLEEP;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
 }
@@ -147,8 +147,10 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 	}
 	hal.WriteCommand(SX126x_RADIO_CALIBRATEIMAGE, calFreq, sizeof(calFreq), SX12XX_Radio_All);
 
-    uint8_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
-    uint8_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
+    uint16_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_RX_TX_TIMEOUT;
+    uint16_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_RX_TX_TIMEOUT;
+    // uint16_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
+    // uint16_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
     SetDioIrqParams(irqMask, dio1Mask);
 }
 
@@ -159,6 +161,30 @@ void SX126xDriver::SetRxTimeoutUs(uint32_t interval)
     {
         timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS; // number of periods for the SX126x to timeout
     }
+}
+
+void SX126xDriver::clearTimeout(SX12XX_Radio_Number_t radioNumber)
+{
+    if (timeout == 0xFFFFFF) 
+        return;
+
+    hal.WriteRegister(0x0902, 0x00, radioNumber);
+
+    uint8_t tempValue;
+    if (radioNumber & SX12XX_Radio_1)
+    {
+        tempValue = hal.ReadRegister(0x0944, SX12XX_Radio_1);
+        hal.WriteRegister(0x0944, tempValue | 0x02, SX12XX_Radio_1);
+    }
+    
+if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+{
+    if (radioNumber & SX12XX_Radio_2)
+    {
+        tempValue = hal.ReadRegister(0x0944, SX12XX_Radio_2);
+        hal.WriteRegister(0x0944, tempValue | 0x02, SX12XX_Radio_2);
+    }
+}
 }
 
 /***
@@ -420,7 +446,7 @@ void ICACHE_RAM_ATTR SX126xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         }
     }
 
-    hal.TXenable(radioNumber); // do first to allow PA stablise
+    // hal.TXenable(radioNumber); // do first to allow PA stablise
     hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
     instance->SetMode(SX126x_MODE_TX, radioNumber);
 
@@ -520,7 +546,14 @@ void ICACHE_RAM_ATTR SX126xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
+            instance->clearTimeout(irqClearRadio);
         }
+    }
+    else if (irqStatus == SX126x_IRQ_RX_TX_TIMEOUT)
+    {
+        hal.TXenable(radioNumber);
+        hal.TXRXdisable();
+        // instance->clearTimeout(irqClearRadio);
     }
     else if (irqStatus == SX126x_IRQ_RADIO_NONE)
     {
