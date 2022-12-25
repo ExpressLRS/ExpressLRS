@@ -11,6 +11,9 @@
 
 #include "devBLETele.h"
 
+#include "config.h"
+extern TxConfig config;
+
 NimBLEServer *pServer;
 NimBLECharacteristic *rcCRSF;
 
@@ -28,6 +31,7 @@ extern CRSF crsf;
 
 static uint32_t LastTMLLinkStatsPacketMillis = 0;
 static uint32_t LastTLMRCPacketMillis = 0;
+static bool initOnce = false;
 
 String getMasterUIDString()
 {
@@ -122,48 +126,26 @@ void ICACHE_RAM_ATTR BluetoothTelemetrySendRCFrame()
     rcCRSF->notify();
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
+void BluetoothTelemetryShutdown()
 {
-    if ((connectionState == bleJoystick) || (pServer == nullptr)){
-        return;
-    }
-
-    if (data != nullptr)
+    if ( pServer != nullptr)
     {
-        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        if (size <= CRSF_MAX_PACKET_LEN)
-        {
-            rcCRSF->setValue(data, size);
-            rcCRSF->notify();
-        }
-    }
+        INFOLN("Stopping BLE Telemetry!");
 
-    uint32_t const now = millis();
-
-    if (now >= (uint32_t)(500 + LastTMLLinkStatsPacketMillis)) 
-    {
-        LastTMLLinkStatsPacketMillis = now;
-        if (connectionState == connected) 
-        {
-            BluetoothTelemetrySendLinkStatsPacket();
-        }
-        else
-        {
-            BluetoothTelemetrySendEmptyLinkStatsPacket();
-        }
-    }
-
-    if (now >= (uint32_t)(500 + LastTLMRCPacketMillis))
-    {
-        /* Periodically send RC channels packet for Android Telemetry viewer */
-        BluetoothTelemetrySendRCFrame();
-        LastTLMRCPacketMillis = now;
-        return;
+        NimBLEDevice::stopAdvertising();
+        NimBLEDevice::deinit(true);
+        pServer = nullptr;
+        rcCRSF = nullptr;
     }
 }
 
-void BluetoothTelemetryBegin()
+void BluetoothTelemetryUpdateDevice()
 {
+    if ( (config.GetBLETelemetry() == false) || (connectionState == bleJoystick) ) 
+    {
+        BluetoothTelemetryShutdown();
+        return;
+    }
 
     // pServer is null if it hasn't been started yet
     if (pServer != nullptr)
@@ -171,6 +153,19 @@ void BluetoothTelemetryBegin()
 
     //NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
     NimBLEDevice::init("Express LRS Telemetry");
+
+    //we do not want devices which are bound to BLE Joystick to connect to Telemetry service.
+    //start BLE Device with random address
+    //avoid frequent address changes
+    if ( initOnce == false )
+    {
+        initOnce = true;
+
+        ble_addr_t blead;
+        ble_hs_id_gen_rnd(1, &blead);
+        ble_hs_id_set_rnd(blead.val);
+    }
+    NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
 
     //Set MTU to max packet length + 3 bytes to be able to send packets longer then default 20 bytes.
     //Should be set on both ends - smaller from two is used.
@@ -211,34 +206,57 @@ void BluetoothTelemetryBegin()
     INFOLN("Starting BLE Telemetry!");
 }
 
-void BluetoothTelemetryShutdown()
+void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
 {
-    INFOLN("Stopping BLE Telemetry!");
+    if (pServer == nullptr)
+        return;
 
-    if ( pServer )
+    if (data != nullptr)
     {
-        NimBLEDevice::deinit();
-        pServer = nullptr;
-        rcCRSF = nullptr;
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (size <= CRSF_MAX_PACKET_LEN)
+        {
+            rcCRSF->setValue(data, size);
+            rcCRSF->notify();
+        }
+    }
+
+    uint32_t const now = millis();
+
+    if (now >= (uint32_t)(500 + LastTMLLinkStatsPacketMillis)) 
+    {
+        LastTMLLinkStatsPacketMillis = now;
+        if (connectionState == connected) 
+        {
+            BluetoothTelemetrySendLinkStatsPacket();
+        }
+        else
+        {
+            BluetoothTelemetrySendEmptyLinkStatsPacket();
+        }
+    }
+
+    if (now >= (uint32_t)(500 + LastTLMRCPacketMillis))
+    {
+        /* Periodically send RC channels packet for Android Telemetry viewer */
+        BluetoothTelemetrySendRCFrame();
+        LastTLMRCPacketMillis = now;
+        return;
     }
 }
 
-static int start()
+static int event()
 {
-    BluetoothTelemetryBegin();
-    return DURATION_IMMEDIATELY;
-}
-
-static int timeout()
-{
+    BluetoothTelemetryUpdateDevice();
     BluetoothTelemetryUpdateValues(nullptr);
-    return 500;
+    
+    return DURATION_NEVER;
 }
 
 device_t BLET_device = {
     .initialize = nullptr,
-    .start = start,
-    .event = nullptr,
-    .timeout = timeout};
-
+    .start = nullptr,
+    .event = event,
+    .timeout = nullptr
+};
 #endif

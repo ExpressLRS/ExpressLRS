@@ -1185,8 +1185,16 @@ void loop()
   if (TelemetryReceiver.HasFinishedData())
   {
       crsf.sendTelemetryToTX(CRSFinBuffer);
+#ifdef HAS_BLET
       BluetoothTelemetryUpdateValues(CRSFinBuffer);
+#endif
       TelemetryReceiver.Unlock();
+  }
+  else
+  {
+#ifdef HAS_BLET
+      BluetoothTelemetryUpdateValues(nullptr);
+#endif
   }
 
   // only send msp data when binding is not active
