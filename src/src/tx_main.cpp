@@ -11,7 +11,7 @@
 #include "devLED.h"
 #include "devScreen.h"
 #include "devBuzzer.h"
-//#include "devBLE.h"
+#include "devBLE.h"
 #include "devBLETele.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -52,8 +52,6 @@ uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
-uint32_t LastTLMDummyPacketMillis = 0;
-uint32_t LastTLMRCPacketMillis = 0;
 
 LQCALC<25> LQCalc;
 
@@ -1181,25 +1179,7 @@ void loop()
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
-    BluetoothTelemetrySendLinkStatsPacket();
     TLMpacketReported = now;
-  }
-
-  if (now >= (uint32_t)(500 + LastTLMRCPacketMillis))
-  {
-    /* Periodically send RC channels packet for Android Telemetry viewer */
-    BluetoothTelemetrySendRCFrame();
-    LastTLMRCPacketMillis = now;
-    return;
-  }
-
-  if ((connectionState == disconnected) &&
-      (now >= (uint32_t)(500 + LastTLMDummyPacketMillis)))
-  {
-    /* In disconnected state, still send LinkStats packet to  Android Telemetry viewer */
-    BluetoothTelemetrySendEmptyLinkStatsPacket();
-    LastTLMDummyPacketMillis = now;
-    return;
   }
 
   if (TelemetryReceiver.HasFinishedData())

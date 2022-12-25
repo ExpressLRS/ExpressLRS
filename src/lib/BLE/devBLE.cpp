@@ -8,6 +8,8 @@
 #include "hwTimer.h"
 #include "logging.h"
 
+#include "devBLETele.h"
+
 #include <BleGamepad.h>
 #include <NimBLEDevice.h>
 
@@ -30,7 +32,7 @@
 
 class ELRSGamepad : public BleGamepad {
     public:
-        ELRSGamepad() : BleGamepad("ExpressLRS Joystick", "ELRS", 100) {};
+        ELRSGamepad() : BleGamepad("Express LRS Joystick", "ELRS", 100) {};
 
     protected:
         void onStarted(NimBLEServer *pServer) {
@@ -69,6 +71,8 @@ void BluetoothJoystickBegin()
     // bleGamepad is null if it hasn't been started yet
     if (bleGamepad != nullptr)
         return;
+
+    BluetoothTelemetryShutdown();
 
     // construct the BLE immediately to prevent reentry from events/timeout
     bleGamepad = new ELRSGamepad();

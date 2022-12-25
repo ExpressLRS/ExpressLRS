@@ -1,5 +1,3 @@
-#include "devBLE.h"
-
 #if defined(PLATFORM_ESP32)
 
 #include "CRSF.h"
@@ -10,6 +8,8 @@
 #include "hwTimer.h"
 #include "logging.h"
 #include "options.h"
+
+#include "devBLETele.h"
 
 NimBLEServer *pServer;
 NimBLECharacteristic *rcCRSF;
@@ -26,24 +26,14 @@ unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
 
 extern CRSF crsf;
 
+static uint32_t LastTMLLinkStatsPacketMillis = 0;
+static uint32_t LastTLMRCPacketMillis = 0;
+
 String getMasterUIDString()
 {
     char muids[7] = {0};
     sprintf(muids, "%02X%02X%02X", MasterUID[3], MasterUID[4], MasterUID[5]);
     return String(muids);
-}
-
-void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
-{
-    if (data != nullptr)
-    {
-        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        if (size <= CRSF_MAX_PACKET_LEN)
-        {
-            rcCRSF->setValue(data, size);
-            rcCRSF->notify();
-        }
-    }
 }
 
 void ICACHE_RAM_ATTR BluetoothTelemetrySendLinkStatsPacketEx(uint8_t* outBuffer)
@@ -132,15 +122,55 @@ void ICACHE_RAM_ATTR BluetoothTelemetrySendRCFrame()
     rcCRSF->notify();
 }
 
+void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
+{
+    if ((connectionState == bleJoystick) || (pServer == nullptr)){
+        return;
+    }
+
+    if (data != nullptr)
+    {
+        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+        if (size <= CRSF_MAX_PACKET_LEN)
+        {
+            rcCRSF->setValue(data, size);
+            rcCRSF->notify();
+        }
+    }
+
+    uint32_t const now = millis();
+
+    if (now >= (uint32_t)(500 + LastTMLLinkStatsPacketMillis)) 
+    {
+        LastTMLLinkStatsPacketMillis = now;
+        if (connectionState == connected) 
+        {
+            BluetoothTelemetrySendLinkStatsPacket();
+        }
+        else
+        {
+            BluetoothTelemetrySendEmptyLinkStatsPacket();
+        }
+    }
+
+    if (now >= (uint32_t)(500 + LastTLMRCPacketMillis))
+    {
+        /* Periodically send RC channels packet for Android Telemetry viewer */
+        BluetoothTelemetrySendRCFrame();
+        LastTLMRCPacketMillis = now;
+        return;
+    }
+}
 
 void BluetoothTelemetryBegin()
 {
 
-    // bleGamepad is null if it hasn't been started yet
+    // pServer is null if it hasn't been started yet
     if (pServer != nullptr)
         return;
 
-    NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
+    //NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
+    NimBLEDevice::init("Express LRS Telemetry");
 
     //Set MTU to max packet length + 3 bytes to be able to send packets longer then default 20 bytes.
     //Should be set on both ends - smaller from two is used.
@@ -179,6 +209,18 @@ void BluetoothTelemetryBegin()
     pAdvertising->start();
 
     INFOLN("Starting BLE Telemetry!");
+}
+
+void BluetoothTelemetryShutdown()
+{
+    INFOLN("Stopping BLE Telemetry!");
+
+    if ( pServer )
+    {
+        NimBLEDevice::deinit();
+        pServer = nullptr;
+        rcCRSF = nullptr;
+    }
 }
 
 static int start()
