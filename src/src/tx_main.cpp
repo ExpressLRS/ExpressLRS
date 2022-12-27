@@ -1121,6 +1121,7 @@ void setup()
 
 void loop()
 {
+  throttleMainLoop();
   uint32_t now = millis();
 
   #if defined(USE_BLE_JOYSTICK)
