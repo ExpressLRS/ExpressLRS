@@ -223,7 +223,7 @@ void BluetoothTelemetryUpdateValues(uint8_t *data)
 
     uint32_t const now = millis();
 
-    if (now >= (uint32_t)(500 + LastTMLLinkStatsPacketMillis)) 
+    if (now >= (uint32_t)(BLE_UPDATE_RATE + LastTMLLinkStatsPacketMillis)) 
     {
         LastTMLLinkStatsPacketMillis = now;
         if (connectionState == connected) 
