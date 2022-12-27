@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdio.h>
 #include <stdint.h>
 
 // duration constants which can be returned from start(), event() or timeout()

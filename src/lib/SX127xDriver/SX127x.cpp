@@ -2,11 +2,15 @@
 #include "logging.h"
 
 SX127xHal hal;
-
-void ICACHE_RAM_ATTR nullCallback(void) {}
-
 SX127xDriver *SX127xDriver::instance = NULL;
 
+#ifdef USE_SX1276_RFO_HF
+  #ifndef OPT_USE_SX1276_RFO_HF
+    #define OPT_USE_SX1276_RFO_HF true
+  #endif
+#else
+  #define OPT_USE_SX1276_RFO_HF false
+#endif
 
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
@@ -25,13 +29,22 @@ const uint8_t SX127x_AllowedSyncwords[105] =
 
 //////////////////////////////////////////////
 
-SX127xDriver::SX127xDriver()
+SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
 {
   instance = this;
-  TXdoneCallback = &nullCallback; // remove callbacks
-  RXdoneCallback = &nullCallback;
-  PayloadLength = 8; // Dummy default value which is overwritten during setup.
-  currFreq = 0; // leave as 0 to ensure that it gets set
+  // default values from datasheet
+  currSyncWord = SX127X_SYNC_WORD;
+  currBW =SX127x_BW_125_00_KHZ;
+  currSF = SX127x_SF_7;
+  currCR = SX127x_CR_4_5;
+  currOpmode = SX127x_OPMODE_SLEEP;
+  ModFSKorLoRa = SX127x_OPMODE_LORA;
+  // Dummy default values which are overwritten during setup
+  currPreambleLen = 0;
+  PayloadLength = 8;
+  currFreq = 0;
+  headerExplMode = false;
+  crcEnabled = false;
 }
 
 bool SX127xDriver::Begin()
@@ -43,6 +56,11 @@ bool SX127xDriver::Begin()
   if (DetectChip())
   {
     ConfigLoraDefaults();
+    // Force the next power update
+    pwrCurrent = PWRPENDING_NONE;
+    SetOutputPower(0);
+    CommitOutputPower();
+
     return true;
   }
   else
@@ -55,8 +73,7 @@ void SX127xDriver::End()
 {
   SetMode(SX127x_OPMODE_SLEEP);
   hal.end();
-  TXdoneCallback = &nullCallback; // remove callbacks
-  RXdoneCallback = &nullCallback;
+  RemoveCallbacks();
 }
 
 void SX127xDriver::ConfigLoraDefaults()
@@ -151,15 +168,36 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
   currSyncWord = _syncWord;
 }
 
+/***
+ * @brief: Schedule an output power change after the next transmit
+ * The radio must be in SX127x_OPMODE_STANDBY to change the power
+ ***/
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
-  SetMode(SX127x_OPMODE_STANDBY);
-  #if defined(USE_SX1276_RFO_HF)
-    hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER | Power);
-  #else
-    hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power);
-  #endif
-  currPWR = Power;
+  uint8_t pwrNew;
+  if (OPT_USE_SX1276_RFO_HF)
+  {
+    pwrNew = SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power;
+  }
+  else
+  {
+    pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
+  }
+
+  if (pwrCurrent != pwrNew)
+  {
+    pwrPending = pwrNew;
+  }
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::CommitOutputPower()
+{
+  if (pwrPending == PWRPENDING_NONE)
+    return;
+
+  pwrCurrent = pwrPending;
+  pwrPending = PWRPENDING_NONE;
+  hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent);
 }
 
 void SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
@@ -297,10 +335,13 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
 {
   currOpmode = SX127x_OPMODE_STANDBY; //goes into standby after transmission
   //TXdoneMicros = micros();
+  // The power level must be changed when in SX127x_OPMODE_STANDBY, so this lags power
+  // changes by at most 1 packet, but does not interrupt any pending RX/TX
+  CommitOutputPower();
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb()
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -311,7 +352,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb()
 
   hal.TXenable();
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX);
-  hal.writeRegisterFIFO(TXdataBuffer, PayloadLength);
+  hal.writeRegisterFIFO(data, size);
 
   SetMode(SX127x_OPMODE_TX);
 }
@@ -327,13 +368,7 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnbISR()
     // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
     currOpmode = SX127x_OPMODE_STANDBY;
   }
-  LastPacketRSSI = GetLastPacketRSSI();
-  LastPacketSNR = GetLastPacketSNR();
-  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
-  // page 87 (note we already do /4 in GetLastPacketSNR())
-  int8_t negOffset = (LastPacketSNR < 0) ? LastPacketSNR : 0;
-  LastPacketRSSI += negOffset;
-  RXdoneCallback();
+  RXdoneCallback(SX12XX_RX_OK);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
@@ -356,27 +391,36 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   }
 }
 
+void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+{
+  LastPacketRSSI = GetLastPacketRSSI();
+  LastPacketSNRRaw = GetLastPacketSNRRaw();
+  // https://www.mouser.com/datasheet/2/761/sx1276-1278113.pdf
+  // Section 3.5.5 (page 87)
+  int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
+  LastPacketRSSI += negOffset;
+}
+
 void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
 { //if radio is not already in the required mode set it to the requested mod
   if (currOpmode != mode)
   {
-    hal.writeRegister(ModFSKorLoRa | SX127X_REG_OP_MODE, mode);
+    hal.writeRegister(SX127X_REG_OP_MODE, mode);
     currOpmode = mode;
   }
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, PayloadLength, interval);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength, interval);
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
 {
-  PayloadLength = PayloadLength;
+  PayloadLength = _PayloadLength;
   IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
-  SetOutputPower(currPWR);
   SetSpreadingFactor((SX127x_SpreadingFactor)sf);
   SetBandwidthCodingRate((SX127x_Bandwidth)bw, (SX127x_CodingRate)cr);
   SetFrequencyReg(freq);
@@ -492,10 +536,9 @@ int8_t ICACHE_RAM_ATTR SX127xDriver::GetCurrRSSI()
   return (-157 + hal.getRegValue(SX127X_REG_RSSI_VALUE));
 }
 
-int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNR()
+int8_t ICACHE_RAM_ATTR SX127xDriver::GetLastPacketSNRRaw()
 {
-  int8_t rawSNR = (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);
-  return (rawSNR / 4);
+  return (int8_t)hal.getRegValue(SX127X_REG_PKT_SNR_VALUE);;
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xDriver::GetIrqFlags()

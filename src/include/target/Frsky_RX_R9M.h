@@ -18,11 +18,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SDA            PB7
 #define GPIO_PIN_SCL            PB6
 
-#if defined(USE_R9MM_R9MINI_SBUS)
-    #define GPIO_PIN_RCSIGNAL_RX    PA3
-    #define GPIO_PIN_RCSIGNAL_TX    PA2
-    #define DEVICE_NAME "FrSky R9MM SBUS"
-#elif defined(TARGET_R9SLIM_RX)
+#if defined(TARGET_R9SLIM_RX)
     #define GPIO_PIN_RCSIGNAL_RX    PA3  // RX1 PIN OF CONNECTOR 1 ON SLIM
     #define GPIO_PIN_RCSIGNAL_TX    PA2  // TX1 PIN OF CONNECTOR 1 ON SLIM
     #define DEVICE_NAME "FrSky R9SLIM RX"
@@ -35,8 +31,10 @@ https://github.com/jaxxzer
     #define GPIO_PIN_RCSIGNAL_TX    PA2 // convinient pin for direct chip solder
     #define DEVICE_NAME "Jumper R900 MINI"
 #else
-    #define GPIO_PIN_RCSIGNAL_RX    PA10
-    #define GPIO_PIN_RCSIGNAL_TX    PA9
+    #define GPIO_PIN_RCSIGNAL_RX        PA10
+    #define GPIO_PIN_RCSIGNAL_TX        PA9
+    #define GPIO_PIN_RCSIGNAL_RX_SBUS   PA3
+    #define GPIO_PIN_RCSIGNAL_TX_SBUS   PA2
     #ifndef DEVICE_NAME
         #define DEVICE_NAME "FrSky R9MM"
     #endif
@@ -60,7 +58,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_RX_ENABLE      PB3
     /* PB9: antenna 1 (left) = HIGH, antenna 2 (right) = LOW
      * Note: Right Antenna is selected by default, LOW */
-    #define GPIO_PIN_ANTENNA_SELECT PB9
+    #define GPIO_PIN_ANT_CTRL PB9
 #elif defined(TARGET_R900MINI_RX)
     #define GPIO_PIN_LED_RED        PA11 // Red
     #define GPIO_PIN_LED_GREEN      PA12 // Green
@@ -73,6 +71,7 @@ https://github.com/jaxxzer
     #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
 #endif
 
+#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
 // External pads
 // #define R9m_Ch1    PA8
 // #define R9m_Ch2    PA11

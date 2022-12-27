@@ -1,6 +1,12 @@
 #include <cstdint>
 #include <cstring>
 #include "telemetry.h"
+#include "logging.h"
+
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#include "tcpsocket.h"
+extern TCPSOCKET wifi2tcp;
+#endif
 
 #if defined(UNIT_TEST)
 #include <iostream>
@@ -8,8 +14,6 @@ using namespace std;
 #endif
 
 #if CRSF_RX_MODULE
-
-#include "CRSF.h"
 
 Telemetry::Telemetry()
 {
@@ -45,7 +49,7 @@ bool Telemetry::ShouldSendDeviceFrame()
 }
 
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
@@ -246,20 +250,31 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
 
-            // larger msp resonses are sent in two chunks so special handling is needed so both get sent
-            if (header->type == CRSF_FRAMETYPE_MSP_RESP)
-            {
-                // there is already another response stored
-                if (payloadTypes[targetIndex].updated)
+            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+                // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
+                if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
                 {
-                    // use other slot
-                    targetIndex = payloadTypesCount - 1;
+                    DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
+                    CRSF::crsf2msp.parse(package);
                 }
-
-                // if both slots are taked do not overwrite other data since the first chunk would be lost
-                if (payloadTypes[targetIndex].updated)
+                else // if no TCP client we just want to forward MSP over the link
+            #endif
+            {
+                // larger msp resonses are sent in two chunks so special handling is needed so both get sent
+                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
                 {
-                    targetFound = false;
+                    // there is already another response stored
+                    if (payloadTypes[targetIndex].updated)
+                    {
+                        // use other slot
+                        targetIndex = payloadTypesCount - 1;
+                    }
+
+                    // if both slots are taked do not overwrite other data since the first chunk would be lost
+                    if (payloadTypes[targetIndex].updated)
+                    {
+                        targetFound = false;
+                    }
                 }
             }
         }

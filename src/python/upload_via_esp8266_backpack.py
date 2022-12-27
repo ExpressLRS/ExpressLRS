@@ -33,11 +33,8 @@ def process_http_result(output_json_file: str) -> int:
     return retval
 
 
-def on_upload(source, target, env):
-    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
+def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
     bootloader_target = None
-
-    upload_addr = ['elrs_tx', 'elrs_tx.local']
     app_start = 0 # eka bootloader offset
 
     # Parse upload flags:
@@ -56,24 +53,15 @@ def on_upload(source, target, env):
                 bootloader_file = flag.split("=")[1]
                 bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
 
-
-    firmware_path = str(source[0])
-    bin_path = os.path.dirname(firmware_path)
-    elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
-    if not os.path.exists(elrs_bin_target):
-        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
-        if not os.path.exists(elrs_bin_target):
-            raise Exception("No valid binary found!")
-
     bin_upload_output = os.path.splitext(elrs_bin_target)[0] + '-output.json'
     if os.path.exists(bin_upload_output):
         os.remove(bin_upload_output)
 
     cmd = ["curl", "--max-time", "60",
            "--retry", "2", "--retry-delay", "1",
+           "--header", "X-FileSize: " + str(os.path.getsize(elrs_bin_target)),
            "-o", "%s" % (bin_upload_output)]
 
-    pio_target = target[0].name
     uri = 'update'
     do_bin_upload = True
 
@@ -82,11 +70,11 @@ def on_upload(source, target, env):
         do_bin_upload = False
     if pio_target == 'uploadforce':
         cmd += ["-F", "force=1"]
+    if isstm:
+        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
+        cmd += ["-F", "type=tx"]
     if do_bin_upload:
         cmd += "-F", "data=@%s" % (elrs_bin_target),
-    if isstm:
-        uri = 'upload'
-        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
 
     if bootloader_target is not None and isstm:
         cmd_bootloader = ["curl", "--max-time", "60",
@@ -105,7 +93,7 @@ def on_upload(source, target, env):
             # Flash bootloader first if set
             if bootloader_target is not None:
                 print("** Flashing Bootloader...")
-                print(cmd_bootloader,cmd)
+                print(cmd_bootloader)
                 subprocess.check_call(cmd_bootloader + [addr])
                 print("** Bootloader Flashed!")
                 print()
@@ -115,7 +103,23 @@ def on_upload(source, target, env):
             returncode = process_http_result(bin_upload_output)
         except subprocess.CalledProcessError as e:
             returncode = e.returncode
+        if returncode == ElrsUploadResult.Success:
+            return returncode
 
     if returncode != ElrsUploadResult.Success:
         print("WIFI upload FAILED!")
     return returncode
+
+def on_upload(source, target, env):
+    firmware_path = str(source[0])
+    bin_path = os.path.dirname(firmware_path)
+    upload_addr = ['elrs_tx', 'elrs_tx.local']
+    elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
+    if not os.path.exists(elrs_bin_target):
+        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+        if not os.path.exists(elrs_bin_target):
+            raise Exception("No valid binary found!")
+
+    pio_target = target[0].name
+    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
+    return do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)

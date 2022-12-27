@@ -47,7 +47,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - id: set-targets
-      run: echo "::set-output name=targets::[$(grep -r "\[env:" src/targets | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
+      run: echo "::set-output name=targets::[$( (grep "\[env:.*UART\]" src/targets/unified.ini ; grep -r "\[env:.*STLINK\]" src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]"
 
   build:
     needs: targets
@@ -89,25 +89,85 @@ jobs:
       run: |
         platformio platform update
         platformio platform install native
-        mkdir -p ~/artifacts
+        mkdir -p ~/artifacts/firmware
         cd src
         case ${{matrix.target}} in
           *2400* | FM30*)
-            export REG=-DRegulatory_Domain_ISM_2400
+            # release builds
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
+
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
           *)
-            export REG=-DRegulatory_Domain_AU_915
+            # release build
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
         esac
-        # All the features
-        PLATFORMIO_BUILD_FLAGS="$REG -DUSE_DIVERSITY -DDEBUG_LOG" pio run -e ${{ matrix.target }}
-        # Minimal/default features
-        PLATFORMIO_BUILD_FLAGS="$REG" pio run -e ${{ matrix.target }}
-        mv .pio/build ~/artifacts/AU_915
+        # copy the common ESP32 files
+        if [[ ${{matrix.target}} == *ESP32* ]] ; then
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ~/artifacts/firmware/
+          mv .pio/build/${{ matrix.target }}/partitions.bin ~/artifacts/firmware/
+        fi
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v2-preview
       with:
-        name: ExpressLRS-${{ env.GITHUB_REF_SLUG_URL }}-${{ github.run_number }}
-        path: ~/artifacts/**/*.bin
+        name: firmware
+        path: ~/artifacts/**/*
       continue-on-error: true
+
+  firmware:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get firmware artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: firmware
+          path: dist
+
+      - name: Copy hardware files to firmware folder
+        run: cp -r src/hardware dist/firmware
+
+      - name: Copy bootloader files to firmware folder
+        run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
+
+      - name: Update firmware artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: firmware
+          path: dist/**/*
+
+  installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - run: pip install pyserial
+      - run: pip install pyinstaller
+      - run: pyinstaller -F src/python/binary_configurator.py -n installer-${{ matrix.os }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: installer
+          path: dist/*
