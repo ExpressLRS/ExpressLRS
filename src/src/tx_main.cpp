@@ -468,6 +468,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     case TX_RADIO_MODE_ANT_2:
       transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
       break;
+    case TX_RADIO_MODE_SWITCH:
+      if(OtaNonce%2==0)   transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
+      else   transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
+      break;
     default:
       break;
     }

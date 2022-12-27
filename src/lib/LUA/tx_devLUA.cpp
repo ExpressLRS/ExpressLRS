@@ -14,7 +14,7 @@ static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
-static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2";
+static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
