@@ -1,6 +1,7 @@
 #pragma once
 
 #include "targets.h"
+#include "Wire.h"
 
 class LM75A
 {

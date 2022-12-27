@@ -1,28 +1,19 @@
 #include <cstdint>
-#include <algorithm>
-#include <cstring>
 #include "stubborn_sender.h"
 
-StubbornSender::StubbornSender()
-    : data(nullptr), length(0)
+StubbornSender::StubbornSender(uint8_t maxPackageIndex)
 {
-    ResetState();
-}
-
-void StubbornSender::setMaxPackageIndex(uint8_t maxPackageIndex)
-{
-    if (this->maxPackageIndex != maxPackageIndex)
-    {
-        this->maxPackageIndex = maxPackageIndex;
-        ResetState();
-    }
+    this->maxPackageIndex = maxPackageIndex;
+    this->ResetState();
 }
 
 void StubbornSender::ResetState()
 {
-    bytesLastPayload = 0;
+    data = nullptr;
+    bytesPerCall = 1;
     currentOffset = 0;
-    currentPackage = 1;
+    currentPackage = 0;
+    length = 0;
     waitUntilTelemetryConfirm = true;
     waitCount = 0;
     // 80 corresponds to UpdateTelemetryRate(ANY, 2, 1), which is what the TX uses in boost mode
@@ -33,59 +24,66 @@ void StubbornSender::ResetState()
 /***
  * Queues a message to send, will abort the current message if one is currently being transmitted
  ***/
-void StubbornSender::SetDataToTransmit(uint8_t* dataToTransmit, uint8_t lengthToTransmit)
+void StubbornSender::SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit, uint8_t bytesPerCall)
 {
-    // if (lengthToTransmit / bytesPerCall >= maxPackageIndex)
-    // {
-    //     return;
-    // }
+    if (lengthToTransmit / bytesPerCall >= maxPackageIndex)
+    {
+        return;
+    }
 
     length = lengthToTransmit;
     data = dataToTransmit;
     currentOffset = 0;
     currentPackage = 1;
     waitCount = 0;
+    this->bytesPerCall = bytesPerCall;
     senderState = (senderState == SENDER_IDLE) ? SENDING : RESYNC_THEN_SEND;
 }
 
-/**
- * @brief: Copy up to maxLen bytes from the current package to outData
- * @returns: packageIndex
- ***/
-uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
+bool StubbornSender::IsActive()
 {
-    uint8_t packageIndex;
+    return senderState != SENDER_IDLE;
+}
 
-    bytesLastPayload = 0;
+void StubbornSender::GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData)
+{
     switch (senderState)
     {
     case RESYNC:
     case RESYNC_THEN_SEND:
-        packageIndex = maxPackageIndex;
+        *packageIndex = maxPackageIndex;
+        *count = 0;
+        *currentData = 0;
         break;
     case SENDING:
+        *currentData = data + currentOffset;
+        *packageIndex = currentPackage;
+        if (bytesPerCall > 1)
         {
-            bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
-            // If this is the last data chunk, and there has been at least one other packet
-            // skip the blank packet needed for WAIT_UNTIL_NEXT_CONFIRM
-            if (currentPackage > 1 && (currentOffset + bytesLastPayload) >= length)
-                packageIndex = 0;
+            if (currentOffset + bytesPerCall <= length)
+            {
+                *count = bytesPerCall;
+            }
             else
-                packageIndex = currentPackage;
-
-            memcpy(outData, &data[currentOffset], bytesLastPayload);
+            {
+                *count = length-currentOffset;
+            }
+        }
+        else
+        {
+            *count = 1;
         }
         break;
     default:
-        packageIndex = 0;
+        *count = 0;
+        *currentData = 0;
+        *packageIndex = 0;
     }
-
-    return packageIndex;
 }
 
 void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
 {
-    stubborn_sender_state_e nextSenderState = senderState;
+    stubborn_sender_state_s nextSenderState = senderState;
 
     switch (senderState)
     {
@@ -101,21 +99,15 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
             break;
         }
 
-        currentOffset += bytesLastPayload;
-        if (currentOffset >= length)
-        {
-            // A 0th packet is always requred so the reciver can
-            // differentiate a new send from a resend, if this is
-            // the first packet acked, send another, else IDLE
-            if (currentPackage == 1)
-                nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
-            else
-                nextSenderState = SENDER_IDLE;
-        }
-
+        currentOffset += bytesPerCall;
         currentPackage++;
         waitUntilTelemetryConfirm = !waitUntilTelemetryConfirm;
         waitCount = 0;
+
+        if (currentOffset >= length)
+        {
+            nextSenderState = WAIT_UNTIL_NEXT_CONFIRM;
+        }
         break;
 
     case RESYNC:

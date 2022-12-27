@@ -14,9 +14,9 @@ void DAC::init()
 {
     DBGLN("Init DAC Driver");
 
-    // I2C initialization is the responsibility of the caller
-    // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-
+    Wire.setSDA(GPIO_PIN_SDA); // set is needed or it wont work :/
+    Wire.setSCL(GPIO_PIN_SCL);
+    Wire.begin();
     m_state = UNKNOWN;
 }
 
@@ -40,6 +40,14 @@ void DAC::resume()
     }
 }
 
+void DAC::setVoltageMV(uint32_t voltsMV)
+{
+    uint8_t ScaledVolts = map(voltsMV, 0, DAC_REF_VCC, 0, 255);
+    setVoltageRegDirect(ScaledVolts);
+    m_currVoltageMV = voltsMV;
+    DBGLN("DAC Voltage %dmV", m_currVoltageMV);
+}
+
 void DAC::setVoltageRegDirect(uint8_t voltReg)
 {
     m_currVoltageRegVal = voltReg;
@@ -52,11 +60,9 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
     Wire.endTransmission();
 }
 
-void DAC::setPower(uint32_t milliVolts)
+void DAC::setPower(int16_t milliVolts)
 {
-    uint8_t ScaledVolts = map(milliVolts, 0, DAC_REF_VCC, 0, 255);
-    setVoltageRegDirect(ScaledVolts);
-    DBGLN("DAC::setPower(%umV)", milliVolts);
+    DAC::setVoltageMV(milliVolts);
 }
 
 DAC TxDAC;

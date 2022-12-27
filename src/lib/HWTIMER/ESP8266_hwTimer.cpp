@@ -1,15 +1,16 @@
 #ifdef PLATFORM_ESP8266
 #include "ESP8266_hwTimer.h"
 
-void (*hwTimer::callbackTick)() = nullptr;
-void (*hwTimer::callbackTock)() = nullptr;
+void inline hwTimer::nullCallback(void) {}
+
+void (*hwTimer::callbackTick)() = &nullCallback;
+void (*hwTimer::callbackTock)() = &nullCallback;
 
 volatile uint32_t hwTimer::HWtimerInterval = TimerIntervalUSDefault;
-bool hwTimer::running = false;
-
 volatile bool hwTimer::isTick = false;
 volatile int32_t hwTimer::PhaseShift = 0;
 volatile int32_t hwTimer::FreqOffset = 0;
+bool hwTimer::running = false;
 uint32_t hwTimer::NextTimeout;
 
 #define HWTIMER_TICKS_PER_US 5
@@ -90,14 +91,14 @@ void ICACHE_RAM_ATTR hwTimer::callback()
     if (hwTimer::isTick)
     {
         timer0_write(NextTimeout);
-        if (callbackTick) callbackTick();
+        hwTimer::callbackTick();
     }
     else
     {
         NextTimeout += hwTimer::PhaseShift;
         timer0_write(NextTimeout);
         hwTimer::PhaseShift = 0;
-        if (callbackTock) callbackTock();
+        hwTimer::callbackTock();
     }
     hwTimer::isTick = !hwTimer::isTick;
 }

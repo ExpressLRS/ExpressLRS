@@ -23,18 +23,16 @@ private:
     uint32_t keyDownStart;
     bool isLongPressed;
 #if defined(JOY_ADC_VALUES)
-    static uint16_t joyAdcValues[N_JOY_ADC_VALUES];
+    static const uint16_t joyAdcValues[N_JOY_ADC_VALUES];
     uint16_t fuzzValues[N_JOY_ADC_VALUES];
     void calcFuzzValues();
 #endif
 
     int readKey();
-
 public:
-    FiveWayButton();
-    void init();
-    void update(int *keyValue, bool *keyLongPressed);
-
     static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
     static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;
+
+    void init();
+    void update(int *keyValue, bool *keyLongPressed);
 };

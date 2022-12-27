@@ -26,12 +26,16 @@
 
 #define CRSF_CRC_POLY 0xd5
 
+#ifndef RCVR_UART_BAUD
+#define RCVR_UART_BAUD 420000
+#endif
+
 #define CRSF_NUM_CHANNELS 16
-#define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
+#define CRSF_CHANNEL_VALUE_MIN  172
 #define CRSF_CHANNEL_VALUE_1000 191
 #define CRSF_CHANNEL_VALUE_MID  992
 #define CRSF_CHANNEL_VALUE_2000 1792
-#define CRSF_CHANNEL_VALUE_MAX  1811 // 2012us - actual CRSF max is 1984 with E.Limits on
+#define CRSF_CHANNEL_VALUE_MAX  1811
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
@@ -52,23 +56,15 @@
 
 #define CRSF_TELEMETRY_LENGTH_INDEX 1
 #define CRSF_TELEMETRY_TYPE_INDEX 2
-#define CRSF_TELEMETRY_FIELD_ID_INDEX 5
-#define CRSF_TELEMETRY_FIELD_CHUNK_INDEX 6
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
-#define AUX1 4
-#define AUX2 5
-#define AUX3 6
-#define AUX4 7
-#define AUX5 8
-#define AUX6 9
-#define AUX7 10
-#define AUX8 11
-#define AUX9 12
-#define AUX10 13
-#define AUX11 14
-#define AUX12 15
+// Macros for big-endian (assume little endian host for now) etc
+#define CRSF_DEC_U16(x) ((uint16_t)__builtin_bswap16(x))
+#define CRSF_DEC_I16(x) ((int16_t)CRSF_DEC_U16(x))
+#define CRSF_DEC_U24(x) (CRSF_DEC_U32((uint32_t)x << 8))
+#define CRSF_DEC_U32(x) ((uint32_t)__builtin_bswap32(x))
+#define CRSF_DEC_I32(x) ((int32_t)CRSF_DEC_U32(x))
 
 //////////////////////////////////////////////////////////////
 
@@ -76,12 +72,19 @@
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
+static const unsigned int VTXtable[6][8] =
+    {{5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725},  /* Band A */
+     {5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866},  /* Band B */
+     {5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945},  /* Band E */
+     {5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880},  /* Ariwave */
+     {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917},  /* Race */
+     {5621, 5584, 5547, 5510, 5473, 5436, 5399, 5362}}; /* LO Race */
+
 typedef enum
 {
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
-    CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
     CRSF_FRAMETYPE_RADIO_ID = 0x3A,
@@ -126,7 +129,10 @@ enum {
 enum {
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
     CRSF_FRAME_VARIO_PAYLOAD_SIZE = 2,
+<<<<<<< HEAD
     CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 4, // TBS version is 2, ELRS is 4 (combines vario)
+=======
+>>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
     CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
@@ -189,8 +195,6 @@ typedef struct crsf_header_s
     uint8_t type;        // from crsf_frame_type_e
 } PACKED crsf_header_t;
 
-#define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
-
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_ext_header_s
 {
@@ -245,7 +249,7 @@ typedef struct deviceInformationPacket_s
     uint8_t parameterVersion;
 } PACKED deviceInformationPacket_t;
 
-#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + strlen(device_name)+1)
+#define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + device_name_size)
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
@@ -338,22 +342,22 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
     return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2;
 }
 
-// Scale a -100& to +100% crossfire value to 988-2012 (Taranis channel uS)
+// Scale a full range crossfire value to 988-2012 (Taransi channel uS)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 {
-    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 988, 2012);
+    return fmap(val, 172, 1811, 988, 2012);
 }
 
-// Scale down a 10-bit value to a -100& to +100% crossfire value
+// Scale down a 10-bit value to a full range crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
 {
-    return fmap(val, 0, 1023, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+    return fmap(val, 0, 1024, 172, 1811);
 }
 
-// Scale up a -100& to +100% crossfire value to 10-bit
+// Scale up a full range crossfire value to 10-bit
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
 {
-    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023);
+    return fmap(val, 172, 1811, 0, 1023);
 }
 
 // Convert 0-max to the CRSF values for 1000-2000
@@ -420,25 +424,7 @@ static inline uint16_t htobe16(uint16_t val)
 #endif
 }
 
-static inline uint16_t be16toh(uint16_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap16(val);
-#endif
-}
-
 static inline uint32_t htobe32(uint32_t val)
-{
-#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    return val;
-#else
-    return __builtin_bswap32(val);
-#endif
-}
-
-static inline uint32_t be32toh(uint32_t val)
 {
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     return val;

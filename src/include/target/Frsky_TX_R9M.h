@@ -45,6 +45,9 @@
 #define HighPower                       PWR_250mW
 #define MaxPower                        PWR_1000mW
 #if !defined(POWER_OUTPUT_VALUES)
-    #define POWER_OUTPUT_VALUES         {720,875,1000,1140,1390,1730,2100,2600}
-    #define POWER_OUTPUT_VALUES_868     {650,860,1000,1160,1420,1730,2100,2600}
+    #if defined(Regulatory_Domain_EU_868)
+        #define POWER_OUTPUT_VALUES {650,860,1000,1160,1420,1730,2100,2600}
+    #else
+        #define POWER_OUTPUT_VALUES {720,875,1000,1140,1390,1730,2100,2600}
+    #endif
 #endif

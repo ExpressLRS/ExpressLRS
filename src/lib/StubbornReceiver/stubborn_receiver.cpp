@@ -1,28 +1,19 @@
 #include <cstdint>
-#include <algorithm>
-#include <cstring>
 #include "stubborn_receiver.h"
 
-StubbornReceiver::StubbornReceiver()
+StubbornReceiver::StubbornReceiver(uint8_t maxPackageIndex)
 {
-    ResetState();
-    data = nullptr;
-    length = 0;
-}
-
-void StubbornReceiver::setMaxPackageIndex(uint8_t maxPackageIndex)
-{
-    if (this->maxPackageIndex != maxPackageIndex)
-    {
-        this->maxPackageIndex = maxPackageIndex;
-        ResetState();
-    }
+    this->maxPackageIndex = maxPackageIndex;
+    this->ResetState();
 }
 
 void StubbornReceiver::ResetState()
 {
-    currentPackage = 1;
+    data = 0;
+    bytesPerCall = 1;
     currentOffset = 0;
+    currentPackage = 0;
+    length = 0;
     telemetryConfirm = false;
 }
 
@@ -31,18 +22,25 @@ bool StubbornReceiver::GetCurrentConfirm()
     return telemetryConfirm;
 }
 
-void StubbornReceiver::SetDataToReceive(uint8_t* dataToReceive, uint8_t maxLength)
+void StubbornReceiver::SetDataToReceive(uint8_t maxLength, uint8_t* dataToReceive, uint8_t bytesPerCall)
 {
     length = maxLength;
     data = dataToReceive;
     currentPackage = 1;
     currentOffset = 0;
     finishedData = false;
+    this->bytesPerCall = bytesPerCall;
 }
 
-void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * const receiveData, uint8_t dataLen)
+void StubbornReceiver::ReceiveData(uint8_t packageIndex, volatile uint8_t* receiveData)
 {
-    // Resync
+    if  (packageIndex == 0 && currentPackage > 1)
+    {
+        finishedData = true;
+        telemetryConfirm = !telemetryConfirm;
+        return;
+    }
+
     if (packageIndex == maxPackageIndex)
     {
         telemetryConfirm = !telemetryConfirm;
@@ -57,26 +55,19 @@ void StubbornReceiver::ReceiveData(uint8_t const packageIndex, uint8_t const * c
         return;
     }
 
-    bool acceptData = false;
-    if (packageIndex == 0 && currentPackage > 1)
+    if (packageIndex == currentPackage)
     {
-        // PackageIndex 0 (the final packet) can also contain data
-        acceptData = true;
-        finishedData = true;
-    }
-    else if (packageIndex == currentPackage)
-    {
-        acceptData = true;
+        for (uint8_t i = 0; i < bytesPerCall; i++)
+        {
+            data[currentOffset++] = *(receiveData + i);
+        }
+
         currentPackage++;
+        telemetryConfirm = !telemetryConfirm;
+        return;
     }
 
-    if (acceptData)
-    {
-        uint8_t len = std::min((uint8_t)(length - currentOffset), dataLen);
-        memcpy(&data[currentOffset], receiveData, len);
-        currentOffset += len;
-        telemetryConfirm = !telemetryConfirm;
-    }
+    return;
 }
 
 bool StubbornReceiver::HasFinishedData()

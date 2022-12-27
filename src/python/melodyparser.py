@@ -1,5 +1,3 @@
-import sys
-
 notesChars = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 pauseChar = 'P'
 
@@ -28,7 +26,9 @@ def parseMelody(melodyString, bpm=120, transposeBySemitones=0):
 			operations.append([frequency, duration])
 		else:
 			continue
-	return operations
+	# turn list into C-style array string
+	arrayString = generateArrayString(operations)
+	return arrayString
 
 def getFrequency(note, transposeBy=0, A4=440):
 	# example note: A#5, meaning: 5th octave A sharp
@@ -40,7 +40,7 @@ def getFrequency(note, transposeBy=0, A4=440):
 	else:
 		keyNumber = keyNumber + ((octave - 1) * 12) + 1
 	keyNumber += transposeBy
-	return int(A4 * 2 ** ((keyNumber - 49) / 12.0))
+	return int(A4 * 2 ** ((keyNumber - 49) / 12))
 
 def getDurationInMs(bpm, duration):
 	return int((1000 * (60 * 4 / bpm)) / float(duration))
@@ -49,10 +49,10 @@ def generateArrayString(melodyArray):
 	# generate C-style array string from python list
 	elements = []
 	for element in melodyArray:
-		elements.append("{" + str(int(element[0])) + "," + str(int(element[1])) + "}")
+		elements.append("{" + str(element[0]) + "," + str(element[1]) + "}")
 	return "{" + ','.join(elements) + "}"
 
-def parseToArray(melodyOrRTTTL):
+def parse(melodyOrRTTTL):
 	# If | in melody it is original notes|bpm|transpose format
 	if ('|' in melodyOrRTTTL):
 		defineValue = melodyOrRTTTL.split("|")
@@ -61,12 +61,14 @@ def parseToArray(melodyOrRTTTL):
 	# Else assume RTTL
 	else:
 		from external.rtttl import RTTTL
-		return RTTTL(melodyOrRTTTL).notes()
+		retVal = ""
+		tune = RTTTL(melodyOrRTTTL)
+		for freq, msec in tune.notes():
+			retVal += f"{{{freq:.0f},{msec:.0f}}},"
 
-def parse(melodyOrRTTTL):
-	operations = parseToArray(melodyOrRTTTL)
-	return generateArrayString(operations)
+		if retVal != "":
+			retVal = "{" + retVal[:-1] + "}"
+		else:
+			raise ValueError("Blank RTTTL melody detected")
+		return retVal
 
-
-if __name__ == '__main__':
-	print(parse(sys.argv[1]))

@@ -14,10 +14,10 @@ class hwTimer
 {
 public:
 	static volatile uint32_t HWtimerInterval;
-	static bool running;
 	static volatile bool isTick;
 	static volatile int32_t PhaseShift;
 	static volatile int32_t FreqOffset;
+	static bool running;
 	static uint32_t NextTimeout;
 
 	static void init();

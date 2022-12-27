@@ -20,8 +20,8 @@
 #define GPIO_PIN_RST                PB0
 #define GPIO_PIN_TX_ENABLE          PA8  // Works on Lite
 #define GPIO_PIN_RX_ENABLE          PB14 // Works on Lite
-#define GPIO_PIN_ANT_CTRL           PA9
-#define GPIO_PIN_ANT_CTRL_COMPL     PB13
+#define GPIO_PIN_ANT_CTRL_1         PA9
+#define GPIO_PIN_ANT_CTRL_2         PB13
 #define GPIO_PIN_RCSIGNAL_RX        PA10 // S.PORT (Only needs one wire )
 #define GPIO_PIN_RCSIGNAL_TX        PB6  // Needed for CRSF libs but does nothing/not hooked up to JR module.
 #define GPIO_PIN_LED_WS2812         PB6
@@ -48,3 +48,5 @@
 /* Joystick values              {UP, DOWN, LEFT, RIGHT, ENTER, IDLE}*/
 #define JOY_ADC_VALUES          {459, 509, 326, 182, 91, 1021}
 #endif
+
+#define Regulatory_Domain_ISM_2400 1

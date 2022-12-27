@@ -1,51 +1,54 @@
 #pragma once
 
 #include "targets.h"
+
+#if defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || defined(Regulatory_Domain_FCC_915) || defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433)
+#include "SX127xDriver.h"
+#elif Regulatory_Domain_ISM_2400
+#include "SX1280Driver.h"
+#endif
+
 #include "random.h"
 
-#if defined(RADIO_SX127X)
-#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
-#elif defined(RADIO_SX128X)
-#define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
+#ifdef Regulatory_Domain_AU_915
+#define Regulatory_Domain_Index 1
+#elif defined Regulatory_Domain_FCC_915
+#define Regulatory_Domain_Index 2
+#elif defined Regulatory_Domain_EU_868
+#define Regulatory_Domain_Index 3
+#elif defined Regulatory_Domain_AU_433
+#define Regulatory_Domain_Index 4
+#elif defined Regulatory_Domain_EU_433
+#define Regulatory_Domain_Index 5
+#elif defined Regulatory_Domain_ISM_2400
+#define Regulatory_Domain_Index 6
+#elif defined Regulatory_Domain_IN_866
+#define Regulatory_Domain_Index 7
+#else
+#define Regulatory_Domain_Index 8
 #endif
-#define FreqCorrectionMin (-FreqCorrectionMax)
+
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
+#define FreqCorrectionMin ((int32_t)(-100000/FREQ_STEP))
 
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
-#define FREQ_SPREAD_SCALE 256
-
-typedef struct {
-    const char  *domain;
-    uint32_t    freq_start;
-    uint32_t    freq_stop;
-    uint32_t    freq_count;
-} fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
-extern uint32_t freq_spread;
 extern int32_t FreqCorrection;
 extern uint8_t FHSSsequence[];
+extern const uint32_t FHSSfreqs[];
 extern uint_fast8_t sync_channel;
-extern const fhss_config_t *FHSSconfig;
+extern const uint8_t FHSS_SEQUENCE_CNT;
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
-
 // The number of frequencies for this regulatory domain
-static inline uint32_t FHSSgetChannelCount(void)
-{
-    return FHSSconfig->freq_count;
-}
-
-// get the number of entries in the FHSS sequence
-static inline uint16_t FHSSgetSequenceCount()
-{
-    return (256 / FHSSconfig->freq_count) * FHSSconfig->freq_count;
-}
+uint32_t FHSSgetChannelCount(void);
 
 // get the initial frequency, which is also the sync channel
 static inline uint32_t GetInitialFreq()
 {
-    return FHSSconfig->freq_start + (sync_channel * freq_spread / FREQ_SPREAD_SCALE) - FreqCorrection;
+    return FHSSfreqs[sync_channel] - FreqCorrection;
 }
 
 // Get the current sequence pointer
@@ -57,20 +60,21 @@ static inline uint8_t FHSSgetCurrIndex()
 // Set the sequence pointer, used by RX on SYNC
 static inline void FHSSsetCurrIndex(const uint8_t value)
 {
-    FHSSptr = value % FHSSgetSequenceCount();
+    FHSSptr = value % FHSS_SEQUENCE_CNT;
 }
 
 // Advance the pointer to the next hop and return the frequency of that channel
 static inline uint32_t FHSSgetNextFreq()
 {
-    FHSSptr = (FHSSptr + 1) % FHSSgetSequenceCount();
-    uint32_t freq = FHSSconfig->freq_start + (freq_spread * FHSSsequence[FHSSptr] / FREQ_SPREAD_SCALE) - FreqCorrection;
+    FHSSptr = (FHSSptr + 1) % FHSS_SEQUENCE_CNT;
+    uint32_t freq = FHSSfreqs[FHSSsequence[FHSSptr]] - FreqCorrection;
     return freq;
 }
 
-static inline const char *getRegulatoryDomain()
+// get the number of entries in the FHSS sequence
+static inline uint8_t FHSSgetSequenceCount()
 {
-    return FHSSconfig->domain;
+    return FHSS_SEQUENCE_CNT;
 }
 
 // Get frequency offset by half of the domain frequency range

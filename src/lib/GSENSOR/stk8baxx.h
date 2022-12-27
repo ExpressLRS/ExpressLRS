@@ -1,6 +1,7 @@
 #pragma once
 
 #include "targets.h"
+#include "Wire.h"
 
 class STK8xxx
 {
@@ -79,7 +80,7 @@ public:
 #define STK8xxx_VAL_INT_OD      bit(1)
 
 #define STK8xxx_REG_SLOPETHD    0x28
-#define STK8xxx_VAL_SLP_DFLT    150 // 0x14
+#define STK8xxx_VAL_SLP_DFLT    0x14
 
 #define STK8xxx_REG_SIGMOT2     0x2A
 #define STK8xxx_VAL_SKIP_TIME   bit(0)

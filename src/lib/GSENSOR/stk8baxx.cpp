@@ -1,5 +1,4 @@
 #ifdef HAS_GSENSOR_STK8xxx
-#include <Wire.h>
 #include "stk8baxx.h"
 #include "logging.h"
 

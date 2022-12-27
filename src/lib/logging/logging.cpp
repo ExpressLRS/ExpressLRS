@@ -11,8 +11,6 @@
 void debugPrintf(const char* fmt, ...)
 {
   char c;
-  const char *v;
-  char buf[21];
   va_list  vlist;
   va_start(vlist,fmt);
 
@@ -21,36 +19,22 @@ void debugPrintf(const char* fmt, ...)
     if (c == '%') {
       fmt++;
       c = GETCHAR;
-      v = buf;
-      buf[0] = 0;
       switch (c) {
         case 's':
-          v = va_arg(vlist, const char *);
+          LOGGING_UART.print(va_arg(vlist,const char *));
           break;
         case 'd':
-          itoa(va_arg(vlist, int32_t), buf, DEC);
+          LOGGING_UART.print(va_arg(vlist,int32_t), DEC);
           break;
         case 'u':
-          utoa(va_arg(vlist, uint32_t), buf, DEC);
+          LOGGING_UART.print(va_arg(vlist,uint32_t), DEC);
           break;
         case 'x':
-          utoa(va_arg(vlist, uint32_t), buf, HEX);
+          LOGGING_UART.print(va_arg(vlist,uint32_t), HEX);
           break;
-#if !defined(PLATFORM_STM32)
-        case 'f':
-          {
-            float val = va_arg(vlist, double);
-            itoa((int32_t)val, buf, DEC);
-            strcat(buf, ".");
-            int32_t decimals = abs((int32_t)(val * 1000)) % 1000;
-            itoa(decimals, buf + strlen(buf), DEC);
-          }
-          break;
-#endif
         default:
           break;
       }
-      LOGGING_UART.write((uint8_t*)v, strlen(v));
     } else {
       LOGGING_UART.write(c);
     }
@@ -59,23 +43,3 @@ void debugPrintf(const char* fmt, ...)
   }
   va_end(vlist);
 }
-
-#if defined(DEBUG_INIT)
-// Create a UART to send DBGLN to during preinit
-void debugCreateInitLogger()
-{
-  #if defined(PLATFORM_ESP32)
-  TxBackpack = new HardwareSerial(1);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
-  #else
-  TxBackpack = new HardwareSerial(0);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1);
-  #endif
-}
-
-void debugFreeInitLogger()
-{
-  ((HardwareSerial *)TxBackpack)->end();
-  delete (HardwareSerial *)TxBackpack;
-}
-#endif

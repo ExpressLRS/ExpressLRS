@@ -11,29 +11,29 @@ typedef enum {
     WAIT_UNTIL_NEXT_CONFIRM,
     RESYNC,
     RESYNC_THEN_SEND, // perform a RESYNC then go to SENDING
-} stubborn_sender_state_e;
+} stubborn_sender_state_s;
 
 class StubbornSender
 {
 public:
-    StubbornSender();
-    void setMaxPackageIndex(uint8_t maxPackageIndex);
+    StubbornSender(uint8_t maxPackageIndex);
     void ResetState();
     void UpdateTelemetryRate(uint16_t airRate, uint8_t tlmRatio, uint8_t tlmBurst);
-    void SetDataToTransmit(uint8_t* dataToTransmit, uint8_t lengthToTransmit);
-    uint8_t GetCurrentPayload(uint8_t *outData, uint8_t maxLen);
+    void SetDataToTransmit(uint8_t lengthToTransmit, uint8_t* dataToTransmit, uint8_t bytesPerCall);
+    void GetCurrentPayload(uint8_t *packageIndex, uint8_t *count, uint8_t **currentData);
     void ConfirmCurrentPayload(bool telemetryConfirmValue);
-    bool IsActive() const { return senderState != SENDER_IDLE; }
+    bool IsActive();
     uint16_t GetMaxPacketsBeforeResync() const { return maxWaitCount; }
 private:
     uint8_t *data;
     uint8_t length;
+    uint8_t bytesPerCall;
     uint8_t currentOffset;
-    uint8_t bytesLastPayload;
     uint8_t currentPackage;
     bool waitUntilTelemetryConfirm;
+    bool resetState;
     uint16_t waitCount;
     uint16_t maxWaitCount;
     uint8_t maxPackageIndex;
-    stubborn_sender_state_e senderState;
+    volatile stubborn_sender_state_s senderState;
 };

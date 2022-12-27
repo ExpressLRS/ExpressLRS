@@ -5,7 +5,6 @@
 // There is some special handling for this target
 #define TARGET_TX_FM30
 #define USE_SX1280_DCDC
-//#define CRITICAL_FLASH
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PB12
@@ -46,3 +45,5 @@
 #define HighPower               PWR_100mW
 #define MaxPower                PWR_250mW
 #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
+
+#define Regulatory_Domain_ISM_2400 1

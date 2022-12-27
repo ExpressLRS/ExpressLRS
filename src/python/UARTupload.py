@@ -19,7 +19,7 @@ def dbg_print(line=''):
     return
 
 
-def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target="", accept=None) -> int:
+def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=False, key=None, target="") -> int:
     SCRIPT_DEBUG = False
     half_duplex = False
 
@@ -138,16 +138,17 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
                         gotBootloader = True
                         break
 
-                    elif "_RX" in line:
-                        if line != target and line != accept and not ignore_incorrect_target:
-                            if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (line, target)):
+                    elif "_RX_" in line:
+                        flash_target = re.sub("_VIA_.*", "", target.upper())
+                        if line != flash_target and not ignore_incorrect_target:
+                            if query_yes_no("\n\n\nWrong target selected! your RX is '%s', trying to flash '%s', continue? Y/N\n" % (line, flash_target)):
                                 ignore_incorrect_target = True
                                 continue
                             else:
-                                dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, target))
+                                dbg_print("Wrong target selected your RX is '%s', trying to flash '%s'" % (line, flash_target))
                                 return ElrsUploadResult.ErrorMismatch
-                        elif target != "":
-                            dbg_print("Verified RX target '%s'" % target)
+                        elif flash_target != "":
+                            dbg_print("Verified RX target '%s'" % flash_target)
 
             dbg_print("    Got into bootloader after: %u attempts\n" % currAttempt)
 
@@ -181,7 +182,7 @@ def uart_upload(port, filename, baudrate, ghst=False, ignore_incorrect_target=Fa
             dbg = str(round((total_packets / filechunks) * 100)) + "%"
             if (error_count > 0):
                 dbg += ", err: " + str(error_count)
-            dbg_print(dbg)
+            dbg_print(dbg + "\n")
 
     def getc(size, timeout=3):
         return s.read(size) or None
@@ -235,7 +236,7 @@ def on_upload(source, target, env):
                 envkey = flag.split("=")[1]
 
     try:
-        returncode = uart_upload(upload_port, firmware_path, upload_speed, ghst, upload_force, key=envkey, target=re.sub("_VIA_.*", "", env['PIOENV'].upper()))
+        returncode = uart_upload(upload_port, firmware_path, upload_speed, ghst, upload_force, key=envkey, target=env['PIOENV'])
     except Exception as e:
         dbg_print("{0}\n".format(e))
         return ElrsUploadResult.ErrorGeneral

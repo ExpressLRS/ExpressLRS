@@ -1,7 +1,6 @@
 #ifndef DEVICE_NAME
 #define DEVICE_NAME "Namimno 2G4RX"
 #endif
-
 // GPIO pin definitions
 #define GPIO_PIN_RST            PB4
 #define GPIO_PIN_BUSY           PB5
@@ -18,4 +17,4 @@
 
 // Output Power - default for SX120
 
-#define POWER_OUTPUT_FIXED 13 //MAX power for 2400 RXes that doesn't have PA is 12.5dbm
+#define Regulatory_Domain_ISM_2400 1

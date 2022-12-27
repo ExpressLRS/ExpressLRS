@@ -1,31 +1,8 @@
-#include "targets.h"
-#include "POWERMGNT.h"
-
-uint8_t powerToCrsfPower(PowerLevels_e Power)
-{
-    // Crossfire's power levels as defined in opentx:radio/src/telemetry/crossfire.cpp
-    //static const int32_t power_values[] = { 0, 10, 25, 100, 500, 1000, 2000, 250, 50 };
-    switch (Power)
-    {
-    case PWR_10mW: return 1;
-    case PWR_25mW: return 2;
-    case PWR_50mW: return 8;
-    case PWR_100mW: return 3;
-    case PWR_250mW: return 7;
-    case PWR_500mW: return 4;
-    case PWR_1000mW: return 5;
-    case PWR_2000mW: return 6;
-    default:
-        return 0;
-    }
-}
-
-#ifndef UNIT_TEST
-
 #include "common.h"
-#include "device.h"
+#include "POWERMGNT.h"
 #include "DAC.h"
 #include "helpers.h"
+#include "common.h"
 
 /*
  * Moves the power management values and special cases out of the main code and into `targets.h`.
@@ -56,22 +33,12 @@ uint8_t powerToCrsfPower(PowerLevels_e Power)
  * 13 on SX1280 (~12.5dBm) or 15 on SX127x (~17dBm)
  */
 
-PowerLevels_e PowerLevelContainer::CurrentPower = PWR_COUNT; // default "undefined" initial value
+PowerLevels_e POWERMGNT::CurrentPower = PWR_COUNT; // default "undefined" initial value
 PowerLevels_e POWERMGNT::FanEnableThreshold = PWR_250mW;
 int8_t POWERMGNT::CurrentSX1280Power = 0;
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-static const int16_t *powerValues;
-#else
 #if defined(POWER_OUTPUT_VALUES)
-static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
-#if defined(POWER_OUTPUT_DAC) && !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
-static const int16_t powerValues868[] = POWER_OUTPUT_VALUES_868;
-extern bool isDomain868();
-#endif
-#else
-static const int16_t *powerValues = nullptr;
-#endif
+static int16_t powerValues[] = POWER_OUTPUT_VALUES;
 #endif
 
 static int8_t powerCaliValues[PWR_COUNT] = {0};
@@ -82,7 +49,7 @@ nvs_handle POWERMGNT::handle = 0;
 
 PowerLevels_e POWERMGNT::incPower()
 {
-    if (CurrentPower < getMaxPower())
+    if (CurrentPower < MaxPower)
     {
         setPower((PowerLevels_e)((uint8_t)CurrentPower + 1));
     }
@@ -119,6 +86,25 @@ void POWERMGNT::decSX1280Ouput()
 int8_t POWERMGNT::currentSX1280Ouput()
 {
     return CurrentSX1280Power;
+}
+
+uint8_t POWERMGNT::powerToCrsfPower(PowerLevels_e Power)
+{
+    // Crossfire's power levels as defined in opentx:radio/src/telemetry/crossfire.cpp
+    //static const int32_t power_values[] = { 0, 10, 25, 100, 500, 1000, 2000, 250, 50 };
+    switch (Power)
+    {
+    case PWR_10mW: return 1;
+    case PWR_25mW: return 2;
+    case PWR_50mW: return 8;
+    case PWR_100mW: return 3;
+    case PWR_250mW: return 7;
+    case PWR_500mW: return 4;
+    case PWR_1000mW: return 5;
+    case PWR_2000mW: return 6;
+    default:
+        return 0;
+    }
 }
 
 uint8_t POWERMGNT::getPowerIndBm()
@@ -202,11 +188,6 @@ void POWERMGNT::LoadCalibration()
 
 void POWERMGNT::init()
 {
-    PowerLevelContainer::CurrentPower = PWR_COUNT;
-
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-    powerValues = POWER_OUTPUT_VALUES;
-#endif
 #if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
 #elif defined(POWER_OUTPUT_ANALOG)
@@ -223,6 +204,9 @@ void POWERMGNT::init()
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, 950);
 #endif
+#if defined(GPIO_PIN_FAN_EN)
+    pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+#endif
     LoadCalibration();
     setDefaultPower();
 }
@@ -233,9 +217,9 @@ PowerLevels_e POWERMGNT::getDefaultPower()
     {
         return MinPower;
     }
-    if (getMaxPower() < DefaultPower)
+    if (MaxPower < DefaultPower)
     {
-        return getMaxPower();
+        return MaxPower;
     }
     return DefaultPower;
 }
@@ -254,44 +238,34 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         Power = MinPower;
     }
-    else if (Power > getMaxPower())
+    else if (Power > MaxPower)
     {
-        Power = getMaxPower();
+        Power = MaxPower;
     }
+
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
-    int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];
-    TxDAC.setPower(mV);
+    TxDAC.setPower(powerValues[Power - MinPower]);
 #elif defined(POWER_OUTPUT_ANALOG)
     Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_DACWRITE) && !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
+#elif defined(POWER_OUTPUT_DACWRITE)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+#elif defined(POWER_OUTPUT_FIXED)
+    Radio.SetOutputPower(POWER_OUTPUT_FIXED);
+#elif defined(POWER_OUTPUT_VALUES) && defined(TARGET_TX)
+    CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
+    Radio.SetOutputPower(CurrentSX1280Power);
+#elif defined(TARGET_RX)
+    // Set to max power for telemetry on the RX if not specified
+    Radio.SetOutputPowerMax();
 #else
-    #if defined(TARGET_UNIFIED_TX) && defined(PLATFORM_ESP32)
-    if (POWER_OUTPUT_DACWRITE)
-    {
-        Radio.SetOutputPower(0b0000);
-        dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-    }
-    else
-    #endif
-    if (POWER_OUTPUT_FIXED != -99)
-    {
-        Radio.SetOutputPower(POWER_OUTPUT_FIXED);
-    }
-    else if (powerValues != nullptr)
-    {
-        CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
-        Radio.SetOutputPower(CurrentSX1280Power);
-    }
+#error "[ERROR] Unknown power management!"
 #endif
     CurrentPower = Power;
     devicesTriggerEvent();
 }
-
-#endif /* !UNIT_TEST */

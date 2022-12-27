@@ -33,5 +33,8 @@
 #define POWER_OUTPUT_DAC            0b0001101
 #define MinPower                    PWR_10mW
 #define MaxPower                    PWR_2000mW
+#if defined(Regulatory_Domain_EU_868)
+#define POWER_OUTPUT_VALUES         {500,860,1000,1170,1460,1730,2100,2600}
+#else
 #define POWER_OUTPUT_VALUES         {895,1030,1128,1240,1465,1700,2050,2600}
-#define POWER_OUTPUT_VALUES_868     {500,860,1000,1170,1460,1730,2100,2600}
+#endif

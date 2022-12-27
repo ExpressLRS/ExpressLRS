@@ -7,13 +7,10 @@ import filecmp
 import shutil
 import gzip
 from external.minify import (html_minifier, rcssmin, rjsmin)
-from external.wheezy.template.engine import Engine
-from external.wheezy.template.ext.core import CoreExtension
-from external.wheezy.template.loader import FileLoader
 
 
 def get_version(env):
-    return '%s (%s)' % (env.get('GIT_VERSION'), env.get('GIT_SHA'))
+    return '%s (%s) %s' % (env.get('GIT_VERSION'), env.get('GIT_SHA'), env.get('REG_DOMAIN'))
 
 def build_version(out, env):
     out.write('const char *VERSION = "%s";\n\n' % get_version(env))
@@ -27,20 +24,11 @@ def compress(data):
         f.write(data)
     return buf.getvalue()
 
-def build_html(mainfile, var, out, env, isTX=False):
-    engine = Engine(
-        loader=FileLoader(["html"]),
-        extensions=[CoreExtension("@@")]
-    )
-    template = engine.get_template(mainfile)
-    data = template.render({
-            'VERSION': get_version(env),
-            'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
-            'isTX': isTX,
-            'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
-        })
+def build_html(mainfile, var, out, env):
+    with open('html/%s' % mainfile, 'r') as file:
+        data = file.read()
     if mainfile.endswith('.html'):
-        data = html_minifier.html_minify(data)
+        data = html_minifier.html_minify(data).replace('@VERSION@', get_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
     if mainfile.endswith('.css'):
         data = rcssmin.cssmin(data)
     if mainfile.endswith('.js'):
@@ -49,24 +37,23 @@ def build_html(mainfile, var, out, env, isTX=False):
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
-def build_common(env, mainfile, isTX):
+def build_common(env, mainfile):
     fd, path = tempfile.mkstemp()
     try:
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
-            build_html(mainfile, "INDEX_HTML", out, env, isTX)
-            build_html("scan.js", "SCAN_JS", out, env, isTX)
-            build_html("mui.js", "MUI_JS", out, env)
-            build_html("elrs.css", "ELRS_CSS", out, env)
-            build_html("hardware.html", "HARDWARE_HTML", out, env, isTX)
-            build_html("hardware.js", "HARDWARE_JS", out, env)
-            build_html("cw.html", "CW_HTML", out, env)
-            build_html("cw.js", "CW_JS", out, env)
-
+            build_html(mainfile, "INDEX_HTML", out, env)
+            build_html("scan.js", "SCAN_JS", out, env)
+            build_html("main.css", "CSS", out, env)
+            build_html("logo.svg", "FLAG", out, env)
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")
         os.remove(path)
 
-target_name = env['PIOENV'].upper()
-build_common(env, "index.html", not '_RX_' in target_name)
+platform = env.get('PIOPLATFORM', '')
+
+if platform in ['espressif8266']:
+    build_common(env, "rx_index.html")
+elif platform in ['espressif32']:
+    build_common(env, "tx_index.html")

@@ -1,55 +1,65 @@
-@@require(isTX)
-
-/* eslint-disable comma-dangle */
-/* eslint-disable max-len */
-/* eslint-disable require-jsdoc */
-
-document.addEventListener('DOMContentLoaded', init, false);
-let scanTimer = undefined;
-let colorTimer = undefined;
-let colorUpdated  = false;
-let storedModelId = 255;
-let buttonActions = [];
+document.addEventListener("DOMContentLoaded", get_mode, false);
+var scanTimer = undefined;
 
 function _(el) {
-  return document.getElementById(el);
+    return document.getElementById(el);
 }
 
-function getPwmFormData() {
-  let ch = 0;
-  let inField;
-  const outData = [];
-  while (inField = _(`pwm_${ch}_ch`)) {
-    const inChannel = inField.value;
-    const mode = _(`pwm_${ch}_mode`).value;
-    const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
-    const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
-    const failsafeField = _(`pwm_${ch}_fs`);
-    let failsafe = failsafeField.value;
-    if (failsafe > 2011) failsafe = 2011;
-    if (failsafe < 988) failsafe = 988;
-    failsafeField.value = failsafe;
+function getPwmFormData()
+{
+    let ch = 0;
+    let inField;
+    let outData = [];
+    while (inField = _(`pwm_${ch}_ch`))
+    {
+        let inChannel = inField.value;
+        let invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
+        let failsafeField = _(`pwm_${ch}_fs`);
+        let failsafe = failsafeField.value;
+        if (failsafe > 2011) failsafe = 2011;
+        if (failsafe < 988) failsafe = 988;
+        failsafeField.value = failsafe;
 
-    const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafe - 988);
-    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} inv=${invert} nar=${narrow} raw=${raw}`);
-    outData.push(raw);
-    ++ch;
-  }
+        let raw = (invert << 14) | (inChannel << 10) | (failsafe - 988);
+        //console.log(`PWM ${ch} input=${inChannel} fs=${failsafe} inv=${invert} raw=${raw}`);
+        outData.push(raw);
+        ++ch;
+    }
 
-  const outForm = new FormData();
-  outForm.append('pwm', outData.join(','));
-  return outForm;
+    let outForm = new FormData();
+    outForm.append('pwm', outData.join(','));
+    return outForm;
 }
 
-function enumSelectGenerate(id, val, arOptions) {
-  // Generate a <select> item with every option in arOptions, and select the val element (0-based)
-  const retVal = `<div class="mui-select"><select id="${id}">` +
-        arOptions.map((item, idx) => {
-          return `<option value="${idx}"${(idx == val) ? ' selected' : ''}>${item}</option>`;
-        }).join('') + '</select></div>';
-  return retVal;
-}
+function updatePwmSettings(arPwm)
+{
+    if (arPwm === undefined)
+        return;
+    // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert
+    let htmlFields = ['<table class="pwmtbl"><tr><th>Output</th><th>Input</th><th>Invert?</th><th>Failsafe</th></tr>'];
+    arPwm.forEach((item, index) => {
+        let failsafe = (item & 1023) + 988; // 10 bits
+        let ch = (item >> 10) & 15; // 4 bits
+        let inv = (item >> 14) & 1;
+        htmlFields.push(`<tr><th>${index+1}</th><td><select id="pwm_${index}_ch">
+          <option value="0"${(ch===0) ? ' selected' : ''}>ch1</option>
+          <option value="1"${(ch===1) ? ' selected' : ''}>ch2</option>
+          <option value="2"${(ch===2) ? ' selected' : ''}>ch3</option>
+          <option value="3"${(ch===3) ? ' selected' : ''}>ch4</option>
+          <option value="4"${(ch===4) ? ' selected' : ''}>ch5 (AUX1)</option>
+          <option value="5"${(ch===5) ? ' selected' : ''}>ch6 (AUX2)</option>
+          <option value="6"${(ch===6) ? ' selected' : ''}>ch7 (AUX3)</option>
+          <option value="7"${(ch===7) ? ' selected' : ''}>ch8 (AUX4)</option>
+          <option value="8"${(ch===8) ? ' selected' : ''}>ch9 (AUX5)</option>
+          <option value="9"${(ch===9) ? ' selected' : ''}>ch10 (AUX6)</option>
+          <option value="10"${(ch===10) ? ' selected' : ''}>ch11 (AUX7)</option>
+          <option value="11"${(ch===11) ? ' selected' : ''}>ch12 (AUX8)</option>
+        </select></td><td><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></td>
+        <td><input id="pwm_${index}_fs" value="${failsafe}" size="4"/></td></tr>`);
+    });
+    htmlFields.push('<tr><td colspan="4"><input type="submit" value="Set PWM Output"></td></tr></table>');
 
+<<<<<<< HEAD
 function updatePwmSettings(arPwm) {
   if (arPwm === undefined) {
     if (_('pwm_tab')) _('pwm_tab').style.display = 'none';
@@ -88,269 +98,302 @@ function updatePwmSettings(arPwm) {
   _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
 @@end
 }
+=======
+    let grp = document.createElement('DIV');
+    grp.setAttribute('class', 'group');
+    grp.innerHTML = htmlFields.join('');
+>>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 
-function init() {
-  // setup network radio button handling
-  _('nt0').onclick = () => _('credentials').style.display = 'block';
-  _('nt1').onclick = () => _('credentials').style.display = 'block';
-  _('nt2').onclick = () => _('credentials').style.display = 'none';
-  _('nt3').onclick = () => _('credentials').style.display = 'none';
-@@if not isTX:
-  // setup model match checkbox handler
-  _('model-match').onclick = () => {
-    if (_('model-match').checked) {
-      _('modelid').style.display = 'block';
-      if (storedModelId == 255) {
-        _('modelid').value = '';
-      } else {
-        _('modelid').value = storedModelId;
-      }
-    } else {
-      _('modelid').style.display = 'none';
-      _('modelid').value = '255';
+    _('pwm').appendChild(grp);
+    _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
+    _('pwm_container').style.display = 'block';
+}
+
+function get_mode() {
+    var json_url = 'mode.json';
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+            var data = JSON.parse(this.responseText);
+            if (data.mode==="STA") {
+                _('stamode').style.display = 'block';
+                _('ssid').textContent = data.ssid;
+            } else {
+                _('apmode').style.display = 'block';
+                if (data.ssid) {
+                    _('homenet').textContent = data.ssid;
+                } else {
+                    _('connect').style.display = 'none';
+                }
+                scanTimer = setInterval(get_networks, 2000);
+            }
+            if (data.modelid !== undefined)
+                _('modelid').value = data.modelid;
+            updatePwmSettings(data.pwm);
+        }
+    };
+    xmlhttp.open("POST", json_url, true);
+    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlhttp.send();
+}
+
+function get_networks() {
+    var json_url = 'networks.json';
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+            var data = JSON.parse(this.responseText);
+            _('loader').style.display = 'none';
+            autocomplete(_('network'), data);
+            clearInterval(scanTimer);
+        }
+    };
+    xmlhttp.open("POST", json_url, true);
+    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlhttp.send();
+}
+
+function hasErrorParameter() {
+    var tmp = [], result = false;
+    location.search
+        .substr(1)
+        .split("&")
+        .forEach(function (item) {
+            tmp = item.split("=");
+            if (tmp[0] === "error") result = true;
+        });
+    return result;
+}
+
+function show(elements, specifiedDisplay) {
+    elements = elements.length ? elements : [elements];
+    for (var index = 0; index < elements.length; index++) {
+        elements[index].style.display = specifiedDisplay || 'block';
     }
-  };
-@@end
-  initOptions();
 }
 
-function changeCurrentColors() {
-  if (colorTimer === undefined) {
-    sendCurrentColors();
-    colorTimer = setInterval(timeoutCurrentColors, 50);
-  } else {
-    colorUpdated = true;
-  }
-}
+var elements = document.querySelectorAll('#failed');
+if (hasErrorParameter()) show(elements);
 
-function sendCurrentColors() {
-  const formData = new FormData(_('upload_options'));
-  const data = Object.fromEntries(formData);
-  colors = [];
-  for (const [k, v] of Object.entries(data)) {
-    if (_(k) && _(k).type == 'color') {
-      const index = parseInt(k.substring('6')) - 1;
-      if (_(k + '-div').style.display === 'none') colors[index] = -1;
-      else colors[index] = parseInt(v.substring(1), 16);
+function autocomplete(inp, arr) {
+    /*the autocomplete function takes two arguments,
+    the text field element and an array of possible autocompleted values:*/
+    var currentFocus;
+
+    /*execute a function when someone writes in the text field:*/
+    function handler(e) {
+        var a, b, i, val = this.value;
+        /*close any already open lists of autocompleted values*/
+        closeAllLists();
+        currentFocus = -1;
+        /*create a DIV element that will contain the items (values):*/
+        a = document.createElement("DIV");
+        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("class", "autocomplete-items");
+        /*append the DIV element as a child of the autocomplete container:*/
+        this.parentNode.appendChild(a);
+        /*for each item in the array...*/
+        for (i = 0; i < arr.length; i++) {
+            /*check if the item starts with the same letters as the text field value:*/
+            if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+                /*create a DIV element for each matching element:*/
+                b = document.createElement("DIV");
+                /*make the matching letters bold:*/
+                b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+                b.innerHTML += arr[i].substr(val.length);
+                /*insert a input field that will hold the current array item's value:*/
+                b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+                /*execute a function when someone clicks on the item value (DIV element):*/
+                b.addEventListener("click", ((arg) => (e) => {
+                    /*insert the value for the autocomplete text field:*/
+                    inp.value = arg.getElementsByTagName("input")[0].value;
+                    /*close the list of autocompleted values,
+                    (or any other open lists of autocompleted values:*/
+                    closeAllLists();
+                })(b));
+                a.appendChild(b);
+            }
+        }
     }
-  }
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.open('POST', '/buttons', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/json');
-  xmlhttp.send(JSON.stringify(colors));
-  colorUpdated = false;
-}
+    inp.addEventListener("input", handler);
+    inp.addEventListener("click", handler);
 
-function timeoutCurrentColors() {
-  if (colorUpdated) {
-    sendCurrentColors();
-  } else {
-    clearInterval(colorTimer);
-    colorTimer = undefined;
-  }
-}
-
-function updateConfig(data) {
-  if (data.mode==='STA') {
-    _('stamode').style.display = 'block';
-    _('ssid').textContent = data.ssid;
-  } else {
-    _('apmode').style.display = 'block';
-  }
-@@if not isTX:
-  if (data.hasOwnProperty('modelid') && data.modelid != 255) {
-    _('modelid').style.display = 'block';
-    _('model-match').checked = true;
-    storedModelId = data.modelid;
-  } else {
-    _('modelid').style.display = 'none';
-    _('model-match').checked = false;
-    storedModelId = 255;
-  }
-  _('modelid').value = storedModelId;
-@@end
-  if (data.product_name) _('product_name').textContent = data.product_name;
-  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
-  if (data.uid) _('uid').value = data.uid.toString();
-  if (data.uidtype) _('uid-type').textContent = data.uidtype;
-  updatePwmSettings(data.pwm);
-@@if isTX:
-  if (data.hasOwnProperty['button-colors']) {
-    if (_('button1-color')) _('button1-color').oninput = changeCurrentColors;
-    if (data['button-colors'][0] === -1) _('button1-color-div').style.display = 'none';
-    else _('button1-color').value = color(data['button-colors'][0]);
-
-    if (_('button2-color')) _('button2-color').oninput = changeCurrentColors;
-    if (data['button-colors'][1] === -1) _('button2-color-div').style.display = 'none';
-    else _('button2-color').value = color(data['button-colors'][1]);
-  }
-  if (data.hasOwnProperty('button-actions')) {
-    updateButtons(data['button-actions']);
-  } else {
-    _('button-tab').style.display = 'none';
-  }
-  if (data['has-highpower'] === true) _('has-highpower').style.display = 'block';
-@@end
-}
-
-function initOptions() {
-  initBindingPhraseGen();
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      updateOptions(data['options']);
-      updateConfig(data['config']);
-      scanTimer = setInterval(getNetworks, 2000);
+    /*execute a function presses a key on the keyboard:*/
+    inp.addEventListener("keydown", (e) => {
+        var x = _(this.id + "autocomplete-list");
+        if (x) x = x.getElementsByTagName("div");
+        if (e.keyCode == 40) {
+            /*If the arrow DOWN key is pressed,
+            increase the currentFocus variable:*/
+            currentFocus++;
+            /*and and make the current item more visible:*/
+            addActive(x);
+        } else if (e.keyCode == 38) { //up
+            /*If the arrow UP key is pressed,
+            decrease the currentFocus variable:*/
+            currentFocus--;
+            /*and and make the current item more visible:*/
+            addActive(x);
+        } else if (e.keyCode == 13) {
+            /*If the ENTER key is pressed, prevent the form from being submitted,*/
+            e.preventDefault();
+            if (currentFocus > -1) {
+                /*and simulate a click on the "active" item:*/
+                if (x) x[currentFocus].click();
+            }
+        }
+    });
+    function addActive(x) {
+        /*a function to classify an item as "active":*/
+        if (!x) return false;
+        /*start by removing the "active" class on all items:*/
+        removeActive(x);
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = (x.length - 1);
+        /*add class "autocomplete-active":*/
+        x[currentFocus].classList.add("autocomplete-active");
     }
-  };
-  xmlhttp.open('GET', '/config', true);
-  xmlhttp.send();
-}
-
-function getNetworks() {
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      if (data.length > 0) {
-        _('loader').style.display = 'none';
-        autocomplete(_('network'), data);
-        clearInterval(scanTimer);
-      }
+    function removeActive(x) {
+        /*a function to remove the "active" class from all autocomplete items:*/
+        for (var i = 0; i < x.length; i++) {
+            x[i].classList.remove("autocomplete-active");
+        }
     }
-  };
-  xmlhttp.open('GET', 'networks.json', true);
-  xmlhttp.send();
+    function closeAllLists(elmnt) {
+        /*close all autocomplete lists in the document,
+        except the one passed as an argument:*/
+        var x = document.getElementsByClassName("autocomplete-items");
+        for (var i = 0; i < x.length; i++) {
+            if (elmnt != x[i] && elmnt != inp) {
+                x[i].parentNode.removeChild(x[i]);
+            }
+        }
+    }
+    /*execute a function when someone clicks in the document:*/
+    document.addEventListener("click", (e) => {
+        closeAllLists(e.target);
+    });
 }
 
-// =========================================================
+//=========================================================
 
 function uploadFile() {
-  _('upload_btn').disabled = true
-  try {
-    const file = _('firmware_file').files[0];
-    const formdata = new FormData();
-    formdata.append('upload', file, file.name);
-    const ajax = new XMLHttpRequest();
-    ajax.upload.addEventListener('progress', progressHandler, false);
-    ajax.addEventListener('load', completeHandler, false);
-    ajax.addEventListener('error', errorHandler, false);
-    ajax.addEventListener('abort', abortHandler, false);
-    ajax.open('POST', '/update');
-    ajax.setRequestHeader('X-FileSize', file.size);
+    var file = _("firmware_file").files[0];
+    var formdata = new FormData();
+    formdata.append("upload", file, file.name);
+    var ajax = new XMLHttpRequest();
+    ajax.upload.addEventListener("progress", progressHandler, false);
+    ajax.addEventListener("load", completeHandler, false);
+    ajax.addEventListener("error", errorHandler, false);
+    ajax.addEventListener("abort", abortHandler, false);
+    ajax.open("POST", "/update");
     ajax.send(formdata);
-  }
-  catch (e) {
-    _('upload_btn').disabled = false
-  }
 }
 
 function progressHandler(event) {
-  // _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-  const percent = Math.round((event.loaded / event.total) * 100);
-  _('progressBar').value = percent;
-  _('status').innerHTML = percent + '% uploaded... please wait';
+    //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+    var percent = Math.round((event.loaded / event.total) * 100);
+    _("progressBar").value = percent;
+    _("status").innerHTML = percent + "% uploaded... please wait";
 }
 
 function completeHandler(event) {
-  _('status').innerHTML = '';
-  _('progressBar').value = 0;
-  _('upload_btn').disabled = false
-  const data = JSON.parse(event.target.responseText);
-  if (data.status === 'ok') {
-    function showMessage() {
-      cuteAlert({
-        type: 'success',
-        title: 'Update Succeeded',
-        message: data.msg
-      });
-    }
-    // This is basically a delayed display of the success dialog with a fake progress
-    let percent = 0;
-    const interval = setInterval(()=>{
-      percent = percent + 2;
-      _('progressBar').value = percent;
-      _('status').innerHTML = percent + '% flashed... please wait';
-      if (percent == 100) {
-        clearInterval(interval);
-        _('status').innerHTML = '';
-        _('progressBar').value = 0;
-        showMessage();
-      }
-    }, 100);
-  } else if (data.status === 'mismatch') {
-    cuteAlert({
-      type: 'question',
-      title: 'Targets Mismatch',
-      message: data.msg,
-      confirmText: 'Flash anyway',
-      cancelText: 'Cancel'
-    }).then((e)=>{
-      const xmlhttp = new XMLHttpRequest();
-      xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4) {
-          _('status').innerHTML = '';
-          _('progressBar').value = 0;
-          if (this.status == 200) {
-            const data = JSON.parse(this.responseText);
+    _("status").innerHTML = "";
+    _("progressBar").value = 0;
+    var data = JSON.parse(event.target.responseText);
+    if (data.status === 'ok') {
+        function show_message() {
             cuteAlert({
-              type: 'info',
-              title: 'Force Update',
-              message: data.msg
+                type: 'success',
+                title: "Update Succeeded",
+                message: data.msg
             });
-          } else {
-            cuteAlert({
-              type: 'error',
-              title: 'Force Update',
-              message: 'An error occurred trying to force the update'
-            });
-          }
         }
-      };
-      xmlhttp.open('POST', '/forceupdate', true);
-      const data = new FormData();
-      data.append('action', e);
-      xmlhttp.send(data);
-    });
-  } else {
-    cuteAlert({
-      type: 'error',
-      title: 'Update Failed',
-      message: data.msg
-    });
-  }
+        // This is basically a delayed display of the success dialog with a fake progress
+        var percent = 0;
+        var interval = setInterval(()=>{
+            percent = percent + 2;
+            _("progressBar").value = percent;
+            _("status").innerHTML = percent + "% flashed... please wait";
+            if (percent == 100) {
+                clearInterval(interval);
+                _("status").innerHTML = "";
+                _("progressBar").value = 0;
+                show_message();
+            }
+        }, 100);
+    } else if (data.status === 'mismatch') {
+        cuteAlert({
+            type: 'question',
+            title: "Targets Mismatch",
+            message: data.msg,
+            confirmText: "Flash anyway",
+            cancelText: "Cancel"
+        }).then((e)=>{
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    _("status").innerHTML = "";
+                    _("progressBar").value = 0;
+                    if (this.status == 200) {
+                        var data = JSON.parse(this.responseText);
+                        cuteAlert({
+                            type: "info",
+                            title: "Force Update",
+                            message: data.msg
+                        });
+                    }
+                    else {
+                        cuteAlert({
+                            type: "error",
+                            title: "Force Update",
+                            message: "An error occurred trying to force the update"
+                        });
+                    }
+                }
+            };
+            xmlhttp.open("POST", "/forceupdate", true);
+            var data = new FormData();
+            data.append("action", e);
+            xmlhttp.send(data);
+        });
+    } else {
+        cuteAlert({
+            type: 'error',
+            title: "Update Failed",
+            message: data.msg
+        });
+    }
 }
 
 function errorHandler(event) {
-  _('status').innerHTML = '';
-  _('progressBar').value = 0;
-  _('upload_btn').disabled = false
-  cuteAlert({
-    type: 'error',
-    title: 'Update Failed',
-    message: event.target.responseText
-  });
+    _("status").innerHTML = "";
+    _("progressBar").value = 0;
+    cuteAlert({
+        type: "error",
+        title: "Update Failed",
+        message: event.target.responseText
+    });
 }
 
 function abortHandler(event) {
-  _('status').innerHTML = '';
-  _('progressBar').value = 0;
-  _('upload_btn').disabled = false
-  cuteAlert({
-    type: 'info',
-    title: 'Update Aborted',
-    message: event.target.responseText
-  });
+    _("status").innerHTML = "";
+    _("progressBar").value = 0;
+    cuteAlert({
+        type: "info",
+        title: "Update Aborted",
+        message: event.target.responseText
+    });
 }
 
 _('upload_form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  uploadFile();
+    e.preventDefault();
+    uploadFile();
 });
 
-// =========================================================
+//=========================================================
 
+<<<<<<< HEAD
 function callback(title, msg, url, getdata, success) {
   return function(e) {
     e.stopPropagation();
@@ -494,284 +537,155 @@ function submitButtonActions(e) {
         title: 'Success',
         message: 'Button actions have been saved'
       });
+=======
+function callback(title, msg, url, getdata) {
+    return function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (this.readyState == 4) {
+                if (this.status == 200) {
+                    cuteAlert({
+                        type: "info",
+                        title: title,
+                        message: this.responseText
+                    });
+                }
+                else {
+                    cuteAlert({
+                        type: "error",
+                        title: title,
+                        message: msg
+                    });
+                }
+            }
+        };
+        xmlhttp.open("POST", url, true);
+        if (getdata) data = getdata();
+        else data = null;
+        xmlhttp.send(data);
+>>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
     }
-  };
 }
-_('submit-actions').addEventListener('click', submitButtonActions);
-@@end
 
-function updateOptions(data) {
-  for (const [key, value] of Object.entries(data)) {
-    if (_(key)) {
-      if (_(key).type == 'checkbox') {
-        _(key).checked = value;
+_('sethome').addEventListener('submit', callback("Set Home Network", "An error occurred setting the home network", "/sethome", function() {
+    return new FormData(_('sethome'));
+}));
+_('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
+_('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
+_('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
+if (_('modelmatch') != undefined) {
+    _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model",
+        () => { return new FormData(_('modelmatch')); }));
+}
+
+//=========================================================
+
+// Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/
+
+function cuteAlert({
+    type,
+    title,
+    message,
+    buttonText = "OK",
+    confirmText = "OK",
+    cancelText = "Cancel",
+    closeStyle,
+  }) {
+    return new Promise((resolve) => {
+      setInterval(() => {}, 5000);
+      const body = document.querySelector("body");
+
+      const scripts = document.getElementsByTagName("script");
+
+      let closeStyleTemplate = "alert-close";
+      if (closeStyle === "circle") {
+        closeStyleTemplate = "alert-close-circle";
+      }
+
+      let btnTemplate = `<button class="alert-button ${type}-bg ${type}-btn">${buttonText}</button>`;
+      if (type === "question") {
+        btnTemplate = `
+<div class="question-buttons">
+  <button class="confirm-button error-bg error-btn">${confirmText}</button>
+  <button class="cancel-button question-bg question-btn">${cancelText}</button>
+</div>
+`;
+      }
+
+      let svgTemplate = `
+<svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
+<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
+24zm9.707-33.707a1 1 0 0 0-1.414 0L26 24.586l-8.293-8.293a1 1 0 0 0-1.414 1.414L24.586 26l-8.293 8.293a1 1 0 0 0 0 1.414c.195.195.451.293.707.293s.512-.098.707
+-.293L26 27.414l8.293 8.293c.195.195.451.293.707.293s.512-.098.707-.293a1 1 0 0 0 0-1.414L27.414 26l8.293-8.293a1 1 0 0 0 0-1.414z"/>
+</svg>
+`;
+      if (type === "success") {
+        svgTemplate = `
+<svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
+<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
+24zm12.252-34.664l-15.369 17.29-9.259-7.407a1 1 0 0 0-1.249 1.562l10 8a1 1 0 0 0 1.373-.117l16-18a1 1 0 1 0-1.496-1.328z"/>
+</svg>
+`;
+      }
+      if (type === "info") {
+        svgTemplate = `
+<svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 64 64" xmlns:v="https://vecta.io/nano">
+<path d="M38.535 47.606h-4.08V28.447a1 1 0 0 0-1-1h-4.52a1 1 0 1 0 0 2h3.52v18.159h-5.122a1 1 0 1 0 0 2h11.202a1 1 0 1 0 0-2z"/>
+<circle cx="32" cy="18" r="3"/><path d="M32 0C14.327 0 0 14.327 0 32s14.327 32 32 32 32-14.327 32-32S49.673 0 32 0zm0 62C15.458 62 2 48.542 2 32S15.458 2 32 2s30 13.458 30 30-13.458 30-30 30z"/>
+</svg>
+`;
+      }
+
+      const template = `
+<div class="alert-wrapper">
+  <div class="alert-frame">
+    <div class="alert-header ${type}-bg">
+      <span class="${closeStyleTemplate}">X</span>
+      ${svgTemplate}
+    </div>
+    <div class="alert-body">
+      <span class="alert-title">${title}</span>
+      <span class="alert-message">${message}</span>
+      ${btnTemplate}
+    </div>
+  </div>
+</div>
+`;
+
+      body.insertAdjacentHTML("afterend", template);
+
+      const alertWrapper = document.querySelector(".alert-wrapper");
+      const alertFrame = document.querySelector(".alert-frame");
+      const alertClose = document.querySelector(`.${closeStyleTemplate}`);
+
+      function resolveIt() {
+        alertWrapper.remove();
+        resolve();
+      }
+      function confirmIt() {
+        alertWrapper.remove();
+        resolve("confirm");
+      }
+      function stopProp(e) {
+        e.stopPropagation();
+      }
+
+      if (type === "question") {
+        const confirmButton = document.querySelector(".confirm-button");
+        const cancelButton = document.querySelector(".cancel-button");
+
+        confirmButton.addEventListener("click", confirmIt);
+          cancelButton.addEventListener("click", resolveIt);
       } else {
-        if (Array.isArray(value)) _(key).value = value.toString();
-        else _(key).value = value;
+        const alertButton = document.querySelector(".alert-button");
+
+        alertButton.addEventListener("click", resolveIt);
       }
-    }
+
+      alertClose.addEventListener("click", resolveIt);
+      alertWrapper.addEventListener("click", resolveIt);
+      alertFrame.addEventListener("click", stopProp);
+    });
   }
-  if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
-  else _('connect').style.display = 'none';
-  if (data['customised']) _('reset-options').style.display = 'block';
-}
-
-@@if isTX:
-function toRGB(c)
-{
-  r = c & 0xE0 ;
-  r = ((r << 16) + (r << 13) + (r << 10)) & 0xFF0000;
-  g = c & 0x1C;
-  g = ((g<< 11) + (g << 8) + (g << 5)) & 0xFF00;
-  b = ((c & 0x3) << 1) + ((c & 0x3) >> 1);
-  b = (b << 5) + (b << 2) + (b >> 1);
-  s = (r+g+b).toString(16);
-  return '#' + "000000".substring(0, 6-s.length) + s;
-}
-
-function updateButtons(data) {
-  buttonActions = data;
-  for (const [b, _v] of Object.entries(data)) {
-    for (const [p, v] of Object.entries(_v['action'])) {
-      appendRow(parseInt(b), parseInt(p), v);
-    }
-    _(`button${parseInt(b)+1}-color-div`).style.display = 'block';
-    _(`button${parseInt(b)+1}-color`).value = toRGB(_v['color']);
-  }
-  _('button1-color').oninput = changeCurrentColors;
-  _('button2-color').oninput = changeCurrentColors;
-}
-
-function changeCurrentColors() {
-  if (colorTimer === undefined) {
-    sendCurrentColors();
-    colorTimer = setInterval(timeoutCurrentColors, 50);
-  } else {
-    colorUpdated = true;
-  }
-}
-
-function to8bit(v)
-{
-  v = parseInt(v.substring(1), 16)
-  return ((v >> 16) & 0xE0) + ((v >> (8+3)) & 0x1C) + ((v >> 6) & 0x3)
-}
-
-function sendCurrentColors() {
-  const formData = new FormData(_('button_actions'));
-  const data = Object.fromEntries(formData);
-  colors = [];
-  for (const [k, v] of Object.entries(data)) {
-    if (_(k) && _(k).type == 'color') {
-      const index = parseInt(k.substring('6')) - 1;
-      if (_(k + '-div').style.display === 'none') colors[index] = -1;
-      else colors[index] = to8bit(v);
-    }
-  }
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.open('POST', '/buttons', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/json');
-  xmlhttp.send(JSON.stringify(colors));
-  colorUpdated = false;
-}
-
-function timeoutCurrentColors() {
-  if (colorUpdated) {
-    sendCurrentColors();
-  } else {
-    clearInterval(colorTimer);
-    colorTimer = undefined;
-  }
-}
-
-function checkEnableButtonActionSave() {
-  let disable = false;
-  for (const [b, _v] of Object.entries(buttonActions)) {
-    for (const [p, v] of Object.entries(_v['action'])) {
-      if (v['action'] !== 0 && (_(`select-press-${b}-${p}`).value === '' || _(`select-long-${b}-${p}`).value === '' || _(`select-short-${b}-${p}`).value === '')) {
-        disable = true;
-      }
-    }
-  }
-  _('submit-actions').disabled = disable;
-}
-
-function changeAction(b, p, value) {
-  buttonActions[b]['action'][p]['action'] = value;
-  if (value === 0) {
-    _(`select-press-${b}-${p}`).value = '';
-    _(`select-long-${b}-${p}`).value = '';
-    _(`select-short-${b}-${p}`).value = '';
-  }
-  checkEnableButtonActionSave();
-}
-
-function changePress(b, p, value) {
-  buttonActions[b]['action'][p]['is-long-press'] = (value==='true');
-  _(`mui-long-${b}-${p}`).style.display = value==='true' ? 'block' : 'none';
-  _(`mui-short-${b}-${p}`).style.display = value==='true' ? 'none' : 'block';
-  checkEnableButtonActionSave();
-}
-
-function changeCount(b, p, value) {
-  buttonActions[b]['action'][p]['count'] = parseInt(value);
-  _(`select-long-${b}-${p}`).value = value;
-  _(`select-short-${b}-${p}`).value = value;
-  checkEnableButtonActionSave();
-}
-
-function appendRow(b,p,v) {
-  const row = _('button-actions').insertRow();
-  row.innerHTML = `
-<td>
-  Button ${parseInt(b)+1}
-</td>
-<td>
-  <div class="mui-select">
-    <select onchange="changeAction(${b}, ${p}, parseInt(this.value));">
-      <option value='0' ${v['action']===0 ? 'selected' : ''}>Unused</option>
-      <option value='1' ${v['action']===1 ? 'selected' : ''}>Increase Power</option>
-      <option value='2' ${v['action']===2 ? 'selected' : ''}>Go to VTX Band Menu</option>
-      <option value='3' ${v['action']===3 ? 'selected' : ''}>Go to VTX Channel Menu</option>
-      <option value='4' ${v['action']===4 ? 'selected' : ''}>Send VTX Settings</option>
-      <option value='5' ${v['action']===5 ? 'selected' : ''}>Start WiFi</option>
-      <option value='6' ${v['action']===6 ? 'selected' : ''}>Enter Binding Mode</option>
-    </select>
-    <label>Action</label>
-  </div>
-</td>
-<td>
-  <div class="mui-select">
-    <select id="select-press-${b}-${p}" onchange="changePress(${b}, ${p}, this.value);">
-      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
-      <option value='false' ${v['is-long-press']===false ? 'selected' : ''}>Short press (click)</option>
-      <option value='true' ${v['is-long-press']===true ? 'selected' : ''}>Long press (hold)</option>
-    </select>
-    <label>Press</label>
-  </div>
-</td>
-<td>
-  <div class="mui-select" id="mui-long-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "block": "none"};">
-    <select id="select-long-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
-      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
-      <option value='0' ${v['count']===0 ? 'selected' : ''}>for 0.5 seconds</option>
-      <option value='1' ${v['count']===1 ? 'selected' : ''}>for 1 second</option>
-      <option value='2' ${v['count']===2 ? 'selected' : ''}>for 1.5 seconds</option>
-      <option value='3' ${v['count']===3 ? 'selected' : ''}>for 2 seconds</option>
-      <option value='4' ${v['count']===4 ? 'selected' : ''}>for 2.5 seconds</option>
-      <option value='5' ${v['count']===5 ? 'selected' : ''}>for 3 seconds</option>
-      <option value='6' ${v['count']===6 ? 'selected' : ''}>for 3.5 seconds</option>
-      <option value='7' ${v['count']===7 ? 'selected' : ''}>for 4 seconds</option>
-    </select>
-    <label>Count</label>
-  </div>
-  <div class="mui-select" id="mui-short-${b}-${p}" style="display:${buttonActions[b]['action'][p]['is-long-press'] ? "none": "block"};">
-    <select id="select-short-${b}-${p}" onchange="changeCount(${b}, ${p}, this.value);">
-      <option value='' disabled hidden ${v['action']===0 ? 'selected' : ''}></option>
-      <option value='0' ${v['count']===0 ? 'selected' : ''}>1 time</option>
-      <option value='1' ${v['count']===1 ? 'selected' : ''}>2 times</option>
-      <option value='2' ${v['count']===2 ? 'selected' : ''}>3 times</option>
-      <option value='3' ${v['count']===3 ? 'selected' : ''}>4 times</option>
-      <option value='4' ${v['count']===4 ? 'selected' : ''}>5 times</option>
-      <option value='5' ${v['count']===5 ? 'selected' : ''}>6 times</option>
-      <option value='6' ${v['count']===6 ? 'selected' : ''}>7 times</option>
-      <option value='7' ${v['count']===7 ? 'selected' : ''}>8 times</option>
-    </select>
-    <label>Count</label>
-  </div>
-</td>
-`
-}
-@@end
-
-md5 = function() {
-  const k = [];
-  let i = 0;
-
-  for (; i < 64;) {
-    k[i] = 0 | (Math.abs(Math.sin(++i)) * 4294967296);
-  }
-
-  function calcMD5(str) {
-    let b; let c; let d; let j;
-    const x = [];
-    const str2 = unescape(encodeURI(str));
-    let a = str2.length;
-    const h = [b = 1732584193, c = -271733879, ~b, ~c];
-    let i = 0;
-
-    for (; i <= a;) x[i >> 2] |= (str2.charCodeAt(i) || 128) << 8 * (i++ % 4);
-
-    x[str = (a + 8 >> 6) * 16 + 14] = a * 8;
-    i = 0;
-
-    for (; i < str; i += 16) {
-      a = h; j = 0;
-      for (; j < 64;) {
-        a = [
-          d = a[3],
-          ((b = a[1] | 0) +
-            ((d = (
-              (a[0] +
-                [
-                  b & (c = a[2]) | ~b & d,
-                  d & b | ~d & c,
-                  b ^ c ^ d,
-                  c ^ (b | ~d)
-                ][a = j >> 4]
-              ) +
-              (k[j] +
-                (x[[
-                  j,
-                  5 * j + 1,
-                  3 * j + 5,
-                  7 * j
-                ][a] % 16 + i] | 0)
-              )
-            )) << (a = [
-              7, 12, 17, 22,
-              5, 9, 14, 20,
-              4, 11, 16, 23,
-              6, 10, 15, 21
-            ][4 * a + j++ % 4]) | d >>> 32 - a)
-          ),
-          b,
-          c
-        ];
-      }
-      for (j = 4; j;) h[--j] = h[j] + a[j];
-    }
-
-    str = [];
-    for (; j < 32;) str.push(((h[j >> 3] >> ((1 ^ j++ & 7) * 4)) & 15) * 16 + ((h[j >> 3] >> ((1 ^ j++ & 7) * 4)) & 15));
-
-    return new Uint8Array(str);
-  }
-  return calcMD5;
-}();
-
-function uidBytesFromText(text) {
-  const bindingPhraseFull = `-DMY_BINDING_PHRASE="${text}"`;
-  const bindingPhraseHashed = md5(bindingPhraseFull);
-  const uidBytes = bindingPhraseHashed.subarray(0, 6);
-
-  return uidBytes;
-}
-
-function initBindingPhraseGen() {
-  const uid = _('uid');
-
-  function setOutput(text) {
-    const uidBytes = uidBytesFromText(text);
-    uid.value = uidBytes;
-  }
-
-  function updateValue(e) {
-    setOutput(e.target.value);
-  }
-
-  phrase.addEventListener('input', updateValue);
-  setOutput('');
-}
-
-@@include("libs.js")

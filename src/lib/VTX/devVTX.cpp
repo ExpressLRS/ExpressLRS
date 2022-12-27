@@ -7,20 +7,9 @@
 #include "msp.h"
 #include "logging.h"
 
-#include "devButton.h"
-
-#define PITMODE_OFF     0
-#define PITMODE_ON      1
-
-// Delay after disconnect to preserve the VTXSS_CONFIRMED status
-// Needs to be long enough to reconnect, but short enough to
-// reset between the user switching equipment
-#define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
-
+extern bool ICACHE_RAM_ATTR IsArmed();
 extern CRSF crsf;
-extern Stream *TxBackpack;
-static uint8_t pitmodeAuxState = 0;
-static bool sendEepromWrite = true;
+extern Stream *LoggingBackpack;
 
 static enum VtxSendState_e
 {
@@ -34,25 +23,6 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     devicesTriggerEvent();
-}
-
-void VtxPitmodeSwitchUpdate()
-{
-    if (config.GetVtxPitmode() == PITMODE_OFF)
-    {
-        return;
-    }
-
-    uint8_t auxInverted = config.GetVtxPitmode() % 2;
-    uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
-    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelData[auxNumber]) ^ auxInverted;
-
-    if (pitmodeAuxState != currentPitmodeAuxState)
-    {
-        pitmodeAuxState = currentPitmodeAuxState;
-        sendEepromWrite = false;
-        VtxTriggerSend();
-    }
 }
 
 static void eepromWriteToMSPOut()
@@ -77,28 +47,11 @@ static void VtxConfigToMSPOut()
     packet.addByte(0);
     if (config.GetVtxPower()) {
         packet.addByte(config.GetVtxPower());
-
-        if (config.GetVtxPitmode() == PITMODE_OFF || config.GetVtxPitmode() == PITMODE_ON)
-        {
-            packet.addByte(config.GetVtxPitmode());
-        }
-        else
-        {
-            packet.addByte(pitmodeAuxState);
-        }
+        packet.addByte(config.GetVtxPitmode());
     }
 
     crsf.AddMspMessage(&packet);
-
-    if (!crsf.IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
-    {
-        MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
-    }
-}
-
-static void initialize()
-{
-    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    MSP::sendPacket(&packet, LoggingBackpack); // send to tx-backpack as MSP
 }
 
 static int event()
@@ -111,37 +64,18 @@ static int event()
     }
 
     if (connectionState == disconnected)
-    {
-        // If the VtxSend has completed, wait before going back to VTXSS_UNKNOWN
-        // to ignore a temporary disconnect after saving EEPROM
-        if (VtxSendState == VTXSS_CONFIRMED)
-        {
-            VtxSendState = VTXSS_CONFIRMED;
-            return VTX_DISCONNECT_DEBOUNCE_MS;
-        }
         VtxSendState = VTXSS_UNKNOWN;
-    }
-    else if (VtxSendState == VTXSS_CONFIRMED && connectionState == connected)
-    {
-        return DURATION_NEVER;
-    }
 
-    return DURATION_IGNORE;
+    return DURATION_NEVER;
 }
 
 static int timeout()
 {
     // 0 = off in the lua Band field
-    if (config.GetVtxBand() == 0)
+    // Do not send while armed
+    if (config.GetVtxBand() == 0 || IsArmed())
     {
         VtxSendState = VTXSS_CONFIRMED;
-        return DURATION_NEVER;
-    }
-
-    // Can only get here in VTXSS_CONFIRMED state if still disconnected
-    if (VtxSendState == VTXSS_CONFIRMED)
-    {
-        VtxSendState = VTXSS_UNKNOWN;
         return DURATION_NEVER;
     }
 
@@ -155,9 +89,7 @@ static int timeout()
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
-        if (sendEepromWrite)
-            eepromWriteToMSPOut();
-        sendEepromWrite = true;
+        eepromWriteToMSPOut();
     }
     else
     {
@@ -171,7 +103,7 @@ static int timeout()
 }
 
 device_t VTX_device = {
-    .initialize = initialize,
+    .initialize = NULL,
     .start = NULL,
     .event = event,
     .timeout = timeout

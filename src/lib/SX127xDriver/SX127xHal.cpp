@@ -22,26 +22,23 @@ void SX127xHal::init()
 {
   DBGLN("Hal Init");
 
-  if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     DBGLN("Use PA ctrl pin: %d", GPIO_PIN_PA_ENABLE);
     pinMode(GPIO_PIN_PA_ENABLE, OUTPUT);
     digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
-  }
+#endif
 
-  if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     DBGLN("Use TX pin: %d", GPIO_PIN_TX_ENABLE);
     pinMode(GPIO_PIN_TX_ENABLE, OUTPUT);
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-  }
+#endif
 
-  if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     DBGLN("Use RX pin: %d", GPIO_PIN_RX_ENABLE);
     pinMode(GPIO_PIN_RX_ENABLE, OUTPUT);
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-  }
+#endif
 
 #ifdef PLATFORM_ESP32
   SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI); // sck, miso, mosi, ss (ss can be any GPIO)
@@ -72,15 +69,14 @@ void SX127xHal::init()
 
   digitalWrite(GPIO_PIN_NSS, HIGH);
 
-  if (GPIO_PIN_RST != UNDEF_PIN)
-  {
-    pinMode(GPIO_PIN_RST, OUTPUT);
+#if defined(GPIO_PIN_RST) && (GPIO_PIN_RST != UNDEF_PIN)
+  pinMode(GPIO_PIN_RST, OUTPUT);
 
-    delay(100);
-    digitalWrite(GPIO_PIN_RST, LOW);
-    delay(100);
-    pinMode(GPIO_PIN_RST, INPUT); // leave floating
-  }
+  delay(100);
+  digitalWrite(GPIO_PIN_RST, LOW);
+  delay(100);
+  pinMode(GPIO_PIN_RST, INPUT); // leave floating
+#endif
 
   attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), dioISR, RISING);
 }
@@ -202,50 +198,41 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data)
 
 void ICACHE_RAM_ATTR SX127xHal::TXenable()
 {
-  if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-  }
-  if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
-  }
-  if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
-  }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX127xHal::RXenable()
 {
-  if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, HIGH);
-  }
-  if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-  }
-  if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, HIGH);
-  }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX127xHal::TXRXdisable()
 {
-  if (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
-  {
+#if defined(GPIO_PIN_RX_ENABLE) && (GPIO_PIN_RX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_RX_ENABLE, LOW);
-  }
-  if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_TX_ENABLE) && (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
-  }
-  if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-  {
+#endif
+#if defined(GPIO_PIN_PA_ENABLE) && (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
-  }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR()

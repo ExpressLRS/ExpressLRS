@@ -13,18 +13,17 @@ private:
 public:
     GENERIC_CRC8(uint8_t poly);
     uint8_t calc(const uint8_t data);
-    uint8_t calc(const uint8_t *data, uint16_t len, uint8_t crc = 0);
+    uint8_t calc(const uint8_t *data, uint8_t len, uint8_t crc = 0);
 };
 
-class Crc2Byte
+class GENERIC_CRC14
 {
 private:
-    uint16_t _crctab[crclen];
-    uint8_t  _bits;
-    uint16_t _bitmask;
-    uint16_t _poly;
+    uint16_t crc14tab[crclen];
+    uint16_t crcpoly;
 
 public:
-    void init(uint8_t bits, uint16_t poly);
+    GENERIC_CRC14(uint16_t poly);
     uint16_t calc(uint8_t *data, uint8_t len, uint16_t crc);
+    uint16_t calc(volatile uint8_t *data, uint8_t len, uint16_t crc);
 };
