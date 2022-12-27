@@ -69,7 +69,7 @@ void BluetoothTelemetrySendEmptyLinkStatsPacket()
 }
 
 
-void ICACHE_RAM_ATTR BluetoothTelemetrySendLinkStatsPacket()
+void BluetoothTelemetrySendLinkStatsPacket()
 {
     if (!CRSF::CRSFstate)
     {
