@@ -1080,11 +1080,12 @@ static void HandleWebUpdate()
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
+      // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
+      // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+      // Only done on 8266 as the ESP32 runs a throttled loop()
+      if (!Update.isRunning())
+        delay(1);
     #endif
-    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
-    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-    if (!Update.isRunning())
-      delay(1);
   }
 }
 
