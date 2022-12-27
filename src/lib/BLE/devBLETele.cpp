@@ -206,7 +206,7 @@ void BluetoothTelemetryUpdateDevice()
     INFOLN("Starting BLE Telemetry!");
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetryUpdateValues(uint8_t *data)
+void BluetoothTelemetryUpdateValues(uint8_t *data)
 {
     if (pServer == nullptr)
         return;
