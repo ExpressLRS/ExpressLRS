@@ -40,7 +40,7 @@ String getMasterUIDString()
     return String(muids);
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetrySendLinkStatsPacketEx(uint8_t* outBuffer)
+void BluetoothTelemetrySendLinkStatsPacketEx(uint8_t* outBuffer)
 {
     outBuffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     outBuffer[CRSF_TELEMETRY_LENGTH_INDEX] = CRSF_FRAME_SIZE(LinkStatisticsFrameLength);
