@@ -27,7 +27,7 @@ static int timeout()
 {
     if (connectionState != serialUpdate)
     {
-        #if defined(PLATFORM_ESP32)
+        #if defined(PLATFORM_ESP32) || defined(PLATFORM_STM32)
         if (sendFrame)
         {
             sendFrame = false;

@@ -1486,8 +1486,6 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
-    Serial.begin(420000);
-    SerialLogger = &Serial;
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {

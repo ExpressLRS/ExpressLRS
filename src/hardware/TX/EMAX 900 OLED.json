@@ -13,7 +13,7 @@
     "power_max": 7,
     "power_default": 2,
     "power_control": 3,
-    "power_values": [8,18,25,35,50,70,105,225],
+    "power_values": [16,23,33,42,63,78,140,225],
     "power_apc2": 26,
     "joystick": 33,
     "joystick_values": [2010, 1230, 635, 2730, 0, 4095],
