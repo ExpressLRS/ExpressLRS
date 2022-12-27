@@ -88,7 +88,7 @@ void BluetoothTelemetrySendLinkStatsPacket()
     BluetoothTelemetrySendLinkStatsPacketEx(outBuffer);
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetrySendRCFrame()
+void BluetoothTelemetrySendRCFrame()
 {
     if (!CRSF::CRSFstate)
     {
