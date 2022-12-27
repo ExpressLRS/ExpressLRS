@@ -1,7 +1,6 @@
 #pragma once
 
 #include "targets.h"
-#include "Wire.h"
 
 typedef enum
 {
@@ -20,15 +19,12 @@ class Gsensor
 {
 private:
     int system_state;
-    bool is_flipped;        
+    bool is_flipped;
 public:
-    void init();
+    bool init();
     void handle();
+    bool hasTriggered(unsigned long now);
     void getGSensorData(float *X_DataOut, float *Y_DataOut, float *Z_DataOut);
     int getSystemState();
     bool isFlipped();
-
 };
-
-
-

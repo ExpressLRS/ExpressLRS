@@ -15,7 +15,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 
 Maintainer: Miguel Luis and Gregory Cristian
 
-Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project 
+Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 */
 
 #include "SX1280_Regs.h"
@@ -38,38 +38,41 @@ public:
     void end();
     void reset();
 
-    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size);
-    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command, uint8_t val);
-    void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size);
-    void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t value);
+    void ICACHE_RAM_ATTR setNss(uint8_t radioNumber, bool state);
 
-    void ICACHE_RAM_ATTR ReadCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size);
-    void ICACHE_RAM_ATTR ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size);
-    uint8_t ICACHE_RAM_ATTR ReadRegister(uint16_t address);
+    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
+    void ICACHE_RAM_ATTR WriteCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
+    void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t value, SX12XX_Radio_Number_t radioNumber);
 
-    void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size); // Writes and Reads to FIFO
-    void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, volatile uint8_t *buffer, uint8_t size);
+    void ICACHE_RAM_ATTR ReadCommand(SX1280_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    void ICACHE_RAM_ATTR ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    uint8_t ICACHE_RAM_ATTR ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber);
 
-    bool ICACHE_RAM_ATTR WaitOnBusy();
-    
-    void ICACHE_RAM_ATTR TXenable();
+    void ICACHE_RAM_ATTR WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber); // Writes and Reads to FIFO
+    void ICACHE_RAM_ATTR ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+
+    bool ICACHE_RAM_ATTR WaitOnBusy(SX12XX_Radio_Number_t radioNumber);
+
+    void ICACHE_RAM_ATTR TXenable(SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR RXenable();
     void ICACHE_RAM_ATTR TXRXdisable();
 
-    static ICACHE_RAM_ATTR void dioISR();
-    void (*IsrCallback)(); //function pointer for callback
+    static ICACHE_RAM_ATTR void dioISR_1();
+    static ICACHE_RAM_ATTR void dioISR_2();
+    void (*IsrCallback_1)(); //function pointer for callback
+    void (*IsrCallback_2)(); //function pointer for callback
 
-#if defined(GPIO_PIN_BUSY) && (GPIO_PIN_BUSY != UNDEF_PIN)
-    void BusyDelay(uint32_t duration) const { (void)duration; };
-#else
     uint32_t BusyDelayStart;
     uint32_t BusyDelayDuration;
     void BusyDelay(uint32_t duration)
     {
-        BusyDelayStart = micros();
-        BusyDelayDuration = duration;
+        if (GPIO_PIN_BUSY == UNDEF_PIN)
+        {
+            BusyDelayStart = micros();
+            BusyDelayDuration = duration;
+        }
     }
-<<<<<<< HEAD
 
 private:
 #if defined(PLATFORM_ESP32)
@@ -86,7 +89,5 @@ private:
     bool rx_enabled;
     bool tx1_enabled;
     bool tx2_enabled;
-=======
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 #endif
 };

@@ -2,10 +2,20 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#include <AsyncJson.h>
+#include <ArduinoJson.h>
+#if defined(PLATFORM_ESP8266)
+#include <FS.h>
+#else
+#include <SPIFFS.h>
+#endif
+
 #if defined(PLATFORM_ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Update.h>
+#include <esp_partition.h>
+#include <esp_ota_ops.h>
 #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -17,30 +27,41 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
+#include "AsyncJson.h"
+#include "ArduinoJson.h"
 
 #include "common.h"
 #include "POWERMGNT.h"
+#include "FHSS.h"
 #include "hwTimer.h"
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
+#include "devVTXSPI.h"
+#include "devButton.h"
 
 #include "WebContent.h"
 
 #include "config.h"
 #if defined(TARGET_TX)
 extern TxConfig config;
+extern void setButtonColors(uint8_t b1, uint8_t b2);
 #else
 extern RxConfig config;
 #endif
+
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern unsigned long rebootTime;
+
+static char station_ssid[33];
+static char station_password[65];
 
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
 extern bool InBindingMode;
 
 static wl_status_t laststatus = WL_IDLE_STATUS;
-static volatile WiFiMode_t wifiMode = WIFI_OFF;
+volatile WiFiMode_t wifiMode = WIFI_OFF;
 static volatile WiFiMode_t changeMode = WIFI_OFF;
 static volatile unsigned long changeTime = 0;
 
@@ -49,8 +70,18 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#include "tcpsocket.h"
+TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
+#include "CRSF.h"
+extern CRSF crsf;
+#endif
+
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
+static bool scanComplete = false;
+static constexpr uint32_t STALE_WIFI_SCAN = 20000;
+static uint32_t lastScanTimeMS = 0;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -58,6 +89,14 @@ static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
+
+void setWifiUpdateMode()
+{
+  // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
+  // Need to change this before the mode change event so the LED is updated
+  InBindingMode = false;
+  connectionState = wifiUpdate;
+}
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -98,25 +137,32 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-static void WebUpdateSendCSS(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t*)CSS, sizeof(CSS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
+static struct {
+  const char *url;
+  const char *contentType;
+  const uint8_t* content;
+  const size_t size;
+} files[] = {
+  {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
+  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
+  {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+  {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
+  {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
+  {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
+  {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
+};
 
-static void WebUpdateSendJS(AsyncWebServerRequest *request)
+static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
-
-static void WebUpdateSendFlag(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
+  for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
+    if (request->url().equals(files[i].url)) {
+      AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
+      response->addHeader("Content-Encoding", "gzip");
+      request->send(response);
+      return;
+    }
+  }
+  request->send(404, "text/plain", "File not found");
 }
 
 static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
@@ -126,34 +172,23 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
     return;
   }
   force_update = request->hasArg("force");
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  AsyncWebServerResponse *response;
+  if (connectionState == hardwareUndefined)
+  {
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
+  }
+  else
+  {
+    response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+  }
+  response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
-  response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-constexpr uint8_t SERVO_PINS[] = GPIO_PIN_PWM_OUTPUTS;
-constexpr uint8_t SERVO_COUNT = ARRAY_SIZE(SERVO_PINS);
-
-static String WebGetPwmStr()
-{
-  // Output is raw integers, the Javascript side needs to parse it
-  // ,"pwm":[49664,50688,51200] = 3 channels, 0=512, 1=512, 2=0
-  String pwmStr(",\"pwm\":[");
-  for (uint8_t ch=0; ch<SERVO_COUNT; ++ch)
-  {
-    if (ch > 0)
-      pwmStr.concat(',');
-    pwmStr.concat(config.GetPwmChannel(ch)->raw);
-  }
-  pwmStr.concat(']');
-
-  return pwmStr;
-}
-
 static void WebUpdatePwm(AsyncWebServerRequest *request)
 {
   String pwmStr = request->arg("pwm");
@@ -167,9 +202,9 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
   // strtok will modify the string as it parses
   char *token = strtok((char *)pwmStr.c_str(), ",");
   uint8_t channel = 0;
-  while (token != nullptr && channel < SERVO_COUNT)
+  while (token != nullptr && channel < GPIO_PIN_PWM_OUTPUTS_COUNT)
   {
-    uint16_t val = atoi(token);
+    uint32_t val = atoi(token);
     DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
     ++channel;
@@ -180,34 +215,171 @@ static void WebUpdatePwm(AsyncWebServerRequest *request)
 }
 #endif
 
-static void WebUpdateSendMode(AsyncWebServerRequest *request)
+static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
-  String s = String("{\"ssid\":\"") + config.GetSSID() + "\",\"mode\":\"";
-  if (wifiMode == WIFI_STA) {
-    s += "STA\"";
-  } else {
-    s += "AP\"";
+  static File file;
+  static size_t bytes;
+  if (!file || request->url() != file.name()) {
+    file = SPIFFS.open(request->url(), "w");
+    bytes = 0;
   }
-  #if defined(TARGET_RX)
-  s += ",\"modelid\":" + String(config.GetModelId());
-  #endif
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
-  s += WebGetPwmStr();
-  #endif
-  s += "}";
-  request->send(200, "application/json", s);
+  file.write(data, len);
+  bytes += len;
+  if (bytes == total) {
+    file.close();
+  }
 }
+
+static void getFile(AsyncWebServerRequest *request)
+{
+  if (request->url() == "/options.json") {
+    request->send(200, "application/json", getOptions());
+  } else if (request->url() == "/hardware.json") {
+    request->send(200, "application/json", getHardware());
+  } else {
+    request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+  }
+}
+
+static void HandleReboot(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
+}
+
+static void HandleReset(AsyncWebServerRequest *request)
+{
+  if (request->hasArg("hardware")) {
+    SPIFFS.remove("/hardware.json");
+  }
+  if (request->hasArg("options")) {
+    SPIFFS.remove("/options.json");
+  }
+  if (request->hasArg("model") || request->hasArg("config")) {
+    config.SetDefaults(true);
+  }
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  rebootTime = millis() + 100;
+}
+
+static void GetConfiguration(AsyncWebServerRequest *request)
+{
+  DynamicJsonDocument json(2048);
+
+  DynamicJsonDocument options(2048);
+  deserializeJson(options, getOptions());
+  json["options"] = options;
+
+#if defined(TARGET_TX)
+  int button_count = 0;
+  if (GPIO_PIN_BUTTON != UNDEF_PIN)
+    button_count = 1;
+  if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
+    button_count = 2;
+  for (int button=0 ; button<button_count ; button++)
+  {
+    const tx_button_color_t *buttonColor = config.GetButtonActions(button);
+    json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+    {
+      json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
+      json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor->val.actions[pos].count;
+      json["config"]["button-actions"][button]["action"][pos]["action"] = buttonColor->val.actions[pos].action;
+    }
+  }
+#endif
+
+  json["config"]["ssid"] = station_ssid;
+  json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+  #if defined(TARGET_RX)
+  json["config"]["modelid"] = config.GetModelId();
+  json["config"]["forcetlm"] = config.GetForceTlmOff();
+  #if defined(GPIO_PIN_PWM_OUTPUTS)
+  for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+  {
+    json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
+  }
+  #endif
+  #endif
+  json["config"]["product_name"] = product_name;
+  json["config"]["lua_name"] = device_name;
+  json["config"]["reg_domain"] = getRegulatoryDomain();
+  JsonArray uid = json["config"].createNestedArray("uid");
+  copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+
+  #if defined(TARGET_RX)
+  if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
+  else
+  #endif
+  if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+  #if defined(TARGET_RX)
+  else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
+  else json["config"]["uidtype"] = "Not set";
+  #else
+  else json["config"]["uidtype"] = "Not set (using MAC address)";
+  #endif
+  json["config"]["has-highpower"] = (MaxPower != HighPower);
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
+}
+
+#if defined(TARGET_TX)
+static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (json.containsKey("button-actions")) {
+    const JsonArray &array = json["button-actions"].as<JsonArray>();
+    for (size_t button=0 ; button<array.size() ; button++)
+    {
+      tx_button_color_t action;
+      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+      {
+        action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
+        action.val.actions[pos].count = array[button]["action"][pos]["count"];
+        action.val.actions[pos].action = array[button]["action"][pos]["action"];
+      }
+      action.val.color = array[button]["color"];
+      config.SetButtonActions(button, &action);
+    }
+    config.Commit();
+  }
+  request->send(200);
+}
+
+static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  int button1Color = json[0].as<int>();
+  int button2Color = json[1].as<int>();
+  DBGLN("%d %d", button1Color, button2Color);
+  setButtonColors(button1Color, button2Color);
+  request->send(200);
+}
+#endif
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
-  request->send(200, "application/json", s);
+  DynamicJsonDocument json(2048);
+  json["target"] = &target_name[4];
+  json["version"] = VERSION;
+  json["product_name"] = product_name;
+  json["lua_name"] = device_name;
+  json["reg_domain"] = getRegulatoryDomain();
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
 
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
   int numNetworks = WiFi.scanComplete();
-  if (numNetworks >= 0) {
+  if (numNetworks >= 0 && millis() - lastScanTimeMS < STALE_WIFI_SCAN) {
     DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
@@ -223,6 +395,18 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
     s+="]";
     request->send(200, "application/json", s);
   } else {
+    if (WiFi.scanComplete() != WIFI_SCAN_RUNNING)
+    {
+      #if defined(PLATFORM_ESP8266)
+      scanComplete = false;
+      WiFi.scanNetworksAsync([](int){
+        scanComplete = true;
+      });
+      #else
+      WiFi.scanNetworks(true);
+      #endif
+      lastScanTimeMS = millis();
+    }
     request->send(204, "application/json", "[]");
   }
 }
@@ -245,8 +429,8 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
-  DBGLN("Connecting to home network");
-  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
+  DBGLN("Connecting to network");
+  String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
@@ -256,19 +440,25 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String ssid = request->arg("network");
   String password = request->arg("password");
 
-  DBGLN("Setting home network %s", ssid.c_str());
-  config.SetSSID(ssid.c_str());
-  config.SetPassword(password.c_str());
-  config.Commit();
+  DBGLN("Setting network %s", ssid.c_str());
+  strcpy(station_ssid, ssid.c_str());
+  strcpy(station_password, password.c_str());
+  if (request->hasArg("save")) {
+    strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
+    strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
+    saveOptions();
+  }
   WebUpdateConnect(request);
 }
 
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
-  DBGLN("Forget home network");
-  config.SetSSID("");
-  config.SetPassword("");
-  config.Commit();
+  DBGLN("Forget network");
+  firmwareOptions.home_wifi_ssid[0] = 0;
+  firmwareOptions.home_wifi_password[0] = 0;
+  saveOptions();
+  station_ssid[0] = 0;
+  station_password[0] = 0;
   String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
@@ -282,11 +472,18 @@ static void WebUpdateModelId(AsyncWebServerRequest *request)
   config.SetModelId((uint8_t)modelid);
   config.Commit();
 
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Model Match updated, rebooting receiver");
-  response->addHeader("Connection", "close");
-  request->send(response);
-  request->client()->close();
-  rebootTime = millis() + 100;
+  request->send(200, "text/plain", "Model Match updated");
+}
+
+static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
+{
+  long forceTlm = request->arg("force-tlm").toInt();
+
+  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
+  config.SetForceTlmOff(forceTlm != 0);
+  config.Commit();
+
+  request->send(200, "text/plain", "Force telemetry updated");
 }
 #endif
 
@@ -316,39 +513,34 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
+static void corsPreflightResponse(AsyncWebServerRequest *request) {
+  AsyncWebServerResponse *response = request->beginResponse(204, "text/plain");
+  request->send(response);
+}
+
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (Update.hasError()) {
-    StreamString p = StreamString();
-    Update.printError(p);
-    p.trim();
-    DBGLN("Failed to upload firmware: %s", p.c_str());
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
-    response->addHeader("Connection", "close");
-    request->send(response);
-    request->client()->close();
-  } else {
-    if (target_seen) {
+  if (target_seen) {
+    String msg;
+    if (Update.end()) {
       DBGLN("Update complete, rebooting");
-      String success = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
+      msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
-        success += "Please wait for the LED to resume blinking before disconnecting power.\"}";
+        msg += "Please wait for the LED to resume blinking before disconnecting power.\"}";
       #else
-        success += "Please wait for a few seconds while the device reboots.\"}";
+        msg += "Please wait for a few seconds while the device reboots.\"}";
       #endif
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", success);
-      response->addHeader("Connection", "close");
-      request->send(response);
-      request->client()->close();
       rebootTime = millis() + 200;
     } else {
-      String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
-      if (target_found.length() != 0) {
-        message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
+      StreamString p = StreamString();
+      if (Update.hasError()) {
+        Update.printError(p);
+      } else {
+        p.println("Not enough data uploaded!");
       }
-      message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
-      request->send(200, "application/json", message);
+      p.trim();
+      DBGLN("Failed to upload firmware: %s", p.c_str());
+      msg = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
     }
-<<<<<<< HEAD
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
     response->addHeader("Connection", "close");
     request->send(response);
@@ -361,23 +553,21 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     message += "<br/>It looks like you are flashing firmware with a different name to the current  firmware.  This sometimes happens because the hardware was flashed from the factory with an early version that has a different name. Or it may have even changed between major releases.";
     message += "<br/><br/>Please double check you are uploading the correct target, then proceed with 'Flash Anyway'.\"}";
     request->send(200, "application/json", message);
-=======
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
   }
 }
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   force_update = force_update || request->hasArg("force");
   if (index == 0) {
-    DBGLN("Update: %s", filename.c_str());
+    size_t filesize = request->header("X-FileSize").toInt();
+    DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
     #if defined(PLATFORM_ESP8266)
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     DBGLN("Free space = %u", maxSketchSpace);
-    if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
-    #else
-    if (!Update.begin()) { //start with max available size
+    UNUSED(maxSketchSpace); // for warning
     #endif
+    if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
       Update.printError(LOGGING_UART);
     }
     target_seen = false;
@@ -416,16 +606,8 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         }
       }
       totalSize += len;
-    }
-  }
-  if (final && !Update.getError()) {
-    DBGVLN("finish");
-    if (target_seen) {
-      if (Update.end(true)) { //true to set the size to the current progress
-        DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
-      } else {
-        Update.printError(LOGGING_UART);
-      }
+    } else {
+      DBGLN("write failed to write %d", len);
     }
   }
 }
@@ -433,11 +615,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
-    if (Update.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
-    } else {
-      Update.printError(LOGGING_UART);
-    }
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
@@ -447,6 +624,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 {
   uint8_t *dst;
@@ -464,7 +642,7 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
     len = constrain((len / 4) * 4, 4, SPI_FLASH_SEC_SIZE);
   }
 
-  ESP.flashRead(pos, (uint32_t *)dst, len);
+  ESP.flashRead(firmwareOffset + pos, (uint32_t *)dst, len);
 
   // If using local stack buffer, move the 4 bytes into the passed buffer
   // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
@@ -477,13 +655,44 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 }
 
 static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
-  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize(), &getFirmwareChunk);
+  #if defined(PLATFORM_ESP32)
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  if (running) {
+      firmwareOffset = running->address;
+  }
+  #endif
+  const size_t firmwareTrailerSize = 4096;  // max number of bytes for the options/hardware layout json
+  AsyncWebServerResponse *response = request->beginResponse("application/octet-stream", (size_t)ESP.getSketchSize() + firmwareTrailerSize, &getFirmwareChunk);
   String filename = String("attachment; filename=\"") + (const char *)&target_name[4] + "_" + VERSION + ".bin\"";
   response->addHeader("Content-Disposition", filename);
   request->send(response);
 }
 
-static void wifiOff()
+#ifdef RADIO_SX128X
+static void HandleContinuousWave(AsyncWebServerRequest *request) {
+  if (request->hasArg("radio")) {
+    SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+
+    AsyncWebServerResponse *response = request->beginResponse(204);
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+
+    Radio.TXdoneCallback = [](){};
+    Radio.Begin();
+
+    POWERMGNT::init();
+    POWERMGNT::setPower(POWERMGNT::getMinPower());
+
+    Radio.startCWTest(2440000000, radio);
+  } else {
+    int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
+    request->send(200, "application/json", String("{\"radios\": ") + radios + "}");
+  }
+}
+#endif
+
+static void initialize()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -491,13 +700,10 @@ static void wifiOff()
   #if defined(PLATFORM_ESP8266)
   WiFi.forceSleepBegin();
   #endif
-<<<<<<< HEAD
   registerButtonFunction(ACTION_START_WIFI, [](){
     setWifiUpdateMode();
     devicesTriggerEvent();
   });
-=======
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 }
 
 static void startWiFi(unsigned long now)
@@ -505,15 +711,22 @@ static void startWiFi(unsigned long now)
   if (wifiStarted) {
     return;
   }
-  hwTimer::stop();
-  // Set transmit power to minimum
-  POWERMGNT::setPower(MinPower);
-  if (connectionState < FAILURE_STATES) {
-    connectionState = wifiUpdate;
-  }
 
-  DBGLN("Stopping Radio");
-  Radio.End();
+  if (connectionState < FAILURE_STATES) {
+    hwTimer::stop();
+
+#ifdef HAS_VTX_SPI
+    VTxOutputMinimum();
+#endif
+
+    // Set transmit power to minimum
+    POWERMGNT::setPower(MinPower);
+
+    setWifiUpdateMode();
+
+    DBGLN("Stopping Radio");
+    Radio.End();
+  }
 
   DBGLN("Begin Webupdater");
 
@@ -526,15 +739,13 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
-    config.SetSSID(home_wifi_ssid);
-    config.SetPassword(home_wifi_password);
-    config.Commit();
-  }
-  if (config.GetSSID()[0]==0) {
+  strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+  strcpy(station_password, firmwareOptions.home_wifi_password);
+  if (station_ssid[0] == 0) {
     changeTime = now;
     changeMode = WIFI_AP;
-  } else {
+  }
+  else {
     changeTime = now;
     changeMode = WIFI_STA;
   }
@@ -550,6 +761,33 @@ static void startMDNS()
     return;
   }
 
+  String options = "-DAUTO_WIFI_ON_INTERVAL=" + String(firmwareOptions.wifi_auto_on_interval / 1000);
+
+  #ifdef TARGET_TX
+  if (firmwareOptions.unlock_higher_power)
+  {
+    options += " -DUNLOCK_HIGHER_POWER";
+  }
+  if (firmwareOptions.uart_inverted)
+  {
+    options += " -DUART_INVERTED";
+  }
+  options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
+  options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
+  #endif
+
+  #ifdef TARGET_RX
+  if (firmwareOptions.lock_on_first_connection)
+  {
+    options += " -DLOCK_ON_FIRST_CONNECTION";
+  }
+  if (firmwareOptions.invert_tx)
+  {
+    options += " -DRCVR_INVERT_TX";
+  }
+  options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
+  #endif
+
   String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
   #ifdef PLATFORM_ESP8266
@@ -558,8 +796,10 @@ static void startMDNS()
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt(service, "device", (const char *)device_name);
+    MDNS.addServiceTxt(service, "product", (const char *)product_name);
     MDNS.addServiceTxt(service, "version", VERSION);
-    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt(service, "options", options.c_str());
     MDNS.addServiceTxt(service, "type", "rx");
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
@@ -575,10 +815,15 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt("http", "tcp", "device", device_name);
+    MDNS.addServiceTxt("http", "tcp", "device", (const char *)device_name);
+    MDNS.addServiceTxt("http", "tcp", "product", (const char *)product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+    MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
+  #ifdef TARGET_TX
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  #else
+    MDNS.addServiceTxt("http", "tcp", "type", "rx");
+  #endif
   #endif
 }
 
@@ -593,14 +838,14 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendCSS);
-  server.on("/scan.js", WebUpdateSendJS);
-  server.on("/logo.svg", WebUpdateSendFlag);
-  server.on("/mode.json", WebUpdateSendMode);
+  server.on("/elrs.css", WebUpdateSendContent);
+  server.on("/mui.js", WebUpdateSendContent);
+  server.on("/scan.js", WebUpdateSendContent);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
+  server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
   server.on("/firmware.bin", WebUpdateGetFirmware);
@@ -615,13 +860,37 @@ static void startServices()
   server.on("/fwlink", WebUpdateHandleRoot);
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
+  server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
+  server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
+  #ifdef RADIO_SX128X
+  server.on("/cw.html", WebUpdateSendContent);
+  server.on("/cw.js", WebUpdateSendContent);
+  server.on("/cw", HandleContinuousWave);
+  #endif
+
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
   #if defined(TARGET_RX)
     server.on("/model", WebUpdateModelId);
+    server.on("/forceTelemetry", WebUpdateForceTelemetry);
   #endif
   #if defined(GPIO_PIN_PWM_OUTPUTS)
     server.on("/pwm", WebUpdatePwm);
+  #endif
+  server.on("/hardware.html", WebUpdateSendContent);
+  server.on("/hardware.js", WebUpdateSendContent);
+  server.on("/hardware.json", getFile).onBody(putFile);
+  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/reboot", HandleReboot);
+  server.on("/reset", HandleReset);
+
+  #if defined(TARGET_TX)
+    server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
+    server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -635,12 +904,16 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
+  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  wifi2tcp.begin();
+  #endif
 }
 
 static void HandleWebUpdate()
 {
   unsigned long now = millis();
   wl_status_t status = WiFi.status();
+
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
     switch(status) {
@@ -669,24 +942,30 @@ static void HandleWebUpdate()
         DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
+        WiFi.mode(wifiMode);
         #if defined(PLATFORM_ESP8266)
-          WiFi.mode(WIFI_AP_STA);
-        #else
-          WiFi.mode(WIFI_AP);
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
         #endif
         changeTime = now;
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
-        WiFi.scanNetworks(true);
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", config.GetSSID());
+        DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
+        #if defined(PLATFORM_ESP32)
+        WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
+        #endif
         WiFi.mode(wifiMode);
+        #if defined(PLATFORM_ESP8266)
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
+        #endif
         changeTime = now;
-        WiFi.begin(config.GetSSID(), config.GetPassword());
+        WiFi.begin(station_ssid, station_password);
         startServices();
       default:
         break;
@@ -696,6 +975,14 @@ static void HandleWebUpdate()
     #endif
     changeMode = WIFI_OFF;
   }
+
+  #if defined(PLATFORM_ESP8266)
+  if (scanComplete)
+  {
+    WiFi.mode(wifiMode);
+    scanComplete = false;
+  }
+  #endif
 
   if (servicesStarted)
   {
@@ -710,15 +997,35 @@ static void HandleWebUpdate()
   }
 }
 
+void HandleMSP2WIFI()
+{
+  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  // check is there is any data to write out
+  if (crsf.crsf2msp.FIFOout.peekSize() > 0)
+  {
+    const uint16_t len = crsf.crsf2msp.FIFOout.popSize();
+    uint8_t data[len];
+    crsf.crsf2msp.FIFOout.popBytes(data, len);
+    wifi2tcp.write(data, len);
+  }
+
+  // check if there is any data to read in
+  const uint16_t bytesReady = wifi2tcp.bytesReady();
+  if (bytesReady > 0)
+  {
+    uint8_t data[bytesReady];
+    wifi2tcp.read(data);
+    crsf.msp2crsf.parse(data, bytesReady);
+  }
+
+  wifi2tcp.handle();
+  #endif
+}
+
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
-
-  #ifdef AUTO_WIFI_ON_INTERVAL
-    return AUTO_WIFI_ON_INTERVAL * 1000;
-  #else
-    return DURATION_NEVER;
-  #endif
+  return firmwareOptions.wifi_auto_on_interval;
 }
 
 static int event()
@@ -730,6 +1037,15 @@ static int event()
       return DURATION_IMMEDIATELY;
     }
   }
+  else if (wifiStarted)
+  {
+    wifiStarted = false;
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    #if defined(PLATFORM_ESP8266)
+    WiFi.forceSleepBegin();
+    #endif
+  }
   return DURATION_IGNORE;
 }
 
@@ -738,40 +1054,38 @@ static int timeout()
   if (wifiStarted)
   {
     HandleWebUpdate();
+    HandleMSP2WIFI();
     return DURATION_IMMEDIATELY;
   }
 
-  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
+  #if defined(TARGET_TX)
+  // if webupdate was requested before or .wifi_auto_on_interval has elapsed but uart is not detected
+  // start webupdate, there might be wrong configuration flashed.
+  if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
     DBGLN("No CRSF ever detected, starting WiFi");
-    connectionState = wifiUpdate;
+    setWifiUpdateMode();
     return DURATION_IMMEDIATELY;
   }
-  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
-  if (!webserverPreventAutoStart && (connectionState == disconnected))
+  #elif defined(TARGET_RX)
+  if (firmwareOptions.wifi_auto_on_interval != -1 && !webserverPreventAutoStart && (connectionState == disconnected))
   {
     static bool pastAutoInterval = false;
     // If InBindingMode then wait at least 60 seconds before going into wifi,
-    // regardless of if AUTO_WIFI_ON_INTERVAL is set to less
-    if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
+    // regardless of if .wifi_auto_on_interval is set to less
+    if (!InBindingMode || firmwareOptions.wifi_auto_on_interval >= 60000 || pastAutoInterval)
     {
-      // No need to ExitBindingMode(), the radio is about to be stopped. Need
-      // to change this before the mode change event so the LED is updated
-      InBindingMode = false;
-      connectionState = wifiUpdate;
+      setWifiUpdateMode();
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
-    return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
+    return (60000 - firmwareOptions.wifi_auto_on_interval);
   }
   #endif
   return DURATION_NEVER;
 }
 
 device_t WIFI_device = {
-  .initialize = wifiOff,
+  .initialize = initialize,
   .start = start,
   .event = event,
   .timeout = timeout

@@ -4,19 +4,16 @@
 #define SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB 0x0954
 #define SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MASK 0x0FFFFF
 
-<<<<<<< HEAD
 #define SX1280_REG_SF_ADDITIONAL_CONFIG             0x925
 #define SX1280_REG_FREQ_ERR_CORRECTION              0x93C
 #define SX1280_REG_FLRC_CRC_SEED                    0x9C8
 #define SX1280_REG_FLRC_SYNC_WORD                   0x9CF
-=======
-#define SX1280_REG_FLRC_CRC_POLY    0x9C6
-#define SX1280_REG_FLRC_CRC_SEED    0x9C8
-#define SX1280_REG_FLRC_SYNC_WORD   0x9CF
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 
 #define SX1280_XTAL_FREQ 52000000
-#define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))
+#define FREQ_STEP ((double)(SX1280_XTAL_FREQ / pow(2.0, 18.0)))  // 198.3642578125
+
+#define SX1280_POWER_MIN (-18)
+#define SX1280_POWER_MAX (13)
 
 typedef enum
 {
@@ -252,9 +249,9 @@ typedef enum
 typedef enum
 {
     SX1280_FLRC_CRC_OFF    = 0x00,
-    SX1280_FLRC_CRC_1_BYTE = 0x10,
-    SX1280_FLRC_CRC_2_BYTE = 0x20,
-    SX1280_FLRC_CRC_3_BYTE = 0x30,
+    SX1280_FLRC_CRC_2_BYTE = 0x10,
+    SX1280_FLRC_CRC_3_BYTE = 0x20,
+    SX1280_FLRC_CRC_4_BYTE = 0x30,
 } SX1280_RadioFlrcCrc_t;
 
 enum

@@ -3,37 +3,26 @@
 #include "targets.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
+#include "SX12xxDriverCommon.h"
 
-class SX1280Driver
+#define RADIO_SNR_SCALE 4 // Units for LastPacketSNRRaw
+
+class SX1280Driver: public SX12xxDriverCommon
 {
 public:
     static SX1280Driver *instance;
 
-    ///////Callback Function Pointers/////
-    void (*RXdoneCallback)(); //function pointer for callback
-    void (*TXdoneCallback)(); //function pointer for callback
 
     ///////////Radio Variables////////
-    #define TXRXBuffSize 16
-    volatile WORD_ALIGNED_ATTR uint8_t TXdataBuffer[TXRXBuffSize];
-    volatile WORD_ALIGNED_ATTR uint8_t RXdataBuffer[TXRXBuffSize];
+    uint16_t timeout;
 
-    uint16_t timeout = 0xFFFF;
-
-    uint32_t currFreq;
-    uint8_t PayloadLength;
-    bool IQinverted;
     ///////////////////////////////////
-
-    /////////////Packet Stats//////////
-    int8_t LastPacketRSSI;
-    int8_t LastPacketSNR;
 
     ////////////////Configuration Functions/////////////
     SX1280Driver();
     bool Begin();
     void End();
-    void SetTxIdleMode() { SetMode(SX1280_MODE_FS); }; // set Idle mode used when switching from RX to TX
+    void SetTxIdleMode() { SetMode(SX1280_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,
                 uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0);
@@ -41,68 +30,64 @@ public:
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power);
-<<<<<<< HEAD
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
-=======
-    void SetOutputPowerMax() { SetOutputPower(13); };
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 
-    int32_t GetFrequencyError();
+    bool GetFrequencyErrorbool();
+    bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
-<<<<<<< HEAD
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX);
-=======
-    void TXnb();
-    void RXnb();
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 
-    uint16_t GetIrqStatus();
-    void ClearIrqStatus(uint16_t irqMask);
+    uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
+    void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
 
-    void GetStatus();
+    void GetStatus(SX12XX_Radio_Number_t radioNumber);
 
-<<<<<<< HEAD
     uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
     SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
     SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
-=======
-    bool GetFrequencyErrorbool();
-    uint8_t GetRxBufferAddr();
-    int8_t GetRssiInst();
-    void GetLastPacketStats();
->>>>>>> parent of 4fb6474b (Merge branch 'master' of https://github.com/SunjunKim/ExpressLRS)
 
 private:
-    SX1280_RadioOperatingModes_t currOpmode = SX1280_MODE_SLEEP;
+    // constant used for no power change pending
+    // must not be a valid power register value
+    static const uint8_t PWRPENDING_NONE = 0xff;
 
-    void SetMode(SX1280_RadioOperatingModes_t OPmode);
+    SX1280_RadioOperatingModes_t currOpmode;
+    uint8_t packet_mode;
+    bool modeSupportsFei;
+    SX12XX_Radio_Number_t processingPacketRadio;
+    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
+    uint8_t pwrCurrent;
+    uint8_t pwrPending;
+
+    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr);
     void SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
-                             uint8_t PayloadLength, SX1280_RadioLoRaCrcModes_t crc,
-                             uint8_t InvertIQ);
+                             uint8_t PayloadLength, uint8_t InvertIQ);
     // FLRC functions
     void ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt=SX1280_FLRC_BT_0_5);
     void SetPacketParamsFLRC(uint8_t HeaderType,
-                             uint8_t crc,
                              uint8_t PreambleLength,
                              uint8_t PayloadLength,
                              uint32_t syncWord,
-                             uint16_t crcSeed);
+                             uint16_t crcSeed,
+                             uint8_t cr);
 
     void SetDioIrqParams(uint16_t irqMask,
                          uint16_t dio1Mask=SX1280_IRQ_RADIO_NONE,
                          uint16_t dio2Mask=SX1280_IRQ_RADIO_NONE,
                          uint16_t dio3Mask=SX1280_IRQ_RADIO_NONE);
 
-
-    static void IsrCallback();
-    void RXnbISR(); // ISR for non-blocking RX routine
+    static void IsrCallback_1();
+    static void IsrCallback_2();
+    static void IsrCallback(SX12XX_Radio_Number_t radioNumber);
+    bool RXnbISR(uint16_t irqStatus, SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
+    void CommitOutputPower();
 };
