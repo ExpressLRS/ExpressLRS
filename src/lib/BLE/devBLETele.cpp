@@ -51,7 +51,7 @@ void BluetoothTelemetrySendLinkStatsPacketEx(uint8_t* outBuffer)
     rcCRSF->notify();
 }
 
-void ICACHE_RAM_ATTR BluetoothTelemetrySendEmptyLinkStatsPacket()
+void BluetoothTelemetrySendEmptyLinkStatsPacket()
 {
     uint8_t outBuffer[LinkStatisticsFrameLength + 4];
     memset(&outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1], 0, LinkStatisticsFrameLength);
