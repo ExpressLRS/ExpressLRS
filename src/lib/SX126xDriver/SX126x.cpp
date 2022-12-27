@@ -87,6 +87,8 @@ bool SX126xDriver::Begin()
     }
 #endif
 
+    hal.WriteCommand(SX126x_RADIO_SET_RXTXFALLBACKMODE, (uint8_t)0x40, SX12XX_Radio_All);
+
     return true;
 }
 
@@ -163,6 +165,9 @@ void SX126xDriver::SetRxTimeoutUs(uint32_t interval)
     }
 }
 
+/***
+ * @brief: 15.3 Implicit Header Mode Timeout Behavior (Data Sheet Rev. 1.0)
+ ***/
 void SX126xDriver::clearTimeout(SX12XX_Radio_Number_t radioNumber)
 {
     if (timeout == 0xFFFFFF) 
@@ -446,7 +451,7 @@ void ICACHE_RAM_ATTR SX126xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         }
     }
 
-    // hal.TXenable(radioNumber); // do first to allow PA stablise
+    hal.TXenable(radioNumber); // do first to allow PA stablise
     hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
     instance->SetMode(SX126x_MODE_TX, radioNumber);
 
@@ -546,14 +551,13 @@ void ICACHE_RAM_ATTR SX126xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
-            instance->clearTimeout(irqClearRadio);
         }
+        instance->clearTimeout(irqClearRadio);
     }
     else if (irqStatus == SX126x_IRQ_RX_TX_TIMEOUT)
     {
-        hal.TXenable(radioNumber);
-        hal.TXRXdisable();
-        // instance->clearTimeout(irqClearRadio);
+        // Returns automatically to STBY_RC mode on timer end-of-count.  Setting FS will be needed for Gemini Tx mode, and to minimise jitter.
+        instance->SetMode(SX126x_MODE_FS, radioNumber);
     }
     else if (irqStatus == SX126x_IRQ_RADIO_NONE)
     {
