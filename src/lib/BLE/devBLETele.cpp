@@ -236,7 +236,7 @@ void BluetoothTelemetryUpdateValues(uint8_t *data)
         }
     }
 
-    if (now >= (uint32_t)(500 + LastTLMRCPacketMillis))
+    if (now >= (uint32_t)(BLE_UPDATE_RATE + LastTLMRCPacketMillis))
     {
         /* Periodically send RC channels packet for Android Telemetry viewer */
         BluetoothTelemetrySendRCFrame();
