@@ -17,6 +17,8 @@ extern TxConfig config;
 NimBLEServer *pServer;
 NimBLECharacteristic *rcCRSF;
 
+#define BLE_UPDATE_RATE 500
+
 unsigned short const TELEMETRY_SVC_UUID = 0x1819;
 unsigned short const TELEMETRY_CRSF_UUID = 0x2BBD;
 
