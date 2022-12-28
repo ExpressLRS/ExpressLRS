@@ -74,7 +74,7 @@ bool SX126xDriver::Begin()
     }
 
     hal.WriteRegister(SX126x_RADIO_RX_GAIN, SX126x_RX_BOOSTED_GAIN, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
-    hal.WriteRegister(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, SX126x_DIO2ASSWITCHCTRL_ON, SX12XX_Radio_All);
+    hal.WriteCommand(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, SX126x_DIO2ASSWITCHCTRL_ON, SX12XX_Radio_All);
 
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;
@@ -206,6 +206,25 @@ void SX126xDriver::SetOutputPower(int8_t power)
     }
 }
 
+// void ICACHE_RAM_ATTR SX126xDriver::CommitOutputPower()
+// {
+//     if (pwrPending == PWRPENDING_NONE)
+//         return;
+
+//     pwrCurrent = pwrPending;
+//     pwrPending = PWRPENDING_NONE;
+//     uint8_t buf[2] = { pwrCurrent, (uint8_t)SX126x_RADIO_RAMP_10_US };
+//     hal.WriteCommand(SX126x_RADIO_SET_TXPARAMS, buf, sizeof(buf), SX12XX_Radio_All);
+// }
+
+
+/***
+ * @brief: For discussion.  Should the PA Config be changed, or fixed?
+ * 
+ * "Changing the paDutyCycle will affect the distribution of the power in the harmonics and should be
+ * selected to work in conjunction with a given matching network."
+ ***/
+
 void ICACHE_RAM_ATTR SX126xDriver::CommitOutputPower()
 {
     if (pwrPending == PWRPENDING_NONE)
@@ -213,7 +232,46 @@ void ICACHE_RAM_ATTR SX126xDriver::CommitOutputPower()
 
     pwrCurrent = pwrPending;
     pwrPending = PWRPENDING_NONE;
-    uint8_t buf[2] = { pwrCurrent, (uint8_t)SX126x_RADIO_RAMP_10_US };
+
+    uint8_t pwrOffset = 0;
+    uint8_t paDutyCycle = 0x04;
+    uint8_t hpMax = 0x07;
+
+    if (pwrCurrent > 30) // power range -9 to -1.
+    {
+        pwrOffset = 8;
+        paDutyCycle = 0x02;
+        hpMax = 0x02;
+    }
+    else if (pwrCurrent > 20)
+    {
+        paDutyCycle = 0x04;
+        hpMax = 0x07;
+    }
+    else if (pwrCurrent > 17)
+    {
+        pwrOffset = 2;
+        paDutyCycle = 0x03;
+        hpMax = 0x05;
+    }
+    else if (pwrCurrent > 14)
+    {
+        pwrOffset = 5;
+        paDutyCycle = 0x02;
+        hpMax = 0x3;
+    }
+    else
+    {
+        pwrOffset = 8;
+        paDutyCycle = 0x02;
+        hpMax = 0x02;
+    }
+
+    // PA Operating Modes with Optimal Settings
+    uint8_t paparams[4] = {paDutyCycle, hpMax, 0x00, 0x01};
+    hal.WriteCommand(SX126x_RADIO_SET_PACONFIG, paparams, sizeof(paparams), SX12XX_Radio_All, 25);
+
+    uint8_t buf[2] = {pwrCurrent + pwrOffset, (uint8_t)SX126x_RADIO_RAMP_10_US};
     hal.WriteCommand(SX126x_RADIO_SET_TXPARAMS, buf, sizeof(buf), SX12XX_Radio_All);
 }
 
@@ -290,8 +348,8 @@ void SX126xDriver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     hal.WriteCommand(SX126x_RADIO_SET_MODULATIONPARAMS, rfparams, sizeof(rfparams), SX12XX_Radio_All, 25);
 
     // Set the PA config to 22dBm max output
-    WORD_ALIGNED_ATTR uint8_t paparams[4] = {0x04, 0x07, 0x00, 0x01};
-    hal.WriteCommand(SX126x_RADIO_SET_PACONFIG, paparams, sizeof(paparams), SX12XX_Radio_All, 25);
+    // WORD_ALIGNED_ATTR uint8_t paparams[4] = {0x04, 0x07, 0x00, 0x01};
+    // hal.WriteCommand(SX126x_RADIO_SET_PACONFIG, paparams, sizeof(paparams), SX12XX_Radio_All, 25);
 
     // as per section 15.1: Modulation Quality with 500 kHz
     uint8_t reg = hal.ReadRegister(0x889, SX12XX_Radio_1);
