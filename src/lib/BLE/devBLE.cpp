@@ -32,7 +32,7 @@
 
 class ELRSGamepad : public BleGamepad {
     public:
-        ELRSGamepad() : BleGamepad("Express LRS Joystick", "ELRS", 100) {};
+        ELRSGamepad() : BleGamepad("ExpressLRS Joystick", "ELRS", 100) {};
 
     protected:
         void onStarted(NimBLEServer *pServer) {
