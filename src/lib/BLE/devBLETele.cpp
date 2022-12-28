@@ -154,7 +154,7 @@ void BluetoothTelemetryUpdateDevice()
         return;
 
     //NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
-    NimBLEDevice::init("Express LRS Telemetry");
+    NimBLEDevice::init("ExpressLRS Telemetry");
 
     //we do not want devices which are bound to BLE Joystick to connect to Telemetry service.
     //start BLE Device with random address
