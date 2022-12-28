@@ -181,7 +181,7 @@ enum eServoOutputMode : uint8_t
 
 #ifndef UNIT_TEST
 #if defined(RADIO_SX126X)
-#define RATE_MAX 5
+#define RATE_MAX 6
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern SX126xDriver Radio;
