@@ -485,6 +485,15 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "DIY_900_RX_PWMP"
+            },
+            "llcc68": {
+                "product_name": "Generic ESP8285 llcc68 900MHz RX",
+                "lua_name": "ELRS 900RX",
+                "layout_file": "Generic 900 LLCC68.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_1262_RX",
+                "prior_target_name": "Unified_ESP8285_900_1262_RX"
             }
         },
         "tx_2400": {
