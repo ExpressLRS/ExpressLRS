@@ -155,6 +155,13 @@ typedef enum
     SX126x_RX_BOOSTED_GAIN = 0x96,
 } SX126x_RxGain_t;
 
+typedef enum
+{
+    SX126x_RX_RXTXFALLBACKMODE_FS = 0x40,
+    SX126x_RX_RXTXFALLBACKMODE_STDBY_XOSC = 0x30,
+    SX126x_RX_RXTXFALLBACKMODE_STDBY_RC = 0x20,
+} SX126x_RxTxFallBackMode_t;
+
 typedef enum RadioCommands_u
 {
     SX126x_RADIO_WRITE_REGISTER = 0x0D,

@@ -73,6 +73,7 @@ bool SX126xDriver::Begin()
         }
     }
 
+    hal.WriteCommand(SX126x_RADIO_SET_RXTXFALLBACKMODE, (uint8_t)SX126x_RX_RXTXFALLBACKMODE_FS, SX12XX_Radio_All);
     hal.WriteRegister(SX126x_RADIO_RX_GAIN, SX126x_RX_BOOSTED_GAIN, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
     hal.WriteCommand(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, SX126x_DIO2ASSWITCHCTRL_ON, SX12XX_Radio_All);
 
@@ -86,8 +87,6 @@ bool SX126xDriver::Begin()
         hal.WriteCommand(SX126x_RADIO_SET_REGULATORMODE, SX126x_USE_DCDC, SX12XX_Radio_All);        // Enable DCDC converter instead of LDO
     }
 #endif
-
-    hal.WriteCommand(SX126x_RADIO_SET_RXTXFALLBACKMODE, (uint8_t)0x40, SX12XX_Radio_All);
 
     return true;
 }
@@ -112,7 +111,7 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     DBG("Config LoRa ");
     SetFrequencyReg(regfreq);
     ConfigModParamsLoRa(bw, sf, cr);
-#if defined(DEBUG_FREQ_CORRECTION)
+#if defined(DEBUG_FREQ_CORRECTION) // TODO Chekc if this available with the llcc68?
     SX126x_RadioLoRaPacketLengthsModes_t packetLengthType = SX126x_LORA_PACKET_VARIABLE_LENGTH;
 #else
     SX126x_RadioLoRaPacketLengthsModes_t packetLengthType = SX126x_LORA_PACKET_FIXED_LENGTH;
@@ -151,8 +150,6 @@ void SX126xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     uint16_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_RX_TX_TIMEOUT;
     uint16_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE | SX126x_IRQ_RX_TX_TIMEOUT;
-    // uint16_t dio1Mask = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
-    // uint16_t irqMask  = SX126x_IRQ_TX_DONE | SX126x_IRQ_RX_DONE;
     SetDioIrqParams(irqMask, dio1Mask);
 }
 
@@ -390,7 +387,7 @@ void SX126xDriver::SetPacketParamsLoRa(uint8_t PreambleLength, SX126x_RadioLoRaP
 {
     uint8_t buf[6];
 
-    buf[0] = 0x00;
+    buf[0] = 0x00; // Preamble MSB
     buf[1] = PreambleLength;
     buf[2] = HeaderType;
     buf[3] = PayloadLength;
