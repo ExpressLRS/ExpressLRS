@@ -37,7 +37,7 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   // SF7 ~218us (60us + SF7 symbol time)
   // SF9 ~218us (Odd one out, measured to same as SF7 wait time)
 
-  if (radio_type == RADIO_TYPE_SX128x_LORA)
+  if (radio_type == RADIO_TYPE_LORA)
   {
     switch(SF)
       {
@@ -48,7 +48,7 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
         default: return 218;
       }
   }
-  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  else if (radio_type == RADIO_TYPE_FLRC)
   {
     return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
@@ -68,7 +68,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
 
-  if (radio_type == RADIO_TYPE_SX128x_LORA)
+  if (radio_type == RADIO_TYPE_LORA)
   {
     switch(txPower)
     {
@@ -80,7 +80,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  else if (radio_type == RADIO_TYPE_FLRC)
   {
     switch(txPower)
     {

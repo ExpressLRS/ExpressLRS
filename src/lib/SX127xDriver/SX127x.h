@@ -29,8 +29,9 @@ public:
     bool Begin();
     void End();
     bool DetectChip();
-    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval);
-    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,
+                uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0);                
     void SetMode(SX127x_RadioOPmodes mode);
     void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();

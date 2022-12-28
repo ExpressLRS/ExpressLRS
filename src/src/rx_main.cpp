@@ -299,10 +299,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
     hwTimer.updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
-#if defined(RADIO_SX128X)
-                 , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
-#endif
+                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0,
+                 uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_FLRC)
                  );
 
     checkGeminiMode();
@@ -1251,9 +1249,6 @@ void HandleUARTin()
 static void setupRadio()
 {
     Radio.currFreq = GetInitialFreq();
-#if defined(RADIO_SX127X)
-    //Radio.currSyncWord = UID[3];
-#endif
     bool init_success = Radio.Begin();
     POWERMGNT.init();
     if (!init_success)

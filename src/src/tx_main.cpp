@@ -332,10 +332,8 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
   hwTimer.updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
-#if defined(RADIO_SX128X)
-               , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
-#endif
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval,
+               uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_FLRC)
                );
                
   if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
@@ -1071,9 +1069,6 @@ void setup()
     config.Load(); // Load the stored values from eeprom
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
-    #if defined(RADIO_SX127X)
-    //Radio.currSyncWord = UID[3];
-    #endif
     bool init_success;
     #if defined(USE_BLE_JOYSTICK)
     init_success = true; // No radio is attached with a joystick only module.  So we are going to fake success so that crsf, hwTimer etc are initiated below.

@@ -410,9 +410,11 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode)
   }
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength, interval);
+  Config(bw, sf, cr, regfreq, PreambleLength, currSyncWord, InvertIQ, _PayloadLength, interval);
 }
 
 void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
