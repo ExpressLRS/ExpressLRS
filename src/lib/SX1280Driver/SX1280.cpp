@@ -106,20 +106,7 @@ bool SX1280Driver::Begin()
         hal.WriteRegister(0x0891, (hal.ReadRegister(0x0891, SX12XX_Radio_2) | 0xC0), SX12XX_Radio_2);   //default is low power mode, switch to high sensitivity instead
     }
 
-#if defined(TARGET_RX)
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
-#else
-/*
-Do not enable for dual radio TX.
-When SX1280_RADIO_SET_AUTOFS is set and tlm received by only 1 of the 2 radios,  that radio will go into FS mode and the other
-into Standby mode.  After the following SPI command for tx mode, busy will go high for differing periods of time because 1 is
-transitioning from FS mode and the other from Standby mode. This causes the tx done dio of the 2 radios to occur at very different times.
-*/
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN)
-    {
-        hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
-    }
-#endif
 
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;
@@ -175,8 +162,8 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetFrequencyReg(regfreq);
     SetRxTimeoutUs(interval);
 
-    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
-    uint8_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
+    uint16_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_RX_TX_TIMEOUT;
+    uint16_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR | SX1280_IRQ_RX_TX_TIMEOUT;
     SetDioIrqParams(irqMask, dio1Mask);
 }
 
@@ -620,6 +607,10 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
     }
+    else if (irqStatus == SX1280_IRQ_RX_TX_TIMEOUT)
+    {
+        instance->SetMode(SX1280_MODE_FS, irqClearRadio);
+    }    
     else if (irqStatus == SX1280_IRQ_RADIO_NONE)
     {
         return;
