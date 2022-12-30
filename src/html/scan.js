@@ -349,6 +349,36 @@ _('upload_form').addEventListener('submit', (e) => {
   uploadFile();
 });
 
+_('fileselect').addEventListener('change', (e) => {
+  const files = e.target.files || e.dataTransfer.files;
+  const reader = new FileReader();
+  reader.onload = function(x) {
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+      _('fileselect').value = '';
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          cuteAlert({
+            type: 'info',
+            title: 'Upload Model Configuration',
+            message: this.responseText
+          });
+        } else {
+          cuteAlert({
+            type: 'error',
+            title: 'Upload Model Configuration',
+            message: 'An error occurred while uploading model configuration file'
+          });
+        }
+      }
+    };
+    xmlhttp.open('POST', '/import', true);
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
+    xmlhttp.send(x.target.result);
+  }
+  reader.readAsText(files[0]);
+}, false);
+
 // =========================================================
 
 function callback(title, msg, url, getdata, success) {

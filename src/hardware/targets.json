@@ -619,10 +619,18 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
-            "diversity_vtx": {
+            "diversity_pa_vtx": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
                 "layout_file": "Generic 2400 True Diversity PA and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "diversity_vtx": {
+                "product_name": "Generic ESP32 True Diversity 2.4Ghz RX and VTx",
+                "lua_name": "Div+VTx 2.4RX",
+                "layout_file": "Generic 2400 True Diversity and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
@@ -1293,6 +1301,14 @@
                     "power_values": [-18,-15,-12,-8,-5,0]
                 },
                 "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
+			},
+            "boxer": {
+                "product_name": "RadioMaster Boxer Internal 2.4GHz TX",
+                "lua_name": "RadioMstr Boxer",
+                "layout_file": "Radiomaster Boxer.json",
+                "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX"
             }
