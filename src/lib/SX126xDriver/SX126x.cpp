@@ -73,7 +73,7 @@ bool SX126xDriver::Begin()
         }
     }
 
-    hal.WriteCommand(SX126x_RADIO_SET_RXTXFALLBACKMODE, (uint8_t)SX126x_RX_RXTXFALLBACKMODE_FS, SX12XX_Radio_All);
+    hal.WriteCommand(SX126x_RADIO_SET_RXTXFALLBACKMODE, SX126x_RX_RXTXFALLBACKMODE_FS, SX12XX_Radio_All);
     hal.WriteRegister(SX126x_RADIO_RX_GAIN, SX126x_RX_BOOSTED_GAIN, SX12XX_Radio_All);   //default is low power mode, switch to high sensitivity instead
     hal.WriteCommand(SX126x_RADIO_SET_DIO2ASSWITCHCTRL, SX126x_DIO2ASSWITCHCTRL_ON, SX12XX_Radio_All);
 
@@ -301,7 +301,7 @@ void SX126xDriver::SetMode(SX126x_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
         break;
 
     case SX126x_MODE_FS:
-        hal.WriteCommand(SX126x_RADIO_SET_FS, (uint8_t)0x00, radioNumber, 70);
+        hal.WriteCommand(SX126x_RADIO_SET_FS, buf, 0, radioNumber, 70);
         break;
 
     case SX126x_MODE_RX:
@@ -496,7 +496,7 @@ void ICACHE_RAM_ATTR SX126xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)
     {
         // Make sure the unused radio is in FS mode and will not receive the tx packet.
-        if (lastSuccessfulPacketRadio == SX12XX_Radio_1)
+        if (radioNumber == SX12XX_Radio_1)
         {
             instance->SetMode(SX126x_MODE_FS, SX12XX_Radio_2);
         }
@@ -597,22 +597,23 @@ void ICACHE_RAM_ATTR SX126xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     if (irqStatus & SX126x_IRQ_TX_DONE)
     {
         hal.TXRXdisable();
+        instance->ClearIrqStatus(SX126x_IRQ_RADIO_ALL, SX12XX_Radio_All); // Calling ClearIrqStatus first allows more time for processing instead of waiting for busy to clear.
         instance->TXnbISR();
-        irqClearRadio = SX12XX_Radio_All;
+        return;
     }
     else if (irqStatus & SX126x_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
-            irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
         instance->clearTimeout(irqClearRadio);
     }
     else if (irqStatus == SX126x_IRQ_RX_TX_TIMEOUT)
     {
-        // Returns automatically to STBY_RC mode on timer end-of-count.  Setting FS will be needed for Gemini Tx mode, and to minimise jitter.
-        instance->SetMode(SX126x_MODE_FS, radioNumber);
+        instance->ClearIrqStatus(SX126x_IRQ_RADIO_ALL, irqClearRadio); // Calling ClearIrqStatus first allows more time for processing e.g. 2nd radio IRQ.
+        instance->SetMode(SX126x_MODE_FS, radioNumber); // Returns automatically to STBY_RC mode on timer end-of-count.  Setting FS will be needed for Gemini Tx mode, and to minimise jitter.
+        return;
     }
     else if (irqStatus == SX126x_IRQ_RADIO_NONE)
     {
