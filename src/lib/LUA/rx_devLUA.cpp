@@ -196,7 +196,7 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
       rx_config_pwm_t newPwmCh;
       newPwmCh.raw = config.GetPwmChannel(ch)->raw;
       // The value must fit into the 10 bit range of the failsafe
-      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(CRSF::ChannelData[ch], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(CRSF::ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
       //DBGLN("FSCH(%u) crsf=%u us=%u", ch, CRSF::ChannelData[ch], newPwmCh.val.failsafe+988U);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
     }
