@@ -1,0 +1,27 @@
+{
+    "serial_rx": 3,
+    "serial_tx": 1,
+    
+    "radio_miso": 33,
+    "radio_mosi": 32,
+    "radio_rst": 26,
+    "radio_sck": 25,
+
+    "radio_busy": 36,
+    "radio_dio1": 37,
+    "radio_nss": 27,
+    
+    "power_min": 0,
+    "power_high": 0,
+    "power_max": 0,
+    "power_default": 0,
+    "power_control": 0,
+    "power_values": [0],
+
+    "led_rgb": 22,
+    "led_rgb_isgrb": true,
+    "ledidx_rgb_status": [0],
+    "ledidx_rgb_boot": [0],
+
+    "button": 0
+}
