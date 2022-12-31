@@ -54,7 +54,7 @@
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
 #define USE_SX1280_DCDC
 #define OPT_USE_SX1280_DCDC hardware_flag(HARDWARE_radio_dcdc)
-#define OPT_USE_SX126x_DCDC hardware_flag(HARDWARE_radio_dcdc)
+#define OPT_USE_LLCC68_DCDC hardware_flag(HARDWARE_radio_dcdc)
 #define USE_SX1276_RFO_HF
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
 

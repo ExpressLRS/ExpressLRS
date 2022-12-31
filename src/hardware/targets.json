@@ -468,23 +468,23 @@
     "generic": {
         "name": "Generic targets used as a base",
         "tx_900": {
-            "llcc68": {
+            "LLCC68": {
                 "product_name": "Generic ESP32 LLCC68 TX",
                 "lua_name": "Generic LLCC68",
                 "layout_file": "Generic LLCC68.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_1262_TX",
-                "prior_target_name": "Unified_ESP32_900_1262_TX"
+                "firmware": "Unified_ESP32_900_LLCC68_TX",
+                "prior_target_name": "Unified_ESP32_900_LLCC68_TX"
             },
-            "gemini_llcc68": {
+            "gemini_LLCC68": {
                 "product_name": "Generic ESP32 LLCC68 Gemini TX",
                 "lua_name": "Gemini LLCC68",
                 "layout_file": "Generic LLCC68 Gemini.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_1262_TX",
-                "prior_target_name": "Unified_ESP32_900_1262_TX"
+                "firmware": "Unified_ESP32_900_LLCC68_TX",
+                "prior_target_name": "Unified_ESP32_900_LLCC68_TX"
             }
         },
         "rx_900": {
@@ -506,23 +506,23 @@
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "DIY_900_RX_PWMP"
             },
-            "llcc68": {
-                "product_name": "Generic ESP8285 llcc68 900MHz RX",
+            "LLCC68": {
+                "product_name": "Generic ESP8285 LLCC68 900MHz RX",
                 "lua_name": "ELRS 900RX",
                 "layout_file": "Generic 900 LLCC68.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
-                "firmware": "Unified_ESP8285_900_1262_RX",
-                "prior_target_name": "Unified_ESP8285_900_1262_RX"
+                "firmware": "Unified_ESP8285_900_LLCC68_RX",
+                "prior_target_name": "Unified_ESP8285_900_LLCC68_RX"
             },
-            "llcc68_true_diversity": {
-                "product_name": "Generic ESP32 True Diversity llcc68 900MHz RX",
+            "LLCC68_true_diversity": {
+                "product_name": "Generic ESP32 True Diversity LLCC68 900MHz RX",
                 "lua_name": "Diversity LLCC68",
                 "layout_file": "Generic 900 LLCC68 True Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_1262_RX",
-                "prior_target_name": "Unified_ESP32_900_1262_RX"
+                "firmware": "Unified_ESP32_900_LLCC68_RX",
+                "prior_target_name": "Unified_ESP32_900_LLCC68_RX"
             }
         },
         "tx_2400": {

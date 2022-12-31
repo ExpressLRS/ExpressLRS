@@ -18,21 +18,21 @@ Maintainer: Miguel Luis and Gregory Cristian
 Heavily modified/simplified by Alessandro Carcione 2020 for ELRS project
 */
 
-#include "SX126x_Regs.h"
-#include "SX126x.h"
+#include "LLCC68_Regs.h"
+#include "LLCC68.h"
 
-enum SX126x_BusyState_
+enum LLCC68_BusyState_
 {
-    SX126x_NOT_BUSY = true,
-    SX126x_BUSY = false,
+    LLCC68_NOT_BUSY = true,
+    LLCC68_BUSY = false,
 };
 
-class SX126xHal
+class LLCC68Hal
 {
 public:
-    static SX126xHal *instance;
+    static LLCC68Hal *instance;
 
-    SX126xHal();
+    LLCC68Hal();
 
     void init();
     void end();
@@ -40,12 +40,12 @@ public:
 
     void ICACHE_RAM_ATTR setNss(uint8_t radioNumber, bool state);
 
-    void ICACHE_RAM_ATTR WriteCommand(SX126x_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
-    void ICACHE_RAM_ATTR WriteCommand(SX126x_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
+    void ICACHE_RAM_ATTR WriteCommand(LLCC68_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
+    void ICACHE_RAM_ATTR WriteCommand(LLCC68_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay = 15);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR WriteRegister(uint16_t address, uint8_t value, SX12XX_Radio_Number_t radioNumber);
 
-    void ICACHE_RAM_ATTR ReadCommand(SX126x_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    void ICACHE_RAM_ATTR ReadCommand(LLCC68_RadioCommands_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     uint8_t ICACHE_RAM_ATTR ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber);
 

@@ -253,7 +253,7 @@
 #undef Regulatory_Domain_AU_433
 #undef Regulatory_Domain_EU_433
 
-#elif defined(RADIO_SX127X) || defined(RADIO_SX126X)
+#elif defined(RADIO_SX127X) || defined(RADIO_LLCC68)
 #if !(defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915) || \
         defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || \
         defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || \
@@ -261,7 +261,7 @@
 #error "Regulatory_Domain is not defined for 900MHz device. Check user_defines.txt!"
 #endif
 #else
-#error "Either RADIO_SX126X, RADIO_SX127X or RADIO_SX128X must be defined!"
+#error "Either RADIO_LLCC68, RADIO_SX127X or RADIO_SX128X must be defined!"
 #endif
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)

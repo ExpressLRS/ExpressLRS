@@ -3,8 +3,8 @@
 #ifndef UNIT_TEST
 #include "targets.h"
 
-#if defined(RADIO_SX126X)
-#include "SX126xDriver.h"
+#if defined(RADIO_LLCC68)
+#include "LLCC68Driver.h"
 #elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #elif defined(RADIO_SX128X)
@@ -180,11 +180,11 @@ enum eServoOutputMode : uint8_t
 };
 
 #ifndef UNIT_TEST
-#if defined(RADIO_SX126X)
+#if defined(RADIO_LLCC68)
 #define RATE_MAX 6
 #define RATE_BINDING RATE_LORA_50HZ
 
-extern SX126xDriver Radio;
+extern LLCC68Driver Radio;
 
 #elif defined(RADIO_SX127X)
 #define RATE_MAX 5

@@ -17,19 +17,19 @@ Modified and adapted by Alessandro Carcione for ELRS project
 */
 
 #ifndef UNIT_TEST
-#include "SX126x_Regs.h"
-#include "SX126x_hal.h"
+#include "LLCC68_Regs.h"
+#include "LLCC68_hal.h"
 #include <SPI.h>
 #include "logging.h"
 
-SX126xHal *SX126xHal::instance = NULL;
+LLCC68Hal *LLCC68Hal::instance = NULL;
 
-SX126xHal::SX126xHal()
+LLCC68Hal::LLCC68Hal()
 {
     instance = this;
 }
 
-void SX126xHal::end()
+void LLCC68Hal::end()
 {
     TXRXdisable(); // make sure the RX/TX amp pins are disabled
     detachInterrupt(GPIO_PIN_DIO1);
@@ -42,7 +42,7 @@ void SX126xHal::end()
     IsrCallback_2 = nullptr; // remove callbacks
 }
 
-void SX126xHal::init()
+void LLCC68Hal::init()
 {
     DBGLN("Hal Init");
 
@@ -175,7 +175,7 @@ void SX126xHal::init()
     }
 }
 
-void ICACHE_RAM_ATTR SX126xHal::setNss(uint8_t radioNumber, bool state)
+void ICACHE_RAM_ATTR LLCC68Hal::setNss(uint8_t radioNumber, bool state)
 {
     #if defined(PLATFORM_ESP32)
     spiDisableSSPins(SPI.bus(), ~radioNumber);
@@ -186,9 +186,9 @@ void ICACHE_RAM_ATTR SX126xHal::setNss(uint8_t radioNumber, bool state)
     #endif
 }
 
-void SX126xHal::reset(void)
+void LLCC68Hal::reset(void)
 {
-    DBGLN("SX126x Reset");
+    DBGLN("LLCC68 Reset");
 
     if (GPIO_PIN_RST != UNDEF_PIN)
     {
@@ -201,16 +201,16 @@ void SX126xHal::reset(void)
     BusyDelay(10000); // 10ms delay if GPIO_PIN_BUSY is undefined
     WaitOnBusy(SX12XX_Radio_All);
 
-    //this->BusyState = SX126x_NOT_BUSY;
-    DBGLN("SX126x Ready!");
+    //this->BusyState = LLCC68_NOT_BUSY;
+    DBGLN("LLCC68 Ready!");
 }
 
-void ICACHE_RAM_ATTR SX126xHal::WriteCommand(SX126x_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
+void ICACHE_RAM_ATTR LLCC68Hal::WriteCommand(LLCC68_RadioCommands_t command, uint8_t val, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
     WriteCommand(command, &val, 1, radioNumber, busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::WriteCommand(SX126x_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
+void ICACHE_RAM_ATTR LLCC68Hal::WriteCommand(LLCC68_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1];
 
@@ -225,15 +225,15 @@ void ICACHE_RAM_ATTR SX126xHal::WriteCommand(SX126x_RadioCommands_t command, uin
     BusyDelay(busyDelay);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::ReadCommand(SX126x_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::ReadCommand(LLCC68_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
-    #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX126x_RADIO_GET_STATUS, fixed 3 bytes packet size
+    #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == LLCC68_RADIO_GET_STATUS, fixed 3 bytes packet size
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
 
-    if (command == SX126x_RADIO_GET_STATUS)
+    if (command == LLCC68_RADIO_GET_STATUS)
     {
         OutBuffer[0] = (uint8_t)command;
         OutBuffer[1] = 0x00;
@@ -252,11 +252,11 @@ void ICACHE_RAM_ATTR SX126xHal::ReadCommand(SX126x_RadioCommands_t command, uint
     setNss(radioNumber, HIGH);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
 
-    OutBuffer[0] = (SX126x_RADIO_WRITE_REGISTER);
+    OutBuffer[0] = (LLCC68_RADIO_WRITE_REGISTER);
     OutBuffer[1] = ((address & 0xFF00) >> 8);
     OutBuffer[2] = (address & 0x00FF);
 
@@ -270,16 +270,16 @@ void ICACHE_RAM_ATTR SX126xHal::WriteRegister(uint16_t address, uint8_t *buffer,
     BusyDelay(15);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::WriteRegister(uint16_t address, uint8_t value, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::WriteRegister(uint16_t address, uint8_t value, SX12XX_Radio_Number_t radioNumber)
 {
     WriteRegister(address, &value, 1, radioNumber);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4];
 
-    OutBuffer[0] = (SX126x_RADIO_READ_REGISTER);
+    OutBuffer[0] = (LLCC68_RADIO_READ_REGISTER);
     OutBuffer[1] = ((address & 0xFF00) >> 8);
     OutBuffer[2] = (address & 0x00FF);
     OutBuffer[3] = 0x00;
@@ -293,14 +293,14 @@ void ICACHE_RAM_ATTR SX126xHal::ReadRegister(uint16_t address, uint8_t *buffer, 
     setNss(radioNumber, HIGH);
 }
 
-uint8_t ICACHE_RAM_ATTR SX126xHal::ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber)
+uint8_t ICACHE_RAM_ATTR LLCC68Hal::ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t data;
     ReadRegister(address, &data, 1, radioNumber);
     return data;
 }
 
-void ICACHE_RAM_ATTR SX126xHal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t localbuf[size];
 
@@ -311,7 +311,7 @@ void ICACHE_RAM_ATTR SX126xHal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
 
-    OutBuffer[0] = SX126x_RADIO_WRITE_BUFFER;
+    OutBuffer[0] = LLCC68_RADIO_WRITE_BUFFER;
     OutBuffer[1] = offset;
 
     memcpy(OutBuffer + 2, localbuf, size);
@@ -325,12 +325,12 @@ void ICACHE_RAM_ATTR SX126xHal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     BusyDelay(15);
 }
 
-void ICACHE_RAM_ATTR SX126xHal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
     uint8_t localbuf[size];
 
-    OutBuffer[0] = SX126x_RADIO_READ_BUFFER;
+    OutBuffer[0] = LLCC68_RADIO_READ_BUFFER;
     OutBuffer[1] = offset;
     OutBuffer[2] = 0x00;
 
@@ -348,7 +348,7 @@ void ICACHE_RAM_ATTR SX126xHal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     }
 }
 
-bool ICACHE_RAM_ATTR SX126xHal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR LLCC68Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
 {
     if (GPIO_PIN_BUSY != UNDEF_PIN)
     {
@@ -395,19 +395,19 @@ bool ICACHE_RAM_ATTR SX126xHal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
     return true;
 }
 
-void ICACHE_RAM_ATTR SX126xHal::dioISR_1()
+void ICACHE_RAM_ATTR LLCC68Hal::dioISR_1()
 {
     if (instance->IsrCallback_1)
         instance->IsrCallback_1();
 }
 
-void ICACHE_RAM_ATTR SX126xHal::dioISR_2()
+void ICACHE_RAM_ATTR LLCC68Hal::dioISR_2()
 {
     if (instance->IsrCallback_2)
         instance->IsrCallback_2();
 }
 
-void ICACHE_RAM_ATTR SX126xHal::TXenable(SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LLCC68Hal::TXenable(SX12XX_Radio_Number_t radioNumber)
 {
 #if defined(PLATFORM_ESP32)
     if (radioNumber == SX12XX_Radio_2)
@@ -461,7 +461,7 @@ void ICACHE_RAM_ATTR SX126xHal::TXenable(SX12XX_Radio_Number_t radioNumber)
 #endif
 }
 
-void ICACHE_RAM_ATTR SX126xHal::RXenable()
+void ICACHE_RAM_ATTR LLCC68Hal::RXenable()
 {
 #if defined(PLATFORM_ESP32)
     GPIO.out_w1ts = rx_enable_set_bits;
@@ -497,7 +497,7 @@ void ICACHE_RAM_ATTR SX126xHal::RXenable()
 #endif
 }
 
-void ICACHE_RAM_ATTR SX126xHal::TXRXdisable()
+void ICACHE_RAM_ATTR LLCC68Hal::TXRXdisable()
 {
 #if defined(PLATFORM_ESP32)
     GPIO.out_w1tc = txrx_disable_clr_bits;

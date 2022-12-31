@@ -6,7 +6,7 @@ const char STR_EMPTYSPACE[] = { 0 };
 const char STR_LUA_PACKETRATES[] =
 #if defined(RADIO_SX127X)
     "25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)";
-#elif defined(RADIO_SX126X)
+#elif defined(RADIO_LLCC68)
     "333Hz(-111dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);250Hz(-111dBm)";
 #elif defined(RADIO_SX128X)
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"

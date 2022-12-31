@@ -3,9 +3,9 @@
 #include "options.h"
 #include <string.h>
 
-#if defined(RADIO_SX127X) || defined(RADIO_SX126X)
-#if defined(RADIO_SX126X)
-#include "SX126xDriver.h"
+#if defined(RADIO_SX127X) || defined(RADIO_LLCC68)
+#if defined(RADIO_LLCC68)
+#include "LLCC68Driver.h"
 #else
 #include "SX127xDriver.h"
 #endif
