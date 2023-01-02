@@ -270,7 +270,11 @@ static void HandleReset(AsyncWebServerRequest *request)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
+#if defined(PLATFORM_ESP32)
   DynamicJsonDocument json(32768);
+#else
+  DynamicJsonDocument json(2048);
+#endif
 
   bool exportMode = request->hasArg("export");
 
