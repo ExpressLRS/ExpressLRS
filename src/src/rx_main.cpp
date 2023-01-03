@@ -95,6 +95,8 @@ extern bool webserverPreventAutoStart;
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
+#elif defined(TARGET_DIY_900_RX_STM32)
+    HardwareSerial CRSF_TX_SERIAL(USART1);
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
