@@ -1113,7 +1113,7 @@ static void setupSerial()
     CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* PLATFORM_STM32 */
 
-#if defined(TARGET_RX_FM30_MINI)
+#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(firmwareOptions.uart_baud); // Same baud as CRSF for simplicity
