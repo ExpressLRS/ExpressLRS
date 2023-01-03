@@ -36,9 +36,9 @@ jobs:
 
     - name: Run PlatformIO Tests
       run: |
-        platformio platform install native
-        platformio platform update
         cd src
+        platformio pkg install --platform native
+        platformio pkg update
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
 
   validation:
@@ -105,10 +105,10 @@ jobs:
 
     - name: Run PlatformIO
       run: |
-        platformio platform update
-        platformio platform install native
         mkdir -p ~/artifacts/firmware
         cd src
+        platformio pkg install --platform native
+        platformio pkg update
         case ${{matrix.target}} in
           *2400* | FM30*)
             # release builds
