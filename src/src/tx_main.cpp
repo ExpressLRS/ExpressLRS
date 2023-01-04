@@ -84,7 +84,7 @@ device_affinity_t ui_devices[] = {
   {&BLE_device, 0},
 #endif
 #ifdef HAS_BLET
-  {&BLET_device, 1},
+  {&BLET_device, 0},
 #endif
 #ifdef HAS_BUZZER
   {&Buzzer_device, 0},
