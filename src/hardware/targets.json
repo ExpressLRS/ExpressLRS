@@ -1333,8 +1333,8 @@
                 "prior_target_name": "DIY_2400_RX_PWMP"
             },
             "er6": {
-                "product_name": "RadioMaster ER6 2.4GHz PWM RX",
-                "lua_name": "RadioMstr ER6",
+                "product_name": "RadioMaster ER6-GV 2.4GHz PWM RX",
+                "lua_name": "RadioMstr ER6-GV",
                 "layout_file": "Generic 2400 PWMP5.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
