@@ -1318,6 +1318,10 @@
                 "product_name": "RadioMaster ER4 2.4GHz PWM RX",
                 "lua_name": "RM ER4",
                 "layout_file": "Generic 2400 PWMP5.json",
+                "overlay": {
+                    "power_dcdc": true,
+                    "pwm_outputs": [0,1,3,9]
+                },
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
@@ -1336,6 +1340,9 @@
                 "product_name": "RadioMaster ER6-GV 2.4GHz PWM RX",
                 "lua_name": "RM ER6-GV",
                 "layout_file": "Generic 2400 PWMP5.json",
+                "overlay": {
+                    "power_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
