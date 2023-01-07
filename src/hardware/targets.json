@@ -1339,14 +1339,14 @@
             "er6": {
                 "product_name": "RadioMaster ER6-GV 2.4GHz PWM RX",
                 "lua_name": "RM ER6-GV",
-                "layout_file": "Generic 2400 PWMP5.json",
+                "layout_file": "Vario 2400.json",
                 "overlay": {
                     "power_dcdc": true
                 },
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
-                "prior_target_name": "DIY_2400_RX_PWMP"
+                "prior_target_name": "Vario 2400RX"
             },
             "rp1": {
                 "product_name": "RadioMaster RP1 2.4GHz RX",
