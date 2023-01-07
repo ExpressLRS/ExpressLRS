@@ -71,7 +71,13 @@ https://github.com/jaxxzer
     #define GPIO_PIN_BUTTON         PC13 // pullup e.g. LOW when pressed
 #endif
 
-#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
+// Output Power
+#define MinPower                    PWR_10mW
+#define MaxPower                    PWR_100mW
+#define HighPower                   PWR_100mW
+#define DefaultPower			    PWR_50mW
+#define POWER_OUTPUT_VALUES         {8,11,15,20}
+
 // External pads
 // #define R9m_Ch1    PA8
 // #define R9m_Ch2    PA11
