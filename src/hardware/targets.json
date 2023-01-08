@@ -959,6 +959,17 @@
                     "offset": "0x4000",
                     "bootloader": "ghost/ghost_atto_bootloader.bin"
                 }
+            },
+            "atto_duo": {
+                "product_name": "Ghost Atto DUO 2.4GHz TX",
+                "upload_methods": ["stlink", "betaflight"],
+                "platform": "stm32",
+                "firmware": "GHOST_ATTO_DUO_2400_RX",
+                "stlink": {
+                    "cpus": ["STM32F303K8Tx"],
+                    "offset": "0x4000",
+                    "bootloader": "ghost/ghost_atto_bootloader.bin"
+                }
             }
         }
     },
