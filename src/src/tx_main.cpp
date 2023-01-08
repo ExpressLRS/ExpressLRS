@@ -44,6 +44,7 @@ extern bool webserverPreventAutoStart;
 #endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
+char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
@@ -960,6 +961,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
     VtxTriggerSend();
   }
 #endif
+  if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
+  {
+    memset(backpackVersion, 0, sizeof(backpackVersion));
+    memcpy(backpackVersion, packet->payload, packet->payloadSize > sizeof(backpackVersion)-1 ? sizeof(backpackVersion)-1 : packet->payloadSize);
+  }
 }
 
 static void HandleUARTout()
