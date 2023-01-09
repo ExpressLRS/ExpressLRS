@@ -1260,16 +1260,6 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (connectionState > MODE_STATES)
-  {
-    return;
-  }
-
-  CheckReadyToSend();
-  CheckConfigChangePending();
-  DynamicPower_Update(now);
-  VtxPitmodeSwitchUpdate();
-
   if (TxUSB->available())
   {
     if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
@@ -1287,6 +1277,16 @@ void loop()
       msp.markPacketReceived();
     }
   }
+
+  if (connectionState > MODE_STATES)
+  {
+    return;
+  }
+
+  CheckReadyToSend();
+  CheckConfigChangePending();
+  DynamicPower_Update(now);
+  VtxPitmodeSwitchUpdate();
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
