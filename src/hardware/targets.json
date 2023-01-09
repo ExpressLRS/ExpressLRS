@@ -1196,6 +1196,19 @@
             }
         }
     },
+    "newbeedrone": {
+        "name": "NewBeeDrone",
+        "rx_2400": {
+            "rx24d": {
+                "product_name": "NewBeeDrone Diversity 2.4Ghz RX",
+                "lua_name": "NewBeeDrone 2400RX",
+                "layout_file": "Generic 2400 Diversity PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "quadkopters": {
         "name": "QuadKopters",
         "tx_2400": {
