@@ -331,6 +331,8 @@ def main():
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
             exit(1)
+    else:
+        config = ask_for_firmware(args)
 
     with args.file as f:
         mm = mmap.mmap(f.fileno(), 0)
