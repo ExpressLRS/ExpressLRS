@@ -75,6 +75,7 @@ device_affinity_t ui_devices[] = {
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
+uint8_t geminiMode = 0;
 
 hwTimer hwTimer;
 POWERMGNT POWERMGNT;
@@ -206,6 +207,14 @@ uint8_t getLq()
     return LQCalc.getLQ();
 }
 
+static inline void checkGeminiMode()
+{
+    if (isDualRadio())
+    {
+        geminiMode = config.GetAntennaMode();
+    }
+}
+
 static uint8_t minLqForChaos()
 {
     // Determine the most number of CRC-passing packets we could receive on
@@ -295,6 +304,13 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                  );
+
+    checkGeminiMode();
+    if (geminiMode)
+    {
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    }
+
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
@@ -318,7 +334,16 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     }
 
     alreadyFHSS = true;
-    Radio.SetFrequencyReg(FHSSgetNextFreq());
+
+    if (geminiMode)
+    {
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+    }
+    else
+    {
+        Radio.SetFrequencyReg(FHSSgetNextFreq());
+    }
 
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
@@ -423,11 +448,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
+    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : SX12XX_Radio_Default;
+    SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
 #if defined(Regulatory_Domain_EU_CE_2400)
-    if (ChannelIsClear())
+    clearChannelsMask = ChannelIsClear(transmittingRadio);
+    if (clearChannelsMask)
 #endif
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
+        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
     }
     return true;
 }
@@ -663,10 +691,6 @@ void LostConnection(bool resumeRx)
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
-    FreqCorrection = 0;
-    #if defined(RADIO_SX127X)
-    Radio.SetPPMoffsetReg(0);
-    #endif
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -700,7 +724,6 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
-    FreqCorrection = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -1403,7 +1426,7 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
-    if (config.IsModified() && !InBindingMode)
+    if (config.IsModified() && !InBindingMode && connectionState != wifiUpdate)
     {
         LostConnection(false);
         config.Commit();
@@ -1450,8 +1473,6 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
-    Serial.begin(420000);
-    SerialLogger = &Serial;
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
@@ -1583,6 +1604,7 @@ void loop()
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
+    checkGeminiMode();
     debugRcvrLinkstats();
 }
 
@@ -1652,6 +1674,10 @@ void EnterBindingMode()
     // Lock the RF rate and freq while binding
     SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
     Radio.SetFrequencyReg(GetInitialFreq());
+    if (geminiMode)
+    {
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    }
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 

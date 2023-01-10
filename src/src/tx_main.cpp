@@ -337,6 +337,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
+               
+  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
+  {
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+  }
+
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
   TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
@@ -356,7 +362,15 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    Radio.SetFrequencyReg(FHSSgetNextFreq());
+    if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
+    {
+      Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+      Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+    }
+    else
+    {      
+      Radio.SetFrequencyReg(FHSSgetNextFreq());
+    }
   }
 }
 
@@ -439,11 +453,33 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
+  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
+
+  if (isDualRadio())
+  {
+    switch (config.GetAntennaMode())
+    {
+    case TX_RADIO_MODE_GEMINI:
+      transmittingRadio = SX12XX_Radio_All; // Gemini mode  
+      break;
+    case TX_RADIO_MODE_ANT_1:
+      transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
+      break;
+    case TX_RADIO_MODE_ANT_2:
+      transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
+      break;
+    default:
+      break;
+    }
+  }
+
+  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
 #if defined(Regulatory_Domain_EU_CE_2400)
-  if (ChannelIsClear())
+  clearChannelsMask = ChannelIsClear(transmittingRadio);
+  if (clearChannelsMask)
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
   }
 }
 
@@ -551,18 +587,38 @@ static void UARTconnected()
   hwTimer.resume();
 }
 
-static void ChangeRadioParams()
+void ResetPower()
 {
-  ModelUpdatePending = false;
-
-  SetRFLinkRate(config.GetRate());
   // Dynamic Power starts at MinPower unless armed
   // (user may be turning up the power while flying and dropping the power may compromise the link)
-  POWERMGNT.setPower((config.GetDynamicPower() && !crsf.IsArmed()) ? MinPower : (PowerLevels_e)config.GetPower());
+  if (config.GetDynamicPower())
+  {
+    if (!crsf.IsArmed())
+    {
+      // if dynamic power enabled and not armed then set to MinPower
+      POWERMGNT.setPower(MinPower);
+    }
+    else if (POWERMGNT.currPower() < config.GetPower())
+    {
+      // if the new config is a higher power then set it, otherwise leave it alone
+      POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    }
+  }
+  else
+  {
+    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+  }
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
   LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
+}
+
+static void ChangeRadioParams()
+{
+  ModelUpdatePending = false;
+  SetRFLinkRate(config.GetRate());
+  ResetPower();
 }
 
 void ModelUpdateReq()
@@ -804,6 +860,10 @@ void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
   Radio.SetFrequencyReg(GetInitialFreq());
+  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
+  {
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+  }
   // Start transmitting again
   hwTimer.resume();
 

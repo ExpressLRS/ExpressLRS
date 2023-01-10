@@ -14,6 +14,7 @@ static char tlmBandwidth[] = " (xxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2";
 
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
@@ -80,6 +81,15 @@ static struct luaItem_selection luaSwitch = {
     switchmodeOpts4ch,
     STR_EMPTYSPACE
 };
+
+#if defined(GPIO_PIN_NSS_2)
+  static struct luaItem_selection luaAntenna = {
+      {"Antenna Mode", CRSF_TEXT_SELECTION},
+      0, // value
+      antennamodeOpts,
+      STR_EMPTYSPACE
+  };
+#endif
 
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
@@ -222,6 +232,7 @@ static char luaBadGoodString[10];
 
 extern TxConfig config;
 extern void VtxTriggerSend();
+extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
@@ -532,6 +543,12 @@ static void registerLuaParameters()
       else
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
     });
+    if (isDualRadio())
+    {
+      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetAntennaMode(arg);
+      });
+    }
     registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
       bool newModelMatch = arg;
       config.SetModelMatch(newModelMatch);
@@ -553,6 +570,10 @@ static void registerLuaParameters()
     luadevGeneratePowerOpts(&luaPower);
     registerLUAParameter(&luaPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
+      if (!config.IsModified())
+      {
+          ResetPower();
+      }
     }, luaPowerFolder.common.id);
     registerLUAParameter(&luaDynamicPower, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetDynamicPower(arg > 0);
@@ -654,6 +675,10 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  if (isDualRadio())
+  {
+    setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
+  }
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

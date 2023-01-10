@@ -22,6 +22,7 @@ extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
+extern void ResetPower();
 extern void setWifiUpdateMode();
 
 extern Display *display;
@@ -221,6 +222,10 @@ static void saveValueIndex(bool init)
 
         case STATE_POWER_MAX:
             config.SetPower(values_index);
+            if (!config.IsModified())
+            {
+                ResetPower();
+            }
             break;
         case STATE_POWER_DYNAMIC:
             config.SetDynamicPower(values_index > 0);

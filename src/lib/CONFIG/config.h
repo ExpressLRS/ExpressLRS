@@ -78,6 +78,7 @@ public:
     bool GetDynamicPower() const { return m_model->dynamicPower; }
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
+    uint8_t GetAntennaMode() const { return m_model->txAntenna; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
@@ -91,6 +92,7 @@ public:
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
+    model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -99,6 +101,7 @@ public:
     void SetDynamicPower(bool dynamicPower);
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
+    void SetAntennaMode(uint8_t txAntenna);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -149,7 +152,7 @@ typedef union {
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
-                 unused:13;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:12;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
@@ -213,8 +216,8 @@ public:
     void SetRateInitialIdx(uint8_t rateInitialIdx);
 
 private:
-    void UpgradeEepromV4ToV5();
-    void UpgradeEepromV5ToV6();
+    void UpgradeEepromV4();
+    void UpgradeEepromV5();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
