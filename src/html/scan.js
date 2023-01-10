@@ -168,6 +168,8 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
+
+  _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
 @@end
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
