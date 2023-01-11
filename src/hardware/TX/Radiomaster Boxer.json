@@ -24,5 +24,6 @@
     "debug_backpack_tx": 17,
     "backpack_boot": 15,
     "backpack_en": 25,
-    "misc_fan_en": 2
+    "misc_fan_pwm": 2,
+    "misc_fan_speeds": [165,165,165,165,165,165]
 }

@@ -446,7 +446,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : SX12XX_Radio_Default;    
+    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : SX12XX_Radio_Default;
     SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
 #if defined(Regulatory_Domain_EU_CE_2400)
     clearChannelsMask = ChannelIsClear(transmittingRadio);
@@ -689,10 +689,6 @@ void LostConnection(bool resumeRx)
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
-    FreqCorrection = 0;
-    #if defined(RADIO_SX127X)
-    Radio.SetPPMoffsetReg(0);
-    #endif
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -727,7 +723,6 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     RXtimerState = tim_disconnected;
     DBGLN(" ");
     DBGLN("tentative conn");
-    FreqCorrection = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -1428,7 +1423,7 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
-    if (config.IsModified() && !InBindingMode)
+    if (config.IsModified() && !InBindingMode && connectionState != wifiUpdate)
     {
         LostConnection(false);
         config.Commit();
