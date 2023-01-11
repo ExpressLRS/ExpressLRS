@@ -108,7 +108,7 @@ void LLCC68Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     IQinverted = InvertIQ;
     SetMode(LLCC68_MODE_STDBY_RC, SX12XX_Radio_All);
     hal.WriteCommand(LLCC68_RADIO_SET_PACKETTYPE, LLCC68_PACKET_TYPE_LORA, SX12XX_Radio_All, 20);
-    DBG("Config LoRa ");
+    DBGLN("Config LoRa ");
     SetFrequencyReg(regfreq);
     ConfigModParamsLoRa(bw, sf, cr);
 #if defined(DEBUG_FREQ_CORRECTION) // TODO Chekc if this available with the LLCC68?

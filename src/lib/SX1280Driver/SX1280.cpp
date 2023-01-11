@@ -163,7 +163,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     }
     else
     {
-        DBG("Config LoRa ");
+        DBGLN("Config LoRa ");
         ConfigModParamsLoRa(bw, sf, cr);
 #if defined(DEBUG_FREQ_CORRECTION)
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_VARIABLE_LENGTH;
