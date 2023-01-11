@@ -187,6 +187,9 @@ if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         hal.WriteRegister(0x0944, tempValue | 0x02, SX12XX_Radio_2);
     }
 }
+
+    // Calling FS mode here to set any radios that may be still be in RX mode.  Important for Gemini.
+    instance->SetMode(LLCC68_MODE_FS, radioNumber);
 }
 
 /***
@@ -594,7 +597,13 @@ void ICACHE_RAM_ATTR LLCC68Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     SX12XX_Radio_Number_t irqClearRadio = radioNumber;
 
     uint16_t irqStatus = instance->GetIrqStatus(radioNumber);
-    if (irqStatus & LLCC68_IRQ_TX_DONE)
+    if (irqStatus == LLCC68_IRQ_RX_TX_TIMEOUT)
+    {
+        instance->ClearIrqStatus(LLCC68_IRQ_RADIO_ALL, irqClearRadio); // Calling ClearIrqStatus first allows more time for processing e.g. 2nd radio IRQ.
+        instance->SetMode(LLCC68_MODE_FS, radioNumber); // Returns automatically to STBY_RC mode on timer end-of-count.  Setting FS will be needed for Gemini Tx mode, and to minimise jitter.
+        return;
+    }
+    else if (irqStatus & LLCC68_IRQ_TX_DONE)
     {
         hal.TXRXdisable();
         instance->ClearIrqStatus(LLCC68_IRQ_RADIO_ALL, SX12XX_Radio_All); // Calling ClearIrqStatus first allows more time for processing instead of waiting for busy to clear.
@@ -606,13 +615,10 @@ void ICACHE_RAM_ATTR LLCC68Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
             instance->lastSuccessfulPacketRadio = radioNumber;
+            irqClearRadio = SX12XX_Radio_All;
         }
+        instance->ClearIrqStatus(LLCC68_IRQ_RADIO_ALL, irqClearRadio);
         instance->clearTimeout(irqClearRadio);
-    }
-    else if (irqStatus == LLCC68_IRQ_RX_TX_TIMEOUT)
-    {
-        instance->ClearIrqStatus(LLCC68_IRQ_RADIO_ALL, irqClearRadio); // Calling ClearIrqStatus first allows more time for processing e.g. 2nd radio IRQ.
-        instance->SetMode(LLCC68_MODE_FS, radioNumber); // Returns automatically to STBY_RC mode on timer end-of-count.  Setting FS will be needed for Gemini Tx mode, and to minimise jitter.
         return;
     }
     else if (irqStatus == LLCC68_IRQ_RADIO_NONE)
