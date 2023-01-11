@@ -725,6 +725,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionState = tentative;
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
+    DBGLN(" ");
     DBGLN("tentative conn");
     FreqCorrection = 0;
     PfdPrevRawOffset = 0;
@@ -752,6 +753,7 @@ void GotConnection(unsigned long now)
     webserverPreventAutoStart = true;
     #endif
 
+    DBGLN(" ");
     DBGLN("got conn");
 }
 
