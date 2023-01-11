@@ -168,6 +168,8 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
+
+  _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
 @@end
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
@@ -348,6 +350,36 @@ _('upload_form').addEventListener('submit', (e) => {
   e.preventDefault();
   uploadFile();
 });
+
+_('fileselect').addEventListener('change', (e) => {
+  const files = e.target.files || e.dataTransfer.files;
+  const reader = new FileReader();
+  reader.onload = function(x) {
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+      _('fileselect').value = '';
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          cuteAlert({
+            type: 'info',
+            title: 'Upload Model Configuration',
+            message: this.responseText
+          });
+        } else {
+          cuteAlert({
+            type: 'error',
+            title: 'Upload Model Configuration',
+            message: 'An error occurred while uploading model configuration file'
+          });
+        }
+      }
+    };
+    xmlhttp.open('POST', '/import', true);
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
+    xmlhttp.send(x.target.result);
+  }
+  reader.readAsText(files[0]);
+}, false);
 
 // =========================================================
 
