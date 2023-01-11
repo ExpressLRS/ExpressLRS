@@ -468,7 +468,7 @@
     "generic": {
         "name": "Generic targets used as a base",
         "tx_900": {
-            "LLCC68": {
+            "llcc68": {
                 "product_name": "Generic ESP32 LLCC68 TX",
                 "lua_name": "Generic LLCC68",
                 "layout_file": "Generic LLCC68.json",
@@ -477,7 +477,7 @@
                 "firmware": "Unified_ESP32_900_LLCC68_TX",
                 "prior_target_name": "Unified_ESP32_900_LLCC68_TX"
             },
-            "gemini_LLCC68": {
+            "gemini_llcc68": {
                 "product_name": "Generic ESP32 LLCC68 Gemini TX",
                 "lua_name": "Gemini LLCC68",
                 "layout_file": "Generic LLCC68 Gemini.json",
@@ -506,7 +506,7 @@
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "DIY_900_RX_PWMP"
             },
-            "LLCC68": {
+            "llcc68": {
                 "product_name": "Generic ESP8285 LLCC68 900MHz RX",
                 "lua_name": "ELRS 900RX",
                 "layout_file": "Generic 900 LLCC68.json",
@@ -515,7 +515,7 @@
                 "firmware": "Unified_ESP8285_900_LLCC68_RX",
                 "prior_target_name": "Unified_ESP8285_900_LLCC68_RX"
             },
-            "LLCC68_true_diversity": {
+            "llcc68_true_diversity": {
                 "product_name": "Generic ESP32 True Diversity LLCC68 900MHz RX",
                 "lua_name": "Diversity LLCC68",
                 "layout_file": "Generic 900 LLCC68 True Diversity.json",
