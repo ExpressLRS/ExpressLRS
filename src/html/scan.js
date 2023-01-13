@@ -5,7 +5,6 @@
 /* eslint-disable require-jsdoc */
 
 document.addEventListener('DOMContentLoaded', init, false);
-let scanTimer = undefined;
 let colorTimer = undefined;
 let colorUpdated  = false;
 let storedModelId = 255;
@@ -203,7 +202,7 @@ function initOptions() {
       const data = JSON.parse(this.responseText);
       updateOptions(data['options']);
       updateConfig(data['config']);
-      scanTimer = setInterval(getNetworks, 2000);
+      setTimeout(getNetworks, 2000);
     }
   };
   xmlhttp.open('GET', '/config', true);
@@ -212,15 +211,20 @@ function initOptions() {
 
 function getNetworks() {
   const xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+  xmlhttp.onload = function() {
+    if (this.status == 204) {
+      setTimeout(getNetworks, 2000);
+    } else {
+      console.log(this.responseText);
       const data = JSON.parse(this.responseText);
       if (data.length > 0) {
         _('loader').style.display = 'none';
         autocomplete(_('network'), data);
-        clearInterval(scanTimer);
       }
     }
+  };
+  xmlhttp.onerror = function() {
+    setTimeout(getNetworks, 2000);
   };
   xmlhttp.open('GET', 'networks.json', true);
   xmlhttp.send();
