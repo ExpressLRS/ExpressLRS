@@ -67,6 +67,7 @@ bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
+static uint16_t ptrChannels[3] = {1500, 1500, 1500};
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -469,6 +470,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
+        CRSF::ChannelData[11] = ptrChannels[0];
+        CRSF::ChannelData[12] = ptrChannels[1];
+        CRSF::ChannelData[13] = ptrChannels[2];
         OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
@@ -965,6 +969,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
   {
     memset(backpackVersion, 0, sizeof(backpackVersion));
     memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
+  }
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
+  {
+    ptrChannels[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannels[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannels[2] = packet->payload[4] + (packet->payload[5] << 8);
   }
 }
 
