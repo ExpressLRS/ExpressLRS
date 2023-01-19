@@ -549,7 +549,7 @@ function updateOptions(data) {
   }
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
   else _('connect').style.display = 'none';
-  if (data['customised']) _('reset-options').style.display = 'block';
+  _('reset-options').style.display = data['customised'] ? 'block' : 'none';
 }
 
 @@if isTX:
