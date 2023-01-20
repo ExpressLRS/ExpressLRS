@@ -6,6 +6,9 @@
                 "product_name": "Anyleaf 2.4GHz single radio RX",
                 "lua_name": "AL single RX",
                 "layout_file":  "Generic 2400 Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX"
