@@ -964,7 +964,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
   {
     memset(backpackVersion, 0, sizeof(backpackVersion));
-    memcpy(backpackVersion, packet->payload, packet->payloadSize > sizeof(backpackVersion)-1 ? sizeof(backpackVersion)-1 : packet->payloadSize);
+    memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
   }
 }
 

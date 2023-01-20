@@ -217,7 +217,7 @@ static int timeout()
         return 1000;        // don't check for another second so we don't spam too hard :-)
     }
 
-    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || lastVersionTryTime+1000 < millis())) {
+    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000)) {
         lastVersionTryTime = millis();
         versionRequestTries++;
         mspPacket_t out;
