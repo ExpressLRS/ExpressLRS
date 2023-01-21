@@ -194,7 +194,7 @@ String& getOptions()
     return builtinOptions;
 }
 
-void saveOptions(Stream &stream)
+void saveOptions(Stream &stream, boolean customised)
 {
     DynamicJsonDocument doc(1024);
 
@@ -220,6 +220,7 @@ void saveOptions(Stream &stream)
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     #endif
     doc["domain"] = firmwareOptions.domain;
+    doc["customised"] = customised;
 
     serializeJson(doc, stream);
 }
@@ -227,7 +228,7 @@ void saveOptions(Stream &stream)
 void saveOptions()
 {
     File options = SPIFFS.open("/options.json", "w");
-    saveOptions(options);
+    saveOptions(options, true);
     options.close();
 }
 
@@ -318,7 +319,7 @@ bool options_init()
     firmwareOptions.domain = doc["domain"] | 0;
 
     builtinOptions.clear();
-    saveOptions(builtinOptions);
+    saveOptions(builtinOptions, doc["customised"] | false);
 
     debugFreeInitLogger();
 
