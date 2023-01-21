@@ -485,6 +485,8 @@ function submitOptions(e) {
       return arr.length == 0 ? undefined : arr;
     }
     if (typeof v === 'boolean') return v;
+    if (v == 'true') return true;
+    if (v == 'false') return false;
     return isNaN(v) ? v : +v;
   }));
 
@@ -550,6 +552,7 @@ function updateOptions(data) {
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
   else _('connect').style.display = 'none';
   if (data['customised']) _('reset-options').style.display = 'block';
+  _('customised').value = true; // overwrite the value from the module, if we save then it's customised
 }
 
 @@if isTX:
