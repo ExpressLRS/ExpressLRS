@@ -194,7 +194,7 @@ String& getOptions()
     return builtinOptions;
 }
 
-void saveOptions(Stream &stream, boolean customised)
+void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
