@@ -452,11 +452,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
 #if defined(Regulatory_Domain_EU_CE_2400)
     clearChannelsMask = ChannelIsClear(transmittingRadio);
-    if (clearChannelsMask)
 #endif
-    {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
-    }
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio, clearChannelsMask);
+
     return true;
 }
 
