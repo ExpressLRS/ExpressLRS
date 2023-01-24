@@ -25,8 +25,8 @@
                 "firmware": "Unified_ESP32_2400_RX"
             },
             "h7-fc": {
-                "product_name": "Anyleaf H7 FC integrated RX",
-                "lua_name": "AL H7 FC RX",
+                "product_name": "Anyleaf FC integrated RX",
+                "lua_name": "AL FC RX",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
