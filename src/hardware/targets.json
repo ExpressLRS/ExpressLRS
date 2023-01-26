@@ -619,10 +619,18 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
-            "diversity_vtx": {
+            "diversity_pa_vtx": {
                 "product_name": "Generic ESP32 True Diversity PA 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
                 "layout_file": "Generic 2400 True Diversity PA and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "diversity_vtx": {
+                "product_name": "Generic ESP32 True Diversity 2.4Ghz RX and VTx",
+                "lua_name": "Div+VTx 2.4RX",
+                "layout_file": "Generic 2400 True Diversity and VTx.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
@@ -635,13 +643,13 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
             },
-            "true_diversity_pwm14": {            
-            "product_name": "Generic ESP32 True Diversity PA 14xPWM 2.4Ghz RX ",            
-            "lua_name": "14PWM TD 2.4RX",            
-            "layout_file": "Generic 2400 True Diversity PA PWM 14.json",            
-            "upload_methods": ["uart", "wifi", "betaflight"],            
-            "platform": "esp32",            
-            "firmware": "Unified_ESP32_2400_RX"
+            "true_diversity_pwm14": {
+                "product_name": "Generic ESP32 True Diversity PA 14xPWM 2.4Ghz RX ",
+                "lua_name": "14PWM TD 2.4RX",
+                "layout_file": "Generic 2400 True Diversity PA PWM 14.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             }
         }
     },
@@ -1260,7 +1268,7 @@
         "tx_2400": {
             "zorro": {
                 "product_name": "RadioMaster Zorro 2.4GHz TX",
-                "lua_name": "RadioMstr Zorro",
+                "lua_name": "RM Zorro",
                 "layout_file": "Radiomaster Zorro.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
@@ -1269,7 +1277,7 @@
             },
             "tx16s": {
                 "product_name": "RadioMaster TX16S Internal 2.4GHz TX",
-                "lua_name": "RadioMstr TX16S",
+                "lua_name": "RM TX16S",
                 "layout_file": "Radiomaster TX16S 2400.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
@@ -1278,7 +1286,7 @@
             },
             "tx12": {
                 "product_name": "RadioMaster TX12 Internal 2.4GHz TX",
-                "lua_name": "RadioMstr TX12",
+                "lua_name": "RM TX12",
                 "layout_file": "Radiomaster Zorro.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
@@ -1287,7 +1295,7 @@
             },
             "ranger": {
                 "product_name": "RadioMaster Ranger 2.4GHz TX",
-                "lua_name": "RadioMstr Ranger",
+                "lua_name": "RM Ranger",
                 "layout_file": "Radiomaster Ranger.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
@@ -1311,21 +1319,54 @@
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX"
+			},
+            "boxer": {
+                "product_name": "RadioMaster Boxer Internal 2.4GHz TX",
+                "lua_name": "RM Boxer",
+                "layout_file": "Radiomaster Boxer.json",
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
+            "er4": {
+                "product_name": "RadioMaster ER4 2.4GHz PWM RX",
+                "lua_name": "RM ER4",
+                "layout_file": "Generic 2400 PWMP5.json",
+                "overlay": {
+                    "power_dcdc": true,
+                    "pwm_outputs": [0,1,3,9]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_PWMP"
+            },
             "er5": {
                 "product_name": "RadioMaster ER5A/C 2.4GHz PWM RX",
-                "lua_name": "RadioMstr ER5A/C",
+                "lua_name": "RM ER5A/C",
                 "layout_file": "Generic 2400 PWMP5.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_PWMP"
             },
+            "er6": {
+                "product_name": "RadioMaster ER6-GV 2.4GHz PWM RX",
+                "lua_name": "RM ER6-GV",
+                "layout_file": "Vario 2400.json",
+                "overlay": {
+                    "power_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "Vario 2400RX"
+            },
             "rp1": {
                 "product_name": "RadioMaster RP1 2.4GHz RX",
-                "lua_name": "RadioMstr RP1",
+                "lua_name": "RM RP1",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -1333,7 +1374,7 @@
             },
             "rp2": {
                 "product_name": "RadioMaster RP2 2.4GHz RX",
-                "lua_name": "RadioMstr RP2",
+                "lua_name": "RM RP2",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -1341,7 +1382,7 @@
             },
             "rp3": {
                 "product_name": "RadioMaster RP3 Diversity 2.4GHz RX",
-                "lua_name": "RadioMstr RP3",
+                "lua_name": "RM RP3",
                 "layout_file": "Generic 2400 Diversity PA.json",
                 "overlay": {
                     "radio_dcdc": true
