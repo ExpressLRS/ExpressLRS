@@ -552,6 +552,28 @@ TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 }
 
 void
+TxConfig::GetHeadTracking(uint8_t *panChannel, uint8_t *tiltChannel, uint8_t *rollChannel) const
+{
+    uint32_t ht = m_model->headTracking;
+    *panChannel = ht % 11;
+    ht /= 11;
+    *tiltChannel = ht % 11;
+    ht /= 11;
+    *rollChannel = ht % 11;
+}
+
+void
+TxConfig::SetHeadTracking(uint8_t panChannel, uint8_t tiltChannel, uint8_t rollChannel)
+{
+    uint32_t ht;
+    ht = panChannel + (tiltChannel + rollChannel * 11) * 11;
+    if (ht != m_model->headTracking) {
+        m_model->headTracking = ht;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetDefaults(bool commit)
 {
     // Reset everything to 0/false and then just set anything that zero is not appropriate

@@ -12,9 +12,11 @@
 extern bool InBindingMode;
 extern Stream *TxBackpack;
 extern char backpackVersion[];
+extern bool headTrackingEnabled;
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
+bool HTEnableFlagReadyToSend = false;
 
 bool lastRecordingState = false;
 
@@ -107,6 +109,17 @@ static void BackpackWiFiToMSPOut(uint16_t command)
     packet.makeCommand();
     packet.function = command;
     packet.addByte(0);
+
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+}
+
+static void BackpackHTFlagToMSPOut(uint8_t arg)
+{
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
+    packet.addByte(arg);
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
@@ -239,6 +252,13 @@ static int timeout()
         VRxBackpackWiFiReadyToSend = false;
         BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
     }
+
+    if (HTEnableFlagReadyToSend && connectionState < MODE_STATES)
+    {
+        HTEnableFlagReadyToSend = false;
+        BackpackHTFlagToMSPOut(headTrackingEnabled);
+    }
+
     return BACKPACK_TIMEOUT;
 }
 

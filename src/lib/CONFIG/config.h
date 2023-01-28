@@ -20,14 +20,15 @@
 
 #if defined(TARGET_TX)
 typedef struct {
-    uint8_t     rate:4,
-                tlm:4;
-    uint8_t     power:3,
+    uint32_t    rate:4,
+                tlm:4,
+                power:3,
                 switchMode:2,
-                boostChannel:3; // dynamic power boost AUX channel
-    uint8_t     dynamicPower:1,
+                boostChannel:3, // dynamic power boost AUX channel
+                dynamicPower:1,
                 modelMatch:1,
-                txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
+                txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
+                headTracking:12;
 } model_config_t;
 
 typedef struct {
@@ -93,6 +94,7 @@ public:
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
+    void GetHeadTracking(uint8_t *panChannel, uint8_t *tiltChannel, uint8_t *rollChannel) const;
 
     // Setters
     void SetRate(uint8_t rate);
@@ -116,6 +118,7 @@ public:
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
+    void SetHeadTracking(uint8_t panChannel, uint8_t tiltChannel, uint8_t rollChannel);
 
     // State setters
     bool SetModelId(uint8_t modelId);

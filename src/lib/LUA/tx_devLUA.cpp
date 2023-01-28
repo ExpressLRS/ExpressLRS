@@ -18,6 +18,8 @@ static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 
+#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
+
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
@@ -226,6 +228,24 @@ static struct luaItem_selection luaDvrStopDelay = {
     {"DVR Stp Dly", CRSF_TEXT_SELECTION},
     0, // value
     "0s;5s;15s;30s;45s;1min;2min",
+    STR_EMPTYSPACE};
+
+static struct luaItem_selection luaHeadTrackingPanChannel = {
+    {"HT Pan Channel", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;" STR_LUA_ALLAUX,
+    STR_EMPTYSPACE};
+
+static struct luaItem_selection luaHeadTrackingTiltChannel = {
+    {"HT Tilt Channel", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;" STR_LUA_ALLAUX,
+    STR_EMPTYSPACE};
+
+static struct luaItem_selection luaHeadTrackingRollChannel = {
+    {"HT Roll Channel", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;" STR_LUA_ALLAUX,
     STR_EMPTYSPACE};
 
 static struct luaItem_string luaBackpackVersion = {
@@ -653,6 +673,29 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
+
+      registerLUAParameter(
+          &luaHeadTrackingPanChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              uint8_t p, t, r;
+              config.GetHeadTracking(&p, &t, &r);
+              config.SetHeadTracking(arg, t, r);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaHeadTrackingTiltChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              uint8_t p, t, r;
+              config.GetHeadTracking(&p, &t, &r);
+              config.SetHeadTracking(p, arg, r);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaHeadTrackingRollChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              uint8_t p, t, r;
+              config.GetHeadTracking(&p, &t, &r);
+              config.SetHeadTracking(p, t, arg);
+          },
+          luaBackpackFolder.common.id);
+
       registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
   }
@@ -713,6 +756,12 @@ static int event()
     setLuaTextSelectionValue(&luaDvrAux, config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetDvrStopDelay());
+    // Head tracking config
+    uint8_t p, t, r;
+    config.GetHeadTracking(&p, &t, &r);
+    setLuaTextSelectionValue(&luaHeadTrackingPanChannel, p);
+    setLuaTextSelectionValue(&luaHeadTrackingTiltChannel, t);
+    setLuaTextSelectionValue(&luaHeadTrackingRollChannel, r);
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)

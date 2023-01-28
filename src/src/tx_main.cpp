@@ -67,7 +67,10 @@ bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
-static uint16_t ptrChannels[3] = {1500, 1500, 1500};
+
+bool headTrackingEnabled = false;
+static uint8_t ptrChannels[3];
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN};
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -470,9 +473,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        CRSF::ChannelData[11] = ptrChannels[0];
-        CRSF::ChannelData[12] = ptrChannels[1];
-        CRSF::ChannelData[13] = ptrChannels[2];
+        if (headTrackingEnabled)
+        {
+          if (ptrChannels[0]) CRSF::ChannelData[ptrChannels[0]+3] = ptrChannelData[0];
+          if (ptrChannels[1]) CRSF::ChannelData[ptrChannels[1]+3] = ptrChannelData[1];
+          if (ptrChannels[2]) CRSF::ChannelData[ptrChannels[2]+3] = ptrChannelData[2];
+        }
         OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
@@ -653,6 +659,14 @@ static void ChangeRadioParams()
   ResetPower();
 }
 
+static void UpdateHeadTracking()
+{
+  // Update HeadTracking channels
+  config.GetHeadTracking(ptrChannels, ptrChannels+1, ptrChannels+2);
+  headTrackingEnabled = ptrChannels[0] != 0 || ptrChannels[1] != 0 || ptrChannels[2] != 0;
+  HTEnableFlagReadyToSend = true;
+}
+
 void ModelUpdateReq()
 {
   // Force synspam with the current rate parameters in case already have a connection established
@@ -661,6 +675,9 @@ void ModelUpdateReq()
     syncSpamCounter = syncSpamAmount;
     ModelUpdatePending = true;
   }
+
+  UpdateHeadTracking();
+  devicesTriggerEvent();
 
   // Jump from awaitingModelId to transmitting to break the startup delay now
   // that the ModelID has been confirmed by the handset
@@ -680,6 +697,7 @@ static void ConfigChangeCommit()
   hwTimer.callbackTock = &timerCallbackNormal;
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
+  UpdateHeadTracking();
   devicesTriggerEvent();
 }
 
@@ -972,9 +990,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
   }
   else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
   {
-    ptrChannels[0] = packet->payload[0] + (packet->payload[1] << 8);
-    ptrChannels[1] = packet->payload[2] + (packet->payload[3] << 8);
-    ptrChannels[2] = packet->payload[4] + (packet->payload[5] << 8);
+    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
   }
 }
 
@@ -1180,6 +1198,7 @@ void setup()
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
+    UpdateHeadTracking();
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
