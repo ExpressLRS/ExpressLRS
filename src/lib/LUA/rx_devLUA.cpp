@@ -31,7 +31,17 @@ static struct luaItem_selection luaRateInitIdx = {
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "Antenna B;Antenna A;Diversity",
+    "Antenna A;Antenna B;Diversity",
+    STR_EMPTYSPACE
+};
+#endif
+
+// Gemini Mode
+#if defined(GPIO_PIN_NSS_2)
+static struct luaItem_selection luaDiversityMode = {
+    {"Rx Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    "Diversity;Gemini",
     STR_EMPTYSPACE
 };
 #endif
@@ -186,7 +196,7 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
       rx_config_pwm_t newPwmCh;
       newPwmCh.raw = config.GetPwmChannel(ch)->raw;
       // The value must fit into the 10 bit range of the failsafe
-      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(CRSF::ChannelData[ch], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(CRSF::ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
       //DBGLN("FSCH(%u) crsf=%u us=%u", ch, CRSF::ChannelData[ch], newPwmCh.val.failsafe+988U);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
     }
@@ -211,6 +221,15 @@ static void registerLuaParameters()
       config.SetAntennaMode(arg);
     });
   }
+
+  // Gemini Mode
+  if (isDualRadio())
+  {
+    registerLUAParameter(&luaDiversityMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetAntennaMode(arg); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
+    });
+  }
+
 #if defined(POWER_OUTPUT_VALUES)
   luadevGeneratePowerOpts(&luaTlmPower);
   registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -223,17 +242,6 @@ static void registerLuaParameters()
     uint8_t newRate = RATE_MAX - 1 - arg;
     config.SetRateInitialIdx(newRate);
   });
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-  if (OPT_HAS_SERVO_OUTPUT)
-  {
-    registerLUAParameter(&luaMappingFolder);
-    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
-  }
-#endif
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -248,6 +256,17 @@ static void registerLuaParameters()
     }
     sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  if (OPT_HAS_SERVO_OUTPUT)
+  {
+    registerLUAParameter(&luaMappingFolder);
+    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+  }
+#endif
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
@@ -260,6 +279,12 @@ static int event()
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+  }
+
+  // Gemini Mode
+  if (isDualRadio())
+  {
+    setLuaTextSelectionValue(&luaDiversityMode, config.GetAntennaMode()); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
   }
 
 #if defined(POWER_OUTPUT_VALUES)
