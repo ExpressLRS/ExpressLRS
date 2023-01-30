@@ -1013,16 +1013,16 @@ void UpdateModelMatch(uint8_t model)
 void MspReceiveComplete()
 {
     /* Possible data types received in a MSP frame:
-     *    MSP_ELRS command bytes: 
+     *    MSP_ELRS command bytes:
      *        0: command
      *        1..n: payload
-     *    crsf_header_t bytes: 
+     *    crsf_header_t bytes:
      *        0: device_addr
      *        1: frame_size
      *        2: type
      *        3..n-1: payload
-     *        n: crc     
-     *    crsf_ext_header_t bytes: 
+     *        n: crc
+     *    crsf_ext_header_t bytes:
      *        0: device_addr
      *        1: frame_size
      *        2: type
@@ -1030,7 +1030,7 @@ void MspReceiveComplete()
      *        4: orig_addr
      *        5..n-1: payload
      *        n: crc
-     *    crsf_ext_header_t with encapsulated MSP sent with CRSF::AddMspMessage(mspPacket_t* packet): 
+     *    crsf_ext_header_t with encapsulated MSP sent with CRSF::AddMspMessage(mspPacket_t* packet):
      *        // CRSF extended frame header
      *        0: device_addr = CRSF_ADDRESS_BROADCAST = 0x00
      *        1: frame_size
@@ -1045,9 +1045,9 @@ void MspReceiveComplete()
      *        n-1: mspCrc
      *        // CRSF crc
      *        n: crc
-    /*
-    crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData; 
-    
+     */
+    crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+
     switch(receivedHeader->device_addr) {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
@@ -1061,7 +1061,7 @@ void MspReceiveComplete()
     case MSP_ELRS_SET_RX_LOAN_MODE: //0x0F
         loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
-        break;           
+        break;
     default:
         switch(receivedHeader->type) {
         case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
@@ -1078,7 +1078,7 @@ void MspReceiveComplete()
                     vtxSPIPitmode = MspData[11];
                 }
                 devicesTriggerEvent();
-            }           
+            }
             break;
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
@@ -1087,7 +1087,7 @@ void MspReceiveComplete()
                 crsf.ParameterUpdateData[1] = MspData[CRSF_TELEMETRY_FIELD_ID_INDEX];
                 crsf.ParameterUpdateData[2] = MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX];
                 luaParamUpdateReq();
-            }      
+            }
             break;
         case CRSF_FRAMETYPE_ARDUPILOT_LUA:
             // No MSP data to the FC if no model match
@@ -1096,7 +1096,7 @@ void MspReceiveComplete()
                 crsf.sendMSPFrameToFC(MspData);
             }
             break;
-        default: 
+        default:
             // No MSP data to the FC if no model match
             if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
             {
