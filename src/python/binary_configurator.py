@@ -268,8 +268,20 @@ def ask_for_firmware(args):
                                     target = f'{v}.{t}.{m}'
     return target, config
 
+class readable_dir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.R_OK):
+            setattr(namespace,self.dest,prospective_dir)
+        else:
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
+    # firmware/targets directory
+    parser.add_argument('--dir', action=readable_dir, default=None)
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -319,6 +331,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.dir != None:
+        os.chdir(args.dir)
+
     if args.file == None:
         os.chdir('firmware')
         args.target, config = ask_for_firmware(args)
@@ -332,7 +347,7 @@ def main():
             print("Firmware files not found, did you download and unpack them in this directory?")
             exit(1)
     else:
-        config = ask_for_firmware(args)
+        args.target, config = ask_for_firmware(args)
 
     with args.file as f:
         mm = mmap.mmap(f.fileno(), 0)
