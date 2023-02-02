@@ -448,12 +448,13 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : SX12XX_Radio_Default;
-    SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
+    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+
 #if defined(Regulatory_Domain_EU_CE_2400)
-    clearChannelsMask = ChannelIsClear(transmittingRadio);
+    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+    if (transmittingRadio)
 #endif
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio, clearChannelsMask);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
     return true;
 }

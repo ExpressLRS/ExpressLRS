@@ -465,10 +465,10 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, SX12XX_Radio_Number_t clearChannelsMask)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     //catch TX timeout and no transmission in case of LBT channel in use
-    if ((currOpmode == SX1280_MODE_TX) || (!clearChannelsMask))
+    if ((currOpmode == SX1280_MODE_TX) || (radioNumber == SX12XX_Radio_NONE))
     {
         DBGLN("Timeout!");
         SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
@@ -476,12 +476,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         TXnbISR();
         return;
     }
-
-    if (radioNumber == SX12XX_Radio_Default)
-    {
-        radioNumber = lastSuccessfulPacketRadio;
-    }
-        
+  
     // Normal diversity mode
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)
     {

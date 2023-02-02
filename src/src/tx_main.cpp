@@ -453,7 +453,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
+  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
 
   if (isDualRadio())
   {
@@ -473,12 +473,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
-#if defined(Regulatory_Domain_EU_CE_2400)
-  clearChannelsMask = ChannelIsClear(transmittingRadio);
+#if defined(Regulatory_Domain_EU_CE_2400) 
+  transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
-  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio, clearChannelsMask);
-
+  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 }
 
 /*
