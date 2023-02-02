@@ -1089,13 +1089,6 @@ void MspReceiveComplete()
                 luaParamUpdateReq();
             }
             break;
-        case CRSF_FRAMETYPE_ARDUPILOT_LUA:
-            // No MSP data to the FC if no model match
-            if (connectionHasModelMatch)
-            {
-                crsf.sendMSPFrameToFC(MspData);
-            }
-            break;
         default:
             // No MSP data to the FC if no model match
             if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
