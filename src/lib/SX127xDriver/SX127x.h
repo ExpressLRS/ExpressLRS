@@ -72,7 +72,7 @@ public:
     SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() {return SX12XX_Radio_1;}
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, SX12XX_Radio_Number_t clearChannelsMask);
+    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 
