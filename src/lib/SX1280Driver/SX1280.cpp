@@ -467,8 +467,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 
 void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    //catch TX timeout and no transmission in case of LBT channel in use
-    if ((currOpmode == SX1280_MODE_TX) || (radioNumber == SX12XX_Radio_NONE))
+    //catch TX timeout
+    if (currOpmode == SX1280_MODE_TX)
     {
         DBGLN("Timeout!");
         SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
