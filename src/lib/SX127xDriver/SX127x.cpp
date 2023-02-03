@@ -341,7 +341,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, SX12XX_Radio_Number_t clearChannelsMask)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {

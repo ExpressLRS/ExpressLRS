@@ -452,7 +452,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-    if (transmittingRadio)
 #endif
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
