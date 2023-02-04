@@ -1,6 +1,5 @@
 {
-    "serial_rx": 3,
-    "serial_tx": 1,
+    "pwm_outputs": [1,3],
     "radio_busy": 5,
     "radio_dio1": 4,
     "radio_miso": 12,
