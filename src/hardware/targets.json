@@ -1357,6 +1357,14 @@
                 "firmware": "Unified_ESP8285_2400_RX"
             },
             "rp2": {
+                "product_name": "RadioMaster RP2 2.4GHz RX",
+                "lua_name": "RM RP2",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "rp2pwm": {
                 "product_name": "RadioMaster RP2 2.4GHz RX PWM",
                 "lua_name": "RM RP2 PWM",
                 "layout_file": "Generic 2400 pwm.json",
