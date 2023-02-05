@@ -171,13 +171,14 @@ jobs:
 
       - name: Create firmware zip bundle
         run: |
-          zip -r -9 firmware.zip ./dist
+          zip -r -9 firmware.zip ./dist/firmware
 
       - name: Upload firmware bundle to ExpressLRS artifactory
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+          AWS_REGION: "eu-central-1"
         run: |
           if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
             echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
