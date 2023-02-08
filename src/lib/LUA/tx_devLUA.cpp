@@ -230,22 +230,16 @@ static struct luaItem_selection luaDvrStopDelay = {
     "0s;5s;15s;30s;45s;1min;2min",
     STR_EMPTYSPACE};
 
-static struct luaItem_selection luaHeadTrackingPanChannel = {
-    {"HT Pan Channel", CRSF_TEXT_SELECTION},
+static struct luaItem_selection luaHeadTrackingEnableChannel = {
+    {"HT Enable", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;" STR_LUA_ALLAUX,
+    "Off;On;" STR_LUA_ALLAUX_UPDOWN,
     STR_EMPTYSPACE};
 
-static struct luaItem_selection luaHeadTrackingTiltChannel = {
-    {"HT Tilt Channel", CRSF_TEXT_SELECTION},
+static struct luaItem_selection luaHeadTrackingStartChannel = {
+    {"HT Start Channel", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;" STR_LUA_ALLAUX,
-    STR_EMPTYSPACE};
-
-static struct luaItem_selection luaHeadTrackingRollChannel = {
-    {"HT Roll Channel", CRSF_TEXT_SELECTION},
-    0, // value
-    "Off;" STR_LUA_ALLAUX,
+    STR_LUA_ALLAUX,
     STR_EMPTYSPACE};
 
 static struct luaItem_string luaBackpackVersion = {
@@ -675,24 +669,13 @@ static void registerLuaParameters()
           luaBackpackFolder.common.id);
 
       registerLUAParameter(
-          &luaHeadTrackingPanChannel, [](luaPropertiesCommon *item, uint8_t arg) {
-              uint8_t p, t, r;
-              config.GetHeadTracking(&p, &t, &r);
-              config.SetHeadTracking(arg, t, r);
+          &luaHeadTrackingEnableChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetPTREnableChannel(arg);
           },
           luaBackpackFolder.common.id);
       registerLUAParameter(
-          &luaHeadTrackingTiltChannel, [](luaPropertiesCommon *item, uint8_t arg) {
-              uint8_t p, t, r;
-              config.GetHeadTracking(&p, &t, &r);
-              config.SetHeadTracking(p, arg, r);
-          },
-          luaBackpackFolder.common.id);
-      registerLUAParameter(
-          &luaHeadTrackingRollChannel, [](luaPropertiesCommon *item, uint8_t arg) {
-              uint8_t p, t, r;
-              config.GetHeadTracking(&p, &t, &r);
-              config.SetHeadTracking(p, t, arg);
+          &luaHeadTrackingStartChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetPTRStartChannel(arg);
           },
           luaBackpackFolder.common.id);
 
@@ -756,12 +739,8 @@ static int event()
     setLuaTextSelectionValue(&luaDvrAux, config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetDvrStopDelay());
-    // Head tracking config
-    uint8_t p, t, r;
-    config.GetHeadTracking(&p, &t, &r);
-    setLuaTextSelectionValue(&luaHeadTrackingPanChannel, p);
-    setLuaTextSelectionValue(&luaHeadTrackingTiltChannel, t);
-    setLuaTextSelectionValue(&luaHeadTrackingRollChannel, r);
+    setLuaTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetPTREnableChannel());
+    setLuaTextSelectionValue(&luaHeadTrackingStartChannel, config.GetPTRStartChannel());
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)

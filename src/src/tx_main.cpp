@@ -68,9 +68,9 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
-bool headTrackingEnabled = false;
-static uint8_t ptrChannels[3];
+static uint8_t headTrackingEnabledChannel = 0;
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN};
+bool headTrackingEnabled = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -473,11 +473,35 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        if (headTrackingEnabled)
-        {
-          if (ptrChannels[0]) CRSF::ChannelData[ptrChannels[0]+3] = ptrChannelData[0];
-          if (ptrChannels[1]) CRSF::ChannelData[ptrChannels[1]+3] = ptrChannelData[1];
-          if (ptrChannels[2]) CRSF::ChannelData[ptrChannels[2]+3] = ptrChannelData[2];
+        if (config.GetPTREnableChannel() != HT_OFF) {
+          uint8_t ptrStartChannel = config.GetPTRStartChannel();
+          uint32_t chan = CRSF::ChannelData[config.GetPTREnableChannel()/2+3];
+          bool enable = headTrackingEnabledChannel == HT_ON;
+          if (config.GetPTREnableChannel() % 2 == 0)
+          {
+            enable |= chan >= CRSF_CHANNEL_VALUE_MID;
+          }
+          else
+          {
+            enable |= chan < CRSF_CHANNEL_VALUE_MID;
+          }
+          if (enable != headTrackingEnabled)
+          {
+            headTrackingEnabled = enable;
+            HTEnableFlagReadyToSend = true;
+          }
+          if (enable)
+          {
+            CRSF::ChannelData[ptrStartChannel+4] = ptrChannelData[0];
+            CRSF::ChannelData[ptrStartChannel+5] = ptrChannelData[1];
+            CRSF::ChannelData[ptrStartChannel+6] = ptrChannelData[2];
+          }
+          else
+          {
+            CRSF::ChannelData[ptrStartChannel+4] = CRSF_CHANNEL_VALUE_MID;
+            CRSF::ChannelData[ptrStartChannel+5] = CRSF_CHANNEL_VALUE_MID;
+            CRSF::ChannelData[ptrStartChannel+6] = CRSF_CHANNEL_VALUE_MID;
+          }
         }
         OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
@@ -659,14 +683,6 @@ static void ChangeRadioParams()
   ResetPower();
 }
 
-static void UpdateHeadTracking()
-{
-  // Update HeadTracking channels
-  config.GetHeadTracking(ptrChannels, ptrChannels+1, ptrChannels+2);
-  headTrackingEnabled = ptrChannels[0] != 0 || ptrChannels[1] != 0 || ptrChannels[2] != 0;
-  HTEnableFlagReadyToSend = true;
-}
-
 void ModelUpdateReq()
 {
   // Force synspam with the current rate parameters in case already have a connection established
@@ -676,7 +692,6 @@ void ModelUpdateReq()
     ModelUpdatePending = true;
   }
 
-  UpdateHeadTracking();
   devicesTriggerEvent();
 
   // Jump from awaitingModelId to transmitting to break the startup delay now
@@ -697,7 +712,6 @@ static void ConfigChangeCommit()
   hwTimer.callbackTock = &timerCallbackNormal;
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
-  UpdateHeadTracking();
   devicesTriggerEvent();
 }
 
@@ -1198,7 +1212,6 @@ void setup()
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
-    UpdateHeadTracking();
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)

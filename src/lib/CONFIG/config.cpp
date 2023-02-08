@@ -552,23 +552,19 @@ TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 }
 
 void
-TxConfig::GetHeadTracking(uint8_t *panChannel, uint8_t *tiltChannel, uint8_t *rollChannel) const
+TxConfig::SetPTRStartChannel(uint8_t ptrStartChannel)
 {
-    uint32_t ht = m_model->headTracking;
-    *panChannel = ht % 11;
-    ht /= 11;
-    *tiltChannel = ht % 11;
-    ht /= 11;
-    *rollChannel = ht % 11;
+    if (ptrStartChannel != m_model->ptrStartChannel) {
+        m_model->ptrStartChannel = ptrStartChannel;
+        m_modified |= MODEL_CHANGED;
+    }
 }
 
 void
-TxConfig::SetHeadTracking(uint8_t panChannel, uint8_t tiltChannel, uint8_t rollChannel)
+TxConfig::SetPTREnableChannel(uint8_t ptrEnableChannel)
 {
-    uint32_t ht;
-    ht = panChannel + (tiltChannel + rollChannel * 11) * 11;
-    if (ht != m_model->headTracking) {
-        m_model->headTracking = ht;
+    if (ptrEnableChannel != m_model->ptrEnableChannel) {
+        m_model->ptrEnableChannel = ptrEnableChannel;
         m_modified |= MODEL_CHANGED;
     }
 }
