@@ -313,7 +313,11 @@ bool options_init()
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #else
+    #if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = USE_AIRPORT_AT_BAUD;
+    #else
     firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
+    #endif
     firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
