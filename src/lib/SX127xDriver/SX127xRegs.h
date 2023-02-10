@@ -20,6 +20,14 @@ typedef enum
     SX127x_OPMODE_CAD = 0b00000111,
 } SX127x_RadioOPmodes;
 
+#if defined(RADIO_SX1272)
+typedef enum
+{
+    SX127x_BW_125_00_KHZ = 0b00000000,
+    SX127x_BW_250_00_KHZ = 0b01000000,
+    SX127x_BW_500_00_KHZ = 0b10000000
+} SX127x_Bandwidth;
+#else
 typedef enum
 {
     SX127x_BW_7_80_KHZ = 0b00000000,
@@ -33,6 +41,7 @@ typedef enum
     SX127x_BW_250_00_KHZ = 0b10000000,
     SX127x_BW_500_00_KHZ = 0b10010000
 } SX127x_Bandwidth;
+#endif
 
 typedef enum
 {
@@ -46,6 +55,15 @@ typedef enum
 } SX127x_SpreadingFactor;
 #define SX127X_SPREADING_FACTOR_MASK 0b11110000
 
+#if defined(RADIO_SX1272)
+typedef enum
+{
+    SX127x_CR_4_5 = 0b00001000,
+    SX127x_CR_4_6 = 0b00010000,
+    SX127x_CR_4_7 = 0b00011000,
+    SX127x_CR_4_8 = 0b00100000,
+} SX127x_CodingRate;
+#else
 typedef enum
 {
     SX127x_CR_4_5 = 0b00000010,
@@ -53,6 +71,7 @@ typedef enum
     SX127x_CR_4_7 = 0b00000110,
     SX127x_CR_4_8 = 0b00001000,
 } SX127x_CodingRate;
+#endif
 
 // SX127x series common registers
 #define SX127X_REG_FIFO 0x00
@@ -240,13 +259,24 @@ typedef enum
 //SX1278_REG_LNA
 #define SX1278_LNA_BOOST_LF_OFF 0b00000000 //  4     3     default LNA current
 
-#define SX1278_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
-#define SX1278_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
+//SX127X_REG_MODEM_CONFIG_1
+#if defined(RADIO_SX1272)
+    #define SX127x_HEADER_EXPL_MODE 0b00000000 //  2     2     explicit header mode
+    #define SX127x_HEADER_IMPL_MODE 0b00000100 //  2     2     implicit header mode
+#else
+    #define SX127x_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
+    #define SX127x_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
+#endif
 
 //SX1278_REG_MODEM_CONFIG_2
 #define SX1278_RX_CRC_MODE_OFF 0b00000000 //  2     2     CRC disabled
 #define SX1278_RX_CRC_MODE_ON 0b00000100  //  2     2     CRC enabled
 #define SX1278_RX_CRC_MODE_MASK 0b00000100
+
+//SX1278_REG_MODEM_CONFIG_1
+#define SX1272_RX_CRC_MODE_OFF 0b00000000 //  1     1     CRC disabled
+#define SX1272_RX_CRC_MODE_ON 0b00000010  //  1     1     CRC enabled
+#define SX1272_RX_CRC_MODE_MASK 0b00000010
 
 //SX1278_REG_MODEM_CONFIG_3
 #define SX1278_LOW_DATA_RATE_OPT_OFF 0b00000000 //  3     3     low data rate optimization disabled
@@ -254,8 +284,6 @@ typedef enum
 #define SX1278_AGC_AUTO_OFF 0b00000000          //  2     2     LNA gain set by REG_LNA
 #define SX1278_AGC_AUTO_ON 0b00000100           //  2     2     LNA gain set by internal AGC loop
 
-#define SX1276_HEADER_EXPL_MODE 0b00000000 //  0     0     explicit header mode
-#define SX1276_HEADER_IMPL_MODE 0b00000001 //  0     0     implicit header mode
 
 #define ERR_NONE 0x00
 #define ERR_CHIP_NOT_FOUND 0x01

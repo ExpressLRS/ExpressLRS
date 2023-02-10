@@ -125,7 +125,11 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
     if (currSF == SX127x_SF_6) // set SF6 optimizations
     {
       hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
-      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+      #if defined(RADIO_SX1272)
+        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+      #else
+        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+      #endif
     }
     else
     {
@@ -140,25 +144,35 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
 
       if (crcEnabled)
       {
-
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #if defined(RADIO_SX1272)
+          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_ON, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #else
+          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #endif
       }
       else
       {
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #if defined(RADIO_SX1272)
+          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #else
+          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        #endif
       }
     }
 
-    if (bw == SX127x_BW_500_00_KHZ)
-    {
-      //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
-      hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
-      hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
-    }
-    else
-    {
-      hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
-    }
+    #if !defined(RADIO_SX1272) //does not apply to SX1272
+      if (bw == SX127x_BW_500_00_KHZ)
+      {
+        //data-sheet errata recommendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+        hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
+        hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
+      }
+      else
+      {
+        hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
+      }
+    #endif
+
     currCR = cr;
     currBW = bw;
   }
@@ -321,7 +335,11 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION, radioNumber);
     DBG("%x", version);
+    #if defined(RADIO_SX1272)
+    if (version == 0x22)
+    #else
     if (version == 0x12)
+    #endif
     {
       flagFound = true;
     }
@@ -340,7 +358,12 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   }
   else
   {
+    #if defined(RADIO_SX1272)
+    DBGLN(" found! (match by REG_VERSION == 0x22)");
+    #else
     DBGLN(" found! (match by REG_VERSION == 0x12)");
+    #endif
+
   }
   return true;
 }
@@ -455,6 +478,14 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
 {
   switch (currBW)
   {
+  #if defined(RADIO_SX1272)
+  case SX127x_BW_125_00_KHZ:
+    return 125E3;
+  case SX127x_BW_250_00_KHZ:
+    return 250E3;
+  case SX127x_BW_500_00_KHZ:
+    return 500E3;
+  #else
   case SX127x_BW_7_80_KHZ:
     return 7.8E3;
   case SX127x_BW_10_40_KHZ:
@@ -475,6 +506,7 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
     return 250E3;
   case SX127x_BW_500_00_KHZ:
     return 500E3;
+  #endif
   }
   return -1;
 }
@@ -484,6 +516,14 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
 
   switch (currBW)
   {
+  #if defined(RADIO_SX1272)
+  case SX127x_BW_125_00_KHZ:
+    return 64;
+  case SX127x_BW_250_00_KHZ:
+    return 32;
+  case SX127x_BW_500_00_KHZ:
+    return 16;
+  #else
   case SX127x_BW_7_80_KHZ:
     return 1026;
   case SX127x_BW_10_40_KHZ:
@@ -504,6 +544,7 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
     return 32;
   case SX127x_BW_500_00_KHZ:
     return 16;
+  #endif
   }
   return -1;
 }
