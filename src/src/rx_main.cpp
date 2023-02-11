@@ -1069,7 +1069,7 @@ void MspReceiveComplete()
             {
                 UpdateModelMatch(MspData[9]);
             }
-             else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
             {
                 vtxSPIBandChannelIdx = MspData[8];
                 if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
