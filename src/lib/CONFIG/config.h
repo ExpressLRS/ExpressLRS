@@ -92,6 +92,7 @@ public:
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
+    model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
 
     // Setters
     void SetRate(uint8_t rate);

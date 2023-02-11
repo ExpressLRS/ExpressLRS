@@ -137,6 +137,13 @@ def options():
 def update_config():
     if (request.json['button-actions'] is not None):
         config['config']['button-actions'] = request.json['button-actions']
+    return "Config Updated"
+
+@route('/import', method='POST')
+def import_config():
+    json = request.json
+    print(json)
+    return "Config Updated"
 
 @route('/sethome', method='POST')
 def options():

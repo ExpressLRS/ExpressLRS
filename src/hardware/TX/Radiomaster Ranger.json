@@ -29,6 +29,7 @@
     "ledidx_rgb_status": [2,3,4,5],
     "misc_fan_pwm": 2,
     "misc_fan_tacho": 27,
+    "misc_fan_speeds": [47,63,95,127,191,255,255],
     "gsensor_stk8xxx": true,
     "i2c_scl": 12,
     "i2c_sda": 14,

@@ -11,37 +11,12 @@ import UARTupload
 import upload_via_esp8266_backpack
 import stlink
 from firmware import DeviceType, FirmwareOptions, MCUType
+
+import sys
+from os.path import dirname
+sys.path.append(dirname(__file__) + '/external/esptool')
+
 from external.esptool import esptool
-
-bootloader_args = {
-    'DIY_2400_RX_STM32_CCG_Nano_v0_5': {'offset': 0x4000, 'bootloader': 'sx1280_rx_nano_pcb_v0.5_bootloader.bin'},
-    'Frsky_TX_R9M': {'offset': 0x4000, 'bootloader': 'r9m_bootloader.bin'},
-    'Frsky_TX_R9M_LITE': {'offset': 0x4000, 'bootloader': 'r9m_bootloader.bin'},
-    'Frsky_TX_R9M_LITE_PRO': {'offset': 0x8000, 'bootloader': 'r9m_lite_pro_bootloader.bin'},
-    'Frsky_RX_R9MM_R9MINI': {'offset': 0x8000, 'bootloader': 'r9mm_bootloader.bin'},
-    'Frsky_RX_R9SLIM': {'offset': 0x8000, 'bootloader': 'r9slim_no_btn_bootloader.bin'},
-    'Frsky_RX_R9SLIMPLUS': {'offset': 0x8000, 'bootloader': 'r9slim_plus_bootloader.bin'},
-    'Frsky_RX_R9SLIMPLUS_OTA': {'offset': 0x8000, 'bootloader': 'r9slim_plus_ota_bootloader.bin'},
-    'Frsky_RX_R9MX': {'offset': 0x8000, 'bootloader': 'r9mx_bootloader.bin'},
-    'Jumper_RX_R900MINI': {'offset': 0x8000, 'bootloader': 'jumper_r900_bootloader.bin'},
-
-    'HappyModel_TX_ES915TX': {'offset': 0x4000, 'bootloader': 'r9m_bootloader.bin'},
-    'HappyModel_RX_ES915RX': {'offset': 0x8000, 'bootloader': 'r9mm_bootloader.bin'},
-    'HappyModel_PP_2400_RX': {'offset': 0x4000, 'bootloader': 'sx1280_rx_nano_pcb_v0.5_bootloader.bin'},
-
-    'GHOST_2400_TX': {'offset': 0x4000, 'bootloader': 'ghost/ghost_tx_bootloader.bin'},
-    'GHOST_2400_TX_LITE': {'offset': 0x4000, 'bootloader': 'ghost/ghost_tx_bootloader.bin'},
-    'GHOST_ATTO_2400_RX': {'offset': 0x4000, 'bootloader': 'ghost/ghost_atto_bootloader.bin'},
-
-    'NamimnoRC_VOYAGER_900_TX': {'offset': 0x4000, 'bootloader': 'namimnorc/tx/namimnorc_tx_bootloader.bin'},
-    'NamimnoRC_VOYAGER_900_RX': {'offset': 0x8000, 'bootloader': 'namimnorc/rx/voyager_900_bootloader.bin'},
-    'NamimnoRC_FLASH_2400_TX': {'offset': 0x4000, 'bootloader': 'namimnorc/tx/namimnorc_tx_bootloader.bin'},
-    'NamimnoRC_FLASH_2400_RX': {'offset': 0x8000, 'bootloader': 'namimnorc/rx/flash_2400_bootloader.bin'},
-
-    'FM30_TX': {'offset': 0x1000, 'bootloader': 'fm30_bootloader.bin'},
-    'FM30_RX_MINI': {'offset': 0x4000, 'bootloader': 'fm30_mini_bootloader.bin'},
-    'FM30_RX_MINI_AS_TX': {'offset': 0x4000, 'bootloader': 'fm30_mini_bootloader.bin'},
-}
 
 class UploadMethod(Enum):
     wifi = 'wifi'
@@ -69,9 +44,8 @@ def upload_stm32_uart(args):
         args.port = serials_find.get_serial_port()
     return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept)
 
-def upload_stm32_stlink(args):
-    bl_args = bootloader_args[re.sub('_via_.*', '', args.target)]
-    stlink.on_upload([args.filename], None, {'UPLOAD_FLAGS': [f'BOOTLOADER=bootloader/${bl_args["file"]}', f'VECT_OFFSET=${bl_args["offset"]}']})
+def upload_stm32_stlink(args, options: FirmwareOptions):
+    stlink.on_upload([args.file.name], None, {'UPLOAD_FLAGS': [f'BOOTLOADER={options.bootloader}', f'VECT_OFFSET={options.offset}']})
     return ElrsUploadResult.Success
 
 def upload_esp8266_uart(args):
@@ -157,7 +131,7 @@ def upload(options: FirmwareOptions, args):
             if args.flash == UploadMethod.betaflight or args.flash == UploadMethod.uart:
                 return upload_stm32_uart(args)
             elif args.flash == UploadMethod.stlink:      # untested
-                return upload_stm32_stlink(args)
+                return upload_stm32_stlink(args, options)
     else:
         if options.mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.edgetx:
@@ -168,7 +142,7 @@ def upload(options: FirmwareOptions, args):
                 return upload_wifi(args, ['elrs_tx', 'elrs_tx.local'], False)
         elif options.mcuType == MCUType.STM32:
             if args.flash == UploadMethod.stlink:      # test
-                return upload_stm32_stlink(args)
+                return upload_stm32_stlink(args, options)
             elif args.flash == UploadMethod.wifi:
                 return upload_wifi(args, ['elrs_txbp', 'elrs_txbp.local'], True)
     print("Invalid upload method for firmware")
