@@ -14,7 +14,7 @@
 
 #ifdef HAS_MSP_VTX
 
-#define FC_QUERY_PERIOD_MS      200 // pool every 200ms
+#define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
 #define MSP_VTX_PAYLOAD_OFFSET  11
 
@@ -261,23 +261,9 @@ void mspVtxProcessPacket(uint8_t *packet)
         case CHECK_BANDS:
             if (bandPacket->bandNameLength ==  BAND_NAME_LENGTH && bandPacket->bandLetter == getBandLetterByIdx(checkingIndex) && bandPacket->isFactoryBand == IS_FACTORY_BAND && bandPacket->channels == CHANNEL_COUNT) // Check lengths before trying to check content
             {
-                if (bandPacket->bandName1 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 0) &&
-                    bandPacket->bandName2 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 1) &&
-                    bandPacket->bandName3 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 2) &&
-                    bandPacket->bandName4 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 3) &&
-                    bandPacket->bandName5 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 4) &&
-                    bandPacket->bandName6 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 5) &&
-                    bandPacket->bandName7 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 6) &&
-                    bandPacket->bandName8 == channelFreqLabelByIdx(checkingIndex * CHANNEL_COUNT + 7))
+                if (memcmp(bandPacket->bandName, channelFreqLabel + checkingIndex * CHANNEL_COUNT, 8) == 0)
                 {
-                    if (bandPacket->channel1 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 0) &&
-                        bandPacket->channel2 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 1) &&
-                        bandPacket->channel3 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 2) &&
-                        bandPacket->channel4 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 3) &&
-                        bandPacket->channel5 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 4) &&
-                        bandPacket->channel6 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 5) &&
-                        bandPacket->channel7 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 6) &&
-                        bandPacket->channel8 == getFreqByIdx(checkingIndex * CHANNEL_COUNT + 7))
+                    if (memcmp(bandPacket->channel, channelFreqTable + checkingIndex * CHANNEL_COUNT, 8) == 0)
                     {
                         checkingIndex++;
                         if (checkingIndex > getFreqTableBands() - 1)

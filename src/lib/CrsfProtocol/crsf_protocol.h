@@ -281,25 +281,11 @@ typedef struct mspVtxBandPacket_s
 {
     uint8_t band;
     uint8_t bandNameLength;
-    uint8_t bandName1;
-    uint8_t bandName2;
-    uint8_t bandName3;
-    uint8_t bandName4;
-    uint8_t bandName5;
-    uint8_t bandName6;
-    uint8_t bandName7;
-    uint8_t bandName8;
+    uint8_t bandName[8];
     uint8_t bandLetter;
     uint8_t isFactoryBand;
     uint8_t channels;
-    uint16_t channel1;
-    uint16_t channel2;
-    uint16_t channel3;
-    uint16_t channel4;
-    uint16_t channel5;
-    uint16_t channel6;
-    uint16_t channel7;
-    uint16_t channel8;
+    uint16_t channel[8];
 } PACKED mspVtxBandPacket_t;
 
 #define MSP_REQUEST_PAYLOAD_LENGTH(len) 7 + len // status + flags + 2 function + 2 length + crc + payload
