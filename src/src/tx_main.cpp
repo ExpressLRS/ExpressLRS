@@ -1015,7 +1015,7 @@ static void setupSerial()
   if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   {
     serialPort = new HardwareSerial(1);
-    (HardwareSerial*)serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+    ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
   }
   else
   {
