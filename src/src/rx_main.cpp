@@ -113,6 +113,10 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define CRSF_RX_SERIAL Serial
 #endif
 
+// Variables / constants for Airport //
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;

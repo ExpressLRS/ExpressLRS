@@ -34,6 +34,10 @@ TxConfig config;
 Stream *TxBackpack;
 Stream *TxUSB;
 
+// Variables / constants for Airport //
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
@@ -346,7 +350,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
-               
+
   if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
@@ -377,7 +381,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
     }
     else
-    {      
+    {
       Radio.SetFrequencyReg(FHSSgetNextFreq());
     }
   }
@@ -474,7 +478,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     switch (config.GetAntennaMode())
     {
     case TX_RADIO_MODE_GEMINI:
-      transmittingRadio = SX12XX_Radio_All; // Gemini mode  
+      transmittingRadio = SX12XX_Radio_All; // Gemini mode
       break;
     case TX_RADIO_MODE_ANT_1:
       transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
