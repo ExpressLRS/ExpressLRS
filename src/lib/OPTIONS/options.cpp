@@ -333,7 +333,7 @@ bool options_init()
     firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
     firmwareOptions.is_airport = doc["is-airport"] | true;
     #else
-    firmwareOptions.uart_baud = doc["airport-uart-baud"] | 0;
+    firmwareOptions.uart_baud = doc["airport-uart-baud"] | 460800;
     firmwareOptions.is_airport = doc["is-airport"] | false;
     #endif
     #else

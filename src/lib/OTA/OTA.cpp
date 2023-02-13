@@ -579,7 +579,6 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
     OtaSwitchModeCurrent = switchMode;
 }
 
-#if defined(USE_AIRPORT_AT_BAUD)
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
 {
     uint8_t count = inputBuffer->size();
@@ -611,4 +610,3 @@ void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_
         outputBuffer->pushBytes(otaPktPtr->std.airport.payload, count);
     }
 }
-#endif // USE_AIRPORT_AT_BAUD

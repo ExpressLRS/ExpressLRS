@@ -209,10 +209,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
     else
     {
-      #if defined(USE_AIRPORT_AT_BAUD)
+      if (firmwareOptions.is_airport)
+      {
         OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         return true;
-      #endif
+      }
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
@@ -229,10 +230,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
-        #if defined(USE_AIRPORT_AT_BAUD)
+        if (firmwareOptions.is_airport)
+        {
           OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
           return true;
-        #endif
+        }
         TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
@@ -460,11 +462,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
 
-      #if defined(USE_AIRPORT_AT_BAUD)
+      if (firmwareOptions.is_airport)
+      {
         OtaPackAirportData(&otaPkt, &apInputBuffer);
-      #else
+      }
+      else
+      {
         OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
-      #endif
+      }
     }
   }
 
@@ -768,10 +773,11 @@ static void UpdateConnectDisconnectStatus()
       crsf.ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
-      #if defined(USE_AIRPORT_AT_BAUD)
+      if (firmwareOptions.is_airport)
+      {
         apInputBuffer.flush();
         apOutputBuffer.flush();
-      #endif
+      }
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -954,12 +960,13 @@ void ProcessMSPPacket(mspPacket_t *packet)
 
 static void HandleUARTout()
 {
-  #if defined(USE_AIRPORT_AT_BAUD)
+  if (firmwareOptions.is_airport)
+  {
     while (apOutputBuffer.size())
     {
       TxUSB->write(apOutputBuffer.pop());
     }
-  #endif
+  }
 }
 
 static void setupSerial()
@@ -968,36 +975,31 @@ static void setupSerial()
    * This is always done because we need a place to send data even if there is no backpack!
    */
   bool portConflict = false;
+  int8_t rxPin = UNDEF_PIN;
+  int8_t txPin = UNDEF_PIN;
 
-#if defined(USE_AIRPORT_AT_BAUD)
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    // Airport enabled - set TxUSB port to pins 1 and 3
-    #define GPIO_PIN_USB_RX   3
-    #define GPIO_PIN_USB_TX   1
-    #define USB_BAUD          USE_AIRPORT_AT_BAUD
+  if (firmwareOptions.is_airport)
+  {
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+      // Airport enabled - set TxUSB port to pins 1 and 3
+      rxPin = 3;
+      txPin = 1;
 
-    #if defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
-      if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
+      if (GPIO_PIN_DEBUG_RX == rxPin && GPIO_PIN_DEBUG_TX == txPin)
       {
         // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
         // TxUSB takes priority over TxBackpack
         portConflict = true;
       }
+    #else
+      // For STM targets, assume GPIO_PIN_DEBUG defines point to USB
+      rxPin = GPIO_PIN_DEBUG_RX;
+      txPin = GPIO_PIN_DEBUG_TX;
     #endif
-  #else
-    // For STM targets, assume GPIO_PIN_DEBUG defines point to USB
-    #define GPIO_PIN_USB_RX   GPIO_PIN_DEBUG_RX
-    #define GPIO_PIN_USB_TX   GPIO_PIN_DEBUG_TX
-  #endif
-#else
-  // No airport - set TxUSB port to null
-  #define GPIO_PIN_USB_RX   UNDEF_PIN
-  #define GPIO_PIN_USB_TX   UNDEF_PIN
-  #define USB_BAUD          460800
-#endif
+  }
 
 // Setup TxBackpack
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_DEBUG_RX) && defined(GPIO_PIN_DEBUG_TX)
+#if defined(PLATFORM_ESP32)
   Stream *serialPort;
   if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN && !portConflict)
   {
@@ -1008,9 +1010,17 @@ static void setupSerial()
   {
     serialPort = new NullStream();
   }
-#elif defined(PLATFORM_ESP8266) && defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-  HardwareSerial *serialPort = new HardwareSerial(1);
-  serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+#elif defined(PLATFORM_ESP8266)
+  Stream *serialPort;
+  if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  {
+    serialPort = new HardwareSerial(1);
+    (HardwareSerial*)serialPort->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+  }
+  else
+  {
+    serialPort = new NullStream();
+  }
 #elif defined(TARGET_TX_FM30)
   USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
   serialPort->begin();
@@ -1029,21 +1039,19 @@ static void setupSerial()
   TxBackpack = serialPort;
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32) && defined(GPIO_PIN_USB_RX) && defined(GPIO_PIN_USB_TX)
-  Stream *usbPort;
-  if (GPIO_PIN_USB_RX != UNDEF_PIN && GPIO_PIN_USB_TX != UNDEF_PIN)
+#if defined(PLATFORM_ESP32)
+  if (rxPin != UNDEF_PIN && txPin != UNDEF_PIN)
   {
-    usbPort = new HardwareSerial(1);
-    ((HardwareSerial *)usbPort)->begin(USB_BAUD, SERIAL_8N1, GPIO_PIN_USB_RX, GPIO_PIN_USB_TX);
+    TxUSB = new HardwareSerial(1);
+    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, rxPin, txPin);
   }
   else
   {
-    usbPort = new NullStream();
+    TxUSB = new NullStream();
   }
 #else
-  Stream *usbPort = new NullStream();
+  TxUSB = new NullStream();
 #endif
-  TxUSB = usbPort;
 }
 
 /**
@@ -1141,9 +1149,10 @@ void setup()
     Radio.TXdoneCallback = &TXdoneISR;
 
     crsf.connected = &UARTconnected; // it will auto init when it detects UART connection
-    #if !defined(USE_AIRPORT_AT_BAUD)
+    if (!firmwareOptions.is_airport)
+    {
       crsf.disconnected = &UARTdisconnected;
-    #endif
+    }
     crsf.RecvModelUpdate = &ModelUpdateReq;
     hwTimer.callbackTock = &timerCallbackNormal;
     DBGLN("ExpressLRS TX Module Booted...");
@@ -1200,11 +1209,12 @@ void setup()
 
   devicesStart();
 
-  #if defined(USE_AIRPORT_AT_BAUD)
+  if (firmwareOptions.is_airport)
+  {
     config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
-  #endif
+  }
 }
 
 void loop()
@@ -1252,12 +1262,10 @@ void loop()
 
   if (TxUSB->available())
   {
-    #if defined(USE_AIRPORT_AT_BAUD)
-      if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
-      {
-        apInputBuffer.push(TxUSB->read());
-      }
-    #endif
+    if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+    {
+      apInputBuffer.push(TxUSB->read());
+    }
   }
 
   if (TxBackpack->available())

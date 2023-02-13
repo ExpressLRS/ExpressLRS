@@ -399,11 +399,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK
-    #if !defined(USE_AIRPORT_AT_BAUD)
-        || !TelemetrySender.IsActive()
-    #endif
-        )
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -439,9 +435,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        #if defined(USE_AIRPORT_AT_BAUD)
+        if (firmwareOptions.is_airport)
+        {
             OtaPackAirportData(&otaPkt, &apInputBuffer);
-        #else
+        }
+        else
+        {
             if (OtaIsFullRes)
             {
                 otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
@@ -455,7 +454,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     otaPkt.std.tlm_dl.payload,
                     sizeof(otaPkt.std.tlm_dl.payload));
             }
-        #endif
+        }
     }
 
     OtaGeneratePacketCrc(&otaPkt);
@@ -761,10 +760,11 @@ void GotConnection(unsigned long now)
     webserverPreventAutoStart = true;
     #endif
 
-    #if defined(USE_AIRPORT_AT_BAUD)
+    if (firmwareOptions.is_airport)
+    {
         apInputBuffer.flush();
         apOutputBuffer.flush();
-    #endif
+    }
 
     DBGLN("got conn");
 }
@@ -776,10 +776,11 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     if (connectionState != connected || SwitchModePending)
         return;
 
-    #if defined(USE_AIRPORT_AT_BAUD)
+    if (firmwareOptions.is_airport)
+    {
         OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         return;
-    #endif
+    }
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -1241,14 +1242,15 @@ void HandleUARTin()
     }
     while (CRSF_RX_SERIAL.available())
     {
-        #if defined(USE_AIRPORT_AT_BAUD)
+        if (firmwareOptions.is_airport)
+        {
             uint8_t v = CRSF_RX_SERIAL.read();
             if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
             {
                 apInputBuffer.push(v);
             }
             continue;
-        #endif
+        }
 
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
 
@@ -1276,12 +1278,13 @@ void HandleUARTin()
 
 static void HandleUARTout()
 {
-    #if defined(USE_AIRPORT_AT_BAUD)
+    if (firmwareOptions.is_airport)
+    {
         while (apOutputBuffer.size())
         {
             Serial.write(apOutputBuffer.pop());
         }
-    #endif
+    }
 }
 
 static void setupRadio()
@@ -1583,10 +1586,11 @@ void loop()
 
     devicesUpdate(now);
 
-    #if defined(USE_AIRPORT_AT_BAUD)
+    if (firmwareOptions.is_airport)
+    {
         HandleUARTin();
         HandleUARTout();
-    #endif
+    }
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

@@ -523,9 +523,11 @@ static void registerLuaParameters()
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
       if (eRatio <= TLM_RATIO_DISARMED)
       {
-        #if !defined(USE_AIRPORT_AT_BAUD) // Don't allow TLM ratio changes if using AIRPORT
+        // Don't allow TLM ratio changes if using AIRPORT
+        if (!firmwareOptions.is_airport)
+        {
           config.SetTlm(eRatio);
-        #endif
+        }
       }
     });
     #if defined(TARGET_TX_FM30)
@@ -534,40 +536,41 @@ static void registerLuaParameters()
       devicesTriggerEvent();
     });
     #endif
-    #if !defined(USE_AIRPORT_AT_BAUD)
-    registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      // Only allow changing switch mode when disconnected since we need to guarantee
-      // the pack and unpack functions are matched
-      if (connectionState == disconnected)
-      {
-        config.SetSwitchMode(arg);
-        OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
-      }
-      else
-        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-    });
-    if (isDualRadio())
+    if (!firmwareOptions.is_airport)
     {
-      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
-        config.SetAntennaMode(arg);
+      registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        // Only allow changing switch mode when disconnected since we need to guarantee
+        // the pack and unpack functions are matched
+        if (connectionState == disconnected)
+        {
+          config.SetSwitchMode(arg);
+          OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
+        }
+        else
+          setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+      });
+      if (isDualRadio())
+      {
+        registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+          config.SetAntennaMode(arg);
+        });
+      }
+      registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        bool newModelMatch = arg;
+        config.SetModelMatch(newModelMatch);
+        if (connectionState == connected)
+        {
+          mspPacket_t msp;
+          msp.reset();
+          msp.makeCommand();
+          msp.function = MSP_SET_RX_CONFIG;
+          msp.addByte(MSP_ELRS_MODEL_ID);
+          msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
+          CRSF::AddMspMessage(&msp);
+        }
+        luadevUpdateModelID();
       });
     }
-    registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      bool newModelMatch = arg;
-      config.SetModelMatch(newModelMatch);
-      if (connectionState == connected)
-      {
-        mspPacket_t msp;
-        msp.reset();
-        msp.makeCommand();
-        msp.function = MSP_SET_RX_CONFIG;
-        msp.addByte(MSP_ELRS_MODEL_ID);
-        msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
-        CRSF::AddMspMessage(&msp);
-      }
-      luadevUpdateModelID();
-    });
-    #endif // !defined(USE_AIRPORT_AT_BAUD)
 
     // POWER folder
     registerLUAParameter(&luaPowerFolder);
@@ -594,8 +597,7 @@ static void registerLuaParameters()
     registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
   }
 #endif
-#if !defined(USE_AIRPORT_AT_BAUD)
-  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
+  if ((HAS_RADIO || OPT_USE_TX_BACKPACK) && !firmwareOptions.is_airport) {
     // VTX folder
     registerLUAParameter(&luaVtxFolder);
     registerLUAParameter(&luaVtxBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -612,8 +614,7 @@ static void registerLuaParameters()
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxSend, &luahandSimpleSendCmd, luaVtxFolder.common.id);
   }
-  #endif // !defined(USE_AIRPORT_AT_BAUD)
-  
+
   // WIFI folder
   #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
