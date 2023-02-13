@@ -86,7 +86,7 @@ def patch_wifi(mm, pos, args):
     return pos
 
 def patch_rx_params(mm, pos, args):
-    pos = write32(mm, pos, args.rx_baud)
+    pos = write32(mm, pos, args.rx_baud if args.airport_baud is None else args.airport_baud)
     val = mm[pos]
     if args.invert_tx != None:
         val &= ~1
@@ -97,10 +97,13 @@ def patch_rx_params(mm, pos, args):
     if args.r9mm_mini_sbus != None:
         val &= ~4
         val |= (args.r9mm_mini_sbus << 2)
+    if args.airport_baud != None:
+        val |= ~8
+        val |= 0 if args.airport_baud == 0 else 8
     mm[pos] = val
     return pos + 1
 
-def patch_tx_params(mm, pos, args):
+def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
@@ -110,8 +113,15 @@ def patch_tx_params(mm, pos, args):
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
+    if args.airport_baud != None:
+        val |= ~4
+        val |= 0 if args.airport_baud == 0 else 4
     mm[pos] = val
-    return pos + 1
+    pos += 1
+    if options.hasBuzzer:
+        pos = patch_buzzer(mm, pos, args)
+    pos = write32(mm, pos, 0 if args.airport_baud is None else args.airport_baud)
+    return pos
 
 def patch_buzzer(mm, pos, args):
     melody = args.buzzer_melody
@@ -186,9 +196,7 @@ def patch_firmware(options, mm, pos, args):
         pos += 1
         pos = patch_uid(mm, pos, args)
         if options.deviceType is DeviceType.TX:
-            pos = patch_tx_params(mm, pos, args)
-            if options.hasBuzzer:
-                pos = patch_buzzer(mm, pos, args)
+            pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
             pos = patch_rx_params(mm, pos, args)
     else:
@@ -275,6 +283,8 @@ def main():
     parser.add_argument('--password', type=length_check(64, "password"), required=False, help='Home network password')
     parser.add_argument('--auto-wifi', type=int, help='Interval (in seconds) before WiFi auto starts, if no connection is made')
     parser.add_argument('--no-auto-wifi', action='store_true', help='Disables WiFi auto start if no connection is made')
+    # AirPort
+    parser.add_argument('--airport-baud', type=int, const=None, nargs='?', action='store', help='If configured as an AirPort device then this is the baud rate to use')
     # RX Params
     parser.add_argument('--rx-baud', type=int, const=420000, nargs='?', action='store', help='The receiver baudrate talking to the flight controller')
     parser.add_argument('--invert-tx', dest='invert_tx', action='store_true', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
