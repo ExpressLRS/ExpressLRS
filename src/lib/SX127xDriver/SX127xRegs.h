@@ -54,6 +54,7 @@ typedef enum
 } SX127x_CodingRate;
 
 // SX127x series common registers
+#define SX127X_REG_PA_DAC 0x4D
 #define SX127X_REG_FIFO 0x00
 #define SX127X_REG_OP_MODE 0x01
 #define SX127X_REG_FRF_MSB 0x06
