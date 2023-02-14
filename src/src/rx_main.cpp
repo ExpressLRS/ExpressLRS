@@ -1566,13 +1566,13 @@ void setup()
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
         #if defined(OPT_HAS_SERVO_OUTPUT)
-        // If serial is not already defined, then see if there is serial output configured for pin 1 in the PWM configuration
+        // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
         if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
         {
             for (int i=0 ; i<GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
                 eServoOutputMode pinMode = (eServoOutputMode)config.GetPwmChannel(i)->val.mode;
-                if (GPIO_PIN_PWM_OUTPUTS[i] == 1 && (pinMode == somSerialTx))
+                if (pinMode == somSerial)
                 {
                     pwmSerialDefined = true;
                     break;

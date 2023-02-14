@@ -174,8 +174,7 @@ enum eServoOutputMode : uint8_t
     som400Hz,
     som10KHzDuty,
     somOnOff,   // Digital 0/1 mode
-    somSerialTx,// Serial output TX
-    somSerialRx,// Serial input RX
+    somSerial,  // Serial TX or RX depending on pin
     somPwm,     // True PWM mode (NOT SUPPORTED)
 };
 

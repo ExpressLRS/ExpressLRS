@@ -69,12 +69,10 @@ function updatePwmSettings(arPwm) {
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (pin == 1) {
       modes.push('Serial TX');
-      modes.push(undefined);  // SerialRX
       modes.push(undefined);  // true PWM
       pin1Index = index;
     }
     if (pin == 3) {
-      modes.push(undefined);  // SerialTX
       modes.push('Serial RX');
       modes.push(undefined);  // true PWM
       pin3Index = index;
@@ -113,14 +111,8 @@ function updatePwmSettings(arPwm) {
     const pin1Mode = _(`pwm_${pin1Index}_mode`);
     const pin3Mode = _(`pwm_${pin3Index}_mode`);
     pin1Mode.onchange = () => {
-      if (pin1Mode.value == 8) { // CRSF Out
-        pin3Mode.value = 9;
-        setDisabled(pin1Index, true);
-        setDisabled(pin3Index, true);
-        pin3Mode.disabled = true;
-      }
-      else if (pin1Mode.value == 10) { // SBUS Out
-        pin3Mode.value = 11;
+      if (pin1Mode.value == 8) { // Serial
+        pin3Mode.value = 8;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -133,13 +125,16 @@ function updatePwmSettings(arPwm) {
       }
     }
     pin3Mode.onchange = () => {
-      if (pin3Mode.value == 9) { // CRSF In
+      if (pin3Mode.value == 8) { // Serial
         pin1Mode.value = 8;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
       }
     }
+    const pin3 = pin3Mode.value;
+    pin1Mode.onchange();
+    if(pin1Mode.value != 8) pin3Mode.value = pin3;
   }
 @@end
 }

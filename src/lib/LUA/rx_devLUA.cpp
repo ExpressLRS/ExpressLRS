@@ -11,6 +11,9 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
+static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
+static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX";
+static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial RX";
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -107,7 +110,7 @@ static struct luaItem_int8 luaMappingChannelIn = {
 static struct luaItem_selection luaMappingOutputMode = {
     {"Output Mode", CRSF_TEXT_SELECTION},
     0, // value
-    "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX;Serial RX",
+    pwmModes,
     STR_EMPTYSPACE
 };
 
@@ -150,6 +153,18 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 {
   setLuaUint8Value(&luaMappingChannelOut, arg);
   // Must trigger an event because this is not a persistent config item
+  if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
+  {
+    luaMappingOutputMode.options = rxModes;
+  }
+  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
+  {
+    luaMappingOutputMode.options = txModes;
+  }
+  else
+  {
+    luaMappingOutputMode.options = pwmModes;
+  }
   devicesTriggerEvent();
 }
 
@@ -163,27 +178,27 @@ static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t a
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static uint8_t configureSerialPin(uint8_t pin, uint8_t mode, uint8_t sibling, uint8_t siblingMode, uint8_t oldMode, uint8_t newMode)
+static uint8_t configureSerialPin(uint8_t pin, uint8_t sibling, uint8_t oldMode, uint8_t newMode)
 {
-  if (newMode == siblingMode)
-  {
-    return oldMode;
-  }
   for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
   {
     if (GPIO_PIN_PWM_OUTPUTS[ch] == sibling)
     {
-      // set sibling pin channel settings based on "configuring" pin settings
+      // set sibling pin channel settings based on this pins settings
       rx_config_pwm_t newPin3Config;
-      if (newMode == mode)
+      if (newMode == somSerial)
       {
-        newPin3Config.val.mode = siblingMode;
+        newPin3Config.val.mode = somSerial;
+      }
+      else
+      {
+        newPin3Config.val.mode = som50Hz;
       }
       config.SetPwmChannelRaw(ch, newPin3Config.raw);
       break;
     }
   }
-  if ((oldMode == mode && newMode != mode) || (oldMode != mode && newMode == mode))
+  if (oldMode != newMode)
   {
     deferExecution(100, [](){
       reconfigureSerial();
@@ -203,13 +218,13 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   // Check if pin == 1/3 and do other pin adjustment accordingly
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
-    newPwmCh.val.mode = configureSerialPin(1, somSerialTx, 3, somSerialRx, oldMode, arg);
+    newPwmCh.val.mode = configureSerialPin(1, 3, oldMode, arg);
   }
   else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
   {
-    newPwmCh.val.mode = configureSerialPin(3, somSerialRx, 1, somSerialTx, oldMode, arg);
+    newPwmCh.val.mode = configureSerialPin(3, 1, oldMode, arg);
   }
-  else if (arg == somSerialRx || arg == somSerialTx)
+  else if (arg == somSerial)
   {
     newPwmCh.val.mode = oldMode;
   }

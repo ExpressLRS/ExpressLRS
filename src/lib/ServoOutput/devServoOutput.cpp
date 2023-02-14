@@ -124,7 +124,7 @@ static void initialize()
         return;
     }
 
-    for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
@@ -136,7 +136,7 @@ static void initialize()
 #endif
         // Mark servo pins that are being used for serial as disconnected
         eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-        if (mode == somSerialRx || mode == somSerialTx)
+        if (mode == somSerial)
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }
