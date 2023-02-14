@@ -34,10 +34,7 @@ function getPwmFormData() {
     outData.push(raw);
     ++ch;
   }
-
-  const outForm = new FormData();
-  outForm.append('pwm', outData.join(','));
-  return outForm;
+  return outData;
 }
 
 function enumSelectGenerate(id, val, arOptions) {
@@ -50,6 +47,7 @@ function enumSelectGenerate(id, val, arOptions) {
   return retVal;
 }
 
+@@if not isTX:
 function updatePwmSettings(arPwm) {
   if (arPwm === undefined) {
     if (_('pwm_tab')) _('pwm_tab').style.display = 'none';
@@ -90,15 +88,13 @@ function updatePwmSettings(arPwm) {
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
   });
-  htmlFields.push('</table></div><button type="submit" class="mui-btn mui-btn--primary">Set PWM Output</button>');
+  htmlFields.push('</table></div>');
 
   const grp = document.createElement('DIV');
   grp.setAttribute('class', 'group');
   grp.innerHTML = htmlFields.join('');
 
-@@if not isTX:
   _('pwm').appendChild(grp);
-  _('pwm').addEventListener('submit', callback('Set PWM Output', 'Unknown error', '/pwm', getPwmFormData));
 
   var setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
@@ -116,12 +112,16 @@ function updatePwmSettings(arPwm) {
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
+        _('serial-config').style.display = 'block';
+        _('baud-config').style.display = 'block';
       }
       else {
         pin3Mode.value = 0;
         setDisabled(pin1Index, false);
         setDisabled(pin3Index, false);
         pin3Mode.disabled = false;
+        _('serial-config').style.display = 'none';
+        _('baud-config').style.display = 'none';
       }
     }
     pin3Mode.onchange = () => {
@@ -130,14 +130,16 @@ function updatePwmSettings(arPwm) {
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
+        _('serial-config').style.display = 'block';
+        _('baud-config').style.display = 'block';
       }
     }
     const pin3 = pin3Mode.value;
     pin1Mode.onchange();
     if(pin1Mode.value != 8) pin3Mode.value = pin3;
   }
-@@end
 }
+@@end
 
 function init() {
   // setup network radio button handling
@@ -201,6 +203,10 @@ function timeoutCurrentColors() {
 }
 
 function updateConfig(data) {
+  if (data.product_name) _('product_name').textContent = data.product_name;
+  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
+  if (data.uid) _('uid').value = data.uid.toString();
+  if (data.uidtype) _('uid-type').textContent = data.uidtype;
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
     _('ssid').textContent = data.ssid;
@@ -219,25 +225,20 @@ function updateConfig(data) {
   }
   _('modelid').value = storedModelId;
   _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
-  if (data['protocol-select'] === true) {
-    _('protocol-select').style.display = 'block';
-    _('sbus-protocol').onchange = () => {
-      if (_('sbus-protocol').value === 'false') {
-        _('rcvr-uart-baud').disabled = false;
-        _('rcvr-uart-baud').value = '420000';
-      }
-      else {
-        _('rcvr-uart-baud').disabled = true;
-        _('rcvr-uart-baud').value = '100000';
-      }
+  _('serial-protocol').onchange = () => {
+    if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+      _('rcvr-uart-baud').disabled = false;
+      _('rcvr-uart-baud').value = '420000';
+    }
+    else {
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '100000';
     }
   }
-@@end
-  if (data.product_name) _('product_name').textContent = data.product_name;
-  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
-  if (data.uid) _('uid').value = data.uid.toString();
-  if (data.uidtype) _('uid-type').textContent = data.uidtype;
   updatePwmSettings(data.pwm);
+  _('serial-protocol').value = data['serial-protocol'];
+  _('serial-protocol').onchange();
+@@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
     if (_('button1-color')) _('button1-color').oninput = changeCurrentColors;
@@ -263,8 +264,8 @@ function initOptions() {
   xmlhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      updateConfig(data['config']);
       updateOptions(data['options']);
+      updateConfig(data['config']);
       setTimeout(getNetworks, 2000);
     }
   };
@@ -278,7 +279,6 @@ function getNetworks() {
     if (this.status == 204) {
       setTimeout(getNetworks, 2000);
     } else {
-      console.log(this.responseText);
       const data = JSON.parse(this.responseText);
       if (data.length > 0) {
         _('loader').style.display = 'none';
@@ -474,7 +474,7 @@ function callback(title, msg, url, getdata, success) {
       }
     };
     xmlhttp.open('POST', url, true);
-    if (getdata) data = getdata();
+    if (getdata) data = getdata(xmlhttp);
     else data = null;
     xmlhttp.send(data);
   };
@@ -509,17 +509,17 @@ _('reset-options').addEventListener('click', callback('Reset Runtime Options', '
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
-if (_('modelmatch') != undefined) {
-  _('modelmatch').addEventListener('submit', callback('Set Model Match', 'An error occurred updating the model match number', '/model',
-      () => {
-        return new FormData(_('modelmatch'));
+if (_('config') != undefined) {
+  _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
+      (xmlhttp) => {
+        xmlhttp.setRequestHeader('Content-Type', 'application/json');
+        return JSON.stringify({
+          "pwm": getPwmFormData(),
+          "protocol": +_('serial-protocol').value,
+          "modelid": +_('modelid').value,
+          "forcetlm": +_('force-tlm').checked
+        });
       }));
-}
-if (_('forcetlm') != undefined) {
-  _('forcetlm').addEventListener('submit', callback('Set force telemetry', 'An error occurred updating the force telemetry setting', '/forceTelemetry',
-    () => {
-      return new FormData(_('forcetlm'));
-    }));
 }
 
 function submitOptions(e) {

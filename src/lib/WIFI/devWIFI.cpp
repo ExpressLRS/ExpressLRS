@@ -189,33 +189,6 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-static void WebUpdatePwm(AsyncWebServerRequest *request)
-{
-  String pwmStr = request->arg("pwm");
-  if (pwmStr.isEmpty())
-  {
-    request->send(400, "text/plain", "Empty pwm parameter");
-    return;
-  }
-
-  // parse out the integers representing the PWM values
-  // strtok will modify the string as it parses
-  char *token = strtok((char *)pwmStr.c_str(), ",");
-  uint8_t channel = 0;
-  while (token != nullptr && channel < GPIO_PIN_PWM_OUTPUTS_COUNT)
-  {
-    uint32_t val = atoi(token);
-    DBGLN("PWMch(%u)=%u", channel, val);
-    config.SetPwmChannelRaw(channel, val);
-    ++channel;
-    token = strtok(nullptr, ",");
-  }
-  config.Commit();
-  request->send(200, "text/plain", "PWM outputs updated");
-}
-#endif
-
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
@@ -341,6 +314,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["ssid"] = station_ssid;
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
+    json["config"]["serial-protocol"] = config.GetSerialProtocol();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["forcetlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -356,7 +330,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["reg_domain"] = getRegulatoryDomain();
 
     #if defined(TARGET_RX)
-    json["config"]["protocol-select"] = GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN;
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif
@@ -457,6 +430,35 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
   DBGLN("%d %d", button1Color, button2Color);
   setButtonColors(button1Color, button2Color);
   request->send(200);
+}
+#else
+static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  uint8_t protocol = json["protocol"] | 0;
+  DBGLN("Setting serial protocol %u", protocol);
+  config.SetSerialProtocol((eSerialProtocol)protocol);
+
+  long modelid = json["modelid"] | 255;
+  if (modelid < 0 || modelid > 63) modelid = 255;
+  DBGLN("Setting model match id %u", (uint8_t)modelid);
+  config.SetModelId((uint8_t)modelid);
+
+  long forceTlm = json["forcetlm"] | 0;
+  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
+  config.SetForceTlmOff(forceTlm != 0);
+
+  #if defined(GPIO_PIN_PWM_OUTPUTS)
+  JsonArray pwm = json["pwm"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
+  {
+    uint32_t val = pwm[channel];
+    DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetPwmChannelRaw(channel, val);
+  }
+  #endif
+
+  config.Commit();
+  request->send(200, "text/plain", "Configuration updated");
 }
 #endif
 
@@ -559,30 +561,6 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
-
-#if defined(TARGET_RX)
-static void WebUpdateModelId(AsyncWebServerRequest *request)
-{
-  long modelid = request->arg("modelid").toInt();
-  if (modelid < 0 || modelid > 63) modelid = 255;
-  DBGLN("Setting model match id %u", (uint8_t)modelid);
-  config.SetModelId((uint8_t)modelid);
-  config.Commit();
-
-  request->send(200, "text/plain", "Model Match updated");
-}
-
-static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
-{
-  long forceTlm = request->arg("force-tlm").toInt();
-
-  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
-  config.SetForceTlmOff(forceTlm != 0);
-  config.Commit();
-
-  request->send(200, "text/plain", "Force telemetry updated");
-}
-#endif
 
 static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 {
@@ -967,13 +945,6 @@ static void startServices()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-  #if defined(TARGET_RX)
-    server.on("/model", WebUpdateModelId);
-    server.on("/forceTelemetry", WebUpdateForceTelemetry);
-  #endif
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
-    server.on("/pwm", WebUpdatePwm);
-  #endif
   server.on("/hardware.html", WebUpdateSendContent);
   server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
@@ -981,9 +952,9 @@ static void startServices()
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
+  server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
-    server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
   #endif
 
