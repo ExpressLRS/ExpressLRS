@@ -36,7 +36,7 @@
 
 // Output Power
 #define MinPower                    PWR_10mW
-#define HighPower                   PWR_250mW
-#define MaxPower                    PWR_1000mW
+#define HighPower                   PWR_2000mW
+#define MaxPower                    PWR_2000mW
 #define POWER_OUTPUT_ANALOG
-#define POWER_OUTPUT_VALUES         {600,770,950,1150,1480,2000,3500}
+#define POWER_OUTPUT_VALUES         {600,770,950,1150,1480,2000,3500,4095}
