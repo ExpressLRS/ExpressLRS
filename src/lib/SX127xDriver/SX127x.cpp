@@ -12,6 +12,8 @@ SX127xDriver *SX127xDriver::instance = NULL;
   #define OPT_USE_SX1276_RFO_HF false
 #endif
 
+bool SX127X_PA_20DBM; //20dbm check variable is created
+
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
      21, 23, 26, 29, 30, 31, 33, 34,
@@ -181,7 +183,18 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
   }
   else
   {
+    if (Power < 16)
+    {
     pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
+    //#define SX127X_PA_SELECT_BOOST 0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
+    SX127X_PA_20DBM=false;
+    }
+    if (Power >= 17)
+    { 
+    pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | 0b00001111;
+    //#define SX127X_PA_SELECT_BOOST 0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
+    SX127X_PA_20DBM=true;
+    }
   }
 
   if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
@@ -193,11 +206,28 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
 void ICACHE_RAM_ATTR SX127xDriver::CommitOutputPower()
 {
   if (pwrPending == PWRPENDING_NONE)
+  {
     return;
-
-  pwrCurrent = pwrPending;
-  pwrPending = PWRPENDING_NONE;
-  hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent);
+  }
+  if (SX127X_PA_20DBM == true)
+  {//20dbm
+    pwrCurrent = pwrPending;
+    pwrPending = PWRPENDING_NONE;
+    //20dbm
+    hal.writeRegister(SX127X_REG_PA_DAC, 0x87);  //turn on 3rd amplifier, see 5.4.3
+    //hal.writeRegister(SX127X_REG_OCP, 0x20 | 18); //increace power protection to 150mA RegOcp, see 5.4.4 
+    //might not be needed, already done above..
+    //hal.writeRegister(SX127X_REG_PA_CONFIG, SX127X_PA_SELECT_BOOST | uint8_t (17 - 2));
+    hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent);
+  }
+  if (SX127X_PA_20DBM == false)
+  { //15dbm <<<
+    pwrCurrent = pwrPending;
+    pwrPending = PWRPENDING_NONE;
+    hal.writeRegister(SX127X_REG_PA_DAC, 0x84); //turn off 3rd amplifier, see 5.4.3
+    hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent);
+    //hal.setRegValue(SX127X_REG_OCP, 0x84, 2, 0); //this one didnt work
+  }
 }
 
 void SX127xDriver::SetPreambleLength(uint8_t PreambleLen)
