@@ -968,7 +968,7 @@ bool CRSF::RXhandleUARTout()
 void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
     {
         constexpr uint8_t outBuffer[] = {
             LinkStatisticsFrameLength + 4,
@@ -993,7 +993,7 @@ void CRSF::sendLinkStatisticsToFC()
 void CRSF::sendRCFrameToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (OPT_CRSF_RCVR_NO_SERIAL)
+    if (OPT_CRSF_RCVR_NO_SERIAL || firmwareOptions.is_airport)
         return;
 
     constexpr uint8_t outBuffer[] = {
@@ -1035,7 +1035,7 @@ void CRSF::sendRCFrameToFC()
 void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
     {
         const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)

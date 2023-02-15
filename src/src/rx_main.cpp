@@ -113,6 +113,10 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define CRSF_RX_SERIAL Serial
 #endif
 
+// Variables / constants for Airport //
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
@@ -403,7 +407,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -439,18 +443,25 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (OtaIsFullRes)
+        if (firmwareOptions.is_airport)
         {
-            otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.full.tlm_dl.payload,
-                sizeof(otaPkt.full.tlm_dl.payload));
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
         else
         {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-            otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.std.tlm_dl.payload,
-                sizeof(otaPkt.std.tlm_dl.payload));
+            if (OtaIsFullRes)
+            {
+                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.full.tlm_dl.payload,
+                    sizeof(otaPkt.full.tlm_dl.payload));
+            }
+            else
+            {
+                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.std.tlm_dl.payload,
+                    sizeof(otaPkt.std.tlm_dl.payload));
+            }
         }
     }
 
@@ -757,6 +768,12 @@ void GotConnection(unsigned long now)
     webserverPreventAutoStart = true;
     #endif
 
+    if (firmwareOptions.is_airport)
+    {
+        apInputBuffer.flush();
+        apOutputBuffer.flush();
+    }
+
     DBGLN("got conn");
 }
 
@@ -766,6 +783,12 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     // during sync, where packets can be received before connection
     if (connectionState != connected || SwitchModePending)
         return;
+
+    if (firmwareOptions.is_airport)
+    {
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        return;
+    }
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -934,7 +957,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PDF calculation since TX does not send such data and tlm frames from other rx are not in sync
+    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
     if (otaPktPtr->std.type == PACKET_TYPE_TLM)
     {
         return true;
@@ -1227,6 +1250,16 @@ void HandleUARTin()
     }
     while (CRSF_RX_SERIAL.available())
     {
+        if (firmwareOptions.is_airport)
+        {
+            uint8_t v = CRSF_RX_SERIAL.read();
+            if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+            {
+                apInputBuffer.push(v);
+            }
+            continue;
+        }
+
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
 
         if (telemetry.ShouldCallBootloader())
@@ -1247,6 +1280,17 @@ void HandleUARTin()
             crsf.GetDeviceInformation(deviceInformation, 0);
             crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             crsf.sendMSPFrameToFC(deviceInformation);
+        }
+    }
+}
+
+static void HandleUARTout()
+{
+    if (firmwareOptions.is_airport)
+    {
+        while (apOutputBuffer.size())
+        {
+            Serial.write(apOutputBuffer.pop());
         }
     }
 }
@@ -1549,6 +1593,12 @@ void loop()
     }
 
     devicesUpdate(now);
+
+    if (firmwareOptions.is_airport)
+    {
+        HandleUARTin();
+        HandleUARTout();
+    }
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
