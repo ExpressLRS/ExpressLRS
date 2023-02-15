@@ -238,7 +238,8 @@ def patch_unified(args, options):
         args.target,
         'tx' if options.deviceType is DeviceType.TX else 'rx',
         '2400' if options.radioChip is RadioType.SX1280 else '900',
-        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else ''
+        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
+        options.luaName
     )
 
 def length_check(l, f):
@@ -269,13 +270,26 @@ def ask_for_firmware(args):
                 config = products[int(choice)-1]
                 for v in targets:
                     for t in targets[v]:
-                        for m in targets[v][t]:
-                            if targets[v][t][m]['product_name'] == config['product_name']:
-                                target = f'{v}.{t}.{m}'
+                        if t != 'name':
+                            for m in targets[v][t]:
+                                if targets[v][t][m]['product_name'] == config['product_name']:
+                                    target = f'{v}.{t}.{m}'
     return target, config
+
+class readable_dir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.R_OK):
+            setattr(namespace,self.dest,prospective_dir)
+        else:
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
 
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
+    # firmware/targets directory
+    parser.add_argument('--dir', action=readable_dir, default=None)
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -327,6 +341,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.dir != None:
+        os.chdir(args.dir)
+
     if args.file == None:
         os.chdir('firmware')
         args.target, config = ask_for_firmware(args)
@@ -339,6 +356,8 @@ def main():
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
             exit(1)
+    else:
+        args.target, config = ask_for_firmware(args)
 
     with args.file as f:
         mm = mmap.mmap(f.fileno(), 0)
@@ -346,10 +365,13 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if 'buzzer' in config['features'] == True else False,
+            True if 'features' in config and 'buzzer' in config['features'] == True else False,
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
-            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
+            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
+            config['lua_name'] if 'lua_name' in config else '',
+            config['stlink']['bootloader'] if 'stlink' in config else '',
+            config['stlink']['offset'] if 'stlink' in config else 0
         )
         patch_firmware(options, mm, pos, args)
         if args.flash:
