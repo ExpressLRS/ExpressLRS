@@ -115,3 +115,6 @@
 # Enable reporting offsets sent to Open/EdgeTX for packet synchronisation.
 # Also logs forced resyncs when a packet is delayed or missed.
 #-DDEBUG_OPENTX_SYNC
+
+# Use an ELRS TX and RX as a transparent UART over the air
+#-DUSE_AIRPORT_AT_BAUD=9600
