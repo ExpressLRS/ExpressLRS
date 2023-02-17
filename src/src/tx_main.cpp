@@ -488,13 +488,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if(!LBTSuccessCalc.currentIsSet())
-  {
-    Radio.TXdoneCallback();
-  }
-#endif
-
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
