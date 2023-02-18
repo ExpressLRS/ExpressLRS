@@ -55,7 +55,7 @@ typedef struct {
         /** PACKET_TYPE_RCDATA **/
         struct {
             OTA_Channels_4x10 ch;
-            uint8_t switches:7,
+            uint8_t switches:7, // note: contains telemetryStatus bit
                     ch4:1;
         } rc;
         struct {
@@ -64,7 +64,9 @@ typedef struct {
         } PACKED dbg_linkstats;
         /** PACKET_TYPE_MSP **/
         struct {
-            uint8_t packageIndex;
+            uint8_t packageIndex:4, // values: 0-13:packageIndex, 14=ELRS_MSP_MAX_PACKAGES:resync, 15:unused, 1:payload is bind info (in bind mode)
+                    telemetryStatus:1,
+                    zero: 3; // future expansion, set to 0
             uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
@@ -113,13 +115,17 @@ typedef struct {
         } PACKED dbg_linkstats;
         /** PACKET_TYPE_MSP **/
         struct {
-            uint8_t packetType: 2,
-                    packageIndex: 6;
+            uint8_t packetType: 2, // PACKET_TYPE_MSPDATA 0b01
+                    packageIndex: 4, // values: 0-13:packageIndex, 14=ELRS_MSP_MAX_PACKAGES:resync, 15:unused, 1:payload is bind info (in bind mode)
+                    telemetryStatus:1,
+                    zero: 1; // reserved for future expansion, set to 0
             uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
         struct {
-            uint8_t packetType; // only low 2 bits
+            uint8_t packetType: 2, // PACKET_TYPE_SYNC 0b10 (low 2 bits)
+                    telemetryStatus:1,
+                    zero: 5; // reserved for future expansion, set to 0
             OTA_Sync_s sync;
             uint8_t free[4];
         } PACKED sync;

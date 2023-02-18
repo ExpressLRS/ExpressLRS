@@ -417,17 +417,37 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   // Sync spam only happens on slot 1 and 2 and can't be disabled
   if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
-  {
-    otaPkt.std.type = PACKET_TYPE_SYNC;
-    GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
+  { 
+    if(OtaIsFullRes)
+    {
+      otaPkt.full.sync.packetType = PACKET_TYPE_SYNC;
+      otaPkt.full.sync.telemetryStatus = TelemetryReceiver.GetCurrentConfirm();
+      otaPkt.full.sync.zero = 0;
+      GenerateSyncPacketData(&otaPkt.full.sync.sync);
+    }
+    else
+    {
+      otaPkt.std.type = PACKET_TYPE_SYNC;
+      GenerateSyncPacketData(&otaPkt.std.sync);
+    }
     syncSlot = 0; // reset the sync slot in case the new rate (after the syncspam) has a lower FHSShopInterval
   }
   // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
   // But only on the sync FHSS channel and with a timed delay between them
   else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
   {
-    otaPkt.std.type = PACKET_TYPE_SYNC;
-    GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
+    if(OtaIsFullRes)
+    {
+      otaPkt.full.sync.packetType = PACKET_TYPE_SYNC;
+      otaPkt.full.sync.telemetryStatus = TelemetryReceiver.GetCurrentConfirm();
+      otaPkt.full.sync.zero = 0;
+      GenerateSyncPacketData(&otaPkt.full.sync.sync);
+    }
+    else
+    {
+      otaPkt.std.type = PACKET_TYPE_SYNC;
+      GenerateSyncPacketData(&otaPkt.std.sync);
+    }
     syncSlot = (syncSlot + 1) % (ExpressLRS_currAirRate_Modparams->FHSShopInterval * 2);
   }
   else
@@ -440,12 +460,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.full.msp_ul.payload,
           sizeof(otaPkt.full.msp_ul.payload));
+        otaPkt.full.msp_ul.telemetryStatus = TelemetryReceiver.GetCurrentConfirm();
+        otaPkt.full.msp_ul.zero = 0;
       }
       else
       {
         otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.std.msp_ul.payload,
           sizeof(otaPkt.std.msp_ul.payload));
+        otaPkt.std.msp_ul.telemetryStatus = TelemetryReceiver.GetCurrentConfirm();
+        otaPkt.std.msp_ul.zero = 0;          
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions
