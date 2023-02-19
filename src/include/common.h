@@ -96,6 +96,7 @@ typedef enum : uint8_t
     RATE_DVDA_500HZ,
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
+    RATE_DVDA_50HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
@@ -181,7 +182,7 @@ enum eServoOutputMode : uint8_t
 
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
-#define RATE_MAX 5
+#define RATE_MAX 6
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
