@@ -69,7 +69,7 @@ static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
 static uint8_t headTrackingEnabledChannel = 0;
-static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MIN};
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 bool headTrackingEnabled = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
