@@ -1201,7 +1201,7 @@
         "rx_2400": {
             "rx24d": {
                 "product_name": "NewBeeDrone Diversity 2.4Ghz RX",
-                "lua_name": "NewBeeDrone 2400RX",
+                "lua_name": "NBD 2400RX",
                 "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
