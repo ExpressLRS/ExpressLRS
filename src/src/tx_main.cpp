@@ -71,6 +71,7 @@ bool RxWiFiReadyToSend = false;
 static uint8_t headTrackingEnabledChannel = 0;
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 bool headTrackingEnabled = false;
+static uint32_t lastPTRValidTimeMs;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -490,7 +491,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
             headTrackingEnabled = enable;
             HTEnableFlagReadyToSend = true;
           }
-          if (enable)
+          // If enabled and this packet is less that 1 second old then use it
+          if (enable && now - lastPTRValidTimeMs < 1000)
           {
             CRSF::ChannelData[ptrStartChannel+4] = ptrChannelData[0];
             CRSF::ChannelData[ptrStartChannel+5] = ptrChannelData[1];
@@ -961,7 +963,7 @@ void ExitBindingMode()
   DBGLN("Exiting binding mode");
 }
 
-void ProcessMSPPacket(mspPacket_t *packet)
+void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if !defined(CRITICAL_FLASH)
   // Inspect packet for ELRS specific opcodes
@@ -1007,6 +1009,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
     ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
     ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
     ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    lastPTRValidTimeMs = now;
   }
 }
 
@@ -1315,7 +1318,7 @@ void loop()
     if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
-      ProcessMSPPacket(msp.getReceivedPacket());
+      ProcessMSPPacket(now, msp.getReceivedPacket());
       msp.markPacketReceived();
     }
   }
