@@ -477,10 +477,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
   
 	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
-		Radio.TXdoneCallback();                                 // but do status uptate (issue #2028)
+  {                                                         // but do status update (issue #2028)
+		Radio.TXdoneCallback();
+  }
 	else		
 #endif
-  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+  {
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+  }
 }
 
 /*

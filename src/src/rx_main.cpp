@@ -455,8 +455,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     
     if (transmittingRadio != SX12XX_Radio_NONE)               // send packet if channel available  
 #endif
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-
+    {
+        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    }
     return true;
 }
 
