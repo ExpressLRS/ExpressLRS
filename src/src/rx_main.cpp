@@ -340,9 +340,17 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
 
     if (geminiMode)
-    {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+    {   
+        if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        }
+        else
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+        }
     }
     else
     {
@@ -399,7 +407,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
+    if ((NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive()) && !firmwareOptions.is_airport)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
