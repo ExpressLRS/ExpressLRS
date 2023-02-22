@@ -5,7 +5,6 @@
 /* eslint-disable require-jsdoc */
 
 document.addEventListener('DOMContentLoaded', init, false);
-let scanTimer = undefined;
 let colorTimer = undefined;
 let colorUpdated  = false;
 let storedModelId = 255;
@@ -168,6 +167,8 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
+
+  _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
 @@end
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
@@ -201,7 +202,7 @@ function initOptions() {
       const data = JSON.parse(this.responseText);
       updateOptions(data['options']);
       updateConfig(data['config']);
-      scanTimer = setInterval(getNetworks, 2000);
+      setTimeout(getNetworks, 2000);
     }
   };
   xmlhttp.open('GET', '/config', true);
@@ -210,15 +211,20 @@ function initOptions() {
 
 function getNetworks() {
   const xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+  xmlhttp.onload = function() {
+    if (this.status == 204) {
+      setTimeout(getNetworks, 2000);
+    } else {
+      console.log(this.responseText);
       const data = JSON.parse(this.responseText);
       if (data.length > 0) {
         _('loader').style.display = 'none';
         autocomplete(_('network'), data);
-        clearInterval(scanTimer);
       }
     }
+  };
+  xmlhttp.onerror = function() {
+    setTimeout(getNetworks, 2000);
   };
   xmlhttp.open('GET', 'networks.json', true);
   xmlhttp.send();
@@ -348,6 +354,36 @@ _('upload_form').addEventListener('submit', (e) => {
   e.preventDefault();
   uploadFile();
 });
+
+_('fileselect').addEventListener('change', (e) => {
+  const files = e.target.files || e.dataTransfer.files;
+  const reader = new FileReader();
+  reader.onload = function(x) {
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+      _('fileselect').value = '';
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          cuteAlert({
+            type: 'info',
+            title: 'Upload Model Configuration',
+            message: this.responseText
+          });
+        } else {
+          cuteAlert({
+            type: 'error',
+            title: 'Upload Model Configuration',
+            message: 'An error occurred while uploading model configuration file'
+          });
+        }
+      }
+    };
+    xmlhttp.open('POST', '/import', true);
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
+    xmlhttp.send(x.target.result);
+  }
+  reader.readAsText(files[0]);
+}, false);
 
 // =========================================================
 

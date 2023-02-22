@@ -116,9 +116,11 @@ def on_upload(source, target, env):
     upload_addr = ['elrs_tx', 'elrs_tx.local']
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
     if not os.path.exists(elrs_bin_target):
-        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+        elrs_bin_target = os.path.join(bin_path, 'firmware.bin.gz')
         if not os.path.exists(elrs_bin_target):
-            raise Exception("No valid binary found!")
+            elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+            if not os.path.exists(elrs_bin_target):
+                raise Exception("No valid binary found!")
 
     pio_target = target[0].name
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
