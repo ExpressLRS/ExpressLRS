@@ -86,7 +86,7 @@ def patch_wifi(mm, pos, args):
     return pos
 
 def patch_rx_params(mm, pos, args):
-    pos = write32(mm, pos, args.rx_baud)
+    pos = write32(mm, pos, args.rx_baud if args.airport_baud is None else args.airport_baud)
     val = mm[pos]
     if args.invert_tx != None:
         val &= ~1
@@ -97,10 +97,13 @@ def patch_rx_params(mm, pos, args):
     if args.r9mm_mini_sbus != None:
         val &= ~4
         val |= (args.r9mm_mini_sbus << 2)
+    if args.airport_baud != None:
+        val |= ~8
+        val |= 0 if args.airport_baud == 0 else 8
     mm[pos] = val
     return pos + 1
 
-def patch_tx_params(mm, pos, args):
+def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
@@ -110,8 +113,15 @@ def patch_tx_params(mm, pos, args):
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
+    if args.airport_baud != None:
+        val |= ~4
+        val |= 0 if args.airport_baud == 0 else 4
     mm[pos] = val
-    return pos + 1
+    pos += 1
+    if options.hasBuzzer:
+        pos = patch_buzzer(mm, pos, args)
+    pos = write32(mm, pos, 0 if args.airport_baud is None else args.airport_baud)
+    return pos
 
 def patch_buzzer(mm, pos, args):
     melody = args.buzzer_melody
@@ -186,9 +196,7 @@ def patch_firmware(options, mm, pos, args):
         pos += 1
         pos = patch_uid(mm, pos, args)
         if options.deviceType is DeviceType.TX:
-            pos = patch_tx_params(mm, pos, args)
-            if options.hasBuzzer:
-                pos = patch_buzzer(mm, pos, args)
+            pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
             pos = patch_rx_params(mm, pos, args)
     else:
@@ -230,7 +238,8 @@ def patch_unified(args, options):
         args.target,
         'tx' if options.deviceType is DeviceType.TX else 'rx',
         '2400' if options.radioChip is RadioType.SX1280 else '900',
-        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else ''
+        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
+        options.luaName
     )
 
 def length_check(l, f):
@@ -261,13 +270,26 @@ def ask_for_firmware(args):
                 config = products[int(choice)-1]
                 for v in targets:
                     for t in targets[v]:
-                        for m in targets[v][t]:
-                            if targets[v][t][m]['product_name'] == config['product_name']:
-                                target = f'{v}.{t}.{m}'
+                        if t != 'name':
+                            for m in targets[v][t]:
+                                if targets[v][t][m]['product_name'] == config['product_name']:
+                                    target = f'{v}.{t}.{m}'
     return target, config
+
+class readable_dir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.R_OK):
+            setattr(namespace,self.dest,prospective_dir)
+        else:
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
 
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
+    # firmware/targets directory
+    parser.add_argument('--dir', action=readable_dir, default=None)
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -275,6 +297,8 @@ def main():
     parser.add_argument('--password', type=length_check(64, "password"), required=False, help='Home network password')
     parser.add_argument('--auto-wifi', type=int, help='Interval (in seconds) before WiFi auto starts, if no connection is made')
     parser.add_argument('--no-auto-wifi', action='store_true', help='Disables WiFi auto start if no connection is made')
+    # AirPort
+    parser.add_argument('--airport-baud', type=int, const=None, nargs='?', action='store', help='If configured as an AirPort device then this is the baud rate to use')
     # RX Params
     parser.add_argument('--rx-baud', type=int, const=420000, nargs='?', action='store', help='The receiver baudrate talking to the flight controller')
     parser.add_argument('--invert-tx', dest='invert_tx', action='store_true', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
@@ -317,6 +341,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.dir != None:
+        os.chdir(args.dir)
+
     if args.file == None:
         os.chdir('firmware')
         args.target, config = ask_for_firmware(args)
@@ -329,6 +356,8 @@ def main():
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
             exit(1)
+    else:
+        args.target, config = ask_for_firmware(args)
 
     with args.file as f:
         mm = mmap.mmap(f.fileno(), 0)
@@ -336,10 +365,13 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if 'buzzer' in config['features'] == True else False,
+            True if 'features' in config and 'buzzer' in config['features'] == True else False,
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
-            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280
+            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
+            config['lua_name'] if 'lua_name' in config else '',
+            config['stlink']['bootloader'] if 'stlink' in config else '',
+            config['stlink']['offset'] if 'stlink' in config else 0
         )
         patch_firmware(options, mm, pos, args)
         if args.flash:
