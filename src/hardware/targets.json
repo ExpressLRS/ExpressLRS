@@ -192,6 +192,22 @@
             }
         },
         "rx_900": {
+            "ttgov1": {
+                "product_name": "DIY TTGO V1 900MHz RX",
+                "lua_name": "DIY900 TTGO V1RX",
+                "layout_file": "DIY 900 TTGO V1.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
+            "ttgov2": {
+                "product_name": "DIY TTGO V2 900MHz RX",
+                "lua_name": "DIY900 TTGO V2RX",
+                "layout_file": "DIY 900 TTGO V2.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
             "huzzah": {
                 "product_name": "DIY Huzzah RFM95 900MHz TX",
                 "lua_name": "ELRS RFM95 900RX",
