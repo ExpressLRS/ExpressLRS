@@ -25,7 +25,7 @@ static int timeout()
 {
     if (connectionState != serialUpdate)
     {
-        uint32_t duration = serialIO->sendRCFrameToFC(frameAvailable, CRSF::ChannelData);
+        uint32_t duration = serialIO->sendRCFrameToFC(frameAvailable, ChannelData);
         frameAvailable = false;
         serialIO->handleUARTout();
         serialIO->handleUARTin();

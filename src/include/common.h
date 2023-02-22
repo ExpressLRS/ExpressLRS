@@ -223,6 +223,7 @@ uint32_t uidMacSeedGet(void);
 void initUID();
 bool isDualRadio();
 
+#define CRSF_NUM_CHANNELS 16
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6
@@ -240,3 +241,5 @@ bool isDualRadio();
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
+
+extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format

@@ -109,6 +109,8 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 connectionState_e connectionState = disconnected;
 bool connectionHasModelMatch;
 
+uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
+
 uint8_t MasterUID[6];                       // The definitive user UID
 uint8_t UID[6];                             // The currently running UID
 uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
@@ -206,6 +208,6 @@ void initUID()
 }
 
 bool ICACHE_RAM_ATTR isDualRadio()
-{    
+{
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }

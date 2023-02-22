@@ -48,7 +48,7 @@ void BluetoothJoystickUpdateValues()
 
         for (uint8_t i = 0; i < 8; i++)
         {
-            data[i] = map(CRSF::ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
+            data[i] = map(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
         }
 
         bleGamepad->setX(data[0]);

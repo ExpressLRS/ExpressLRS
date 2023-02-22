@@ -143,7 +143,7 @@ static void AuxStateToMSPOut()
     uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
     uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-    bool recordingState = CRSF_to_BIT(CRSF::ChannelData[auxNumber]) ^ auxInverted;
+    bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (recordingState == lastRecordingState)
     {

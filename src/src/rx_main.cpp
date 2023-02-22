@@ -800,7 +800,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         return;
     }
 
-    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, CRSF::ChannelData, ExpressLRS_currTlmDenom);
+    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // No channels packets to the FC or PWM pins if no model match

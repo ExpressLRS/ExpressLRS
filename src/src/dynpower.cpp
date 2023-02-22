@@ -90,7 +90,7 @@ void DynamicPower_Update(uint32_t now)
   uint8_t boostChannel = config.GetBoostChannel();
   bool armed = CRSF::IsArmed();
   if ((connectionState == disconnected && armed) ||
-    (boostChannel && (CRSF_to_BIT(CRSF::ChannelData[AUX9 + boostChannel - 1]) == 0)))
+    (boostChannel && (CRSF_to_BIT(ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {
     DynamicPower_SetToConfigPower();
     return;

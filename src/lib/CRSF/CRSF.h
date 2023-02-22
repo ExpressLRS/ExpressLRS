@@ -6,6 +6,7 @@
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
+#include "common.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "LowPassFilter.h"
@@ -94,7 +95,6 @@ public:
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
-    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
 
 private:
     static inBuffer_U inBuffer;

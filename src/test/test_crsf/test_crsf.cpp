@@ -10,6 +10,7 @@ using namespace std;
 
 // Create a CRSF object to test,
 CRSF crsf;
+uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
 

@@ -117,7 +117,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
  * A 3 bit switch index and 3-4 bit value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: crsf.ChannelData, crsf.currentSwitches
+ * Inputs: channelData, TelemetryStatus
  * Outputs: OTA_Packet4_s, side-effects the sentSwitch value
  */
 // The next switch index to send, where 0=AUX2 and 6=AUX8
@@ -192,7 +192,7 @@ static uint8_t ICACHE_RAM_ATTR HybridWideSwitchToOta(const uint32_t *channelData
  * A 6 or 7 bit switch value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: crsf.ChannelData, crsf.LinkStatistics.uplink_TX_Power
+ * Inputs: cchannelData, TelemetryStatus
  * Outputs: OTA_Packet4_s
  **/
 void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData,
@@ -398,7 +398,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
  * 1 bit for the TelemetryStatus, which may be in every packet or just idx 7
  * depending on TelemetryRatio
  *
- * Output: crsf.ChannelData, crsf.LinkStatistics.uplink_TX_Power
+ * Output: channelData
  * Returns: TelemetryStatus bit
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData,

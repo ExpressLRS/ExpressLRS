@@ -1,8 +1,6 @@
 #include "CRSF.h"
 #include "device.h"
 #include "FIFO.h"
-#include "telemetry_protocol.h"
-#include "common.h"
 #include "logging.h"
 #include "helpers.h"
 
@@ -35,8 +33,6 @@ GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 /// Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
-
-uint32_t CRSF::ChannelData[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
 
