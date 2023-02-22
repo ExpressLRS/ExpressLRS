@@ -108,25 +108,25 @@ bool pwmSerialDefined = false;
 #endif
 uint32_t serialBaud;
 
-/* CRSF_TX_SERIAL is used by CRSF output */
+/* SERIAL_PROTOCOL_TX is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
-    HardwareSerial CRSF_TX_SERIAL(USART2);
+    HardwareSerial SERIAL_PROTOCOL_TX(USART2);
 #else
-    #define CRSF_TX_SERIAL Serial
+    #define SERIAL_PROTOCOL_TX Serial
 #endif
 SerialIO *serialIO;
 
-/* CRSF_RX_SERIAL is used by telemetry receiver and can be on a different peripheral */
+/* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
-    #define CRSF_RX_SERIAL CrsfRxSerial
+    #define SERIAL_PROTOCOL_RX CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
-    #define CRSF_RX_SERIAL CrsfRxSerial
+    #define SERIAL_PROTOCOL_RX CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
 #elif defined(TARGET_RX_FM30_MINI)
-    #define CRSF_RX_SERIAL CRSF_TX_SERIAL
+    #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #else
-    #define CRSF_RX_SERIAL Serial
+    #define SERIAL_PROTOCOL_RX Serial
 #endif
 
 StubbornSender TelemetrySender;
@@ -350,7 +350,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
 
     if (geminiMode)
-    {   
+    {
         if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
@@ -1131,38 +1131,38 @@ static void setupSerial()
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
-    CRSF_RX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(serialBaud);
+    SERIAL_PROTOCOL_RX.setRx(GPIO_PIN_RCSIGNAL_RX);
+    SERIAL_PROTOCOL_RX.begin(serialBaud);
 
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
 #else
 #if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
     if (invert)
     {
-        CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
-        CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
+        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
+        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
     }
     else
 #endif
     {
-        CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
-        CRSF_TX_SERIAL.setRx(GPIO_PIN_RCSIGNAL_RX);
+        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
+        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX);
     }
 #endif /* TARGET_R9SLIMPLUS_RX */
 #if defined(TARGET_RX_GHOST_ATTO_V1)
     // USART1 is used for RX (half duplex)
-    CRSF_RX_SERIAL.setHalfDuplex();
-    CRSF_RX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_RX);
-    CRSF_RX_SERIAL.begin(serialBaud);
-    CRSF_RX_SERIAL.enableHalfDuplexRx();
+    SERIAL_PROTOCOL_RX.setHalfDuplex();
+    SERIAL_PROTOCOL_RX.setTx(GPIO_PIN_RCSIGNAL_RX);
+    SERIAL_PROTOCOL_RX.begin(serialBaud);
+    SERIAL_PROTOCOL_RX.enableHalfDuplexRx();
 
     // USART2 is used for TX (half duplex)
     // Note: these must be set before begin()
-    CRSF_TX_SERIAL.setHalfDuplex();
-    CRSF_TX_SERIAL.setRx((PinName)NC);
-    CRSF_TX_SERIAL.setTx(GPIO_PIN_RCSIGNAL_TX);
+    SERIAL_PROTOCOL_TX.setHalfDuplex();
+    SERIAL_PROTOCOL_TX.setRx((PinName)NC);
+    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    CRSF_TX_SERIAL.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
+    SERIAL_PROTOCOL_TX.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
 #endif /* PLATFORM_STM32 */
 #if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
     if (invert)
@@ -1191,15 +1191,15 @@ static void setupSerial()
 
     if (firmwareOptions.is_airport)
     {
-        serialIO = new SerialAirPort(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+        serialIO = new SerialAirPort(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (sbusSerialOutput)
     {
-        serialIO = new SerialSBUS(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+        serialIO = new SerialSBUS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else
     {
-        serialIO = new SerialCRSF(CRSF_TX_SERIAL, CRSF_RX_SERIAL);
+        serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     SerialLogger = &Serial;
 }
@@ -1209,9 +1209,9 @@ static void serialShutdown()
     SerialLogger = new NullStream();
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX) || defined(TARGET_RX_GHOST_ATTO_V1)
-    CRSF_RX_SERIAL.end();
+    SERIAL_PROTOCOL_RX.end();
 #endif
-    CRSF_TX_SERIAL.end();
+    SERIAL_PROTOCOL_TX.end();
 #else
     Serial.end();
 #endif
@@ -1569,7 +1569,7 @@ void setup()
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
         if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
         {
-            for (int i=0 ; i<GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
+            for (int i = 0 ; i < GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
                 eServoOutputMode pinMode = (eServoOutputMode)config.GetPwmChannel(i)->val.mode;
                 if (pinMode == somSerial)
@@ -1699,8 +1699,8 @@ struct bootloader {
 
 void reset_into_bootloader(void)
 {
-    CRSF_TX_SERIAL.println((const char *)&target_name[4]);
-    CRSF_TX_SERIAL.flush();
+    SERIAL_PROTOCOL_TX.println((const char *)&target_name[4]);
+    SERIAL_PROTOCOL_TX.flush();
 #if defined(PLATFORM_STM32)
     delay(100);
     DBGLN("Jumping to Bootloader...");
