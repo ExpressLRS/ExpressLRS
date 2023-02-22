@@ -190,120 +190,77 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
     return true;
 }
 
-bool Telemetry::AppendTelemetryPackage(uint8_t *package)
+void Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
-    const crsf_header_t *header = (crsf_header_t *) package;
+    const crsf_ext_header_t *header = (crsf_ext_header_t *) package;
 
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'l')
+    //handle non-OTA
+    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'l') // note: this should be an extended csrf packet, not a standard crsf packet
     {
         callBootloader = true;
-        return true;
+        return;
     }
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'd')
+    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'd') // note: this should be an extended csrf packet, not a standard crsf packet
     {
         callEnterBind = true;
-        return true;
+        return;
     }
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'm' && package[4] == 'm')
+    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'm' && package[4] == 'm') // note: this should be an extended csrf packet, not a standard crsf packet
     {
         callUpdateModelMatch = true;
         modelMatchId = package[5];
-        return true;
+        return;
     }
-    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_ADDRESS_CRSF_RECEIVER)
+    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
     {
         sendDeviceFrame = true;
-        return true;
+        return;
     }
+    #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+    if (header->type >= CRSF_FRAMETYPE_DEVICE_PING && header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+    {
+        if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+        {
+            DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
+            CRSF::crsf2msp.parse(package);
+        }
+        //fall through: if no TCP client we just want to forward MSP over the link
+    }
+    #endif
 
+    //handle OTA
     uint8_t targetIndex = 0;
     bool targetFound = false;
 
-
-    if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
+    //store crsf telemetry in 1-slot LIFO buffer, overwrite exising data (if the crsf package fits in the buffer)
+    for (int8_t i = 0; i < payloadTypesCount - 2; i++)
     {
-        const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-
-        if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP)
+        if (header->type == payloadTypes[i].type && CRSF_FRAME_SIZE(header->frame_size) <= payloadTypes[i].size)
         {
-            // reserve last slot for adrupilot custom frame with the sub type status text: this is needed to make sure the important status messages are not lost
-            if (package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
-            {
-                targetIndex = payloadTypesCount - 1;
-            }
-            else
-            {
-                targetIndex = payloadTypesCount - 2;
-            }
-            targetFound = true;
-        }
-        else if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-        {
-            targetIndex = payloadTypesCount - 2;
-            targetFound = true;
-
-            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
-                // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-                if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
-                {
-                    DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    CRSF::crsf2msp.parse(package);
-                }
-                else // if no TCP client we just want to forward MSP over the link
-            #endif
-            {
-                // larger msp resonses are sent in two chunks so special handling is needed so both get sent
-                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
-                {
-                    // there is already another response stored
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        // use other slot
-                        targetIndex = payloadTypesCount - 1;
-                    }
-
-                    // if both slots are taked do not overwrite other data since the first chunk would be lost
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        targetFound = false;
-                    }
-                }
-            }
-        }
-        else
-        {
-            targetIndex = payloadTypesCount - 1;
+            targetIndex = i;
             targetFound = true;
         }
     }
-    else
+
+    // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks 
+    if (!targetFound)
     {
-        for (int8_t i = 0; i < payloadTypesCount - 2; i++)
+        // first try slot payloadTypesCount - 2, so that the OTA packets are transmitted in the same order as they are received
+        targetIndex = payloadTypesCount - 2;
+        targetFound = !payloadTypes[targetIndex].updated;
+        if (!targetFound) 
         {
-            if (header->type == payloadTypes[i].type)
-            {
-                if (!payloadTypes[i].locked && CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
-                {
-                    targetIndex = i;
-                    targetFound = true;
-                }
-                #if defined(UNIT_TEST)
-                else if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) > payloadTypes[i].size)
-                {
-                    cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
-                }
-                #endif
-                break;
-            }
-        }
+            // use other slot if first slot is full
+            targetIndex = payloadTypesCount - 1; 
+            targetFound = !payloadTypes[targetIndex].updated;
+        } 
     }
 
-    if (targetFound)
+    // write to slot, but only if the slot is not locked by the OTA sender
+    if (targetFound && !payloadTypes[targetIndex].locked)
     {
         memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
         payloadTypes[targetIndex].updated = true;
     }
-
-    return targetFound;
 }
 #endif
