@@ -262,7 +262,9 @@ bool options_init()
     ESP.flashRead(location, buf, 2048);
 
     bool hardware_inited = hardware_init(buf);
+    #if defined(LOG_INIT)
     DBGLN("init %d %x", hardware_inited, location);
+    #endif
 
     if (buf[0] != 0xFFFFFFFF)
     {
