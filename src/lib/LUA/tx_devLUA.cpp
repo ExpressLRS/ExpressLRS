@@ -203,6 +203,15 @@ struct luaItem_selection luaBluetoothTelem = {
 };
 #endif
 
+#if defined(PLATFORM_ESP32)
+static struct luaItem_selection luaBTSerial = {
+    {"BT Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    STR_EMPTYSPACE
+};
+#endif
+
 //---------------------------- BACKPACK ------------------
 static struct luaItem_folder luaBackpackFolder = {
     {"Backpack", CRSF_FOLDER},
@@ -536,6 +545,14 @@ static void registerLuaParameters()
       devicesTriggerEvent();
     });
     #endif
+
+    #if defined(PLATFORM_ESP32)
+    registerLUAParameter(&luaBTSerial, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      bool newBTSerial = arg;
+      config.SetBTSerial(newBTSerial);
+    });
+    #endif
+
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -709,6 +726,9 @@ static int event()
   }
 #if defined(TARGET_TX_FM30)
   setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
+#endif
+#if defined(PLATFORM_ESP32)
+  setLuaTextSelectionValue(&luaBTSerial, (uint8_t)config.GetBTSerial());
 #endif
   return DURATION_IMMEDIATELY;
 }

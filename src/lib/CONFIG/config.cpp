@@ -374,6 +374,16 @@ TxConfig::SetTlm(uint8_t tlm)
 }
 
 void
+TxConfig::SetBTSerial(bool btSerial)
+{
+    if (GetBTSerial() != btSerial)
+    {
+        m_model->btSerial = btSerial;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetPower(uint8_t power)
 {
     if (GetPower() != power)

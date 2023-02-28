@@ -28,6 +28,7 @@ typedef struct {
     uint8_t     dynamicPower:1,
                 modelMatch:1,
                 txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
+    uint8_t     btSerial:1;
 } model_config_t;
 
 typedef struct {
@@ -91,6 +92,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
+    bool GetBTSerial() const { return m_model->btSerial; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
 
@@ -115,6 +117,7 @@ public:
     void SetDvrAux(uint8_t dvrAux);
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
+    void SetBTSerial(bool btSerial);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
 
     // State setters
