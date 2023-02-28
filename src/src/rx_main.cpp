@@ -407,7 +407,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if ((NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive()) && !firmwareOptions.is_airport)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
