@@ -51,7 +51,8 @@ static void sendVtxConfigCommand(void)
 
 static void sendEepromWriteCommand(void)
 {
-    if (!eepromWriteRequired) {
+    if (!eepromWriteRequired)
+    {
         return;
     }
 
@@ -100,18 +101,17 @@ static void setVtxTableBand(uint8_t band)
     {
         payload[2 + i] = channelFreqLabelByIdx((band - 1) * CHANNEL_COUNT + i);
     }
-    
+
     payload[2+CHANNEL_COUNT] = getBandLetterByIdx(band - 1);
     payload[3+CHANNEL_COUNT] = IS_FACTORY_BAND;
     payload[4+CHANNEL_COUNT] = CHANNEL_COUNT;
 
-    int i;
-    for(i = 0; i < CHANNEL_COUNT; i++)
+    for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
         payload[(5+CHANNEL_COUNT) + (i * 2)] =  getFreqByIdx(((band-1) * CHANNEL_COUNT) + i) & 0xFF;
         payload[(6+CHANNEL_COUNT) + (i * 2)] = (getFreqByIdx(((band-1) * CHANNEL_COUNT) + i) >> 8) & 0xFF;
     }
-    
+
     uint8_t request[MSP_REQUEST_LENGTH(MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH)];
     crsf.SetMspV2Request(request, MSP_SET_VTXTABLE_BAND, payload, MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH));
@@ -183,18 +183,23 @@ void mspVtxProcessPacket(uint8_t *packet)
         {
         case GET_VTX_TABLE_SIZE:
 
-            //  Store initially received values.  If the VTx Table is correct, only then set these values.  //
+            //  Store initially received values.  If the VTx Table is correct, only then set these values.
             pitMode = vtxConfigPacket->pitmode;
-            power = vtxConfigPacket->power - 1; // Correct for BF starting at 1.
+            power = vtxConfigPacket->power;
 
-            if (vtxConfigPacket->lowPowerDisarm) // Force on boot because BF doesnt send a low power index.
+            if (power == RACE_MODE) // If race mode, force pit mode on boot.
             {
-                power = 0; 
+                pitMode = 1;
+            }
+
+            if (vtxConfigPacket->lowPowerDisarm) // Force 0mw on boot because BF doesnt send a low power index.
+            {
+                power = 1; 
             }
 
             if (power >= NUM_POWER_LEVELS)
             {
-                power = 2; // 25 mW
+                power = 3; // 25 mW
             }
 
             channel = ((vtxConfigPacket->band - 1) * 8) + (vtxConfigPacket->channel - 1);   
@@ -214,7 +219,7 @@ void mspVtxProcessPacket(uint8_t *packet)
             pitMode = vtxConfigPacket->pitmode;
 
             // Set power before freq changes to prevent PLL settling issues and spamming other frequencies.
-            power = vtxConfigPacket->power - 1; // Correct for BF starting at 1.
+            power = vtxConfigPacket->power;
             vtxSPIPitmode = pitMode;
             vtxSPIPowerIdx = power;
 
@@ -235,9 +240,7 @@ void mspVtxProcessPacket(uint8_t *packet)
         case CHECK_POWER_LEVELS:
             if (powerLevelPacket->powerValue ==  powerLevelsLut[checkingIndex] && powerLevelPacket->powerLabelLength == POWER_LEVEL_LABEL_LENGTH) // Check lengths before trying to check content
             {
-                if (powerLevelPacket->label1 == powerLevelsLabel[checkingIndex * POWER_LEVEL_LABEL_LENGTH + 0] &&
-                    powerLevelPacket->label2 == powerLevelsLabel[checkingIndex * POWER_LEVEL_LABEL_LENGTH + 1] &&
-                    powerLevelPacket->label3 == powerLevelsLabel[checkingIndex * POWER_LEVEL_LABEL_LENGTH + 2])
+                if (memcmp(powerLevelPacket->label, powerLevelsLabel + checkingIndex * POWER_LEVEL_LABEL_LENGTH, sizeof(powerLevelPacket->label)) == 0)
                 {
                     checkingIndex++;
                     if (checkingIndex > NUM_POWER_LEVELS - 1)
@@ -261,9 +264,9 @@ void mspVtxProcessPacket(uint8_t *packet)
         case CHECK_BANDS:
             if (bandPacket->bandNameLength ==  BAND_NAME_LENGTH && bandPacket->bandLetter == getBandLetterByIdx(checkingIndex) && bandPacket->isFactoryBand == IS_FACTORY_BAND && bandPacket->channels == CHANNEL_COUNT) // Check lengths before trying to check content
             {
-                if (memcmp(bandPacket->bandName, channelFreqLabel + checkingIndex * CHANNEL_COUNT, 8) == 0)
+                if (memcmp(bandPacket->bandName, channelFreqLabel + checkingIndex * CHANNEL_COUNT, sizeof(bandPacket->bandName)) == 0)
                 {
-                    if (memcmp(bandPacket->channel, channelFreqTable + checkingIndex * CHANNEL_COUNT, 8) == 0)
+                    if (memcmp(bandPacket->channel, channelFreqTable + checkingIndex * CHANNEL_COUNT, sizeof(bandPacket->channel)) == 0)
                     {
                         checkingIndex++;
                         if (checkingIndex > getFreqTableBands() - 1)

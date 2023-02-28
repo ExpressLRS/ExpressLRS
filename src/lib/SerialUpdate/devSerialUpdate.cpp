@@ -29,7 +29,7 @@ static int event()
         running = false;
         hwTimer::stop();
 #ifdef HAS_VTX_SPI
-        VTxOutputMinimum();
+        disableVTxSpi();
 #endif
 #ifdef HAS_MSP_VTX
         disableMspVtx();

@@ -7,9 +7,6 @@
 #include "hwTimer.h"
 #include "logging.h"
 #include <SPI.h>
-#if defined(PLATFORM_ESP32)
-#include <pwmWrite.h>
-#endif
 
 #define SYNTHESIZER_REGISTER_A                  0x00
 #define SYNTHESIZER_REGISTER_B                  0x01
@@ -29,8 +26,8 @@
 #define MIN_DAC                                 1 // Testing required.
 #define MAX_DAC                                 250 // Absolute max is 255.  But above 250 does nothing.
 // PWM is 0-4095
-#define MIN_PWM                                 1000 // Testing required.
-#define MAX_PWM                                 3600 // Absolute max is 4095.  But above 3500 does nothing.
+#define MIN_PWM                                 2000 // could be even higher than that, depends on HW.
+#define MAX_PWM                                 3700 // Absolute max is 4095. But above 3600 does nothing.
 
 #define VPD_BUFFER                              5
 
@@ -43,6 +40,10 @@
 
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
+#if defined(PLATFORM_ESP32)
+constexpr uint8_t rfAmpPwmChannel = 0;
+#endif
+
 uint8_t vtxSPIBandChannelIdx = 255;
 static uint8_t vtxSPIBandChannelIdxCurrent = 255;
 uint8_t vtxSPIPowerIdx = 0;
@@ -50,13 +51,15 @@ static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
 static uint8_t RfAmpVrefState = 0;
 static uint16_t vtxSPIPWM = MAX_PWM;
-static uint16_t vtxMinPWM = MAX_PWM;
-static uint16_t vtxMaxPWM = MIN_PWM;
+static uint16_t vtxMinPWM = MIN_PWM;
+static uint16_t vtxMaxPWM = MAX_PWM;
 static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
-#define VPD_SETPOINT_0_MW                       0
-#define VPD_SETPOINT_YOLO_MW                    2000
+static bool stopVtxMonitoring = false;
+
+#define VPD_SETPOINT_0_MW                       VPD_BUFFER // to avoid overflow
+#define VPD_SETPOINT_YOLO_MW                    2250
 #if defined(TARGET_UNIFIED_RX)
 const uint16_t *VpdSetPointArray25mW = nullptr;
 const uint16_t *VpdSetPointArray100mW = nullptr;
@@ -77,10 +80,8 @@ static const uint16_t freqTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
-#if defined(PLATFORM_ESP32)
-static Pwm pwm;
-#endif
 static SPIClass *vtxSPI;
+
 static void rtc6705WriteRegister(uint32_t regData)
 {
     // When sharing the SPI Bus control of the NSS pin is done by us
@@ -159,7 +160,7 @@ static void setPWM()
     }
     else
     {
-        pwm.write(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
+        ledcWrite(rfAmpPwmChannel, vtxSPIPWM);
     }
 #else
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
@@ -219,20 +220,23 @@ static void SetVpdSetPoint()
     {
     case 1: // 0 mW
         VpdSetPoint = VPD_SETPOINT_0_MW;
-        return;
+        break;
 
-    case 2: // 25 mW
+    case 2: // RCE
+    case 3: // 25 mW
         VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray25mW);
-        return;
+        break;
 
-    case 3: // 100 mW
+    case 4: // 100 mW
         VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray100mW);
-        return;
+        break;
 
     default: // YOLO mW
         VpdSetPoint = VPD_SETPOINT_YOLO_MW;
-        return;
+        break;
     }
+
+    DBGLN("Setting new VPD setpoint: %d", VpdSetPoint);
 }
 
 static void checkOutputPower()
@@ -257,8 +261,17 @@ static void checkOutputPower()
         {
             VTxOutputDecrease();
         }
+
+        //DBGLN("VTX VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
     }
 }
+
+void disableVTxSpi()
+{
+    stopVtxMonitoring = true;
+    VTxOutputMinimum();
+}
+
 
 static void initialize()
 {
@@ -305,8 +318,8 @@ static void initialize()
             }
             else
             {
-                pwm.writeFrequency(GPIO_PIN_RF_AMP_PWM, 10000); // 10kHz
-                pwm.writeResolution(12); // 0 - 4095
+                ledcSetup(rfAmpPwmChannel, 10000, 12); // 12 bit 10khz
+                ledcAttachPin(GPIO_PIN_RF_AMP_PWM, rfAmpPwmChannel);
             }
         #endif
         setPWM();
@@ -351,9 +364,9 @@ static int timeout()
         return DURATION_NEVER;
     }
 
-    if (hwTimer::running && !hwTimer::isTick)
+    if ((hwTimer::running && !hwTimer::isTick) || stopVtxMonitoring)
     {
-        // Only run spi and analog reads during rx free time or when disconnected.
+        // Dont run spi and analog reads during rx hopping, wifi or updating
         return DURATION_IMMEDIATELY;
     }
 
@@ -362,22 +375,21 @@ static int timeout()
         rtc6705SetFrequencyByIdx(vtxSPIBandChannelIdx);
         vtxSPIBandChannelIdxCurrent = vtxSPIBandChannelIdx;
 
-        INFOLN("VTx set frequency...");
+        DBGLN("Set VTX channel: %d", vtxSPIBandChannelIdx);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }
-    else
+
+    if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
-        if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
-        {
-            SetVpdSetPoint();
-            vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
-        }
-
-        checkOutputPower();
-
-        return VTX_POWER_INTERVAL_MS;
+        DBGLN("Set VTX power: %d", vtxSPIPowerIdx);
+        SetVpdSetPoint();
+        vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
     }
+
+    checkOutputPower();
+
+    return VTX_POWER_INTERVAL_MS;
 }
 
 device_t VTxSPI_device = {

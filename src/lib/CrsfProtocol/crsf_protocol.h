@@ -272,9 +272,7 @@ typedef struct mspVtxPowerLevelPacket_s
     uint8_t powerLevel;
     uint16_t powerValue;
     uint8_t powerLabelLength;
-    uint8_t label1;
-    uint8_t label2;
-    uint8_t label3;
+    uint8_t label[3];
 } PACKED mspVtxPowerLevelPacket_t;
 
 typedef struct mspVtxBandPacket_s

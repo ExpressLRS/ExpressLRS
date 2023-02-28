@@ -9,3 +9,4 @@ extern uint8_t vtxSPIPowerIdx;
 extern uint8_t vtxSPIPitmode;
 
 void VTxOutputMinimum();
+void disableVTxSpi();
