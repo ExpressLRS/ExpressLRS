@@ -1229,6 +1229,7 @@ void setup()
 
 void loop()
 {
+  throttleMainLoop();
   uint32_t now = millis();
 
   HandleUARTout(); // Only used for non-CRSF output
