@@ -6,6 +6,8 @@
 #include "OTA.h"
 #include "FHSS.h"
 
+extern char backpackVersion[];
+
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
@@ -225,6 +227,10 @@ static struct luaItem_selection luaDvrStopDelay = {
     0, // value
     "0s;5s;15s;30s;45s;1min;2min",
     STR_EMPTYSPACE};
+
+static struct luaItem_string luaBackpackVersion = {
+    {"Version", CRSF_INFO},
+    backpackVersion};
 
 //---------------------------- BACKPACK ------------------
 
@@ -647,6 +653,7 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
+      registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
   }
 
@@ -706,6 +713,7 @@ static int event()
     setLuaTextSelectionValue(&luaDvrAux, config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetDvrStopDelay());
+    setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)
   setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
