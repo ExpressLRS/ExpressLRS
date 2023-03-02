@@ -99,7 +99,6 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
   hal.writeRegisterBits(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, SX127X_OCP_MASK); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
-  hal.writeRegisterBits(SX127X_REG_INVERT_IQ, (uint8_t)IQinverted, 0b01000000); // Should be SX127X_REG_INVERT_IQ_MASK but I dont want to fix it and break everything.
 }
 
 void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr)
@@ -426,7 +425,6 @@ void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uin
 void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
 {
   PayloadLength = _PayloadLength;
-  IQinverted = InvertIQ;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetSpreadingFactor((SX127x_SpreadingFactor)sf);
