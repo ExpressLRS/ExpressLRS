@@ -101,6 +101,9 @@
 #ifndef GPIO_PIN_DIO0
 #define GPIO_PIN_DIO0 UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_DIO0_2
+#define GPIO_PIN_DIO0_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_DIO1
 #define GPIO_PIN_DIO1 UNDEF_PIN
 #endif
@@ -197,6 +200,13 @@
 #endif
 #ifndef GPIO_PIN_DEBUG_TX
 #define GPIO_PIN_DEBUG_TX       1
+#endif
+#elif defined(PLATFORM_ESP8266)
+#ifndef GPIO_PIN_DEBUG_RX
+#define GPIO_PIN_DEBUG_RX       UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_DEBUG_TX
+#define GPIO_PIN_DEBUG_TX       UNDEF_PIN
 #endif
 #endif
 #if !defined(TARGET_UNIFIED_TX)

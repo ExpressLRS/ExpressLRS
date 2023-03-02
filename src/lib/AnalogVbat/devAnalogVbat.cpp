@@ -56,7 +56,7 @@ static void reportVbat()
 
 static int timeout()
 {
-    if (GPIO_ANALOG_VBAT == UNDEF_PIN)
+    if (GPIO_ANALOG_VBAT == UNDEF_PIN || telemetry.GetCrsfBatterySensorDetected())
     {
         return DURATION_NEVER;
     }

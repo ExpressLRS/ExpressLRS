@@ -56,7 +56,8 @@ typedef struct {
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
-                    unused: 3;          // FUTURE available
+                    backpackDisable:1,  // bool, disable backpack via EN pin if available
+                    unused:2;          // FUTURE available
     uint8_t         dvrStartDelay:3,
                     dvrAux:5;
     tx_button_color_t buttonColors[2];  // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
@@ -91,6 +92,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
+    bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
 
@@ -116,6 +118,7 @@ public:
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
+    void SetBackpackDisable(bool backpackDisable);
 
     // State setters
     bool SetModelId(uint8_t modelId);
