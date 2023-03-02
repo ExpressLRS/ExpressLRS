@@ -57,6 +57,8 @@ public:
     bool ShouldCallEnterBind();
     bool ShouldCallUpdateModelMatch();
     bool ShouldSendDeviceFrame();
+    void CheckCrsfBatterySensorDetected();
+    bool GetCrsfBatterySensorDetected() { return crsfBatterySensorDetected; };
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
@@ -74,5 +76,6 @@ private:
     bool callEnterBind;
     bool callUpdateModelMatch;
     bool sendDeviceFrame;
+    bool crsfBatterySensorDetected;
     uint8_t modelMatchId;
 };
