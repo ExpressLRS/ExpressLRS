@@ -34,16 +34,19 @@ typedef struct _options {
     bool        invert_tx:1;
     bool        lock_on_first_connection:1;
     bool        r9mm_mini_sbus:1;
+    bool        is_airport:1;
 #endif
 #if defined(TARGET_TX)
     uint32_t    tlm_report_interval;
     uint32_t    fan_min_runtime;
     bool        uart_inverted:1;
     bool        unlock_higher_power:1;
+    bool        is_airport:1;
 #if defined(GPIO_PIN_BUZZER)
     uint8_t     buzzer_mode;            // 0 = disable all, 1 = beep once, 2 = disable startup beep, 3 = default tune, 4 = custom tune
     uint16_t    buzzer_melody[32][2];
 #endif
+    uint32_t    uart_baud;              // only use for airport
 #endif
 } __attribute__((packed)) firmware_options_t;
 

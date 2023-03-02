@@ -71,16 +71,21 @@
 							<label>TLM report interval (ms)</label>
 						</div>
 						<div class="mui-checkbox">
-							<input id='uart-inverted' name='uart-inverted' type='checkbox'/>
-							<label>UART inverted</label>
+							<label><input id='uart-inverted' name='uart-inverted' type='checkbox'/>UART inverted</label>
 						</div>
 						<div class="mui-textfield">
 							<input size='3' id='fan-runtime' name='fan-runtime' type='text'/>
 							<label>Fan runtime (s)</label>
 						</div>
 						<div id="has-highpower" class="mui-checkbox" style="display: none;">
-							<input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>
-							<label>Unlock higher power</label>
+							<label><input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>Unlock higher power</label>
+						</div>
+						<div class="mui-checkbox">
+							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
+						</div>
+						<div class="mui-textfield">
+							<input size='7' id='airport-uart-baud' name='airport-uart-baud' type='text'/>
+							<label>AirPort UART baud</label>
 						</div>
 @@else:
 						<div class="mui-textfield">
@@ -88,11 +93,13 @@
 							<label>UART baud</label>
 						</div>
 						<div class="mui-checkbox">
-
-							<label><input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/> Invert TX pin</label>
+							<label><input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/>Invert TX pin</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/> Lock on first connection</label>
+							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>Lock on first connection</label>
+						</div>
+						<div class="mui-checkbox">
+							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
 						</div>
 @@end
 						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>

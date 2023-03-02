@@ -42,6 +42,7 @@
 #define GPIO_PIN_BUSY hardware_pin(HARDWARE_radio_busy)
 #define GPIO_PIN_BUSY_2 hardware_pin(HARDWARE_radio_busy_2)
 #define GPIO_PIN_DIO0 hardware_pin(HARDWARE_radio_dio0)
+#define GPIO_PIN_DIO0_2 hardware_pin(HARDWARE_radio_dio0_2)
 #define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
 #define GPIO_PIN_DIO1_2 hardware_pin(HARDWARE_radio_dio1_2)
 #define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)

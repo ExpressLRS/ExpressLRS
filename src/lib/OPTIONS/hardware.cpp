@@ -28,6 +28,7 @@ static const struct {
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
+    {HARDWARE_radio_dio0_2, "radio_dio0_2", INT},
     {HARDWARE_radio_dio1, "radio_dio1", INT},
     {HARDWARE_radio_dio1_2, "radio_dio1_2", INT},
     {HARDWARE_radio_dio2, "radio_dio2", INT},

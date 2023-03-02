@@ -76,7 +76,9 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     #endif
 #endif
 #if defined(TARGET_RX)
-#if defined(RCVR_UART_BAUD)
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
     .uart_baud = 420000,
@@ -95,6 +97,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .r9mm_mini_sbus = true,
 #else
     .r9mm_mini_sbus = false,
+#endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
+#else
+    .is_airport = false,
 #endif
 #endif
 #if defined(TARGET_TX)
@@ -118,6 +125,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .unlock_higher_power = false,
 #endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
+#else
+    .is_airport = false,
+#endif
 #if defined(GPIO_PIN_BUZZER)
     #if defined(DISABLE_ALL_BEEPS)
     .buzzer_mode = buzzerQuiet,
@@ -135,6 +147,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .buzzer_mode = buzzerTune,
     .buzzer_melody = {{659, 300}, {659, 300}, {523, 100}, {659, 300}, {783, 550}, {392, 575}},
     #endif
+#endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#else
+    .uart_baud = 0,
 #endif
 #endif
 };
@@ -187,11 +204,13 @@ void saveOptions(Stream &stream)
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
     doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+    doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
     doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     #endif
+    doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
 
     serializeJson(doc, stream);
@@ -269,8 +288,21 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
+    #if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
+    firmwareOptions.is_airport = doc["is-airport"] | true;
+    #else
+    firmwareOptions.uart_baud = doc["airport-uart-baud"] | 460800;
+    firmwareOptions.is_airport = doc["is-airport"] | false;
+    #endif
+    #else
+    #if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | USE_AIRPORT_AT_BAUD;
+    firmwareOptions.is_airport = doc["is-airport"] | true;
     #else
     firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
+    firmwareOptions.is_airport = doc["is-airport"] | false;
+    #endif
     firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif

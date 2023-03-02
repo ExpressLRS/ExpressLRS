@@ -1,4 +1,5 @@
 #include "targets.h"
+#include "common.h"
 
 #include <functional>
 
@@ -50,4 +51,15 @@ void executeDeferredFunction(unsigned long now)
         deferredFunction();
         deferredFunction = nullptr;
     }
+}
+
+void throttleMainLoop()
+{
+#if defined(PLATFORM_ESP32)
+    // Throttle the main loop() on ESP32 to allow power saving to kick in
+    // Loop at 1000Hz for 1000Hz rates, Loop at 500Hz for all other rates
+    static TickType_t loopThrottle = 0; // first loop will not delay
+    uint32_t interval_MS = ExpressLRS_currAirRate_Modparams->interval > 1000U ? 2U : 1U;
+    xTaskDelayUntil(&loopThrottle, pdMS_TO_TICKS(interval_MS));
+#endif
 }
