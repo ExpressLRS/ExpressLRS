@@ -12,6 +12,7 @@
 #include "LQCALC.h"
 #include "OTA.h"
 #include "POWERMGNT.h"
+#include "FIFO_GENERIC.h"
 
 void setupTargetCommon();
 void deferExecution(uint32_t ms, std::function<void()> f);
