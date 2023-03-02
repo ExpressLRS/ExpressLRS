@@ -366,6 +366,17 @@
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
             }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "Foxeer 900MHz RX",
+                "lua_name": "Foxeer 900 RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX",
+                "prior_target_name": "BETAFPV_900_RX"
+            }
         }
     },
     "frsky": {
