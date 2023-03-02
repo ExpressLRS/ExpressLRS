@@ -1,3 +1,5 @@
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+
 #include "EspFlashStream.h"
 
 EspFlashStream::EspFlashStream()
@@ -54,3 +56,4 @@ int EspFlashStream::peek()
     return _buffer[_bufferPos];
 }
 
+#endif

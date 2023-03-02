@@ -1,7 +1,6 @@
 #pragma once
 
 #include "targets.h"
-#include "EspFlashStream.h"
 
 extern const unsigned char target_name[];
 extern const uint8_t target_name_size;
@@ -62,6 +61,8 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
+
+#include "EspFlashStream.h"
 extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
 #else
 extern const firmware_options_t firmwareOptions;

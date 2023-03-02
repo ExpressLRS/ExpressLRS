@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
+#include "targets.h"
 
 class EspFlashStream : public Stream
 {
@@ -18,7 +18,7 @@ public:
     virtual int peek();
 
 private:
-    __attribute__((aligned(4))) uint8_t _buffer[4];
+    WORD_ALIGNED_ATTR uint8_t _buffer[4];
     size_t _flashBase;
     size_t _flashOffset;
     uint8_t _bufferPos;
