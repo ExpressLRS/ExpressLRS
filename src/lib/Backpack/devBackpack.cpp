@@ -5,11 +5,13 @@
 #include "msptypes.h"
 #include "CRSF.h"
 #include "config.h"
+#include "logging.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
 extern bool InBindingMode;
 extern Stream *TxBackpack;
+extern char backpackVersion[];
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
@@ -206,10 +208,24 @@ static int start()
 
 static int timeout()
 {
+    static uint8_t versionRequestTries = 0;
+    static uint32_t lastVersionTryTime = 0;
+
     if (InBindingMode)
     {
         BackpackBinding();
         return 1000;        // don't check for another second so we don't spam too hard :-)
+    }
+
+    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000)) {
+        lastVersionTryTime = millis();
+        versionRequestTries++;
+        mspPacket_t out;
+        out.reset();
+        out.makeCommand();
+        out.function = MSP_ELRS_GET_BACKPACK_VERSION;
+        MSP::sendPacket(&out, TxBackpack);
+        DBGLN("Sending get backpack version command");
     }
 
     if (TxBackpackWiFiReadyToSend && connectionState < MODE_STATES)

@@ -12,6 +12,8 @@
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
                                ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
 
+extern char backpackVersion[];
+
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
@@ -236,6 +238,10 @@ static struct luaItem_selection luaDvrStopDelay = {
     0, // value
     luastrDvrDelay,
     STR_EMPTYSPACE};
+
+static struct luaItem_string luaBackpackVersion = {
+    {"Version", CRSF_INFO},
+    backpackVersion};
 
 //---------------------------- BACKPACK ------------------
 
@@ -690,6 +696,7 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
+      registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
   }
 
@@ -752,6 +759,7 @@ static int event()
     setLuaTextSelectionValue(&luaDvrAux, config.GetBackpackDisable() ? 0 : config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
+    setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)
   setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));

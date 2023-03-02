@@ -44,6 +44,7 @@ extern bool webserverPreventAutoStart;
 #endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
+char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
@@ -960,6 +961,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
     VtxTriggerSend();
   }
 #endif
+  if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
+  {
+    memset(backpackVersion, 0, sizeof(backpackVersion));
+    memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
+  }
 }
 
 static void HandleUARTout()
@@ -1254,16 +1260,6 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (connectionState > MODE_STATES)
-  {
-    return;
-  }
-
-  CheckReadyToSend();
-  CheckConfigChangePending();
-  DynamicPower_Update(now);
-  VtxPitmodeSwitchUpdate();
-
   if (TxUSB->available())
   {
     if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
@@ -1281,6 +1277,16 @@ void loop()
       msp.markPacketReceived();
     }
   }
+
+  if (connectionState > MODE_STATES)
+  {
+    return;
+  }
+
+  CheckReadyToSend();
+  CheckConfigChangePending();
+  DynamicPower_Update(now);
+  VtxPitmodeSwitchUpdate();
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
