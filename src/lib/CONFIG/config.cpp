@@ -176,6 +176,9 @@ void TxConfig::Load()
             m_config.buttonColors[0].raw = value;
         if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
             m_config.buttonColors[1].raw = value;
+        // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
+        if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
+            m_config.backpackDisable = value8;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -333,6 +336,7 @@ TxConfig::Commit()
     {
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
+        nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -538,6 +542,16 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
     if (GetDvrStopDelay() != dvrStopDelay)
     {
         m_config.dvrStopDelay = dvrStopDelay;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetBackpackDisable(bool backpackDisable)
+{
+    if (m_config.backpackDisable != backpackDisable)
+    {
+        m_config.backpackDisable = backpackDisable;
         m_modified |= MAIN_CHANGED;
     }
 }

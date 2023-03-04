@@ -105,15 +105,10 @@ void SX127xHal::reset(void)
     DBGLN("SX127x Ready!");
 }
 
-uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterValue(uint8_t reg, SX12XX_Radio_Number_t radioNumber, uint8_t msb, uint8_t lsb)
+uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber)
 {
-    if ((msb > 7) || (lsb > 7) || (lsb > msb))
-    {
-        DBGLN("ERROR INVALID BIT RANGE");
-        return (ERR_INVALID_BIT_RANGE);
-    }
-    uint8_t rawValue = readRegister(reg, radioNumber);
-    uint8_t maskedValue = rawValue & ((0b11111111 << lsb) & (0b11111111 >> (7 - msb)));
+    uint8_t rawValue = readRegister(reg);
+    uint8_t maskedValue = rawValue & mask;
     return (maskedValue);
 }
 
@@ -136,28 +131,20 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     memcpy(data, buf + 1, numBytes);
 }
 
-void ICACHE_RAM_ATTR SX127xHal::writeRegisterValue(uint8_t reg, uint8_t value, SX12XX_Radio_Number_t radioNumber, uint8_t msb, uint8_t lsb)
+void ICACHE_RAM_ATTR SX127xHal::writeRegisterBits(uint8_t reg, uint8_t value, uint8_t mask, SX12XX_Radio_Number_t radioNumber)
 {
-    if ((msb > 7) || (lsb > 7) || (lsb > msb))
-    {
-        DBGLN("ERROR INVALID BIT RANGE");
-        return;
-    }
-
     if (radioNumber & SX12XX_Radio_1)
     {
         uint8_t currentValue = readRegister(reg, SX12XX_Radio_1);
-        uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
         uint8_t newValue = (currentValue & ~mask) | (value & mask);
-        writeRegister(reg, newValue, SX12XX_Radio_1);
+        writeRegister(reg, newValue), SX12XX_Radio_1;
     }
     
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
     {
         uint8_t currentValue = readRegister(reg, SX12XX_Radio_2);
-        uint8_t mask = ~((0b11111111 << (msb + 1)) | (0b11111111 >> (8 - lsb)));
         uint8_t newValue = (currentValue & ~mask) | (value & mask);
-        writeRegister(reg, newValue, SX12XX_Radio_2);
+        writeRegister(reg, newValue), SX12XX_Radio_2;
     }
 }
 

@@ -92,6 +92,7 @@ private:
     SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
+    uint8_t lowFrequencyMode;
 
     static void IsrCallback_1();
     static void IsrCallback_2();

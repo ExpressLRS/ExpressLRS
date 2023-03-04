@@ -6,6 +6,7 @@
 #include "logging.h"
 #include "helpers.h"
 
+#if defined(CRSF_TX_MODULE)
 #if defined(PLATFORM_ESP32)
 #include <soc/uart_reg.h>
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
@@ -28,7 +29,7 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSF::Port = Serial;
 #endif
-Stream *CRSF::PortSecondary;
+#endif
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
@@ -51,6 +52,7 @@ uint8_t CRSF::ParameterUpdateData[3] = {0};
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
+Stream *CRSF::PortSecondary;
 static FIFO MspWriteFIFO;
 
 void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
@@ -190,6 +192,7 @@ void CRSF::End()
 #endif // CRSF_TX_MODULE
 }
 
+#if CRSF_TX_MODULE
 void CRSF::flush_port_input(void)
 {
     // Make sure there is no garbage on the UART at the start
@@ -199,7 +202,6 @@ void CRSF::flush_port_input(void)
     }
 }
 
-#if CRSF_TX_MODULE
 void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 {
     if (!CRSF::CRSFstate)
@@ -966,7 +968,7 @@ bool CRSF::RXhandleUARTout()
 void CRSF::sendLinkStatisticsToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
     {
         constexpr uint8_t outBuffer[] = {
             LinkStatisticsFrameLength + 4,
@@ -991,7 +993,7 @@ void CRSF::sendLinkStatisticsToFC()
 void CRSF::sendRCFrameToFC()
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (OPT_CRSF_RCVR_NO_SERIAL)
+    if (OPT_CRSF_RCVR_NO_SERIAL || firmwareOptions.is_airport)
         return;
 
     constexpr uint8_t outBuffer[] = {
@@ -1033,7 +1035,7 @@ void CRSF::sendRCFrameToFC()
 void CRSF::sendMSPFrameToFC(uint8_t* data)
 {
 #if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    if (!OPT_CRSF_RCVR_NO_SERIAL && !firmwareOptions.is_airport)
     {
         const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)

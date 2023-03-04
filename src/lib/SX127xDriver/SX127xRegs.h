@@ -44,6 +44,7 @@ typedef enum
     SX127x_SF_11 = 0b10110000,
     SX127x_SF_12 = 0b11000000
 } SX127x_SpreadingFactor;
+#define SX127X_SPREADING_FACTOR_MASK 0b11110000
 
 typedef enum
 {
@@ -81,6 +82,8 @@ typedef enum
 #define SX127X_REG_HOP_CHANNEL 0x1C
 #define SX127X_REG_MODEM_CONFIG_1 0x1D
 #define SX127X_REG_MODEM_CONFIG_2 0x1E
+#define SX127X_REG_SYMB_TIMEOUT_MSB 0x1E
+#define SX127X_REG_SYMB_TIMEOUT_MSB_MASK 0b00000011
 #define SX127X_REG_SYMB_TIMEOUT_LSB 0x1F
 #define SX127X_REG_PREAMBLE_MSB 0x20
 #define SX127X_REG_PREAMBLE_LSB 0x21
@@ -93,7 +96,8 @@ typedef enum
 #define SX127X_REG_FEI_LSB 0x2A
 #define SX127X_REG_RSSI_WIDEBAND 0x2C
 #define SX127X_REG_DETECT_OPTIMIZE 0x31
-#define SX127X_REG_INVERT_IQ 0x33
+#define SX127X_REG_INVERT_IQ 0b01000001
+#define SX127X_REG_INVERT_IQ_MASK 0b01000001
 #define SX127X_REG_DETECTION_THRESHOLD 0x37
 #define SX127X_REG_SYNC_WORD 0x39
 #define SX127X_REG_DIO_MAPPING_1 0x40
@@ -112,6 +116,7 @@ typedef enum
 #define SX127X_OCP_ON 0b00100000    //  5     5     PA overload current protection enabled
 #define SX127X_OCP_TRIM 0b00001011  //  4     0     OCP current: I_max(OCP_TRIM = 0b1011) = 100 mA
 #define SX127X_OCP_150MA 0b00010010 //  4     0     OCP current: I_max(OCP_TRIM = 10010) = 150 mA
+#define SX127X_OCP_MASK 0b00111111
 
 // SX127X_REG_LNA
 #define SX127X_LNA_GAIN_0 0b00000000    //  7     5     LNA gain setting:   not used
@@ -127,6 +132,7 @@ typedef enum
 
 #define SX127X_TX_MODE_SINGLE 0b00000000 //  3     3     single TX
 #define SX127X_TX_MODE_CONT 0b00001000   //  3     3     continuous TX
+#define SX127X_TX_MODE_MASK 0b00001000   //  3     3
 #define SX127X_RX_TIMEOUT_MSB 0b00000000 //  1     0
 
 // SX127X_REG_SYMB_TIMEOUT_LSB
@@ -140,6 +146,7 @@ typedef enum
 // SX127X_REG_DETECT_OPTIMIZE
 #define SX127X_DETECT_OPTIMIZE_SF_6 0b00000101    //  2     0     SF6 detection optimization
 #define SX127X_DETECT_OPTIMIZE_SF_7_12 0b00000011 //  2     0     SF7 to SF12 detection optimization
+#define SX127X_DETECT_OPTIMIZE_SF_MASK 0b00000111 //  2     0
 
 // SX127X_REG_DETECTION_THRESHOLD
 #define SX127X_DETECTION_THRESHOLD_SF_6 0b00001100    //  7     0     SF6 detection threshold
@@ -156,7 +163,9 @@ typedef enum
 // SX127X_REG_DIO_MAPPING_1
 #define SX127X_DIO0_RX_DONE 0b00000000             //  7     6
 #define SX127X_DIO0_TX_DONE 0b01000000             //  7     6
+#define SX127X_DIO0_RXTX_DONE 0b11000000           //  7     6
 #define SX127X_DIO0_CAD_DONE 0b10000000            //  7     6
+#define SX127X_DIO0_MASK 0b11000000                //  7     6
 #define SX127X_DIO1_RX_TIMEOUT 0b00000000          //  5     4
 #define SX127X_DIO1_FHSS_CHANGE_CHANNEL 0b00010000 //  5     4
 #define SX127X_DIO1_CAD_DETECTED 0b00100000        //  5     4
@@ -237,6 +246,7 @@ typedef enum
 //SX1278_REG_MODEM_CONFIG_2
 #define SX1278_RX_CRC_MODE_OFF 0b00000000 //  2     2     CRC disabled
 #define SX1278_RX_CRC_MODE_ON 0b00000100  //  2     2     CRC enabled
+#define SX1278_RX_CRC_MODE_MASK 0b00000100
 
 //SX1278_REG_MODEM_CONFIG_3
 #define SX1278_LOW_DATA_RATE_OPT_OFF 0b00000000 //  3     3     low data rate optimization disabled
