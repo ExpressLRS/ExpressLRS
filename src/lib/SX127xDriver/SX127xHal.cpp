@@ -48,8 +48,9 @@ void SX127xHal::init()
     SPI.setFrequency(10000000);
     SPI.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
         spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
-    // spiEnableSSPins(SPI.bus(), SX12XX_Radio_All);
+    }
     spiEnableSSPins(SPI.bus(), 0xFF);
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");

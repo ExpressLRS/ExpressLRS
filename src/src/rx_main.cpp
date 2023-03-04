@@ -468,12 +468,11 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         tempFC = FreqCorrection_2;
     }
 
-    //DBGVLN(tempFC);
     if (value)
     {
         if (tempFC > FreqCorrectionMin)
         {
-            tempFC -= 1; // FREQ_STEP units
+            tempFC--; // FREQ_STEP units
         }
         else
         {
@@ -484,7 +483,7 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     {
         if (tempFC < FreqCorrectionMax)
         {
-            tempFC += 1; // FREQ_STEP units
+            tempFC++; // FREQ_STEP units
         }
         else
         {
