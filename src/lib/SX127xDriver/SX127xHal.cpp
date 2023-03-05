@@ -107,7 +107,7 @@ void SX127xHal::reset(void)
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t rawValue = readRegister(reg);
+    uint8_t rawValue = readRegister(reg, radioNumber);
     uint8_t maskedValue = rawValue & mask;
     return (maskedValue);
 }
@@ -137,14 +137,14 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterBits(uint8_t reg, uint8_t value, ui
     {
         uint8_t currentValue = readRegister(reg, SX12XX_Radio_1);
         uint8_t newValue = (currentValue & ~mask) | (value & mask);
-        writeRegister(reg, newValue), SX12XX_Radio_1;
+        writeRegister(reg, newValue, SX12XX_Radio_1);
     }
     
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
     {
         uint8_t currentValue = readRegister(reg, SX12XX_Radio_2);
         uint8_t newValue = (currentValue & ~mask) | (value & mask);
-        writeRegister(reg, newValue), SX12XX_Radio_2;
+        writeRegister(reg, newValue, SX12XX_Radio_2);
     }
 }
 
