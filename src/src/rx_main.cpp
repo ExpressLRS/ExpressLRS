@@ -1012,7 +1012,8 @@ void UpdateModelMatch(uint8_t model)
  **/
 void MspReceiveComplete()
 {
-    switch (MspData[0]) {
+    switch (MspData[0]) 
+    {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
@@ -1029,7 +1030,8 @@ void MspReceiveComplete()
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-        switch (receivedHeader->type) {
+        switch (receivedHeader->type) 
+        {
         case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
