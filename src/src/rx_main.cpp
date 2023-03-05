@@ -1012,43 +1012,7 @@ void UpdateModelMatch(uint8_t model)
  **/
 void MspReceiveComplete()
 {
-    /* Possible data types received in a MSP frame:
-     *    MSP_ELRS command bytes:
-     *        0: command
-     *        1..n: payload
-     *    crsf_header_t bytes:
-     *        0: device_addr
-     *        1: frame_size
-     *        2: type
-     *        3..n-1: payload
-     *        n: crc
-     *    crsf_ext_header_t bytes:
-     *        0: device_addr
-     *        1: frame_size
-     *        2: type
-     *        3: dest_addr
-     *        4: orig_addr
-     *        5..n-1: payload
-     *        n: crc
-     *    crsf_ext_header_t with encapsulated MSP sent with CRSF::AddMspMessage(mspPacket_t* packet):
-     *        // CRSF extended frame header
-     *        0: device_addr = CRSF_ADDRESS_BROADCAST = 0x00
-     *        1: frame_size
-     *        2: type = CRSF_FRAMETYPE_MSP_WRITE
-     *        3: dest_addr = CRSF_ADDRESS_FLIGHT_CONTROLLER
-     *        4: orig_addr = CRSF_ADDRESS_RADIO_TRANSMITTER
-     *        // Encapsulated MSP payload
-     *        5: mspHeader = 0x30
-     *        6: mspPayloadSize
-     *        7: mspFunction
-     *        8..n-2: mspPayload
-     *        n-1: mspCrc
-     *        // CRSF crc
-     *        n: crc
-     */
-    crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-
-    switch(receivedHeader->device_addr) {
+    switch (MspData[0]) {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
@@ -1063,7 +1027,9 @@ void MspReceiveComplete()
         InLoanBindingMode = true;
         break;
     default:
-        switch(receivedHeader->type) {
+        //handle received CRSF package
+        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
+        switch (receivedHeader->type) {
         case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
@@ -1089,12 +1055,11 @@ void MspReceiveComplete()
                 luaParamUpdateReq();
             }
             break;
-        default:
-            // No MSP data to the FC if no model match
-            if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-            {
-                crsf.sendMSPFrameToFC(MspData);
-            }
+        }
+        // No MSP data to the FC if no model match
+        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+        {
+            crsf.sendMSPFrameToFC(MspData);
         }
     }
 
