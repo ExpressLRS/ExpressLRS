@@ -20,7 +20,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {2, RATE_LORA_100HZ,     -117,  8770, 3500, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(2.5)},
     {3, RATE_LORA_50HZ,      -120, 18560, 4000, 2500, 600, 5000, SNR_SCALE(-1), SNR_SCALE(1.5)},
     {4, RATE_LORA_25HZ,      -123, 29950, 6000, 4000,   0, 5000, SNR_SCALE(-3), SNR_SCALE(0.5)},
-    {0, RATE_DVDA_50HZ,      -112,  4380, 3000, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(3.0)}};
+    {5, RATE_DVDA_50HZ,      -112,  4380, 3000, 2500, 600, 5000, SNR_SCALE( 1), SNR_SCALE(3.0)}};
 #endif
 
 #if defined(RADIO_SX128X)
