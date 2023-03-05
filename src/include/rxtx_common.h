@@ -17,3 +17,4 @@
 void setupTargetCommon();
 void deferExecution(uint32_t ms, std::function<void()> f);
 void executeDeferredFunction(unsigned long now);
+void throttleMainLoop();

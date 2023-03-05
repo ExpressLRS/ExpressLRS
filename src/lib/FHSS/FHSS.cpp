@@ -39,6 +39,7 @@ uint8_t volatile FHSSptr;
 uint_fast8_t sync_channel;
 // Offset from the predefined frequency determined by AFC on Team900 (register units)
 int32_t FreqCorrection;
+int32_t FreqCorrection_2;
 
 uint32_t freq_spread;
 

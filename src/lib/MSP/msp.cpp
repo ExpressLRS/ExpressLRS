@@ -93,7 +93,10 @@ MSP::processReceivedByte(uint8_t c)
                 m_packet.flags = header->flags;
                 // reset the offset iterator for re-use in payload below
                 m_offset = 0;
-                m_inputState = MSP_PAYLOAD_V2_NATIVE;
+				if (m_packet.payloadSize == 0)
+                	m_inputState = MSP_CHECKSUM_V2_NATIVE;
+				else
+                	m_inputState = MSP_PAYLOAD_V2_NATIVE;
             }
             break;
 
