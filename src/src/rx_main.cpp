@@ -115,6 +115,10 @@ CRSF crsf(CRSF_TX_SERIAL);
     #define CRSF_RX_SERIAL Serial
 #endif
 
+// Variables / constants for Airport //
+FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
@@ -338,9 +342,17 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
 
     if (geminiMode)
-    {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-        Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+    {   
+        if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        }
+        else
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+        }
     }
     else
     {
@@ -397,7 +409,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !TelemetrySender.IsActive())
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -433,18 +445,25 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (OtaIsFullRes)
+        if (firmwareOptions.is_airport)
         {
-            otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.full.tlm_dl.payload,
-                sizeof(otaPkt.full.tlm_dl.payload));
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
         else
         {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-            otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.std.tlm_dl.payload,
-                sizeof(otaPkt.std.tlm_dl.payload));
+            if (OtaIsFullRes)
+            {
+                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.full.tlm_dl.payload,
+                    sizeof(otaPkt.full.tlm_dl.payload));
+            }
+            else
+            {
+                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.std.tlm_dl.payload,
+                    sizeof(otaPkt.std.tlm_dl.payload));
+            }
         }
     }
 
@@ -462,14 +481,19 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     return true;
 }
 
-void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
+uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
-    //DBGVLN(FreqCorrection);
+    uint32_t tempFC = FreqCorrection;
+    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2)
+    {
+        tempFC = FreqCorrection_2;
+    }
+
     if (value)
     {
-        if (FreqCorrection > FreqCorrectionMin)
+        if (tempFC > FreqCorrectionMin)
         {
-            FreqCorrection -= 1; // FREQ_STEP units
+            tempFC--; // FREQ_STEP units
         }
         else
         {
@@ -478,15 +502,26 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     }
     else
     {
-        if (FreqCorrection < FreqCorrectionMax)
+        if (tempFC < FreqCorrectionMax)
         {
-            FreqCorrection += 1; // FREQ_STEP units
+            tempFC++; // FREQ_STEP units
         }
         else
         {
             DBGLN("Max +FreqCorrection reached!");
         }
     }
+
+    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+    {
+        FreqCorrection = tempFC;
+    }
+    else
+    {
+        FreqCorrection_2 = tempFC;
+    }
+
+    return tempFC;
 }
 
 void ICACHE_RAM_ATTR updatePhaseLock()
@@ -661,20 +696,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         servoNewChannelsAvaliable();
     }
 
-    if (!didFHSS) didFHSS = HandleFHSS();
+    if (!didFHSS)
+    {
+        HandleFHSS();
+    }
+    didFHSS = false;
 
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
-
-    if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
-    {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
-    #if defined(RADIO_SX127X)
-        // Teamp900 also needs to adjust its demood PPM
-        Radio.SetPPMoffsetReg(FreqCorrection);
-    #endif /* RADIO_SX127X */
-    }
-    didFHSS = false;
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -693,6 +722,11 @@ void LostConnection(bool resumeRx)
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
+    FreqCorrection = 0;
+    FreqCorrection_2 = 0;
+    #if defined(RADIO_SX127X)
+    Radio.SetPPMoffsetReg(0);
+    #endif
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -726,6 +760,8 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
+    FreqCorrection = 0;
+    FreqCorrection_2 = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -751,6 +787,12 @@ void GotConnection(unsigned long now)
     webserverPreventAutoStart = true;
     #endif
 
+    if (firmwareOptions.is_airport)
+    {
+        apInputBuffer.flush();
+        apOutputBuffer.flush();
+    }
+
     DBGLN("got conn");
 }
 
@@ -760,6 +802,12 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     // during sync, where packets can be received before connection
     if (connectionState != connected || SwitchModePending)
         return;
+
+    if (firmwareOptions.is_airport)
+    {
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        return;
+    }
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, &crsf, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -928,7 +976,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PDF calculation since TX does not send such data and tlm frames from other rx are not in sync
+    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
     if (otaPktPtr->std.type == PACKET_TYPE_TLM)
     {
         return true;
@@ -961,6 +1009,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     // Store the LQ/RSSI/Antenna
     Radio.GetLastPacketStats();
     getRFlinkInfo();
+
+    if (Radio.FrequencyErrorAvailable())
+    {
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+    #if defined(RADIO_SX127X)
+        // Teamp900 also needs to adjust its demood PPM
+        Radio.SetPPMoffsetReg(tempFreqCorrection);
+    #endif /* RADIO_SX127X */
+    }
+
     // Received a packet, that's the definition of LQ
     LQCalc.add();
     // Extend sync duration since we've received a packet at this rate
@@ -1221,6 +1279,16 @@ void HandleUARTin()
     }
     while (CRSF_RX_SERIAL.available())
     {
+        if (firmwareOptions.is_airport)
+        {
+            uint8_t v = CRSF_RX_SERIAL.read();
+            if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+            {
+                apInputBuffer.push(v);
+            }
+            continue;
+        }
+
         telemetry.RXhandleUARTin(CRSF_RX_SERIAL.read());
 
         if (telemetry.ShouldCallBootloader())
@@ -1241,6 +1309,17 @@ void HandleUARTin()
             crsf.GetDeviceInformation(deviceInformation, 0);
             crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             crsf.sendMSPFrameToFC(deviceInformation);
+        }
+    }
+}
+
+static void HandleUARTout()
+{
+    if (firmwareOptions.is_airport)
+    {
+        while (apOutputBuffer.size())
+        {
+            Serial.write(apOutputBuffer.pop());
         }
     }
 }
@@ -1535,6 +1614,7 @@ void setup()
 
 void loop()
 {
+    throttleMainLoop();
     unsigned long now = millis();
 
     if (MspReceiver.HasFinishedData())
@@ -1543,6 +1623,12 @@ void loop()
     }
 
     devicesUpdate(now);
+
+    if (firmwareOptions.is_airport)
+    {
+        HandleUARTin();
+        HandleUARTout();
+    }
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

@@ -176,6 +176,9 @@ void TxConfig::Load()
             m_config.buttonColors[0].raw = value;
         if (nvs_get_u32(handle, "button2", &value) == ESP_OK)
             m_config.buttonColors[1].raw = value;
+        // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
+        if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
+            m_config.backpackDisable = value8;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -333,6 +336,7 @@ TxConfig::Commit()
     {
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
+        nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -538,6 +542,16 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
     if (GetDvrStopDelay() != dvrStopDelay)
     {
         m_config.dvrStopDelay = dvrStopDelay;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
+TxConfig::SetBackpackDisable(bool backpackDisable)
+{
+    if (m_config.backpackDisable != backpackDisable)
+    {
+        m_config.backpackDisable = backpackDisable;
         m_modified |= MAIN_CHANGED;
     }
 }
@@ -858,6 +872,8 @@ RxConfig::SetDefaults(bool commit)
     m_config.power = POWERMGNT::getDefaultPower();
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
         m_config.antennaMode = 2; // 2 is diversity
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        m_config.antennaMode = 0; // 0 is diversity for dual radio
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)

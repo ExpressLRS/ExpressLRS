@@ -1,0 +1,17 @@
+{
+    "serial_rx": 3,
+    "serial_tx": 1,
+    "radio_dio0": 26,
+    "radio_miso": 19,
+    "radio_mosi": 27,
+    "radio_nss": 18,
+    "radio_rst": 12,
+    "radio_sck": 5,
+    "power_min": 0,
+    "power_high": 2,
+    "power_max": 2,
+    "power_default": 2,
+    "power_control": 0,
+    "power_values": [8,12,15],
+    "led": 2
+}
