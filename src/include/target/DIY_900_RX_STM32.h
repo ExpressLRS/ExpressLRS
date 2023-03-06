@@ -24,5 +24,8 @@
 #define GPIO_PIN_LED_GREEN   PC13
 #define GPIO_LED_GREEN_INVERTED 1
 
-// Output Power - default for SX127x
-#define POWER_OUTPUT_FIXED 15 //MAX power for 900 RXes
+// Output Power
+#define MinPower                PWR_10mW
+#define MaxPower                PWR_50mW
+#define DefaultPower            PWR_50mW
+#define POWER_OUTPUT_VALUES     {8,12,15}
