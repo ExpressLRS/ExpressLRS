@@ -95,6 +95,8 @@ extern bool webserverPreventAutoStart;
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
+#elif defined(TARGET_DIY_900_RX_STM32)
+    HardwareSerial CRSF_TX_SERIAL(USART1);
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
@@ -479,14 +481,19 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     return true;
 }
 
-void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
+uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
-    //DBGVLN(FreqCorrection);
+    uint32_t tempFC = FreqCorrection;
+    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2)
+    {
+        tempFC = FreqCorrection_2;
+    }
+
     if (value)
     {
-        if (FreqCorrection > FreqCorrectionMin)
+        if (tempFC > FreqCorrectionMin)
         {
-            FreqCorrection -= 1; // FREQ_STEP units
+            tempFC--; // FREQ_STEP units
         }
         else
         {
@@ -495,15 +502,26 @@ void ICACHE_RAM_ATTR HandleFreqCorr(bool value)
     }
     else
     {
-        if (FreqCorrection < FreqCorrectionMax)
+        if (tempFC < FreqCorrectionMax)
         {
-            FreqCorrection += 1; // FREQ_STEP units
+            tempFC++; // FREQ_STEP units
         }
         else
         {
             DBGLN("Max +FreqCorrection reached!");
         }
     }
+
+    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+    {
+        FreqCorrection = tempFC;
+    }
+    else
+    {
+        FreqCorrection_2 = tempFC;
+    }
+
+    return tempFC;
 }
 
 void ICACHE_RAM_ATTR updatePhaseLock()
@@ -678,20 +696,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         servoNewChannelsAvaliable();
     }
 
-    if (!didFHSS) didFHSS = HandleFHSS();
+    if (!didFHSS)
+    {
+        HandleFHSS();
+    }
+    didFHSS = false;
 
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
-
-    if (!didFHSS && !tlmSent && LQCalc.currentIsSet() && Radio.FrequencyErrorAvailable())
-    {
-        HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
-    #if defined(RADIO_SX127X)
-        // Teamp900 also needs to adjust its demood PPM
-        Radio.SetPPMoffsetReg(FreqCorrection);
-    #endif /* RADIO_SX127X */
-    }
-    didFHSS = false;
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -710,6 +722,11 @@ void LostConnection(bool resumeRx)
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
+    FreqCorrection = 0;
+    FreqCorrection_2 = 0;
+    #if defined(RADIO_SX127X)
+    Radio.SetPPMoffsetReg(0);
+    #endif
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -743,6 +760,8 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
+    FreqCorrection = 0;
+    FreqCorrection_2 = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -990,6 +1009,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     // Store the LQ/RSSI/Antenna
     Radio.GetLastPacketStats();
     getRFlinkInfo();
+
+    if (Radio.FrequencyErrorAvailable())
+    {
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+    #if defined(RADIO_SX127X)
+        // Teamp900 also needs to adjust its demood PPM
+        Radio.SetPPMoffsetReg(tempFreqCorrection);
+    #endif /* RADIO_SX127X */
+    }
+
     // Received a packet, that's the definition of LQ
     LQCalc.add();
     // Extend sync duration since we've received a packet at this rate
@@ -1144,7 +1173,7 @@ static void setupSerial()
     CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* PLATFORM_STM32 */
 
-#if defined(TARGET_RX_FM30_MINI)
+#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(firmwareOptions.uart_baud); // Same baud as CRSF for simplicity
