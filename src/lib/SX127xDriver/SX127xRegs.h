@@ -123,6 +123,12 @@ typedef enum
 #define SX127X_REG_DIO_MAPPING_2 0x41
 #define SX127X_REG_VERSION 0x42
 
+#if defined(RADIO_SX1272)
+    #define SX127X_VERSION 0x22
+#else
+    #define SX127X_VERSION 0x12
+#endif
+
 // SX127X_REG_PA_CONFIG
 #define SX127X_PA_SELECT_RFO 0b00000000    //  7     7     RFO pin output, power limited to +14 dBm
 #define SX127X_PA_SELECT_BOOST 0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
@@ -273,7 +279,7 @@ typedef enum
 #define SX1278_RX_CRC_MODE_ON 0b00000100  //  2     2     CRC enabled
 #define SX1278_RX_CRC_MODE_MASK 0b00000100
 
-//SX1278_REG_MODEM_CONFIG_1
+//SX1272_REG_MODEM_CONFIG_1
 #define SX1272_RX_CRC_MODE_OFF 0b00000000 //  1     1     CRC disabled
 #define SX1272_RX_CRC_MODE_ON 0b00000010  //  1     1     CRC enabled
 #define SX1272_RX_CRC_MODE_MASK 0b00000010

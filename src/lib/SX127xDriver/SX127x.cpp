@@ -335,11 +335,7 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION, radioNumber);
     DBG("%x", version);
-    #if defined(RADIO_SX1272)
-    if (version == 0x22)
-    #else
-    if (version == 0x12)
-    #endif
+    if (version == SX127X_VERSION)
     {
       flagFound = true;
     }
@@ -358,12 +354,7 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   }
   else
   {
-    #if defined(RADIO_SX1272)
-    DBGLN(" found! (match by REG_VERSION == 0x22)");
-    #else
-    DBGLN(" found! (match by REG_VERSION == 0x12)");
-    #endif
-
+    DBGLN(" found! (match by REG_VERSION == SX127X_VERSION)");
   }
   return true;
 }
