@@ -354,7 +354,7 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   }
   else
   {
-    DBGLN(" found! (match by REG_VERSION == SX127X_VERSION)");
+    DBGLN(" found! (match by REG_VERSION == 0x%x", SX127X_VERSION);
   }
   return true;
 }
