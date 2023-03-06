@@ -469,14 +469,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
 {
   switch (currBW)
   {
-  #if defined(RADIO_SX1272)
-  case SX127x_BW_125_00_KHZ:
-    return 125E3;
-  case SX127x_BW_250_00_KHZ:
-    return 250E3;
-  case SX127x_BW_500_00_KHZ:
-    return 500E3;
-  #else
   case SX127x_BW_7_80_KHZ:
     return 7.8E3;
   case SX127x_BW_10_40_KHZ:
@@ -497,7 +489,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
     return 250E3;
   case SX127x_BW_500_00_KHZ:
     return 500E3;
-  #endif
   }
   return -1;
 }
@@ -507,14 +498,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
 
   switch (currBW)
   {
-  #if defined(RADIO_SX1272)
-  case SX127x_BW_125_00_KHZ:
-    return 64;
-  case SX127x_BW_250_00_KHZ:
-    return 32;
-  case SX127x_BW_500_00_KHZ:
-    return 16;
-  #else
   case SX127x_BW_7_80_KHZ:
     return 1026;
   case SX127x_BW_10_40_KHZ:
@@ -535,7 +518,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
     return 32;
   case SX127x_BW_500_00_KHZ:
     return 16;
-  #endif
   }
   return -1;
 }
