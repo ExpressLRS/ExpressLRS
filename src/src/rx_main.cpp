@@ -95,6 +95,8 @@ extern bool webserverPreventAutoStart;
 /* CRSF_TX_SERIAL is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial CRSF_TX_SERIAL(USART2);
+#elif defined(TARGET_DIY_900_RX_STM32)
+    HardwareSerial CRSF_TX_SERIAL(USART1);
 #else
     #define CRSF_TX_SERIAL Serial
 #endif
@@ -1171,7 +1173,7 @@ static void setupSerial()
     CRSF_TX_SERIAL.begin(firmwareOptions.uart_baud);
 #endif /* PLATFORM_STM32 */
 
-#if defined(TARGET_RX_FM30_MINI)
+#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(firmwareOptions.uart_baud); // Same baud as CRSF for simplicity
