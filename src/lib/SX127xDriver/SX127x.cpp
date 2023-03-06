@@ -125,11 +125,7 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
     if (currSF == SX127x_SF_6) // set SF6 optimizations
     {
       hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX127x_HEADER_IMPL_MODE, SX12XX_Radio_All);
-      #if defined(RADIO_SX1272)
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-      #else
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-      #endif
+      SetCRCMode(false);
     }
     else
     {
@@ -144,19 +140,11 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
 
       if (crcEnabled)
       {
-        #if defined(RADIO_SX1272)
-          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_ON, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-        #else
-          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-        #endif
+        SetCRCMode(true);
       }
       else
       {
-        #if defined(RADIO_SX1272)
-          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-        #else
-          hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
-        #endif
+        SetCRCMode(false);
       }
     }
 
@@ -175,6 +163,26 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
 
     currCR = cr;
     currBW = bw;
+  }
+}
+
+void SX127xDriver::SetCRCMode(bool on)
+{
+  if(on)
+  {
+    #if defined(RADIO_SX1272)
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_ON, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #else
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #endif
+  }
+  else
+  {
+    #if defined(RADIO_SX1272)
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #else
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #endif
   }
 }
 

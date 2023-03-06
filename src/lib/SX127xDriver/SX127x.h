@@ -36,6 +36,7 @@ public:
     void ConfigLoraDefaults();
 
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
+    void SetCRCMode(bool on); //false for off
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
     void SetPreambleLength(uint8_t PreambleLen);
