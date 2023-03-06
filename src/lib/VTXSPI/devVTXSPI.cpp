@@ -44,8 +44,8 @@
 constexpr uint8_t rfAmpPwmChannel = 0;
 #endif
 
-uint8_t vtxSPIBandChannelIdx = 255;
-static uint8_t vtxSPIBandChannelIdxCurrent = 255;
+uint16_t vtxSPIFrequency = 6000;
+static uint16_t vtxSPIFrequencyCurrent = 6000;
 uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
@@ -70,15 +70,6 @@ uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
 
 uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
-
-static const uint16_t freqTable[48] = {
-    5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A
-    5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866, // B
-    5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945, // E
-    5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880, // F
-    5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917, // R
-    5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
-};
 
 static SPIClass *vtxSPI;
 
@@ -124,11 +115,6 @@ static void rtc6705SetFrequency(uint32_t freq)
 
     uint32_t regData = SYNTHESIZER_REGISTER_B | (WRITE_BIT << 4) | (SYN_RF_A_REG << 5) | (SYN_RF_N_REG << 12);
     rtc6705WriteRegister(regData);
-}
-
-static void rtc6705SetFrequencyByIdx(uint8_t idx)
-{
-    rtc6705SetFrequency((uint32_t)freqTable[idx]);
 }
 
 static void rtc6705PowerAmpOn()
@@ -190,13 +176,12 @@ static void VTxOutputDecrease()
 static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
 {
     uint16_t newVpd = 0;
-    uint16_t f = freqTable[vtxSPIBandChannelIdxCurrent];
 
-    if (f <= VpdFreqArray[0])
+    if (vtxSPIFrequencyCurrent <= VpdFreqArray[0])
     {
         newVpd = VpdSetPointArray[0];
     }
-    else if (f >= VpdFreqArray[VpdSetPointCount - 1])
+    else if (vtxSPIFrequencyCurrent >= VpdFreqArray[VpdSetPointCount - 1])
     {
         newVpd = VpdSetPointArray[VpdSetPointCount - 1];
     }
@@ -204,9 +189,9 @@ static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
     {
         for (uint8_t i = 0; i < (VpdSetPointCount - 1); i++)
         {
-            if (f < VpdFreqArray[i + 1])
+            if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
             {
-                newVpd = VpdSetPointArray[i] + ((VpdSetPointArray[i + 1]-VpdSetPointArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (f - VpdFreqArray[i]);
+                newVpd = VpdSetPointArray[i] + ((VpdSetPointArray[i + 1]-VpdSetPointArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
             }
         }
     }
@@ -349,7 +334,7 @@ static int event()
         return DURATION_NEVER;
     }
 
-    if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
+    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -370,12 +355,12 @@ static int timeout()
         return DURATION_IMMEDIATELY;
     }
 
-    if (vtxSPIBandChannelIdxCurrent != vtxSPIBandChannelIdx)
+    if (vtxSPIFrequencyCurrent != vtxSPIFrequency)
     {
-        rtc6705SetFrequencyByIdx(vtxSPIBandChannelIdx);
-        vtxSPIBandChannelIdxCurrent = vtxSPIBandChannelIdx;
+        rtc6705SetFrequency(vtxSPIFrequency);
+        vtxSPIFrequencyCurrent = vtxSPIFrequency;
 
-        DBGLN("Set VTX channel: %d", vtxSPIBandChannelIdx);
+        DBGLN("Set VTX frequency: %d", vtxSPIFrequency);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }

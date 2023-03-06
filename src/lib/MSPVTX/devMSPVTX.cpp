@@ -226,7 +226,7 @@ void mspVtxProcessPacket(uint8_t *packet)
             channel = ((vtxConfigPacket->band - 1) * 8) + (vtxConfigPacket->channel - 1);
             if (channel < FREQ_TABLE_SIZE)
             {
-                vtxSPIBandChannelIdx = channel;
+                vtxSPIFrequency = getFreqByIdx(channel);
             }
             break;
         }
@@ -274,7 +274,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                             mspState = (eepromWriteRequired ? SEND_EEPROM_WRITE : MONITORING);
                             vtxSPIPitmode = pitMode;
                             vtxSPIPowerIdx = power;
-                            vtxSPIBandChannelIdx = channel;
+                            vtxSPIFrequency = getFreqByIdx(channel);
                         }
                         break;
                     }

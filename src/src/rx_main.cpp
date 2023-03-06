@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 #include "MeanAccumulator.h"
+#include "freqTable.h"
 
 #include "devCRSF.h"
 #include "devLED.h"
@@ -1039,7 +1040,7 @@ void MspReceiveComplete()
     {
         if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
         {
-            vtxSPIBandChannelIdx = MspData[8];
+            vtxSPIFrequency = getFreqByIdx(MspData[8]);
             if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
             {
                 vtxSPIPowerIdx = MspData[10];
