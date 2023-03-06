@@ -126,7 +126,7 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
     {
       hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
       #if defined(RADIO_SX1272)
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
       #else
         hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
       #endif
