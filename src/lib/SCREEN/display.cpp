@@ -53,7 +53,8 @@ static const char *rate_string[] = {
     "100 Full",
     "100Hz",
     "50Hz",
-    "25Hz"
+    "25Hz",
+    "D50Hz"
 };
 #endif
 

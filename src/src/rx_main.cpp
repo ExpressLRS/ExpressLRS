@@ -111,6 +111,8 @@ uint32_t serialBaud;
 /* SERIAL_PROTOCOL_TX is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial SERIAL_PROTOCOL_TX(USART2);
+#elif defined(TARGET_DIY_900_RX_STM32)
+    HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
 #endif
@@ -1201,7 +1203,7 @@ static void setupSerial()
     }
 #endif
 
-#if defined(TARGET_RX_FM30_MINI)
+#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(serialBaud); // Same baud as CRSF for simplicity

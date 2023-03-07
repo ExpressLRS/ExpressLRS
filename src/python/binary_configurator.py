@@ -251,7 +251,7 @@ def ask_for_firmware(args):
         products = []
         if args.target is not None:
             target = args.target
-            config = jmespath.search(f'{target}', targets)
+            config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
         else:
             i = 0
             for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900"][].*[]', targets):
