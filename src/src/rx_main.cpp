@@ -604,7 +604,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
-        if(config.GetAntennaMode() == 2)
+        if (config.GetAntennaMode() == 2)
         {
             // 0 and 1 is use for gpio_antenna_select
             // 2 is diversity
