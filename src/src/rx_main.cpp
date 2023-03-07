@@ -342,7 +342,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
 
     if (geminiMode)
-    {   
+    {
         if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
@@ -1554,6 +1554,10 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
+    // Setup default logging in case of failure, or no layout
+    Serial.begin(115200);
+    SerialLogger = &Serial;
+
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
