@@ -1618,7 +1618,6 @@ void setup()
 
 void loop()
 {
-    throttleMainLoop();
     unsigned long now = millis();
 
     if (MspReceiver.HasFinishedData())
