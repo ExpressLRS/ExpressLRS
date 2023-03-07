@@ -983,7 +983,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         ProcessRfPacket_MSP(otaPktPtr);
         break;
     case PACKET_TYPE_SYNC: //sync packet from master
-        if(OtaIsFullRes) 
+        if (OtaIsFullRes) 
         {
             bool telemetryConfirmValue = otaPktPtr->full.sync.telemetryStatus;
             TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
