@@ -107,9 +107,13 @@ void devicesTriggerEvent()
 {
     eventFired[0] = true;
     eventFired[1] = true;
+    #if defined(PLATFORM_ESP32)
+    // Release teh semaphore so the tasks on core 0 run now
+    xSemaphoreGive(taskSemaphore);
+    #endif
 }
 
-void devicesUpdate(unsigned long now)
+int devicesUpdate(unsigned long now)
 {
     int32_t core = CURRENT_CORE;
 
@@ -132,6 +136,7 @@ void devicesUpdate(unsigned long now)
         }
     }
 
+    int smallest_delay = DURATION_NEVER;
     for(size_t i=0 ; i<deviceCount ; i++)
     {
         if (uiDevices[i].core == core || core == -1) {
@@ -139,9 +144,14 @@ void devicesUpdate(unsigned long now)
             {
                 int delay = (uiDevices[i].device->timeout)();
                 deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
+                if (delay != DURATION_NEVER)
+                {
+                    smallest_delay = (smallest_delay == DURATION_NEVER) ? delay : std::min(smallest_delay, (int)(deviceTimeout[i]-now));
+                }
             }
         }
     }
+    return smallest_delay;
 }
 
 #if defined(PLATFORM_ESP32)
@@ -155,7 +165,9 @@ static void deviceTask(void *pvArgs)
     xSemaphoreGive(completeSemaphore);
     for (;;)
     {
-        devicesUpdate(millis());
+        int delay = devicesUpdate(millis());
+        // sleep the core until the desired time or it's awakened by an event
+        xSemaphoreTake(taskSemaphore, delay == DURATION_NEVER ? portMAX_DELAY : pdMS_TO_TICKS(delay));
     }
 }
 #endif
