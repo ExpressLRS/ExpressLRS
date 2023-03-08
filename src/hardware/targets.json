@@ -1465,7 +1465,9 @@
                 "layout_file": "Generic 2400 PWMP5.json",
                 "overlay": {
                     "power_dcdc": true,
-                    "pwm_outputs": [0,1,3,9]
+                    "pwm_outputs": [0,1,3,9],
+                    "vbat_offset": -10,
+                    "vbat_scale": 292
                 },
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
@@ -1481,14 +1483,67 @@
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_PWMP"
             },
+            "er6": {
+                "product_name": "RadioMaster ER6 2.4GHz Diversity+6xPWM RX",
+                "lua_name": "RM ER6",
+                "layout_file": "Radiomaster 2400 ER8G.json",
+                "overlay": {
+                    "power_values": [-9,-6,-3,0],
+                    "pwm_outputs": [14, 12, 15, 2, 4, 9]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "er6g": {
+                "product_name": "RadioMaster ER6-G 2.4GHz Diversity+6xPWM RX",
+                "lua_name": "RM ER6-G",
+                "layout_file": "Vario 2400.json",
+                "overlay": {
+                    "power_values": [-2,-1,3]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
             "er6gv": {
-                "product_name": "RadioMaster ER6-GV 2.4GHz PWM RX",
+                "product_name": "RadioMaster ER6-GV 2.4GHz Diversity+6xPWM+Vario RX",
                 "lua_name": "RM ER6-GV",
                 "layout_file": "Vario 2400.json",
+                "overlay": {
+                    "power_values": [-2,-1,3]
+                },
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX",
                 "prior_target_name": "Vario 2400RX"
+            },
+            "er8": {
+                "product_name": "RadioMaster ER8 2.4GHz Diversity+8xPWM RX",
+                "lua_name": "RM ER8",
+                "layout_file": "Radiomaster 2400 ER8G.json",
+                "overlay": {
+                    "power_values": [-9,-6,-3,0]
+                },
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "er8g": {
+                "product_name": "RadioMaster ER8-G 2.4GHz Diversity+8xPWM RX",
+                "lua_name": "RM ER8-G",
+                "layout_file": "Radiomaster 2400 ER8G.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "er8gv": {
+                "product_name": "RadioMaster ER8-GV 2.4GHz Diversity+8xPWM+Vario RX",
+                "lua_name": "RM ER8-GV",
+                "layout_file": "Radiomaster 2400 ER8G.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
             },
             "rp1": {
                 "product_name": "RadioMaster RP1 2.4GHz RX",
