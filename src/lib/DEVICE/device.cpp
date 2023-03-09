@@ -139,15 +139,17 @@ int devicesUpdate(unsigned long now)
     int smallest_delay = DURATION_NEVER;
     for(size_t i=0 ; i<deviceCount ; i++)
     {
-        if (uiDevices[i].core == core || core == -1) {
-            if (uiDevices[i].device->timeout && now >= deviceTimeout[i])
+        if ((uiDevices[i].core == core || core == -1) && uiDevices[i].device->timeout)
+        {
+            int delay = deviceTimeout[i] == 0xFFFFFFFF ? DURATION_NEVER : (int)(deviceTimeout[i]-now);
+            if (now >= deviceTimeout[i])
             {
-                int delay = (uiDevices[i].device->timeout)();
+                delay = (uiDevices[i].device->timeout)();
                 deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;
-                if (delay != DURATION_NEVER)
-                {
-                    smallest_delay = (smallest_delay == DURATION_NEVER) ? delay : std::min(smallest_delay, (int)(deviceTimeout[i]-now));
-                }
+            }
+            if (delay != DURATION_NEVER)
+            {
+                smallest_delay = (smallest_delay == DURATION_NEVER) ? delay : std::min(smallest_delay, delay);
             }
         }
     }
