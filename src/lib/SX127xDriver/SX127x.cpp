@@ -137,15 +137,7 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
       {
         hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX127x_HEADER_IMPL_MODE, SX12XX_Radio_All);
       }
-
-      if (crcEnabled)
-      {
-        SetCRCMode(true);
-      }
-      else
-      {
-        SetCRCMode(false);
-      }
+      SetCRCMode(crcEnabled);
     }
 
     #if !defined(RADIO_SX1272) //does not apply to SX1272
