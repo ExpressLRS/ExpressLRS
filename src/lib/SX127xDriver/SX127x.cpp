@@ -124,43 +124,57 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
   {
     if (currSF == SX127x_SF_6) // set SF6 optimizations
     {
-      hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
-      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+      hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX127x_HEADER_IMPL_MODE, SX12XX_Radio_All);
+      SetCRCMode(false);
     }
     else
     {
       if (headerExplMode)
       {
-        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_EXPL_MODE, SX12XX_Radio_All);
+        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX127x_HEADER_EXPL_MODE, SX12XX_Radio_All);
       }
       else
       {
-        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX1278_HEADER_IMPL_MODE, SX12XX_Radio_All);
+        hal.writeRegister(SX127X_REG_MODEM_CONFIG_1, bw | cr | SX127x_HEADER_IMPL_MODE, SX12XX_Radio_All);
       }
+      SetCRCMode(crcEnabled);
+    }
 
-      if (crcEnabled)
+    #if !defined(RADIO_SX1272) //does not apply to SX1272
+      if (bw == SX127x_BW_500_00_KHZ)
       {
-
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        //data-sheet errata recommendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+        hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
+        hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
       }
       else
       {
-        hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+        hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
       }
-    }
+    #endif
 
-    if (bw == SX127x_BW_500_00_KHZ)
-    {
-      //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
-      hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
-      hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
-    }
-    else
-    {
-      hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
-    }
     currCR = cr;
     currBW = bw;
+  }
+}
+
+void SX127xDriver::SetCRCMode(bool on)
+{
+  if(on)
+  {
+    #if defined(RADIO_SX1272)
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_ON, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #else
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_ON, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #endif
+  }
+  else
+  {
+    #if defined(RADIO_SX1272)
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_1, SX1272_RX_CRC_MODE_OFF, SX1272_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #else
+      hal.writeRegisterBits(SX127X_REG_MODEM_CONFIG_2, SX1278_RX_CRC_MODE_OFF, SX1278_RX_CRC_MODE_MASK, SX12XX_Radio_All);
+    #endif
   }
 }
 
@@ -321,7 +335,7 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   {
     uint8_t version = hal.readRegister(SX127X_REG_VERSION, radioNumber);
     DBG("%x", version);
-    if (version == 0x12)
+    if (version == SX127X_VERSION)
     {
       flagFound = true;
     }
@@ -340,7 +354,7 @@ bool SX127xDriver::DetectChip(SX12XX_Radio_Number_t radioNumber)
   }
   else
   {
-    DBGLN(" found! (match by REG_VERSION == 0x12)");
+    DBGLN(" found! (match by REG_VERSION == 0x%x", SX127X_VERSION);
   }
   return true;
 }
