@@ -80,7 +80,7 @@ public:
         EXIT_CRITICAL;
     }
 
-    void pushBytes(const uint8_t *data, uint32_t len)
+    ICACHE_RAM_ATTR void pushBytes(const uint8_t *data, uint32_t len)
     {
         if (numElements + len > FIFO_SIZE)
         {
@@ -113,7 +113,7 @@ public:
         return data;
     }
 
-    void popBytes(uint8_t *data, uint32_t len)
+    ICACHE_RAM_ATTR void popBytes(uint8_t *data, uint32_t len)
     {
         if (numElements < len)
         {
@@ -143,6 +143,11 @@ public:
             uint8_t data = buffer[head];
             return data;
         }
+    }
+
+    uint8_t peekPos(uint16_t pos)
+    {
+        return buffer[(head + pos) % FIFO_SIZE];
     }
 
     uint16_t free()
