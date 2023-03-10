@@ -578,31 +578,58 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
-{
+{  
+    bool gotRadio[2] = {instance->irq_flag[0], instance->irq_flag[1]};
+    instance->irq_flag[0] = instance->irq_flag[1] = false;  // reset the flags
+
+    if(gotRadio[0]) instance->irq_count[0]++;
+    if(gotRadio[1]) instance->irq_count[1]++;
+
     uint8_t status[2];
-    hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, processingPacketRadio);
-    if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
-        // No SNR in FLRC mode
-        LastPacketRSSI = -(int8_t)(status[1] / 2);
-        LastPacketSNRRaw = 0;
-        return;
+    uint8_t rssi[2];
+    uint8_t snr[2];
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+
+    for(uint8_t i=0;i<2;i++)
+    {
+        if (gotRadio[i])
+        {
+            hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, radio[i]);
+            
+            if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
+                // No SNR in FLRC mode
+                rssi[i] = -(int8_t)(status[1] / 2);
+                snr[i] = 0;
+            }
+            else 
+            {
+                // LoRa mode has both RSSI and SNR
+                rssi[i] = -(int8_t)(status[0] / 2);    
+                snr[i] = (int8_t)status[1];
+
+                // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
+                // need to subtract SNR from RSSI when SNR <= 0;
+                int8_t negOffset = (snr[i] < 0) ? (snr[i] / RADIO_SNR_SCALE) : 0;
+                rssi[i] += negOffset;    
+            }
+        }
     }
-    // LoRa mode has both RSSI and SNR
-    LastPacketRSSI = -(int8_t)(status[0] / 2);
-    LastPacketSNRRaw = (int8_t)status[1];
-    // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
-    // need to subtract SNR from RSSI when SNR <= 0;
-    int8_t negOffset = (LastPacketSNRRaw < 0) ? (LastPacketSNRRaw / RADIO_SNR_SCALE) : 0;
-    LastPacketRSSI += negOffset;
+    
+    if(gotRadio[0]) { LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
+    if(gotRadio[1]) { LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; }
+    // when two radio got the packet, use the better snr one
+    if(gotRadio[0] && gotRadio[1])  LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
 {
+    instance->irq_flag[0] = true;
     instance->IsrCallback(SX12XX_Radio_1);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
 {
+    instance->irq_flag[1] = true;
     instance->IsrCallback(SX12XX_Radio_2);
 }
 

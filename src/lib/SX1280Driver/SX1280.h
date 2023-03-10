@@ -59,7 +59,7 @@ private:
     uint8_t packet_mode;
     bool modeSupportsFei;
     SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
+    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;    
     uint8_t pwrCurrent;
     uint8_t pwrPending;
 

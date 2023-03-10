@@ -44,7 +44,11 @@ public:
 
     /////////////Packet Stats//////////
     int8_t LastPacketRSSI;
+    int8_t LastPacketRSSI2;
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
+
+    uint16_t irq_count[2];
+    bool irq_flag[2];
 
 protected:
     void RemoveCallbacks(void)
