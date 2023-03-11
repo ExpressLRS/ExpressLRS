@@ -334,7 +334,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   }
 #endif
   JsonArray uid = json["config"].createNestedArray("uid");
-  copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+  copyArray(UID, sizeof(UID), uid);
   if (!exportMode)
   {
     json["config"]["ssid"] = station_ssid;
