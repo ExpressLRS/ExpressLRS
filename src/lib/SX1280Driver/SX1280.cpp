@@ -488,6 +488,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         radioNumber = lastSuccessfulPacketRadio;
     }
 
+    telem_count[(radioNumber==SX12XX_Radio_1)?0:1]++;
+
     // Normal diversity mode
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)
     {
@@ -583,6 +585,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     bool gotRadio[2] = {true, false}; // one-radio default.
     if (isDualRadio())
     {
+        // among this at least one radio passed CRC check
         gotRadio[0] = digitalRead(GPIO_PIN_DIO1)>0;
         gotRadio[1] = digitalRead(GPIO_PIN_DIO1_2)>0;
     }
@@ -620,10 +623,17 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         }
     }
 
+    // by default..
+    instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
+
     if(gotRadio[0]) { LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
     if(gotRadio[1]) { LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; }
     // when two radio got the packet, use the better snr one
-    if(gotRadio[0] && gotRadio[1])  LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
+    if(gotRadio[0] && gotRadio[1])  {
+        LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
+        // Update the last successful packet radio to be the one with better signal strength
+        instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
+    }
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
@@ -652,8 +662,12 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
-            instance->lastSuccessfulPacketRadio = radioNumber;
+            // instance->lastSuccessfulPacketRadio = radioNumber;  // now moved inside RXnbISR
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
+        }
+        else
+        {
+            instance->fail_count++;
         }
     }
     else if (irqStatus == SX1280_IRQ_RADIO_NONE)

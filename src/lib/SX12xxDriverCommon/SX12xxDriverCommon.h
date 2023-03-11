@@ -48,6 +48,8 @@ public:
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
 
     uint16_t irq_count[2];
+    uint16_t fail_count;
+    uint16_t telem_count[2];
 
 protected:
     void RemoveCallbacks(void)
