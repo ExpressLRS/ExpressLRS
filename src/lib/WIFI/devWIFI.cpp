@@ -1147,12 +1147,12 @@ static int timeout()
     HandleWebUpdate();
     HandleMSP2WIFI();
 #if defined(PLATFORM_ESP8266)
-      // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
-      // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-      // Only done on 8266 as the ESP32 runs a throttled task
-      if (!Update.isRunning())
-        delay(1);
-      return DURATION_IMMEDIATELY
+    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
+    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+    // Only done on 8266 as the ESP32 runs a throttled task
+    if (!Update.isRunning())
+      delay(1);
+      return DURATION_IMMEDIATELY;
 #else
     // All the web traffic is async apart from changing modes and MSP2WIFI
     // No need to run balls-to-the-wall; the wifi runs on this core too (0)
