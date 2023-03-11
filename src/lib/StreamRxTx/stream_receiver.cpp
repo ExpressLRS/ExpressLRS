@@ -3,7 +3,7 @@
 #include <cstring>
 #include "stream_receiver.h"
 #include "crsf_protocol.h"
-#include "crsf.h"
+#include "CRSF.h"
 
 ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_s const * const otaPktPtr)
 {
