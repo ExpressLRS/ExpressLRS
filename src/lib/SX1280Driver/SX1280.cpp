@@ -84,7 +84,7 @@ bool SX1280Driver::Begin()
 
     hal.reset();
     DBGLN("SX1280 Begin");
-  
+
     RFAMP.init();
 
     SetMode(SX1280_MODE_STDBY_RC, SX12XX_Radio_All); // Put in STDBY_RC mode.  Must be SX1280_MODE_STDBY_RC for SX1280_RADIO_SET_REGULATORMODE to be set.
@@ -270,7 +270,7 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
         buf[1] = 0xFFFF >> 8;
         buf[2] = 0xFFFF & 0xFF;
         hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
-        break;        
+        break;
 
     case SX1280_MODE_TX:
         //uses timeout Time-out duration = periodBase * periodBaseCount
@@ -486,7 +486,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     {
         radioNumber = lastSuccessfulPacketRadio;
     }
-        
+
     // Normal diversity mode
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)
     {
@@ -578,9 +578,8 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
-{  
-    bool gotRadio[2] = {instance->irq_flag[0], instance->irq_flag[1]};
-    instance->irq_flag[0] = instance->irq_flag[1] = false;  // reset the flags
+{
+    bool gotRadio[2] = {digitalRead(GPIO_PIN_DIO1)>0, digitalRead(GPIO_PIN_DIO1_2)>0};
 
     if(gotRadio[0]) instance->irq_count[0]++;
     if(gotRadio[1]) instance->irq_count[1]++;
@@ -595,26 +594,26 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         if (gotRadio[i])
         {
             hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, radio[i]);
-            
+
             if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
                 // No SNR in FLRC mode
                 rssi[i] = -(int8_t)(status[1] / 2);
                 snr[i] = 0;
             }
-            else 
+            else
             {
                 // LoRa mode has both RSSI and SNR
-                rssi[i] = -(int8_t)(status[0] / 2);    
+                rssi[i] = -(int8_t)(status[0] / 2);
                 snr[i] = (int8_t)status[1];
 
                 // https://www.mouser.com/datasheet/2/761/DS_SX1280-1_V2.2-1511144.pdf p84
                 // need to subtract SNR from RSSI when SNR <= 0;
                 int8_t negOffset = (snr[i] < 0) ? (snr[i] / RADIO_SNR_SCALE) : 0;
-                rssi[i] += negOffset;    
+                rssi[i] += negOffset;
             }
         }
     }
-    
+
     if(gotRadio[0]) { LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
     if(gotRadio[1]) { LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; }
     // when two radio got the packet, use the better snr one
@@ -623,13 +622,11 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
 {
-    instance->irq_flag[0] = true;
     instance->IsrCallback(SX12XX_Radio_1);
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_2()
 {
-    instance->irq_flag[1] = true;
     instance->IsrCallback(SX12XX_Radio_2);
 }
 
