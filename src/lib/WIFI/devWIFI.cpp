@@ -1152,7 +1152,7 @@ static int timeout()
     // Only done on 8266 as the ESP32 runs a throttled task
     if (!Update.isRunning())
       delay(1);
-      return DURATION_IMMEDIATELY;
+    return DURATION_IMMEDIATELY;
 #else
     // All the web traffic is async apart from changing modes and MSP2WIFI
     // No need to run balls-to-the-wall; the wifi runs on this core too (0)
