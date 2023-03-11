@@ -247,7 +247,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     }
 
     int32_t rssiDBM = Radio.LastPacketRSSI;
-    
+
     if (GPIO_PIN_NSS_2 != UNDEF_PIN) {
         int32_t rssiDBM2 = Radio.LastPacketRSSI2;
 
@@ -360,7 +360,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     alreadyFHSS = true;
 
     if (geminiMode)
-    {   
+    {
         if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);

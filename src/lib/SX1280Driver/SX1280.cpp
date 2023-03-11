@@ -1,3 +1,4 @@
+#include "common.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include "SX1280.h"
@@ -579,7 +580,12 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
-    bool gotRadio[2] = {digitalRead(GPIO_PIN_DIO1)>0, digitalRead(GPIO_PIN_DIO1_2)>0};
+    bool gotRadio[2] = {true, false}; // one-radio default.
+    if (isDualRadio())
+    {
+        gotRadio[0] = digitalRead(GPIO_PIN_DIO1)>0;
+        gotRadio[1] = digitalRead(GPIO_PIN_DIO1_2)>0;
+    }
 
     if(gotRadio[0]) instance->irq_count[0]++;
     if(gotRadio[1]) instance->irq_count[1]++;
