@@ -392,7 +392,10 @@ static int event()
 static int timeout()
 {
   luaHandleUpdateParameter();
-  return DURATION_IMMEDIATELY;
+  // Receivers can only `UpdateParamReq == true` every 4th packet due to the transmitter cadence in 1:2
+  // Channels, Downlink Telem Slot, Uplink Telem (the write command), Downlink Telem Slot...
+  // (interval * 4 / 1000) or 1 second if not connected
+  return (connectionState == connected) ? ExpressLRS_currAirRate_Modparams->interval / 250 : 1000;
 }
 
 static int start()

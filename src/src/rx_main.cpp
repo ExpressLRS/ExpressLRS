@@ -1561,6 +1561,10 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
+    // Setup default logging in case of failure, or no layout
+    Serial.begin(115200);
+    SerialLogger = &Serial;
+
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
@@ -1646,7 +1650,6 @@ void setup()
 
 void loop()
 {
-    throttleMainLoop();
     unsigned long now = millis();
 
     if (MspReceiver.HasFinishedData())

@@ -1107,6 +1107,10 @@ static void setupTarget()
 bool setupHardwareFromOptions()
 {
 #if defined(TARGET_UNIFIED_TX)
+  // Setup default logging in case of failure, or no layout
+  Serial.begin(115200);
+  TxBackpack = &Serial;
+
   if (!options_init())
   {
     // Register the WiFi with the framework
@@ -1229,7 +1233,6 @@ void setup()
 
 void loop()
 {
-  throttleMainLoop();
   uint32_t now = millis();
 
   HandleUARTout(); // Only used for non-CRSF output
@@ -1261,12 +1264,9 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (TxUSB->available())
+  if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
   {
-    if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
-    {
-      apInputBuffer.push(TxUSB->read());
-    }
+    apInputBuffer.push(TxUSB->read());
   }
 
   if (TxBackpack->available())

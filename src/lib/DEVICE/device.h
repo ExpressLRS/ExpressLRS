@@ -26,6 +26,6 @@ typedef struct {
 void devicesRegister(device_affinity_t *devices, uint8_t count);
 void devicesInit();
 void devicesStart();
-void devicesUpdate(unsigned long now);
+int devicesUpdate(unsigned long now);
 void devicesTriggerEvent();
 void devicesStop();
