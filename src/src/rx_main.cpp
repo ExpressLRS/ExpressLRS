@@ -1037,6 +1037,7 @@ void MspReceiveComplete()
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
                 UpdateModelMatch(MspData[9]);
+                break;
             }
             else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
             {
@@ -1047,9 +1048,10 @@ void MspReceiveComplete()
                     vtxSPIPitmode = MspData[11];
                 }
                 devicesTriggerEvent();
+                break;
             }
-            break;
-        case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
+            // FALLTHROUGH
+        default:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {
                 crsf.ParameterUpdateData[0] = MspData[CRSF_TELEMETRY_TYPE_INDEX];
