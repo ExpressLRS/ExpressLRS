@@ -4,6 +4,7 @@
 #include "SX1280.h"
 #include "logging.h"
 #include "RFAMP_hal.h"
+#include <Arduino.h>
 
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
