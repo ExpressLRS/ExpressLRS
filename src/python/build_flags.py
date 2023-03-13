@@ -66,8 +66,6 @@ def process_json_flag(define):
         json_flags['uart-inverted'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
-    if define == "-DRCVR_INVERT_TX" and isRX:
-        json_flags['rcvr-invert-tx'] = True
     if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
         json_flags['lock-on-first-connection'] = True
 

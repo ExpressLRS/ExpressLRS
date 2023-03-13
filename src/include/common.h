@@ -167,17 +167,24 @@ typedef enum : uint8_t {
 
 enum eServoOutputMode : uint8_t
 {
-    som50Hz,  // Hz modes are "Servo PWM" where the signal is 988-2012us
-    som60Hz,  // and the mode sets the refresh interval
-    som100Hz, // 50Hz must be mode=0 for default in config
+    som50Hz,    // Hz modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,    // and the mode sets the refresh interval
+    som100Hz,   // 50Hz must be mode=0 for default in config
     som160Hz,
     som333Hz,
     som400Hz,
     som10KHzDuty,
-    somOnOff,  // Digital 0/1 mode
-    somPwm,    // True PWM mode (NOT SUPPORTED)
-    somCrsfTx, // CRSF output TX (NOT SUPPORTED)
-    somCrsfRx, // CRSF output RX (NOT SUPPORTED)
+    somOnOff,   // Digital 0/1 mode
+    somSerial,  // Serial TX or RX depending on pin
+    somPwm,     // True PWM mode (NOT SUPPORTED)
+};
+
+enum eSerialProtocol : uint8_t
+{
+    PROTOCOL_CRSF,
+    PROTOCOL_INVERTED_CRSF,
+    PROTOCOL_SBUS,
+    PROTOCOL_INVERTED_SBUS
 };
 
 #ifndef UNIT_TEST
@@ -217,6 +224,7 @@ uint32_t uidMacSeedGet(void);
 void initUID();
 bool isDualRadio();
 
+#define CRSF_NUM_CHANNELS 16
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6
@@ -234,3 +242,5 @@ bool isDualRadio();
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
+
+extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
