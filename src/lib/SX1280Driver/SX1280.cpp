@@ -1,4 +1,3 @@
-#include "common.h"
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
 #include "SX1280.h"
@@ -587,7 +586,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1)?0:1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
-    if (isDualRadio())
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) // if it's a dual radio
     {
         bool isSecondRadioGotData = false;
 
