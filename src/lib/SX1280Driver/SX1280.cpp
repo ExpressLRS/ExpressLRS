@@ -4,7 +4,6 @@
 #include "SX1280.h"
 #include "logging.h"
 #include "RFAMP_hal.h"
-#include <Arduino.h>
 
 SX1280Hal hal;
 SX1280Driver *SX1280Driver::instance = NULL;
@@ -583,21 +582,45 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
     bool gotRadio[2] = {true, false}; // one-radio default.
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1)?0:1;
+    uint8_t secondRadioIdx = !processingRadioIdx;
+
     if (isDualRadio())
     {
-        // among this at least one radio passed CRC check
-        gotRadio[0] = digitalRead(GPIO_PIN_DIO1)>0;
-        gotRadio[1] = digitalRead(GPIO_PIN_DIO1_2)>0;
+        bool isSecondRadioGotData = false;
+
+        uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
+        if(secondIrqStatus&SX1280_IRQ_RX_DONE){
+            rx_status second_rx_fail = SX12XX_RX_OK;
+            if (packet_mode == SX1280_PACKET_TYPE_FLRC)
+            {
+               second_rx_fail = ((secondIrqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+               ((secondIrqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+               ((secondIrqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
+            }
+            if (second_rx_fail == SX12XX_RX_OK)
+            {
+                uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
+                hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength, radio[secondRadioIdx]);
+                // OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+                // OtaIsFullRes = (PayloadLength == OTA8_PACKET_SIZE);
+                isSecondRadioGotData = true;
+            }
+        }
+
+        // processingRadio always passed the sanity check here
+        gotRadio[processingRadioIdx] = true;
+        gotRadio[secondRadioIdx] = isSecondRadioGotData;
     }
 
-    if(gotRadio[0]) instance->irq_count[0]++;
-    if(gotRadio[1]) instance->irq_count[1]++;
+    if(gotRadio[processingRadioIdx]) instance->irq_count[0]++;
+    if(gotRadio[secondRadioIdx]) instance->irq_count[1]++;
 
     uint8_t status[2];
     uint8_t rssi[2];
     uint8_t snr[2];
-    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
 
     for(uint8_t i=0;i<2;i++)
     {
