@@ -7,13 +7,10 @@
 #include "devCRSF.h"
 
 using namespace std;
-// Mock out the serial port using a string stream
-std::string buf;
-StringStream ss(buf);
 
 // Create a CRSF object to test,
-// using the StringStream as a mock UART
-CRSF crsf(&ss);
+CRSF crsf;
+uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
 

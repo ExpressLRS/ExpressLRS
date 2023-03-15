@@ -31,14 +31,14 @@ void BluetoothJoystickUpdateValues()
         int16_t data[8];
         for (uint8_t i = 0; i < 8; i++)
         {
-            data[i] = map(CRSF::ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
+            data[i] = map(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
         }
         bleGamepad->setAxes(data[0], data[1], data[4], data[5], data[2], data[3], data[6], data[7]);
 
         // map other 8 channels to buttons
         for (uint8_t i = 8; i < 16; i++)
         {
-            if (CRSF::ChannelData[i] >= CRSF_CHANNEL_VALUE_2000) {
+            if (ChannelData[i] >= CRSF_CHANNEL_VALUE_2000) {
                 bleGamepad->press(i - 7);
             } else {
                 bleGamepad->release(i - 7);

@@ -27,7 +27,7 @@ public:
     inline bool isAnyPwmActive() const { return _activePwmChannels; }
     inline uint8_t getOutputCnt() const { return _outputCnt; }
 
-    const uint8_t PIN_DISCONNECTED = 0xff;
+    static const uint8_t PIN_DISCONNECTED = 0xff;
 
 private:
 #if defined(PLATFORM_ESP32)

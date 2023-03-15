@@ -42,3 +42,5 @@ public:
     uint8_t getSrc();
     uint8_t getDest();
 };
+
+extern CROSSFIRE2MSP crsf2msp;

@@ -78,26 +78,20 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #if defined(TARGET_RX)
 #if defined(USE_AIRPORT_AT_BAUD)
     .uart_baud = USE_AIRPORT_AT_BAUD,
+#elif defined(USE_SBUS_PROTOCOL)
+    .uart_baud = 100000,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
     .uart_baud = 420000,
 #endif
-#if defined(RCVR_INVERT_TX)
-    .invert_tx = true,
-#else
-    .invert_tx = false,
-#endif
+    ._unused1 = false,
 #if defined(LOCK_ON_FIRST_CONNECTION)
     .lock_on_first_connection = true,
 #else
     .lock_on_first_connection = false,
 #endif
-#if defined(USE_R9MM_R9MINI_SBUS)
-    .r9mm_mini_sbus = true,
-#else
-    .r9mm_mini_sbus = false,
-#endif
+    ._unused2 = false,
 #if defined(USE_AIRPORT_AT_BAUD)
     .is_airport = true,
 #else
@@ -207,7 +201,6 @@ void saveOptions(Stream &stream)
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
-    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
@@ -303,7 +296,6 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
     firmwareOptions.is_airport = doc["is-airport"] | false;
     #endif
-    firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;

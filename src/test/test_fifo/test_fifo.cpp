@@ -9,11 +9,11 @@ FIFO f;
 void init()
 {
     f.flush();
-    for(int i=0;i<FIFO_SIZE/2;i++) {
+    for(int i=0;i<FIFO::FIFO_SIZE/2;i++) {
         f.push(i);
         TEST_ASSERT_EQUAL(i, f.pop());
     }
-    for(int i=0;i<FIFO_SIZE-1;i++) {
+    for(int i=0;i<FIFO::FIFO_SIZE-1;i++) {
         f.push(i);
     }
 }
@@ -21,7 +21,7 @@ void init()
 void test_fifo_pop_wrap(void)
 {
     init();
-    for(int i=0;i<FIFO_SIZE-1;i++) {
+    for(int i=0;i<FIFO::FIFO_SIZE-1;i++) {
         TEST_ASSERT_EQUAL(i, f.pop());
     }
 }
@@ -29,9 +29,9 @@ void test_fifo_pop_wrap(void)
 void test_fifo_popBytes_wrap(void)
 {
     init();
-    uint8_t buf[FIFO_SIZE] = {0};
-    f.popBytes(buf, FIFO_SIZE-1);
-    for(int i=0;i<FIFO_SIZE-1;i++) {
+    uint8_t buf[FIFO::FIFO_SIZE] = {0};
+    f.popBytes(buf, FIFO::FIFO_SIZE-1);
+    for(int i=0;i<FIFO::FIFO_SIZE-1;i++) {
         TEST_ASSERT_EQUAL(i, buf[i]);
     }
 }
