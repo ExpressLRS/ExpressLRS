@@ -602,10 +602,11 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
             if (second_rx_fail == SX12XX_RX_OK)
             {
                 uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
-                hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength, radio[secondRadioIdx]);
-                // OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
-                // OtaIsFullRes = (PayloadLength == OTA8_PACKET_SIZE);
+                WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
+                hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
                 isSecondRadioGotData = true;
+                // the first byte of the buffer is different (but why..?)
+                for (int i=1;i<PayloadLength;i++) { if (RXdataBuffer[i] != RXdataBuffer_second[i]) isSecondRadioGotData = false; }
             }
         }
 
