@@ -610,8 +610,19 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
                 hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
                 isSecondRadioGotData = true;
+
+                // leaving only the type in the first byte
+                RXdataBuffer[0] &= 0b11;
+                RXdataBuffer_second[0] &= 0b11;
+                if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
+                    isSecondRadioGotData = true;
+
                 // the first byte of the buffer is different (but why..?)
-                for (int i=1;i<PayloadLength;i++) { if (RXdataBuffer[i] != RXdataBuffer_second[i]) isSecondRadioGotData = false; }
+                // for (int i=1;i<PayloadLength;i++) { if (RXdataBuffer[i] != RXdataBuffer_second[i]) isSecondRadioGotData = false; }
+
+                // DBGLN("%d %d %d %d \t %d %d %d %d",
+                //        RXdataBuffer[0], RXdataBuffer[1], RXdataBuffer[2], RXdataBuffer[3],
+                //        RXdataBuffer_second[0], RXdataBuffer_second[1], RXdataBuffer_second[2], RXdataBuffer_second[3]);
             }
         }
 
