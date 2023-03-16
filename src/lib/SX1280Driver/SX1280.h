@@ -19,6 +19,7 @@ public:
 
     ///////////Radio Variables////////
     uint16_t timeout;
+    bool isFirstIrq = true;
 
     ///////////////////////////////////
 

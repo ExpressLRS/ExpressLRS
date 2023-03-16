@@ -730,6 +730,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
     didFHSS = false;
 
+    Radio.isFirstIrq = true;
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 

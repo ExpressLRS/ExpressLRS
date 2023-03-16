@@ -582,11 +582,16 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
     SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    bool gotRadio[2] = {true, false}; // one-radio default.
+    bool gotRadio[2] = {false, false}; // one-radio default.
     uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1)?0:1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN) // if it's a dual radio
+    // processingRadio always passed the sanity check here
+    gotRadio[processingRadioIdx] = true;
+
+    // if it's a dual radio, and if it's the first IRQ
+    // (don't need if this it's the second IRQ, because the first IRQ is already failed)
+    if (instance->isFirstIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         bool isSecondRadioGotData = false;
 
@@ -610,8 +615,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
             }
         }
 
-        // processingRadio always passed the sanity check here
-        gotRadio[processingRadioIdx] = true;
+        // second radio received the same packet to the processing radio
         gotRadio[secondRadioIdx] = isSecondRadioGotData;
     }
 
@@ -654,7 +658,8 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     if(gotRadio[1]) { LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; }
     // when two radio got the packet, use the better snr one
     if(gotRadio[0] && gotRadio[1])  {
-        LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
+        // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
+        LastPacketSNRRaw = (snr[0]+snr[1])/2;
         // Update the last successful packet radio to be the one with better signal strength
         instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
@@ -693,6 +698,7 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
         {
             instance->fail_count++;
         }
+        instance->isFirstIrq = false;   // isr is already fired in this period.
     }
     else if (irqStatus == SX1280_IRQ_RADIO_NONE)
     {
