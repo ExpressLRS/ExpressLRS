@@ -41,6 +41,7 @@ void SerialCRSF::sendLinkStatisticsToFC()
 
 uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
+#if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
 
@@ -75,6 +76,7 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     _outputPort->write(outBuffer, sizeof(outBuffer));
     _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
     _outputPort->write(crc);
+#endif // CRSF_RCVR_NO_SERIAL
     return DURATION_IMMEDIATELY;
 }
 
