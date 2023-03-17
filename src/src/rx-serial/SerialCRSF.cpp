@@ -16,27 +16,22 @@ void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 
 void SerialCRSF::sendLinkStatisticsToFC()
 {
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    constexpr uint8_t outBuffer[] = {
+        LinkStatisticsFrameLength + 4,
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        LinkStatisticsFrameLength + 2,
+        CRSF_FRAMETYPE_LINK_STATISTICS
+    };
+
+    uint8_t crc = crsf_crc.calc(outBuffer[3]);
+    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+
+    if (_fifo.ensure(outBuffer[0] + 1))
     {
-        constexpr uint8_t outBuffer[] = {
-            LinkStatisticsFrameLength + 4,
-            CRSF_ADDRESS_FLIGHT_CONTROLLER,
-            LinkStatisticsFrameLength + 2,
-            CRSF_FRAMETYPE_LINK_STATISTICS
-        };
-
-        uint8_t crc = crsf_crc.calc(outBuffer[3]);
-        crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
-
-        if (_fifo.ensure(outBuffer[0] + 1))
-        {
-            _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-            _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
-            _fifo.push(crc);
-        }
+        _fifo.pushBytes(outBuffer, sizeof(outBuffer));
+        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
+        _fifo.push(crc);
     }
-#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
@@ -80,18 +75,13 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 
 void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
-        const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
-        if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
-        {
-            data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-            _fifo.push(totalBufferLen);
-            _fifo.pushBytes(data, totalBufferLen);
-        }
+        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        _fifo.push(totalBufferLen);
+        _fifo.pushBytes(data, totalBufferLen);
     }
-#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 void SerialCRSF::processByte(uint8_t byte)
