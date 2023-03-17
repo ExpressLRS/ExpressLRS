@@ -16,7 +16,6 @@ void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 
 void SerialCRSF::sendLinkStatisticsToFC()
 {
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (!OPT_CRSF_RCVR_NO_SERIAL)
     {
         constexpr uint8_t outBuffer[] = {
@@ -36,53 +35,53 @@ void SerialCRSF::sendLinkStatisticsToFC()
             _fifo.push(crc);
         }
     }
-#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!frameAvailable)
-        return DURATION_IMMEDIATELY;
+    if (!OPT_CRSF_RCVR_NO_SERIAL)
+    {
+        if (!frameAvailable)
+            return DURATION_IMMEDIATELY;
 
-    constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        RCframeLength + 2,
-        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-    };
 
-    crsf_channels_s PackedRCdataOut;
-    PackedRCdataOut.ch0 = channelData[0];
-    PackedRCdataOut.ch1 = channelData[1];
-    PackedRCdataOut.ch2 = channelData[2];
-    PackedRCdataOut.ch3 = channelData[3];
-    PackedRCdataOut.ch4 = channelData[4];
-    PackedRCdataOut.ch5 = channelData[5];
-    PackedRCdataOut.ch6 = channelData[6];
-    PackedRCdataOut.ch7 = channelData[7];
-    PackedRCdataOut.ch8 = channelData[8];
-    PackedRCdataOut.ch9 = channelData[9];
-    PackedRCdataOut.ch10 = channelData[10];
-    PackedRCdataOut.ch11 = channelData[11];
-    PackedRCdataOut.ch12 = channelData[12];
-    PackedRCdataOut.ch13 = channelData[13];
-    PackedRCdataOut.ch14 = linkQuality;
-    PackedRCdataOut.ch15 = rssiDBM;
+        constexpr uint8_t outBuffer[] = {
+            // No need for length prefix as we aren't using the FIFO
+            CRSF_ADDRESS_FLIGHT_CONTROLLER,
+            RCframeLength + 2,
+            CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+        };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+        crsf_channels_s PackedRCdataOut;
+        PackedRCdataOut.ch0 = channelData[0];
+        PackedRCdataOut.ch1 = channelData[1];
+        PackedRCdataOut.ch2 = channelData[2];
+        PackedRCdataOut.ch3 = channelData[3];
+        PackedRCdataOut.ch4 = channelData[4];
+        PackedRCdataOut.ch5 = channelData[5];
+        PackedRCdataOut.ch6 = channelData[6];
+        PackedRCdataOut.ch7 = channelData[7];
+        PackedRCdataOut.ch8 = channelData[8];
+        PackedRCdataOut.ch9 = channelData[9];
+        PackedRCdataOut.ch10 = channelData[10];
+        PackedRCdataOut.ch11 = channelData[11];
+        PackedRCdataOut.ch12 = channelData[12];
+        PackedRCdataOut.ch13 = channelData[13];
+        PackedRCdataOut.ch14 = linkQuality;
+        PackedRCdataOut.ch15 = rssiDBM;
 
-    _outputPort->write(outBuffer, sizeof(outBuffer));
-    _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
-    _outputPort->write(crc);
-#endif // CRSF_RCVR_NO_SERIAL
+        uint8_t crc = crsf_crc.calc(outBuffer[2]);
+        crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+
+        _outputPort->write(outBuffer, sizeof(outBuffer));
+        _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
+        _outputPort->write(crc);
+    }
     return DURATION_IMMEDIATELY;
 }
 
 void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
 {
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
     if (!OPT_CRSF_RCVR_NO_SERIAL)
     {
         const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
@@ -93,7 +92,6 @@ void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
             _fifo.pushBytes(data, totalBufferLen);
         }
     }
-#endif // DEBUG_CRSF_NO_OUTPUT
 }
 
 void SerialCRSF::processByte(uint8_t byte)
