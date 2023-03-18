@@ -623,8 +623,13 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         gotRadio[secondRadioIdx] = isSecondRadioGotData;
     }
 
-    if(gotRadio[processingRadioIdx]) instance->irq_count[0]++;
-    if(gotRadio[secondRadioIdx]) instance->irq_count[1]++;
+    // if(gotRadio[processingRadioIdx]) instance->irq_count[0]++;
+    // if(gotRadio[secondRadioIdx]) instance->irq_count[1]++;
+
+    if(gotRadio[0]) instance->irq_count[0]++;
+    if(gotRadio[1]) instance->irq_count[1]++;
+    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
+    if(gotRadio[0] && gotRadio[1]) instance->irq_count[3]++;
 
     uint8_t status[2];
     uint8_t rssi[2];

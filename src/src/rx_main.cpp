@@ -1746,11 +1746,11 @@ void loop()
     if(now - lastReport >= 1000)
     {
         //DBGLN("IRQ counts: %d, %d / telem: %d, %d / dio but failed: %d"
-        DBGLN("%d\t%d\t%d\t%d\t%d"
-            , Radio.irq_count[0], Radio.irq_count[1]
+        DBGLN("%d\t%d\t%d\t%d\t%d\t%d\t%d"
+            , Radio.irq_count[0], Radio.irq_count[1], Radio.irq_count[2], Radio.irq_count[3]
             , Radio.telem_count[0], Radio.telem_count[1]
             , Radio.fail_count);
-        Radio.irq_count[0] = Radio.irq_count[1] = 0;
+        Radio.irq_count[0] = Radio.irq_count[1] = Radio.irq_count[2] = Radio.irq_count[3] = 0;
         Radio.fail_count = 0;
         Radio.telem_count[0] = Radio.telem_count[1] = 0;
         lastReport = now;
