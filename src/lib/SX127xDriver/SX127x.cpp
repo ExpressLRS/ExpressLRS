@@ -49,6 +49,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   headerExplMode = false;
   crcEnabled = false;
   lowFrequencyMode = SX1278_HIGH_FREQ;
+  lastSuccessfulPacketRadio = SX12XX_Radio_1;
 }
 
 bool SX127xDriver::Begin()
