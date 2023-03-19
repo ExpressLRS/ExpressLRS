@@ -626,11 +626,6 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     // if(gotRadio[processingRadioIdx]) instance->irq_count[0]++;
     // if(gotRadio[secondRadioIdx]) instance->irq_count[1]++;
 
-    if(gotRadio[0]) instance->irq_count[0]++;
-    if(gotRadio[1]) instance->irq_count[1]++;
-    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
-    if(gotRadio[0] && gotRadio[1]) instance->irq_count[3]++;
-
     uint8_t status[2];
     uint8_t rssi[2];
     uint8_t snr[2];
@@ -663,10 +658,13 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     // by default..
     instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
 
-    if(gotRadio[0]) { LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
-    if(gotRadio[1]) { LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; }
+    // stat updates
+    if(gotRadio[0]) { instance->irq_count[0]++; LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
+    if(gotRadio[1]) { instance->irq_count[1]++; LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
+    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
     // when two radio got the packet, use the better snr one
     if(gotRadio[0] && gotRadio[1])  {
+        instance->irq_count[3]++;
         // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
         LastPacketSNRRaw = (snr[0]+snr[1])/2;
         // Update the last successful packet radio to be the one with better signal strength

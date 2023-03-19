@@ -52,6 +52,7 @@ public:
     uint16_t irq_count[4];
     uint16_t fail_count;
     uint16_t telem_count[2];
+    int16_t snr_sum[2];
 
 protected:
     void RemoveCallbacks(void)
