@@ -146,10 +146,17 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
         //data-sheet errata recommendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
         hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
         hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
+
+        // 2.3 Receiver Spurious Reception of a LoRa Signal
+        hal.writeRegisterBits(0x31, 0x80, 0x80, SX12XX_Radio_All);
       }
       else
       {
         hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
+
+        // 2.3 Receiver Spurious Reception of a LoRa Signal
+        // !!! Note - Registers 0x2F and 0x30 also need to be corrected if ELRS every uses other BW.  Check errata. !!!
+        hal.writeRegisterBits(0x31, 0x00, 0x80, SX12XX_Radio_All);
       }
     #endif
 
