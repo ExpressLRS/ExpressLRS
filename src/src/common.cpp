@@ -154,15 +154,16 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
     return retVal;
 }
 
-
+// The below Hz is the OTA rate.  Not the RC packet rate.  Which will be different for DVDA modes and can be calculated with numOfSends.
 uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate)
 {
     switch(eRate)
     {
     case RATE_FLRC_1000HZ: return 1000;
     case RATE_FLRC_500HZ: return 500;
-    case RATE_DVDA_500HZ: return 500;
-    case RATE_DVDA_250HZ: return 250;
+    case RATE_DVDA_500HZ: return 1000;
+    case RATE_DVDA_250HZ: return 1000;
+    case RATE_DVDA_50HZ: return 200;
     case RATE_LORA_500HZ: return 500;
     case RATE_LORA_333HZ_8CH: return 333;
     case RATE_LORA_250HZ: return 250;
