@@ -1368,7 +1368,7 @@ static void updateTelemetryBurst()
         return;
     telemBurstValid = true;
 
-    uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     telemetryBurstMax = TLMBurstMaxForRateRatio(hz, ExpressLRS_currTlmDenom);
 
     // Notify the sender to adjust its expected throughput
