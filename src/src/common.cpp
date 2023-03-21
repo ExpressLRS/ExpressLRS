@@ -154,29 +154,6 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
     return retVal;
 }
 
-
-uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate)
-{
-    switch(eRate)
-    {
-    case RATE_FLRC_1000HZ: return 1000;
-    case RATE_FLRC_500HZ: return 500;
-    case RATE_DVDA_500HZ: return 500;
-    case RATE_DVDA_250HZ: return 250;
-    case RATE_LORA_500HZ: return 500;
-    case RATE_LORA_333HZ_8CH: return 333;
-    case RATE_LORA_250HZ: return 250;
-    case RATE_LORA_200HZ: return 200;
-    case RATE_LORA_150HZ: return 150;
-    case RATE_LORA_100HZ: return 100;
-    case RATE_LORA_100HZ_8CH: return 100;
-    case RATE_LORA_50HZ: return 50;
-    case RATE_LORA_25HZ: return 25;
-    case RATE_LORA_4HZ: return 4;
-    default: return 1;
-    }
-}
-
 uint32_t uidMacSeedGet(void)
 {
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
