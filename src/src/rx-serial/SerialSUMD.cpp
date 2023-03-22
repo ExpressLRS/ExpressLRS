@@ -63,8 +63,8 @@ uint32_t SerialSUMD::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     outBuffer[27] = us >> 8;		
     outBuffer[28] = us  & 0x00ff;
     us = (CRSF_to_US(ChannelData[13]) << 3);
-    outBuffer[29] = us /0x100;		
-    outBuffer[30] = us %0x100;
+    outBuffer[29] = us >> 8;		
+    outBuffer[30] = us & 0x00ff;
     us = (CRSF_to_US(ChannelData[14]) << 3);
     outBuffer[31] = us >> 8;		
     outBuffer[32] = us  & 0x00ff;
