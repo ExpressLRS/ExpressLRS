@@ -1,12 +1,6 @@
 #include "SerialSUMD.h"
 #include "CRSF.h"
 #include "device.h"
-#include "telemetry.h"
-
-extern Telemetry telemetry;
-extern void reset_into_bootloader();
-extern void EnterBindingMode();
-extern void UpdateModelMatch(uint8_t model);
 
 void SerialSUMD::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
@@ -16,8 +10,9 @@ void SerialSUMD::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 
 uint32_t SerialSUMD::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
-    if (!frameAvailable)
+    if (!frameAvailable) {
         return DURATION_IMMEDIATELY;
+    }
 
 	uint8_t outBuffer[37];
 
@@ -105,10 +100,6 @@ void SerialSUMD::sendLinkStatisticsToFC()
 
 void SerialSUMD::sendMSPFrameToFC(uint8_t* data)
 {
-    // unsupported
-}
-
-void SerialSUMD::sendLinkStatisticsToFC() {   
     // unsupported
 }
 

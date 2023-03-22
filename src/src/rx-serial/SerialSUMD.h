@@ -62,6 +62,6 @@ private:
     uint16_t linkQuality = 0;
     uint16_t rssiDBM = 0;
 
-    uint16_t crc16(uint8_t *data, uint8_t len)
+    uint16_t crc16(uint8_t *data, uint8_t len);
     void processByte(uint8_t byte) override {};
 };
