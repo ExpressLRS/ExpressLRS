@@ -17,10 +17,7 @@ uint32_t SerialSUMD::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 	uint8_t outBuffer[37];
 
 	outBuffer[0] = 0xA8;		//Graupner
-	if (frameAvailable)
-		outBuffer[1] = 0x01;	//SUMD
-	else
-		outBuffer[1] = 0x81;	//SUMD Failsafe
+	outBuffer[1] = 0x01;	    //SUMD
 	outBuffer[2] = 0x10;		//16CH	
 
     uint16_t us = (CRSF_to_US(ChannelData[0]) << 3);

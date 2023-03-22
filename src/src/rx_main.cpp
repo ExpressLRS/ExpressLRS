@@ -1211,7 +1211,7 @@ static void setupSerial()
 
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
-    SerialMode mode = sbusSerialOutput ? SERIAL_TX_ONLY : SERIAL_FULL;
+    SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
