@@ -42,7 +42,7 @@
 ### COMPATIBILITY OPTIONS: ###
 
 # Invert the TX/RX half-duplex pin in the transmitter code. Handset external
-# modules are almost all inverted. ESP32 targets only
+# modules are almost all inverted. ESP32/8286 targets only
 -DUART_INVERTED
 
 # Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
@@ -54,10 +54,6 @@
 # RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will
 # not work, only via_Wifi. ESP8266/8285 targets only
 #-DRCVR_INVERT_TX
-
-# Use the SBUS **pin** on R9MM receiver hardware, which is inverted.
-# Does not output SBUS protocol, just inverted CRSF.
-#-DUSE_R9MM_R9MINI_SBUS
 
 #-DTLM_REPORT_INTERVAL_MS=240LU
 
@@ -115,3 +111,6 @@
 # Enable reporting offsets sent to Open/EdgeTX for packet synchronisation.
 # Also logs forced resyncs when a packet is delayed or missed.
 #-DDEBUG_OPENTX_SYNC
+
+# Use an ELRS TX and RX as a transparent UART over the air
+#-DUSE_AIRPORT_AT_BAUD=9600

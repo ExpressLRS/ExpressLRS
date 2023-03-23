@@ -45,7 +45,7 @@ void VtxPitmodeSwitchUpdate()
 
     uint8_t auxInverted = config.GetVtxPitmode() % 2;
     uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
-    uint8_t currentPitmodeAuxState = CRSF_to_BIT(crsf.ChannelData[auxNumber]) ^ auxInverted;
+    uint8_t currentPitmodeAuxState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (pitmodeAuxState != currentPitmodeAuxState)
     {

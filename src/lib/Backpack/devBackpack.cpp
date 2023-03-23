@@ -5,11 +5,13 @@
 #include "msptypes.h"
 #include "CRSF.h"
 #include "config.h"
+#include "logging.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
 extern bool InBindingMode;
 extern Stream *TxBackpack;
+extern char backpackVersion[];
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
@@ -143,7 +145,7 @@ static void AuxStateToMSPOut()
     uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
     uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-    bool recordingState = CRSF_to_BIT(CRSF::ChannelData[auxNumber]) ^ auxInverted;
+    bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (recordingState == lastRecordingState)
     {
@@ -178,17 +180,17 @@ static void AuxStateToMSPOut()
 
 static void initialize()
 {
-#ifdef GPIO_PIN_BACKPACK_EN
+#if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
-        // reset the ESP8285 so we know it's running
         pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
         pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+        // Shut down the backpack via EN pin and hold it there until the first event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
         digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-        delay(50);
-        digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH); // enable high
+        delay(20);
+        // Rely on event() to boot
     }
 #endif
 
@@ -206,10 +208,24 @@ static int start()
 
 static int timeout()
 {
+    static uint8_t versionRequestTries = 0;
+    static uint32_t lastVersionTryTime = 0;
+
     if (InBindingMode)
     {
         BackpackBinding();
         return 1000;        // don't check for another second so we don't spam too hard :-)
+    }
+
+    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000)) {
+        lastVersionTryTime = millis();
+        versionRequestTries++;
+        mspPacket_t out;
+        out.reset();
+        out.makeCommand();
+        out.function = MSP_ELRS_GET_BACKPACK_VERSION;
+        MSP::sendPacket(&out, TxBackpack);
+        DBGLN("Sending get backpack version command");
     }
 
     if (TxBackpackWiFiReadyToSend && connectionState < MODE_STATES)
@@ -226,9 +242,21 @@ static int timeout()
     return BACKPACK_TIMEOUT;
 }
 
+static int event()
+{
+#if defined(GPIO_PIN_BACKPACK_EN)
+    if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    {
+        // EN should be HIGH to be active
+        digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
+    }
+#endif
+    return DURATION_IGNORE;
+}
+
 device_t Backpack_device = {
     .initialize = initialize,
     .start = start,
-    .event = NULL,
+    .event = event,
     .timeout = timeout
 };

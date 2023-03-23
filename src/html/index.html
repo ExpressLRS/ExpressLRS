@@ -71,28 +71,32 @@
 							<label>TLM report interval (ms)</label>
 						</div>
 						<div class="mui-checkbox">
-							<input id='uart-inverted' name='uart-inverted' type='checkbox'/>
-							<label>UART inverted</label>
+							<label><input id='uart-inverted' name='uart-inverted' type='checkbox'/>UART inverted</label>
 						</div>
 						<div class="mui-textfield">
 							<input size='3' id='fan-runtime' name='fan-runtime' type='text'/>
 							<label>Fan runtime (s)</label>
 						</div>
 						<div id="has-highpower" class="mui-checkbox" style="display: none;">
-							<input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>
-							<label>Unlock higher power</label>
+							<label><input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>Unlock higher power</label>
+						</div>
+						<div class="mui-checkbox">
+							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
+						</div>
+						<div class="mui-textfield">
+							<input size='7' id='airport-uart-baud' name='airport-uart-baud' type='text'/>
+							<label>AirPort UART baud</label>
 						</div>
 @@else:
-						<div class="mui-textfield">
+						<div id="baud-config" class="mui-textfield"  style="display: block;">
 							<input size='7' id='rcvr-uart-baud' name='rcvr-uart-baud' type='text'/>
 							<label>UART baud</label>
 						</div>
 						<div class="mui-checkbox">
-
-							<label><input id='rcvr-invert-tx' name='rcvr-invert-tx' type='checkbox'/> Invert TX pin</label>
+							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>Lock on first connection</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/> Lock on first connection</label>
+							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
 						</div>
 @@end
 						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>
@@ -163,11 +167,48 @@
 @@if not isTX:
 			<div class="mui-tabs__pane" id="pane-justified-3">
 				<div class="mui-panel">
-					<h2>Model Match</h2>
-					Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
-					in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
-					<br/><br/>
-					<form class="mui-form--inline elrs-inline-form" action='/modelmatch' id='modelmatch' method='POST'>
+					<div id="pwm_tab">
+						<h2>PWM Output</h2>
+						Set PWM output mode and failsafe positions.
+						<ul>
+							<li><b>Output:</b> Receiver output pin</li>
+							<li><b>Mode:</b> Output frequency, binary On/Off, or Serial (for MCU pins 1 and 3 only) mode</li>
+							<ul>
+								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>below and <b>UART baud</b> on the <b>Options</b> tab</li>
+							</ul>
+							<li><b>Input:</b> Input channel from the handset</li>
+							<li><b>Invert:</b> Invert input channel position</li>
+							<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
+							<li><b>Failsafe:</b> Absolute position to set the servo on failsafe</li>
+							<ul>
+								<li>Does not use "Invert" flag</li>
+								<li>Value will be halved if "750us" flag is set</li>
+								<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
+							</ul>
+						</ul>
+						<br/><br/>
+						<form action="/pwm" id="pwm" method="POST">
+						</form>
+					</div>
+					<form class="mui-form" action='/config' id='config' method='POST'>
+						<div id="serial-config" style="display: block;">
+							<h2>Serial Protocol</h2>
+							Set the protocol used to communicate with the flight controller.
+							<br/><br/>
+							<div class="mui-select">
+								<select id='serial-protocol' name='serial-protocol'>
+									<option value='0'>CRSF</option>
+									<option value='1'>Inverted CRSF</option>
+									<option value='2'>SBUS</option>
+									<option value='3'>Inverted SBUS</option>
+								</select>
+								<label>Serial Protocol</label>
+							</div>
+						</div>
+						<h2>Model Match</h2>
+						Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
+						in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
+						<br/><br/>
 						<div class="mui-checkbox">
 							<label><input id='model-match' name='model-match' type='checkbox'/> Enable Model Match</label>
 						</div>
@@ -175,38 +216,13 @@
 							<input id='modelid' type='text' name='modelid' value="255" required/>
 							<label>Model ID</label>
 						</div>
-						<button type='submit' class="mui-btn mui-btn--small mui-btn--primary">Save</button>
-					</form>
-				</div>
-				<div id="pwm_tab" class="mui-panel">
-					<h2>PWM Output</h2>
-					Set PWM output mode and failsafe positions.
-					<ul>
-						<li><b>Output:</b> Receiver output pin</li>
-						<li><b>Mode:</b> Output frequency or binary On/Off mode</li>
-						<li><b>Input:</b> Input channel from the handset</li>
-						<li><b>Invert:</b> Invert input channel position</li>
-						<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
-						<li><b>Failsafe:</b> Absolute position to set the servo on failsafe</li>
-						<ul>
-							<li>Does not use "Invert" flag</li>
-							<li>Value will be halved if "750us" flag is set</li>
-							<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
-						</ul>
-					</ul>
-					<br/><br/>
-					<form action="/pwm" id="pwm" method="POST">
-					</form>
-				</div>
-				<div class="mui-panel">
-					<h2>Force telemetry off</h2>
-					When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the "Telem Ratio" setting on the TX and never send telemetry from this receiver.
-					<br/><br/>
-					<form class="mui-form--inline elrs-inline-form" action='/forceTelemetry' id='forcetlm' method='POST'>
+						<h2>Force telemetry off</h2>
+						When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the "Telem Ratio" setting on the TX and never send telemetry from this receiver.
+						<br/><br/>
 						<div class="mui-checkbox">
 							<label><input id='force-tlm' name='force-tlm' type='checkbox' value="1"/> Force telemetry OFF on this receiver</label>
 						</div>
-						<input type='submit' value='Save' class="mui-btn mui-btn--small mui-btn--primary">
+						<button type='submit' class="mui-btn mui-btn--small mui-btn--primary">Save</button>
 					</form>
 				</div>
 				<div class="mui-panel">

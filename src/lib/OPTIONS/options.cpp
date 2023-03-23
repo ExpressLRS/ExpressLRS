@@ -76,25 +76,26 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     #endif
 #endif
 #if defined(TARGET_RX)
-#if defined(RCVR_UART_BAUD)
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#elif defined(USE_SBUS_PROTOCOL)
+    .uart_baud = 100000,
+#elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
     .uart_baud = 420000,
 #endif
-#if defined(RCVR_INVERT_TX)
-    .invert_tx = true,
-#else
-    .invert_tx = false,
-#endif
+    ._unused1 = false,
 #if defined(LOCK_ON_FIRST_CONNECTION)
     .lock_on_first_connection = true,
 #else
     .lock_on_first_connection = false,
 #endif
-#if defined(USE_R9MM_R9MINI_SBUS)
-    .r9mm_mini_sbus = true,
+    ._unused2 = false,
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
 #else
-    .r9mm_mini_sbus = false,
+    .is_airport = false,
 #endif
 #endif
 #if defined(TARGET_TX)
@@ -118,6 +119,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .unlock_higher_power = false,
 #endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
+#else
+    .is_airport = false,
+#endif
 #if defined(GPIO_PIN_BUZZER)
     #if defined(DISABLE_ALL_BEEPS)
     .buzzer_mode = buzzerQuiet,
@@ -136,6 +142,11 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .buzzer_melody = {{659, 300}, {659, 300}, {523, 100}, {659, 300}, {783, 550}, {392, 575}},
     #endif
 #endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#else
+    .uart_baud = 0,
+#endif
 #endif
 };
 
@@ -153,40 +164,13 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #include "esp_ota_ops.h"
 #endif
 
-char product_name[129];
-char device_name[17];
+char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
+char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
 
 firmware_options_t firmwareOptions;
 
-extern bool hardware_init(uint32_t *config);
-
-static uint32_t buf[2048];
-
-#if defined(PLATFORM_ESP8266)
-// We need our own function on ESP8266 because the builtin crashes!
-uint32_t myGetSketchSize()
-{
-    uint32_t result = 0;
-    image_header_t &image_header = *(image_header_t *)buf;
-    uint32_t pos = APP_START_OFFSET;
-    if (spi_flash_read(pos, (uint32_t*) &image_header, sizeof(image_header)) != SPI_FLASH_RESULT_OK) {
-        return 0;
-    }
-    pos += sizeof(image_header);
-    int segments = image_header.num_segments;
-    for (uint32_t section_index = 0; section_index < segments; ++section_index)
-    {
-        section_header_t &section_header = *(section_header_t *)buf;
-        if (spi_flash_read(pos, (uint32_t*) &section_header, sizeof(section_header)) != SPI_FLASH_RESULT_OK) {
-            return 0;
-        }
-        pos += sizeof(section_header);
-        pos += section_header.size;
-    }
-    result = (pos + 16) & ~15;
-    return result;
-}
-#endif
+// hardware_init prototype here as it is called by options_init()
+extern bool hardware_init(EspFlashStream &strmFlash);
 
 static StreamString builtinOptions;
 String& getOptions()
@@ -214,11 +198,12 @@ void saveOptions(Stream &stream)
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
     doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
+    doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
-    doc["rcvr-invert-tx"] = firmwareOptions.invert_tx;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     #endif
+    doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
 
     serializeJson(doc, stream);
@@ -231,65 +216,51 @@ void saveOptions()
     options.close();
 }
 
-bool options_init()
+/**
+ * @brief:  Checks if the strmFlash currently is pointing to something that looks like
+ *          a string (not all 0xFF). Position in the stream will not be changed.
+ * @return: true if appears to have a string
+*/
+bool options_HasStringInFlash(EspFlashStream &strmFlash)
 {
-    debugCreateInitLogger();
+    uint32_t firstBytes;
+    size_t pos = strmFlash.getPosition();
+    strmFlash.readBytes((uint8_t *)&firstBytes, sizeof(firstBytes));
+    strmFlash.setPosition(pos);
 
-    uint32_t partition_start = 0;
-    #if defined(PLATFORM_ESP32)
-    SPIFFS.begin(true);
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    if (running) {
-        partition_start = running->address;
-    }
-    uint32_t location = partition_start + ESP.getSketchSize();
-    #else
-    SPIFFS.begin();
-    uint32_t location = partition_start + myGetSketchSize();
-    #endif
-    ESP.flashRead(location, buf, 2048);
+    return firstBytes != 0xffffffff;
+}
 
-    bool hardware_inited = hardware_init(buf);
-
-    if (buf[0] != 0xFFFFFFFF)
-    {
-        strlcpy(product_name, (const char *)buf, sizeof(product_name));
-        strlcpy(device_name, (const char *)buf + 128, sizeof(device_name));
-    }
-    else
-    {
-        #if defined(TARGET_UNIFIED_RX)
-        strcpy(product_name, "Unified RX");
-        strcpy(device_name, "Unified RX");
-        #else
-        strcpy(product_name, "Unified TX");
-        strcpy(device_name, "Unified TX");
-        #endif
-    }
-
+/**
+ * @brief:  Internal read options from either the flash stream at the end of the sketch or the options.json file
+ *          Fills the firmwareOptions variable
+ * @return: true if either was able to be parsed
+*/
+ static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
+{
+    Stream *strmSrc;
     DynamicJsonDocument doc(1024);
     File file = SPIFFS.open("/options.json", "r");
     if (!file || file.isDirectory())
     {
-        if (file)
-        {
-            file.close();
-        }
-        // Try JSON at the end of the firmware
-        DeserializationError error = deserializeJson(doc, ((const char *)buf) + 16 + 128, strnlen(((const char *)buf) + 16 + 128, 512));
-        if (error)
+        // Try OPTIONS JSON at the end of the firmware, after PRODUCTNAME DEVICENAME
+        constexpr size_t optionConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE;
+        strmFlash.setPosition(optionConfigOffset);
+        if (!options_HasStringInFlash(strmFlash))
         {
             return false;
         }
+        strmSrc = &strmFlash;
     }
     else
     {
-        DeserializationError error = deserializeJson(doc, file);
-        file.close();
-        if (error)
-        {
-            return false;
-        }
+        strmSrc = &file;
+    }
+
+    DeserializationError error = deserializeJson(doc, *strmSrc);
+    if (error)
+    {
+        return false;
     }
 
     if (doc["uid"].is<JsonArray>())
@@ -310,20 +281,94 @@ bool options_init()
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
+    #if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
+    firmwareOptions.is_airport = doc["is-airport"] | true;
+    #else
+    firmwareOptions.uart_baud = doc["airport-uart-baud"] | 460800;
+    firmwareOptions.is_airport = doc["is-airport"] | false;
+    #endif
+    #else
+    #if defined(USE_AIRPORT_AT_BAUD)
+    firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | USE_AIRPORT_AT_BAUD;
+    firmwareOptions.is_airport = doc["is-airport"] | true;
     #else
     firmwareOptions.uart_baud = doc["rcvr-uart-baud"] | 420000;
-    firmwareOptions.invert_tx = doc["rcvr-invert-tx"] | false;
+    firmwareOptions.is_airport = doc["is-airport"] | false;
+    #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
 
-    builtinOptions.clear();
-    saveOptions(builtinOptions);
+    return true;
+}
+
+/**
+ * @brief:  Initializes product_name / device_name either from flash or static values
+ * @return: true if the names came from flash, or false if the values are default
+*/
+static bool options_LoadProductAndDeviceName(EspFlashStream &strmFlash)
+{
+    if (options_HasStringInFlash(strmFlash))
+    {
+        strmFlash.setPosition(0);
+        // Product name
+        strmFlash.readBytes(product_name, ELRSOPTS_PRODUCTNAME_SIZE);
+        product_name[ELRSOPTS_PRODUCTNAME_SIZE] = '\0';
+        // Device name
+        strmFlash.readBytes(device_name, ELRSOPTS_DEVICENAME_SIZE);
+        device_name[ELRSOPTS_DEVICENAME_SIZE] = '\0';
+
+        return true;
+    }
+    else
+    {
+        #if defined(TARGET_UNIFIED_RX)
+        strcpy(product_name, "Unified RX");
+        strcpy(device_name, "Unified RX");
+        #else
+        strcpy(product_name, "Unified TX");
+        strcpy(device_name, "Unified TX");
+        #endif
+
+        return false;
+    }
+}
+
+bool options_init()
+{
+    debugCreateInitLogger();
+
+    uint32_t baseAddr = 0;
+#if defined(PLATFORM_ESP32)
+    SPIFFS.begin(true);
+    const esp_partition_t *runningPart = esp_ota_get_running_partition();
+    if (runningPart)
+    {
+        baseAddr = runningPart->address;
+    }
+#else
+    SPIFFS.begin();
+    // ESP8266 sketch baseAddr is always 0
+#endif
+
+    EspFlashStream strmFlash;
+    strmFlash.setBaseAddress(baseAddr + ESP.getSketchSize());
+
+    // Product / Device Name
+    options_LoadProductAndDeviceName(strmFlash);
+    // options.json
+    if (options_LoadFromFlashOrFile(strmFlash))
+    {
+        builtinOptions.clear();
+        saveOptions(builtinOptions);
+    }
+    // hardware.json
+    bool hasHardware = hardware_init(strmFlash);
 
     debugFreeInitLogger();
 
-    return hardware_inited;
+    return hasHardware;
 }
-
 
 #endif

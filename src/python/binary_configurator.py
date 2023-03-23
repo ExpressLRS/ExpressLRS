@@ -86,21 +86,20 @@ def patch_wifi(mm, pos, args):
     return pos
 
 def patch_rx_params(mm, pos, args):
-    pos = write32(mm, pos, args.rx_baud)
+    pos = write32(mm, pos, args.rx_baud if args.airport_baud is None else args.airport_baud)
     val = mm[pos]
-    if args.invert_tx != None:
-        val &= ~1
-        val |= args.invert_tx
+    val &= ~1   # unused1 - ex invert_tx
     if args.lock_on_first_connection != None:
         val &= ~2
         val |= (args.lock_on_first_connection << 1)
-    if args.r9mm_mini_sbus != None:
-        val &= ~4
-        val |= (args.r9mm_mini_sbus << 2)
+    val &= ~4   # unused2 - ex r9mm_mini_sbus
+    if args.airport_baud != None:
+        val |= ~8
+        val |= 0 if args.airport_baud == 0 else 8
     mm[pos] = val
     return pos + 1
 
-def patch_tx_params(mm, pos, args):
+def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
@@ -110,8 +109,15 @@ def patch_tx_params(mm, pos, args):
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
+    if args.airport_baud != None:
+        val |= ~4
+        val |= 0 if args.airport_baud == 0 else 4
     mm[pos] = val
-    return pos + 1
+    pos += 1
+    if options.hasBuzzer:
+        pos = patch_buzzer(mm, pos, args)
+    pos = write32(mm, pos, 0 if args.airport_baud is None else args.airport_baud)
+    return pos
 
 def patch_buzzer(mm, pos, args):
     melody = args.buzzer_melody
@@ -186,9 +192,7 @@ def patch_firmware(options, mm, pos, args):
         pos += 1
         pos = patch_uid(mm, pos, args)
         if options.deviceType is DeviceType.TX:
-            pos = patch_tx_params(mm, pos, args)
-            if options.hasBuzzer:
-                pos = patch_buzzer(mm, pos, args)
+            pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
             pos = patch_rx_params(mm, pos, args)
     else:
@@ -216,8 +220,6 @@ def patch_unified(args, options):
 
     if args.rx_baud is not None:
         json_flags['rcvr-uart-baud'] = args.rx_baud
-    if args.invert_tx is not None:
-        json_flags['rcvr-invert-tx'] = args.invert_tx
     if args.lock_on_first_connection is not None:
         json_flags['lock-on-first-connection'] = args.lock_on_first_connection
 
@@ -249,7 +251,7 @@ def ask_for_firmware(args):
         products = []
         if args.target is not None:
             target = args.target
-            config = jmespath.search(f'{target}', targets)
+            config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
         else:
             i = 0
             for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900"][].*[]', targets):
@@ -289,17 +291,13 @@ def main():
     parser.add_argument('--password', type=length_check(64, "password"), required=False, help='Home network password')
     parser.add_argument('--auto-wifi', type=int, help='Interval (in seconds) before WiFi auto starts, if no connection is made')
     parser.add_argument('--no-auto-wifi', action='store_true', help='Disables WiFi auto start if no connection is made')
+    # AirPort
+    parser.add_argument('--airport-baud', type=int, const=None, nargs='?', action='store', help='If configured as an AirPort device then this is the baud rate to use')
     # RX Params
     parser.add_argument('--rx-baud', type=int, const=420000, nargs='?', action='store', help='The receiver baudrate talking to the flight controller')
-    parser.add_argument('--invert-tx', dest='invert_tx', action='store_true', help='Invert the TX pin on the receiver, if connecting to SBUS pad')
-    parser.add_argument('--no-invert-tx', dest='invert_tx', action='store_false', help='TX pin is connected to a regular UART (i.e. not an SBUS inverted pin)')
-    parser.set_defaults(invert_tx=None)
     parser.add_argument('--lock-on-first-connection', dest='lock_on_first_connection', action='store_true', help='Lock RF mode on first connection')
     parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Do not lock RF mode on first connection')
     parser.set_defaults(lock_on_first_connection=None)
-    parser.add_argument('--r9mm-mini-sbus', dest='r9mm_mini_sbus', action='store_true', help='Use the SBUS pin for CRSF output, not it will be inverted')
-    parser.add_argument('--no-r9mm-mini-sbus', dest='r9mm_mini_sbus', action='store_false', help='Use the normal serial pins for CRSF')
-    parser.set_defaults(r9mm_mini_sbus=None)
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')

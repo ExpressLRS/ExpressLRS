@@ -55,12 +55,17 @@ def process_json_flag(define):
         if parts.group(1) == "RCVR_UART_BAUD" and isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "USE_AIRPORT_AT_BAUD":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            json_flags['is-airport'] = True
+            if isRX:
+                json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
+            else:
+                json_flags['airport-uart-baud'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED" and not isRX:
         json_flags['uart-inverted'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
-    if define == "-DRCVR_INVERT_TX" and isRX:
-        json_flags['rcvr-invert-tx'] = True
     if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
         json_flags['lock-on-first-connection'] = True
 

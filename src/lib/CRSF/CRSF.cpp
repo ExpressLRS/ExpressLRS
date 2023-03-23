@@ -1,8 +1,6 @@
 #include "CRSF.h"
 #include "device.h"
 #include "FIFO.h"
-#include "telemetry_protocol.h"
-#include "common.h"
 #include "logging.h"
 #include "helpers.h"
 
@@ -33,21 +31,12 @@ HardwareSerial CRSF::Port = Serial;
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
-#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
-CROSSFIRE2MSP CRSF::crsf2msp;
-MSP2CROSSFIRE CRSF::msp2crsf;
-#endif
-
 /// Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
-
-uint32_t CRSF::ChannelData[16] = {0};
 
 inBuffer_U CRSF::inBuffer;
 
 volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-
-uint8_t CRSF::ParameterUpdateData[3] = {0};
 
 #if CRSF_TX_MODULE
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
@@ -58,7 +47,7 @@ static FIFO MspWriteFIFO;
 void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
 void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
 
-void (*CRSF::RecvParameterUpdate)() = nullptr; // called when recv parameter update req, ie from LUA
+void (*CRSF::RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
 void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
 void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
 
@@ -467,10 +456,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         }
         else
         {
-            ParameterUpdateData[0] = packetType;
-            ParameterUpdateData[1] = SerialInBuffer[5];
-            ParameterUpdateData[2] = SerialInBuffer[6];
-            if (RecvParameterUpdate) RecvParameterUpdate();
+            if (RecvParameterUpdate) RecvParameterUpdate(packetType, SerialInBuffer[5], SerialInBuffer[6]);
         }
 
         packetReceived = true;
@@ -927,127 +913,6 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
-
-#elif CRSF_RX_MODULE // !CRSF_TX_MODULE
-bool CRSF::RXhandleUARTout()
-{
-    bool retVal = false;
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
-    {
-        // don't write more than 128 bytes at a time to avoid RX buffer overflow
-        const int maxBytesPerCall = 128;
-        uint32_t bytesWritten = 0;
-        #if defined(USE_MSP_WIFI)
-            while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
-            {
-                uint8_t OutPktLen = msp2crsf.FIFOout.pop();
-
-                uint8_t OutData[OutPktLen];
-                msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-                this->_dev->write(OutData, OutPktLen); // write the packet out
-                bytesWritten += OutPktLen;
-                retVal = true;
-            }
-        #endif
-
-        while (SerialOutFIFO.size() > SerialOutFIFO.peek() && (bytesWritten + SerialOutFIFO.peek()) < maxBytesPerCall)
-        {
-            noInterrupts();
-            uint8_t OutPktLen = SerialOutFIFO.pop();
-            uint8_t OutData[OutPktLen];
-            SerialOutFIFO.popBytes(OutData, OutPktLen);
-            interrupts();
-            this->_dev->write(OutData, OutPktLen); // write the packet out
-            bytesWritten += OutPktLen;
-            retVal = true;
-        }
-    }
-    return retVal;
-}
-
-void CRSF::sendLinkStatisticsToFC()
-{
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
-    {
-        constexpr uint8_t outBuffer[] = {
-            LinkStatisticsFrameLength + 4,
-            CRSF_ADDRESS_FLIGHT_CONTROLLER,
-            LinkStatisticsFrameLength + 2,
-            CRSF_FRAMETYPE_LINK_STATISTICS
-        };
-
-        uint8_t crc = crsf_crc.calc(outBuffer[3]);
-        crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
-
-        if (SerialOutFIFO.ensure(outBuffer[0] + 1))
-        {
-            SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-            SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-            SerialOutFIFO.push(crc);
-        }
-    }
-#endif // DEBUG_CRSF_NO_OUTPUT
-}
-
-void CRSF::sendRCFrameToFC()
-{
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (OPT_CRSF_RCVR_NO_SERIAL)
-        return;
-
-    constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        RCframeLength + 2,
-        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-    };
-
-    crsf_channels_s PackedRCdataOut;
-    PackedRCdataOut.ch0 = ChannelData[0];
-    PackedRCdataOut.ch1 = ChannelData[1];
-    PackedRCdataOut.ch2 = ChannelData[2];
-    PackedRCdataOut.ch3 = ChannelData[3];
-    PackedRCdataOut.ch4 = ChannelData[4];
-    PackedRCdataOut.ch5 = ChannelData[5];
-    PackedRCdataOut.ch6 = ChannelData[6];
-    PackedRCdataOut.ch7 = ChannelData[7];
-    PackedRCdataOut.ch8 = ChannelData[8];
-    PackedRCdataOut.ch9 = ChannelData[9];
-    PackedRCdataOut.ch10 = ChannelData[10];
-    PackedRCdataOut.ch11 = ChannelData[11];
-    PackedRCdataOut.ch12 = ChannelData[12];
-    PackedRCdataOut.ch13 = ChannelData[13];
-    PackedRCdataOut.ch14 = ChannelData[14];
-    PackedRCdataOut.ch15 = ChannelData[15];
-
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
-
-    //SerialOutFIFO.push(RCframeLength + 4);
-    //SerialOutFIFO.pushBytes(outBuffer, RCframeLength + 4);
-    this->_dev->write(outBuffer, sizeof(outBuffer));
-    this->_dev->write((byte *)&PackedRCdataOut, RCframeLength);
-    this->_dev->write(crc);
-#endif // CRSF_RCVR_NO_SERIAL
-}
-
-void CRSF::sendMSPFrameToFC(uint8_t* data)
-{
-#if !defined(DEBUG_CRSF_NO_OUTPUT)
-    if (!OPT_CRSF_RCVR_NO_SERIAL)
-    {
-        const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
-        if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
-        {
-            data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-            SerialOutFIFO.push(totalBufferLen);
-            SerialOutFIFO.pushBytes(data, totalBufferLen);
-        }
-    }
-#endif // DEBUG_CRSF_NO_OUTPUT
-}
-
 #endif // CRSF_RX_MODULE
 
 /***

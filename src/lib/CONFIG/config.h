@@ -3,6 +3,7 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 #include "options.h"
+#include "common.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -15,7 +16,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   6U
+#define RX_CONFIG_VERSION   7U
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
@@ -56,7 +57,8 @@ typedef struct {
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
-                    unused: 3;          // FUTURE available
+                    backpackDisable:1,  // bool, disable backpack via EN pin if available
+                    unused:2;          // FUTURE available
     uint8_t         dvrStartDelay:3,
                     dvrAux:5;
     tx_button_color_t buttonColors[2];  // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
@@ -91,6 +93,7 @@ public:
     uint8_t  GetDvrAux() const { return m_config.dvrAux; }
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
+    bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
 
@@ -116,6 +119,7 @@ public:
     void SetDvrStartDelay(uint8_t dvrStartDelay);
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
+    void SetBackpackDisable(bool backpackDisable);
 
     // State setters
     bool SetModelId(uint8_t modelId);
@@ -170,6 +174,8 @@ typedef struct {
                 forceTlmOff:1,
                 rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
+    uint8_t     serialProtocol:2,
+                unused:6;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
@@ -196,6 +202,7 @@ public:
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
+    eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -214,10 +221,12 @@ public:
     #endif
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
+    void SetSerialProtocol(eSerialProtocol serialProtocol);
 
 private:
     void UpgradeEepromV4();
     void UpgradeEepromV5();
+    void UpgradeEepromV6();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

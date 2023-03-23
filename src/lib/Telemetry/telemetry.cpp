@@ -19,6 +19,8 @@ using namespace std;
 
 #if CRSF_RX_MODULE
 
+#include "crsf2msp.h"
+
 Telemetry::Telemetry()
 {
     ResetState();
@@ -52,6 +54,13 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
+void Telemetry::CheckCrsfBatterySensorDetected()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        crsfBatterySensorDetected = true;
+    }
+}
 
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE);
 
@@ -175,6 +184,11 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 if (data == crc)
                 {
                     AppendTelemetryPackage(CRSFinBuffer);
+
+                    // Special case to check here and not in AppendTelemetryPackage().  devAnalogVbat sends
+                    // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
+                    CheckCrsfBatterySensorDetected();
+
                     receivedPackages++;
                     return true;
                 }
@@ -251,7 +265,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
                 {
                     DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    CRSF::crsf2msp.parse(package);
+                    crsf2msp.parse(package);
                 }
                 else // if no TCP client we just want to forward MSP over the link
             #endif
