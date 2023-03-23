@@ -28,7 +28,8 @@ typedef enum
   MSP_STATE_MAX
 } mspVtxState_e;
 
-extern CRSF crsf;
+void SendMSPFrameToFC(uint8_t *mspData);
+
 static bool eepromWriteRequired = false;
 static uint8_t checkingIndex = 0;
 static uint8_t pitMode = 0;
@@ -38,14 +39,14 @@ static uint8_t mspState = GET_VTX_TABLE_SIZE;
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
-    crsf.SetExtendedHeaderAndCrc(mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-    crsf.sendMSPFrameToFC(mspFrame);
+    CRSF::SetExtendedHeaderAndCrc(mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    SendMSPFrameToFC(mspFrame);
 }
 
 static void sendVtxConfigCommand(void)
 {
     uint8_t vtxConfig[MSP_REQUEST_LENGTH(0)];
-    crsf.SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
+    CRSF::SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
     sendCrsfMspToFC(vtxConfig, MSP_REQUEST_FRAME_SIZE(0));
 }
 
@@ -57,7 +58,7 @@ static void sendEepromWriteCommand(void)
     }
 
     uint8_t eepromWrite[MSP_REQUEST_LENGTH(0)];
-    crsf.SetMspV2Request(eepromWrite, MSP_EEPROM_WRITE, nullptr, 0);
+    CRSF::SetMspV2Request(eepromWrite, MSP_EEPROM_WRITE, nullptr, 0);
     sendCrsfMspToFC(eepromWrite, MSP_REQUEST_FRAME_SIZE(0));
 
     eepromWriteRequired = false;
@@ -84,7 +85,7 @@ static void clearVtxTable(void)
     };
 
     uint8_t request[MSP_REQUEST_LENGTH(MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH)];
-    crsf.SetMspV2Request(request, MSP_SET_VTX_CONFIG, payload, MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH);
+    CRSF::SetMspV2Request(request, MSP_SET_VTX_CONFIG, payload, MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH));
 
     eepromWriteRequired = true;
@@ -113,7 +114,7 @@ static void setVtxTableBand(uint8_t band)
     }
 
     uint8_t request[MSP_REQUEST_LENGTH(MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH)];
-    crsf.SetMspV2Request(request, MSP_SET_VTXTABLE_BAND, payload, MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH);
+    CRSF::SetMspV2Request(request, MSP_SET_VTXTABLE_BAND, payload, MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH));
 
     eepromWriteRequired = true;
@@ -125,7 +126,7 @@ static void getVtxTableBand(uint8_t idx)
     uint8_t payload[1] = {idx};
 
     uint8_t request[MSP_REQUEST_LENGTH(payloadLength)];
-    crsf.SetMspV2Request(request, MSP_VTXTABLE_BAND, payload, payloadLength);
+    CRSF::SetMspV2Request(request, MSP_VTXTABLE_BAND, payload, payloadLength);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(payloadLength));
 }
 
@@ -142,7 +143,7 @@ static void setVtxTablePowerLevel(uint8_t idx)
     payload[6] = powerLevelsLabel[((idx - 1) * POWER_LEVEL_LABEL_LENGTH) + 2];
 
     uint8_t request[MSP_REQUEST_LENGTH(MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH)];
-    crsf.SetMspV2Request(request, MSP_SET_VTXTABLE_POWERLEVEL, payload, MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH);
+    CRSF::SetMspV2Request(request, MSP_SET_VTXTABLE_POWERLEVEL, payload, MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH));
 
     eepromWriteRequired = true;
@@ -154,7 +155,7 @@ static void getVtxTablePowerLvl(uint8_t idx)
     uint8_t payload[1] = {idx};
 
     uint8_t request[MSP_REQUEST_LENGTH(payloadLength)];
-    crsf.SetMspV2Request(request, MSP_VTXTABLE_POWERLEVEL, payload, payloadLength);
+    CRSF::SetMspV2Request(request, MSP_VTXTABLE_POWERLEVEL, payload, payloadLength);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(payloadLength));
 }
 
