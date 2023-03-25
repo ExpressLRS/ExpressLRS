@@ -50,17 +50,20 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch14 = channelData[14];
     PackedRCdataOut.ch15 = channelData[15];
 
+    // Ch 7 appears to be control mode
+    // https://forum.dji.com/forum.php?mod=viewthread&tid=227897&page=2#pid2784111
+
     if (channelData[6] > 1300)
     {
-        PackedRCdataOut.ch6 = 1696;
+        PackedRCdataOut.ch6 = 848;
     }
     else if (channelData[6] > 700)
     {
-        PackedRCdataOut.ch6 = 1024;
+        PackedRCdataOut.ch6 = 512;
     }
     else
     {
-        PackedRCdataOut.ch6 = 352;
+        PackedRCdataOut.ch6 = 176;
     }
     
     // DBGLN("%d", PackedRCdataOut.ch4);
