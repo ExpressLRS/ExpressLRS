@@ -50,6 +50,21 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch14 = channelData[14];
     PackedRCdataOut.ch15 = channelData[15];
 
+    if (channelData[6] > 1300)
+    {
+        PackedRCdataOut.ch6 = 1696;
+    }
+    else if (channelData[6] > 700)
+    {
+        PackedRCdataOut.ch6 = 1024;
+    }
+    else
+    {
+        PackedRCdataOut.ch6 = 352;
+    }
+    
+    // DBGLN("%d", PackedRCdataOut.ch4);
+
     uint8_t extraData = 0;
     extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
     extraData |= frameAvailable ? 0 : SBUS_FLAG_SIGNAL_LOSS;
