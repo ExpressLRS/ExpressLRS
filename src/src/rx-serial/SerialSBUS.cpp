@@ -53,15 +53,6 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch13 = fmap(channelData[14], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
     PackedRCdataOut.ch14 = fmap(channelData[15], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
     PackedRCdataOut.ch15 = fmap(channelData[4], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-    
-    DBG("%d, ", PackedRCdataOut.ch0);
-    DBG("%d, ", PackedRCdataOut.ch1);
-    DBG("%d, ", PackedRCdataOut.ch2);
-    DBG("%d, ", PackedRCdataOut.ch3);
-    DBG("%d, ", PackedRCdataOut.ch4);
-    DBG("%d, ", PackedRCdataOut.ch5);
-    DBG("%d, ", PackedRCdataOut.ch6);
-    DBGLN("%d", PackedRCdataOut.ch7);
 
     uint8_t extraData = 0;
     extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
