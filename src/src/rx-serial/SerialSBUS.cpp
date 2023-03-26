@@ -33,40 +33,35 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 
     // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
-    PackedRCdataOut.ch0 = channelData[0];
-    PackedRCdataOut.ch1 = channelData[1];
-    PackedRCdataOut.ch2 = channelData[2];
-    PackedRCdataOut.ch3 = channelData[3];
-    PackedRCdataOut.ch4 = channelData[4];
-    PackedRCdataOut.ch5 = channelData[5];
-    PackedRCdataOut.ch6 = channelData[6];
-    PackedRCdataOut.ch7 = channelData[7];
-    PackedRCdataOut.ch8 = channelData[8];
-    PackedRCdataOut.ch9 = channelData[9];
-    PackedRCdataOut.ch10 = channelData[10];
-    PackedRCdataOut.ch11 = channelData[11];
-    PackedRCdataOut.ch12 = channelData[12];
-    PackedRCdataOut.ch13 = channelData[13];
-    PackedRCdataOut.ch14 = channelData[14];
-    PackedRCdataOut.ch15 = channelData[15];
-
-    // Ch 7 appears to be control mode
-    // https://forum.dji.com/forum.php?mod=viewthread&tid=227897&page=2#pid2784111
-
-    if (channelData[6] > 1300)
-    {
-        PackedRCdataOut.ch6 = 848;
-    }
-    else if (channelData[6] > 700)
-    {
-        PackedRCdataOut.ch6 = 512;
-    }
-    else
-    {
-        PackedRCdataOut.ch6 = 176;
-    }
     
-    // DBGLN("%d", PackedRCdataOut.ch4);
+    PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch1 = fmap(channelData[1], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch2 = fmap(channelData[2], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch3 = fmap(channelData[3], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+
+    PackedRCdataOut.ch4 = fmap(channelData[5], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch5 = fmap(channelData[6], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch6 = fmap(channelData[7], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 176, 848); // Ch 7 appears to be control mode https://forum.dji.com/forum.php?mod=viewthread&tid=227897&page=2#pid2784111
+    PackedRCdataOut.ch7 = fmap(channelData[8], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+
+    PackedRCdataOut.ch8 = fmap(channelData[9], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch9 = fmap(channelData[10], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch10 = fmap(channelData[11], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch11 = fmap(channelData[12], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+
+    PackedRCdataOut.ch12 = fmap(channelData[13], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch13 = fmap(channelData[14], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch14 = fmap(channelData[15], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    PackedRCdataOut.ch15 = fmap(channelData[4], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
+    
+    DBG("%d, ", PackedRCdataOut.ch0);
+    DBG("%d, ", PackedRCdataOut.ch1);
+    DBG("%d, ", PackedRCdataOut.ch2);
+    DBG("%d, ", PackedRCdataOut.ch3);
+    DBG("%d, ", PackedRCdataOut.ch4);
+    DBG("%d, ", PackedRCdataOut.ch5);
+    DBG("%d, ", PackedRCdataOut.ch6);
+    DBGLN("%d", PackedRCdataOut.ch7);
 
     uint8_t extraData = 0;
     extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
