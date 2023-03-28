@@ -262,15 +262,16 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     int32_t rssiDBM = Radio.LastPacketRSSI;
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN) {
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) 
+    {
         int32_t rssiDBM2 = Radio.LastPacketRSSI2;
 
         #if !defined(DEBUG_RCVR_LINKSTATS)
         rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
         rssiDBM2 = LPF_UplinkRSSI1.update(rssiDBM2);
         #endif
-        if (rssiDBM > 0) rssiDBM = 0;
-        if (rssiDBM2 > 0) rssiDBM2 = 0;
+        if (rssiDBM > 0) { rssiDBM = 0; }
+        if (rssiDBM2 > 0) { rssiDBM2 = 0; }
 
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;

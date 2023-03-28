@@ -488,7 +488,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
 #if defined(DEBUG_RCVR_DUAL_RSSI)
-    telem_count[(radioNumber==SX12XX_Radio_1)?0:1]++;
+    telem_count[(radioNumber==SX12XX_Radio_1) ? 0 : 1]++;
 #endif
 
     // Normal diversity mode
@@ -585,7 +585,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 {
     SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
     bool gotRadio[2] = {false, false}; // one-radio default.
-    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1)?0:1;
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
     // processingRadio always passed the sanity check here
@@ -598,13 +598,14 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         bool isSecondRadioGotData = false;
 
         uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
-        if(secondIrqStatus&SX1280_IRQ_RX_DONE){
+        if(secondIrqStatus&SX1280_IRQ_RX_DONE)
+        {
             rx_status second_rx_fail = SX12XX_RX_OK;
             if (packet_mode == SX1280_PACKET_TYPE_FLRC)
             {
                second_rx_fail = ((secondIrqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
-               ((secondIrqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
-               ((secondIrqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
+                                ((secondIrqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+                                ((secondIrqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
             }
             if (second_rx_fail == SX12XX_RX_OK)
             {
@@ -617,7 +618,9 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 RXdataBuffer_second[0] &= 0b11;
                 // if the second packet is same to the first, it's valid
                 if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
+                {
                     isSecondRadioGotData = true;
+                }
             }
         }
 
@@ -635,7 +638,8 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         {
             hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, radio[i]);
 
-            if (packet_mode == SX1280_PACKET_TYPE_FLRC) {
+            if (packet_mode == SX1280_PACKET_TYPE_FLRC) 
+            {
                 // No SNR in FLRC mode
                 rssi[i] = -(int8_t)(status[1] / 2);
                 snr[i] = 0;
@@ -663,7 +667,8 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
 
     // when both radio got the packet, use the better RSSI one
-    if(gotRadio[0] && gotRadio[1])  {
+    if(gotRadio[0] && gotRadio[1])  
+    {
         // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1]; // design choice
         LastPacketSNRRaw = (snr[0]+snr[1])/2;
         // Update the last successful packet radio to be the one with better signal strength
@@ -674,8 +679,9 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     // stat updates
     if(gotRadio[0]) { instance->irq_count[0]++; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }
     if(gotRadio[1]) { instance->irq_count[1]++; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
-    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
-    if(gotRadio[0] && gotRadio[1])  {
+    if(gotRadio[0] || gotRadio[1]) { instance->irq_count[2]++; }
+    if(gotRadio[0] && gotRadio[1])
+    {
         instance->irq_count[3]++;
     }
 #endif
@@ -707,7 +713,6 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         if (instance->RXnbISR(irqStatus, radioNumber))
         {
-            // instance->lastSuccessfulPacketRadio = radioNumber;  // now moved inside RXnbISR
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
 #if defined(DEBUG_RCVR_DUAL_RSSI)
