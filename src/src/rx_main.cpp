@@ -93,7 +93,9 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
+#if defined(DEBUG_LOG)
 unsigned long lastReport = 0;
+#endif
 
 #if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
@@ -730,7 +732,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
     didFHSS = false;
 
-    Radio.isFirstIrq = true;
+    Radio.isFirstRxIrq = true;
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -1743,6 +1745,7 @@ void loop()
     checkGeminiMode();
     debugRcvrLinkstats();
 
+#if defined(DEBUG_LOG)
     if(now - lastReport >= 1000)
     {
         //DBGLN("IRQ counts: %d, %d / telem: %d, %d / dio but failed: %d"
@@ -1757,6 +1760,7 @@ void loop()
         Radio.telem_count[0] = Radio.telem_count[1] = 0;
         lastReport = now;
     }
+#endif
 }
 
 struct bootloader {

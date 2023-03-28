@@ -487,7 +487,9 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         radioNumber = lastSuccessfulPacketRadio;
     }
 
+#if defined(DEBUG_LOG)
     telem_count[(radioNumber==SX12XX_Radio_1)?0:1]++;
+#endif
 
     // Normal diversity mode
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber != SX12XX_Radio_All)
@@ -590,8 +592,8 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     gotRadio[processingRadioIdx] = true;
 
     // if it's a dual radio, and if it's the first IRQ
-    // (don't need if this it's the second IRQ, because the first IRQ is already failed)
-    if (instance->isFirstIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+    // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
+    if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         bool isSecondRadioGotData = false;
 
@@ -609,11 +611,11 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
                 WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
                 hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
-                isSecondRadioGotData = true;
 
                 // leaving only the type in the first byte (crcHigh was cleared)
                 RXdataBuffer[0] &= 0b11;
                 RXdataBuffer_second[0] &= 0b11;
+                // if the second packet is same to the first, it's valid
                 if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
                     isSecondRadioGotData = true;
             }
@@ -622,9 +624,6 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         // second radio received the same packet to the processing radio
         gotRadio[secondRadioIdx] = isSecondRadioGotData;
     }
-
-    // if(gotRadio[processingRadioIdx]) instance->irq_count[0]++;
-    // if(gotRadio[secondRadioIdx]) instance->irq_count[1]++;
 
     uint8_t status[2];
     uint8_t rssi[2];
@@ -652,24 +651,34 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 int8_t negOffset = (snr[i] < 0) ? (snr[i] / RADIO_SNR_SCALE) : 0;
                 rssi[i] += negOffset;
             }
+
+            // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
+            (i == 0) ? LastPacketRSSI = rssi[i] : LastPacketRSSI2 = rssi[i];
+            // Update whatever SNRs we have
+            LastPacketSNRRaw = snr[i];
         }
     }
 
-    // by default..
+    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
     instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
 
-    // stat updates
-    if(gotRadio[0]) { instance->irq_count[0]++; LastPacketRSSI = rssi[0]; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }  // update RSSI&SNR only if the corresponding rx isr is triggered
-    if(gotRadio[1]) { instance->irq_count[1]++; LastPacketRSSI2 = rssi[1]; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
-    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
-    // when two radio got the packet, use the better snr one
+    // when both radio got the packet, use the better RSSI one
     if(gotRadio[0] && gotRadio[1])  {
-        instance->irq_count[3]++;
-        // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1];
+        // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1]; // design choice
         LastPacketSNRRaw = (snr[0]+snr[1])/2;
         // Update the last successful packet radio to be the one with better signal strength
         instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
+
+#if defined(DEBUG_LOG)
+    // stat updates
+    if(gotRadio[0]) { instance->irq_count[0]++; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }
+    if(gotRadio[1]) { instance->irq_count[1]++; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
+    if(gotRadio[0] || gotRadio[1]) instance->irq_count[2]++;
+    if(gotRadio[0] && gotRadio[1])  {
+        instance->irq_count[3]++;
+    }
+#endif
 }
 
 void ICACHE_RAM_ATTR SX1280Driver::IsrCallback_1()
@@ -701,11 +710,13 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             // instance->lastSuccessfulPacketRadio = radioNumber;  // now moved inside RXnbISR
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
+#if defined(DEBUG_LOG)
         else
         {
             instance->fail_count++;
         }
-        instance->isFirstIrq = false;   // isr is already fired in this period.
+#endif
+        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
     else if (irqStatus == SX1280_IRQ_RADIO_NONE)
     {

@@ -47,12 +47,14 @@ public:
     int8_t LastPacketRSSI2;
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
 
-    bool isFirstIrq = true;
+    bool isFirstRxIrq = true;
 
+#if defined(DEBUG_LOG)
     uint16_t irq_count[4];
     uint16_t fail_count;
     uint16_t telem_count[2];
     int16_t snr_sum[2];
+#endif
 
 protected:
     void RemoveCallbacks(void)
