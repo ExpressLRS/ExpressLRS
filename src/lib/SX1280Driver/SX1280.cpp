@@ -487,7 +487,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         radioNumber = lastSuccessfulPacketRadio;
     }
 
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
     telem_count[(radioNumber==SX12XX_Radio_1)?0:1]++;
 #endif
 
@@ -670,7 +670,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
 
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
     // stat updates
     if(gotRadio[0]) { instance->irq_count[0]++; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }
     if(gotRadio[1]) { instance->irq_count[1]++; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
@@ -710,7 +710,7 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             // instance->lastSuccessfulPacketRadio = radioNumber;  // now moved inside RXnbISR
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
         else
         {
             instance->fail_count++;

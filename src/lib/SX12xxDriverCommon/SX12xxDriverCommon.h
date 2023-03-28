@@ -49,7 +49,7 @@ public:
 
     bool isFirstRxIrq = true;
 
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
     uint16_t irq_count[4];
     uint16_t fail_count;
     uint16_t telem_count[2];

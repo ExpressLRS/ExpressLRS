@@ -93,7 +93,7 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
 unsigned long lastReport = 0;
 #endif
 
@@ -1745,7 +1745,7 @@ void loop()
     checkGeminiMode();
     debugRcvrLinkstats();
 
-#if defined(DEBUG_LOG)
+#if defined(DEBUG_RCVR_DUAL_RSSI)
     if(now - lastReport >= 1000)
     {
         //DBGLN("IRQ counts: %d, %d / telem: %d, %d / dio but failed: %d"
