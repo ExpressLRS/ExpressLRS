@@ -1,4 +1,39 @@
 {
+    "anyleaf": {
+        "name": "AnyLeaf",
+        "rx_2400": {
+            "single-radio": {
+                "product_name": "Anyleaf 2.4GHz single radio RX",
+                "lua_name": "AL single RX",
+                "layout_file":  "Generic 2400 Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "dual-radio": {
+                "product_name": "Anyleaf 2.4GHz dual radio RX",
+                "lua_name": "AL dual RX",
+                "layout_file": "Generic 2400 True Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "h7-fc": {
+                "product_name": "Anyleaf FC integrated RX",
+                "lua_name": "AL FC RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "axis": {
         "name": "Axisflying",
         "tx_2400": {

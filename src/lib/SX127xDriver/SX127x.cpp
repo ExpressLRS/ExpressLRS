@@ -49,6 +49,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   headerExplMode = false;
   crcEnabled = false;
   lowFrequencyMode = SX1278_HIGH_FREQ;
+  lastSuccessfulPacketRadio = SX12XX_Radio_1;
 }
 
 bool SX127xDriver::Begin()
@@ -143,13 +144,22 @@ void SX127xDriver::SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate
     #if !defined(RADIO_SX1272) //does not apply to SX1272
       if (bw == SX127x_BW_500_00_KHZ)
       {
-        //data-sheet errata recommendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+        // Errata 2.1 Sensitivity Optimization with a 500 kHz Bandwidth https://www.semtech.com/products/wireless-rf/lora-connect/sx1276
         hal.writeRegister(0x36, 0x02, SX12XX_Radio_All);
         hal.writeRegister(0x3a, lowFrequencyMode ? 0x7F : 0x64, SX12XX_Radio_All);
+
+
+        // Errata 2.3 Receiver Spurious Reception of a LoRa Signal - https://www.semtech.com/products/wireless-rf/lora-connect/sx1276
+        hal.writeRegisterBits(SX127X_REG_DETECT_OPTIMIZE, 0x80, 0x80, SX12XX_Radio_All);
       }
       else
       {
+        // Errata 2.1 Sensitivity Optimization with a 500 kHz Bandwidth https://www.semtech.com/products/wireless-rf/lora-connect/sx1276
         hal.writeRegister(0x36, 0x03, SX12XX_Radio_All);
+
+        // Errata 2.3 Receiver Spurious Reception of a LoRa Signal - https://www.semtech.com/products/wireless-rf/lora-connect/sx1276
+        // !!! Note - Registers 0x2F and 0x30 also need to be corrected if ELRS every uses other BW.  Check errata. !!!
+        hal.writeRegisterBits(SX127X_REG_DETECT_OPTIMIZE, 0x00, 0x80, SX12XX_Radio_All);
       }
     #endif
 

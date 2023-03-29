@@ -754,11 +754,6 @@ void LostConnection(bool resumeRx)
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer.resetFreqOffset();
-    FreqCorrection = 0;
-    FreqCorrection_2 = 0;
-    #if defined(RADIO_SX127X)
-    Radio.SetPPMoffsetReg(0);
-    #endif
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -792,8 +787,6 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
-    FreqCorrection = 0;
-    FreqCorrection_2 = 0;
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -1390,7 +1383,7 @@ static void updateTelemetryBurst()
         return;
     telemBurstValid = true;
 
-    uint32_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     telemetryBurstMax = TLMBurstMaxForRateRatio(hz, ExpressLRS_currTlmDenom);
 
     // Notify the sender to adjust its expected throughput
