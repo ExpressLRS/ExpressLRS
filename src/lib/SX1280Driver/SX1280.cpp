@@ -638,7 +638,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         {
             hal.ReadCommand(SX1280_RADIO_GET_PACKETSTATUS, status, 2, radio[i]);
 
-            if (packet_mode == SX1280_PACKET_TYPE_FLRC) 
+            if (packet_mode == SX1280_PACKET_TYPE_FLRC)
             {
                 // No SNR in FLRC mode
                 rssi[i] = -(int8_t)(status[1] / 2);
@@ -667,7 +667,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
 
     // when both radio got the packet, use the better RSSI one
-    if(gotRadio[0] && gotRadio[1])  
+    if(gotRadio[0] && gotRadio[1])
     {
         // LastPacketSNRRaw = (snr[0]>snr[1])? snr[0]: snr[1]; // design choice
         LastPacketSNRRaw = (snr[0]+snr[1])/2;
@@ -684,12 +684,21 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
             instance->rxSignalStats[i].irq_count++;
             instance->rxSignalStats[i].rssi_sum += rssi[i];
             instance->rxSignalStats[i].snr_sum += snr[i];
-            if (snr[i] > instance->rxSignalStats[i].snr_max) { instance->rxSignalStats[i].snr_max = snr[i]; }
+            if (snr[i] > instance->rxSignalStats[i].snr_max)
+            {
+                instance->rxSignalStats[i].snr_max = snr[i];
+            }
             LastPacketSNRRaw = snr[i];
         }
     }
-    if(gotRadio[0] || gotRadio[1]) { instance->irq_count_or++; }
-    if(gotRadio[0] && gotRadio[1]) { instance->irq_count_both++; }
+    if(gotRadio[0] || gotRadio[1])
+    {
+        instance->irq_count_or++;
+    }
+    if(gotRadio[0] && gotRadio[1])
+    {
+        instance->irq_count_both++;
+    }
 #endif
 }
 

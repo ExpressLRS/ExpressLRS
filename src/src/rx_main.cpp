@@ -262,7 +262,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     int32_t rssiDBM = Radio.LastPacketRSSI;
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN) 
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         int32_t rssiDBM2 = Radio.LastPacketRSSI2;
 
@@ -270,13 +270,13 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
         rssiDBM2 = LPF_UplinkRSSI1.update(rssiDBM2);
         #endif
-        if (rssiDBM > 0) { rssiDBM = 0; }
-        if (rssiDBM2 > 0) { rssiDBM2 = 0; }
+        rssiDBM = (rssiDBM > 0) ? 0 : rssiDBM;
+        rssiDBM2 = (rssiDBM2 > 0) ? 0 : rssiDBM2;
 
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
-        (rssiDBM > rssiDBM2)? antenna=0: antenna=1; // report a better antenna for the reception
+        antenna = (rssiDBM > rssiDBM2)? 0 : 1; // report a better antenna for the reception
     }
     else if (antenna == 0)
     {
@@ -1743,9 +1743,8 @@ void loop()
     // log column header:  radio#, cnt1, rssi1, snr1, snr1_max, telem1, fail1, radio#, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
     if(now - lastReport >= 1000 && connectionState == connected)
     {
-        for (int i = 0; i < 2; i++)
+        for (int i = 0 ; i < isDualRadio() ? 2 : 1 ; i++)
         {
-            if (!isDualRadio() && i==1) break;  // if there's no second radio, break here
             DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
                 Radio.rxSignalStats[i].irq_count,
                 float(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
@@ -1753,7 +1752,7 @@ void loop()
                 float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
                 Radio.rxSignalStats[i].telem_count,
                 Radio.rxSignalStats[i].fail_count);
-                
+
                 Radio.rxSignalStats[i].irq_count = 0;
                 Radio.rxSignalStats[i].snr_sum = 0;
                 Radio.rxSignalStats[i].rssi_sum = 0;
