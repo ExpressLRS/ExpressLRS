@@ -100,7 +100,8 @@ PowerLevels_e POWERMGNT::decPower()
 
 void POWERMGNT::incSX1280Output()
 {
-    if (CurrentSX1280Power < 13 && CurrentSX1280Power < powerValues[CurrentPower] + 2)
+    // Power adjustment is capped to within +-3dB of the target power level to prevent power run-away
+    if (CurrentSX1280Power < 13 && CurrentSX1280Power < powerValues[CurrentPower] + 3)
     {
         CurrentSX1280Power++;
         Radio.SetOutputPower(CurrentSX1280Power);
@@ -109,7 +110,8 @@ void POWERMGNT::incSX1280Output()
 
 void POWERMGNT::decSX1280Output()
 {
-    if (CurrentSX1280Power > -18 && CurrentSX1280Power > powerValues[CurrentPower] - 2)
+    // Power adjustment is capped to within +-3dB of the target power level to prevent power run-away
+    if (CurrentSX1280Power > -18 && CurrentSX1280Power > powerValues[CurrentPower] - 3)
     {
         CurrentSX1280Power--;
         Radio.SetOutputPower(CurrentSX1280Power);
