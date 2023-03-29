@@ -487,8 +487,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         radioNumber = lastSuccessfulPacketRadio;
     }
 
-#if defined(DEBUG_RCVR_DUAL_RSSI)
-    telem_count[(radioNumber==SX12XX_Radio_1) ? 0 : 1]++;
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+    instance->rxSignalStats[(radioNumber==SX12XX_Radio_1) ? 0 : 1].telem_count++;
 #endif
 
     // Normal diversity mode
@@ -675,15 +675,21 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
 
-#if defined(DEBUG_RCVR_DUAL_RSSI)
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
     // stat updates
-    if(gotRadio[0]) { instance->irq_count[0]++; LastPacketSNRRaw = snr[0]; snr_sum[0] += snr[0]; }
-    if(gotRadio[1]) { instance->irq_count[1]++; LastPacketSNRRaw = snr[1]; snr_sum[1] += snr[1];  }
-    if(gotRadio[0] || gotRadio[1]) { instance->irq_count[2]++; }
-    if(gotRadio[0] && gotRadio[1])
+    for (uint8_t i = 0; i < 2; i++)
     {
-        instance->irq_count[3]++;
+        if (gotRadio[i])
+        {
+            instance->rxSignalStats[i].irq_count++;
+            instance->rxSignalStats[i].rssi_sum += rssi[i];
+            instance->rxSignalStats[i].snr_sum += snr[i];
+            if (snr[i] > instance->rxSignalStats[i].snr_max) { instance->rxSignalStats[i].snr_max = snr[i]; }
+            LastPacketSNRRaw = snr[i];
+        }
     }
+    if(gotRadio[0] || gotRadio[1]) { instance->irq_count_or++; }
+    if(gotRadio[0] && gotRadio[1]) { instance->irq_count_both++; }
 #endif
 }
 
@@ -715,10 +721,10 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
         {
             irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
-#if defined(DEBUG_RCVR_DUAL_RSSI)
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
         {
-            instance->fail_count++;
+            instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
         instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)

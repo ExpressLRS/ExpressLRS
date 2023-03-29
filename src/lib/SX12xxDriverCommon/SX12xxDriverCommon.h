@@ -49,11 +49,20 @@ public:
 
     bool isFirstRxIrq = true;
 
-#if defined(DEBUG_RCVR_DUAL_RSSI)
-    uint16_t irq_count[4];
-    uint16_t fail_count;
-    uint16_t telem_count[2];
-    int16_t snr_sum[2];
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+    typedef struct rxSignalStats_s 
+    {
+        uint16_t irq_count;
+        uint16_t telem_count;
+        int16_t rssi_sum;
+        int16_t snr_sum;
+        int8_t snr_max;
+        uint16_t fail_count;
+    } rxSignalStats_t;
+    
+    rxSignalStats_t rxSignalStats[2];
+    uint16_t irq_count_or;
+    uint16_t irq_count_both;
 #endif
 
 protected:

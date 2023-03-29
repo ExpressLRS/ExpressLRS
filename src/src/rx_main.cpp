@@ -93,7 +93,7 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#if defined(DEBUG_RCVR_DUAL_RSSI)
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
 unsigned long lastReport = 0;
 #endif
 
@@ -1746,19 +1746,31 @@ void loop()
     checkGeminiMode();
     debugRcvrLinkstats();
 
-#if defined(DEBUG_RCVR_DUAL_RSSI)
-    if(now - lastReport >= 1000)
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+    // log column header:  cnt1	rssi1	snr1	snr1_max	telem1	fail1	cnt1	rssi1	snr1	snr1_max	telem1	fail1	or	both
+    if(now - lastReport >= 1000 && connectionState == connected)
     {
-        //DBGLN("IRQ counts: %d, %d / telem: %d, %d / dio but failed: %d"
-        DBGLN("%d\t%d\t%d\t%d\t%f\t%f\t%d\t%d\t%d"
-            , Radio.irq_count[0], Radio.irq_count[1], Radio.irq_count[2], Radio.irq_count[3]
-            , float(Radio.snr_sum[0])/Radio.irq_count[0]/RADIO_SNR_SCALE, float(Radio.snr_sum[1])/Radio.irq_count[1]/RADIO_SNR_SCALE
-            , Radio.telem_count[0], Radio.telem_count[1]
-            , Radio.fail_count);
-        Radio.irq_count[0] = Radio.irq_count[1] = Radio.irq_count[2] = Radio.irq_count[3] = 0;
-        Radio.snr_sum[0] = Radio.snr_sum[1] = 0;
-        Radio.fail_count = 0;
-        Radio.telem_count[0] = Radio.telem_count[1] = 0;
+        for (int i = 0; i < 2; i++)
+        {
+            DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
+                Radio.rxSignalStats[i].irq_count,
+                float(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
+                float(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
+                float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
+                Radio.rxSignalStats[i].telem_count,
+                Radio.rxSignalStats[i].fail_count);
+                
+                Radio.rxSignalStats[i].irq_count = 0;
+                Radio.rxSignalStats[i].snr_sum = 0;
+                Radio.rxSignalStats[i].rssi_sum = 0;
+                Radio.rxSignalStats[i].snr_max = INT8_MIN;
+                Radio.rxSignalStats[i].telem_count = 0;
+                Radio.rxSignalStats[i].fail_count = 0;
+        }
+        DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+        Radio.irq_count_or = 0;
+        Radio.irq_count_both = 0;
+
         lastReport = now;
     }
 #endif
