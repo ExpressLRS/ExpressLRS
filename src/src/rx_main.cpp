@@ -1747,11 +1747,12 @@ void loop()
     debugRcvrLinkstats();
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    // log column header:  cnt1	rssi1	snr1	snr1_max	telem1	fail1	cnt1	rssi1	snr1	snr1_max	telem1	fail1	or	both
+    // log column header:  radio#, cnt1, rssi1, snr1, snr1_max, telem1, fail1, radio#, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
     if(now - lastReport >= 1000 && connectionState == connected)
     {
         for (int i = 0; i < 2; i++)
         {
+            if (!isDualRadio() && i==1) break;  // if there's no second radio, break here
             DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
                 Radio.rxSignalStats[i].irq_count,
                 float(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
@@ -1767,7 +1768,14 @@ void loop()
                 Radio.rxSignalStats[i].telem_count = 0;
                 Radio.rxSignalStats[i].fail_count = 0;
         }
-        DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+        if (isDualRadio())
+        {
+            DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+        }
+        else
+        {
+            DBGLN("");
+        }
         Radio.irq_count_or = 0;
         Radio.irq_count_both = 0;
 
