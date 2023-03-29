@@ -39,11 +39,11 @@ static int start()
 
 /**
  * @brief Event callback for PDET device.
- * 
+ *
  * If the module is running in the "normal" mode, i.e. with the radio outputting RF,
  * then set the initial duration to immediately call the 'timeout' function.
- * Otherwise set the diration to never call the power detection/adjustment 'timeout' function.
- * 
+ * Otherwise set the duration to never call the power detection/adjustment 'timeout' function.
+ *
  * @return int duration in ms to call the 'timeout' function
  */
 static int event()
