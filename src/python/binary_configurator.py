@@ -333,7 +333,6 @@ def main():
         os.chdir(args.dir)
 
     if args.file == None:
-        os.chdir('firmware')
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']

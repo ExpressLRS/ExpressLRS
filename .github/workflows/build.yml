@@ -163,6 +163,17 @@ jobs:
       - name: Copy bootloader files to firmware folder
         run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Build flasher "binary" with shiv
+        run: |
+          cd src/python
+          pip install shiv
+          shiv -c flash -o ../../dist/firmware/flasher.pyz pyserial .
+
       - name: Update firmware artifact
         uses: actions/upload-artifact@v3
         with:
@@ -184,28 +195,6 @@ jobs:
             echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
             exit 0
           fi
-          
+
           echo "Uploading firmware to artifactory"
           aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
-
-  installer:
-    needs: [validation, test]
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.7
-
-      - run: pip install pyserial
-      - run: pip install pyinstaller
-      - run: pyinstaller -F src/python/binary_configurator.py -n installer-${{ matrix.os }}
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: installer
-          path: dist/*
