@@ -178,7 +178,7 @@ String& getOptions()
     return builtinOptions;
 }
 
-void saveOptions(Stream &stream)
+void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
@@ -205,6 +205,7 @@ void saveOptions(Stream &stream)
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
+    doc["customised"] = customised;
 
     serializeJson(doc, stream);
 }
@@ -212,7 +213,7 @@ void saveOptions(Stream &stream)
 void saveOptions()
 {
     File options = SPIFFS.open("/options.json", "w");
-    saveOptions(options);
+    saveOptions(options, true);
     options.close();
 }
 
