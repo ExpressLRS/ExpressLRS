@@ -1,4 +1,5 @@
 #include "targets.h"
+#include "common.h"
 #include "device.h"
 #include "logging.h"
 #include "POWERMGNT.h"
@@ -36,9 +37,27 @@ static int start()
     return DURATION_NEVER;
 }
 
+/**
+ * @brief Event callback for PDET device.
+ *
+ * If the module is running in the "normal" mode, i.e. with the radio outputting RF,
+ * then set the initial duration to immediately call the 'timeout' function.
+ * Otherwise set the duration to never call the power detection/adjustment 'timeout' function.
+ *
+ * @return int duration in ms to call the 'timeout' function
+ */
+static int event()
+{
+    if (GPIO_PIN_PA_PDET == UNDEF_PIN || connectionState > connectionState_e::MODE_STATES)
+    {
+        return DURATION_NEVER;
+    }
+    return DURATION_IMMEDIATELY;
+}
+
 static int timeout()
 {
-    if (!busyTransmitting) return PDET_BUSY_PERIODMS;
+    if (!busyTransmitting) return DURATION_IMMEDIATELY;
 
     pdet_storage_t newPdetScaled = PDET_MV_SCALE(analogReadMilliVolts(GPIO_PIN_PA_PDET));
 
@@ -59,14 +78,14 @@ static int timeout()
     pdet_storage_t targetPowerDbmScaled = PDET_DBM_SCALE(targetPowerDbm);
     DBGVLN("PdetMv=%u dBm=%u", PdetMvScaled, dBmScaled);
 
-    if (dBmScaled < (targetPowerDbmScaled - PDET_HYSTERESIS_DBMSCALED) && POWERMGNT::currentSX1280Ouput() < SKY85321_MAX_DBM_INPUT)
+    if (dBmScaled < (targetPowerDbmScaled - PDET_HYSTERESIS_DBMSCALED) && POWERMGNT::currentSX1280Output() < SKY85321_MAX_DBM_INPUT)
     {
-        POWERMGNT::incSX1280Ouput();
+        POWERMGNT::incSX1280Output();
         PdetMvScaled = 0;
     }
     else if (dBmScaled > (targetPowerDbmScaled + PDET_HYSTERESIS_DBMSCALED))
     {
-        POWERMGNT::decSX1280Ouput();
+        POWERMGNT::decSX1280Output();
         PdetMvScaled = 0;
     }
 
@@ -76,7 +95,7 @@ static int timeout()
 device_t PDET_device = {
     .initialize = NULL,
     .start = start,
-    .event = NULL,
+    .event = event,
     .timeout = timeout
 };
 #endif
