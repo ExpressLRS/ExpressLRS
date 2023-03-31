@@ -629,8 +629,8 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     }
 
     uint8_t status[2];
-    uint8_t rssi[2];
-    uint8_t snr[2];
+    int8_t rssi[2];
+    int8_t snr[2];
 
     for(uint8_t i=0;i<2;i++)
     {

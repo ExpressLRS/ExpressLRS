@@ -526,8 +526,9 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         {
             tempFC--; // FREQ_STEP units
         }
-        else
+        else if (tempFC == FreqCorrectionMin)
         {
+            tempFC--;
             DBGLN("Max -FreqCorrection reached!");
         }
     }
@@ -537,8 +538,9 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         {
             tempFC++; // FREQ_STEP units
         }
-        else
+        else if (tempFC == FreqCorrectionMax)
         {
+            tempFC++;
             DBGLN("Max +FreqCorrection reached!");
         }
     }
@@ -1739,11 +1741,11 @@ void loop()
     checkGeminiMode();
     debugRcvrLinkstats();
 
-#if defined(DEBUG_RCVR_SIGNAL_STATS)
-    // log column header:  radio#, cnt1, rssi1, snr1, snr1_max, telem1, fail1, radio#, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
+#if defined DEBUG_RCVR_SIGNAL_STATS
+    // log column header:  cnt1, rssi1, snr1, snr1_max, telem1, fail1, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
     if(now - lastReport >= 1000 && connectionState == connected)
     {
-        for (int i = 0 ; i < isDualRadio() ? 2 : 1 ; i++)
+        for (int i = 0 ; i < (isDualRadio()?2:1) ; i++)
         {
             DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
                 Radio.rxSignalStats[i].irq_count,
