@@ -69,7 +69,7 @@ bool SX127xDriver::Begin()
     lowFrequencyMode = SX1278_LOW_FREQ;
     DBGLN("Setting 'lowFrequencyMode' used for 433MHz.");
   }
-  
+
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
   if (!DetectChip(SX12XX_Radio_1))
@@ -278,7 +278,7 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
-{  
+{
   int32_t regfreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
 
   SetFrequencyReg(regfreq, radioNumber);
@@ -390,11 +390,11 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   // }
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
-  if (radioNumber == SX12XX_Radio_Default)
+  if (radioNumber == SX12XX_Radio_NONE)
   {
       radioNumber = lastSuccessfulPacketRadio;
   }
-  
+
   RFAMP.TXenable(radioNumber);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
   hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
@@ -423,7 +423,7 @@ bool ICACHE_RAM_ATTR SX127xDriver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   RFAMP.RXenable();
-  
+
   if (timeoutSymbols)
   {
     SetMode(SX127x_OPMODE_RXSINGLE, SX12XX_Radio_All);
@@ -454,7 +454,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode, SX12XX_Radi
   // {
   //    return;
   // }
-  
+
   hal.writeRegister(SX127X_REG_OP_MODE, mode | lowFrequencyMode, radioNumber);
   currOpmode = mode;
 }
@@ -634,7 +634,7 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         return;
     }
-    
+
     instance->ClearIrqFlags(irqClearRadio);
 }
 

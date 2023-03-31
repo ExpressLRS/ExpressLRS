@@ -1517,7 +1517,7 @@
             "ss24d": {
                 "product_name": "Skystars SS24D 2.4GHz RX",
                 "lua_name": "Skystars SS24D",
-                "layout_file": "Generic 2400 PA.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
