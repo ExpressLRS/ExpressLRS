@@ -525,11 +525,10 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         if (tempFC > FreqCorrectionMin)
         {
             tempFC--; // FREQ_STEP units
-        }
-        else if (tempFC == FreqCorrectionMin)
-        {
-            tempFC--;
-            DBGLN("Max -FreqCorrection reached!");
+            if (tempFC == FreqCorrectionMin)
+            {
+                DBGLN("Max -FreqCorrection reached!");
+            }
         }
     }
     else
@@ -537,11 +536,10 @@ uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         if (tempFC < FreqCorrectionMax)
         {
             tempFC++; // FREQ_STEP units
-        }
-        else if (tempFC == FreqCorrectionMax)
-        {
-            tempFC++;
-            DBGLN("Max +FreqCorrection reached!");
+            if (tempFC == FreqCorrectionMax)
+            {
+                DBGLN("Max +FreqCorrection reached!");
+            }
         }
     }
 
