@@ -705,6 +705,7 @@ void RxConfig::Load()
     SetDefaults(false);
     UpgradeEepromV4();
     UpgradeEepromV5();
+    UpgradeEepromV6();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -773,6 +774,39 @@ void RxConfig::UpgradeEepromV5()
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+        }
+    }
+}
+
+// ========================================================
+// V6 Upgrade
+static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * const current)
+{
+    current->val.failsafe = v6->val.failsafe;
+    current->val.inputChannel = v6->val.inputChannel;
+    current->val.inverted = v6->val.inverted;
+    current->val.narrow = v6->val.narrow;
+    current->val.mode = v6->val.mode;
+}
+
+void RxConfig::UpgradeEepromV6()
+{
+    v6_rx_config_t v6Config;
+    m_eeprom->Get(0, v6Config);
+    if ((v6Config.version & ~CONFIG_MAGIC_MASK) == 6)
+    {
+        memcpy(m_config.uid, v6Config.uid, sizeof(v6Config.uid));
+        m_config.vbatScale = v6Config.vbatScale;
+        m_config.isBound = v6Config.isBound;
+        m_config.power = v6Config.power;
+        m_config.antennaMode = v6Config.antennaMode;
+        m_config.forceTlmOff = v6Config.forceTlmOff;
+        m_config.rateInitialIdx = v6Config.rateInitialIdx;
+        m_config.modelId = v6Config.modelId;
+
+        for (unsigned ch=0; ch<16; ++ch)
+        {
+            PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
     }
 }
@@ -890,11 +924,19 @@ RxConfig::SetDefaults(bool commit)
     m_config.power = POWERMGNT::getDefaultPower();
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
         m_config.antennaMode = 2; // 2 is diversity
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        m_config.antennaMode = 0; // 0 is diversity for dual radio
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
         SetPwmChannel(ch, 512, ch, false, 0, false);
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
+#endif
+
+#if defined(RCVR_INVERT_TX)
+    m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
+#else
+    m_config.serialProtocol = PROTOCOL_CRSF;
 #endif
 
     if (commit)
@@ -969,5 +1011,12 @@ RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
     }
 }
 
-
+void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
+{
+    if (m_config.serialProtocol != serialProtocol)
+    {
+        m_config.serialProtocol = serialProtocol;
+        m_modified = true;
+    }
+}
 #endif

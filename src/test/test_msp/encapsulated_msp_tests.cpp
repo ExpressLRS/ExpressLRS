@@ -5,13 +5,8 @@
 
 #include "devCRSF.h"
 
-// Mock out the serial port using a string stream
-std::string buf;
-StringStream ss(buf);
-
-// Create a CRSF object to test,
-// using the StringStream as a mock UART
-CRSF crsf(&ss);
+// Create a CRSF object to test
+CRSF crsf;
 
 void test_encapsulated_msp_send(void)
 {

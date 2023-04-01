@@ -311,7 +311,7 @@ static void luadevUpdateTlmBandwidth()
   {
     tlmBandwidth[0] = ' ';
 
-    uint16_t hz = RateEnumToHz(ExpressLRS_currAirRate_Modparams->enum_rate);
+    uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
     uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_TELEMETRY_BYTES_PER_CALL : ELRS4_TELEMETRY_BYTES_PER_CALL;

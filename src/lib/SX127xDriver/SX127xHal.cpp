@@ -48,8 +48,9 @@ void SX127xHal::init()
     SPI.setFrequency(10000000);
     SPI.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
         spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
-    // spiEnableSSPins(SPI.bus(), SX12XX_Radio_All);
+    }
     spiEnableSSPins(SPI.bus(), 0xFF);
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
@@ -106,7 +107,7 @@ void SX127xHal::reset(void)
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t rawValue = readRegister(reg);
+    uint8_t rawValue = readRegister(reg, radioNumber);
     uint8_t maskedValue = rawValue & mask;
     return (maskedValue);
 }
@@ -114,7 +115,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBits(uint8_t reg, uint8_t mask, S
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t data;
-    readRegister(reg, &data, 1);
+    readRegister(reg, &data, 1, radioNumber);
     return data;
 }
 
@@ -132,14 +133,24 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegisterBits(uint8_t reg, uint8_t value, uint8_t mask, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t currentValue = readRegister(reg);
-    uint8_t newValue = (currentValue & ~mask) | (value & mask);
-    writeRegister(reg, newValue);
+    if (radioNumber & SX12XX_Radio_1)
+    {
+        uint8_t currentValue = readRegister(reg, SX12XX_Radio_1);
+        uint8_t newValue = (currentValue & ~mask) | (value & mask);
+        writeRegister(reg, newValue, SX12XX_Radio_1);
+    }
+    
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
+    {
+        uint8_t currentValue = readRegister(reg, SX12XX_Radio_2);
+        uint8_t newValue = (currentValue & ~mask) | (value & mask);
+        writeRegister(reg, newValue, SX12XX_Radio_2);
+    }
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data, SX12XX_Radio_Number_t radioNumber)
 {
-    writeRegister(reg, &data, 1);
+    writeRegister(reg, &data, 1, radioNumber);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber)

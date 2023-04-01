@@ -474,9 +474,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        if (config.GetPTREnableChannel() != HT_OFF) {
+        if (config.GetPTREnableChannel() != HT_OFF)
+        {
           uint8_t ptrStartChannel = config.GetPTRStartChannel();
-          uint32_t chan = CRSF::ChannelData[config.GetPTREnableChannel()/2+3];
+          uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
           bool enable = headTrackingEnabledChannel == HT_ON;
           if (config.GetPTREnableChannel() % 2 == 0)
           {
@@ -494,18 +495,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
           // If enabled and this packet is less that 1 second old then use it
           if (enable && now - lastPTRValidTimeMs < 1000)
           {
-            CRSF::ChannelData[ptrStartChannel+4] = ptrChannelData[0];
-            CRSF::ChannelData[ptrStartChannel+5] = ptrChannelData[1];
-            CRSF::ChannelData[ptrStartChannel+6] = ptrChannelData[2];
+            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
           }
           else
           {
-            CRSF::ChannelData[ptrStartChannel+4] = CRSF_CHANNEL_VALUE_MID;
-            CRSF::ChannelData[ptrStartChannel+5] = CRSF_CHANNEL_VALUE_MID;
-            CRSF::ChannelData[ptrStartChannel+6] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
           }
         }
-        OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
   }
@@ -1152,6 +1153,10 @@ static void setupTarget()
 bool setupHardwareFromOptions()
 {
 #if defined(TARGET_UNIFIED_TX)
+  // Setup default logging in case of failure, or no layout
+  Serial.begin(115200);
+  TxBackpack = &Serial;
+
   if (!options_init())
   {
     // Register the WiFi with the framework
@@ -1305,12 +1310,9 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (TxUSB->available())
+  if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
   {
-    if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
-    {
-      apInputBuffer.push(TxUSB->read());
-    }
+    apInputBuffer.push(TxUSB->read());
   }
 
   if (TxBackpack->available())

@@ -21,7 +21,11 @@ static void (*devicePingCallback)() = nullptr;
 #endif
 
 #define LUA_MAX_PARAMS 32
+static uint8_t parameterType;
+static uint8_t parameterIndex;
+static uint8_t parameterArg;
 static volatile bool UpdateParamReq = false;
+
 static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
 static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
 static uint8_t lastLuaField = 0;
@@ -301,8 +305,11 @@ void luaRegisterDevicePingCallback(void (*callback)())
 
 #endif
 
-void ICACHE_RAM_ATTR luaParamUpdateReq()
+void ICACHE_RAM_ATTR luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
 {
+  parameterType = type;
+  parameterIndex = index;
+  parameterArg = arg;
   UpdateParamReq = true;
 }
 
@@ -345,22 +352,22 @@ bool luaHandleUpdateParameter()
     return false;
   }
 
-  switch(crsf.ParameterUpdateData[0])
+  switch(parameterType)
   {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-      if (crsf.ParameterUpdateData[1] == 0)
+      if (parameterIndex == 0)
       {
         // special case for elrs linkstat request
 #ifdef TARGET_TX
         DBGVLN("ELRS status request");
         updateElrsFlags();
         sendELRSstatus();
-      } else if (crsf.ParameterUpdateData[1] == 0x2E) {
+      } else if (parameterIndex == 0x2E) {
         luaSupressCriticalErrors();
 #endif
       } else {
-        uint8_t id = crsf.ParameterUpdateData[1];
-        uint8_t arg = crsf.ParameterUpdateData[2];
+        uint8_t id = parameterIndex;
+        uint8_t arg = parameterArg;
         struct luaPropertiesCommon *p = paramDefinitions[id];
         DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
@@ -386,8 +393,8 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
       {
-        uint8_t fieldId = crsf.ParameterUpdateData[1];
-        uint8_t fieldChunk = crsf.ParameterUpdateData[2];
+        uint8_t fieldId = parameterIndex;
+        uint8_t fieldChunk = parameterArg;
         DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
         if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
         {
@@ -405,7 +412,7 @@ bool luaHandleUpdateParameter()
       break;
 
     default:
-      DBGLN("Unknown LUA %x", crsf.ParameterUpdateData[0]);
+      DBGLN("Unknown LUA %x", parameterType);
   }
 
   UpdateParamReq = false;
