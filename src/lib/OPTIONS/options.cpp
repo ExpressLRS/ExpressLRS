@@ -166,6 +166,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 
 char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
+char flash_discriminator[25];
 
 firmware_options_t firmwareOptions;
 
@@ -205,6 +206,7 @@ void saveOptions(Stream &stream)
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
+    doc["flash-discriminator"] = flash_discriminator;
 
     serializeJson(doc, stream);
 }
@@ -238,29 +240,47 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
 */
  static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
-    Stream *strmSrc;
-    DynamicJsonDocument doc(1024);
-    File file = SPIFFS.open("/options.json", "r");
-    if (!file || file.isDirectory())
+    DynamicJsonDocument flashDoc(1024);
+    DynamicJsonDocument spiffsDoc(1024);
+    bool hasFlash = false;
+    bool hasSpiffs = false;
+
+    // Try OPTIONS JSON at the end of the firmware, after PRODUCTNAME DEVICENAME
+    constexpr size_t optionConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE;
+    strmFlash.setPosition(optionConfigOffset);
+    if (options_HasStringInFlash(strmFlash))
     {
-        // Try OPTIONS JSON at the end of the firmware, after PRODUCTNAME DEVICENAME
-        constexpr size_t optionConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE;
-        strmFlash.setPosition(optionConfigOffset);
-        if (!options_HasStringInFlash(strmFlash))
+        DeserializationError error = deserializeJson(flashDoc, strmFlash);
+        if (error)
         {
             return false;
         }
-        strmSrc = &strmFlash;
-    }
-    else
-    {
-        strmSrc = &file;
+        hasFlash = true;
     }
 
-    DeserializationError error = deserializeJson(doc, *strmSrc);
-    if (error)
+    // load options.json from the SPIFFS partition
+    File file = SPIFFS.open("/options.json", "r");
+    if (file && !file.isDirectory())
     {
-        return false;
+        DeserializationError error = deserializeJson(spiffsDoc, file);
+        if (error)
+        {
+            return false;
+        }
+        hasSpiffs = true;
+    }
+
+    DynamicJsonDocument &doc = flashDoc;
+    if (hasFlash && hasSpiffs)
+    {
+        if (flashDoc["flash-discriminator"] == spiffsDoc["flash-discriminator"])
+        {
+            doc = spiffsDoc;
+        }
+    }
+    else if (hasSpiffs)
+    {
+        doc = spiffsDoc;
     }
 
     if (doc["uid"].is<JsonArray>())
@@ -299,6 +319,7 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
+    strlcpy(flash_discriminator, doc["flash-discriminator"] | "", sizeof(flash_discriminator));
 
     return true;
 }

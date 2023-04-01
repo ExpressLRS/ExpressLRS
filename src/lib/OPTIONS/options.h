@@ -64,6 +64,7 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
+extern char flash_discriminator[];
 
 #include "EspFlashStream.h"
 extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
@@ -71,4 +72,5 @@ extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];
 extern const char *product_name;
+
 #endif
