@@ -531,7 +531,7 @@
         "name": "Generic targets used as a base",
         "tx_900": {
             "gemini": {
-                "product_name": "Generic ESP32 900Ghz Gemini TX",
+                "product_name": "Generic ESP32 900MHz Gemini TX",
                 "lua_name": "Gemini 900TX",
                 "layout_file": "Generic 900 Gemini.json",
                 "upload_methods": ["uart", "wifi", "etx"],
@@ -560,9 +560,17 @@
                 "prior_target_name": "DIY_900_RX_PWMP"
             },
             "true_diversity": {
-                "product_name": "Generic ESP32 True Diversity PA 900Mhz RX",
+                "product_name": "Generic ESP32 True Diversity PA 900MHz RX",
                 "lua_name": "Diversity 900RX",
                 "layout_file": "Generic 900 True Diversity PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
+            "true_diversity_pwm16": {
+                "product_name": "Generic ESP32 True Diversity 16xPWM 900MHz RX ",
+                "lua_name": "16PWM TD 900RX",
+                "layout_file": "Generic 900 True Diversity PWM 16.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_RX"
