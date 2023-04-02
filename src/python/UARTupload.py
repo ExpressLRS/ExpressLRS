@@ -257,9 +257,6 @@ if __name__ == '__main__':
 
     if 3 < len(sys.argv):
         baudrate = sys.argv[3]
-        
-    if 4 < len(sys.argv):
-        baudrate = sys.argv[4]        
 
     returncode = uart_upload(port, filename, baudrate)
     exit(returncode)
