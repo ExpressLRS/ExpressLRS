@@ -242,6 +242,17 @@ static void HandleReset(AsyncWebServerRequest *request)
   rebootTime = millis() + 100;
 }
 
+static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (String(flash_discriminator) != json["flash-discriminator"]) {
+    request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
+    return;
+  }
+  File file = SPIFFS.open("/options.json", "w");
+  serializeJson(json, file);
+  request->send(200);
+}
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
 #if defined(PLATFORM_ESP32)
@@ -948,11 +959,12 @@ static void startServices()
   server.on("/hardware.html", WebUpdateSendContent);
   server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
-  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
+  server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));

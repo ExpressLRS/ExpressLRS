@@ -222,7 +222,7 @@ void saveOptions()
  * @brief:  Checks if the strmFlash currently is pointing to something that looks like
  *          a string (not all 0xFF). Position in the stream will not be changed.
  * @return: true if appears to have a string
-*/
+ */
 bool options_HasStringInFlash(EspFlashStream &strmFlash)
 {
     uint32_t firstBytes;
@@ -237,8 +237,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  * @brief:  Internal read options from either the flash stream at the end of the sketch or the options.json file
  *          Fills the firmwareOptions variable
  * @return: true if either was able to be parsed
-*/
- static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
+ */
+static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
     DynamicJsonDocument flashDoc(1024);
     DynamicJsonDocument spiffsDoc(1024);
@@ -263,11 +263,10 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     if (file && !file.isDirectory())
     {
         DeserializationError error = deserializeJson(spiffsDoc, file);
-        if (error)
+        if (!error)
         {
-            return false;
+            hasSpiffs = true;
         }
-        hasSpiffs = true;
     }
 
     DynamicJsonDocument &doc = flashDoc;

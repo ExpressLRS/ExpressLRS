@@ -553,22 +553,30 @@ function submitOptions(e) {
   }));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      cuteAlert({
-        type: 'question',
-        title: 'Upload Succeeded',
-        message: 'Reboot to take effect',
-        confirmText: 'Reboot',
-        cancelText: 'Close'
-      }).then((e) => {
-        if (e == 'confirm') {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/reboot');
-          xhr.setRequestHeader('Content-Type', 'application/json');
-          xhr.onreadystatechange = function() {};
-          xhr.send();
-        }
-      });
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'question',
+          title: 'Upload Succeeded',
+          message: 'Reboot to take effect',
+          confirmText: 'Reboot',
+          cancelText: 'Close'
+        }).then((e) => {
+          if (e == 'confirm') {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/reboot');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {};
+            xhr.send();
+          }
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Upload Failed',
+          message: this.responseText
+        });
+      }
     }
   };
 }
