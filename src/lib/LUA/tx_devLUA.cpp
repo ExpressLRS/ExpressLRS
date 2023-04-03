@@ -764,6 +764,7 @@ static int event()
 #if defined(TARGET_TX_FM30)
   setLuaTextSelectionValue(&luaBluetoothTelem, !digitalRead(GPIO_PIN_BLUETOOTH_EN));
 #endif
+  luadevUpdateFolderNames();
   return DURATION_IMMEDIATELY;
 }
 
@@ -788,7 +789,6 @@ static int start()
   setLuaStringValue(&luaInfo, luaBadGoodString);
   luaRegisterDevicePingCallback(&luadevUpdateBadGood);
 
-  luadevUpdateFolderNames();
   event();
   return DURATION_IMMEDIATELY;
 }

@@ -41,7 +41,6 @@
 						<label for="phrase">Binding Phrase</label>
 					</div>
 					<form id='upload_options' method='POST' action="/options">
-						<input type="hidden" id="customised" name="customised" value="true"/>
 						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
 						<input type="hidden" id='wifi-password' name='wifi-password'/>
 						<div class="mui-textfield">
@@ -100,8 +99,8 @@
 						</div>
 @@end
 						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>
-						<div>
-							<a id="reset-options" class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
+						<div id="reset-options" style="display: none;">
+							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>
 					</form>
 				</div>

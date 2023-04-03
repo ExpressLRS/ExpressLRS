@@ -178,7 +178,7 @@ String& getOptions()
     return builtinOptions;
 }
 
-void saveOptions(Stream &stream)
+void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
@@ -205,6 +205,7 @@ void saveOptions(Stream &stream)
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
+    doc["customised"] = customised;
 
     serializeJson(doc, stream);
 }
@@ -212,7 +213,7 @@ void saveOptions(Stream &stream)
 void saveOptions()
 {
     File options = SPIFFS.open("/options.json", "w");
-    saveOptions(options);
+    saveOptions(options, true);
     options.close();
 }
 
@@ -235,8 +236,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  * @brief:  Internal read options from either the flash stream at the end of the sketch or the options.json file
  *          Fills the firmwareOptions variable
  * @return: true if either was able to be parsed
-*/
- static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
+ */
+static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
     Stream *strmSrc;
     DynamicJsonDocument doc(1024);
@@ -248,7 +249,7 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
         strmFlash.setPosition(optionConfigOffset);
         if (!options_HasStringInFlash(strmFlash))
         {
-            return false;
+            return;
         }
         strmSrc = &strmFlash;
     }
@@ -260,7 +261,7 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     DeserializationError error = deserializeJson(doc, *strmSrc);
     if (error)
     {
-        return false;
+        return;
     }
 
     if (doc["uid"].is<JsonArray>())
@@ -300,7 +301,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
 
-    return true;
+    builtinOptions.clear();
+    saveOptions(builtinOptions, doc["customised"] | false);
 }
 
 /**
@@ -358,11 +360,7 @@ bool options_init()
     // Product / Device Name
     options_LoadProductAndDeviceName(strmFlash);
     // options.json
-    if (options_LoadFromFlashOrFile(strmFlash))
-    {
-        builtinOptions.clear();
-        saveOptions(builtinOptions);
-    }
+    options_LoadFromFlashOrFile(strmFlash);
     // hardware.json
     bool hasHardware = hardware_init(strmFlash);
 

@@ -150,9 +150,9 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   }
 
   int8_t rssiInst = 0;
-  SX12XX_Radio_Number_t clearChannelsMask = 0x00;
+  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
 
-  if (radioNumber & SX12XX_Radio_1 || (Radio.GetLastSuccessfulPacketRadio() == SX12XX_Radio_1 && radioNumber == SX12XX_Radio_Default))
+  if (radioNumber & SX12XX_Radio_1)
   {
     rssiInst = Radio.GetRssiInst(SX12XX_Radio_1);
     if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
@@ -161,7 +161,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
     }
   }
 
-  if (radioNumber & SX12XX_Radio_2 || (Radio.GetLastSuccessfulPacketRadio() == SX12XX_Radio_2 && radioNumber == SX12XX_Radio_Default))
+  if (radioNumber & SX12XX_Radio_2)
   {
     rssiInst = Radio.GetRssiInst(SX12XX_Radio_2);
     if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))

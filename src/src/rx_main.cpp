@@ -479,14 +479,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : SX12XX_Radio_Default;
-    SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
+    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+
 #if defined(Regulatory_Domain_EU_CE_2400)
-    clearChannelsMask = ChannelIsClear(transmittingRadio);
-    if (clearChannelsMask)
+    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+
+    if (transmittingRadio != SX12XX_Radio_NONE)               // send packet if channel available
 #endif
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
+        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
     }
     return true;
 }
@@ -1075,12 +1076,9 @@ void UpdateModelMatch(uint8_t model)
  **/
 void MspReceiveComplete()
 {
-    if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+    switch (MspData[0])
     {
-        UpdateModelMatch(MspData[9]);
-    }
-    else if (MspData[0] == MSP_ELRS_SET_RX_WIFI_MODE)
-    {
+    case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
@@ -1088,39 +1086,49 @@ void MspReceiveComplete()
             setWifiUpdateMode();
         });
 #endif
-    }
-    else if (MspData[0] == MSP_ELRS_SET_RX_LOAN_MODE)
-    {
+        break;
+    case MSP_ELRS_SET_RX_LOAN_MODE: //0x0F
         loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
-    }
-    else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
-    {
-        vtxSPIBandChannelIdx = MspData[8];
-        if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-        {
-            vtxSPIPowerIdx = MspData[10];
-            vtxSPIPitmode = MspData[11];
-        }
-        devicesTriggerEvent();
-    }
-    else
-    {
+        break;
+    default:
+        //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-
+        switch (receivedHeader->type)
+        {
+        case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
+            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
+            {
+                UpdateModelMatch(MspData[9]);
+                break;
+            }
+            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            {
+                vtxSPIBandChannelIdx = MspData[8];
+                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+                {
+                    vtxSPIPowerIdx = MspData[10];
+                    vtxSPIPitmode = MspData[11];
+                }
+                devicesTriggerEvent();
+                break;
+            }
+            // FALLTHROUGH
+        default:
+            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
+            {
+                luaParamUpdateReq(
+                    MspData[CRSF_TELEMETRY_TYPE_INDEX],
+                    MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
+                    MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]
+                );
+            }
+            break;
+        }
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
             serialIO->sendMSPFrameToFC(MspData);
-        }
-
-        if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
-        {
-            luaParamUpdateReq(
-                MspData[CRSF_TELEMETRY_TYPE_INDEX],
-                MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
-                MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]
-            );
         }
     }
 
