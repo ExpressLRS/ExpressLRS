@@ -7,8 +7,6 @@
 #define SUMD_CRC_SIZE			2														// 16 bit CRC
 #define SUMD_FRAME_16CH_LEN		(SUMD_HEADER_SIZE+SUMD_DATA_SIZE_16CH+SUMD_CRC_SIZE)	
 
-#define CRC_POLYNOME 0x1021
-
 void SerialSUMD::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
     linkQuality = lq;
@@ -76,33 +74,13 @@ uint32_t SerialSUMD::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     outBuffer[33] = us >> 8;		
     outBuffer[34] = us & 0x00ff;
 	  
-	uint16_t crc = crc16(outBuffer, (SUMD_HEADER_SIZE + SUMD_DATA_SIZE_16CH));
+	uint16_t crc = crc2Byte.calc(outBuffer, (SUMD_HEADER_SIZE + SUMD_DATA_SIZE_16CH), 0);
 	outBuffer[35] = (uint8_t)(crc >> 8);
 	outBuffer[36] = (uint8_t)(crc & 0x00ff);	  	
 	
 	_outputPort->write(outBuffer, sizeof(outBuffer));
 	
     return DURATION_IMMEDIATELY;
-}
-
-uint16_t SerialSUMD::crc16(uint8_t *data, uint8_t len)
-{		
-	uint16_t crc = 0;
-
-	for(uint8_t  i = 0; i < len; i++)
-    {
-        crc = crc ^ ((int16_t)data[i] << 8); 
-    
-        for(uint8_t i = 0; i < 8; i++) 
-        {   
-            if (crc & 0x8000) 
-                crc = (crc << 1) ^ CRC_POLYNOME; 
-            else 
-                crc = (crc << 1); 
-        }
-	}
-	
-	return crc;
 }
 
 void SerialSUMD::sendLinkStatisticsToFC()
@@ -112,6 +90,7 @@ void SerialSUMD::sendLinkStatisticsToFC()
 
 void SerialSUMD::sendMSPFrameToFC(uint8_t* data)
 {
+    (void)data;
     // unsupported
 }
 
