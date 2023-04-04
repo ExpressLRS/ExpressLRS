@@ -390,11 +390,6 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   // }
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
-  if (radioNumber == SX12XX_Radio_NONE)
-  {
-      radioNumber = lastSuccessfulPacketRadio;
-  }
-
   RFAMP.TXenable(radioNumber);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
   hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
