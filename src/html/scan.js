@@ -230,6 +230,10 @@ function updateConfig(data) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = '420000';
     }
+    if (_('serial-protocol').value == 4) {
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '115200';
+    }
     else {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
@@ -533,6 +537,8 @@ function submitOptions(e) {
   const formObject = Object.fromEntries(new FormData(formElem));
   // Add in all the unchecked checkboxes which will be absent from a FormData object
   formElem.querySelectorAll('input[type=checkbox]:not(:checked)').forEach((k) => formObject[k.name] = false);
+  // Force customised to true as this is now customising it
+  formObject['customised'] = true;
 
   // Serialize and send the formObject
   xhr.send(JSON.stringify(formObject, function(k, v) {
@@ -549,6 +555,8 @@ function submitOptions(e) {
       }
     }
     if (typeof v === 'boolean') return v;
+    if (v == 'true') return true;
+    if (v == 'false') return false;
     return isNaN(v) ? v : +v;
   }));
 

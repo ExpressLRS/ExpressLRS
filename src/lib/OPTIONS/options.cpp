@@ -80,6 +80,8 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .uart_baud = USE_AIRPORT_AT_BAUD,
 #elif defined(USE_SBUS_PROTOCOL)
     .uart_baud = 100000,
+#elif defined(USE_SUMD_PROTOCOL)
+    .uart_baud = 115200,	
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -179,7 +181,7 @@ String& getOptions()
     return builtinOptions;
 }
 
-void saveOptions(Stream &stream)
+void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
@@ -206,6 +208,7 @@ void saveOptions(Stream &stream)
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
+    doc["customised"] = customised;
     doc["flash-discriminator"] = flash_discriminator;
 
     serializeJson(doc, stream);
@@ -214,7 +217,7 @@ void saveOptions(Stream &stream)
 void saveOptions()
 {
     File options = SPIFFS.open("/options.json", "w");
-    saveOptions(options);
+    saveOptions(options, true);
     options.close();
 }
 
@@ -238,7 +241,7 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  *          Fills the firmwareOptions variable
  * @return: true if either was able to be parsed
  */
-static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
+static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
     DynamicJsonDocument flashDoc(1024);
     DynamicJsonDocument spiffsDoc(1024);
@@ -253,7 +256,7 @@ static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         DeserializationError error = deserializeJson(flashDoc, strmFlash);
         if (error)
         {
-            return false;
+            return;
         }
         hasFlash = true;
     }
@@ -320,7 +323,8 @@ static bool options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.domain = doc["domain"] | 0;
     strlcpy(flash_discriminator, doc["flash-discriminator"] | "", sizeof(flash_discriminator));
 
-    return true;
+    builtinOptions.clear();
+    saveOptions(builtinOptions, doc["customised"] | false);
 }
 
 /**
@@ -378,11 +382,7 @@ bool options_init()
     // Product / Device Name
     options_LoadProductAndDeviceName(strmFlash);
     // options.json
-    if (options_LoadFromFlashOrFile(strmFlash))
-    {
-        builtinOptions.clear();
-        saveOptions(builtinOptions);
-    }
+    options_LoadFromFlashOrFile(strmFlash);
     // hardware.json
     bool hasHardware = hardware_init(strmFlash);
 
