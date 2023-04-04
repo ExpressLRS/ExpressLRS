@@ -11,7 +11,7 @@
 
 class hwTimer
 {
-  public:
+public:
     static volatile bool running;
     static volatile bool isTick;
 
@@ -27,7 +27,7 @@ class hwTimer
     static void pause(uint32_t duration);
 #endif
 
-  private:
+private:
     static void callback();
 
     static void (*callbackTick)();

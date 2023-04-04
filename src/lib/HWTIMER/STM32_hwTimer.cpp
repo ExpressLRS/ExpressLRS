@@ -61,7 +61,8 @@ void hwTimer::stop()
 void hwTimer::pause(uint32_t duration)
 {
     PauseDuration = duration;
-    while(PauseDuration);
+    while (PauseDuration)
+        ;
 }
 #endif
 
@@ -71,11 +72,11 @@ void hwTimer::resume()
     isTick = false;
 #endif
     running = true;
-    #if defined(TARGET_TX)
+#if defined(TARGET_TX)
     MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
-    #else
+#else
     MyTim->setOverflow((HWtimerInterval >> 1), MICROSEC_FORMAT);
-    #endif
+#endif
     MyTim->setCount(0);
     MyTim->resume();
     MyTim->refresh(); // will trigger the interrupt immediately, but will update the prescaler shadow reg
