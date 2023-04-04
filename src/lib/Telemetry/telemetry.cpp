@@ -303,7 +303,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         {
             if (header->type == payloadTypes[i].type)
             {
-                if (!payloadTypes[i].locked && CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
+                if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
                 {
                     targetIndex = i;
                     targetFound = true;
@@ -319,7 +319,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         }
     }
 
-    if (targetFound)
+    if (targetFound && !payloadTypes[targetIndex].locked)
     {
         memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
         payloadTypes[targetIndex].updated = true;
