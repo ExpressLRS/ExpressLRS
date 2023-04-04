@@ -1,4 +1,3 @@
-
 #if defined(PLATFORM_ESP32)
 #include "hwTimer.h"
 #include "logging.h"
@@ -69,14 +68,8 @@ void ICACHE_RAM_ATTR hwTimer::resume()
 
 void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
 {
+    // timer should not be running when updateInterval() is called
     HWtimerInterval = time * HWTIMER_TICKS_PER_US;
-#if defined(TARGET_TX)
-    if (timer)
-    {
-        DBGLN("hwTimer interval: %d", time);
-        timerAlarmWrite(timer, HWtimerInterval, true);
-    }
-#endif
 }
 
 void ICACHE_RAM_ATTR hwTimer::resetFreqOffset()

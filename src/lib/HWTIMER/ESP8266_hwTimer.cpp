@@ -43,8 +43,12 @@ void ICACHE_RAM_ATTR hwTimer::resume()
         // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
         // tock() should always be the first event to maintain consistency
         isTick = false;
+#if defined(TARGET_TX)
+        NextTimeout = HWtimerInterval;
+#else
         // Fire the timer in 2us to get it started close to now
         NextTimeout = ESP.getCycleCount() + (2 * HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
+#endif
         timer0_write(NextTimeout);
         interrupts();
 
@@ -84,31 +88,29 @@ void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 
 void ICACHE_RAM_ATTR hwTimer::callback()
 {
-    if (!running)
+    if (running)
     {
-        return;
-    }
-
 #if defined(TARGET_TX)
-    NextTimeout += HWtimerInterval;
-    timer0_write(NextTimeout);
-    callbackTock();
-#else
-    NextTimeout += (HWtimerInterval >> 1) + (FreqOffset * HWTIMER_PRESCALER);
-    if (hwTimer::isTick)
-    {
+        NextTimeout += HWtimerInterval;
         timer0_write(NextTimeout);
-        callbackTick();
-    }
-    else
-    {
-        NextTimeout += PhaseShift;
-        timer0_write(NextTimeout);
-        PhaseShift = 0;
         callbackTock();
-    }
-    hwTimer::isTick = !hwTimer::isTick;
+#else
+        NextTimeout += (HWtimerInterval >> 1) + (FreqOffset * HWTIMER_PRESCALER);
+        if (hwTimer::isTick)
+        {
+            timer0_write(NextTimeout);
+            callbackTick();
+        }
+        else
+        {
+            NextTimeout += PhaseShift;
+            timer0_write(NextTimeout);
+            PhaseShift = 0;
+            callbackTock();
+        }
+        hwTimer::isTick = !hwTimer::isTick;
 #endif
+    }
 }
 
 #endif
