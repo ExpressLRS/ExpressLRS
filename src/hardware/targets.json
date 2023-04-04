@@ -1345,7 +1345,7 @@
         }
     },
     "radiomaster": {
-        "name": "Radiomaster",
+        "name": "RadioMaster",
         "tx_2400": {
             "zorro": {
                 "product_name": "RadioMaster Zorro 2.4GHz TX",
