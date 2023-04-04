@@ -89,6 +89,11 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         return;
     }
 
+#if defined(TARGET_TX)
+    NextTimeout += HWtimerInterval;
+    timer0_write(NextTimeout);
+    callbackTock();
+#else
     NextTimeout += (HWtimerInterval >> 1) + (FreqOffset * HWTIMER_PRESCALER);
     if (hwTimer::isTick)
     {
@@ -103,5 +108,7 @@ void ICACHE_RAM_ATTR hwTimer::callback()
         callbackTock();
     }
     hwTimer::isTick = !hwTimer::isTick;
+#endif
 }
+
 #endif
