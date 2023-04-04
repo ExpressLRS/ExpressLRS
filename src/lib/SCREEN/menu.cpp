@@ -24,6 +24,7 @@ extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
 extern void ResetPower();
 extern void setWifiUpdateMode();
+extern void SetSyncSpam();
 
 extern Display *display;
 
@@ -209,9 +210,11 @@ static void saveValueIndex(bool init)
     {
         case STATE_PACKET:
             config.SetRate(values_index);
+            SetSyncSpam();
             break;
         case STATE_TELEMETRY:
             config.SetTlm(values_index);
+            SetSyncSpam();
             break;
         case STATE_POWERSAVE:
             config.SetMotionMode(values_index);
