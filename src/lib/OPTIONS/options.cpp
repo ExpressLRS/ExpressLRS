@@ -80,6 +80,8 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .uart_baud = USE_AIRPORT_AT_BAUD,
 #elif defined(USE_SBUS_PROTOCOL)
     .uart_baud = 100000,
+#elif defined(USE_SUMD_PROTOCOL)
+    .uart_baud = 115200,	
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else

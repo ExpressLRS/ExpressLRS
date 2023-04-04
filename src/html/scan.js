@@ -230,6 +230,10 @@ function updateConfig(data) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = '420000';
     }
+    if (_('serial-protocol').value == 4) {
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '115200';
+    }
     else {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';

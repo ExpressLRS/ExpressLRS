@@ -18,6 +18,7 @@
 #include "rx-serial/SerialNOOP.h"
 #include "rx-serial/SerialCRSF.h"
 #include "rx-serial/SerialSBUS.h"
+#include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 
 #include "rx-serial/devSerialIO.h"
@@ -1138,6 +1139,7 @@ void MspReceiveComplete()
 static void setupSerial()
 {
     bool sbusSerialOutput = false;
+	bool sumdSerialOutput = false;
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
@@ -1157,6 +1159,11 @@ static void setupSerial()
         sbusSerialOutput = true;
         serialBaud = 100000;
     }
+	else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
+    {
+        sumdSerialOutput = true;
+        serialBaud = 115200;
+    }		
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF;
 
 #ifdef PLATFORM_STM32
@@ -1212,7 +1219,7 @@ static void setupSerial()
 
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
-    SerialMode mode = sbusSerialOutput ? SERIAL_TX_ONLY : SERIAL_FULL;
+    SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
@@ -1226,6 +1233,10 @@ static void setupSerial()
     else if (sbusSerialOutput)
     {
         serialIO = new SerialSBUS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (sumdSerialOutput)
+    {
+        serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else
     {
