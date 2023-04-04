@@ -1,10 +1,8 @@
 #ifdef PLATFORM_STM32
 #include "hwTimer.h"
 
-static void inline nullCallback(void) {}
-
-void (*hwTimer::callbackTick)() = &nullCallback;
-void (*hwTimer::callbackTock)() = &nullCallback;
+void (*hwTimer::callbackTick)() = [](){};
+void (*hwTimer::callbackTock)() = [](){};
 
 volatile bool hwTimer::running = false;
 volatile bool hwTimer::isTick = false;
@@ -24,10 +22,12 @@ static HardwareTimer *MyTim = new HardwareTimer(TIM1);
 static HardwareTimer *MyTim = new HardwareTimer(TIM2);
 #endif
 
-void hwTimer::init()
+void hwTimer::init(void (*callbackTick)(), void (*callbackTock)())
 {
     if (!alreadyInit)
     {
+        hwTimer::callbackTick = callbackTick;
+        hwTimer::callbackTock = callbackTock;
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
 #if defined(TARGET_TX)

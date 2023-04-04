@@ -3,12 +3,8 @@
 #include "hwTimer.h"
 #include "logging.h"
 
-static void nullCallback(void)
-{
-}
-
-void (*hwTimer::callbackTick)() = &nullCallback;
-void (*hwTimer::callbackTock)() = &nullCallback;
+void (*hwTimer::callbackTick)() = [](){};
+void (*hwTimer::callbackTock)() = [](){};
 
 volatile bool hwTimer::running = false;
 volatile bool hwTimer::isTick = false;
@@ -27,10 +23,13 @@ static portMUX_TYPE isrMutex = portMUX_INITIALIZER_UNLOCKED;
 #define HWTIMER_TICKS_PER_US 1
 #endif
 
-void ICACHE_RAM_ATTR hwTimer::init()
+void ICACHE_RAM_ATTR hwTimer::init(void (*callbackTick)(), void (*callbackTock)())
 {
+
     if (!timer)
     {
+        hwTimer::callbackTick = callbackTick;
+        hwTimer::callbackTock = callbackTock;
         timer = timerBegin(0, (APB_CLK_FREQ / 1000000 / HWTIMER_TICKS_PER_US), true);
         timerAttachInterrupt(timer, hwTimer::callback, true);
         DBGLN("hwTimer Init");

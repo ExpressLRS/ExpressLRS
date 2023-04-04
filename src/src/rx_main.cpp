@@ -1717,12 +1717,9 @@ void setup()
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
             // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-            hwTimer::callbackTock = &HWtimerCallbackTock;
-            hwTimer::callbackTick = &HWtimerCallbackTick;
-
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            hwTimer::init();
+            hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
         }
     }
 

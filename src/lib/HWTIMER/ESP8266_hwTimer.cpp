@@ -1,12 +1,8 @@
 #if defined(PLATFORM_ESP8266)
 #include "hwTimer.h"
 
-static void nullCallback(void)
-{
-}
-
-void (*hwTimer::callbackTick)() = &nullCallback;
-void (*hwTimer::callbackTock)() = &nullCallback;
+void (*hwTimer::callbackTick)() = [](){};
+void (*hwTimer::callbackTock)() = [](){};
 
 volatile bool hwTimer::running = false;
 volatile bool hwTimer::isTick = false;
@@ -21,8 +17,10 @@ static uint32_t NextTimeout;
 #define HWTIMER_TICKS_PER_US 5
 #define HWTIMER_PRESCALER (clockCyclesPerMicrosecond() / HWTIMER_TICKS_PER_US)
 
-void hwTimer::init()
+void hwTimer::init(void (*callbackTick)(), void (*callbackTock)())
 {
+    hwTimer::callbackTick = callbackTick;
+    hwTimer::callbackTock = callbackTock;
     timer0_isr_init();
     running = false;
 }

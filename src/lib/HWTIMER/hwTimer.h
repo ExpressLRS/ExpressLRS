@@ -15,7 +15,7 @@ class hwTimer
     static volatile bool running;
     static volatile bool isTick;
 
-    static void init();
+    static void init(void (*callbackTick)(), void (*callbackTock)());
     static void stop();
     static void resume();
     static void updateInterval(uint32_t time = TimerIntervalUSDefault);
@@ -27,11 +27,11 @@ class hwTimer
     static void pause(uint32_t duration);
 #endif
 
-    static void (*callbackTick)();
-    static void (*callbackTock)();
-
   private:
     static void callback();
+
+    static void (*callbackTick)();
+    static void (*callbackTock)();
 
     static volatile uint32_t HWtimerInterval;
     static volatile int32_t PhaseShift;
