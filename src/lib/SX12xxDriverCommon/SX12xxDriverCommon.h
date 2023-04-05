@@ -46,11 +46,12 @@ public:
     int8_t LastPacketRSSI;
     int8_t LastPacketRSSI2;
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
+    int8_t FuzzySNRThreshold;
 
     bool isFirstRxIrq = true;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    typedef struct rxSignalStats_s 
+    typedef struct rxSignalStats_s
     {
         uint16_t irq_count;
         uint16_t telem_count;
@@ -59,7 +60,7 @@ public:
         int8_t snr_max;
         uint16_t fail_count;
     } rxSignalStats_t;
-    
+
     rxSignalStats_t rxSignalStats[2];
     uint16_t irq_count_or;
     uint16_t irq_count_both;
