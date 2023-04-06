@@ -485,7 +485,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
 
-    if (radioNumber == SX12XX_Radio_Default)
+    if (radioNumber == SX12XX_Radio_NONE)
     {
         radioNumber = lastSuccessfulPacketRadio;
     }
