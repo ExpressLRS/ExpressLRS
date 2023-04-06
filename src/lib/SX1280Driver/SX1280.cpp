@@ -484,14 +484,15 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         return;
     }
 
-
-    if (radioNumber == SX12XX_Radio_NONE)
-    {
-        radioNumber = lastSuccessfulPacketRadio;
-    }
-
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    instance->rxSignalStats[(radioNumber==SX12XX_Radio_1) ? 0 : 1].telem_count++;
+    if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
+    {
+        instance->rxSignalStats[0].telem_count++;
+    }
+    if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_2)
+    {
+        instance->rxSignalStats[1].telem_count++;
+    }
 #endif
 
     // Normal diversity mode
