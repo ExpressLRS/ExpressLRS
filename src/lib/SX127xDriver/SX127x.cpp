@@ -466,7 +466,7 @@ int8_t ICACHE_RAM_ATTR fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
     double transition_value  = 1.0 / (1.0 + exp(-1.0*((diff - threshold) * 10 / threshold)));
 
     // Interpolate between lower_value and average_value using the transition_value, then round to the nearest int
-    return (int8_t)round(lower_value * (1.0 - transition_value) + average_value * transition_value); // add 0.5 for rounding
+    return (int8_t)round(lower_value * (1.0 - transition_value) + average_value * transition_value);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
