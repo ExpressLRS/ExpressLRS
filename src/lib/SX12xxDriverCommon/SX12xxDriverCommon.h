@@ -5,10 +5,10 @@
 typedef uint8_t SX12XX_Radio_Number_t;
 enum
 {
-    SX12XX_Radio_Default = 0,
-    SX12XX_Radio_1       = 1 << 0,
-    SX12XX_Radio_2       = 1 << 1,
-    SX12XX_Radio_All     = 0b00000011,
+    SX12XX_Radio_NONE = 0b00000000,     // Bit mask for no radio
+    SX12XX_Radio_1    = 0b00000001,     // Bit mask for radio 1
+    SX12XX_Radio_2    = 0b00000010,     // Bit mask for radio 2
+    SX12XX_Radio_All  = 0b00000011      // bit mask for both radios
 };
 
 class SX12xxDriverCommon

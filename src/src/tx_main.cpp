@@ -478,7 +478,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
+  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
 
   if (isDualRadio())
   {
@@ -502,13 +502,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
-#if defined(Regulatory_Domain_EU_CE_2400)
-  clearChannelsMask = ChannelIsClear(transmittingRadio);
-  if (clearChannelsMask)
+#if defined(Regulatory_Domain_EU_CE_2400) 
+  transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+  
+	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
+  {                                                         // but do status update (issue #2028)
+		Radio.TXdoneCallback();
+  }
+	else		
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
   }
 }
 
@@ -517,13 +521,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if(!LBTSuccessCalc.currentIsSet())
-  {
-    Radio.TXdoneCallback();
-  }
-#endif
-
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {

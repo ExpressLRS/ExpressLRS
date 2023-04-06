@@ -174,8 +174,8 @@ typedef struct {
                 forceTlmOff:1,
                 rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
-    uint8_t     serialProtocol:2,
-                unused:6;
+    uint8_t     serialProtocol:3,
+                unused:5;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
