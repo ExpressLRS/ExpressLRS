@@ -601,11 +601,11 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
  * @param threshold The threshold value to control the transition between the lower value and the average value reporting strategy
  * @return The reported SNR value, which is either the lower value of the two input SNRs, their average, or a value in between, depending on the difference between the input SNRs and the threshold value
  */
-int8_t ICACHE_RAM_ATTR fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
+int8_t ICACHE_RAM_ATTR SX1280Driver::fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
 {
     double diff = fabs(snr1 - snr2);
     double lower_value = fmin(snr1, snr2);
-    double average_value = (snr1 + snr2) / 2;
+    double average_value = ((double)snr1 + snr2) / 2;
 
     // Map the difference to a value between 0 and 1, using sigmoid function
     // Scale and shift the sigmoid curve to cover the desired transition range
@@ -703,7 +703,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     // when both radio got the packet, use the better RSSI one
     if(gotRadio[0] && gotRadio[1])
     {
-        LastPacketSNRRaw = fuzzy_snr(snr[0], snr[1], instance->FuzzySNRThreshold);
+        LastPacketSNRRaw = instance->fuzzy_snr(snr[0], snr[1], instance->FuzzySNRThreshold);
         // Update the last successful packet radio to be the one with better signal strength
         instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
