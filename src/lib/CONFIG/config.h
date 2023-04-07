@@ -20,15 +20,39 @@
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
+typedef enum {
+    HT_OFF,
+    HT_ON,
+    HT_AUX1_UP,
+    HT_AUX1_DN,
+    HT_AUX2_UP,
+    HT_AUX2_DN,
+    HT_AUX3_UP,
+    HT_AUX3_DN,
+    HT_AUX4_UP,
+    HT_AUX4_DN,
+    HT_AUX5_UP,
+    HT_AUX5_DN,
+    HT_AUX6_UP,
+    HT_AUX6_DN,
+    HT_AUX7_UP,
+    HT_AUX7_DN,
+    HT_AUX8_UP,
+    HT_AUX8_DN,
+} headTrackingEnable_t;
+
 typedef struct {
-    uint8_t     rate:4,
-                tlm:4;
-    uint8_t     power:3,
+    uint32_t    rate:4,
+                tlm:4,
+                power:3,
                 switchMode:2,
-                boostChannel:3; // dynamic power boost AUX channel
-    uint8_t     dynamicPower:1,
+                boostChannel:3, // dynamic power boost AUX channel
+                dynamicPower:1,
                 modelMatch:1,
-                txAntenna:2;    // FUTURE: Which TX antenna to use, 0=Auto
+                txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
+                ptrStartChannel:4,
+                ptrEnableChannel:5,
+                _unused:3;
 } model_config_t;
 
 typedef struct {
@@ -96,6 +120,8 @@ public:
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
+    uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
+    uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }
 
     // Setters
     void SetRate(uint8_t rate);
@@ -120,6 +146,8 @@ public:
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
     void SetBackpackDisable(bool backpackDisable);
+    void SetPTRStartChannel(uint8_t ptrStartChannel);
+    void SetPTREnableChannel(uint8_t ptrEnableChannel);
 
     // State setters
     bool SetModelId(uint8_t modelId);

@@ -6,6 +6,8 @@
 #include "OTA.h"
 #include "FHSS.h"
 
+#define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
+
 #define STR_LUA_ALLAUX_UPDOWN  "AUX1" LUASYM_ARROW_UP ";AUX1" LUASYM_ARROW_DN ";AUX2" LUASYM_ARROW_UP ";AUX2" LUASYM_ARROW_DN \
                                ";AUX3" LUASYM_ARROW_UP ";AUX3" LUASYM_ARROW_DN ";AUX4" LUASYM_ARROW_UP ";AUX4" LUASYM_ARROW_DN \
                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
@@ -25,6 +27,9 @@ static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
+static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
+static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
+
 static const char luastrDisabled[] = "Disabled";
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
@@ -239,6 +244,18 @@ static struct luaItem_selection luaDvrStopDelay = {
     luastrDvrDelay,
     STR_EMPTYSPACE};
 
+static struct luaItem_selection luaHeadTrackingEnableChannel = {
+    {"HT Enable", CRSF_TEXT_SELECTION},
+    0, // value
+    luastrHeadTrackingEnable,
+    STR_EMPTYSPACE};
+
+static struct luaItem_selection luaHeadTrackingStartChannel = {
+    {"HT Start Channel", CRSF_TEXT_SELECTION},
+    0, // value
+    luastrHeadTrackingStart,
+    STR_EMPTYSPACE};
+
 static struct luaItem_string luaBackpackVersion = {
     {"Version", CRSF_INFO},
     backpackVersion};
@@ -321,12 +338,16 @@ static void luadevUpdateBackpackOpts()
     luaDvrAux.options = luastrDisabled;
     luaDvrStartDelay.options = luastrDisabled;
     luaDvrStopDelay.options = luastrDisabled;
+    luaHeadTrackingEnableChannel.options = luastrDisabled;
+    luaHeadTrackingStartChannel.options = luastrDisabled;
   }
   else
   {
     luaDvrAux.options = luastrDvrAux;
     luaDvrStartDelay.options = luastrDvrDelay;
     luaDvrStopDelay.options = luastrDvrDelay;
+    luaHeadTrackingEnableChannel.options = luastrHeadTrackingEnable;
+    luaHeadTrackingStartChannel.options = luastrHeadTrackingStart;
   }
 }
 
@@ -696,6 +717,18 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
+
+      registerLUAParameter(
+          &luaHeadTrackingEnableChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetPTREnableChannel(arg);
+          },
+          luaBackpackFolder.common.id);
+      registerLUAParameter(
+          &luaHeadTrackingStartChannel, [](luaPropertiesCommon *item, uint8_t arg) {
+              config.SetPTRStartChannel(arg);
+          },
+          luaBackpackFolder.common.id);
+
       registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
   }
@@ -759,6 +792,8 @@ static int event()
     setLuaTextSelectionValue(&luaDvrAux, config.GetBackpackDisable() ? 0 : config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
+    setLuaTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetBackpackDisable() ? 0 : config.GetPTREnableChannel());
+    setLuaTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)
