@@ -68,6 +68,11 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
+static uint8_t headTrackingEnabledChannel = 0;
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
+bool headTrackingEnabled = false;
+static uint32_t lastPTRValidTimeMs;
+
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
@@ -469,6 +474,38 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
+        if (config.GetPTREnableChannel() != HT_OFF)
+        {
+          uint8_t ptrStartChannel = config.GetPTRStartChannel();
+          uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
+          bool enable = headTrackingEnabledChannel == HT_ON;
+          if (config.GetPTREnableChannel() % 2 == 0)
+          {
+            enable |= chan >= CRSF_CHANNEL_VALUE_MID;
+          }
+          else
+          {
+            enable |= chan < CRSF_CHANNEL_VALUE_MID;
+          }
+          if (enable != headTrackingEnabled)
+          {
+            headTrackingEnabled = enable;
+            HTEnableFlagReadyToSend = true;
+          }
+          // If enabled and this packet is less that 1 second old then use it
+          if (enable && now - lastPTRValidTimeMs < 1000)
+          {
+            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+          }
+          else
+          {
+            ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
+          }
+        }
         OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
@@ -654,6 +691,8 @@ void ModelUpdateReq()
     syncSpamCounter = syncSpamAmount;
     ModelUpdatePending = true;
   }
+
+  devicesTriggerEvent();
 
   // Jump from awaitingModelId to transmitting to break the startup delay now
   // that the ModelID has been confirmed by the handset
@@ -922,7 +961,7 @@ void ExitBindingMode()
   DBGLN("Exiting binding mode");
 }
 
-void ProcessMSPPacket(mspPacket_t *packet)
+void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if !defined(CRITICAL_FLASH)
   // Inspect packet for ELRS specific opcodes
@@ -962,6 +1001,13 @@ void ProcessMSPPacket(mspPacket_t *packet)
   {
     memset(backpackVersion, 0, sizeof(backpackVersion));
     memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
+  }
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
+  {
+    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    lastPTRValidTimeMs = now;
   }
 }
 
@@ -1271,7 +1317,7 @@ void loop()
     if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
-      ProcessMSPPacket(msp.getReceivedPacket());
+      ProcessMSPPacket(now, msp.getReceivedPacket());
       msp.markPacketReceived();
     }
   }
