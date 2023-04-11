@@ -55,8 +55,8 @@ public:
     {
         uint16_t irq_count;
         uint16_t telem_count;
-        int16_t rssi_sum;
-        int16_t snr_sum;
+        int32_t rssi_sum;
+        int32_t snr_sum;
         int8_t snr_max;
         uint16_t fail_count;
     } rxSignalStats_t;

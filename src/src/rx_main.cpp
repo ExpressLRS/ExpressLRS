@@ -1186,7 +1186,7 @@ static void setupSerial()
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
-    }		
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF;
 
 #ifdef PLATFORM_STM32
@@ -1767,8 +1767,8 @@ void loop()
         {
             DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
                 Radio.rxSignalStats[i].irq_count,
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : float(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : float(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
                 float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
                 Radio.rxSignalStats[i].telem_count,
                 Radio.rxSignalStats[i].fail_count);
