@@ -5,7 +5,7 @@
     "radio_miso": 19,
     "radio_mosi": 27,
     "radio_nss": 18,
-    "radio_rst": 12,
+    "radio_rst": 23,
     "radio_sck": 5,
     "power_min": 0,
     "power_high": 2,
@@ -19,5 +19,6 @@
     "screen_type": 1,
     "debug_backpack_baud": 460800,
     "debug_backpack_rx": 3,
-    "debug_backpack_tx": 1
+    "debug_backpack_tx": 1,
+    "led": 25
 }
