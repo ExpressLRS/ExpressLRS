@@ -596,13 +596,20 @@ function submitButtonActions(e) {
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 204) {
-      cuteAlert({
-        type: 'info',
-        title: 'Success',
-        message: 'Button actions have been saved'
-      });
-    }
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'info',
+          title: 'Success',
+          message: 'Button actions have been saved'
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Failed',
+          message: 'An error occurred while saving button configuration'
+        });
+      }
   };
 }
 _('submit-actions').addEventListener('click', submitButtonActions);
