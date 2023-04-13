@@ -530,10 +530,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       {
         OtaPackAirportData(&otaPkt, &apInputBuffer);
       }
-      else if (useStream)
-      {
-        OtaPackChannelData(&otaPkt, &crsf, (streamReceiver.ack == ackState::ACK ? true : false), ExpressLRS_currTlmDenom);
-      }
       else
       {
         if (config.GetPTREnableChannel() != HT_OFF)
@@ -568,7 +564,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
             ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
           }
         }
-        OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        if (useStream)
+        {
+          OtaPackChannelData(&otaPkt, ChannelData, (streamReceiver.ack == ackState::ACK ? true : false), ExpressLRS_currTlmDenom);
+        } else {
+          OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        }
       }
     }
   }
