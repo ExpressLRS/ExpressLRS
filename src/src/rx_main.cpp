@@ -493,9 +493,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     return true;
 }
 
-uint32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
+int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
 {
-    uint32_t tempFC = FreqCorrection;
+    int32_t tempFC = FreqCorrection;
     if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2)
     {
         tempFC = FreqCorrection_2;
@@ -1163,7 +1163,7 @@ static void setupSerial()
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
-    }		
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF;
 
 #ifdef PLATFORM_STM32
