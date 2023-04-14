@@ -13,7 +13,6 @@
     "power_default": 2,
     "power_control": 0,
     "power_values": [8,12,15],
-    "button": 39,
     "screen_sck": 22,
     "screen_sda": 21,
     "screen_type": 1,
