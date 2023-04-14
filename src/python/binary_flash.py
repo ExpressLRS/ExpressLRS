@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from enum import Enum
-import re
+import shutil
 
 from elrs_helpers import ElrsUploadResult
 import BFinitPassthrough
@@ -24,6 +24,7 @@ class UploadMethod(Enum):
     betaflight = 'bf'
     edgetx = 'etx'
     stlink = 'stlink'
+    dir = 'dir'
 
     def __str__(self):
         return self.value
@@ -106,13 +107,24 @@ def upload_esp32_bf(args):
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
 
+def upload_dir(mcuType, args):
+    if mcuType == MCUType.ESP8266 or mcuType == MCUType.STM32:
+        shutil.copy2(args.file.name, args.out)
+    elif mcuType == MCUType.ESP32:
+        shutil.copy2(args.file.name, args.out)
+        shutil.copy2('bootloader_dio_40m.bin', args.out)
+        shutil.copy2('partitions.bin', args.out)
+        shutil.copy2('boot_app0.bin', args.out)
+
 def upload(options: FirmwareOptions, args):
     if args.baud == 0:
         args.baud = 460800
         if args.flash == UploadMethod.betaflight:
             args.baud = 420000
 
-    if options.deviceType == DeviceType.RX:
+    if args.flash == UploadMethod.dir:
+        return upload_dir(options.mcuType, args)
+    elif options.deviceType == DeviceType.RX:
         if options.mcuType == MCUType.ESP8266:
             if args.flash == UploadMethod.betaflight:
                 return upload_esp8266_bf(args)

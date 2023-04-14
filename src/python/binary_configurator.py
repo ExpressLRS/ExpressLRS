@@ -280,6 +280,16 @@ class readable_dir(argparse.Action):
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
 
+class writeable_dir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.W_OK):
+            setattr(namespace,self.dest,prospective_dir)
+        else:
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a writeable dir".format(prospective_dir))
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
@@ -316,6 +326,7 @@ def main():
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument('--out', action=writeable_dir, default=None)
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
