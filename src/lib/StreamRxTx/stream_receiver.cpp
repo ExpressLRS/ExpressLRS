@@ -5,48 +5,38 @@
 #include "crsf_protocol.h"
 #include "CRSF.h"
 
-ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_s const * const otaPktPtr)
-{
-    if (OtaIsFullRes)
-    {
-        ack = (otaPktPtr->full.stream.ack == 1 ? ackState::ACK : ackState::NACK) ;
-        //uint8_t seq = otaPktPtr->full.stream.seq; //TODO
-        //uint8_t stream = otaPktPtr->full.stream.stream; //TODO
-        if (otaPktPtr->full.stream.hasExt == 0) 
-        {
-            data.pushBytes(otaPktPtr->full.stream.dataOnly, ELRS8_TELEMETRY_BYTES_PER_CALL);
-            cmd = StreamTxRx::CmdType::NOP;
-            cmdLen = 0;            
-        }
-        else 
-        {
-            uint8_t dataLen = otaPktPtr->full.stream.ext.dataLen;
-            if (dataLen > ELRS8_TELEMETRY_BYTES_PER_CALL - 1) dataLen = ELRS8_TELEMETRY_BYTES_PER_CALL - 1;
-            data.pushBytes(otaPktPtr->full.stream.ext.dataAndCmd, dataLen);
+uint32_t DEBUG_rxdatacnt = 0;
 
-            cmd = (StreamTxRx::CmdType) otaPktPtr->full.stream.ext.cmd;
-            cmdLen = ELRS8_TELEMETRY_BYTES_PER_CALL - 1 - dataLen;    
-            memcpy(cmdData, otaPktPtr->full.stream.ext.dataAndCmd + dataLen, cmdLen);
-        }
-    }
-    else //!OtaIsFullRes
+ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_s * const otaPktPtr)
+{
+    StreamTxRx::CmdType cmd = StreamTxRx::CmdType::NOP;
+
+    _PartBegin(otaPktPtr);
+
+    ack = (_streamPtr->hdrFirst.ack == 1 ? ackState::ACK : ackState::NACK) ;
+    //uint8_t seq = streamPtr->hdrFirst.seq; //TODO
+
+    uint8_t partDataPos;
+    uint8_t partLen;
+    uint8_t partType;
+
+    while (_PartPop(&partType, &partDataPos, &partLen))
     {
-        ack = (otaPktPtr->std.stream.ack == 1 ? ackState::ACK : ackState::NACK) ;
-        //uint8_t seq = otaPktPtr->std.stream.seq; //TODO
-        //uint8_t stream = otaPktPtr->std.stream.stream; //TODO
-        if (otaPktPtr->std.stream.isCmd == 0) 
-        {
-            data.pushBytes(otaPktPtr->std.stream.dataOrCmd, otaPktPtr->std.stream.lenOrCmd);
-            cmd = StreamTxRx::CmdType::NOP;
-            cmdLen = 0;            
-        }
-        else 
-        {
-            cmd = (StreamTxRx::CmdType) otaPktPtr->std.stream.lenOrCmd;
-            cmdLen = 4; //TODO (?) variable cmdLen 
-            memcpy(cmdData, otaPktPtr->std.stream.dataOrCmd, cmdLen);
+        switch(partType) {
+        case OTA_STREAMTYPE_CMD:
+            cmd = (StreamTxRx::CmdType) _streamPtr->data[partDataPos];
+            cmdArgsLen = partLen - 1;
+            memcpy(cmdArgs, &_streamPtr->data[partDataPos + 1], partLen - 1);
+            break;
+        case OTA_STREAMTYPE_DATA:
+            data.pushBytes(&_streamPtr->data[partDataPos], partLen);
+            break;
+        case OTA_STREAMTYPE_DATA2:
+            data2.pushBytes(&_streamPtr->data[partDataPos], partLen);
+            break;                        
         }
     }
+
     return cmd;  
 }
 

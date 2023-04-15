@@ -437,7 +437,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             ts_linkstat = now;
             OTA_LinkStats_s ls;
             LinkStatsToOta(&ls);
-            streamSender.SetCmd(StreamTxRx::CmdType::LINKSTAT, (uint8_t*)&ls);
+            streamSender.SetCmd(StreamTxRx::CmdType::LINKSTAT, (uint8_t*)&ls, sizeof(OTA_LinkStats_s));
         }
         streamSender.GetOtaPacket(&otaPkt);
     }
@@ -869,7 +869,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 }
 
-static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPktPtr)
+static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s * const otaPktPtr)
 {
     if (useStream)
     {
@@ -878,7 +878,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
         // Always examine MSP packets for bind information if in bind mode
         if (InBindingMode && streamReceiver.cmd == StreamTxRx::CmdType::BIND)
         {
-            OnELRSBindMSP(streamReceiver.cmdData);
+            OnELRSBindMSP(streamReceiver.cmdArgs);
             return;
         }
 

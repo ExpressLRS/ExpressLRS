@@ -23,12 +23,14 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#define DEBUG_TX_STREAM
+
 #ifdef DEBUG_TX_STREAM
-int DBG_TxCnt = 0;
+int DBG_TxRcCnt = 0;
 bool DBG_TxReady = false;
-OTA_Packet_s DBG_Tx = {0};
+uint8_t DBG_Tx[13] = {0};
 bool DBG_RxReady = false;
-OTA_Packet_s DBG_Rx;
+uint8_t DBG_Rx[13] = {0};
 #endif
 
 //// CONSTANTS ////
@@ -218,7 +220,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 #ifdef DEBUG_TX_STREAM
   if (!DBG_RxReady)
   {
-    memcpy(&DBG_Rx,otaPktPtr,sizeof(OTA_Packet_s));
+    memcpy(DBG_Rx,otaPktPtr,sizeof(OTA_Packet_s));
     DBG_RxReady = true;
   }
 #endif
@@ -234,7 +236,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   {
     if(streamReceiver.ReceiveOtaPacket(otaPktPtr) == StreamTxRx::CmdType::LINKSTAT)
     {
-      LinkStatsFromOta((OTA_LinkStats_s *)streamReceiver.cmdData);
+      LinkStatsFromOta((OTA_LinkStats_s *)streamReceiver.cmdArgs);
     } 
   }
   else
@@ -617,11 +619,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #ifdef DEBUG_TX_STREAM
   if (otaPkt.std.type == PACKET_TYPE_RCDATA)
   {
-    DBG_TxCnt++;
+    DBG_TxRcCnt++;
   }
   else if(!DBG_TxReady)
   {
-    memcpy(&DBG_Tx,&otaPkt,sizeof(OTA_Packet_s));
+    memcpy(DBG_Tx,&otaPkt,sizeof(OTA_Packet_s));
     DBG_TxReady = true;
   }
 #endif
@@ -919,7 +921,7 @@ static void SendRxWiFiOverMSP()
 {
   if (useStream)
   {
-    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_WIFI_MODE, {0});
+    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_WIFI_MODE, {0}, 0);
   }
   else
   {
@@ -932,7 +934,7 @@ void SendRxLoanOverMSP()
 {
   if (useStream)
   {
-    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_LOAN_MODE, {0});
+    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_LOAN_MODE, {0}, 0);
   }
   else
   {  
@@ -1377,14 +1379,21 @@ void loop()
 #ifdef DEBUG_TX_STREAM
   if (DBG_TxReady)
   {
-    uint8_t t = (((uint8_t*)&DBG_Tx)[0]) & 0x03;
-    DBGLN("T%x: %x %x %x %x (RC=%d)",t, ((uint8_t*)&DBG_Tx)[0],((uint8_t*)&DBG_Tx)[1],((uint8_t*)&DBG_Tx)[2],((uint8_t*)&DBG_Tx)[3],DBG_TxCnt);
+    char t = DBG_Tx[0] & 0x03;
+    DBGLN("T%d: %x %x %x %x %x %x %x %x %x %x %x (rc=%d)", 
+      t, 
+      DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10],
+      DBG_TxRcCnt
+    );
     DBG_TxReady = false;
   }
   if (DBG_RxReady)
   {
-    uint8_t t = (((uint8_t*)&DBG_Rx)[0]) & 0x03;
-    DBGLN("R%x: %x %x %x %x",t, ((uint8_t*)&DBG_Rx)[0],((uint8_t*)&DBG_Rx)[1],((uint8_t*)&DBG_Rx)[2],((uint8_t*)&DBG_Rx)[3]);
+    char t = DBG_Rx[0] & 0x03;
+    DBGLN("R%d: %x %x %x %x %x %x %x %x %x %x %x", 
+      t, 
+      DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10]
+    );
     DBG_RxReady = false;
   }  
 #endif
@@ -1473,7 +1482,7 @@ void loop()
       }
       else
       {
-        streamSender.SetCmd(StreamTxRx::CmdType::BIND, &MasterUID[2]);
+        streamSender.SetCmd(StreamTxRx::CmdType::BIND, &MasterUID[2], 4);
         BindingSendCount++;
       }
     }    

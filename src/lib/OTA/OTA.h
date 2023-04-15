@@ -47,6 +47,38 @@ typedef struct {
 } PACKED OTA_Channels_4x10;
 
 typedef struct {
+    uint8_t packetType: 2, //bit0-1: same pos as packetType in OTA4/OTA8 packages
+            ack:1, //bit2
+            seq:1, //bit3
+            partType:3, //bit4-6: same pos OTA_StreamHeaderMore_s
+            partMore:1; //bit7:same pos OTA_StreamHeaderMore_s           
+} PACKED OTA_StreamHeaderFirst_s;
+
+typedef struct {
+    uint8_t partLen:4,  //bit0-3: partLen = length - 1 (possible lengths 1-16)
+            partType:3, //bit4-6: same pos as OTA_StreamHeaderFirst_s
+            partMore:1; //bit7: same pos as OTA_StreamHeaderFirst_s           
+} PACKED OTA_StreamHeaderMore_s;
+
+typedef struct {
+    union { //NOTE: size is actually ELRS8_TELEMETRY_BYTES_PER_CALL+1 for OTA8
+        OTA_StreamHeaderFirst_s hdrFirst;
+        OTA_StreamHeaderMore_s hdr[ELRS4_TELEMETRY_BYTES_PER_CALL+1];
+        uint8_t data[ELRS4_TELEMETRY_BYTES_PER_CALL+1];   
+
+    };
+} PACKED OTA_Stream_s;
+
+#define OTA_STREAMTYPE_CMD     0 // ELRS internal commands: command byte + max 4 argument bytes to keep compatibity with OTA4 packets
+#define OTA_STREAMTYPE_DATA    1 // CRSF data stream
+#define OTA_STREAMTYPE_DATA2   2 // SERIAL data stream
+#define OTA_STREAMTYPE_FUTURE3 3 // future expansion
+#define OTA_STREAMTYPE_FUTURE4 4
+#define OTA_STREAMTYPE_FUTURE5 5
+#define OTA_STREAMTYPE_FUTURE6 6
+#define OTA_STREAMTYPE_FUTURE7 7
+
+typedef struct {
     // The packet type must always be the low two bits of the first byte of the
     // packet to match the same placement in OTA_Packet8_s
     uint8_t type: 2,
@@ -88,14 +120,7 @@ typedef struct {
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
         /** PACKET_TYPE_STREAM **/
-        struct {
-            uint8_t ack: 1,
-                    seq: 1,
-                    stream: 1,
-                    isCmd: 1,
-                    lenOrCmd: 4;
-            uint8_t dataOrCmd[ELRS4_TELEMETRY_BYTES_PER_CALL];
-        } PACKED stream;        
+        OTA_Stream_s stream;        
     };
     uint8_t crcLow;
 } PACKED OTA_Packet4_s;
@@ -153,21 +178,7 @@ typedef struct {
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
         /** PACKET_TYPE_STREAM **/
-        struct {
-            uint8_t packetType: 2,
-                    ack: 1,
-                    seq: 1,
-                    hasExt: 1,
-                    stream: 3;
-            union {
-                uint8_t dataOnly[ELRS8_TELEMETRY_BYTES_PER_CALL];
-                struct {
-                    uint8_t dataLen:4,
-                            cmd:4;
-                    uint8_t dataAndCmd[ELRS8_TELEMETRY_BYTES_PER_CALL-1];
-                } PACKED ext;
-            };
-        } PACKED stream;
+        OTA_Stream_s stream;
     };
     uint16_t crc;  // crc16 LittleEndian
 } PACKED OTA_Packet8_s;
