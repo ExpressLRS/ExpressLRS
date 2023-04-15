@@ -150,6 +150,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Get firmware artifacts
         uses: actions/download-artifact@v3
@@ -198,3 +200,19 @@ jobs:
 
           echo "Uploading firmware to artifactory"
           aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
+
+          echo "Generating artifact index"
+          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
+          echo '{' > index.json
+          echo '"branches": {' >> index.json
+          git branch --list --remotes --format '"%(refname:short)": "%(objectname)",' | grep origin/ | sed s/origin.// | grep -f /tmp/hashes | head -c-2 >> index.json
+          echo '' >> index.json
+          echo '},' >> index.json
+          echo '"tags": {' >> index.json
+          git tag --list --format '"%(refname:short)": "%(objectname)",' | grep -f /tmp/hashes | head -c-2 >> index.json
+          echo '' >> index.json
+          echo '}' >> index.json
+          echo '}' >> index.json
+
+          echo "Uploading artifact index"
+          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json
