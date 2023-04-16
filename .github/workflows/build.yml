@@ -184,7 +184,8 @@ jobs:
 
       - name: Create firmware zip bundle
         run: |
-          zip -r -9 firmware.zip ./dist/firmware
+          cd dist
+          zip -r -9 ../firmware.zip ./firmware
 
       - name: Upload firmware bundle to ExpressLRS artifactory
         env:
