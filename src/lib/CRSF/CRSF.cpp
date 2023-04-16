@@ -65,7 +65,7 @@ bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
 uint32_t CRSF::OpenTXsyncLastSent = 0;
-uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+int32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 volatile int32_t CRSF::OpenTXsyncWindow = 0;
@@ -284,7 +284,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
+void ICACHE_RAM_ATTR CRSF::setSyncParams(int32_t PacketInterval)
 {
     CRSF::RequestedRCpacketInterval = PacketInterval;
     CRSF::OpenTXsyncOffset = 0;
@@ -340,7 +340,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     uint32_t now = millis();
     if (CRSF::CRSFstate && (now - OpenTXsyncLastSent) >= OpenTXsyncPacketInterval)
     {
-        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        int32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset - CRSF::OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
 #ifdef DEBUG_OPENTX_SYNC
         DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)

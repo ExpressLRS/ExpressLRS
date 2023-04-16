@@ -70,7 +70,7 @@ public:
 
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
-    static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
+    static void ICACHE_RAM_ATTR setSyncParams(int32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
     static void disableOpentxSync();
@@ -101,7 +101,7 @@ private:
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
-    static uint32_t RequestedRCpacketInterval;
+    static int32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;
