@@ -262,7 +262,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         // first try slot payloadTypesCount - 2, so that the OTA packets are transmitted in the same order as they are received
         targetIndex = payloadTypesCount - 2;
-        targetFound = !payloadTypes[targetIndex].updated || !(header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER || (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP && package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT));
+        targetFound = !payloadTypes[targetIndex].updated || header->type == CRSF_FRAMETYPE_PARAMETER_READ;
         if (!targetFound)
         {
             // use other slot if first slot is full
