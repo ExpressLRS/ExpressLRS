@@ -1,4 +1,39 @@
 {
+    "anyleaf": {
+        "name": "AnyLeaf",
+        "rx_2400": {
+            "single-radio": {
+                "product_name": "Anyleaf 2.4GHz single radio RX",
+                "lua_name": "AL single RX",
+                "layout_file":  "Generic 2400 Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            },
+            "dual-radio": {
+                "product_name": "Anyleaf 2.4GHz dual radio RX",
+                "lua_name": "AL dual RX",
+                "layout_file": "Generic 2400 True Diversity PA.json",
+                "overlay": {
+                    "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "h7-fc": {
+                "product_name": "Anyleaf FC integrated RX",
+                "lua_name": "AL FC RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX"
+            }
+        }
+    },
     "axis": {
         "name": "Axisflying",
         "tx_2400": {
@@ -192,6 +227,22 @@
             }
         },
         "rx_900": {
+            "ttgov1": {
+                "product_name": "DIY TTGO V1 900MHz RX",
+                "lua_name": "DIY900 TTGO V1RX",
+                "layout_file": "DIY 900 TTGO V1.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
+            "ttgov2": {
+                "product_name": "DIY TTGO V2 900MHz RX",
+                "lua_name": "DIY900 TTGO V2RX",
+                "layout_file": "DIY 900 TTGO V2.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
             "huzzah": {
                 "product_name": "DIY Huzzah RFM95 900MHz TX",
                 "lua_name": "ELRS RFM95 900RX",
@@ -366,6 +417,17 @@
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
             }
+        },
+        "rx_900": {
+            "plain": {
+                "product_name": "Foxeer 900MHz RX",
+                "lua_name": "Foxeer 900 RX",
+                "layout_file": "Generic 900.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX",
+                "prior_target_name": "BETAFPV_900_RX"
+            }
         }
     },
     "frsky": {
@@ -467,6 +529,17 @@
     },
     "generic": {
         "name": "Generic targets used as a base",
+        "tx_900": {
+            "gemini": {
+                "product_name": "Generic ESP32 900MHz Gemini TX",
+                "lua_name": "Gemini 900TX",
+                "layout_file": "Generic 900 Gemini.json",
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "Unified_ESP32_900_TX"
+            }
+        },
         "rx_900": {
             "plain": {
                 "product_name": "Generic ESP8285 SX127x 900MHz RX",
@@ -485,6 +558,22 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "DIY_900_RX_PWMP"
+            },
+            "true_diversity": {
+                "product_name": "Generic ESP32 True Diversity PA 900MHz RX",
+                "lua_name": "Diversity 900RX",
+                "layout_file": "Generic 900 True Diversity PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
+            },
+            "true_diversity_pwm16": {
+                "product_name": "Generic ESP32 True Diversity 16xPWM 900MHz RX ",
+                "lua_name": "16PWM TD 900RX",
+                "layout_file": "Generic 900 True Diversity PWM 16.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
             }
         },
         "tx_2400": {
@@ -631,6 +720,22 @@
                 "product_name": "Generic ESP32 True Diversity 2.4Ghz RX and VTx",
                 "lua_name": "Div+VTx 2.4RX",
                 "layout_file": "Generic 2400 True Diversity and VTx.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "true_diversity_pwm16": {
+                "product_name": "Generic ESP32 True Diversity 16xPWM 2.4Ghz RX ",
+                "lua_name": "16PWM TD 2.4RX",
+                "layout_file": "Generic 2400 True Diversity PWM 16.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "true_diversity_pwm14": {
+                "product_name": "Generic ESP32 True Diversity PA 14xPWM 2.4Ghz RX ",
+                "lua_name": "14PWM TD 2.4RX",
+                "layout_file": "Generic 2400 True Diversity PA PWM 14.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
@@ -1248,7 +1353,7 @@
         }
     },
     "radiomaster": {
-        "name": "Radiomaster",
+        "name": "RadioMaster",
         "tx_2400": {
             "zorro": {
                 "product_name": "RadioMaster Zorro 2.4GHz TX",
@@ -1420,7 +1525,7 @@
             "ss24d": {
                 "product_name": "Skystars SS24D 2.4GHz RX",
                 "lua_name": "Skystars SS24D",
-                "layout_file": "Generic 2400 PA.json",
+                "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",

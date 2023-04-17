@@ -15,6 +15,8 @@ using namespace std;
 
 #if CRSF_RX_MODULE
 
+#include "crsf2msp.h"
+
 Telemetry::Telemetry()
 {
     ResetState();
@@ -48,6 +50,13 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
+void Telemetry::CheckCrsfBatterySensorDetected()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        crsfBatterySensorDetected = true;
+    }
+}
 
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE);
 
@@ -171,6 +180,11 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 if (data == crc)
                 {
                     AppendTelemetryPackage(CRSFinBuffer);
+
+                    // Special case to check here and not in AppendTelemetryPackage().  devAnalogVbat sends
+                    // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
+                    CheckCrsfBatterySensorDetected();
+
                     receivedPackages++;
                     return true;
                 }
@@ -222,7 +236,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
         {
             DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-            CRSF::crsf2msp.parse(package);
+            crsf2msp.parse(package);
         }
         //fall through: if no TCP client we just want to forward MSP over the link
     }
@@ -242,18 +256,18 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         }
     }
 
-    // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks 
+    // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks
     if (!targetFound)
     {
         // first try slot payloadTypesCount - 2, so that the OTA packets are transmitted in the same order as they are received
         targetIndex = payloadTypesCount - 2;
         targetFound = !payloadTypes[targetIndex].updated;
-        if (!targetFound) 
+        if (!targetFound)
         {
             // use other slot if first slot is full
-            targetIndex = payloadTypesCount - 1; 
+            targetIndex = payloadTypesCount - 1;
             targetFound = !payloadTypes[targetIndex].updated;
-        } 
+        }
     }
 
     // write to slot, but only if the slot is not locked by the OTA sender

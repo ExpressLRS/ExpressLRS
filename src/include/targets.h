@@ -101,6 +101,9 @@
 #ifndef GPIO_PIN_DIO0
 #define GPIO_PIN_DIO0 UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_DIO0_2
+#define GPIO_PIN_DIO0_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_DIO1
 #define GPIO_PIN_DIO1 UNDEF_PIN
 #endif
@@ -233,14 +236,14 @@
 #endif
 #endif
 
-#if defined(TARGET_UNIFIED_RX)
-#define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN)
-#else
-#if defined(CRSF_RCVR_NO_SERIAL)
+#if defined(DEBUG_CRSF_NO_OUTPUT)
 #define OPT_CRSF_RCVR_NO_SERIAL true
+#elif defined(TARGET_UNIFIED_RX)
+extern bool pwmSerialDefined;
+
+#define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN && !pwmSerialDefined)
 #else
 #define OPT_CRSF_RCVR_NO_SERIAL false
-#endif
 #endif
 
 #if defined(USE_ANALOG_VBAT) && !defined(GPIO_ANALOG_VBAT)

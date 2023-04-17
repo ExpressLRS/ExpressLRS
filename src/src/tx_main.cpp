@@ -44,6 +44,7 @@ extern bool webserverPreventAutoStart;
 #endif
 //// MSP Data Handling ///////
 bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
+char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
@@ -66,6 +67,11 @@ bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
+
+static uint8_t headTrackingEnabledChannel = 0;
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
+bool headTrackingEnabled = false;
+static uint32_t lastPTRValidTimeMs;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -468,7 +474,39 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        OtaPackChannelData(&otaPkt, &crsf, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        if (config.GetPTREnableChannel() != HT_OFF)
+        {
+          uint8_t ptrStartChannel = config.GetPTRStartChannel();
+          uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
+          bool enable = headTrackingEnabledChannel == HT_ON;
+          if (config.GetPTREnableChannel() % 2 == 0)
+          {
+            enable |= chan >= CRSF_CHANNEL_VALUE_MID;
+          }
+          else
+          {
+            enable |= chan < CRSF_CHANNEL_VALUE_MID;
+          }
+          if (enable != headTrackingEnabled)
+          {
+            headTrackingEnabled = enable;
+            HTEnableFlagReadyToSend = true;
+          }
+          // If enabled and this packet is less that 1 second old then use it
+          if (enable && now - lastPTRValidTimeMs < 1000)
+          {
+            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+          }
+          else
+          {
+            ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
+            ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
+          }
+        }
+        OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
   }
@@ -476,7 +514,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_Default;
+  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
 
   if (isDualRadio())
   {
@@ -500,13 +538,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-  SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_All;
-#if defined(Regulatory_Domain_EU_CE_2400)
-  clearChannelsMask = ChannelIsClear(transmittingRadio);
-  if (clearChannelsMask)
+#if defined(Regulatory_Domain_EU_CE_2400) 
+  transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+  
+	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
+  {                                                         // but do status update (issue #2028)
+		Radio.TXdoneCallback();
+  }
+	else		
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio & clearChannelsMask);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
   }
 }
 
@@ -515,13 +557,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if(!LBTSuccessCalc.currentIsSet())
-  {
-    Radio.TXdoneCallback();
-  }
-#endif
-
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
@@ -656,6 +691,8 @@ void ModelUpdateReq()
     syncSpamCounter = syncSpamAmount;
     ModelUpdatePending = true;
   }
+
+  devicesTriggerEvent();
 
   // Jump from awaitingModelId to transmitting to break the startup delay now
   // that the ModelID has been confirmed by the handset
@@ -924,7 +961,7 @@ void ExitBindingMode()
   DBGLN("Exiting binding mode");
 }
 
-void ProcessMSPPacket(mspPacket_t *packet)
+void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if !defined(CRITICAL_FLASH)
   // Inspect packet for ELRS specific opcodes
@@ -960,6 +997,18 @@ void ProcessMSPPacket(mspPacket_t *packet)
     VtxTriggerSend();
   }
 #endif
+  if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
+  {
+    memset(backpackVersion, 0, sizeof(backpackVersion));
+    memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
+  }
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
+  {
+    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    lastPTRValidTimeMs = now;
+  }
 }
 
 static void HandleUARTout()
@@ -1101,6 +1150,10 @@ static void setupTarget()
 bool setupHardwareFromOptions()
 {
 #if defined(TARGET_UNIFIED_TX)
+  // Setup default logging in case of failure, or no layout
+  Serial.begin(115200);
+  TxBackpack = &Serial;
+
   if (!options_init())
   {
     // Register the WiFi with the framework
@@ -1254,6 +1307,21 @@ void loop()
 
   executeDeferredFunction(now);
 
+  if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
+  {
+    apInputBuffer.push(TxUSB->read());
+  }
+
+  if (TxBackpack->available())
+  {
+    if (msp.processReceivedByte(TxBackpack->read()))
+    {
+      // Finished processing a complete packet
+      ProcessMSPPacket(now, msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
+
   if (connectionState > MODE_STATES)
   {
     return;
@@ -1263,24 +1331,6 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
-
-  if (TxUSB->available())
-  {
-    if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
-    {
-      apInputBuffer.push(TxUSB->read());
-    }
-  }
-
-  if (TxBackpack->available())
-  {
-    if (msp.processReceivedByte(TxBackpack->read()))
-    {
-      // Finished processing a complete packet
-      ProcessMSPPacket(msp.getReceivedPacket());
-      msp.markPacketReceived();
-    }
-  }
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */

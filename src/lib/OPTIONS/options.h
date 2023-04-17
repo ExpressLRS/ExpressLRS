@@ -31,9 +31,9 @@ typedef struct _options {
 #endif
 #if defined(TARGET_RX)
     uint32_t    uart_baud;
-    bool        invert_tx:1;
+    bool        _unused1:1; // invert_tx
     bool        lock_on_first_connection:1;
-    bool        r9mm_mini_sbus:1;
+    bool        _unused2:1; // r9mm_mini_sbus
     bool        is_airport:1;
 #endif
 #if defined(TARGET_TX)
@@ -50,6 +50,12 @@ typedef struct _options {
 #endif
 } __attribute__((packed)) firmware_options_t;
 
+// Layout is PRODUCTNAME DEVICENAME OPTIONS HARDWARE
+constexpr size_t ELRSOPTS_PRODUCTNAME_SIZE = 128;
+constexpr size_t ELRSOPTS_DEVICENAME_SIZE = 16;
+constexpr size_t ELRSOPTS_OPTIONS_SIZE = 512;
+constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
+
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 extern firmware_options_t firmwareOptions;
 extern char product_name[];
@@ -58,6 +64,9 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
+
+#include "EspFlashStream.h"
+extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
 #else
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];
