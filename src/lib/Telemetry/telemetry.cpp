@@ -253,6 +253,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         {
             targetIndex = i;
             targetFound = true;
+            break;
         }
     }
 
