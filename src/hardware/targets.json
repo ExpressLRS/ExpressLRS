@@ -99,6 +99,19 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_RX"
+            },
+            "superp": {
+                "product_name": "BETAFPV SuperP 14Ch 900MHz RX",
+                "lua_name": "BFPV 14CH P900",
+                "layout_file": "Generic 900 True Diversity PWM 16.json",
+                "overlay": {
+                    "pwm_outputs":[13,15,2,0,4,9,10,5,18,23,19,22,3,1],
+                    "vbat_offset": -300,
+                    "vbat_scale": 1227
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
             }
         },
         "tx_2400": {
@@ -187,6 +200,19 @@
                 "layout_file": "Generic 2400 True Diversity PA.json",
                 "overlay": {
                     "radio_dcdc": true
+                },
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_RX"
+            },
+            "superp": {
+                "product_name": "BETAFPV SuperP 14Ch 2.4GHz RX",
+                "lua_name": "BFPV 14CH P2G4",
+                "layout_file": "Generic 2400 True Diversity PA PWM 14.json",
+                "overlay": {
+                    "radio_dcdc": true,
+                    "vbat_offset": -300,
+                    "vbat_scale": 1227
                 },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
