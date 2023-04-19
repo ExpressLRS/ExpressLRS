@@ -11,27 +11,29 @@ void StreamSender::GetOtaPacket(OTA_Packet_s * const otaPktPtr)
 
     _PartBegin(otaPktPtr);
                 
-    //clear packet
+    //clear packet, also ensures that partially filled packages are correctly terminated with CmdType::NOP 
     memset(_streamPtr->data, StreamTxRx::CmdType::NOP, _dataSize);
 
     //setup first header
     _streamPtr->hdrFirst.packetType = packetType;
-    _streamPtr->hdrFirst.ack = (ack == ackState::ACK ? 1 : 0);
+    //NOTE: set ack=1 until ackState is fully implemented
+    _streamPtr->hdrFirst.ack = 1; //_streamPtr->hdrFirst.ack = (ack == ackState::ACK ? 1 : 0);
     _streamPtr->hdrFirst.seq = seq;    
     _streamPtr->hdrFirst.partType = OTA_STREAMTYPE_CMD; 
     _streamPtr->hdrFirst.partMore = 0;
 
-    //push parts into ota packet
+    //push parts into ota packet 
+    //cmd has highest priority, if space left then send stream1, if still space left then send stream2
     _PartPush(OTA_STREAMTYPE_CMD, cmdFifo, false);
-    _PartPush(OTA_STREAMTYPE_DATA, data, true);
-    _PartPush(OTA_STREAMTYPE_DATA2, data2, true);
+    _PartPush(OTA_STREAMTYPE_STREAM1, stream1Fifo, true);
+    _PartPush(OTA_STREAMTYPE_STREAM2, stream2Fifo, true);
         
     seq = (seq + 1) & 0x01;
 }
 
 void StreamSender::PushCrsfPackage(uint8_t* dataToTransmit, uint8_t lengthToTransmit)
 {
-    if(data.free() < lengthToTransmit) return;
+    if(stream1Fifo.free() < lengthToTransmit) return;
     dataToTransmit[0] = crsfSync;
-    data.pushBytes(dataToTransmit, lengthToTransmit);
+    stream1Fifo.pushBytes(dataToTransmit, lengthToTransmit);
 }

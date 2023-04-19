@@ -247,27 +247,35 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     bool targetFound = false;
 
     //store crsf telemetry in 1-slot LIFO buffer, overwrite exising data (if the crsf package fits in the buffer)
-    for (int8_t i = 0; i < payloadTypesCount - 2; i++)
+    for (int8_t i = 0; i < payloadTypesCount - 3; i++)
     {
         if (header->type == payloadTypes[i].type && CRSF_FRAME_SIZE(header->frame_size) <= payloadTypes[i].size)
         {
             targetIndex = i;
             targetFound = true;
+            break;
         }
     }
 
-    // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks 
+    //store status text in 1-slot LIFO buffer, overwrite exising data
+    if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP && package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+    {
+        targetIndex = payloadTypesCount - 3;
+        targetFound = true;
+    }
+
+    // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks
     if (!targetFound)
     {
         // first try slot payloadTypesCount - 2, so that the OTA packets are transmitted in the same order as they are received
         targetIndex = payloadTypesCount - 2;
         targetFound = !payloadTypes[targetIndex].updated;
-        if (!targetFound) 
+        if (!targetFound)
         {
             // use other slot if first slot is full
-            targetIndex = payloadTypesCount - 1; 
+            targetIndex = payloadTypesCount - 1;
             targetFound = !payloadTypes[targetIndex].updated;
-        } 
+        }
     }
 
     // write to slot, but only if the slot is not locked by the OTA sender

@@ -7,13 +7,74 @@
 
 uint32_t DEBUG_rxdatacnt = 0;
 
+bool StreamReceiver::debug_gotsomething(OTA_Packet_s * const otaPktPtr)
+{
+    _PartBegin(otaPktPtr);
+
+    ack = (_streamPtr->hdrFirst.ack == 1 ? ackState::ACK : ackState::NACK);
+    //uint8_t seq = streamPtr->hdrFirst.seq; //TODO
+
+    uint8_t partDataPos;
+    uint8_t partLen;
+    uint8_t partType;
+
+    while (_PartPop(&partType, &partDataPos, &partLen))
+    {
+        switch(partType) {
+        case OTA_STREAMTYPE_CMD:
+            if (_streamPtr->data[partDataPos] >= 2 ) return true;
+            break;
+        case OTA_STREAMTYPE_STREAM1:
+            return true;
+            break;
+        case OTA_STREAMTYPE_STREAM2:
+            return true;
+            break;
+        }
+    }
+    return false;
+} 
+
+void StreamReceiver::debug_decodePacket(OTA_Packet_s * const otaPktPtr)
+{
+    _PartBegin(otaPktPtr);
+
+    ack = (_streamPtr->hdrFirst.ack == 1 ? ackState::ACK : ackState::NACK) ;
+    //uint8_t seq = streamPtr->hdrFirst.seq; //TODO
+
+    uint8_t partDataPos;
+    uint8_t partLen;
+    uint8_t partType;
+
+    while (_PartPop(&partType, &partDataPos, &partLen))
+    {
+        switch(partType) {
+        case OTA_STREAMTYPE_CMD:
+            if (_streamPtr->data[partDataPos] >= 2)
+            {
+                DBG("cmd:");
+                for(uint8_t i=0;i<partLen;i++) DBG("%x ", _streamPtr->data[partDataPos+i]);
+            }
+            break;
+        case OTA_STREAMTYPE_STREAM1:
+            DBG("str1:");
+            for(uint8_t i=0;i<partLen;i++) DBG("%x ", _streamPtr->data[partDataPos+i]);
+            break;
+        case OTA_STREAMTYPE_STREAM2:
+            DBG("str2:");
+            for(uint8_t i=0;i<partLen;i++) DBG("%x ", _streamPtr->data[partDataPos+i]);
+            break;                        
+        }
+    }
+}
+
 ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_s * const otaPktPtr)
 {
     StreamTxRx::CmdType cmd = StreamTxRx::CmdType::NOP;
 
     _PartBegin(otaPktPtr);
 
-    ack = (_streamPtr->hdrFirst.ack == 1 ? ackState::ACK : ackState::NACK) ;
+    ack = (_streamPtr->hdrFirst.ack == 1 ? ackState::ACK : ackState::NACK);
     //uint8_t seq = streamPtr->hdrFirst.seq; //TODO
 
     uint8_t partDataPos;
@@ -28,11 +89,11 @@ ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_
             cmdArgsLen = partLen - 1;
             memcpy(cmdArgs, &_streamPtr->data[partDataPos + 1], partLen - 1);
             break;
-        case OTA_STREAMTYPE_DATA:
-            data.pushBytes(&_streamPtr->data[partDataPos], partLen);
+        case OTA_STREAMTYPE_STREAM1:
+            stream1Fifo.pushBytes(&_streamPtr->data[partDataPos], partLen);
             break;
-        case OTA_STREAMTYPE_DATA2:
-            data2.pushBytes(&_streamPtr->data[partDataPos], partLen);
+        case OTA_STREAMTYPE_STREAM2:
+            stream2Fifo.pushBytes(&_streamPtr->data[partDataPos], partLen);
             break;                        
         }
     }
@@ -41,25 +102,25 @@ ICACHE_RAM_ATTR StreamTxRx::CmdType StreamReceiver::ReceiveOtaPacket(OTA_Packet_
 }
 
 bool StreamReceiver::PopCrsfPacket(uint8_t * CRSFBuffer) {
-    while (data.size() >= 4) //minimum package length is 4: {sync len type crc}
+    while (stream1Fifo.size() >= 4) //minimum package length is 4: {sync len type crc}
     {
-        if (data.peek() != crsfSync) 
+        if (stream1Fifo.peekPos(0) != crsfSync) 
         {
-            data.pop();
+            stream1Fifo.pop();
             continue;
         }
-        uint8_t len = data.peekPos(CRSF_TELEMETRY_LENGTH_INDEX);
+        uint8_t len = stream1Fifo.peekPos(CRSF_TELEMETRY_LENGTH_INDEX);
         if (len < 2 || len > 63) 
         {
-            data.pop();
+            stream1Fifo.pop();
             continue;
         }
-        if (data.size() < len + CRSF_FRAME_NOT_COUNTED_BYTES)
+        if (stream1Fifo.size() < len + CRSF_FRAME_NOT_COUNTED_BYTES)
         {
             break;
         }
         //TODO: check crc without popping data first -> improved recovery from missed OTA package
-        data.popBytes(CRSFBuffer, len + CRSF_FRAME_NOT_COUNTED_BYTES);
+        stream1Fifo.popBytes(CRSFBuffer, len + CRSF_FRAME_NOT_COUNTED_BYTES);
         uint8_t crc = crsf_crc.calc(CRSFBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, len - CRSF_TELEMETRY_CRC_LENGTH);
         if (crc == CRSFBuffer[len + CRSF_FRAME_NOT_COUNTED_BYTES - CRSF_TELEMETRY_CRC_LENGTH]) 
         {

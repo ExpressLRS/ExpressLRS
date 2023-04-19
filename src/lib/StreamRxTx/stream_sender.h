@@ -4,128 +4,6 @@
 #include "OTA.h"
 #include "FIFO_GENERIC.h"
 
-//TODO: replace FIFO_GENERIC with FIFO_unsafe
-
-// Non-thread safe FIFO class
-// Notes:
-// 1) Can simultanously write from one thread, and read from another thread. 
-// 2) Can NOT simultanously write from more than one thread
-// 3) Can NOT simultanously read from more than one thread.
-// 4) Has no flush() method, as this would violate Note 1
-// 5) Actual number of elements the buffer can hold is fifo_size-1
-class FIFO_unsafe
-{
-private:
-    uint16_t head;
-    uint16_t tail;
-    uint8_t *buffer;
-    uint16_t fifo_size;
-
-public:
-    //use external buffer. 
-    FIFO_unsafe(uint8_t *buf, uint16_t len)
-    {
-        head = 0;
-        tail = 0;       
-        buffer = buf;
-        fifo_size = len;
-    }
-
-    ICACHE_RAM_ATTR uint16_t size()
-    {
-        return (tail - head) % fifo_size;
-    }
-
-    ICACHE_RAM_ATTR uint16_t free()
-    {
-        return fifo_size - 1 - size();
-    }
-
-    ICACHE_RAM_ATTR bool push(const uint8_t data)
-    {
-        if (free() < 1) return false;
-
-        buffer[tail] = data;
-        tail = (tail + 1) % fifo_size;
-    }
-
-    ICACHE_RAM_ATTR int16_t pop()
-    {
-        if (size() < 1) return -1;
-
-        uint8_t data = buffer[head];
-        head = (head + 1) % fifo_size;
-        return data;
-    }
-
-    ICACHE_RAM_ATTR bool pushBytes(const uint8_t *data, uint16_t len)
-    {
-        if (free() < len) return false;
-
-        for (uint8_t i = 0; i < len; i++) poke(i, data[i]);
-        tail = (tail + len) % fifo_size;
-        return true;
-    }
-
-    ICACHE_RAM_ATTR bool popBytes(uint8_t *data, uint8_t len)
-    {
-        if (size() < len) return false;
-
-        for (uint8_t i = 0; i < len; i++) data[i] = peek(i);
-        head = (head + len) % fifo_size;
-        return true;
-    }
-
-    // push message as "sync len data" to buffer 
-    ICACHE_RAM_ATTR bool pushMessage(const uint8_t *data, uint8_t len)
-    {
-        if (free() < len + 2 || len == 0) return false;
-
-        poke(0, 'S');
-        poke(1, len);       
-        for (uint8_t i = 0; i < len; i++) poke(i+2, data[i]);
-        tail = (tail + len + 2) % fifo_size;
-        return true;
-    } 
-
-    ICACHE_RAM_ATTR uint8_t popMessage(uint8_t *data, uint8_t maxlen)
-    {
-        while (size() >= 3)
-        {
-            uint8_t len = peek(1);
-            if (peek(0) == 'S' && len <= maxlen && len >= 1)
-            {
-                if (size() < len + 2) 
-                {
-                    //found header, but not complete message - should not happen as pushMessage is atomic ...
-                    return 0;
-                }
-                else
-                {
-                    for (uint8_t i = 0; i < len; i++) data[i] = peek(i + 2);
-                    head = (head + len + 2) % fifo_size;
-                    return len;             
-                }
-            }
-            //something is wrong, buffer does not start with message - pop a byte and try again
-            pop();
-        }
-        return 0;
-    }
-
-    //low level peek(head), no checks
-    ICACHE_RAM_ATTR uint8_t peek(int16_t pos)
-    {
-        return buffer[(head + pos) % fifo_size];
-    }
-
-    //low level poke(tail), no checks
-    ICACHE_RAM_ATTR void poke(int16_t pos, uint8_t value)
-    {
-        buffer[(tail + pos) % fifo_size] = value;
-    } 
-};
-
 enum ackState{ACK,NACK,UNKNOWN};
 
 class StreamTxRx
@@ -160,7 +38,7 @@ protected:
     }
 
     //push part into OTA packet
-    void _PartPush(uint8_t type, FIFO_GENERIC<96>& fifo, bool partialAllowed)
+    void _PartPush(uint8_t type, FIFO_GENERIC_Base& fifo, bool partialAllowed)
     {
         uint8_t len = fifo.size();
         if (len == 0) return;
@@ -219,26 +97,44 @@ protected:
 
 class StreamSender : StreamTxRx
 {
+private:
+    uint8_t crsfSync;
+    uint8_t packetType;
+    uint8_t seq;
+    FIFO_GENERIC<6> cmdFifo;  //actually has only a single cmd in buffer
+
 public:
-    FIFO_GENERIC<96> data;
-    FIFO_GENERIC<96> data2;    
+    FIFO_GENERIC<96> stream1Fifo;
+    FIFO_GENERIC<96> stream2Fifo;    
     ackState ack;
-    uint8_t stream;
-    StreamSender(uint8_t crsfSync, uint8_t packetType) : ack(ackState::UNKNOWN), stream(0)
+
+    StreamSender(uint8_t crsfSync, uint8_t packetType) : ack(ackState::UNKNOWN) 
     {
         this->crsfSync = crsfSync;
         this->packetType = packetType;
     };
+
     void GetOtaPacket(OTA_Packet_s * const otaPktPtr);
+
     void PushCrsfPackage(uint8_t* dataToTransmit, uint8_t lengthToTransmit);
-    bool IsDataBufferLow() 
+
+    // used to only send new CRSF data to stream1Fifo when the fifo is low on data,
+    // prevents sending stale CRSF data OTA
+    bool IsStream1FifoLow() 
     { 
-        return data.size() < 20; 
+        return stream1Fifo.size() < 20; //20 bytes are 2 OTA8 payloads
     } 
+
     bool IsOtaPacketReady() 
     { 
-        return cmdFifo.size() > 0 || data.size() > 0 || data2.size() > 0; 
+        return cmdFifo.size() > 0 || stream1Fifo.size() > 0 || stream2Fifo.size() > 0; 
     }
+
+    bool IsCmdSet() 
+    {
+        return cmdFifo.size() > 0;
+    }
+
     void SetCmd(StreamTxRx::CmdType cmd, uint8_t * cmdArgs, uint8_t cmdArgsLen)
     {
         if (cmd == StreamTxRx::CmdType::NOP || cmd >= StreamTxRx::CmdType::CMD_LAST) return;
@@ -246,9 +142,6 @@ public:
         cmdFifo.push(cmd);
         cmdFifo.pushBytes(cmdArgs, cmdArgsLen);
     }
-private:
-    uint8_t crsfSync; 
-    uint8_t packetType;
-    uint8_t seq;
-    FIFO_GENERIC<96> cmdFifo;  
+
+
 };

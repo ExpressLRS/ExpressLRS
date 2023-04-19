@@ -33,8 +33,25 @@
 #include "targets.h"
 #include "logging.h"
 
+class FIFO_GENERIC_Base
+{
+public:
+    virtual void push(const uint8_t data) = 0;
+    virtual ICACHE_RAM_ATTR void pushBytes(const uint8_t *data, uint32_t len) = 0;
+    virtual uint8_t pop() = 0;
+    virtual ICACHE_RAM_ATTR void popBytes(uint8_t *data, uint32_t len) = 0;
+    virtual uint8_t peek() = 0;
+    virtual uint8_t peekPos(uint16_t pos) = 0;
+    virtual uint16_t free() = 0;
+    virtual uint16_t size() = 0;
+    virtual void pushSize(uint16_t size) = 0;
+    virtual uint16_t peekSize() = 0;
+    virtual uint16_t popSize() = 0;
+    virtual void flush() = 0;
+};
+
 template <uint32_t FIFO_SIZE>
-class FIFO_GENERIC
+class FIFO_GENERIC : public FIFO_GENERIC_Base
 {
 private:
     uint32_t head;

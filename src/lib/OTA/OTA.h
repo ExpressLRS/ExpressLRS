@@ -70,8 +70,8 @@ typedef struct {
 } PACKED OTA_Stream_s;
 
 #define OTA_STREAMTYPE_CMD     0 // ELRS internal commands: command byte + max 4 argument bytes to keep compatibity with OTA4 packets
-#define OTA_STREAMTYPE_DATA    1 // CRSF data stream
-#define OTA_STREAMTYPE_DATA2   2 // SERIAL data stream
+#define OTA_STREAMTYPE_STREAM1 1 // CRSF data stream
+#define OTA_STREAMTYPE_STREAM2 2 // SERIAL data stream
 #define OTA_STREAMTYPE_FUTURE3 3 // future expansion
 #define OTA_STREAMTYPE_FUTURE4 4
 #define OTA_STREAMTYPE_FUTURE5 5
