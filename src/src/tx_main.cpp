@@ -6,8 +6,8 @@
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
-#include "stream_receiver.h"
-#include "stream_sender.h"
+#include "StreamReceiver.h"
+#include "StreamSender.h"
 
 #include "devCRSF.h"
 #include "devLED.h"
@@ -28,12 +28,20 @@
 
 //// STREAM ///
 //#define DEBUG_STREAM
-#define GPIO_PIN_STREAM_RX 3 //XXX TODO
-#define GPIO_PIN_STREAM_TX 1 //XXX TODO
-#define STREAM_BAUD 115200 //XXX TODO
+#ifndef GPIO_PIN_STREAM_RX
+  #define GPIO_PIN_STREAM_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_STREAM_TX
+  #define GPIO_PIN_STREAM_TX UNDEF_PIN
+#endif
+#ifndef STREAM_BAUD
+  #define STREAM_BAUD 115200
+#endif
 
-bool streamEnabled = true;
-StreamSender streamSender(0xC8, PACKET_TYPE_MSPDATA);
+bool streamEnabled = false;
+uint32_t streamCountdown = 60; //number of stream start attempts, one per second
+uint32_t streamCountdownMillis = 0;
+StreamSender streamSender(0xC8, PACKET_TYPE_TLM_OR_STUP);
 StreamReceiver streamReceiver(0xEE);
 Stream *streamSerial = new NullStream(); //default to null stream
 
@@ -196,7 +204,7 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // -- downlink_Link_quality is updated before the LQ period is incremented
   if (streamEnabled)
   {
-    //TODO
+    //XXX TODO
   }
   else
   {
@@ -219,7 +227,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     return false;
   }
 
-  if (otaPktPtr->std.type != PACKET_TYPE_TLM)
+  if (otaPktPtr->std.type != PACKET_TYPE_TLM_OR_STUP && otaPktPtr->std.type != PACKET_TYPE_MSP_OR_STDN)
   {
     DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
@@ -232,14 +240,19 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
-  if (streamEnabled)
+  if (otaPktPtr->std.type == PACKET_TYPE_MSP_OR_STDN) //stream downlink
   {
-    if(streamReceiver.ReceiveOtaPacket(otaPktPtr) == StreamTxRx::CmdType::LINKSTAT)
+    if (!streamEnabled) 
+    {
+      DBGLN("stream mode enabled");
+      streamEnabled = true;
+    }
+    if (streamReceiver.ReceiveOtaPacket(otaPktPtr) == StreamBase::CmdType::LINKSTAT)
     {
       LinkStatsFromOta((OTA_LinkStats_s *)streamReceiver.cmdArgs);
     } 
   }
-  else
+  else if (otaPktPtr->std.type == PACKET_TYPE_TLM_OR_STUP) //telemetry downlink
   {
     // Full res mode
     if (OtaIsFullRes)
@@ -488,7 +501,16 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     if (NextPacketIsMspData)
     {
-      if (streamEnabled && streamSender.IsOtaPacketReady()) 
+      //request switch to stream mode
+      if (!streamEnabled && connectionState == connected && streamCountdown > 0 && millis() - streamCountdownMillis > 1000)
+      {
+        streamCountdown--;
+        streamCountdownMillis = millis();
+        streamSender.GetStreamStartPacket(&otaPkt);
+        NextPacketIsMspData = false;
+        DBGLN("Sending Stream Start %d",streamCountdown);
+      }
+      else if (streamEnabled && streamSender.IsOtaPacketReady()) 
       {
         streamSender.GetOtaPacket(&otaPkt);
         // send channel data next so the channel messages also get sent during msp transmissions
@@ -500,7 +522,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else if (!streamEnabled && MspSender.IsActive())
       {
-        otaPkt.std.type = PACKET_TYPE_MSPDATA;
+        otaPkt.std.type = PACKET_TYPE_MSP_OR_STDN; //MSP
         if (OtaIsFullRes)
         {
           otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
@@ -931,7 +953,7 @@ static void SendRxWiFiOverMSP()
 {
   if (streamEnabled)
   {
-    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_WIFI_MODE, {0}, 0);
+    streamSender.SetCmd(StreamBase::CmdType::SET_RX_WIFI_MODE, {0}, 0);
   }
   else
   {
@@ -944,7 +966,7 @@ void SendRxLoanOverMSP()
 {
   if (streamEnabled)
   {
-    streamSender.SetCmd(StreamTxRx::CmdType::SET_RX_LOAN_MODE, {0}, 0);
+    streamSender.SetCmd(StreamBase::CmdType::SET_RX_LOAN_MODE, {0}, 0);
   }
   else
   {  
@@ -1408,13 +1430,14 @@ void loop()
   if (DBG_TxReady)
   {
     uint8_t t = DBG_Tx[0] & 0x03;
-    sprintf(s,"T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d) ",
+    sprintf(s,"T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d str=%d) ",
       map[t],
       DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10],
-      DBG_RcCnt
+      DBG_RcCnt,
+      (streamEnabled ? 1 : 0)
     );
     DBG(s);
-    if(t==1) DBG_streamReceiver.debug_decodePacket((OTA_Packet_s*)DBG_Tx);
+    if(t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
     DBGCR;
 
     DBG_TxReady = false;
@@ -1428,7 +1451,7 @@ void loop()
       DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10]
     );
     DBG(s);
-    if(t==3) DBG_streamReceiver.debug_decodePacket((OTA_Packet_s*)DBG_Rx);
+    if(t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
     DBGCR;
     DBG_RxReady = false;
   }
@@ -1530,7 +1553,7 @@ void loop()
       }
       else
       {
-        streamSender.SetCmd(StreamTxRx::CmdType::BIND, &MasterUID[2], 4);
+        streamSender.SetCmd(StreamBase::CmdType::BIND, &MasterUID[2], 4);
         BindingSendCount++;
       }
     }

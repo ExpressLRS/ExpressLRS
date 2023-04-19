@@ -6,8 +6,8 @@
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
-#include "stream_sender.h"
-#include "stream_receiver.h"
+#include "StreamSender.h"
+#include "StreamReceiver.h"
 
 #include "lua.h"
 #include "msp.h"
@@ -53,12 +53,20 @@
 
 //// STREAM ///
 //#define DEBUG_STREAM
-#define GPIO_PIN_STREAM_RX 3 //XXX TODO
-#define GPIO_PIN_STREAM_TX 1 //XXX TODO
-#define STREAM_BAUD 115200 //XXX TODO
+#ifndef GPIO_PIN_STREAM_RX
+  #define GPIO_PIN_STREAM_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_STREAM_TX
+  #define GPIO_PIN_STREAM_TX UNDEF_PIN
+#endif
+#ifndef STREAM_BAUD
+  #define STREAM_BAUD 115200
+#endif
 
-bool streamEnabled = true;
-StreamSender streamSender(0xEE, PACKET_TYPE_TLM);
+bool streamEnabled = false;
+uint32_t streamCountdown = 60; //number of stream start attempts, one per second
+uint32_t streamCountdownMillis = 0;
+StreamSender streamSender(0xEE, PACKET_TYPE_MSP_OR_STDN); //STDN
 StreamReceiver streamReceiver(0xC8);
 Stream *streamSerial = new NullStream(); //default to null stream
 
@@ -453,14 +461,22 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             ts_linkstat = now;
             OTA_LinkStats_s ls;
             LinkStatsToOta(&ls);
-            streamSender.SetCmd(StreamTxRx::CmdType::LINKSTAT, (uint8_t*)&ls, sizeof(OTA_LinkStats_s));
+            streamSender.SetCmd(StreamBase::CmdType::LINKSTAT, (uint8_t*)&ls, sizeof(OTA_LinkStats_s));
         }
         streamSender.GetOtaPacket(&otaPkt);
+    } 
+    else if (!streamEnabled && streamCountdown > 0 && millis() - streamCountdownMillis > 1000)
+    {
+        //request switch to stream mode
+        streamCountdown--;
+        streamCountdownMillis = millis();
+        streamSender.GetStreamStartPacket(&otaPkt);
+        DBGLN("Sending Stream Start %d",streamCountdown);
     }
-    else
+    else //!streamEnabled
     {
         alreadyTLMresp = true;
-        otaPkt.std.type = PACKET_TYPE_TLM;
+        otaPkt.std.type = PACKET_TYPE_TLM_OR_STUP; //TLM
 
         if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
         {
@@ -894,79 +910,84 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 }
 
+static void ICACHE_RAM_ATTR ProcessRfPacket_STUP(OTA_Packet_s * const otaPktPtr)
+{
+    if (!streamEnabled) 
+    {
+      DBGLN("stream mode enabled");
+      streamEnabled = true;
+    }
+    
+    streamReceiver.ReceiveOtaPacket(otaPktPtr);
+
+    // Always examine MSP packets for bind information if in bind mode
+    if (InBindingMode && streamReceiver.cmd == StreamBase::CmdType::BIND)
+    {
+        OnELRSBindMSP(streamReceiver.cmdArgs);
+        return;
+    }
+
+    // Must be fully connected to process MSP, prevents processing MSP
+    // during sync, where packets can be received before connection
+    if (connectionState != connected)
+        return;
+
+    switch (streamReceiver.cmd) 
+    {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    case StreamBase::CmdType::SET_RX_WIFI_MODE:
+        // The MSP packet needs to be ACKed so the TX doesn't
+        // keep sending it, so defer the switch to wifi
+        deferExecution(500, []() {
+            setWifiUpdateMode();
+        });
+        break;
+#endif
+    case StreamBase::CmdType::SET_RX_LOAN_MODE:
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
+        InLoanBindingMode = true;
+        break;
+    default:
+        break;
+    } 
+}
+
 static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s * const otaPktPtr)
 {
-    if (streamEnabled)
+    uint8_t packageIndex;
+    uint8_t const * payload;
+    uint8_t dataLen;
+    if (OtaIsFullRes)
     {
-        streamReceiver.ReceiveOtaPacket(otaPktPtr);
-
-        // Always examine MSP packets for bind information if in bind mode
-        if (InBindingMode && streamReceiver.cmd == StreamTxRx::CmdType::BIND)
-        {
-            OnELRSBindMSP(streamReceiver.cmdArgs);
-            return;
-        }
-
-        // Must be fully connected to process MSP, prevents processing MSP
-        // during sync, where packets can be received before connection
-        if (connectionState != connected)
-            return;
-
-        switch (streamReceiver.cmd) 
-        {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-        case StreamTxRx::CmdType::SET_RX_WIFI_MODE:
-            // The MSP packet needs to be ACKed so the TX doesn't
-            // keep sending it, so defer the switch to wifi
-            deferExecution(500, []() {
-                setWifiUpdateMode();
-            });
-            break;
-#endif            
-        case StreamTxRx::CmdType::SET_RX_LOAN_MODE:
-            loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
-            InLoanBindingMode = true;
-            break;          
-        }
+        packageIndex = otaPktPtr->full.msp_ul.packageIndex;
+        payload = otaPktPtr->full.msp_ul.payload;
+        dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
     }
-    else // !streamEnabled
+    else
     {
-    
-        uint8_t packageIndex;
-        uint8_t const * payload;
-        uint8_t dataLen;
-        if (OtaIsFullRes)
-        {
-            packageIndex = otaPktPtr->full.msp_ul.packageIndex;
-            payload = otaPktPtr->full.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
-        }
-        else
-        {
-            packageIndex = otaPktPtr->std.msp_ul.packageIndex;
-            payload = otaPktPtr->std.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
-        }
+        packageIndex = otaPktPtr->std.msp_ul.packageIndex;
+        payload = otaPktPtr->std.msp_ul.payload;
+        dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+    }
 
-        // Always examine MSP packets for bind information if in bind mode
-        // [1] is the package index, first packet of the MSP
-        if (InBindingMode && packageIndex == 1 && payload[0] == MSP_ELRS_BIND)
-        {
-            OnELRSBindMSP((uint8_t *)&payload[1]);
-            return;
-        }
+    // Always examine MSP packets for bind information if in bind mode
+    // [1] is the package index, first packet of the MSP
+    if (InBindingMode && packageIndex == 1 && payload[0] == MSP_ELRS_BIND)
+    {
+        OnELRSBindMSP((uint8_t *)&payload[1]);
+        return;
+    }
 
-        // Must be fully connected to process MSP, prevents processing MSP
-        // during sync, where packets can be received before connection
-        if (connectionState != connected)
-            return;
+    // Must be fully connected to process MSP, prevents processing MSP
+    // during sync, where packets can be received before connection
+    if (connectionState != connected)
+        return;
 
-        bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
-        MspReceiver.ReceiveData(packageIndex, payload, dataLen);
-        if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
-        {
-            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-        }
+    bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
+    MspReceiver.ReceiveData(packageIndex, payload, dataLen);
+    if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
+    {
+        NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
     }
 }
 
@@ -1078,22 +1099,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     }
 
 #ifdef DEBUG_STREAM
-  if (otaPktPtr->std.type == PACKET_TYPE_RCDATA)
-  {
-    DBG_RcCnt++;
-  }
-  else if(!DBG_RxReady)
-  {
-    memcpy(DBG_Rx, otaPktPtr, sizeof(OTA_Packet_s));
-    DBG_RxReady = true;
-  }
-#endif
-
-    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
-    if (otaPktPtr->std.type == PACKET_TYPE_TLM)
+    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA)
     {
-        return true;
+        DBG_RcCnt++;
     }
+    else if(!DBG_RxReady)
+    {
+        memcpy(DBG_Rx, otaPktPtr, sizeof(OTA_Packet_s));
+        DBG_RxReady = true;
+    }
+#endif
 
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
@@ -1107,13 +1122,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     case PACKET_TYPE_RCDATA: //Standard RC Data Packet
         ProcessRfPacket_RC(otaPktPtr);
         break;
-    case PACKET_TYPE_MSPDATA:
+    case PACKET_TYPE_MSP_OR_STDN: //MSP
         ProcessRfPacket_MSP(otaPktPtr);
         break;
     case PACKET_TYPE_SYNC: //sync packet from master
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
+        break;
+    case PACKET_TYPE_TLM_OR_STUP: //Stream uplink
+        ProcessRfPacket_STUP(otaPktPtr);
         break;
     default:
         break;
@@ -1910,7 +1928,7 @@ void loop()
   //char s[100];
   if (DBG_TxReady)
   {
-    if (DBG_streamReceiver.debug_gotsomething((OTA_Packet_s*)DBG_Tx)) 
+    if (DBG_streamReceiver.DEBUG_gotsomething((OTA_Packet_s*)DBG_Tx)) 
     {
         uint8_t t = DBG_Tx[0] & 0x03;
         Serial.printf("T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X ",
@@ -1918,7 +1936,7 @@ void loop()
         DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10]
         );
         //DBG(s);
-        if (t==3) DBG_streamReceiver.debug_decodePacket((OTA_Packet_s*)DBG_Tx);
+        if (t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
         DBGCR;
     }
     DBG_TxReady = false;
@@ -1932,7 +1950,7 @@ void loop()
       DBG_RcCnt
     );
     //DBG(s);
-    if (t==1) DBG_streamReceiver.debug_decodePacket((OTA_Packet_s*)DBG_Rx);
+    if (t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
     DBGCR;
     DBG_RcCnt = 0;
     DBG_RxReady = false;

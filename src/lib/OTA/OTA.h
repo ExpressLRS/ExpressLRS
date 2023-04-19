@@ -13,10 +13,10 @@
 #define OTA8_CRC_CALC_LEN    offsetof(OTA_Packet8_s, crc)
 
 // Packet header types (ota.std.type)
-#define PACKET_TYPE_RCDATA  0b00
-#define PACKET_TYPE_MSPDATA 0b01
-#define PACKET_TYPE_TLM     0b11
-#define PACKET_TYPE_SYNC    0b10
+#define PACKET_TYPE_RCDATA      0b00
+#define PACKET_TYPE_MSP_OR_STDN 0b01 //MSP uplink tx->rx fw<3.3   - stream downlink rx->tx fw>=3.3
+#define PACKET_TYPE_TLM_OR_STUP 0b11 //TLM downlink rx->tx fw<3.3 - stream uplink rx->tx fw>=3.3
+#define PACKET_TYPE_SYNC        0b10
 
 // Mask used to XOR the ModelId into the SYNC packet for ModelMatch
 #define MODELMATCH_MASK 0x3f
