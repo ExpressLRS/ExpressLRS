@@ -1905,62 +1905,63 @@ void loop()
             TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
         }
     }
+
+    if (streamEnabled)
+    {
+        if (streamReceiver.stream2Fifo.size() > 0)
+        {
+            streamSerial->write(streamReceiver.stream2Fifo.pop());
+        }
+        if (streamSender.stream2Fifo.free() > 0 && streamSerial->available())
+        {
+            streamSender.stream2Fifo.push(streamSerial->read());
+        }
+    }
+
+#ifdef DEBUG_STREAM
+    char map[] = {'r','m','s','t'};
+    //char s[100];
+    if (DBG_TxReady)
+    {
+        if (DBG_streamReceiver.DEBUG_gotsomething((OTA_Packet_s*)DBG_Tx))
+        {
+            uint8_t t = DBG_Tx[0] & 0x03;
+            Serial.printf("T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X ",
+            map[t],
+            DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10]
+            );
+            //DBG(s);
+            if (t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
+            DBGCR;
+        }
+        DBG_TxReady = false;
+    }
+    if (DBG_RxReady)
+    {
+        uint8_t t = DBG_Rx[0] & 0x03;
+        Serial.printf("R%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d) ",
+        map[t],
+        DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10],
+        DBG_RcCnt
+        );
+        //DBG(s);
+        if (t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
+        DBGCR;
+        DBG_RcCnt = 0;
+        DBG_RxReady = false;
+    }
+    else if (DBG_RcCnt>100)
+    {
+        DBGLN("R: rc=%d",DBG_RcCnt);
+        DBG_RcCnt = 0;
+    }
+#endif
+
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
     checkGeminiMode();
     debugRcvrLinkstats();
-
-  if (streamEnabled)
-  {
-    if (streamReceiver.stream2Fifo.size() > 0)
-    {
-        streamSerial->write(streamReceiver.stream2Fifo.pop());
-    }
-    if (streamSender.stream2Fifo.free() > 0 && streamSerial->available())
-    {
-        streamSender.stream2Fifo.push(streamSerial->read());
-    }
-  }
-
-#ifdef DEBUG_STREAM
-  char map[] = {'r','m','s','t'};
-  //char s[100];
-  if (DBG_TxReady)
-  {
-    if (DBG_streamReceiver.DEBUG_gotsomething((OTA_Packet_s*)DBG_Tx)) 
-    {
-        uint8_t t = DBG_Tx[0] & 0x03;
-        Serial.printf("T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X ",
-        map[t],
-        DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10]
-        );
-        //DBG(s);
-        if (t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
-        DBGCR;
-    }
-    DBG_TxReady = false;
-  }
-  if (DBG_RxReady)
-  {
-    uint8_t t = DBG_Rx[0] & 0x03;
-    Serial.printf("R%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d) ",
-      map[t],
-      DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10],
-      DBG_RcCnt
-    );
-    //DBG(s);
-    if (t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
-    DBGCR;
-    DBG_RcCnt = 0;
-    DBG_RxReady = false;
-  }
-  else if (DBG_RcCnt>100)
-  {
-    DBGLN("R: rc=%d",DBG_RcCnt);
-    DBG_RcCnt = 0;
-  }
-#endif
 }
 
 struct bootloader {
