@@ -72,4 +72,35 @@ protected:
         RXdoneCallback = nullCallbackRx;
         TXdoneCallback = nullCallbackTx;
     }
+
+
+    /**
+     * @brief Calculates the reported SNR value using a fuzzy logic approach
+     *
+     * This function computes the reported SNR based on two input SNR values (snr1 and snr2) and a threshold value.
+     * The reported SNR is determined by a smooth transition between the lower value of the two input SNRs and their average.
+     * The transition is controlled by the difference between the input SNRs and the threshold value.
+     *
+     * The sigmoid function is used to create a smooth S-shaped curve that maps the difference between the input SNRs
+     * to a value between 0 and 1. This value is then used to interpolate between the lower value and the average value,
+     * providing a smooth transition between the two conditions.
+     *
+     * @param snr1 The first SNR value
+     * @param snr2 The second SNR value
+     * @param threshold The threshold value to control the transition between the lower value and the average value reporting strategy
+     * @return The reported SNR value, which is either the lower value of the two input SNRs, their average, or a value in between, depending on the difference between the input SNRs and the threshold value
+     */
+    int8_t fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
+    {
+        double diff = fabs(snr1 - snr2);
+        double lower_value = fmin(snr1, snr2);
+        double average_value = ((double)snr1 + snr2) / 2;
+
+        // Map the difference to a value between 0 and 1, using sigmoid function
+        // Scale and shift the sigmoid curve to cover the desired transition range
+        double transition_value  = 1.0 / (1.0 + exp(-1.0*((diff - threshold) * 10 / threshold)));
+
+        // Interpolate between lower_value and average_value using the transition_value, then round to the nearest int
+        return (int8_t)round(lower_value * (1.0 - transition_value) + average_value * transition_value);
+    }
 };

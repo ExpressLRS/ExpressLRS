@@ -94,6 +94,4 @@ private:
     bool RXnbISR(uint16_t irqStatus, SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
     void CommitOutputPower();
-
-    int8_t fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold);
 };
