@@ -103,6 +103,9 @@
 # Flash both TX & RX with this enbled to use it if the ID is required.
 #-DDEBUG_RCVR_LINKSTATS
 
+# This debug option reports dual radio RSSI&SNR, which is useful for validating a TD receiver
+#-DDEBUG_RCVR_SIGNAL_STATS
+
 # Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
 # on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection
 # Dynamic power must be off, else it will adjust based on the FreqCorrection reported in SNR
