@@ -5,6 +5,10 @@
 #include "SX1280_hal.h"
 #include "SX12xxDriverCommon.h"
 
+#ifdef PLATFORM_ESP8266
+#include <cstdint>
+#endif
+
 #define RADIO_SNR_SCALE 4 // Units for LastPacketSNRRaw
 
 class SX1280Driver: public SX12xxDriverCommon

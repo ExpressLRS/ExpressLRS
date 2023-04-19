@@ -124,6 +124,10 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+unsigned long lastReport = 0;
+#endif
+
 #if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
@@ -288,7 +292,24 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     }
 
     int32_t rssiDBM = Radio.LastPacketRSSI;
-    if (antenna == 0)
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        int32_t rssiDBM2 = Radio.LastPacketRSSI2;
+
+        #if !defined(DEBUG_RCVR_LINKSTATS)
+        rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
+        rssiDBM2 = LPF_UplinkRSSI1.update(rssiDBM2);
+        #endif
+        rssiDBM = (rssiDBM > 0) ? 0 : rssiDBM;
+        rssiDBM2 = (rssiDBM2 > 0) ? 0 : rssiDBM2;
+
+        // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
+        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
+        antenna = (rssiDBM > rssiDBM2)? 0 : 1; // report a better antenna for the reception
+    }
+    else if (antenna == 0)
     {
         #if !defined(DEBUG_RCVR_LINKSTATS)
         rssiDBM = LPF_UplinkRSSI0.update(rssiDBM);
@@ -351,6 +372,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                  );
+    Radio.FuzzySNRThreshold = (RFperf->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE) ? 0 : (RFperf->DynpowerSnrThreshDn - RFperf->DynpowerSnrThreshUp);
 
     checkGeminiMode();
     if (geminiMode)
@@ -574,10 +596,10 @@ int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         if (tempFC > FreqCorrectionMin)
         {
             tempFC--; // FREQ_STEP units
-        }
-        else
-        {
-            DBGLN("Max -FreqCorrection reached!");
+            if (tempFC == FreqCorrectionMin)
+            {
+                DBGLN("Max -FreqCorrection reached!");
+            }
         }
     }
     else
@@ -585,10 +607,10 @@ int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         if (tempFC < FreqCorrectionMax)
         {
             tempFC++; // FREQ_STEP units
-        }
-        else
-        {
-            DBGLN("Max +FreqCorrection reached!");
+            if (tempFC == FreqCorrectionMax)
+            {
+                DBGLN("Max +FreqCorrection reached!");
+            }
         }
     }
 
@@ -782,6 +804,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
     didFHSS = false;
 
+    Radio.isFirstRxIrq = true;
     updateDiversity();
     bool tlmSent = HandleSendTelemetryResponse();
 
@@ -1962,6 +1985,42 @@ void loop()
     updateSwitchMode();
     checkGeminiMode();
     debugRcvrLinkstats();
+
+#if defined DEBUG_RCVR_SIGNAL_STATS
+    // log column header:  cnt1, rssi1, snr1, snr1_max, telem1, fail1, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
+    if(now - lastReport >= 1000 && connectionState == connected)
+    {
+        for (int i = 0 ; i < (isDualRadio()?2:1) ; i++)
+        {
+            DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
+                Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
+                float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
+                Radio.rxSignalStats[i].telem_count,
+                Radio.rxSignalStats[i].fail_count);
+
+                Radio.rxSignalStats[i].irq_count = 0;
+                Radio.rxSignalStats[i].snr_sum = 0;
+                Radio.rxSignalStats[i].rssi_sum = 0;
+                Radio.rxSignalStats[i].snr_max = INT8_MIN;
+                Radio.rxSignalStats[i].telem_count = 0;
+                Radio.rxSignalStats[i].fail_count = 0;
+        }
+        if (isDualRadio())
+        {
+            DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+        }
+        else
+        {
+            DBGLN("");
+        }
+        Radio.irq_count_or = 0;
+        Radio.irq_count_both = 0;
+
+        lastReport = now;
+    }
+#endif
 }
 
 struct bootloader {
