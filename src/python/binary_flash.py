@@ -2,6 +2,7 @@
 
 from enum import Enum
 import shutil
+import os
 
 from elrs_helpers import ElrsUploadResult
 import BFinitPassthrough
@@ -77,7 +78,8 @@ def upload_esp32_uart(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
     try:
-        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', 'bootloader_dio_40m.bin', '0x8000', 'partitions.bin', '0xe000', 'boot_app0.bin', '0x10000', args.file.name])
+        dir = os.path.dirname(args.file.name)
+        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -87,7 +89,8 @@ def upload_esp32_etx(args):
         args.port = serials_find.get_serial_port()
     ETXinitPassthrough.etx_passthrough_init(args.port, args.baud)
     try:
-        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', 'bootloader_dio_40m.bin', '0x8000', 'partitions.bin', '0xe000', 'boot_app0.bin', '0x10000', args.file.name])
+        dir = os.path.dirname(args.file.name)
+        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -102,7 +105,8 @@ def upload_esp32_bf(args):
     if retval != ElrsUploadResult.Success:
         return retval
     try:
-        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', 'bootloader_dio_40m.bin', '0x8000', 'partitions.bin', '0xe000', 'boot_app0.bin', '0x10000', args.file.name])
+        dir = os.path.dirname(args.file.name)
+        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -111,10 +115,11 @@ def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266 or mcuType == MCUType.STM32:
         shutil.copy2(args.file.name, args.out)
     elif mcuType == MCUType.ESP32:
+        dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
-        shutil.copy2('bootloader_dio_40m.bin', args.out)
-        shutil.copy2('partitions.bin', args.out)
-        shutil.copy2('boot_app0.bin', args.out)
+        shutil.copy2(os.path.join(dir, 'bootloader.bin'), args.out)
+        shutil.copy2(os.path.join(dir, 'partitions.bin'), args.out)
+        shutil.copy2(os.path.join(dir, 'boot_app0.bin'), args.out)
 
 def upload(options: FirmwareOptions, args):
     if args.baud == 0:
