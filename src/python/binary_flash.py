@@ -30,7 +30,7 @@ class UploadMethod(Enum):
     def __str__(self):
         return self.value
 
-def upload_wifi(args, upload_addr, isstm: bool):
+def upload_wifi(args, options, upload_addr, isstm: bool):
     wifi_mode = 'upload'
     if args.force == True:
         wifi_mode = 'uploadforce'
@@ -38,7 +38,14 @@ def upload_wifi(args, upload_addr, isstm: bool):
         wifi_mode = 'uploadconfirm'
     if args.port:
         upload_addr = [args.port]
-    return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
+    if options.mcuType == MCUType.ESP8266:
+        import gzip
+        with open(args.file.name, 'rb') as f_in:
+            with gzip.open('firmware.bin.gz', 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        return upload_via_esp8266_backpack.do_upload('firmware.bin.gz', wifi_mode, upload_addr, isstm, {})
+    else:
+        return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
 
 def upload_stm32_uart(args):
     if args.port == None:
@@ -134,14 +141,14 @@ def upload(options: FirmwareOptions, args):
             elif args.flash == UploadMethod.uart:
                 return upload_esp8266_uart(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, ['elrs_rx', 'elrs_rx.local'], False)
+                return upload_wifi(args, options, ['elrs_rx', 'elrs_rx.local'], False)
         elif options.mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.betaflight:
                 return upload_esp32_bf(args, options)
             elif args.flash == UploadMethod.uart:
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, ['elrs_rx', 'elrs_rx.local'], False)
+                return upload_wifi(args, options, ['elrs_rx', 'elrs_rx.local'], False)
         elif options.mcuType == MCUType.STM32:
             if args.flash == UploadMethod.betaflight or args.flash == UploadMethod.uart:
                 return upload_stm32_uart(args)
@@ -154,11 +161,11 @@ def upload(options: FirmwareOptions, args):
             elif args.flash == UploadMethod.uart:
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, ['elrs_tx', 'elrs_tx.local'], False)
+                return upload_wifi(args, options, ['elrs_tx', 'elrs_tx.local'], False)
         elif options.mcuType == MCUType.STM32:
             if args.flash == UploadMethod.stlink:      # test
                 return upload_stm32_stlink(args, options)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, ['elrs_txbp', 'elrs_txbp.local'], True)
+                return upload_wifi(args, options, ['elrs_txbp', 'elrs_txbp.local'], True)
     print("Invalid upload method for firmware")
     return ElrsUploadResult.ErrorGeneral
