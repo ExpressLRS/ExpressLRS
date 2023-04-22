@@ -347,9 +347,12 @@ def main():
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            src = ('LBT/' if args.lbt else 'FCC/') + file + '/firmware.bin'
+            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
-            shutil.copyfile(src, dst)
+            shutil.copy2(srcdir + '/firmware.bin', ".")
+            if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")
+            if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', ".")
+            if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', ".")
             args.file = open(dst, 'r+b')
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
@@ -369,9 +372,11 @@ def main():
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
             config['lua_name'] if 'lua_name' in config else '',
             config['stlink']['bootloader'] if 'stlink' in config else '',
-            config['stlink']['offset'] if 'stlink' in config else 0
+            config['stlink']['offset'] if 'stlink' in config else 0,
+            config['firmware']
         )
         patch_firmware(options, mm, pos, args)
+        args.file.close()
         if args.flash:
             args.accept = config.get('prior_target_name')
             return binary_flash.upload(options, args)
