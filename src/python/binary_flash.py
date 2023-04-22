@@ -39,10 +39,6 @@ def upload_wifi(args, options, upload_addr, isstm: bool):
     if args.port:
         upload_addr = [args.port]
     if options.mcuType == MCUType.ESP8266:
-        import gzip
-        with open(args.file.name, 'rb') as f_in:
-            with gzip.open('firmware.bin.gz', 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
         return upload_via_esp8266_backpack.do_upload('firmware.bin.gz', wifi_mode, upload_addr, isstm, {})
     else:
         return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})

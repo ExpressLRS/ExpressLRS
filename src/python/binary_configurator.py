@@ -377,6 +377,13 @@ def main():
         )
         patch_firmware(options, mm, pos, args)
         args.file.close()
+
+        if options.mcuType == MCUType.ESP8266:
+            import gzip
+            with open(args.file.name, 'rb') as f_in:
+                with gzip.open('firmware.bin.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
         if args.flash:
             args.accept = config.get('prior_target_name')
             return binary_flash.upload(options, args)
