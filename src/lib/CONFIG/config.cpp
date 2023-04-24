@@ -933,7 +933,7 @@ RxConfig::SetDefaults(bool commit)
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 
-    m_config.teamraceChannel = AUX8; // CH12
+    m_config.teamraceChannel = AUX7; // CH11
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
