@@ -846,7 +846,10 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
-            servoNewChannelsAvaliable();
+            // teamrace is only checked for servos because the teamrace model select logic only runs
+            // when new frames are available, and will decide later if the frame will be forwarded
+            if (teamraceModelIsSelected())
+                servoNewChannelsAvaliable();
         }
         else if (!LQCalcDVDA.currentIsSet())
         {
