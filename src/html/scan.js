@@ -610,7 +610,8 @@ function submitButtonActions(e) {
           message: 'An error occurred while saving button configuration'
         });
       }
-  };
+    };
+  }
 }
 _('submit-actions').addEventListener('click', submitButtonActions);
 @@end
