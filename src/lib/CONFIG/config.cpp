@@ -933,6 +933,8 @@ RxConfig::SetDefaults(bool commit)
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 
+    m_config.teamraceChannel = AUX8; // CH12
+
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
 #else
@@ -1019,4 +1021,23 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
         m_modified = true;
     }
 }
+
+void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
+{
+    if (m_config.teamraceChannel != teamraceChannel)
+    {
+        m_config.teamraceChannel = teamraceChannel;
+        m_modified = true;
+    }
+}
+
+void RxConfig::SetTeamracePosition(uint8_t teamracePosition)
+{
+    if (m_config.teamracePosition != teamracePosition)
+    {
+        m_config.teamracePosition = teamracePosition;
+        m_modified = true;
+    }
+}
+
 #endif

@@ -210,6 +210,7 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval);
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
 uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
+bool teamraceModelIsSelected();
 
 extern uint8_t ExpressLRS_currTlmDenom;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;

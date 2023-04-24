@@ -57,6 +57,20 @@ static struct luaItem_selection luaDiversityMode = {
 };
 #endif
 
+static struct luaItem_selection luaTeamraceChannel = {
+    {"TeamRce Ch", CRSF_TEXT_SELECTION},
+    0, // value
+    "AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaTeamracePosition = {
+    {"TeamRce Pos", CRSF_TEXT_SELECTION},
+    0, // value
+    "Disabled;1/Low;2;3;Mid;4;5;6/High",
+    STR_EMPTYSPACE
+};
+
 //----------------------------Info-----------------------------------
 
 static struct luaItem_string luaModelNumber = {
@@ -316,6 +330,15 @@ static void registerLuaParameters()
     uint8_t newRate = RATE_MAX - 1 - arg;
     config.SetRateInitialIdx(newRate);
   });
+
+  // Teamrace
+  registerLUAParameter(&luaTeamraceChannel, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetTeamraceChannel(arg + AUX2);
+  });
+  registerLUAParameter(&luaTeamracePosition, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetTeamracePosition(arg);
+  });
+
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
     if (arg == 6) {
@@ -366,6 +389,10 @@ static int event()
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
+
+  // Teamrace
+  setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
+  setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)

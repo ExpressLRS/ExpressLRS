@@ -206,7 +206,7 @@ static int event()
 
             if (GPIO_PIN_LED != UNDEF_PIN)
             {
-                if (connectionHasModelMatch)
+                if (connectionHasModelMatch && teamraceModelIsSelected())
                 {
                     digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
                 }
