@@ -24,11 +24,13 @@ void SerialSBUS::sendLinkStatisticsToFC()
 
 uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
-    if (failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES)
+    static auto sendPackets = false;
+    if ((failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
     {
         return SBUS_CALLBACK_INTERVAL_MS;
     }
-    
+    sendPackets = true;
+
     // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
     PackedRCdataOut.ch0 = channelData[0];
