@@ -1246,7 +1246,7 @@ static void setupSerial()
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
-    Serial.begin(serialBaud, config, -1, -1, invert);
+    Serial.begin(serialBaud, config, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
