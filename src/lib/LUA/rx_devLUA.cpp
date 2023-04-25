@@ -57,15 +57,19 @@ static struct luaItem_selection luaDiversityMode = {
 };
 #endif
 
+static struct luaItem_folder luaTeamraceFolder = {
+    {"Squad Select", CRSF_FOLDER},
+};
+
 static struct luaItem_selection luaTeamraceChannel = {
-    {"TeamRce Ch", CRSF_TEXT_SELECTION},
+    {"Channel", CRSF_TEXT_SELECTION},
     0, // value
     "AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12",
     STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaTeamracePosition = {
-    {"TeamRce Pos", CRSF_TEXT_SELECTION},
+    {"Position", CRSF_TEXT_SELECTION},
     0, // value
     "Disabled;1/Low;2;3;Mid;4;5;6/High",
     STR_EMPTYSPACE
@@ -332,12 +336,13 @@ static void registerLuaParameters()
   });
 
   // Teamrace
+  registerLUAParameter(&luaTeamraceFolder);
   registerLUAParameter(&luaTeamraceChannel, [](struct luaPropertiesCommon* item, uint8_t arg) {
     config.SetTeamraceChannel(arg + AUX2);
-  });
+  }, luaTeamraceFolder.common.id);
   registerLUAParameter(&luaTeamracePosition, [](struct luaPropertiesCommon* item, uint8_t arg) {
     config.SetTeamracePosition(arg);
-  });
+  }, luaTeamraceFolder.common.id);
 
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
