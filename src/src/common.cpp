@@ -110,6 +110,7 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 connectionState_e connectionState = disconnected;
 bool connectionHasModelMatch;
+bool teamraceHasModelMatch; // true if isTx or teamrace disabled or (enabled and channel in correct postion)
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
@@ -184,6 +185,8 @@ void initUID()
     }
     memcpy(UID, MasterUID, sizeof(UID));
     OtaUpdateCrcInitFromUid();
+    connectionHasModelMatch = false;
+    teamraceHasModelMatch = true;
 }
 
 bool ICACHE_RAM_ATTR isDualRadio()

@@ -117,7 +117,7 @@ int devicesUpdate(unsigned long now)
 {
     int32_t core = CURRENT_CORE;
 
-    bool newModelMatch = connectionHasModelMatch && teamraceModelIsSelected();
+    bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
     bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != newModelMatch;
     eventFired[core==-1?0:core] = false;
     lastConnectionState[core==-1?0:core] = connectionState;

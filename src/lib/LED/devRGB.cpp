@@ -449,7 +449,7 @@ static int timeout()
     {
     case connected:
         #if defined(TARGET_RX)
-            if (!connectionHasModelMatch || !teamraceModelIsSelected())
+            if (!connectionHasModelMatch || !teamraceHasModelMatch)
             {
                 blinkyColor.h = 10;
                 return flashLED(blinkyColor, 192, 0, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));

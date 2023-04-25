@@ -29,17 +29,6 @@ static int start()
 }
 
 /***
- * @brief: Return true is teamrace disabled or teamrace is enabled and the channel is in the right position
-*/
-bool ICACHE_RAM_ATTR teamraceModelIsSelected()
-{
-    // troiPass or troiDisablePending indicate the model is selected still,
-    // however returning true if troiDisablePending means this RX could send
-    // telemetry and we do not want that
-    return teamraceOutputInhibitState == troiPass;
-}
-
-/***
  * @brief: Convert the current TeamraceChannel value to the appropriate config value for comparison
 */
 static uint8_t teamraceChannelToConfigValue()
@@ -128,6 +117,10 @@ static bool confirmFrameAvailable()
     }
 
     lastTeamracePosition = newTeamracePosition;
+    // troiPass or troiDisablePending indicate the model is selected still,
+    // however returning true if troiDisablePending means this RX could send
+    // telemetry and we do not want that
+    teamraceHasModelMatch = teamraceOutputInhibitState == troiPass;
     return retVal;
 }
 
