@@ -46,3 +46,8 @@ void SerialIO::handleUARTin()
         processByte(byte);
     }
 }
+
+void SerialIO::setFailsafe(bool failsafe)
+{
+    this->failsafe = failsafe;
+}

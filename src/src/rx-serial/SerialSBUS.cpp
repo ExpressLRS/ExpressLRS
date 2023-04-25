@@ -1,9 +1,16 @@
 #include "SerialSBUS.h"
 #include "CRSF.h"
 #include "device.h"
+#include "config.h"
+
+#if defined(TARGET_RX)
 
 #define SBUS_FLAG_SIGNAL_LOSS       (1 << 2)
 #define SBUS_FLAG_FAILSAFE_ACTIVE   (1 << 3)
+
+extern RxConfig config;
+
+const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
 void SerialSBUS::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
@@ -17,6 +24,12 @@ void SerialSBUS::sendLinkStatisticsToFC()
 
 uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
+    if (failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES)
+    {
+        return SBUS_CALLBACK_INTERVAL_MS;
+    }
+    
+    // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
     PackedRCdataOut.ch0 = channelData[0];
     PackedRCdataOut.ch1 = channelData[1];
@@ -36,19 +49,19 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch15 = channelData[15];
 
     uint8_t extraData = 0;
-    if (!frameAvailable)
-    {
-        extraData |= SBUS_FLAG_SIGNAL_LOSS;
-    }
+    extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
+    extraData |= frameAvailable ? 0 : SBUS_FLAG_SIGNAL_LOSS;
 
     _outputPort->write(0x0F);    // HEADER
     _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
     _outputPort->write((uint8_t)extraData);    // ch 17, 18, lost packet, failsafe
     _outputPort->write((uint8_t)0x00);    // FOOTER
-    return 9;   // callback is every 9ms
+    return SBUS_CALLBACK_INTERVAL_MS;
 }
 
 void SerialSBUS::sendMSPFrameToFC(uint8_t* data)
 {
     // unsupported
 }
+
+#endif
