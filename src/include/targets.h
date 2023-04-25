@@ -226,7 +226,7 @@
 #ifndef GPIO_PIN_RCSIGNAL_RX_SBUS
 #define GPIO_PIN_RCSIGNAL_RX_SBUS UNDEF_PIN
 #endif
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP8266)
 #ifndef GPIO_PIN_DEBUG_RX
 #define GPIO_PIN_DEBUG_RX       3
 #endif
