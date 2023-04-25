@@ -1153,7 +1153,8 @@ void MspReceiveComplete()
             break;
         }
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+        if (connectionHasModelMatch && teamraceModelIsSelected() &&
+            (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
             serialIO->sendMSPFrameToFC(MspData);
         }
