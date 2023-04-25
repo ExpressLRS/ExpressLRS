@@ -103,10 +103,7 @@ static bool confirmFrameAvailable()
             if (lastTeamracePosition == newTeamracePosition)
             {
                 if (newTeamracePosition != config.GetTeamracePosition())
-                {
                     teamraceOutputInhibitState = troiInhibit; // disable output
-                    devicesTriggerEvent();
-                }
                 else
                     teamraceOutputInhibitState = troiPass; // return to normal
             }
@@ -123,10 +120,7 @@ static bool confirmFrameAvailable()
             if (lastTeamracePosition == newTeamracePosition)
             {
                 if (newTeamracePosition == config.GetTeamracePosition())
-                {
                     teamraceOutputInhibitState = troiPass; // return to normal
-                    devicesTriggerEvent();
-                }
                 else
                     teamraceOutputInhibitState = troiInhibit; // back to disabled
             }

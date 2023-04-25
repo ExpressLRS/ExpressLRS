@@ -117,10 +117,11 @@ int devicesUpdate(unsigned long now)
 {
     int32_t core = CURRENT_CORE;
 
-    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != connectionHasModelMatch;
+    bool newModelMatch = connectionHasModelMatch && teamraceModelIsSelected();
+    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != newModelMatch;
     eventFired[core==-1?0:core] = false;
     lastConnectionState[core==-1?0:core] = connectionState;
-    lastModelMatch[core==-1?0:core] = connectionHasModelMatch;
+    lastModelMatch[core==-1?0:core] = newModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
