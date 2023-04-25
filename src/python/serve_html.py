@@ -62,6 +62,7 @@ config = {
                 }
             ],
             "serial-protocol": 3,
+            "sbus-failsafe": 0,
             "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
             "lua_name": "ELRS+PWM 2400RX",
             "reg_domain": "ISM2G4",

@@ -50,7 +50,7 @@ function enumSelectGenerate(id, val, arOptions) {
 @@if not isTX:
 function updatePwmSettings(arPwm) {
   if (arPwm === undefined) {
-    if (_('pwm_tab')) _('pwm_tab').style.display = 'none';
+    if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
   }
   var pin1Index = undefined;
@@ -224,7 +224,7 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
-  _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
+  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data.forcetlm;
   _('serial-protocol').onchange = () => {
     if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
       _('rcvr-uart-baud').disabled = false;
@@ -237,6 +237,8 @@ function updateConfig(data) {
     else {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
+      _('sbus-config').style.display = 'block';
+      _('sbus-failsafe').value = data['sbus-failsafe'];
     }
   }
   updatePwmSettings(data.pwm);
@@ -519,9 +521,10 @@ if (_('config') != undefined) {
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({
           "pwm": getPwmFormData(),
-          "protocol": +_('serial-protocol').value,
+          "serial-protocol": +_('serial-protocol').value,
+          "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
-          "forcetlm": +_('force-tlm').checked
+          "force-tlm": +_('force-tlm').checked
         });
       }));
 }
