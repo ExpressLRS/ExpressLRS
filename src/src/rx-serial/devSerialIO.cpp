@@ -40,7 +40,7 @@ bool ICACHE_RAM_ATTR teamraceModelIsSelected()
 }
 
 /***
- * @brief: Convert the current TeamraceChannel value to the appropriate config value
+ * @brief: Convert the current TeamraceChannel value to the appropriate config value for comparison
 */
 static uint8_t teamraceChannelToConfigValue()
 {
@@ -67,17 +67,26 @@ static uint8_t teamraceChannelToConfigValue()
     }
 }
 
-static void teamraceUpdateState()
+/***
+ * @brief: Determine if FrameAvailable and it should be sent to FC
+ * @return: TRUE if a new frame is available and should be processed
+*/
+static bool confirmFrameAvailable()
 {
     if (!frameAvailable)
-        return;
+        return false;
+    frameAvailable = false;
 
     constexpr uint8_t CONFIG_TEAMRACE_POS_OFF = 0;
     if (config.GetTeamracePosition() == CONFIG_TEAMRACE_POS_OFF)
     {
         teamraceOutputInhibitState = troiPass;
-        return;
+        return true;
     }
+
+    // Pass the packet on if in troiPass (of course) or
+    // troiDisableAwaitConfirm (keep sending channels until the teamracepos stabilizes)
+    bool retVal = teamraceOutputInhibitState < troiInhibit;
 
     static uint8_t lastTeamracePosition;
     uint8_t newTeamracePosition = teamraceChannelToConfigValue();
@@ -104,16 +113,12 @@ static void teamraceUpdateState()
             break;
 
         case troiInhibit:
-            frameAvailable = false;
-
             // User appears to be switching to this model, wait for confirm
             if (newTeamracePosition == config.GetTeamracePosition())
                 teamraceOutputInhibitState = troiEnableAwaitConfirm;
             break;
 
         case troiEnableAwaitConfirm:
-            frameAvailable = false;
-
             // Must receive the same new position twice in a row for state to change
             if (lastTeamracePosition == newTeamracePosition)
             {
@@ -129,17 +134,17 @@ static void teamraceUpdateState()
     }
 
     lastTeamracePosition = newTeamracePosition;
+    return retVal;
 }
 
 static int timeout()
 {
     if (connectionState != serialUpdate)
     {
-        // Update teamrace state first to possibly clear frameAvailable
-        teamraceUpdateState();
-        uint32_t duration = serialIO->sendRCFrameToFC(frameAvailable, ChannelData);
+        // Verify there is new ChannelData and they should be sent on
+        bool sendChannels = confirmFrameAvailable();
+        uint32_t duration = serialIO->sendRCFrameToFC(sendChannels, ChannelData);
 
-        frameAvailable = false;
         serialIO->handleUARTout();
         serialIO->handleUARTin();
 
