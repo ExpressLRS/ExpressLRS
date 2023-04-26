@@ -6,6 +6,8 @@
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
+#include "StreamSender.h"
+#include "StreamReceiver.h"
 
 #include "lua.h"
 #include "msp.h"
@@ -48,6 +50,34 @@
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
+
+//// STREAM ///
+//#define DEBUG_STREAM
+#ifndef GPIO_PIN_STREAM_RX
+  #define GPIO_PIN_STREAM_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_STREAM_TX
+  #define GPIO_PIN_STREAM_TX UNDEF_PIN
+#endif
+#ifndef STREAM_BAUD
+  #define STREAM_BAUD 115200
+#endif
+
+bool streamEnabled = false;
+uint32_t streamCountdown = 60; //number of stream start attempts, one per second
+uint32_t streamCountdownMillis = 0;
+StreamSender streamSender(0xEE, PACKET_TYPE_MSP_OR_STDN); //STDN
+StreamReceiver streamReceiver(0xC8);
+Stream *streamSerial = new NullStream(); //default to null stream
+
+#ifdef DEBUG_STREAM
+int DBG_RcCnt = 0;
+bool DBG_TxReady = false;
+uint8_t DBG_Tx[13] = {0};
+bool DBG_RxReady = false;
+uint8_t DBG_Rx[13] = {0};
+StreamReceiver DBG_streamReceiver(0xEE);
+#endif
 
 device_affinity_t ui_devices[] = {
   {&Serial_device, 1},
@@ -351,8 +381,11 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     }
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
-    MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
-    TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+    if (!streamEnabled)
+    {
+        MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
+        TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+    }
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
@@ -439,63 +472,89 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     // ESP requires word aligned buffer
     WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
-    alreadyTLMresp = true;
-    otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
+    if(streamEnabled)
     {
-        OTA_LinkStats_s * ls;
-        if (OtaIsFullRes)
+        //send linkstat on timeout or if no data/cmd to be sent       
+        static uint32_t ts_linkstat = 0;
+        uint32_t now = millis();
+        if ((now - ts_linkstat > 500  || !streamSender.IsOtaPacketReady()) && !streamSender.IsCmdSet())
         {
-            otaPkt.full.tlm_dl.containsLinkStats = 1;
-            ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
-            // Include some advanced telemetry in the extra space
-            // Note the use of `ul_link_stats.payload` vs just `payload`
-            otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.full.tlm_dl.ul_link_stats.payload,
-                sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+            ts_linkstat = now;
+            OTA_LinkStats_s ls;
+            LinkStatsToOta(&ls);
+            streamSender.SetCmd(StreamBase::CmdType::LINKSTAT, (uint8_t*)&ls, sizeof(OTA_LinkStats_s));
         }
-        else
-        {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
-            ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
-        }
-        LinkStatsToOta(ls);
-
-        NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
-        // Start the count at 1 because the next will be DATA and doing +1 before checking
-        // against Max below is for some reason 10 bytes more code
-        telemetryBurstCount = 1;
+        streamSender.GetOtaPacket(&otaPkt);
+    } 
+    else if (!streamEnabled && streamCountdown > 0 && millis() - streamCountdownMillis > 1000)
+    {
+        //request switch to stream mode
+        streamCountdown--;
+        streamCountdownMillis = millis();
+        streamSender.GetStreamStartPacket(&otaPkt);
+        DBGLN("Sending Stream Start %d",streamCountdown);
     }
-    else
+    else //!streamEnabled
     {
-        if (telemetryBurstCount < telemetryBurstMax)
-        {
-            telemetryBurstCount++;
-        }
-        else
-        {
-            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-        }
+        alreadyTLMresp = true;
+        otaPkt.std.type = PACKET_TYPE_TLM_OR_STUP; //TLM
 
-        if (firmwareOptions.is_airport)
+        if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
         {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
-        }
-        else
-        {
+            OTA_LinkStats_s * ls;
             if (OtaIsFullRes)
             {
+                otaPkt.full.tlm_dl.containsLinkStats = 1;
+                ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
+                // Include some advanced telemetry in the extra space
+                // Note the use of `ul_link_stats.payload` vs just `payload`
                 otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.full.tlm_dl.payload,
-                    sizeof(otaPkt.full.tlm_dl.payload));
+                    otaPkt.full.tlm_dl.ul_link_stats.payload,
+                    sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
             }
             else
             {
-                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.std.tlm_dl.payload,
-                    sizeof(otaPkt.std.tlm_dl.payload));
+                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
+                ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
+            }
+            LinkStatsToOta(ls);
+
+            NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+            // Start the count at 1 because the next will be DATA and doing +1 before checking
+            // against Max below is for some reason 10 bytes more code
+            telemetryBurstCount = 1;
+        }
+        else
+        {
+            if (telemetryBurstCount < telemetryBurstMax)
+            {
+                telemetryBurstCount++;
+            }
+            else
+            {
+                NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+            }
+
+            if (firmwareOptions.is_airport)
+            {
+                OtaPackAirportData(&otaPkt, &apInputBuffer);
+            }
+            else
+            {
+                if (OtaIsFullRes)
+                {
+                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                        otaPkt.full.tlm_dl.payload,
+                        sizeof(otaPkt.full.tlm_dl.payload));
+                }
+                else
+                {
+                    otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                        otaPkt.std.tlm_dl.payload,
+                        sizeof(otaPkt.std.tlm_dl.payload));
+                }
             }
         }
     }
@@ -511,6 +570,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 #endif
     {
         Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+
+#ifdef DEBUG_STREAM
+        if(!DBG_TxReady)
+        {
+            memcpy(DBG_Tx,&otaPkt,sizeof(OTA_Packet_s));
+            DBG_TxReady = true;
+        } 
+#endif
+
     }
     return true;
 }
@@ -838,7 +906,14 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData, ExpressLRS_currTlmDenom);
-    TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+    if(streamEnabled)
+    {
+        streamSender.ack = (telemetryConfirmValue ? ackState::ACK : ackState::NACK);
+    }
+    else
+    {
+        TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+    }
 
     // No channels packets to the FC or PWM pins if no model match
     if (connectionHasModelMatch)
@@ -858,7 +933,49 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 }
 
-static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPktPtr)
+static void ICACHE_RAM_ATTR ProcessRfPacket_STUP(OTA_Packet_s * const otaPktPtr)
+{
+    if (!streamEnabled) 
+    {
+      DBGLN("stream mode enabled");
+      streamEnabled = true;
+    }
+    
+    streamReceiver.ReceiveOtaPacket(otaPktPtr);
+
+    // Always examine MSP packets for bind information if in bind mode
+    if (InBindingMode && streamReceiver.cmd == StreamBase::CmdType::BIND)
+    {
+        OnELRSBindMSP(streamReceiver.cmdArgs);
+        return;
+    }
+
+    // Must be fully connected to process MSP, prevents processing MSP
+    // during sync, where packets can be received before connection
+    if (connectionState != connected)
+        return;
+
+    switch (streamReceiver.cmd) 
+    {
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    case StreamBase::CmdType::SET_RX_WIFI_MODE:
+        // The MSP packet needs to be ACKed so the TX doesn't
+        // keep sending it, so defer the switch to wifi
+        deferExecution(500, []() {
+            setWifiUpdateMode();
+        });
+        break;
+#endif
+    case StreamBase::CmdType::SET_RX_LOAN_MODE:
+        loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
+        InLoanBindingMode = true;
+        break;
+    default:
+        break;
+    } 
+}
+
+static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s * const otaPktPtr)
 {
     uint8_t packageIndex;
     uint8_t const * payload;
@@ -1004,11 +1121,17 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
-    if (otaPktPtr->std.type == PACKET_TYPE_TLM)
+#ifdef DEBUG_STREAM
+    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA)
     {
-        return true;
+        DBG_RcCnt++;
     }
+    else if(!DBG_RxReady)
+    {
+        memcpy(DBG_Rx, otaPktPtr, sizeof(OTA_Packet_s));
+        DBG_RxReady = true;
+    }
+#endif
 
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
@@ -1022,13 +1145,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     case PACKET_TYPE_RCDATA: //Standard RC Data Packet
         ProcessRfPacket_RC(otaPktPtr);
         break;
-    case PACKET_TYPE_MSPDATA:
+    case PACKET_TYPE_MSP_OR_STDN: //MSP
         ProcessRfPacket_MSP(otaPktPtr);
         break;
     case PACKET_TYPE_SYNC: //sync packet from master
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
+        break;
+    case PACKET_TYPE_TLM_OR_STUP: //Stream uplink
+        ProcessRfPacket_STUP(otaPktPtr);
         break;
     default:
         break;
@@ -1055,6 +1181,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 #if defined(DEBUG_RX_SCOREBOARD)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
+    DBGW(' ');
+    Serial.printf(" ");
 #endif
     if (doStartTimer)
         hwTimer.resume(); // will throw an interrupt immediately
@@ -1087,6 +1215,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
+    streamSender.ack = ackState::UNKNOWN;
 }
 
 void UpdateModelMatch(uint8_t model)
@@ -1156,7 +1285,7 @@ void MspReceiveComplete()
         }
     }
 
-    MspReceiver.Unlock();
+    if (!streamEnabled) MspReceiver.Unlock();
 }
 
 static void setupSerial()
@@ -1249,22 +1378,55 @@ static void setupSerial()
     Serial.begin(serialBaud, config, -1, -1, invert);
 #endif
 
-    if (firmwareOptions.is_airport)
+    // Setup streamSerial
+    bool portConflict = false;
+    if (!firmwareOptions.is_airport && GPIO_PIN_STREAM_RX != UNDEF_PIN && GPIO_PIN_STREAM_TX != UNDEF_PIN)
     {
-        serialIO = new SerialAirPort(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        if (GPIO_PIN_STREAM_RX == GPIO_PIN_RCSIGNAL_RX || GPIO_PIN_STREAM_TX == GPIO_PIN_RCSIGNAL_TX
+         || GPIO_PIN_STREAM_RX == GPIO_PIN_RCSIGNAL_TX || GPIO_PIN_STREAM_TX == GPIO_PIN_RCSIGNAL_RX)
+        {
+            // Override rc serial port baud rate
+#if defined(PLATFORM_ESP8266)
+            Serial.begin(STREAM_BAUD, SERIAL_8N1, SERIAL_FULL, -1, false);
+#elif defined(PLATFORM_ESP32)
+            Serial.begin(STREAM_BAUD, SERIAL_8N1, GPIO_PIN_STREAM_RX, GPIO_PIN_STREAM_TX, false);
+#else
+            Serial.begin(STREAM_BAUD); //XXX TODO does this work for all other platforms??? Deal with "invert"...
+#endif
+            streamSerial = &Serial;
+            // Avoid conflict between streamSerial and serialIO, streamSerial takes priority over serialIO
+            serialIO = new SerialNOOP();
+            portConflict = true;
+        }
+    #if defined(PLATFORM_ESP32)
+        else
+        {
+            streamSerial = new HardwareSerial(1);
+            ((HardwareSerial *)streamSerial)->begin(STREAM_BAUD, SERIAL_8N1, GPIO_PIN_STREAM_RX, GPIO_PIN_STREAM_TX);
+        }
+    #endif
     }
-    else if (sbusSerialOutput)
+
+    if (!portConflict)
     {
-        serialIO = new SerialSBUS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        if (firmwareOptions.is_airport)
+        {
+            serialIO = new SerialAirPort(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        }
+        else if (sbusSerialOutput)
+        {
+            serialIO = new SerialSBUS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        }
+        else if (sumdSerialOutput)
+        {
+            serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        }
+        else
+        {
+            serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        }
     }
-    else if (sumdSerialOutput)
-    {
-        serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
-    }
-    else
-    {
-        serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
-    }
+
     SerialLogger = &Serial;
 }
 
@@ -1669,7 +1831,7 @@ void setup()
             hwTimer.callbackTock = &HWtimerCallbackTock;
             hwTimer.callbackTick = &HWtimerCallbackTick;
 
-            MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
+            if (!streamEnabled) MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
             hwTimer.init();
         }
@@ -1687,7 +1849,11 @@ void loop()
 {
     unsigned long now = millis();
 
-    if (MspReceiver.HasFinishedData())
+    if (streamEnabled && streamReceiver.PopCrsfPacket(MspData))
+    {
+        MspReceiveComplete();
+    }
+    else if (!streamEnabled && MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
     }
@@ -1749,10 +1915,71 @@ void loop()
 
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+    if (streamEnabled)
     {
-        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        if(streamSender.stream1Fifo.free() > 64 && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload)) {
+            streamSender.PushCrsfPackage(nextPayload, nextPlayloadSize);
+        }
     }
+    else
+    {
+        if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+        {
+            TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        }
+    }
+
+    if (streamEnabled)
+    {
+        if (streamReceiver.stream2Fifo.size() > 0)
+        {
+            streamSerial->write(streamReceiver.stream2Fifo.pop());
+        }
+        if (streamSender.stream2Fifo.free() > 0 && streamSerial->available())
+        {
+            streamSender.stream2Fifo.push(streamSerial->read());
+        }
+    }
+
+#ifdef DEBUG_STREAM
+    char map[] = {'r','m','s','t'};
+    //char s[100];
+    if (DBG_TxReady)
+    {
+        if (DBG_streamReceiver.DEBUG_gotsomething((OTA_Packet_s*)DBG_Tx))
+        {
+            uint8_t t = DBG_Tx[0] & 0x03;
+            Serial.printf("T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X ",
+            map[t],
+            DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10]
+            );
+            //DBG(s);
+            if (t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
+            DBGCR;
+        }
+        DBG_TxReady = false;
+    }
+    if (DBG_RxReady)
+    {
+        uint8_t t = DBG_Rx[0] & 0x03;
+        Serial.printf("R%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d) ",
+        map[t],
+        DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10],
+        DBG_RcCnt
+        );
+        //DBG(s);
+        if (t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
+        DBGCR;
+        DBG_RcCnt = 0;
+        DBG_RxReady = false;
+    }
+    else if (DBG_RcCnt>100)
+    {
+        DBGLN("R: rc=%d",DBG_RcCnt);
+        DBG_RcCnt = 0;
+    }
+#endif
+
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
@@ -1882,7 +2109,7 @@ void ExitBindingMode()
         return;
     }
 
-    MspReceiver.ResetState();
+    if (!streamEnabled) MspReceiver.ResetState();
 
     // Prevent any new packets from coming in
     Radio.SetTxIdleMode();

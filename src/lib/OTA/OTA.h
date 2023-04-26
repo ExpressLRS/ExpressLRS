@@ -13,10 +13,10 @@
 #define OTA8_CRC_CALC_LEN    offsetof(OTA_Packet8_s, crc)
 
 // Packet header types (ota.std.type)
-#define PACKET_TYPE_RCDATA  0b00
-#define PACKET_TYPE_MSPDATA 0b01
-#define PACKET_TYPE_TLM     0b11
-#define PACKET_TYPE_SYNC    0b10
+#define PACKET_TYPE_RCDATA      0b00
+#define PACKET_TYPE_MSP_OR_STDN 0b01 //MSP uplink tx->rx fw<3.3   - stream downlink rx->tx fw>=3.3
+#define PACKET_TYPE_TLM_OR_STUP 0b11 //TLM downlink rx->tx fw<3.3 - stream uplink rx->tx fw>=3.3
+#define PACKET_TYPE_SYNC        0b10
 
 // Mask used to XOR the ModelId into the SYNC packet for ModelMatch
 #define MODELMATCH_MASK 0x3f
@@ -45,6 +45,38 @@ typedef struct {
 typedef struct {
     uint8_t raw[5]; // 4x 10-bit channels, see PackUInt11ToChannels4x10 for encoding
 } PACKED OTA_Channels_4x10;
+
+typedef struct {
+    uint8_t packetType: 2, //bit0-1: same pos as packetType in OTA4/OTA8 packages
+            ack:1, //bit2
+            seq:1, //bit3
+            partType:3, //bit4-6: same pos OTA_StreamHeaderMore_s
+            partMore:1; //bit7:same pos OTA_StreamHeaderMore_s           
+} PACKED OTA_StreamHeaderFirst_s;
+
+typedef struct {
+    uint8_t partLen:4,  //bit0-3: partLen = length - 1 (possible lengths 1-16)
+            partType:3, //bit4-6: same pos as OTA_StreamHeaderFirst_s
+            partMore:1; //bit7: same pos as OTA_StreamHeaderFirst_s           
+} PACKED OTA_StreamHeaderMore_s;
+
+typedef struct {
+    union { //NOTE: size is actually ELRS8_TELEMETRY_BYTES_PER_CALL+1 for OTA8
+        OTA_StreamHeaderFirst_s hdrFirst;
+        OTA_StreamHeaderMore_s hdr[ELRS4_TELEMETRY_BYTES_PER_CALL+1];
+        uint8_t data[ELRS4_TELEMETRY_BYTES_PER_CALL+1];   
+
+    };
+} PACKED OTA_Stream_s;
+
+#define OTA_STREAMTYPE_CMD     0 // ELRS internal commands: command byte + max 4 argument bytes to keep compatibity with OTA4 packets
+#define OTA_STREAMTYPE_STREAM1 1 // CRSF data stream
+#define OTA_STREAMTYPE_STREAM2 2 // SERIAL data stream
+#define OTA_STREAMTYPE_FUTURE3 3 // future expansion
+#define OTA_STREAMTYPE_FUTURE4 4
+#define OTA_STREAMTYPE_FUTURE5 5
+#define OTA_STREAMTYPE_FUTURE6 6
+#define OTA_STREAMTYPE_FUTURE7 7
 
 typedef struct {
     // The packet type must always be the low two bits of the first byte of the
@@ -87,6 +119,8 @@ typedef struct {
                     count:(8 - ELRS4_TELEMETRY_SHIFT);
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
+        /** PACKET_TYPE_STREAM **/
+        OTA_Stream_s stream;        
     };
     uint8_t crcLow;
 } PACKED OTA_Packet4_s;
@@ -143,6 +177,8 @@ typedef struct {
                     count: 5;
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
+        /** PACKET_TYPE_STREAM **/
+        OTA_Stream_s stream;
     };
     uint16_t crc;  // crc16 LittleEndian
 } PACKED OTA_Packet8_s;

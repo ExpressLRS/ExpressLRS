@@ -6,6 +6,8 @@
 #include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
+#include "StreamReceiver.h"
+#include "StreamSender.h"
 
 #include "devCRSF.h"
 #include "devLED.h"
@@ -24,6 +26,34 @@
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
+//// STREAM ///
+//#define DEBUG_STREAM
+#ifndef GPIO_PIN_STREAM_RX
+  #define GPIO_PIN_STREAM_RX UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_STREAM_TX
+  #define GPIO_PIN_STREAM_TX UNDEF_PIN
+#endif
+#ifndef STREAM_BAUD
+  #define STREAM_BAUD 115200
+#endif
+
+bool streamEnabled = false;
+uint32_t streamCountdown = 60; //number of stream start attempts, one per second
+uint32_t streamCountdownMillis = 0;
+StreamSender streamSender(0xC8, PACKET_TYPE_TLM_OR_STUP);
+StreamReceiver streamReceiver(0xEE);
+Stream *streamSerial = new NullStream(); //default to null stream
+
+#ifdef DEBUG_STREAM
+int DBG_RcCnt = 0;
+bool DBG_TxReady = false;
+uint8_t DBG_Tx[13] = {0};
+bool DBG_RxReady = false;
+uint8_t DBG_Rx[13] = {0};
+StreamReceiver DBG_streamReceiver(0xEE);
+#endif
+
 /// define some libs to use ///
 hwTimer hwTimer;
 CRSF crsf;
@@ -31,8 +61,8 @@ POWERMGNT POWERMGNT;
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-Stream *TxBackpack;
-Stream *TxUSB;
+Stream *TxBackpack; //Backpack serial port
+Stream *TxUSB; //Airport serial port
 
 // Variables / constants for Airport //
 FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
@@ -77,6 +107,8 @@ static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
+
+
 
 device_affinity_t ui_devices[] = {
   {&CRSF_device, 1},
@@ -170,7 +202,14 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
   // -- rf_mode is updated when we change rates
   // -- downlink_Link_quality is updated before the LQ period is incremented
-  MspSender.ConfirmCurrentPayload(ls->mspConfirm);
+  if (streamEnabled)
+  {
+    //XXX TODO
+  }
+  else
+  {
+    MspSender.ConfirmCurrentPayload(ls->mspConfirm);
+  }
 }
 
 bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
@@ -188,7 +227,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     return false;
   }
 
-  if (otaPktPtr->std.type != PACKET_TYPE_TLM)
+  if (otaPktPtr->std.type != PACKET_TYPE_TLM_OR_STUP && otaPktPtr->std.type != PACKET_TYPE_MSP_OR_STDN)
   {
     DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
@@ -201,50 +240,65 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
-  // Full res mode
-  if (OtaIsFullRes)
+  if (otaPktPtr->std.type == PACKET_TYPE_MSP_OR_STDN) //stream downlink
   {
-    OTA_Packet8_s * const ota8 = (OTA_Packet8_s * const)otaPktPtr;
-    uint8_t *telemPtr;
-    uint8_t dataLen;
-    if (ota8->tlm_dl.containsLinkStats)
+    if (!streamEnabled) 
     {
-      LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
-      telemPtr = ota8->tlm_dl.ul_link_stats.payload;
-      dataLen = sizeof(ota8->tlm_dl.ul_link_stats.payload);
+      DBGLN("stream mode enabled");
+      streamEnabled = true;
     }
-    else
+    if (streamReceiver.ReceiveOtaPacket(otaPktPtr) == StreamBase::CmdType::LINKSTAT)
     {
-      if (firmwareOptions.is_airport)
-      {
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        return true;
-      }
-      telemPtr = ota8->tlm_dl.payload;
-      dataLen = sizeof(ota8->tlm_dl.payload);
-    }
-    //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
-    TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
+      LinkStatsFromOta((OTA_LinkStats_s *)streamReceiver.cmdArgs);
+    } 
   }
-  // Std res mode
-  else
+  else if (otaPktPtr->std.type == PACKET_TYPE_TLM_OR_STUP) //telemetry downlink
   {
-    switch (otaPktPtr->std.tlm_dl.type)
+    // Full res mode
+    if (OtaIsFullRes)
     {
-      case ELRS_TELEMETRY_TYPE_LINK:
-        LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
-        break;
-
-      case ELRS_TELEMETRY_TYPE_DATA:
+      OTA_Packet8_s * const ota8 = (OTA_Packet8_s * const)otaPktPtr;
+      uint8_t *telemPtr;
+      uint8_t dataLen;
+      if (ota8->tlm_dl.containsLinkStats)
+      {
+        LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
+        telemPtr = ota8->tlm_dl.ul_link_stats.payload;
+        dataLen = sizeof(ota8->tlm_dl.ul_link_stats.payload);
+      }
+      else
+      {
         if (firmwareOptions.is_airport)
         {
           OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
           return true;
         }
-        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
-          otaPktPtr->std.tlm_dl.payload,
-          sizeof(otaPktPtr->std.tlm_dl.payload));
-        break;
+        telemPtr = ota8->tlm_dl.payload;
+        dataLen = sizeof(ota8->tlm_dl.payload);
+      }
+      //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
+      TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
+    }
+    // Std res mode
+    else
+    {
+      switch (otaPktPtr->std.tlm_dl.type)
+      {
+        case ELRS_TELEMETRY_TYPE_LINK:
+          LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
+          break;
+
+        case ELRS_TELEMETRY_TYPE_DATA:
+          if (firmwareOptions.is_airport)
+          {
+            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+            return true;
+          }
+          TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
+            otaPktPtr->std.tlm_dl.payload,
+            sizeof(otaPktPtr->std.tlm_dl.payload));
+          break;
+      }
     }
   }
   return true;
@@ -257,8 +311,12 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   bool updateTelemDenom = true;
 
+  if (streamEnabled && streamSender.IsOtaPacketReady()) 
+  {
+    retVal = TLM_RATIO_1_2;
+  } 
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
+  else if (!streamEnabled && MspSender.IsActive())
   {
     retVal = TLM_RATIO_1_2;
   }
@@ -370,8 +428,11 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   }
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
-  MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
-  TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+  if (!streamEnabled)
+  {
+    MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
+    TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+  }
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -443,30 +504,52 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if (NextPacketIsMspData && MspSender.IsActive())
+    if (NextPacketIsMspData)
     {
-      otaPkt.std.type = PACKET_TYPE_MSPDATA;
-      if (OtaIsFullRes)
+      //request switch to stream mode
+      if (!streamEnabled && connectionState == connected && streamCountdown > 0 && millis() - streamCountdownMillis > 1000)
       {
-        otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.full.msp_ul.payload,
-          sizeof(otaPkt.full.msp_ul.payload));
+        streamCountdown--;
+        streamCountdownMillis = millis();
+        streamSender.GetStreamStartPacket(&otaPkt);
+        NextPacketIsMspData = false;
+        DBGLN("Sending Stream Start %d",streamCountdown);
       }
-      else
+      else if (streamEnabled && streamSender.IsOtaPacketReady()) 
       {
-        otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.std.msp_ul.payload,
-          sizeof(otaPkt.std.msp_ul.payload));
+        streamSender.GetOtaPacket(&otaPkt);
+        // send channel data next so the channel messages also get sent during msp transmissions
+        NextPacketIsMspData = false;
+        // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
+        // to add bandwidth for the reply
+        if (ExpressLRS_currTlmDenom != 2)
+          syncSpamCounter = 1;        
       }
+      else if (!streamEnabled && MspSender.IsActive())
+      {
+        otaPkt.std.type = PACKET_TYPE_MSP_OR_STDN; //MSP
+        if (OtaIsFullRes)
+        {
+          otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.full.msp_ul.payload,
+            sizeof(otaPkt.full.msp_ul.payload));
+        }
+        else
+        {
+          otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.std.msp_ul.payload,
+            sizeof(otaPkt.std.msp_ul.payload));
+        }
 
-      // send channel data next so the channel messages also get sent during msp transmissions
-      NextPacketIsMspData = false;
-      // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
-      BindingSendCount++;
-      // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
-      // to add bandwidth for the reply
-      if (ExpressLRS_currTlmDenom != 2)
-        syncSpamCounter = 1;
+        // send channel data next so the channel messages also get sent during msp transmissions
+        NextPacketIsMspData = false;
+        // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
+        BindingSendCount++;
+        // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
+        // to add bandwidth for the reply
+        if (ExpressLRS_currTlmDenom != 2)
+          syncSpamCounter = 1;
+      }
     }
     else
     {
@@ -511,7 +594,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
             ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
           }
         }
-        OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        if (streamEnabled)
+        {
+          OtaPackChannelData(&otaPkt, ChannelData, (streamReceiver.ack == ackState::ACK ? true : false), ExpressLRS_currTlmDenom);
+        } else {
+          OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        }
       }
     }
   }
@@ -555,6 +643,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
   }
+
+#ifdef DEBUG_STREAM
+  if (otaPkt.std.type == PACKET_TYPE_RCDATA)
+  {
+    DBG_RcCnt++;
+  }
+  else if(!DBG_TxReady)
+  {
+    memcpy(DBG_Tx,&otaPkt,sizeof(OTA_Packet_s));
+    DBG_TxReady = true;
+  }
+#endif
 }
 
 /*
@@ -765,6 +865,15 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+#ifdef DEBUG_STREAM
+  if (!DBG_RxReady)
+  {
+    OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+    memcpy(DBG_Rx,otaPktPtr,sizeof(OTA_Packet_s));
+    DBG_RxReady = true;
+  }
+#endif
+
   if (LQCalc.currentIsSet())
   {
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
@@ -847,14 +956,28 @@ void SetSyncSpam()
 
 static void SendRxWiFiOverMSP()
 {
-  MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
-  MspSender.SetDataToTransmit(MSPDataPackage, 1);
+  if (streamEnabled)
+  {
+    streamSender.SetCmd(StreamBase::CmdType::SET_RX_WIFI_MODE, {0}, 0);
+  }
+  else
+  {
+    MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
+    MspSender.SetDataToTransmit(MSPDataPackage, 1);
+  }
 }
 
 void SendRxLoanOverMSP()
 {
-  MSPDataPackage[0] = MSP_ELRS_SET_RX_LOAN_MODE;
-  MspSender.SetDataToTransmit(MSPDataPackage, 1);
+  if (streamEnabled)
+  {
+    streamSender.SetCmd(StreamBase::CmdType::SET_RX_LOAN_MODE, {0}, 0);
+  }
+  else
+  {  
+    MSPDataPackage[0] = MSP_ELRS_SET_RX_LOAN_MODE;
+    MspSender.SetDataToTransmit(MSPDataPackage, 1);
+  }
 }
 
 static void CheckReadyToSend()
@@ -903,11 +1026,18 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 
 void SendUIDOverMSP()
 {
-  MSPDataPackage[0] = MSP_ELRS_BIND;
-  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
-  BindingSendCount = 0;
-  MspSender.ResetState();
-  MspSender.SetDataToTransmit(MSPDataPackage, 5);
+  if (streamEnabled)
+  {
+    BindingSendCount = 0; 
+  }
+  else
+  {
+    MSPDataPackage[0] = MSP_ELRS_BIND;
+    memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
+    BindingSendCount = 0;
+    MspSender.ResetState();
+    MspSender.SetDataToTransmit(MSPDataPackage, 5);
+  }
 }
 
 void EnterBindingMode()
@@ -953,7 +1083,7 @@ void ExitBindingMode()
     return;
   }
 
-  MspSender.ResetState();
+  if (!streamEnabled) MspSender.ResetState();
 
   // Reset UID to defined values
   memcpy(UID, MasterUID, UID_LEN);
@@ -1056,6 +1186,22 @@ static void setupSerial()
     #endif
   }
 
+  // Setup streamSerial
+  //XXX TODO: enable other platforms by overriding rc serial port - need also change that TX connects without RC in this case
+#if defined(PLATFORM_ESP32) 
+  if (!firmwareOptions.is_airport && GPIO_PIN_STREAM_RX != UNDEF_PIN && GPIO_PIN_STREAM_TX != UNDEF_PIN)
+  {
+    streamSerial = new HardwareSerial(1);
+    ((HardwareSerial *)streamSerial)->begin(STREAM_BAUD, SERIAL_8N1, GPIO_PIN_STREAM_RX, GPIO_PIN_STREAM_TX);
+    if (GPIO_PIN_STREAM_RX == GPIO_PIN_DEBUG_RX || GPIO_PIN_STREAM_TX == GPIO_PIN_DEBUG_TX
+     || GPIO_PIN_STREAM_RX == GPIO_PIN_DEBUG_TX || GPIO_PIN_STREAM_TX == GPIO_PIN_DEBUG_RX)
+    {
+      // Avoid conflict between streamSerial and TxBackpack, streamSerial takes priority over TxBackpack
+      portConflict = true;
+    }
+  }
+#endif
+
 // Setup TxBackpack
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
@@ -1098,7 +1244,7 @@ static void setupSerial()
 
 // Setup TxUSB
 #if defined(PLATFORM_ESP32)
-  if (rxPin != UNDEF_PIN && txPin != UNDEF_PIN)
+  if (firmwareOptions.is_airport && rxPin != UNDEF_PIN && txPin != UNDEF_PIN)
   {
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, rxPin, txPin);
@@ -1282,6 +1428,39 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+  
+#ifdef DEBUG_STREAM
+  char map[] = {'r','m','s','t'};
+  char s[100]; 
+  if (DBG_TxReady)
+  {
+    uint8_t t = DBG_Tx[0] & 0x03;
+    sprintf(s,"T%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X (rc=%d str=%d) ",
+      map[t],
+      DBG_Tx[0], DBG_Tx[1], DBG_Tx[2], DBG_Tx[3], DBG_Tx[4], DBG_Tx[5], DBG_Tx[6], DBG_Tx[7], DBG_Tx[8], DBG_Tx[9], DBG_Tx[10],
+      DBG_RcCnt,
+      (streamEnabled ? 1 : 0)
+    );
+    DBG(s);
+    if(t==3) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Tx);
+    DBGCR;
+
+    DBG_TxReady = false;
+    DBG_RcCnt = 0;
+  }
+  if (DBG_RxReady)
+  {
+    uint8_t t = DBG_Rx[0] & 0x03;
+    sprintf(s,"R%c: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+      map[t],
+      DBG_Rx[0], DBG_Rx[1], DBG_Rx[2], DBG_Rx[3], DBG_Rx[4], DBG_Rx[5], DBG_Rx[6], DBG_Rx[7], DBG_Rx[8], DBG_Rx[9], DBG_Rx[10]
+    );
+    DBG(s);
+    if(t==1) DBG_streamReceiver.DEBUG_decodePacket((OTA_Packet_s*)DBG_Rx);
+    DBGCR;
+    DBG_RxReady = false;
+  }
+#endif
 
   HandleUARTout(); // Only used for non-CRSF output
 
@@ -1312,6 +1491,18 @@ void loop()
 
   executeDeferredFunction(now);
 
+  if (streamEnabled)
+  {
+    if (streamReceiver.stream2Fifo.size() > 0)
+    {
+        streamSerial->write(streamReceiver.stream2Fifo.pop());
+    }
+    if( connectionState == connected && streamSender.stream2Fifo.free() > 0 && streamSerial->available())
+    {
+      streamSender.stream2Fifo.push(streamSerial->read());
+    }
+  }
+
   if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
   {
     apInputBuffer.push(TxUSB->read());
@@ -1340,46 +1531,82 @@ void loop()
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
-      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
+      (now - TLMpacketReported >= firmwareOptions.tlm_report_interval)) 
+  {
     crsf.sendLinkStatisticsToTX();
     TLMpacketReported = now;
   }
 
-  if (TelemetryReceiver.HasFinishedData())
+  if (streamEnabled && streamReceiver.PopCrsfPacket(CRSFinBuffer))
   {
-      crsf.sendTelemetryToTX(CRSFinBuffer);
-      TelemetryReceiver.Unlock();
+    crsf.sendTelemetryToTX(CRSFinBuffer);
+  }
+  else if (!streamEnabled && TelemetryReceiver.HasFinishedData())
+  {
+    crsf.sendTelemetryToTX(CRSFinBuffer);
+    TelemetryReceiver.Unlock();
   }
 
-  // only send msp data when binding is not active
-  static bool mspTransferActive = false;
-  if (InBindingMode)
+  if (streamEnabled)
   {
-    // exit bind mode if package after some repeats
-    if (BindingSendCount > 6) {
-      ExitBindingMode();
-    }
-  }
-  else if (!MspSender.IsActive())
-  {
-    // sending is done and we need to update our flag
-    if (mspTransferActive)
+    if (InBindingMode)
     {
-      // unlock buffer for msp messages
-      crsf.UnlockMspMessage();
-      mspTransferActive = false;
+      // exit bind mode after some repeats
+      if (BindingSendCount > 6) 
+      {
+        ExitBindingMode();
+      }
+      else
+      {
+        streamSender.SetCmd(StreamBase::CmdType::BIND, &MasterUID[2], 4);
+        BindingSendCount++;
+      }
     }
-    // we are not sending so look for next msp package
-    else
+    //only send fresh data to streamSender (only push data to streamSender when Fifo is low) 
+    if (streamSender.IsStream1FifoLow())
     {
       uint8_t* mspData;
       uint8_t mspLen;
       crsf.GetMspMessage(&mspData, &mspLen);
-      // if we have a new msp package start sending
       if (mspData != nullptr)
       {
-        MspSender.SetDataToTransmit(mspData, mspLen);
-        mspTransferActive = true;
+        streamSender.PushCrsfPackage(mspData, mspLen);
+        crsf.UnlockMspMessage();
+      }
+    }
+  }
+  else // !streamEnabled
+  {
+    // only send msp data when binding is not active
+    static bool mspTransferActive = false;
+    if (InBindingMode)
+    {
+      // exit bind mode if package after some repeats
+      if (BindingSendCount > 6) {
+        ExitBindingMode();
+      }
+    }
+    else if (!MspSender.IsActive())
+    {
+      // sending is done and we need to update our flag
+      if (mspTransferActive)
+      {
+        // unlock buffer for msp messages
+        crsf.UnlockMspMessage();
+        mspTransferActive = false;
+      }
+      // we are not sending so look for next msp package
+      else
+      {
+        uint8_t* mspData;
+        uint8_t mspLen;
+        crsf.GetMspMessage(&mspData, &mspLen);
+        // if we have a new msp package start sending
+        if (mspData != nullptr)
+        {
+          MspSender.SetDataToTransmit(mspData, mspLen);
+          mspTransferActive = true;
+        }
       }
     }
   }

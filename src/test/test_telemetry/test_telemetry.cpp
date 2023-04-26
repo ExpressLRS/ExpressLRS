@@ -179,7 +179,7 @@ void test_function_store_unknown_type_two_slots(void)
     sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
-    TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
 }
 
 void test_function_store_ardupilot_status_text(void)
