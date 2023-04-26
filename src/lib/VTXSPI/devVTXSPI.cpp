@@ -49,6 +49,7 @@ static uint16_t vtxSPIFrequencyCurrent = 6000;
 uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
 uint8_t vtxSPIPitmode = 1;
+static uint8_t vtxSPIPitmodeCurrent = 1;
 static uint8_t RfAmpVrefState = 0;
 static uint16_t vtxSPIPWM = MAX_PWM;
 static uint16_t vtxMinPWM = MIN_PWM;
@@ -226,7 +227,7 @@ static void SetVpdSetPoint()
 
 static void checkOutputPower()
 {
-    if (vtxSPIPitmode)
+    if (vtxSPIPitmodeCurrent)
     {
         VTxOutputMinimum();
     }
@@ -334,7 +335,7 @@ static int event()
         return DURATION_NEVER;
     }
 
-    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
+    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx || vtxSPIPitmodeCurrent != vtxSPIPitmode)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -370,6 +371,12 @@ static int timeout()
         DBGLN("Set VTX power: %d", vtxSPIPowerIdx);
         SetVpdSetPoint();
         vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
+    }
+
+    if (vtxSPIPitmodeCurrent != vtxSPIPitmode)
+    {
+        DBGLN("Set PIT mode: %d", vtxSPIPitmode);
+        vtxSPIPitmodeCurrent = vtxSPIPitmode;
     }
 
     checkOutputPower();

@@ -23,6 +23,7 @@ typedef enum
   GET_VTX_TABLE_SIZE = 0,
   CHECK_POWER_LEVELS,
   CHECK_BANDS,
+  SET_RCE_PIT_MODE,
   SEND_EEPROM_WRITE,
   MONITORING,
   MSP_STATE_MAX
@@ -31,6 +32,7 @@ typedef enum
 void SendMSPFrameToFC(uint8_t *mspData);
 
 static bool eepromWriteRequired = false;
+static bool setRcePitMode = false;
 static uint8_t checkingIndex = 0;
 static uint8_t pitMode = 0;
 static uint8_t power = 0;
@@ -87,6 +89,22 @@ static void clearVtxTable(void)
     uint8_t request[MSP_REQUEST_LENGTH(MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH)];
     CRSF::SetMspV2Request(request, MSP_SET_VTX_CONFIG, payload, MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH);
     sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH));
+
+    eepromWriteRequired = true;
+}
+
+static void sendRcePitModeCommand(void)
+{
+    uint8_t payload[4] = {
+        channel, // idx LSB
+        0, // idx MSB
+        RACE_MODE, // 25mW Power idx
+        1 // pitmode
+    };
+
+    uint8_t request[MSP_REQUEST_LENGTH(4)];
+    CRSF::SetMspV2Request(request, MSP_SET_VTX_CONFIG, payload, 4);
+    sendCrsfMspToFC(request, MSP_REQUEST_FRAME_SIZE(4));
 
     eepromWriteRequired = true;
 }
@@ -188,9 +206,10 @@ void mspVtxProcessPacket(uint8_t *packet)
             pitMode = vtxConfigPacket->pitmode;
             power = vtxConfigPacket->power;
 
-            if (power == RACE_MODE) // If race mode, force pit mode on boot.
+            if (power == RACE_MODE && pitMode != 1) // If race mode and not already in PIT, force pit mode on boot and set it in BF.
             {
                 pitMode = 1;
+                setRcePitMode = true;
             }
 
             if (vtxConfigPacket->lowPowerDisarm) // Force 0mw on boot because BF doesnt send a low power index.
@@ -216,6 +235,9 @@ void mspVtxProcessPacket(uint8_t *packet)
             }
             clearVtxTable();
             break;
+        case SET_RCE_PIT_MODE:
+            setRcePitMode = false;
+            mspState = SEND_EEPROM_WRITE;
         case MONITORING:
             pitMode = vtxConfigPacket->pitmode;
 
@@ -272,7 +294,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                         checkingIndex++;
                         if (checkingIndex > getFreqTableBands() - 1)
                         {
-                            mspState = (eepromWriteRequired ? SEND_EEPROM_WRITE : MONITORING);
+                            mspState = (setRcePitMode ? SET_RCE_PIT_MODE : (eepromWriteRequired ? SEND_EEPROM_WRITE : MONITORING));
                             vtxSPIPitmode = pitMode;
                             vtxSPIPowerIdx = power;
                             vtxSPIFrequency = getFreqByIdx(channel);
@@ -309,6 +331,9 @@ static void mspVtxStateUpdate(void)
             break;
         case CHECK_BANDS:
             getVtxTableBand(checkingIndex + 1);
+            break;
+        case SET_RCE_PIT_MODE:
+            sendRcePitModeCommand();
             break;
         case SEND_EEPROM_WRITE:
             sendEepromWriteCommand();
