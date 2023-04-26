@@ -978,6 +978,19 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     device->parameterVersion = 0;
 }
 
+void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
+{
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
+    packet[1] = 0;             // flags
+    packet[2] = function & 0xFF;
+    packet[3] = (function >> 8) & 0xFF;
+    packet[4] = payloadLength & 0xFF;
+    packet[5] = (payloadLength >> 8) & 0xFF;
+    memcpy(packet + 6, payload, payloadLength);
+    packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
+}
+
 void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
 {
     crsf_header_t *header = (crsf_header_t *)frame;

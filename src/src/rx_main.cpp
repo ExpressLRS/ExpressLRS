@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 #include "MeanAccumulator.h"
+#include "freqTable.h"
 
 #include "rx-serial/SerialIO.h"
 #include "rx-serial/SerialNOOP.h"
@@ -31,6 +32,7 @@
 #include "devAnalogVbat.h"
 #include "devSerialUpdate.h"
 #include "devBaro.h"
+#include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -78,6 +80,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
+#ifdef HAS_MSP_VTX
+  {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
 };
 
@@ -1095,6 +1100,11 @@ void UpdateModelMatch(uint8_t model)
     config.SetModelId(model);
 }
 
+void SendMSPFrameToFC(uint8_t *mspData)
+{
+    serialIO->sendMSPFrameToFC(mspData);
+}
+
 /**
  * Process the assembled MSP packet in MspData[]
  **/
@@ -1124,17 +1134,6 @@ void MspReceiveComplete()
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
                 UpdateModelMatch(MspData[9]);
-                break;
-            }
-            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
-            {
-                vtxSPIBandChannelIdx = MspData[8];
-                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                {
-                    vtxSPIPowerIdx = MspData[10];
-                    vtxSPIPitmode = MspData[11];
-                }
-                devicesTriggerEvent();
                 break;
             }
             // FALLTHROUGH
