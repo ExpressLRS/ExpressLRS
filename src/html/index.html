@@ -35,6 +35,9 @@
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
+					<div class="mui-panel" style="background-color: #eff6fc;">
+						The form below <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+					</div>
 					<br/>
 					<div class="mui-textfield">
 						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
@@ -99,7 +102,7 @@
 							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
 						</div>
 @@end
-						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save & Reboot</button>
+						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save</button>
 						<div id="reset-options" style="display: none;">
 							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>

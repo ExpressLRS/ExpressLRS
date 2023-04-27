@@ -81,7 +81,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #elif defined(USE_SBUS_PROTOCOL)
     .uart_baud = 100000,
 #elif defined(USE_SUMD_PROTOCOL)
-    .uart_baud = 115200,	
+    .uart_baud = 115200,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -168,7 +168,10 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 
 char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
-char flash_discriminator[25];
+
+// Discriminator value used to determine if the device has been reflashed and therefore
+// the SPIFSS settings are obsolete and the flashed settings should be used in preference
+uint32_t flash_discriminator;
 
 firmware_options_t firmwareOptions;
 
@@ -321,7 +324,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
-    strlcpy(flash_discriminator, doc["flash-discriminator"] | "", sizeof(flash_discriminator));
+    flash_discriminator = doc["flash-discriminator"] | 0U;
 
     builtinOptions.clear();
     saveOptions(builtinOptions, doc["customised"] | false);

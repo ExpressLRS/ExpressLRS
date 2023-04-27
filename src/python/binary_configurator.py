@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import os
-import base64
+from random import randint
 import argparse
 import json
 from json import JSONEncoder
@@ -234,7 +234,7 @@ def patch_unified(args, options):
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
 
-    json_flags['flash-discriminator'] = base64.b64encode(os.urandom(16)).decode("utf-8")
+    json_flags['flash-discriminator'] = randint(1,2^32-1)
 
     UnifiedConfiguration.doConfiguration(
         args.file,

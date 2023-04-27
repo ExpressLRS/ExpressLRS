@@ -244,7 +244,7 @@ static void HandleReset(AsyncWebServerRequest *request)
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  if (String(flash_discriminator) != json["flash-discriminator"]) {
+  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
     request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
     return;
   }
@@ -344,7 +344,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
     #if defined(TARGET_RX)
     else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
     else json["config"]["uidtype"] = "Not set";
