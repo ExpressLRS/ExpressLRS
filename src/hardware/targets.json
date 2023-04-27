@@ -874,6 +874,24 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_RX"
+            },
+            "epw5": {
+                "product_name": "HappyModel EPW5 2.4GHz PWM RX",
+                "lua_name": "HM EPW5 2400",
+                "layout_file": "Generic 2400 PWMP5.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_PWMP"
+            },
+            "epw6": {
+                "product_name": "HappyModel EPW6 2.4GHz PWM RX",
+                "lua_name": "HM EPW6 2400",
+                "layout_file": "Generic 2400 PWMP6.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_PWMPEX"
             }
         }
     },
