@@ -206,7 +206,42 @@ function updateConfig(data) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
   if (data.uid) _('uid').value = data.uid.toString();
-  if (data.uidtype) _('uid-type').textContent = data.uidtype;
+
+  let bg = '';
+  let fg = '';
+  let text = data.uidtype;
+  let desc = '';
+  if (!data.uidtype || data.uidtype === 'Not set') {
+    bg = '#D50000';  // default 'red' for 'Not set'
+    fg = 'white';
+    text = 'Not set';
+    desc = 'The default binding UID from the device address will be used';
+  }
+  if (data.uidtype === 'Flashed') {
+    bg = '#1976D2'; // blue/white
+    fg = 'white';
+    desc = 'The binding UID was generated from a binding phrase set at flash time';
+  }
+  if (data.uidtype === 'Overridden') {
+    bg = '#689F38'; // green
+    fg = 'black';
+    desc = 'The binding UID has been generated from a bind-phrase previously entered into the "binding phrase" field above';
+  }
+  if (data.uidtype === 'Traditional') {
+    bg = '#D50000'; // red
+    fg = 'white';
+    desc = 'The binding UID has been set using traditional binding method i.e. button or 3-times power cycle and bound via the Lua script';
+  }
+  if (data.uidtype === 'On loan') {
+    bg = '#FFA000'; // amber
+    fg = 'black';
+    desc = 'The binding UID has been set using the model-loan feature';
+  }
+  _('uid-type').style.backgroundColor = bg;
+  _('uid-type').style.color = fg;
+  _('uid-type').textContent = text;
+  _('uid-text').textContent = desc;
+
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
     _('ssid').textContent = data.ssid;

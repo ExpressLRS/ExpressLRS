@@ -36,7 +36,10 @@
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
 					<div class="mui-panel" style="background-color: #eff6fc;">
-						The form below <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+						This form <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+						<br/>
+						<br/>
+						Note: The Binding phrase is <b>not</b> remembered, it is a temporary field used to generate the binding UID.
 					</div>
 					<br/>
 					<div class="mui-textfield">
@@ -47,9 +50,10 @@
 						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
 						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
 						<input type="hidden" id='wifi-password' name='wifi-password'/>
+						<span class="badge" id="uid-type"></span>&nbsp;<span id="uid-text"></span>
+						<br/>
 						<div class="mui-textfield">
 							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
-							<label>UID <b id='uid-type'></b> (Auto updated by changing the bind-phrase above)</label>
 						</div>
 @@if sx127x:
 						<div class="mui-select">

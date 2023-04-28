@@ -36,6 +36,7 @@ config = {
             "wifi-ssid": "network-ssid"
         },
         "config": {
+            "uidtype": "On loan",
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
