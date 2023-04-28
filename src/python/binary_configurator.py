@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+from random import randint
 import argparse
 import json
 from json import JSONEncoder
@@ -218,13 +219,22 @@ def patch_unified(args, options):
     if args.uart_inverted is not None:
         json_flags['uart-inverted'] = args.uart_inverted
 
-    if args.rx_baud is not None:
+    if args.airport_baud is not None:
+        json_flags['is-airport'] = True
+        if options.deviceType is DeviceType.RX:
+            json_flags['rcvr-uart-baud'] = args.airport_baud
+        else:
+            json_flags['airport-uart-baud'] = args.airport_baud
+    elif args.rx_baud is not None:
         json_flags['rcvr-uart-baud'] = args.rx_baud
+
     if args.lock_on_first_connection is not None:
         json_flags['lock-on-first-connection'] = args.lock_on_first_connection
 
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
+
+    json_flags['flash-discriminator'] = randint(1,2^32-1)
 
     UnifiedConfiguration.doConfiguration(
         args.file,

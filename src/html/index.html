@@ -35,17 +35,22 @@
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
+					This form <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+					Note: The Binding phrase is <b>not</b> remembered, it is a temporary field used to generate the binding UID.
+					<br/>
 					<br/>
 					<div class="mui-textfield">
 						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
 						<label for="phrase">Binding Phrase</label>
 					</div>
 					<form id='upload_options' method='POST' action="/options">
+						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
 						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
 						<input type="hidden" id='wifi-password' name='wifi-password'/>
+						<span class="badge" id="uid-type"></span>&nbsp;<span id="uid-text"></span>
+						<br/>
 						<div class="mui-textfield">
 							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
-							<label>UID <b id='uid-type'></b> (Auto updated by changing the bind-phrase above)</label>
 						</div>
 @@if sx127x:
 						<div class="mui-select">
@@ -98,7 +103,7 @@
 							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
 						</div>
 @@end
-						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>
+						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save</button>
 						<div id="reset-options" style="display: none;">
 							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>
