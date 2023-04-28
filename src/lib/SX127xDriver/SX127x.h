@@ -65,8 +65,8 @@ public:
     //uint8_t RunCAD();
 
     uint8_t UnsignedGetLastPacketRSSI(SX12XX_Radio_Number_t radioNumber);
-    int8_t GetLastPacketRSSI();
-    int8_t GetLastPacketSNRRaw();
+    int8_t GetLastPacketRSSI(SX12XX_Radio_Number_t radioNumber);
+    int8_t GetLastPacketSNRRaw(SX12XX_Radio_Number_t radioNumber);
     int8_t GetCurrRSSI(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
     SX12XX_Radio_Number_t GetProcessingPacketRadio(){return processingPacketRadio;}

@@ -206,7 +206,42 @@ function updateConfig(data) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
   if (data.uid) _('uid').value = data.uid.toString();
-  if (data.uidtype) _('uid-type').textContent = data.uidtype;
+
+  let bg = '';
+  let fg = '';
+  let text = data.uidtype;
+  let desc = '';
+  if (!data.uidtype || data.uidtype === 'Not set') {
+    bg = '#D50000';  // default 'red' for 'Not set'
+    fg = 'white';
+    text = 'Not set';
+    desc = 'The default binding UID from the device address will be used';
+  }
+  if (data.uidtype === 'Flashed') {
+    bg = '#1976D2'; // blue/white
+    fg = 'white';
+    desc = 'The binding UID was generated from a binding phrase set at flash time';
+  }
+  if (data.uidtype === 'Overridden') {
+    bg = '#689F38'; // green
+    fg = 'black';
+    desc = 'The binding UID has been generated from a bind-phrase previously entered into the "binding phrase" field above';
+  }
+  if (data.uidtype === 'Traditional') {
+    bg = '#D50000'; // red
+    fg = 'white';
+    desc = 'The binding UID has been set using traditional binding method i.e. button or 3-times power cycle and bound via the Lua script';
+  }
+  if (data.uidtype === 'On loan') {
+    bg = '#FFA000'; // amber
+    fg = 'black';
+    desc = 'The binding UID has been set using the model-loan feature';
+  }
+  _('uid-type').style.backgroundColor = bg;
+  _('uid-type').style.color = fg;
+  _('uid-type').textContent = text;
+  _('uid-text').textContent = desc;
+
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
     _('ssid').textContent = data.ssid;
@@ -561,22 +596,30 @@ function submitOptions(e) {
   }));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      cuteAlert({
-        type: 'question',
-        title: 'Upload Succeeded',
-        message: 'Reboot to take effect',
-        confirmText: 'Reboot',
-        cancelText: 'Close'
-      }).then((e) => {
-        if (e == 'confirm') {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/reboot');
-          xhr.setRequestHeader('Content-Type', 'application/json');
-          xhr.onreadystatechange = function() {};
-          xhr.send();
-        }
-      });
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'question',
+          title: 'Upload Succeeded',
+          message: 'Reboot to take effect',
+          confirmText: 'Reboot',
+          cancelText: 'Close'
+        }).then((e) => {
+          if (e == 'confirm') {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/reboot');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {};
+            xhr.send();
+          }
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Upload Failed',
+          message: this.responseText
+        });
+      }
     }
   };
 }
@@ -631,6 +674,7 @@ function updateOptions(data) {
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
   else _('connect').style.display = 'none';
   if (data['customised']) _('reset-options').style.display = 'block';
+  _('submit-options').disabled = false;
 }
 
 @@if isTX:

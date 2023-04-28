@@ -242,6 +242,17 @@ static void HandleReset(AsyncWebServerRequest *request)
   rebootTime = millis() + 100;
 }
 
+static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
+    request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
+    return;
+  }
+  File file = SPIFFS.open("/options.json", "w");
+  serializeJson(json, file);
+  request->send(200);
+}
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
 #if defined(PLATFORM_ESP32)
@@ -333,7 +344,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
     #if defined(TARGET_RX)
     else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
     else json["config"]["uidtype"] = "Not set";
@@ -594,9 +605,9 @@ static void corsPreflightResponse(AsyncWebServerRequest *request) {
 }
 
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (target_seen) {
+  if (target_seen || Update.hasError()) {
     String msg;
-    if (Update.end()) {
+    if (!Update.hasError() && Update.end()) {
       DBGLN("Update complete, rebooting");
       msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
@@ -791,7 +802,7 @@ static void startWiFi(unsigned long now)
     hwTimer::stop();
 
 #ifdef HAS_VTX_SPI
-    VTxOutputMinimum();
+    disableVTxSpi();
 #endif
 
     // Set transmit power to minimum
@@ -948,11 +959,12 @@ static void startServices()
   server.on("/hardware.html", WebUpdateSendContent);
   server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
-  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
+  server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
