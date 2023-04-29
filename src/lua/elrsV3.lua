@@ -622,7 +622,6 @@ local function lcd_title_color()
   lcd.setColor(CUSTOM_COLOR, BLACK)
   if titleShowWarn then
     lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-    lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
   else
     local title = fields_count > 0 and deviceName or "Loading..."
     lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
