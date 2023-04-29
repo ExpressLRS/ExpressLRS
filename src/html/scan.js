@@ -261,22 +261,27 @@ function updateConfig(data) {
   _('modelid').value = storedModelId;
   _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
   _('serial-protocol').onchange = () => {
-    if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+    if (_('is-airport').checked) {
+      _('rcvr-uart-baud').disabled = false;
+      _('rcvr-uart-baud').value = data['rcvr-uart-baud'];
+    }
+    else if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = '420000';
     }
-    if (_('serial-protocol').value == 4) {
-      _('rcvr-uart-baud').disabled = true;
-      _('rcvr-uart-baud').value = '115200';
-    }
-    else {
+    else if (_('serial-protocol').value == 2 || _('serial-protocol').value == 3) {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
+    }
+    else if (_('serial-protocol').value == 4) {
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '115200';
     }
   }
   updatePwmSettings(data.pwm);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
+  _('is-airport').onchange = _('serial-protocol').onchange;
 @@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
