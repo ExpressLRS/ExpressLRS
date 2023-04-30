@@ -1191,8 +1191,8 @@
         "name": "Matek Systems",
         "rx_2400": {
             "r24d": {
-                "product_name": "MATEK R24-D 2.4GHz RX",
-                "lua_name": "MATEK R24-D",
+                "product_name": "Matek R24-D 2.4GHz RX",
+                "lua_name": "Matek R24-D",
                 "layout_file": "Generic 2400 Diversity PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -1200,8 +1200,8 @@
                 "prior_target_name": "MATEK_2400_RX_R24D"
             },
             "r24s": {
-                "product_name": "MATEK R24-S 2.4GHz RX",
-                "lua_name": "MATEK R24-S",
+                "product_name": "Matek R24-S 2.4GHz RX",
+                "lua_name": "Matek R24-S",
                 "layout_file": "Generic 2400 PA.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -1209,13 +1209,22 @@
                 "prior_target_name": "MATEK_2400_RX"
             },
             "r24p": {
-                "product_name": "MATEK R24-P PWM 2.4GHz RX",
-                "lua_name": "MATEK R24-P",
+                "product_name": "Matek R24-P PWM 2.4GHz RX",
+                "lua_name": "Matek R24-P",
                 "layout_file": "Generic 2400 PWMP5.json",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_2400_RX",
                 "prior_target_name": "MATEK_2400_RX_PWM"
+            },
+            "r24p6": {
+                "product_name": "Matek R24-P6 PWM 2.4GHz RX",
+                "lua_name": "Matek R24-P6",
+                "layout_file": "Generic 2400 PWMP6.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_PWMPEX"
             }
         }
     },
