@@ -1,5 +1,6 @@
 Import("env", "projenv")
 import os
+import shutil
 import stlink
 import UARTupload
 import opentx
@@ -135,3 +136,10 @@ except FileNotFoundError:
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)
 if platform in ['espressif8266'] and "_WIFI" in target_name:
     env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", esp_compress.compressFirmware)
+
+def copyBootApp0bin(source, target, env):
+    file = os.path.join(env.PioPlatform().get_package_dir("framework-arduinoespressif32"), "tools", "partitions", "boot_app0.bin")
+    shutil.copy2(file, os.path.join(env['PROJECT_BUILD_DIR'], env['PIOENV']))
+
+if platform in ['espressif32']:
+    env.AddPreAction("$BUILD_DIR/${PROGNAME}.bin", copyBootApp0bin)

@@ -290,6 +290,16 @@ class readable_dir(argparse.Action):
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
 
+class writeable_dir(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir=values
+        if not os.path.isdir(prospective_dir):
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        if os.access(prospective_dir, os.W_OK):
+            setattr(namespace,self.dest,prospective_dir)
+        else:
+            raise argparse.ArgumentTypeError("readable_dir:{0} is not a writeable dir".format(prospective_dir))
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
@@ -326,6 +336,7 @@ def main():
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument('--out', action=writeable_dir, default=None)
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
@@ -343,13 +354,15 @@ def main():
         os.chdir(args.dir)
 
     if args.file == None:
-        os.chdir('firmware')
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            src = ('LBT/' if args.lbt else 'FCC/') + file + '/firmware.bin'
+            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
-            shutil.copyfile(src, dst)
+            shutil.copy2(srcdir + '/firmware.bin', ".")
+            if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")
+            if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', ".")
+            if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', ".")
             args.file = open(dst, 'r+b')
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
@@ -369,9 +382,18 @@ def main():
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
             config['lua_name'] if 'lua_name' in config else '',
             config['stlink']['bootloader'] if 'stlink' in config else '',
-            config['stlink']['offset'] if 'stlink' in config else 0
+            config['stlink']['offset'] if 'stlink' in config else 0,
+            config['firmware']
         )
         patch_firmware(options, mm, pos, args)
+        args.file.close()
+
+        if options.mcuType == MCUType.ESP8266:
+            import gzip
+            with open(args.file.name, 'rb') as f_in:
+                with gzip.open('firmware.bin.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+
         if args.flash:
             args.accept = config.get('prior_target_name')
             return binary_flash.upload(options, args)
