@@ -641,9 +641,7 @@ local function lcd_title_bw()
   lcd.clear()
   -- B&W screen
   local barHeight = 9
-  if titleShowWarn then
-    lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
-  else
+  if not titleShowWarn then
     lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
     lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
   end
