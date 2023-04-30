@@ -16,6 +16,11 @@ void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 
 void SerialCRSF::sendLinkStatisticsToFC()
 {
+    if (connectionState != connected)
+    {
+        return;
+    }
+
     constexpr uint8_t outBuffer[] = {
         LinkStatisticsFrameLength + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
@@ -75,6 +80,11 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 
 void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
 {
+    if (connectionState != connected)
+    {
+        return;
+    }
+
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
