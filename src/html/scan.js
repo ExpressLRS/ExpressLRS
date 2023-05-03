@@ -639,19 +639,27 @@ function submitButtonActions(e) {
   xhr.open('POST', '/config');
   xhr.setRequestHeader('Content-Type', 'application/json');
   // put in the colors
-  buttonActions[0].color = to8bit(_(`button1-color`).value)
-  buttonActions[1].color = to8bit(_(`button2-color`).value)
+  if (buttonActions[0]) buttonActions[0].color = to8bit(_(`button1-color`).value)
+  if (buttonActions[1]) buttonActions[1].color = to8bit(_(`button2-color`).value)
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 204) {
-      cuteAlert({
-        type: 'info',
-        title: 'Success',
-        message: 'Button actions have been saved'
-      });
-    }
-  };
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'info',
+          title: 'Success',
+          message: 'Button actions have been saved'
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Failed',
+          message: 'An error occurred while saving button configuration'
+        });
+      }
+    };
+  }
 }
 _('submit-actions').addEventListener('click', submitButtonActions);
 @@end
