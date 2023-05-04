@@ -105,22 +105,22 @@ void BluetoothTelemetrySendRCFrame()
     p->header.frame_size = RCframeLength + 2;
     p->header.type = CRSF_FRAMETYPE_RC_CHANNELS_PACKED;
 
-    p->channels.ch0 = CRSF::ChannelData[0];
-    p->channels.ch1 = CRSF::ChannelData[1];
-    p->channels.ch2 = CRSF::ChannelData[2];
-    p->channels.ch3 = CRSF::ChannelData[3];
-    p->channels.ch4 = CRSF::ChannelData[4];
-    p->channels.ch5 = CRSF::ChannelData[5];
-    p->channels.ch6 = CRSF::ChannelData[6];
-    p->channels.ch7 = CRSF::ChannelData[7];
-    p->channels.ch8 = CRSF::ChannelData[8];
-    p->channels.ch9 = CRSF::ChannelData[9];
-    p->channels.ch10 = CRSF::ChannelData[10];
-    p->channels.ch11 = CRSF::ChannelData[11];
-    p->channels.ch12 = CRSF::ChannelData[12];
-    p->channels.ch13 = CRSF::ChannelData[13];
-    p->channels.ch14 = CRSF::ChannelData[14];
-    p->channels.ch15 = CRSF::ChannelData[15];
+    p->channels.ch0 = ChannelData[0];
+    p->channels.ch1 = ChannelData[1];
+    p->channels.ch2 = ChannelData[2];
+    p->channels.ch3 = ChannelData[3];
+    p->channels.ch4 = ChannelData[4];
+    p->channels.ch5 = ChannelData[5];
+    p->channels.ch6 = ChannelData[6];
+    p->channels.ch7 = ChannelData[7];
+    p->channels.ch8 = ChannelData[8];
+    p->channels.ch9 = ChannelData[9];
+    p->channels.ch10 = ChannelData[10];
+    p->channels.ch11 = ChannelData[11];
+    p->channels.ch12 = ChannelData[12];
+    p->channels.ch13 = ChannelData[13];
+    p->channels.ch14 = ChannelData[14];
+    p->channels.ch15 = ChannelData[15];
 
     outBuffer[CRSF_TELEMETRY_TYPE_INDEX + 1 + RCframeLength] = crsf_crc.calc((byte *)&outBuffer[CRSF_TELEMETRY_TYPE_INDEX], RCframeLength + 1 );
 
