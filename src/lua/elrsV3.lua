@@ -500,6 +500,11 @@ local function parseParameterInfoMessage(data)
     if #loadQ == 0 then
       createDeviceFields()
     end
+
+    -- Return value is if the screen should be updated
+    -- If deviceId is TX module, then the Bad/Good drives the update; for other
+    -- devices update each new item. and always update when the queue empties
+    return deviceId ~= 0xEE or #loadQ == 0
   end
 end
 
@@ -537,21 +542,27 @@ local function parseElrsV1Message(data)
 end
 
 local function refreshNext()
-  local command, data = crossfireTelemetryPop()
-  if command == 0x29 then
-    parseDeviceInfoMessage(data)
-  elseif command == 0x2B then
-    parseParameterInfoMessage(data)
-    if #loadQ > 0 then
-      fieldTimeout = 0 -- request next chunk immediately
-    elseif fieldPopup then
-      fieldTimeout = getTime() + fieldPopup.timeout
+  local command, data, forceRedraw
+  repeat
+    command, data = crossfireTelemetryPop()
+    if command == 0x29 then
+      parseDeviceInfoMessage(data)
+    elseif command == 0x2B then
+      if parseParameterInfoMessage(data) then
+        forceRedraw = true
+      end
+      if #loadQ > 0 then
+        fieldTimeout = 0 -- request next chunk immediately
+      elseif fieldPopup then
+        fieldTimeout = getTime() + fieldPopup.timeout
+      end
+    elseif command == 0x2D then
+      parseElrsV1Message(data)
+    elseif command == 0x2E then
+      parseElrsInfoMessage(data)
+      forceRedraw = true
     end
-  elseif command == 0x2D then
-    parseElrsV1Message(data)
-  elseif command == 0x2E then
-    parseElrsInfoMessage(data)
-  end
+  until command == nil
 
   local time = getTime()
   if fieldPopup then
@@ -559,7 +570,8 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 6 }) -- lcsQuery
       fieldTimeout = time + fieldPopup.timeout
     end
-  elseif time > devicesRefreshTimeout and fields_count < 1  then
+  elseif time > devicesRefreshTimeout and fields_count < 1 then
+    forceRedraw = true -- handles initial screen draw
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
   elseif time > linkstatTimeout then
@@ -580,7 +592,10 @@ local function refreshNext()
     -- if elrsFlags bit set is bit higher than bit 0 and bit 1, it is warning flags
     titleShowWarn = (elrsFlags > 3 and not titleShowWarn) or nil
     titleShowWarnTimeout = time + 100
+    forceRedraw = true
   end
+
+  return forceRedraw
 end
 
 local lcd_title -- holds function that is color/bw version
@@ -607,7 +622,6 @@ local function lcd_title_color()
   lcd.setColor(CUSTOM_COLOR, BLACK)
   if titleShowWarn then
     lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
-    lcd.drawText(LCD_W - textSize - 5, 4, tostring(elrsFlags), RIGHT + BOLD + CUSTOM_COLOR)
   else
     local title = fields_count > 0 and deviceName or "Loading..."
     lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
@@ -627,9 +641,7 @@ local function lcd_title_bw()
   lcd.clear()
   -- B&W screen
   local barHeight = 9
-  if titleShowWarn then
-    lcd.drawText(LCD_W, 1, tostring(elrsFlags), RIGHT)
-  else
+  if not titleShowWarn then
     lcd.drawText(LCD_W - 1, 1, goodBadPkt, RIGHT)
     lcd.drawLine(LCD_W - 10, 0, LCD_W - 10, barHeight-1, SOLID, INVERS)
   end
@@ -699,7 +711,7 @@ local function handleDevicePageEvent(event)
   if event == EVT_VIRTUAL_EXIT then -- Cancel edit / go up a folder / reload all
     if edit then
       edit = nil
-      reloadCurField(0)
+      reloadCurField()
     else
       if folderAccess == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
         if deviceId ~= 0xEE then
@@ -930,14 +942,14 @@ local function run(event, touchState)
     return 2
   end
 
+  local forceRedraw = refreshNext()
+
   event = (touch2evt and touch2evt(event, touchState)) or event
   if fieldPopup ~= nil then
     runPopupPage(event)
-  else
+  elseif event ~= 0 or forceRedraw or edit then
     runDevicePage(event)
   end
-
-  refreshNext()
 
   return exitscript
 end
