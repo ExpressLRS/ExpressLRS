@@ -26,7 +26,6 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#define CRSF_NUM_CHANNELS 16
 #define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
 #define CRSF_CHANNEL_VALUE_1000 191
 #define CRSF_CHANNEL_VALUE_MID  992
@@ -56,19 +55,6 @@
 #define CRSF_TELEMETRY_FIELD_CHUNK_INDEX 6
 #define CRSF_TELEMETRY_CRC_LENGTH 1
 #define CRSF_TELEMETRY_TOTAL_SIZE(x) (x + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
-
-#define AUX1 4
-#define AUX2 5
-#define AUX3 6
-#define AUX4 7
-#define AUX5 8
-#define AUX6 9
-#define AUX7 10
-#define AUX8 11
-#define AUX9 12
-#define AUX10 13
-#define AUX11 14
-#define AUX12 15
 
 //////////////////////////////////////////////////////////////
 
@@ -249,6 +235,50 @@ typedef struct deviceInformationPacket_s
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
 
+// https://github.com/betaflight/betaflight/blob/master/src/main/msp/msp.c#L1949
+typedef struct mspVtxConfigPacket_s
+{
+    uint8_t vtxType;
+    uint8_t band;
+    uint8_t channel;
+    uint8_t power;
+    uint8_t pitmode;
+    uint16_t freq;
+    uint8_t deviceIsReady;
+    uint8_t lowPowerDisarm;
+    uint16_t pitModeFreq;
+    uint8_t vtxTableAvailable;
+    uint8_t bands;
+    uint8_t channels;
+    uint8_t powerLevels;
+} PACKED mspVtxConfigPacket_t;
+
+typedef struct mspVtxPowerLevelPacket_s
+{
+    uint8_t powerLevel;
+    uint16_t powerValue;
+    uint8_t powerLabelLength;
+    uint8_t label[3];
+} PACKED mspVtxPowerLevelPacket_t;
+
+typedef struct mspVtxBandPacket_s
+{
+    uint8_t band;
+    uint8_t bandNameLength;
+    uint8_t bandName[8];
+    uint8_t bandLetter;
+    uint8_t isFactoryBand;
+    uint8_t channels;
+    uint16_t channel[8];
+} PACKED mspVtxBandPacket_t;
+
+#define MSP_REQUEST_PAYLOAD_LENGTH(len) 7 + len // status + flags + 2 function + 2 length + crc + payload
+#define MSP_REQUEST_LENGTH(len) (sizeof(crsf_ext_header_t) + MSP_REQUEST_PAYLOAD_LENGTH(len) + CRSF_FRAME_CRC_SIZE)
+#define MSP_REQUEST_FRAME_SIZE(len) (MSP_REQUEST_PAYLOAD_LENGTH(len) + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
+
+#define MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH 15
+#define MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH 29
+#define MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH 7
 /**
  * Union to allow accessing the input buffer as different data shapes
  * without generating compiler warnings (and relying on undefined C++ behaviour!)

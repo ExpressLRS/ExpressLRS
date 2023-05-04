@@ -96,7 +96,7 @@ static void timeoutThermal()
 #if defined(PLATFORM_ESP32)
 static void setFanSpeed()
 {
-    const uint8_t fanSpeeds[] = {
+    const uint8_t defaultFanSpeeds[] = {
         31,  // 10mW
         47,  // 25mW
         63,  // 50mW
@@ -106,8 +106,10 @@ static void setFanSpeed()
         255, // 1000mW
         255  // 2000mW
     };
-    ledcWrite(fanChannel, fanSpeeds[POWERMGNT::currPower()]);
-    DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), fanSpeeds[POWERMGNT::currPower()]);
+
+    uint32_t speed = GPIO_PIN_FAN_SPEEDS == nullptr ? defaultFanSpeeds[POWERMGNT::currPower()] : GPIO_PIN_FAN_SPEEDS[POWERMGNT::currPower()-POWERMGNT::getMinPower()];
+    ledcWrite(fanChannel, speed);
+    DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), speed);
 }
 #endif
 

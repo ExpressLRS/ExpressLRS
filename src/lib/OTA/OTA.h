@@ -5,6 +5,7 @@
 #include <cstddef>
 #include "crc.h"
 #include "devCRSF.h"
+#include "FIFO_GENERIC.h"
 
 #define OTA4_PACKET_SIZE     8U
 #define OTA4_CRC_CALC_LEN    offsetof(OTA_Packet4_s, crcLow)
@@ -64,7 +65,7 @@ typedef struct {
         /** PACKET_TYPE_MSP **/
         struct {
             uint8_t packageIndex;
-            uint8_t payload[ELRS_MSP_BYTES_PER_CALL];
+            uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
         OTA_Sync_s sync;
@@ -80,6 +81,12 @@ typedef struct {
                 uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
             };
         } tlm_dl; // PACKET_TYPE_TLM
+        /** PACKET_TYPE_AIRPORT **/
+        struct {
+            uint8_t type:ELRS4_TELEMETRY_SHIFT,
+                    count:(8 - ELRS4_TELEMETRY_SHIFT);
+            uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
+        } PACKED airport;
     };
     uint8_t crcLow;
 } PACKED OTA_Packet4_s;
@@ -108,7 +115,7 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     packageIndex: 6;
-            uint8_t payload[10];
+            uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
         struct {
@@ -124,11 +131,18 @@ typedef struct {
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t payload[10 - sizeof(OTA_LinkStats_s)];
+                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
                 } PACKED ul_link_stats; // containsLinkStats == true
-                uint8_t payload[10]; // containsLinkStats == false
+                uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL]; // containsLinkStats == false
             };
         } PACKED tlm_dl;
+        /** PACKET_TYPE_AIRPORT **/
+        struct {
+            uint8_t packetType: 2,
+                    containsLinkStats: 1,
+                    count: 5;
+            uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
+        } PACKED airport;
     };
     uint16_t crc;  // crc16 LittleEndian
 } PACKED OTA_Packet8_s;
@@ -160,7 +174,7 @@ extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
-typedef std::function<void (OTA_Packet_s * const otaPktPtr, CRSF const * const crsf, bool TelemetryStatus, uint8_t tlmDenom)> PackChannelData_t;
+typedef std::function<void (OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool TelemetryStatus, uint8_t tlmDenom)> PackChannelData_t;
 extern PackChannelData_t OtaPackChannelData;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx);
@@ -169,9 +183,12 @@ void OtaSetFullResNextChannelSet(bool next);
 #endif
 
 #if defined(TARGET_RX) || defined(UNIT_TEST)
-typedef std::function<bool (OTA_Packet_s const * const otaPktPtr, CRSF * const crsf, uint8_t tlmDenom)> UnpackChannelData_t;
+typedef std::function<bool (OTA_Packet_s const * const otaPktPtr, uint32_t *channelData, uint8_t tlmDenom)> UnpackChannelData_t;
 extern UnpackChannelData_t OtaUnpackChannelData;
 #endif
+
+void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer);
+void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer);
 
 #if defined(DEBUG_RCVR_LINKSTATS)
 extern uint32_t debugRcvrLinkstatsPacketId;

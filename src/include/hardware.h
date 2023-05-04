@@ -9,6 +9,7 @@ typedef enum {
     HARDWARE_radio_busy,
     HARDWARE_radio_busy_2,
     HARDWARE_radio_dio0,
+    HARDWARE_radio_dio0_2,
     HARDWARE_radio_dio1,
     HARDWARE_radio_dio1_2,
     HARDWARE_radio_dio2,
@@ -109,6 +110,8 @@ typedef enum {
     HARDWARE_misc_fan_en,
     HARDWARE_misc_fan_pwm,
     HARDWARE_misc_fan_tacho,
+    HARDWARE_misc_fan_speeds,
+    HARDWARE_misc_fan_speeds_count,
     HARDWARE_gsensor_stk8xxx,
     HARDWARE_thermal_lm75a,
 

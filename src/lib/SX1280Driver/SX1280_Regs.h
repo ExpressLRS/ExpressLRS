@@ -172,7 +172,7 @@ typedef enum
     SX1280_LORA_CR_4_8 = 0x04,
     SX1280_LORA_CR_LI_4_5 = 0x05,
     SX1280_LORA_CR_LI_4_6 = 0x06,
-    SX1280_LORA_CR_LI_4_7 = 0x07,
+    SX1280_LORA_CR_LI_4_8 = 0x07,
 } SX1280_RadioLoRaCodingRates_t;
 
 typedef enum

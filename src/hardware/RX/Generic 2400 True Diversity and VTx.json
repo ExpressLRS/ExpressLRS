@@ -37,8 +37,8 @@
     "vtx_amp_vpd": 4,
     "vtx_amp_vref": 2,
 
-    "vtx_amp_vpd_25mW": [1350,1350,1350,1350],
-    "vtx_amp_vpd_100mW": [1600,1600,1600,1600],
+    "vtx_amp_vpd_25mW": [600,600,600,600],
+    "vtx_amp_vpd_100mW": [1500,1500,1500,1500],
 
     "button": 0
 }

@@ -2,19 +2,6 @@
 #pragma once
 
 #include <Arduino.h>
-#if defined(PLATFORM_ESP32)
-struct timerConfig
-{
-    uint32_t freq;
-    uint8_t ch1;
-    uint8_t ch2;
-
-    timerConfig()
-        : freq(0), ch1(255), ch2(255){};
-};
-
-#endif
-
 class ServoMgr
 {
 public:
@@ -40,13 +27,12 @@ public:
     inline bool isAnyPwmActive() const { return _activePwmChannels; }
     inline uint8_t getOutputCnt() const { return _outputCnt; }
 
-    const uint8_t PIN_DISCONNECTED = 0xff;
+    static const uint8_t PIN_DISCONNECTED = 0xff;
 
 private:
 #if defined(PLATFORM_ESP32)
-    timerConfig _timerConfigs[8];
-    uint8_t _chnMap[16];
-    uint8_t allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin);
+    uint32_t _timerConfigs[8] = {0};
+    void allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin);
 #endif
     const uint8_t *const _pins;
     const uint8_t _outputCnt;

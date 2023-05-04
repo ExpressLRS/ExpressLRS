@@ -1,6 +1,7 @@
 Import("env")
 from genericpath import exists
 import os
+from random import randint
 import sys
 import hashlib
 import fnmatch
@@ -55,12 +56,17 @@ def process_json_flag(define):
         if parts.group(1) == "RCVR_UART_BAUD" and isRX:
             parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "USE_AIRPORT_AT_BAUD":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            json_flags['is-airport'] = True
+            if isRX:
+                json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
+            else:
+                json_flags['airport-uart-baud'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED" and not isRX:
         json_flags['uart-inverted'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
-    if define == "-DRCVR_INVERT_TX" and isRX:
-        json_flags['rcvr-invert-tx'] = True
     if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
         json_flags['lock-on-first-connection'] = True
 
@@ -139,6 +145,8 @@ build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
+
+json_flags['flash-discriminator'] = randint(1,2^32-1)
 
 if '-DRADIO_SX127X=1' in build_flags:
     # disallow setting 2400s for 900

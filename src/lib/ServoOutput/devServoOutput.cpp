@@ -85,7 +85,7 @@ static int servosUpdate(unsigned long now)
         for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            const unsigned crsfVal = CRSF::ChannelData[chConfig->val.inputChannel];
+            const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
             // crsfVal might 0 if this is a switch channel and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
@@ -124,22 +124,27 @@ static void initialize()
         return;
     }
 
-    servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
-
-    for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
         {
-            pin = servoMgr->PIN_DISCONNECTED;
+            pin = ServoMgr::PIN_DISCONNECTED;
         }
 #endif
+        // Mark servo pins that are being used for serial as disconnected
+        eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+        if (mode == somSerial)
+        {
+            pin = ServoMgr::PIN_DISCONNECTED;
+        }
         SERVO_PINS[ch] = pin;
     }
 
     // Initialize all servos to low ASAP
+    servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
     servoMgr->initialize();
 }
 

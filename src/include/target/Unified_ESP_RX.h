@@ -42,6 +42,7 @@
 #define GPIO_PIN_BUSY hardware_pin(HARDWARE_radio_busy)
 #define GPIO_PIN_BUSY_2 hardware_pin(HARDWARE_radio_busy_2)
 #define GPIO_PIN_DIO0 hardware_pin(HARDWARE_radio_dio0)
+#define GPIO_PIN_DIO0_2 hardware_pin(HARDWARE_radio_dio0_2)
 #define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
 #define GPIO_PIN_DIO1_2 hardware_pin(HARDWARE_radio_dio1_2)
 #define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)
@@ -126,6 +127,7 @@
 
 // VTX
 #define HAS_VTX_SPI
+#define HAS_MSP_VTX
 #define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)
 #define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_vtx_amp_pwm)
 #define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_vtx_amp_vpd)
