@@ -17,7 +17,11 @@ extern TxConfig config;
 NimBLEServer *pServer;
 NimBLECharacteristic *rcCRSF;
 
-#define BLE_UPDATE_RATE 500
+//how often link stats packet is sent over BLE
+#define BLE_LINKSTATS_PACKET_PERIOD_MS 500
+
+//how often channels(sticks positions) packet is sent over BLE
+#define BLE_CHANNELS_PACKET_PERIOD_MS 300
 
 unsigned short const TELEMETRY_SVC_UUID = 0x1819;
 unsigned short const TELEMETRY_CRSF_UUID = 0x2BBD;
@@ -225,7 +229,7 @@ void BluetoothTelemetryUpdateValues(uint8_t *data)
 
     uint32_t const now = millis();
 
-    if (now >= (uint32_t)(BLE_UPDATE_RATE + LastTMLLinkStatsPacketMillis)) 
+    if (now >= (uint32_t)(LastTMLLinkStatsPacketMillis + BLE_LINKSTATS_PACKET_PERIOD_MS)) 
     {
         LastTMLLinkStatsPacketMillis = now;
         if (connectionState == connected) 
@@ -238,7 +242,7 @@ void BluetoothTelemetryUpdateValues(uint8_t *data)
         }
     }
 
-    if (now >= (uint32_t)(BLE_UPDATE_RATE + LastTLMRCPacketMillis))
+    if (now >= (uint32_t)(LastTLMRCPacketMillis + BLE_CHANNELS_PACKET_PERIOD_MS))
     {
         /* Periodically send RC channels packet for Android Telemetry viewer */
         BluetoothTelemetrySendRCFrame();
