@@ -8,6 +8,10 @@
 extern TCPSOCKET wifi2tcp;
 #endif
 
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+#include "devMSPVTX.h"
+#endif
+
 #if defined(UNIT_TEST)
 #include <iostream>
 using namespace std;
@@ -242,6 +246,13 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     }
     #endif
 
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+    if (header->type >= CRSF_FRAMETYPE_DEVICE_PING && header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
+    {
+        mspVtxProcessPacket(package);
+    }
+#endif
+
     //handle OTA
     uint8_t targetIndex = 0;
     bool targetFound = false;
@@ -263,7 +274,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         targetIndex = payloadTypesCount - 3;
         targetFound = true;
     }
-    
+
     // store anything else in 2-slot FIFO buffer, do not overwrite existing data. This also handles larger msp responses, which are sent in two chunks
     if (!targetFound)
     {

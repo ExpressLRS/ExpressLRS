@@ -363,7 +363,7 @@ static int event()
   }
 
 #if defined(POWER_OUTPUT_VALUES)
-  setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
+  setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - MinPower);
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 

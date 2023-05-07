@@ -334,4 +334,12 @@ body, input, select, textarea {
 	margin-right: 5px;
   }
 
+  .badge {
+	color: white;
+	padding: 4px 8px;
+	font-weight: bold;
+	text-align: center;
+	border-radius: 5px;
+  }
+
   @@include("mui.css")
