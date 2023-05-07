@@ -1,5 +1,3 @@
-#if defined(TARGET_RX)
-
 #include "SerialSBUS.h"
 #include "CRSF.h"
 #include "device.h"
