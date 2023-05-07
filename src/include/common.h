@@ -188,6 +188,13 @@ enum eSerialProtocol : uint8_t
 	PROTOCOL_SUMD
 };
 
+enum eFailsafeMode : uint8_t
+{
+    FAILSAFE_NO_PULSES,
+    FAILSAFE_LAST_POSITION,
+    FAILSAFE_SET_POSITION
+};
+
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 6

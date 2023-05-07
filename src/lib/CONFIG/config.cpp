@@ -1019,4 +1019,13 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
         m_modified = true;
     }
 }
+
+void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
+{
+    if (m_config.failsafeMode != failsafeMode)
+    {
+        m_config.failsafeMode = failsafeMode;
+        m_modified = true;
+    }
+}
 #endif

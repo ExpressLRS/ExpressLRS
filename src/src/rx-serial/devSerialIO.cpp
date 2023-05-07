@@ -21,6 +21,14 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
+static int event()
+{
+    static connectionState_e lastConnectionState = disconnected;
+    serialIO->setFailsafe(connectionState == disconnected && lastConnectionState == connected);
+    lastConnectionState = connectionState;
+    return DURATION_IGNORE;
+}
+
 static int timeout()
 {
     if (connectionState != serialUpdate)
@@ -37,7 +45,7 @@ static int timeout()
 device_t Serial_device = {
     .initialize = nullptr,
     .start = start,
-    .event = nullptr,
+    .event = event,
     .timeout = timeout
 };
 

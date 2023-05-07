@@ -22,6 +22,13 @@ static struct luaItem_selection luaSerialProtocol = {
     STR_EMPTYSPACE
 };
 
+static struct luaItem_selection luaFailsafeMode = {
+    {"Failsafe Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    "No Pulses;Last Pos",
+    STR_EMPTYSPACE
+};
+
 #if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
@@ -289,6 +296,13 @@ static void registerLuaParameters()
     }
   });
 
+  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS)
+  {
+    registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetFailsafeMode((eFailsafeMode)arg);
+    });
+  }
+
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -350,6 +364,7 @@ static void registerLuaParameters()
 static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+  setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
