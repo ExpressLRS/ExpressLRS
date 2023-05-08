@@ -336,6 +336,7 @@ def main():
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument("--erase", action='store_true', default=False, help="Full chip erase before flashing on ESP devices")
     parser.add_argument('--out', action=writeable_dir, default=None)
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
