@@ -202,7 +202,7 @@ function timeoutCurrentColors() {
   }
 }
 
-function updateConfig(data) {
+function updateConfig(data, options) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
   if (data.uid) _('uid').value = data.uid.toString();
@@ -263,11 +263,11 @@ function updateConfig(data) {
   _('serial-protocol').onchange = () => {
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
-      _('rcvr-uart-baud').value = data['rcvr-uart-baud'];
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
     }
     else if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
       _('rcvr-uart-baud').disabled = false;
-      _('rcvr-uart-baud').value = '420000';
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
     }
     else if (_('serial-protocol').value == 2 || _('serial-protocol').value == 3) {
       _('rcvr-uart-baud').disabled = true;
@@ -311,7 +311,7 @@ function initOptions() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       updateOptions(data['options']);
-      updateConfig(data['config']);
+      updateConfig(data['config'], data['options']);
       setTimeout(getNetworks, 2000);
     }
   };
