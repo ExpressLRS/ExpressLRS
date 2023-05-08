@@ -78,7 +78,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #if defined(TARGET_RX)
 #if defined(USE_AIRPORT_AT_BAUD)
     .uart_baud = USE_AIRPORT_AT_BAUD,
-#elif defined(USE_SBUS_PROTOCOL)
+#elif defined(USE_SBUS_PROTOCOL) || defined(USE_DJI_RS_PRO_PROTOCOL)
     .uart_baud = 100000,
 #elif defined(USE_SUMD_PROTOCOL)
     .uart_baud = 115200,

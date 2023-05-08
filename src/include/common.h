@@ -185,7 +185,8 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_INVERTED_CRSF,
     PROTOCOL_SBUS,
     PROTOCOL_INVERTED_SBUS,
-	PROTOCOL_SUMD
+	PROTOCOL_SUMD,
+    PROTOCOL_DJI_RS_PRO
 };
 
 enum eFailsafeMode : uint8_t

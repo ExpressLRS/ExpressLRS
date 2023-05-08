@@ -18,7 +18,7 @@ static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro",
     STR_EMPTYSPACE
 };
 
@@ -296,7 +296,7 @@ static void registerLuaParameters()
     }
   });
 
-  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS)
+  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
   {
     registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetFailsafeMode((eFailsafeMode)arg);
