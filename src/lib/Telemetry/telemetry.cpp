@@ -229,10 +229,13 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         modelMatchId = package[5];
         return;
     }
-    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
+    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER || header->dest_addr == CRSF_ADDRESS_BROADCAST)
     {
         sendDeviceFrame = true;
-        return;
+        if (header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
+        {
+            return;
+        }
     }
     #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING && header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
