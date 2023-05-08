@@ -36,7 +36,7 @@ typedef struct _options {
     bool        _unused2:1; // r9mm_mini_sbus
     bool        is_airport:1;
 #endif
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) || defined(UNIT_TEST)
     uint32_t    tlm_report_interval;
     uint32_t    fan_min_runtime;
     bool        uart_inverted:1;
