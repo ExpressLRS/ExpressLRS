@@ -395,6 +395,7 @@ def main():
                     shutil.copyfileobj(f_in, f_out)
 
         if args.flash:
+            args.target = config.get('firmware')
             args.accept = config.get('prior_target_name')
             return binary_flash.upload(options, args)
 

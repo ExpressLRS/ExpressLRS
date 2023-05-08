@@ -46,7 +46,7 @@ def upload_wifi(args, options, upload_addr, isstm: bool):
 def upload_stm32_uart(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept)
+    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept, ignore_incorrect_target=args.force)
 
 def upload_stm32_stlink(args, options: FirmwareOptions):
     stlink.on_upload([args.file.name], None, {'UPLOAD_FLAGS': [f'BOOTLOADER={options.bootloader}', f'VECT_OFFSET={options.offset}']})
