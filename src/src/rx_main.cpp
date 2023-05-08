@@ -1443,7 +1443,7 @@ static void updateBindingMode(unsigned long now)
     // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
     {
-        INFOLN("RX has not been bound, enter binding mode...");
+        DBGLN("RX has not been bound, enter binding mode...");
         EnterBindingMode();
     }
 #endif
@@ -1482,7 +1482,7 @@ static void updateBindingMode(unsigned long now)
         config.SetPowerOnCounter(0);
         config.Commit();
 
-        INFOLN("Power on counter >=3, enter binding mode...");
+        DBGLN("Power on counter >=3, enter binding mode...");
         config.SetIsBound(false);
         EnterBindingMode();
     }
@@ -1649,7 +1649,7 @@ void setup()
         #endif
         setupSerial();
 
-        INFOLN("ExpressLRS Module Booting...");
+        DBGLN("ExpressLRS Module Booting...");
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();
