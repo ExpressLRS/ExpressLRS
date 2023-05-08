@@ -10,7 +10,6 @@ import ETXinitPassthrough
 import serials_find
 import UARTupload
 import upload_via_esp8266_backpack
-import stlink
 from firmware import DeviceType, FirmwareOptions, MCUType
 
 import sys
@@ -18,6 +17,9 @@ from os.path import dirname
 sys.path.append(dirname(__file__) + '/external/esptool')
 
 from external.esptool import esptool
+sys.path.append(dirname(__file__) + "/external")
+
+import external.pystlink
 
 class UploadMethod(Enum):
     wifi = 'wifi'
@@ -49,7 +51,20 @@ def upload_stm32_uart(args):
     return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept, ignore_incorrect_target=args.force)
 
 def upload_stm32_stlink(args, options: FirmwareOptions):
-    stlink.on_upload([args.file.name], None, {'UPLOAD_FLAGS': [f'BOOTLOADER={options.bootloader}', f'VECT_OFFSET={options.offset}']})
+    stlink = external.pystlink.PyStlink(verbosity=1)
+
+    flash_start = app_start = 0x08000000
+    if "0x" in options.offset:
+        offset = int(options.offset, 16)
+    else:
+        offset = int(options.offset, 10)
+    app_start = flash_start + offset
+
+    if options.bootloader is not None:
+        stlink.program_flash('bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
+
+    stlink.program_flash(args.file.name, app_start, erase=True, verify=True, initialize_comms=True)
+
     return ElrsUploadResult.Success
 
 def upload_esp8266_uart(args):
