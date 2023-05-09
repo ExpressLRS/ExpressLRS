@@ -64,7 +64,7 @@
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
-// #define GPIO_PIN_RFamp_APC1 hardware_pin(HARDWARE_power_apc1) // stm32
+#define GPIO_PIN_RFamp_APC1 hardware_pin(HARDWARE_power_apc1)
 #define GPIO_PIN_RFamp_APC2 hardware_pin(HARDWARE_power_apc2)
 #define GPIO_PIN_RX_ENABLE hardware_pin(HARDWARE_power_rxen)
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
