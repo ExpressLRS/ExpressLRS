@@ -55,6 +55,7 @@ public:
     static void End(); //stop timers etc
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
     static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
@@ -66,11 +67,9 @@ public:
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
-    static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
-
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
-    static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
+    static void ICACHE_RAM_ATTR setSyncParams(int32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
     static void disableOpentxSync();
@@ -101,7 +100,7 @@ private:
 
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
-    static uint32_t RequestedRCpacketInterval;
+    static int32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;

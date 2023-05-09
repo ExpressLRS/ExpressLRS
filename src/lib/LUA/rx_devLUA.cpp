@@ -18,7 +18,14 @@ static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaFailsafeMode = {
+    {"Failsafe Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    "No Pulses;Last Pos",
     STR_EMPTYSPACE
 };
 
@@ -307,6 +314,13 @@ static void registerLuaParameters()
     }
   });
 
+  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+  {
+    registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetFailsafeMode((eFailsafeMode)arg);
+    });
+  }
+
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -378,6 +392,7 @@ static void registerLuaParameters()
 static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+  setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -391,7 +406,7 @@ static int event()
   }
 
 #if defined(POWER_OUTPUT_VALUES)
-  setLuaTextSelectionValue(&luaTlmPower, config.GetPower());
+  setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - MinPower);
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 

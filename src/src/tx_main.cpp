@@ -320,7 +320,11 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
   #if defined(RADIO_SX128X)
-    if (crsf.GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    if (crsf.GetCurrentBaudRate() == 115200 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 150Hz if we are on 115k baud on external module
+    {
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 6666);
+    }
+    else if (crsf.GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud (on internal module)
     {
       rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
     }
@@ -539,14 +543,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
   }
 
-#if defined(Regulatory_Domain_EU_CE_2400) 
+#if defined(Regulatory_Domain_EU_CE_2400)
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-  
+
 	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
   {                                                         // but do status update (issue #2028)
 		Radio.TXdoneCallback();
   }
-	else		
+	else
 #endif
   {
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);

@@ -49,6 +49,7 @@
 #if defined(GPIO_PIN_SPI_VTX_NSS)
 #if !defined(HAS_VTX_SPI)
 #define HAS_VTX_SPI
+#define HAS_MSP_VTX
 #define OPT_HAS_VTX_SPI true
 #endif
 #else

@@ -27,6 +27,7 @@ class FirmwareOptions(NamedTuple):
     luaName: str
     bootloader: str
     offset: int
+    firmware: str
 
 def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')

@@ -13,6 +13,7 @@
 #include "PFD.h"
 #include "options.h"
 #include "MeanAccumulator.h"
+#include "freqTable.h"
 
 #include "rx-serial/SerialIO.h"
 #include "rx-serial/SerialNOOP.h"
@@ -31,6 +32,7 @@
 #include "devAnalogVbat.h"
 #include "devSerialUpdate.h"
 #include "devBaro.h"
+#include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -78,6 +80,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
+#ifdef HAS_MSP_VTX
+  {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
 };
 
@@ -1098,6 +1103,11 @@ void UpdateModelMatch(uint8_t model)
     config.SetModelId(model);
 }
 
+void SendMSPFrameToFC(uint8_t *mspData)
+{
+    serialIO->sendMSPFrameToFC(mspData);
+}
+
 /**
  * Process the assembled MSP packet in MspData[]
  **/
@@ -1127,17 +1137,6 @@ void MspReceiveComplete()
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
                 UpdateModelMatch(MspData[9]);
-                break;
-            }
-            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
-            {
-                vtxSPIBandChannelIdx = MspData[8];
-                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                {
-                    vtxSPIPowerIdx = MspData[10];
-                    vtxSPIPitmode = MspData[11];
-                }
-                devicesTriggerEvent();
                 break;
             }
             // FALLTHROUGH
@@ -1181,7 +1180,7 @@ static void setupSerial()
         return;
     }
 
-    if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS)
+    if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
     {
         sbusSerialOutput = true;
         serialBaud = 100000;
@@ -1191,7 +1190,7 @@ static void setupSerial()
         sumdSerialOutput = true;
         serialBaud = 115200;
     }
-    bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF;
+    bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #ifdef PLATFORM_STM32
 #if defined(TARGET_R9SLIMPLUS_RX)
@@ -1250,7 +1249,7 @@ static void setupSerial()
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
-    Serial.begin(serialBaud, config, -1, -1, invert);
+    Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1448,7 +1447,7 @@ static void updateBindingMode(unsigned long now)
     // and we're not already in binding mode, enter binding
     if (!config.GetIsBound() && !InBindingMode)
     {
-        INFOLN("RX has not been bound, enter binding mode...");
+        DBGLN("RX has not been bound, enter binding mode...");
         EnterBindingMode();
     }
 #endif
@@ -1487,7 +1486,7 @@ static void updateBindingMode(unsigned long now)
         config.SetPowerOnCounter(0);
         config.Commit();
 
-        INFOLN("Power on counter >=3, enter binding mode...");
+        DBGLN("Power on counter >=3, enter binding mode...");
         config.SetIsBound(false);
         EnterBindingMode();
     }
@@ -1654,7 +1653,7 @@ void setup()
         #endif
         setupSerial();
 
-        INFOLN("ExpressLRS Module Booting...");
+        DBGLN("ExpressLRS Module Booting...");
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();

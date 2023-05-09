@@ -1040,4 +1040,12 @@ void RxConfig::SetTeamracePosition(uint8_t teamracePosition)
     }
 }
 
+void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
+{
+    if (m_config.failsafeMode != failsafeMode)
+    {
+        m_config.failsafeMode = failsafeMode;
+        m_modified = true;
+    }
+}
 #endif

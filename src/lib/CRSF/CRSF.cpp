@@ -65,7 +65,7 @@ bool CRSF::elrsLUAmode = false;
 
 /// OpenTX mixer sync ///
 uint32_t CRSF::OpenTXsyncLastSent = 0;
-uint32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+int32_t CRSF::RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
 volatile uint32_t CRSF::RCdataLastRecv = 0;
 volatile int32_t CRSF::OpenTXsyncOffset = 0;
 volatile int32_t CRSF::OpenTXsyncWindow = 0;
@@ -284,7 +284,7 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::setSyncParams(uint32_t PacketInterval)
+void ICACHE_RAM_ATTR CRSF::setSyncParams(int32_t PacketInterval)
 {
     CRSF::RequestedRCpacketInterval = PacketInterval;
     CRSF::OpenTXsyncOffset = 0;
@@ -340,7 +340,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
     uint32_t now = millis();
     if (CRSF::CRSFstate && (now - OpenTXsyncLastSent) >= OpenTXsyncPacketInterval)
     {
-        uint32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
+        int32_t packetRate = CRSF::RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = CRSF::OpenTXsyncOffset - CRSF::OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
 #ifdef DEBUG_OPENTX_SYNC
         DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
@@ -976,6 +976,19 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
+}
+
+void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
+{
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
+    packet[1] = 0;             // flags
+    packet[2] = function & 0xFF;
+    packet[3] = (function >> 8) & 0xFF;
+    packet[4] = payloadLength & 0xFF;
+    packet[5] = (payloadLength >> 8) & 0xFF;
+    memcpy(packet + 6, payload, payloadLength);
+    packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
 void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)

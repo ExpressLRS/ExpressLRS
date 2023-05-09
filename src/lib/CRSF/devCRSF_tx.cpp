@@ -7,6 +7,10 @@
 
 static int start()
 {
+    if (firmwareOptions.is_airport)
+    {
+        return DURATION_NEVER;
+    }
     CRSF::Begin();
 #if defined(DEBUG_TX_FREERUN)
     CRSF::CRSFstate = true;

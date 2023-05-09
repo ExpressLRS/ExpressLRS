@@ -202,8 +202,9 @@ typedef struct {
                 forceTlmOff:1,
                 rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
-    uint8_t     serialProtocol:3,
-                unused:5;
+    uint8_t     serialProtocol:4,
+                failsafeMode:2,
+                unused:2;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
@@ -236,6 +237,7 @@ public:
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
+    eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -257,6 +259,7 @@ public:
     void SetSerialProtocol(eSerialProtocol serialProtocol);
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
+    void SetFailsafeMode(eFailsafeMode failsafeMode);
 
 private:
     void UpgradeEepromV4();

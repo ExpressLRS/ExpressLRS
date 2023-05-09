@@ -143,7 +143,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t cr;
     expresslrs_tlm_ratio_e TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint32_t interval;          // interval in us seconds that corresponds to that frequency
+    int32_t interval;           // interval in us seconds that corresponds to that frequency
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
@@ -186,7 +186,15 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_INVERTED_CRSF,
     PROTOCOL_SBUS,
     PROTOCOL_INVERTED_SBUS,
-	PROTOCOL_SUMD
+	PROTOCOL_SUMD,
+    PROTOCOL_DJI_RS_PRO
+};
+
+enum eFailsafeMode : uint8_t
+{
+    FAILSAFE_NO_PULSES,
+    FAILSAFE_LAST_POSITION,
+    FAILSAFE_SET_POSITION
 };
 
 #ifndef UNIT_TEST

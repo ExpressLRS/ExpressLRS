@@ -36,7 +36,7 @@ typedef struct _options {
     bool        _unused2:1; // r9mm_mini_sbus
     bool        is_airport:1;
 #endif
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) || defined(UNIT_TEST)
     uint32_t    tlm_report_interval;
     uint32_t    fan_min_runtime;
     bool        uart_inverted:1;
@@ -64,6 +64,7 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
+extern uint32_t flash_discriminator;
 
 #include "EspFlashStream.h"
 extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
@@ -71,4 +72,5 @@ extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
 extern const firmware_options_t firmwareOptions;
 extern const char device_name[];
 extern const char *product_name;
+
 #endif

@@ -59,7 +59,7 @@ Approach:
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     FHSSconfig = &domains[firmwareOptions.domain];
-    INFOLN("Setting %s Mode", FHSSconfig->domain);
+    DBGLN("Setting %s Mode", FHSSconfig->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
 
     sync_channel = (FHSSconfig->freq_count / 2) + 1;

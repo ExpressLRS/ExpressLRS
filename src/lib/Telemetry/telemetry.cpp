@@ -8,6 +8,10 @@
 extern TCPSOCKET wifi2tcp;
 #endif
 
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+#include "devMSPVTX.h"
+#endif
+
 #if defined(UNIT_TEST)
 #include <iostream>
 using namespace std;
@@ -269,6 +273,9 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 // larger msp resonses are sent in two chunks so special handling is needed so both get sent
                 if (header->type == CRSF_FRAMETYPE_MSP_RESP)
                 {
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+                    mspVtxProcessPacket(package);
+#endif
                     // there is already another response stored
                     if (payloadTypes[targetIndex].updated)
                     {
