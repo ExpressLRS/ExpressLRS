@@ -1312,9 +1312,15 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
+  if (firmwareOptions.is_airport && connectionState == connected)
   {
-    apInputBuffer.push(TxUSB->read());
+    auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
+    if (size > 0)
+    {
+      uint8_t buf[size];
+      TxUSB->readBytes(buf, size);
+      apInputBuffer.pushBytes(buf, size);
+    }
   }
 
   if (TxBackpack->available())

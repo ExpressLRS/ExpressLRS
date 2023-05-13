@@ -34,13 +34,25 @@ void SerialIO::handleUARTout()
     }
 }
 
+int SerialIO::getMaxInputBytes()
+{
+    return 64;
+}
 
 void SerialIO::handleUARTin()
 {
-    while (_inputPort->available())
+    auto maxBytes = getMaxInputBytes();
+    uint8_t buffer[maxBytes];
+    auto size = min(_inputPort->available(), maxBytes);
+    _inputPort->readBytes(buffer, size);
+    processBytes(buffer, size);
+}
+
+void SerialIO::processBytes(uint8_t *bytes, uint16_t size)
+{
+    for (int i=0 ; i<size ; i++)
     {
-        uint8_t byte = _inputPort->read();
-        processByte(byte);
+        processByte(bytes[i]);
     }
 }
 

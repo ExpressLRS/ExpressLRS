@@ -17,8 +17,10 @@ public:
     void sendMSPFrameToFC(uint8_t* data) override;
     void sendLinkStatisticsToFC() override;
 
+    int getMaxInputBytes() override;
     void handleUARTout() override;
 
 private:
-    void processByte(uint8_t byte) override;
+    void processBytes(uint8_t *bytes, u_int16_t size) override;
+    void processByte(uint8_t byte) override {};
 };

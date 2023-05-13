@@ -15,6 +15,7 @@ public:
 
     virtual uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) = 0;
 
+    virtual int getMaxInputBytes();
     virtual void handleUARTout();
     virtual void handleUARTin();
 
@@ -24,5 +25,6 @@ protected:
     FIFO _fifo;
     bool failsafe = false;
 
+    virtual void processBytes(uint8_t *bytes, uint16_t size);
     virtual void processByte(uint8_t byte) = 0;
 };
