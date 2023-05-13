@@ -29,7 +29,7 @@ void SerialAirPort::sendMSPFrameToFC(uint8_t* data)
     // unsupported
 }
 
-int SerialAirPort::getMaxInputBytes()
+int SerialAirPort::getMaxSerialReadSize()
 {
     return AP_MAX_BUF_LEN - apInputBuffer.size();
 }

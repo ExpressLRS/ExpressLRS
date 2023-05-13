@@ -17,7 +17,7 @@ public:
     void sendMSPFrameToFC(uint8_t* data) override;
     void sendLinkStatisticsToFC() override;
 
-    int getMaxInputBytes() override;
+    int getMaxSerialReadSize() override;
     void handleUARTout() override;
 
 private:
