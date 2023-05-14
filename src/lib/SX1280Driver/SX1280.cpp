@@ -630,6 +630,12 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
 
         // second radio received the same packet to the processing radio
         gotRadio[secondRadioIdx] = isSecondRadioGotData;
+        #if defined(DEBUG_RCVR_SIGNAL_STATS)
+        if(!isSecondRadioGotData)
+        {
+        instance->rxSignalStats[secondRadioIdx].fail_count++;
+        }
+        #endif
     }
 
     uint8_t status[2];

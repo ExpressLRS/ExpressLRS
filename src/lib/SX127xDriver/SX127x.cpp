@@ -475,8 +475,14 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
       }
     }
 
-    // second radio received the same packet to the processing radio
     gotRadio[secondRadioIdx] = isSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    // second radio received the same packet to the processing radio
+    if(!isSecondRadioGotData)
+    {
+      instance->rxSignalStats[secondRadioIdx].fail_count++;
+    }
+    #endif
   }
 
   int8_t rssi[2];
