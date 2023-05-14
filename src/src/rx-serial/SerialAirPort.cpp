@@ -29,19 +29,24 @@ void SerialAirPort::sendMSPFrameToFC(uint8_t* data)
     // unsupported
 }
 
-void SerialAirPort::processByte(uint8_t byte)
+int SerialAirPort::getMaxSerialReadSize()
 {
-    if (apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected)
+    return AP_MAX_BUF_LEN - apInputBuffer.size();
+}
+
+void SerialAirPort::processBytes(uint8_t *bytes, u_int16_t size)
+{
+    if (connectionState == connected)
     {
-        apInputBuffer.push(byte);
+        apInputBuffer.pushBytes(bytes, size);
     }
 }
 
 void SerialAirPort::handleUARTout()
 {
-    while (apOutputBuffer.size())
-    {
-        _outputPort->write(apOutputBuffer.pop());
-    }
+    auto size = apOutputBuffer.size();
+    uint8_t buf[size];
+    apOutputBuffer.popBytes(buf, size);
+    _outputPort->write(buf, size);
 }
 #endif
