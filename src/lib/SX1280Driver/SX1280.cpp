@@ -633,7 +633,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         #if defined(DEBUG_RCVR_SIGNAL_STATS)
         if(!isSecondRadioGotData)
         {
-        instance->rxSignalStats[secondRadioIdx].fail_count++;
+            instance->rxSignalStats[secondRadioIdx].fail_count++;
         }
         #endif
     }
