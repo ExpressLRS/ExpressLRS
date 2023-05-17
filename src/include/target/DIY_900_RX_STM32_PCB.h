@@ -27,6 +27,8 @@
 #define GPIO_PIN_LED_GREEN   PA10
 #define GPIO_LED_GREEN_INVERTED 0
 
+#define GPIO_PIN_LED GPIO_PIN_LED_GREEN
+
 #define RADIO_SX1272
 
 // Output Power
