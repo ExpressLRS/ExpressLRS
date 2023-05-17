@@ -68,7 +68,6 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
-static uint8_t headTrackingEnabledChannel = 0;
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 bool headTrackingEnabled = false;
 static uint32_t lastPTRValidTimeMs;
@@ -483,7 +482,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         {
           uint8_t ptrStartChannel = config.GetPTRStartChannel();
           uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
-          bool enable = headTrackingEnabledChannel == HT_ON;
+          bool enable = config.GetPTREnableChannel() == HT_ON;
           if (config.GetPTREnableChannel() % 2 == 0)
           {
             enable |= chan >= CRSF_CHANNEL_VALUE_MID;
