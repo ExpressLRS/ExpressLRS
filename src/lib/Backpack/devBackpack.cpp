@@ -17,6 +17,7 @@ extern bool headTrackingEnabled;
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
+bool DvrRecordingStateReadyToSend = false;
 bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
@@ -198,6 +199,36 @@ static void BackpackHTFlagToMSPOut(uint8_t arg)
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
+static uint8_t GetDvrDelaySeconds(uint8_t index)
+{
+    constexpr uint8_t delays[] = {0, 5, 15, 30, 45, 60, 120};
+    return delays[index >= sizeof(delays) ? 0 : index];
+}
+
+static void BackpackDvrRecordingStateMSPOut(bool recordingState)
+{
+    uint16_t delay = 0;
+
+    if (recordingState)
+    {
+        delay = GetDvrDelaySeconds(config.GetDvrStartDelay());
+    }
+    else
+    {
+        delay = GetDvrDelaySeconds(config.GetDvrStopDelay());
+    }
+
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_RECORDING_STATE;
+    packet.addByte(recordingState);
+    packet.addByte(delay & 0xFF); // delay byte 1
+    packet.addByte(delay >> 8); // delay byte 2
+
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+}
+
 void BackpackBinding()
 {
     mspPacket_t packet;
@@ -212,43 +243,39 @@ void BackpackBinding()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
-uint8_t GetDvrDelaySeconds(uint8_t index)
-{
-    constexpr uint8_t delays[] = {0, 5, 15, 30, 45, 60, 120};
-    return delays[index >= sizeof(delays) ? 0 : index];
-}
-
 static void AuxStateToMSPOut()
 {
-    if (config.GetDvrAux() == 0)
+    auto enable = config.GetPTREnableChannel() == HT_ON;
+    if (config.GetBackpackDisable())
     {
-        // DVR AUX control is off
-        return;
+        enable = false;
+    }
+    else if (!enable)
+    {
+        auto chan = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
+        enable |= config.GetPTREnableChannel() % 2 == 0 ? chan : !chan;
+    }
+    if (enable != headTrackingEnabled)
+    {
+        headTrackingEnabled = enable;
+        HTEnableFlagReadyToSend = true;
     }
 
-    const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
-    const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
-
-    const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
-
-    if (recordingState == lastRecordingState)
+    if (config.GetDvrAux() != 0)
     {
-        // Channel state has not changed since we last checked
-        return;
+        // DVR AUX control is on
+        uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
+        uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
+
+        bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+        if (recordingState != lastRecordingState)
+        {
+            // Channel state has changed since we last checked, so schedule a MSP send
+            lastRecordingState = recordingState;
+            DvrRecordingStateReadyToSend = true;
+        }
     }
-    lastRecordingState = recordingState;
 
-    const uint16_t delay = GetDvrDelaySeconds(recordingState ? config.GetDvrStartDelay() : config.GetDvrStopDelay());
-
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeCommand();
-    packet.function = MSP_ELRS_BACKPACK_SET_RECORDING_STATE;
-    packet.addByte(recordingState);
-    packet.addByte(delay & 0xFF); // delay byte 1
-    packet.addByte(delay >> 8); // delay byte 2
-
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
 void sendCRSFTelemetryToBackpack(uint8_t *data)
@@ -372,6 +399,12 @@ static int timeout()
     {
         HTEnableFlagReadyToSend = false;
         BackpackHTFlagToMSPOut(headTrackingEnabled);
+    }
+
+    if (DvrRecordingStateReadyToSend && connectionState < MODE_STATES)
+    {
+        DvrRecordingStateReadyToSend = false;
+        BackpackDvrRecordingStateMSPOut(lastRecordingState);
     }
 
     if (BackpackTelemReadyToSend && connectionState < MODE_STATES)

@@ -438,28 +438,8 @@ void injectBackpackPanTiltRollData(uint32_t const now)
   }
 
   uint8_t ptrStartChannel = config.GetPTRStartChannel();
-  bool enable = config.GetPTREnableChannel() == HT_ON;
-  if (!enable)
-  {
-    uint8_t chan = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
-    if (config.GetPTREnableChannel() % 2 == 0)
-    {
-      enable |= chan;
-    }
-    else
-    {
-      enable |= !chan;
-    }
-  }
-
-  if (enable != headTrackingEnabled)
-  {
-    headTrackingEnabled = enable;
-    HTEnableFlagReadyToSend = true;
-  }
-
   // If enabled and this packet is less that 1 second old then use it
-  if (enable && now - lastPTRValidTimeMs < 1000)
+  if (headTrackingEnabled && now - lastPTRValidTimeMs < 1000)
   {
     ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
     ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
