@@ -7,6 +7,7 @@
 #include "logging.h"
 #include "POWERMGNT.h"
 #include "CRSF.h"
+#include "OTA.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -25,6 +26,9 @@ extern void VtxTriggerSend();
 extern void ResetPower();
 extern void setWifiUpdateMode();
 extern void SetSyncSpam();
+extern uint8_t adjustPacketRateForBaud(uint8_t rate);
+extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
+extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 extern Display *display;
 
@@ -206,15 +210,29 @@ static void decrementValueIndex(bool init)
 
 static void saveValueIndex(bool init)
 {
+    auto val = values_index;
     switch (state_machine.getParentState())
     {
-        case STATE_PACKET:
-            config.SetRate(values_index);
-            SetSyncSpam();
+        case STATE_PACKET: {
+            uint8_t actualRate = adjustPacketRateForBaud(val);
+            uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+                (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+            // If the switch mode is going to change, block the change while connected
+            if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+            {
+                deferExecution(100, [actualRate, newSwitchMode](){
+                    config.SetRate(actualRate);
+                    config.SetSwitchMode(newSwitchMode);
+                    SetSyncSpam();
+                });
+            }
             break;
+        }
         case STATE_TELEMETRY:
-            config.SetTlm(values_index);
-            SetSyncSpam();
+            deferExecution(100, [val](){
+                config.SetTlm(val);
+                SetSyncSpam();
+            });
             break;
         case STATE_POWERSAVE:
             config.SetMotionMode(values_index);
