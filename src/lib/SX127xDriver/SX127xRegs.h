@@ -23,15 +23,6 @@ typedef enum
 #if defined(RADIO_SX1272)
 typedef enum
 {
-    // Only 125 to 500 KHZ supported
-    // 7 to 62KHZ are unique so switch cases don't complain about duplicate values
-    SX127x_BW_7_80_KHZ =  1,
-    SX127x_BW_10_40_KHZ = 2,
-    SX127x_BW_15_60_KHZ = 3,
-    SX127x_BW_20_80_KHZ = 4,
-    SX127x_BW_31_25_KHZ = 5,
-    SX127x_BW_41_70_KHZ = 6,
-    SX127x_BW_62_50_KHZ = 7,
     SX127x_BW_125_00_KHZ = 0b00000000,
     SX127x_BW_250_00_KHZ = 0b01000000,
     SX127x_BW_500_00_KHZ = 0b10000000
@@ -39,13 +30,6 @@ typedef enum
 #else
 typedef enum
 {
-    SX127x_BW_7_80_KHZ = 0b00000000,
-    SX127x_BW_10_40_KHZ = 0b00010000,
-    SX127x_BW_15_60_KHZ = 0b00100000,
-    SX127x_BW_20_80_KHZ = 0b00110000,
-    SX127x_BW_31_25_KHZ = 0b01000000,
-    SX127x_BW_41_70_KHZ = 0b01010000,
-    SX127x_BW_62_50_KHZ = 0b01100000,
     SX127x_BW_125_00_KHZ = 0b01110000,
     SX127x_BW_250_00_KHZ = 0b10000000,
     SX127x_BW_500_00_KHZ = 0b10010000
