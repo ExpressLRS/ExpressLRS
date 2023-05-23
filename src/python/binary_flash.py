@@ -27,6 +27,7 @@ class UploadMethod(Enum):
     betaflight = 'bf'
     edgetx = 'etx'
     stlink = 'stlink'
+    stock = 'stock'
     dir = 'dir'
 
     def __str__(self):
@@ -129,7 +130,10 @@ def upload_esp32_bf(args, options):
 
 def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266 or mcuType == MCUType.STM32:
-        shutil.copy2(args.file.name, args.out)
+        if args.flash == UploadMethod.stock:
+            shutil.copy2(args.file.name, os.path.join(args.out, 'firmware.elrs'))
+        else:
+            shutil.copy2(args.file.name, args.out)
     elif mcuType == MCUType.ESP32:
         dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
@@ -143,7 +147,7 @@ def upload(options: FirmwareOptions, args):
         if args.flash == UploadMethod.betaflight:
             args.baud = 420000
 
-    if args.flash == UploadMethod.dir:
+    if args.flash == UploadMethod.dir or args.flash == UploadMethod.stock:
         return upload_dir(options.mcuType, args)
     elif options.deviceType == DeviceType.RX:
         if options.mcuType == MCUType.ESP8266:

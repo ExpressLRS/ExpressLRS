@@ -12,7 +12,7 @@ def error(msg):
 
 def validate_stm32(vendor, type, devname, device):
     for method in device['upload_methods']:
-        if method not in ['stlink', 'dfu', 'uart', 'wifi', 'betaflight']:
+        if method not in ['stlink', 'dfu', 'uart', 'wifi', 'betaflight', 'stock']:
             error(f'Invalid upload method "{method}" for target "{vendor}.{type}.{devname}"')
     if 'stlink' not in device['upload_methods']:
         error(f'STM32 based devices must always have "stlink" as an upload_method for target "{vendor}.{type}.{devname}"')
