@@ -294,6 +294,20 @@
             }
         }
     },
+    "elrsjoystick": {
+        "name": "ELRSJoystick",
+        "rx_2400": {
+            "elrsjoystick": {
+                "product_name": "ELRSJoystick 2.4GHz",
+                "lua_name": "ELRSJoystick 2400",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
+            }
+        }
+    },
     "emax": {
         "name": "EMAX",
         "tx_900": {
