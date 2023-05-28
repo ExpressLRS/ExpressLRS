@@ -146,7 +146,7 @@ build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-json_flags['flash-discriminator'] = randint(1,2^32-1)
+json_flags['flash-discriminator'] = randint(1,2**32-1)
 
 if '-DRADIO_SX127X=1' in build_flags:
     # disallow setting 2400s for 900
