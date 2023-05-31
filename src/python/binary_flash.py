@@ -46,10 +46,10 @@ def upload_wifi(args, options, upload_addr, isstm: bool):
     else:
         return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
 
-def upload_stm32_uart(args):
+def upload_stm32_uart(args, options):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept, ignore_incorrect_target=args.force)
+    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=options.firmware.upper(), accept=args.accept, ignore_incorrect_target=args.force)
 
 def upload_stm32_stlink(args, options: FirmwareOptions):
     stlink = external.pystlink.PyStlink(verbosity=1)
@@ -166,7 +166,7 @@ def upload(options: FirmwareOptions, args):
                 return upload_wifi(args, options, ['elrs_rx', 'elrs_rx.local'], False)
         elif options.mcuType == MCUType.STM32:
             if args.flash == UploadMethod.betaflight or args.flash == UploadMethod.uart:
-                return upload_stm32_uart(args)
+                return upload_stm32_uart(args, options)
             elif args.flash == UploadMethod.stlink:      # untested
                 return upload_stm32_stlink(args, options)
     else:
