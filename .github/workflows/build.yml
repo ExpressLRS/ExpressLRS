@@ -14,7 +14,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10' 
+        python-version: '3.10'
 
     - name: Cache pip
       uses: actions/cache@v3
@@ -115,27 +115,21 @@ jobs:
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400" pio run -e ${{ matrix.target }}
             OUTDIR=~/artifacts/firmware/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
             mkdir -p $OUTDIR
-            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
 
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio run -e ${{ matrix.target }}
             OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
             mkdir -p $OUTDIR
-            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
           *)
             # release build
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
             OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
             mkdir -p $OUTDIR
-            mv .pio/build/${{ matrix.target }}/firmware.{elrs,bin} $OUTDIR >& /dev/null || :
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
         esac
-        # copy the common ESP32 files
-        if [[ ${{matrix.target}} == *ESP32* ]] ; then
-          cp ~/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/bin/bootloader_dio_40m.bin ~/artifacts/firmware/
-          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin ~/artifacts/firmware/
-          mv .pio/build/${{ matrix.target }}/partitions.bin ~/artifacts/firmware/
-        fi
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v3
@@ -150,6 +144,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Get firmware artifacts
         uses: actions/download-artifact@v3
@@ -163,30 +159,55 @@ jobs:
       - name: Copy bootloader files to firmware folder
         run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Build flasher "binary" with shiv
+        run: |
+          cd src/python
+          pip install shiv
+          shiv -c flash -o ../../dist/firmware/flasher.pyz pyserial .
+
       - name: Update firmware artifact
         uses: actions/upload-artifact@v3
         with:
           name: firmware
           path: dist/**/*
 
-  installer:
-    needs: [validation, test]
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.7
+      - name: Create firmware zip bundle
+        run: |
+          cd dist
+          zip -r -9 ../firmware.zip ./firmware
 
-      - run: pip install pyserial
-      - run: pip install pyinstaller
-      - run: pyinstaller -F src/python/binary_configurator.py -n installer-${{ matrix.os }}
+      - name: Upload firmware bundle to ExpressLRS artifactory
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+          AWS_REGION: "auto"
+        run: |
+          if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
+            echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
+            exit 0
+          fi
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: installer
-          path: dist/*
+          echo "Uploading firmware to artifactory"
+          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
+
+          echo "Generating artifact index"
+          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
+          echo '{' > index.json
+          echo '"branches": {' >> index.json
+          git branch --list --remotes --format '"%(refname:short)": "%(objectname)",' | grep origin/ | sed s/origin.// | grep -f /tmp/hashes | head -c-2 >> index.json
+          echo '' >> index.json
+          echo '},' >> index.json
+          echo '"tags": {' >> index.json
+          git tag --list --format '"%(refname:short)": "%(objectname)",' | grep -f /tmp/hashes | head -c-2 >> index.json
+          echo '' >> index.json
+          echo '}' >> index.json
+          echo '}' >> index.json
+
+          echo "Uploading artifact index"
+          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json

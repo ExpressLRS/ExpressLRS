@@ -5,6 +5,13 @@
 #define MSP_SET_RX_CONFIG   45
 #define MSP_VTX_CONFIG      88   //out message         Get vtx settings - betaflight
 #define MSP_SET_VTX_CONFIG  89   //in message          Set vtx settings - betaflight
+
+#define MSP_VTXTABLE_BAND               137 //out message         vtxTable band/channel data
+#define MSP_SET_VTXTABLE_BAND           227 //in message          set vtxTable band/channel data (one band at a time)
+
+#define MSP_VTXTABLE_POWERLEVEL         138 //out message         vtxTable powerLevel data
+#define MSP_SET_VTXTABLE_POWERLEVEL     228 //in message          set vtxTable powerLevel data (one powerLevel at a time)
+
 #define MSP_EEPROM_WRITE    250  //in message          no param
 
 // ELRS specific opcodes
@@ -18,6 +25,7 @@
 #define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE 0x0D
 #define MSP_ELRS_SET_RX_WIFI_MODE           0x0E
 #define MSP_ELRS_SET_RX_LOAN_MODE           0x0F
+#define MSP_ELRS_GET_BACKPACK_VERSION       0x10
 
 #define MSP_ELRS_POWER_CALI_GET             0x20
 #define MSP_ELRS_POWER_CALI_SET             0x21
@@ -42,3 +50,6 @@
 #define MSP_ELRS_BACKPACK_GET_FIRMWARE          0x030A
 #define MSP_ELRS_BACKPACK_SET_BUZZER            0x030B
 #define MSP_ELRS_BACKPACK_SET_OSD_ELEMENT       0x030C
+#define MSP_ELRS_BACKPACK_SET_HEAD_TRACKING     0x030D
+// incoming
+#define MSP_ELRS_BACKPACK_SET_PTR               0x0383

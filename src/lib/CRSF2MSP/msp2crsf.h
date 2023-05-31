@@ -20,7 +20,7 @@ private:
     void setVersion(uint8_t &data, MSPframeType_e version);
     uint8_t getHeaderDir(uint8_t headerDir);
     void setError(uint8_t &data, bool isError);
-    uint8_t seqNum; 
+    uint8_t seqNum;
 
     uint32_t getFrameLen(uint32_t payloadLen, uint8_t mspVersion);
     MSPframeType_e getVersion(const uint8_t *data);
@@ -32,3 +32,5 @@ public:
     void parse(const uint8_t *data, uint32_t frameLen, uint8_t src = CRSF_ADDRESS_CRSF_RECEIVER, uint8_t dest = CRSF_ADDRESS_FLIGHT_CONTROLLER);
     bool validate(const uint8_t *data, uint32_t expectLen);
 };
+
+extern MSP2CROSSFIRE msp2crsf;

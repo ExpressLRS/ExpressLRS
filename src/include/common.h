@@ -96,6 +96,7 @@ typedef enum : uint8_t
     RATE_DVDA_500HZ,
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
+    RATE_DVDA_50HZ,
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 enum {
@@ -108,7 +109,8 @@ typedef enum : uint8_t
 {
     TX_RADIO_MODE_GEMINI = 0,
     TX_RADIO_MODE_ANT_1 = 1,
-    TX_RADIO_MODE_ANT_2 = 2
+    TX_RADIO_MODE_ANT_2 = 2,
+    TX_RADIO_MODE_SWITCH = 3
 } tx_radio_mode_e;
 
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
@@ -140,7 +142,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t cr;
     expresslrs_tlm_ratio_e TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
-    uint32_t interval;          // interval in us seconds that corresponds to that frequency
+    int32_t interval;           // interval in us seconds that corresponds to that frequency
     uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
@@ -165,22 +167,38 @@ typedef enum : uint8_t {
 
 enum eServoOutputMode : uint8_t
 {
-    som50Hz,  // Hz modes are "Servo PWM" where the signal is 988-2012us
-    som60Hz,  // and the mode sets the refresh interval
-    som100Hz, // 50Hz must be mode=0 for default in config
+    som50Hz,    // Hz modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,    // and the mode sets the refresh interval
+    som100Hz,   // 50Hz must be mode=0 for default in config
     som160Hz,
     som333Hz,
     som400Hz,
     som10KHzDuty,
-    somOnOff,  // Digital 0/1 mode
-    somPwm,    // True PWM mode (NOT SUPPORTED)
-    somCrsfTx, // CRSF output TX (NOT SUPPORTED)
-    somCrsfRx, // CRSF output RX (NOT SUPPORTED)
+    somOnOff,   // Digital 0/1 mode
+    somSerial,  // Serial TX or RX depending on pin
+    somPwm,     // True PWM mode (NOT SUPPORTED)
+};
+
+enum eSerialProtocol : uint8_t
+{
+    PROTOCOL_CRSF,
+    PROTOCOL_INVERTED_CRSF,
+    PROTOCOL_SBUS,
+    PROTOCOL_INVERTED_SBUS,
+	PROTOCOL_SUMD,
+    PROTOCOL_DJI_RS_PRO
+};
+
+enum eFailsafeMode : uint8_t
+{
+    FAILSAFE_NO_PULSES,
+    FAILSAFE_LAST_POSITION,
+    FAILSAFE_SET_POSITION
 };
 
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
-#define RATE_MAX 5
+#define RATE_MAX 6
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
@@ -199,7 +217,6 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval);
 
 uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
-uint16_t RateEnumToHz(expresslrs_RFrates_e const eRate);
 uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
 extern uint8_t ExpressLRS_currTlmDenom;
@@ -215,6 +232,7 @@ uint32_t uidMacSeedGet(void);
 void initUID();
 bool isDualRadio();
 
+#define CRSF_NUM_CHANNELS 16
 #define AUX1 4
 #define AUX2 5
 #define AUX3 6
@@ -232,3 +250,5 @@ bool isDualRadio();
 //Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
 #define ELRS_CRC_POLY 0x07 // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372B
+
+extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format

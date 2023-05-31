@@ -32,6 +32,10 @@ static int start()
         return DURATION_NEVER;
     }
     vbatUpdateScale = 1;
+#if defined(PLATFORM_ESP32)
+    analogSetPinAttenuation(GPIO_ANALOG_VBAT, ADC_0db);
+    analogSetWidth(12);
+#endif
     return VBAT_SAMPLE_INTERVAL;
 }
 
@@ -40,7 +44,7 @@ static void reportVbat()
     uint32_t adc = vbatSmooth.calc_scaled();
     uint16_t vbat;
     // For negative offsets, anything between abs(OFFSET)*CNT and 0 is considered 0
-    if (ANALOG_VBAT_OFFSET < 0 && adc <= (ANALOG_VBAT_OFFSET * -VBAT_SMOOTH_CNT))
+    if (ANALOG_VBAT_OFFSET < 0 && adc <= (ANALOG_VBAT_OFFSET * -vbatSmooth.scale()))
         vbat = 0;
     else
         vbat = adc * 100U / (ANALOG_VBAT_SCALE * vbatSmooth.scale());
@@ -56,7 +60,7 @@ static void reportVbat()
 
 static int timeout()
 {
-    if (GPIO_ANALOG_VBAT == UNDEF_PIN)
+    if (GPIO_ANALOG_VBAT == UNDEF_PIN || telemetry.GetCrsfBatterySensorDetected())
     {
         return DURATION_NEVER;
     }

@@ -17,7 +17,8 @@
 #include <OTA.h>
 #include "crsf_sysmocks.h"
 
-CRSF crsf(NULL);  // need an instance to provide the fields used by the code under test
+CRSF crsf;  // need an instance to provide the fields used by the code under test
+uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 uint8_t UID[6] = {1,2,3,4,5,6};
 
 void test_crsf_endpoints()
@@ -98,10 +99,10 @@ void test_encodingHybrid8(bool highResChannel)
 
     // Define the input data
     // 4 channels of 11-bit analog data
-    crsf.ChannelData[0] = 0x0123 & 0b11111111111;
-    crsf.ChannelData[1] = 0x4567 & 0b11111111111;
-    crsf.ChannelData[2] = 0x89AB & 0b11111111111;
-    crsf.ChannelData[3] = 0xCDEF & 0b11111111111;
+    ChannelData[0] = 0x0123 & 0b11111111111;
+    ChannelData[1] = 0x4567 & 0b11111111111;
+    ChannelData[2] = 0x89AB & 0b11111111111;
+    ChannelData[3] = 0xCDEF & 0b11111111111;
 
     OTA_Packet8_s ota;
     OTA_Channels_4x10 ch;
@@ -122,7 +123,7 @@ void test_encodingHybrid8(bool highResChannel)
     for(int i = 0; i < N_SWITCHES; i++) {
         constexpr int CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
-        crsf.ChannelData[4+i] = CHANNELS[i % 3];
+        ChannelData[4+i] = CHANNELS[i % 3];
     }
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
@@ -133,7 +134,7 @@ void test_encodingHybrid8(bool highResChannel)
 
     // encode it
     OtaUpdateSerializers(smHybridOr16ch, OTA4_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -145,7 +146,7 @@ void test_encodingHybrid8(bool highResChannel)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[1], 5);
 
     // byte 6 is the switch encoding
-    TEST_ASSERT_EQUAL(CRSF_to_BIT(crsf.ChannelData[4+0]), TXdataBuffer[6] >> 7);
+    TEST_ASSERT_EQUAL(CRSF_to_BIT(ChannelData[4+0]), TXdataBuffer[6] >> 7);
     // top bit is undefined
     // expect switch 0 in bit 6
     // index-1 in 3-5
@@ -153,12 +154,12 @@ void test_encodingHybrid8(bool highResChannel)
     if (highResChannel)
     {
         TEST_ASSERT_EQUAL(7, ((TXdataBuffer[6] & 0b110000)>>3) + 1);
-        TEST_ASSERT_EQUAL(CRSF_to_N(crsf.ChannelData[4+7], 16), TXdataBuffer[6] & 0b1111);
+        TEST_ASSERT_EQUAL(CRSF_to_N(ChannelData[4+7], 16), TXdataBuffer[6] & 0b1111);
     }
     else
     {
         TEST_ASSERT_EQUAL(3, ((TXdataBuffer[6] & 0b111000)>>3) + 1);
-        TEST_ASSERT_EQUAL(CRSF_to_N(crsf.ChannelData[4+3], 6), TXdataBuffer[6] & 0b0111);
+        TEST_ASSERT_EQUAL(CRSF_to_N(ChannelData[4+3], 6), TXdataBuffer[6] & 0b0111);
     }
 }
 
@@ -181,27 +182,27 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
     uint8_t TXdataBuffer[OTA4_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     // Define the input data
     // 4 channels of 11-bit analog data
-    crsf.ChannelData[0] = 0x0123 & 0b11111111111;
-    crsf.ChannelData[1] = 0x4567 & 0b11111111111;
-    crsf.ChannelData[2] = 0x89AB & 0b11111111111;
-    crsf.ChannelData[3] = 0xCDEF & 0b11111111111;
+    ChannelData[0] = 0x0123 & 0b11111111111;
+    ChannelData[1] = 0x4567 & 0b11111111111;
+    ChannelData[2] = 0x89AB & 0b11111111111;
+    ChannelData[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     for(int i = 0; i < N_SWITCHES; i++) {
         constexpr int CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
-        crsf.ChannelData[4+i] = CHANNELS[i % 3];
+        ChannelData[4+i] = CHANNELS[i % 3];
     }
     if (forceSwitch == 0)
-        crsf.ChannelData[4+forceSwitch] = BIT_to_CRSF(switchval);
+        ChannelData[4+forceSwitch] = BIT_to_CRSF(switchval);
     else if (forceSwitch == 7)
-        crsf.ChannelData[4+forceSwitch] = N_to_CRSF(switchval, 15);
+        ChannelData[4+forceSwitch] = N_to_CRSF(switchval, 15);
     else
-        crsf.ChannelData[4+forceSwitch] = SWITCH3b_to_CRSF(switchval);
+        ChannelData[4+forceSwitch] = SWITCH3b_to_CRSF(switchval);
 
     // set the nextSwitchIndex so we know which switch to expect in the packet
     if (forceSwitch == 0)
@@ -210,25 +211,25 @@ void test_decodingHybrid8(uint8_t forceSwitch, uint8_t switchval)
         OtaSetHybrid8NextSwitchIndex(forceSwitch-1);
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     // use the encoding method to pack it into TXdataBuffer
     OtaUpdateSerializers(smHybridOr16ch, OTA4_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
 
     // run the decoder, results in crsf->PackedRCdataOut
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
-    TEST_ASSERT_EQUAL(ChannelsIn[1], crsf.ChannelData[1]);
-    TEST_ASSERT_EQUAL(ChannelsIn[2], crsf.ChannelData[2]);
-    TEST_ASSERT_EQUAL(ChannelsIn[3], crsf.ChannelData[3]);
+    TEST_ASSERT_EQUAL(ChannelsIn[0], ChannelData[0]);
+    TEST_ASSERT_EQUAL(ChannelsIn[1], ChannelData[1]);
+    TEST_ASSERT_EQUAL(ChannelsIn[2], ChannelData[2]);
+    TEST_ASSERT_EQUAL(ChannelsIn[3], ChannelData[3]);
 
-    TEST_ASSERT_EQUAL(ChannelsIn[4+0], crsf.ChannelData[4]); // Switch 0 is sent on every packet
+    TEST_ASSERT_EQUAL(ChannelsIn[4+0], ChannelData[4]); // Switch 0 is sent on every packet
     if (forceSwitch == 7)
-        TEST_ASSERT_EQUAL(ChannelsIn[4+forceSwitch], crsf.ChannelData[11]); // We forced switch 1 to be sent as the sequential field
+        TEST_ASSERT_EQUAL(ChannelsIn[4+forceSwitch], ChannelData[11]); // We forced switch 1 to be sent as the sequential field
     else if (forceSwitch != 0)
-        TEST_ASSERT_EQUAL(crsf.ChannelData[4+forceSwitch], crsf.ChannelData[4+forceSwitch]);
+        TEST_ASSERT_EQUAL(ChannelData[4+forceSwitch], ChannelData[4+forceSwitch]);
 }
 
 void test_decodingHybrid8_all()
@@ -254,33 +255,33 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     uint8_t TXdataBuffer[OTA4_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     // Define the input data
     // 4 channels of 11-bit analog data
-    crsf.ChannelData[0] = 0x0123 & 0b11111111111;
-    crsf.ChannelData[1] = 0x4567 & 0b11111111111;
-    crsf.ChannelData[2] = 0x89AB & 0b11111111111;
-    crsf.ChannelData[3] = 0xCDEF & 0b11111111111;
+    ChannelData[0] = 0x0123 & 0b11111111111;
+    ChannelData[1] = 0x4567 & 0b11111111111;
+    ChannelData[2] = 0x89AB & 0b11111111111;
+    ChannelData[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     constexpr int N_SWITCHES = 8;
     for(int i = 0; i < N_SWITCHES; i++) {
         constexpr unsigned CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
-        crsf.ChannelData[4+i] = CHANNELS[i % 3];
+        ChannelData[4+i] = CHANNELS[i % 3];
     }
 
     // Uplink data
     crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaUpdateSerializers(smWideOr8ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
-    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
+    OtaPackChannelData(otaPktPtr, ChannelData, nonce % 2, tlmDenom);
 
     // check it looks right
     // 1st byte is CRC & packet type
@@ -306,7 +307,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
         TEST_ASSERT_EQUAL(crsf.LinkStatistics.uplink_TX_Power, switches & 0b111111);
     else
     {
-        uint16_t ch = crsf.ChannelData[5+switchIdx];
+        uint16_t ch = ChannelData[5+switchIdx];
         if (highRes)
             TEST_ASSERT_EQUAL(CRSF_to_N(ch, 128), switches & 0b1111111); // 7-bit
         else
@@ -336,14 +337,14 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     uint8_t TXdataBuffer[OTA4_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     // Define the input data
     // 4 channels of 11-bit analog data
-    crsf.ChannelData[0] = 0x0123 & 0b11111111111;
-    crsf.ChannelData[1] = 0x4567 & 0b11111111111;
-    crsf.ChannelData[2] = 0x89AB & 0b11111111111;
-    crsf.ChannelData[3] = 0xCDEF & 0b11111111111;
+    ChannelData[0] = 0x0123 & 0b11111111111;
+    ChannelData[1] = 0x4567 & 0b11111111111;
+    ChannelData[2] = 0x89AB & 0b11111111111;
+    ChannelData[3] = 0xCDEF & 0b11111111111;
 
     // 8 switches
     constexpr int N_SWITCHES = 8;
@@ -351,36 +352,36 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
         constexpr unsigned CHANNELS[] =
             { CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_2000 };
         if (i == forceSwitch)
-            crsf.ChannelData[4+i] = forceVal;
+            ChannelData[4+i] = forceVal;
         else
-            crsf.ChannelData[4+i] = CHANNELS[i % 3];
+            ChannelData[4+i] = CHANNELS[i % 3];
     }
 
     // Uplink data
     crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     // encode it
     uint8_t tlmDenom = (highRes) ? 64 : 4;
     OtaUpdateSerializers(smWideOr8ch, OTA4_PACKET_SIZE);
     OtaNonce = nonce;
-    OtaPackChannelData(otaPktPtr, &crsf, nonce % 2, tlmDenom);
+    OtaPackChannelData(otaPktPtr, ChannelData, nonce % 2, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
     crsf.LinkStatistics.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
-    bool telemResult = OtaUnpackChannelData(otaPktPtr, &crsf, tlmDenom);
+    bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData, tlmDenom);
 
     // compare the unpacked results with the input data
-    TEST_ASSERT_EQUAL(ChannelsIn[0], crsf.ChannelData[0]);
-    TEST_ASSERT_EQUAL(ChannelsIn[1], crsf.ChannelData[1]);
-    TEST_ASSERT_EQUAL(ChannelsIn[2], crsf.ChannelData[2]);
-    TEST_ASSERT_EQUAL(ChannelsIn[3], crsf.ChannelData[3]);
+    TEST_ASSERT_EQUAL(ChannelsIn[0], ChannelData[0]);
+    TEST_ASSERT_EQUAL(ChannelsIn[1], ChannelData[1]);
+    TEST_ASSERT_EQUAL(ChannelsIn[2], ChannelData[2]);
+    TEST_ASSERT_EQUAL(ChannelsIn[3], ChannelData[3]);
 
     // Switch 0 is sent on every packet
-    TEST_ASSERT_EQUAL(crsf.ChannelData[4], crsf.ChannelData[4]);
+    TEST_ASSERT_EQUAL(ChannelData[4], ChannelData[4]);
 
     uint8_t switchIdx = nonce % 8;
     // Validate the telemResult was unpacked properly
@@ -394,9 +395,9 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     else
     {
         if (highRes)
-            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(crsf.ChannelData[5+switchIdx], 128), 127), crsf.ChannelData[5+switchIdx]);
+            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(ChannelData[5+switchIdx], 128), 127), ChannelData[5+switchIdx]);
         else
-            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(crsf.ChannelData[5+switchIdx], 64), 63), crsf.ChannelData[5+switchIdx]);
+            TEST_ASSERT_EQUAL(N_to_CRSF(CRSF_to_N(ChannelData[5+switchIdx], 64), 63), ChannelData[5+switchIdx]);
     }
 }
 
@@ -404,23 +405,23 @@ void fullres_fillChannelData()
 {
     // Define the input data
     // 16 channels of 11-bit analog data
-    crsf.ChannelData[0] = 0x0123 & 0b11111111111;
-    crsf.ChannelData[1] = 0x4567 & 0b11111111111;
-    crsf.ChannelData[2] = 0x89AB & 0b11111111111;
-    crsf.ChannelData[3] = 0xCDEF & 0b11111111111;
-    crsf.ChannelData[4] = 0x3210 & 0b11111111111;
-    crsf.ChannelData[5] = 0x7654 & 0b11111111111;
-    crsf.ChannelData[6] = 0xBA98 & 0b11111111111;
-    crsf.ChannelData[7] = 0xFEDC & 0b11111111111;
+    ChannelData[0] = 0x0123 & 0b11111111111;
+    ChannelData[1] = 0x4567 & 0b11111111111;
+    ChannelData[2] = 0x89AB & 0b11111111111;
+    ChannelData[3] = 0xCDEF & 0b11111111111;
+    ChannelData[4] = 0x3210 & 0b11111111111;
+    ChannelData[5] = 0x7654 & 0b11111111111;
+    ChannelData[6] = 0xBA98 & 0b11111111111;
+    ChannelData[7] = 0xFEDC & 0b11111111111;
 
-    crsf.ChannelData[8]  = 0x2301 & 0b11111111111;
-    crsf.ChannelData[9]  = 0x6745 & 0b11111111111;
-    crsf.ChannelData[10] = 0xAB89 & 0b11111111111;
-    crsf.ChannelData[11] = 0xEFCD & 0b11111111111;
-    crsf.ChannelData[12] = 0x1023 & 0b11111111111;
-    crsf.ChannelData[13] = 0x5476 & 0b11111111111;
-    crsf.ChannelData[14] = 0x98BA & 0b11111111111;
-    crsf.ChannelData[15] = 0xDCFE & 0b11111111111;
+    ChannelData[8]  = 0x2301 & 0b11111111111;
+    ChannelData[9]  = 0x6745 & 0b11111111111;
+    ChannelData[10] = 0xAB89 & 0b11111111111;
+    ChannelData[11] = 0xEFCD & 0b11111111111;
+    ChannelData[12] = 0x1023 & 0b11111111111;
+    ChannelData[13] = 0x5476 & 0b11111111111;
+    ChannelData[14] = 0x98BA & 0b11111111111;
+    ChannelData[15] = 0xDCFE & 0b11111111111;
 }
 
 void test_encodingFullresPowerLevels()
@@ -428,7 +429,7 @@ void test_encodingFullresPowerLevels()
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
 
@@ -441,8 +442,8 @@ void test_encodingFullresPowerLevels()
         uint8_t crsfPower = powerToCrsfPower((PowerLevels_e)pwr);
         crsf.LinkStatistics.uplink_TX_Power = crsfPower;
 
-        OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-        OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+        OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
+        OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
 
         TEST_ASSERT_EQUAL(crsfPower, crsf.LinkStatistics.uplink_TX_Power);
     }
@@ -453,15 +454,15 @@ void test_encodingFullres8ch()
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
     crsf.LinkStatistics.uplink_TX_Power = PWR_250mW;
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     OtaUpdateSerializers(smWideOr8ch, OTA8_PACKET_SIZE);
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
 
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
@@ -492,18 +493,18 @@ void test_encodingFullres16ch()
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     OtaUpdateSerializers(smHybridOr16ch, OTA8_PACKET_SIZE);
     OtaSetFullResNextChannelSet(false);
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
@@ -522,7 +523,7 @@ void test_encodingFullres16ch()
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
     // Low 4ch (CH9-CH12)
     expected[0] = ((ChannelsIn[8] >> 1) >> 0);
     expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[9] >> 1) << 2);
@@ -544,18 +545,18 @@ void test_encodingFullres12ch()
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     OtaUpdateSerializers(sm12ch, OTA8_PACKET_SIZE);
     OtaSetFullResNextChannelSet(false);
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     uint8_t expected[5];
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
@@ -574,7 +575,7 @@ void test_encodingFullres12ch()
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
     // Low 4ch (CH1-CH4)
     expected[0] = ((ChannelsIn[0] >> 1) >> 0);
     expected[1] = ((ChannelsIn[0] >> 1) >> 8) | ((ChannelsIn[1] >> 1) << 2);
@@ -596,31 +597,31 @@ void test_decodingFullres16chLow()
     uint8_t TXdataBuffer[OTA8_PACKET_SIZE] = {0};
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s *)TXdataBuffer;
     uint32_t ChannelsIn[16];
-    TEST_ASSERT_EQUAL(sizeof(crsf.ChannelData), sizeof(ChannelsIn));
+    TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
 
     // Save the channels since they go into the same place
-    memcpy(ChannelsIn, crsf.ChannelData, sizeof(crsf.ChannelData));
+    memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
     OtaUpdateSerializers(smHybridOr16ch, OTA8_PACKET_SIZE);
     OtaSetFullResNextChannelSet(false);
 
     // ** PACKET ONE **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
+    OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
     for (unsigned ch=0; ch<8; ++ch)
     {
-        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, crsf.ChannelData[ch]);
+        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, ChannelData[ch]);
     }
 
     // ** PACKET TWO **
     memset(TXdataBuffer, 0, sizeof(TXdataBuffer)); // "destChannels4x10 must be zeroed"
-    OtaPackChannelData(otaPktPtr, &crsf, false, 0);
-    OtaUnpackChannelData(otaPktPtr, &crsf, 0);
+    OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
+    OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
     for (unsigned ch=9; ch<16; ++ch)
     {
-        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, crsf.ChannelData[ch]);
+        TEST_ASSERT_EQUAL(ChannelsIn[ch] & 0b11111111110, ChannelData[ch]);
     }
 }
 

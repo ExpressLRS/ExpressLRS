@@ -33,11 +33,12 @@
 
 #include "targets.h"
 
-// If this is 256 then the compiler can optimise out the modulo because the head/tail are uint8_t types
-#define FIFO_SIZE 256
-
 class FIFO
 {
+public:
+    // If this is 256 then the compiler can optimise out the modulo because the head/tail are uint8_t types
+    static const uint16_t FIFO_SIZE = 256;
+
 private:
     uint8_t head;
     uint8_t tail;

@@ -71,10 +71,11 @@ static DNSServer dnsServer;
 static IPAddress ipAddress;
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#include "crsf2msp.h"
+#include "msp2crsf.h"
+
 #include "tcpsocket.h"
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
-#include "CRSF.h"
-extern CRSF crsf;
 #endif
 
 static AsyncWebServer server(80);
@@ -188,33 +189,6 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-static void WebUpdatePwm(AsyncWebServerRequest *request)
-{
-  String pwmStr = request->arg("pwm");
-  if (pwmStr.isEmpty())
-  {
-    request->send(400, "text/plain", "Empty pwm parameter");
-    return;
-  }
-
-  // parse out the integers representing the PWM values
-  // strtok will modify the string as it parses
-  char *token = strtok((char *)pwmStr.c_str(), ",");
-  uint8_t channel = 0;
-  while (token != nullptr && channel < GPIO_PIN_PWM_OUTPUTS_COUNT)
-  {
-    uint32_t val = atoi(token);
-    DBGLN("PWMch(%u)=%u", channel, val);
-    config.SetPwmChannelRaw(channel, val);
-    ++channel;
-    token = strtok(nullptr, ",");
-  }
-  config.Commit();
-  request->send(200, "text/plain", "PWM outputs updated");
-}
-#endif
-
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   static File file;
@@ -266,6 +240,17 @@ static void HandleReset(AsyncWebServerRequest *request)
   request->send(response);
   request->client()->close();
   rebootTime = millis() + 100;
+}
+
+static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
+    request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
+    return;
+  }
+  File file = SPIFFS.open("/options.json", "w");
+  serializeJson(json, file);
+  request->send(200);
 }
 
 static void GetConfiguration(AsyncWebServerRequest *request)
@@ -340,12 +325,15 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["ssid"] = station_ssid;
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
+    json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
-    json["config"]["forcetlm"] = config.GetForceTlmOff();
+    json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-      json["config"]["pwm"][ch] = config.GetPwmChannel(ch)->raw;
+    json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
+    json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
     }
     #endif
     #endif
@@ -357,7 +345,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
     #if defined(TARGET_RX)
     else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
     else json["config"]["uidtype"] = "Not set";
@@ -454,6 +442,39 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
   DBGLN("%d %d", button1Color, button2Color);
   setButtonColors(button1Color, button2Color);
   request->send(200);
+}
+#else
+static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  uint8_t protocol = json["serial-protocol"] | 0;
+  DBGLN("Setting serial protocol %u", protocol);
+  config.SetSerialProtocol((eSerialProtocol)protocol);
+
+  uint8_t failsafe = json["sbus-failsafe"] | 0;
+  DBGLN("Setting SBUS failsafe mode %u", failsafe);
+  config.SetFailsafeMode((eFailsafeMode)failsafe);
+
+  long modelid = json["modelid"] | 255;
+  if (modelid < 0 || modelid > 63) modelid = 255;
+  DBGLN("Setting model match id %u", (uint8_t)modelid);
+  config.SetModelId((uint8_t)modelid);
+
+  long forceTlm = json["force-tlm"] | 0;
+  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
+  config.SetForceTlmOff(forceTlm != 0);
+
+  #if defined(GPIO_PIN_PWM_OUTPUTS)
+  JsonArray pwm = json["pwm"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
+  {
+    uint32_t val = pwm[channel];
+    DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetPwmChannelRaw(channel, val);
+  }
+  #endif
+
+  config.Commit();
+  request->send(200, "text/plain", "Configuration updated");
 }
 #endif
 
@@ -557,30 +578,6 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   sendResponse(request, msg, WIFI_AP);
 }
 
-#if defined(TARGET_RX)
-static void WebUpdateModelId(AsyncWebServerRequest *request)
-{
-  long modelid = request->arg("modelid").toInt();
-  if (modelid < 0 || modelid > 63) modelid = 255;
-  DBGLN("Setting model match id %u", (uint8_t)modelid);
-  config.SetModelId((uint8_t)modelid);
-  config.Commit();
-
-  request->send(200, "text/plain", "Model Match updated");
-}
-
-static void WebUpdateForceTelemetry(AsyncWebServerRequest *request)
-{
-  long forceTlm = request->arg("force-tlm").toInt();
-
-  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
-  config.SetForceTlmOff(forceTlm != 0);
-  config.Commit();
-
-  request->send(200, "text/plain", "Force telemetry updated");
-}
-#endif
-
 static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 {
   if (captivePortal(request))
@@ -613,9 +610,9 @@ static void corsPreflightResponse(AsyncWebServerRequest *request) {
 }
 
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
-  if (target_seen) {
+  if (target_seen || Update.hasError()) {
     String msg;
-    if (Update.end()) {
+    if (!Update.hasError() && Update.end()) {
       DBGLN("Update complete, rebooting");
       msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
@@ -810,7 +807,7 @@ static void startWiFi(unsigned long now)
     hwTimer::stop();
 
 #ifdef HAS_VTX_SPI
-    VTxOutputMinimum();
+    disableVTxSpi();
 #endif
 
     // Set transmit power to minimum
@@ -874,10 +871,6 @@ static void startMDNS()
   if (firmwareOptions.lock_on_first_connection)
   {
     options += " -DLOCK_ON_FIRST_CONNECTION";
-  }
-  if (firmwareOptions.invert_tx)
-  {
-    options += " -DRCVR_INVERT_TX";
   }
   options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
   #endif
@@ -968,23 +961,17 @@ static void startServices()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-  #if defined(TARGET_RX)
-    server.on("/model", WebUpdateModelId);
-    server.on("/forceTelemetry", WebUpdateForceTelemetry);
-  #endif
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
-    server.on("/pwm", WebUpdatePwm);
-  #endif
   server.on("/hardware.html", WebUpdateSendContent);
   server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
-  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
+  server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
+  server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
-    server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
   #endif
 
@@ -1085,10 +1072,6 @@ static void HandleWebUpdate()
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
     #endif
-    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
-    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-    if (!Update.isRunning())
-      delay(1);
   }
 }
 
@@ -1096,11 +1079,11 @@ void HandleMSP2WIFI()
 {
   #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
   // check is there is any data to write out
-  if (crsf.crsf2msp.FIFOout.peekSize() > 0)
+  if (crsf2msp.FIFOout.peekSize() > 0)
   {
-    const uint16_t len = crsf.crsf2msp.FIFOout.popSize();
+    const uint16_t len = crsf2msp.FIFOout.popSize();
     uint8_t data[len];
-    crsf.crsf2msp.FIFOout.popBytes(data, len);
+    crsf2msp.FIFOout.popBytes(data, len);
     wifi2tcp.write(data, len);
   }
 
@@ -1110,7 +1093,7 @@ void HandleMSP2WIFI()
   {
     uint8_t data[bytesReady];
     wifi2tcp.read(data);
-    crsf.msp2crsf.parse(data, bytesReady);
+    msp2crsf.parse(data, bytesReady);
   }
 
   wifi2tcp.handle();
@@ -1150,7 +1133,18 @@ static int timeout()
   {
     HandleWebUpdate();
     HandleMSP2WIFI();
+#if defined(PLATFORM_ESP8266)
+    // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
+    // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+    // Only done on 8266 as the ESP32 runs a throttled task
+    if (!Update.isRunning())
+      delay(1);
     return DURATION_IMMEDIATELY;
+#else
+    // All the web traffic is async apart from changing modes and MSP2WIFI
+    // No need to run balls-to-the-wall; the wifi runs on this core too (0)
+    return 2;
+#endif
   }
 
   #if defined(TARGET_TX)

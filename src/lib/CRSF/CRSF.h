@@ -3,13 +3,10 @@
 
 #include "targets.h"
 #include "crsf_protocol.h"
-#if defined(CRSF_RX_MODULE) && defined(USE_MSP_WIFI)
-#include "crsf2msp.h"
-#include "msp2crsf.h"
-#endif
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
+#include "common.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "LowPassFilter.h"
@@ -29,25 +26,7 @@ class CRSF
 {
 
 public:
-    #if CRSF_RX_MODULE
-    CRSF(Stream *dev) : _dev(dev)
-    {
-    }
-
-    CRSF(Stream &dev) : _dev(&dev) {}
-
-    #if defined(USE_MSP_WIFI)
-    static CROSSFIRE2MSP crsf2msp;
-    static MSP2CROSSFIRE msp2crsf;
-    #endif
-    #endif
-
-    static uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
-
     /////Variables/////
-
-
-    static uint8_t ParameterUpdateData[3];
 
     #ifdef CRSF_TX_MODULE
     static HardwareSerial Port;
@@ -57,7 +36,7 @@ public:
     static void (*connected)();
 
     static void (*RecvModelUpdate)();
-    static void (*RecvParameterUpdate)();
+    static void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg);
     static void (*RCdataCallback)();
 
     // The model ID as received from the Transmitter
@@ -76,6 +55,7 @@ public:
     static void End(); //stop timers etc
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
     static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
@@ -87,11 +67,9 @@ public:
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
-    static void ICACHE_RAM_ATTR sendSetVTXchannel(uint8_t band, uint8_t channel);
-
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms
-    static void ICACHE_RAM_ATTR setSyncParams(uint32_t PacketInterval);
+    static void ICACHE_RAM_ATTR setSyncParams(int32_t PacketInterval);
     static void ICACHE_RAM_ATTR JustSentRFpacket();
     static void ICACHE_RAM_ATTR sendSyncPacketToTX();
     static void disableOpentxSync();
@@ -114,26 +92,15 @@ public:
     static void ICACHE_RAM_ATTR RcPacketToChannelsData();
     #endif
 
-    #ifdef CRSF_RX_MODULE
-    bool RXhandleUARTout();
-    void ICACHE_RAM_ATTR sendRCFrameToFC();
-    void ICACHE_RAM_ATTR sendMSPFrameToFC(uint8_t* data);
-    void sendLinkStatisticsToFC();
-    #endif
-
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
 
 private:
     static inBuffer_U inBuffer;
 
-#if CRSF_RX_MODULE
-    Stream *_dev;
-#endif
-
 #if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
-    static uint32_t RequestedRCpacketInterval;
+    static int32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
     static volatile uint32_t dataLastRecv;
     static volatile int32_t OpenTXsyncOffset;

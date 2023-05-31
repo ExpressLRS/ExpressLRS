@@ -1,6 +1,6 @@
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 
-#include "targets.h"
+#include "options.h"
 #include "helpers.h"
 #include "logging.h"
 #if defined(PLATFORM_ESP8266)
@@ -28,6 +28,7 @@ static const struct {
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
+    {HARDWARE_radio_dio0_2, "radio_dio0_2", INT},
     {HARDWARE_radio_dio1, "radio_dio1", INT},
     {HARDWARE_radio_dio1_2, "radio_dio1_2", INT},
     {HARDWARE_radio_dio2, "radio_dio2", INT},
@@ -153,10 +154,8 @@ String& getHardware()
     return builtinHardwareConfig;
 }
 
-bool hardware_init(uint32_t *config)
+static void hardware_ClearAllFields()
 {
-    constexpr size_t hardwareConfigOffset = 128 + 16 + 512;
-
     for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
         switch (fields[i].type) {
             case INT:
@@ -176,34 +175,10 @@ bool hardware_init(uint32_t *config)
                 break;
         }
     }
+}
 
-    DynamicJsonDocument doc(2048);
-    File file = SPIFFS.open("/hardware.json", "r");
-    if (!file || file.isDirectory()) {
-        if (file)
-        {
-            file.close();
-        }
-        if (config[0] == 0xFFFFFFFF)
-        {
-            return false;
-        }
-        builtinHardwareConfig.clear();
-        DeserializationError error = deserializeJson(doc, ((const char *)config) + hardwareConfigOffset, strnlen(((const char *)config) + hardwareConfigOffset, 2048));
-        if (error) {
-            return false;
-        }
-        serializeJson(doc, builtinHardwareConfig);
-    }
-    else
-    {
-        DeserializationError error = deserializeJson(doc, file);
-        file.close();
-        if (error) {
-            return false;
-        }
-    }
-
+static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
+{
     for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
         if (doc.containsKey(fields[i].name)) {
             switch (fields[i].type) {
@@ -232,6 +207,39 @@ bool hardware_init(uint32_t *config)
             }
         }
     }
+}
+
+bool hardware_init(EspFlashStream &strmFlash)
+{
+    hardware_ClearAllFields();
+    builtinHardwareConfig.clear();
+
+    Stream *strmSrc;
+    DynamicJsonDocument doc(2048);
+    File file = SPIFFS.open("/hardware.json", "r");
+    if (!file || file.isDirectory()) {
+        constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;
+        strmFlash.setPosition(hardwareConfigOffset);
+        if (!options_HasStringInFlash(strmFlash))
+        {
+            return false;
+        }
+
+        strmSrc = &strmFlash;
+    }
+    else
+    {
+        strmSrc = &file;
+    }
+
+    DeserializationError error = deserializeJson(doc, *strmSrc);
+    if (error)
+    {
+        return false;
+    }
+    serializeJson(doc, builtinHardwareConfig);
+
+    hardware_LoadFieldsFromDoc(doc);
 
     return true;
 }
