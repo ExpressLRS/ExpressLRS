@@ -141,11 +141,13 @@ def upload_esp32_bf(args, options):
     return ElrsUploadResult.Success
 
 def upload_dir(mcuType, args):
-    if mcuType == MCUType.ESP8266 or mcuType == MCUType.STM32:
+    if mcuType == MCUType.STM32:
         if args.flash == UploadMethod.stock:
             shutil.copy2(args.file.name, os.path.join(args.out, 'firmware.elrs'))
         else:
             shutil.copy2(args.file.name, args.out)
+    if mcuType == MCUType.ESP8266:
+        shutil.copy2('firmware.bin.gz', os.path.join(args.out, 'firmware.bin.gz'))
     elif mcuType == MCUType.ESP32:
         dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
