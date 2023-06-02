@@ -182,7 +182,7 @@
                 "prior_target_name": "DIY_2400_RX_PWMP"
             },
             "superd": {
-                "product_name": "BETAFPV 2.4GHz SuperD RX",
+                "product_name": "BETAFPV SuperD 2.4GHz RX",
                 "lua_name": "BFPV SuperD 2G4",
                 "layout_file": "Generic 2400 True Diversity PA.json",
                 "overlay": {
