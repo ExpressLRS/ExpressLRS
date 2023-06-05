@@ -27,6 +27,7 @@ class UploadMethod(Enum):
     betaflight = 'bf'
     edgetx = 'etx'
     stlink = 'stlink'
+    stock = 'stock'
     dir = 'dir'
 
     def __str__(self):
@@ -45,10 +46,10 @@ def upload_wifi(args, options, upload_addr, isstm: bool):
     else:
         return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
 
-def upload_stm32_uart(args):
+def upload_stm32_uart(args, options):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=args.target, accept=args.accept, ignore_incorrect_target=args.force)
+    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=options.firmware.upper(), accept=args.accept, ignore_incorrect_target=args.force)
 
 def upload_stm32_stlink(args, options: FirmwareOptions):
     stlink = external.pystlink.PyStlink(verbosity=1)
@@ -129,7 +130,10 @@ def upload_esp32_bf(args, options):
 
 def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266 or mcuType == MCUType.STM32:
-        shutil.copy2(args.file.name, args.out)
+        if args.flash == UploadMethod.stock:
+            shutil.copy2(args.file.name, os.path.join(args.out, 'firmware.elrs'))
+        else:
+            shutil.copy2(args.file.name, args.out)
     elif mcuType == MCUType.ESP32:
         dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
@@ -143,7 +147,7 @@ def upload(options: FirmwareOptions, args):
         if args.flash == UploadMethod.betaflight:
             args.baud = 420000
 
-    if args.flash == UploadMethod.dir:
+    if args.flash == UploadMethod.dir or args.flash == UploadMethod.stock:
         return upload_dir(options.mcuType, args)
     elif options.deviceType == DeviceType.RX:
         if options.mcuType == MCUType.ESP8266:
@@ -162,7 +166,7 @@ def upload(options: FirmwareOptions, args):
                 return upload_wifi(args, options, ['elrs_rx', 'elrs_rx.local'], False)
         elif options.mcuType == MCUType.STM32:
             if args.flash == UploadMethod.betaflight or args.flash == UploadMethod.uart:
-                return upload_stm32_uart(args)
+                return upload_stm32_uart(args, options)
             elif args.flash == UploadMethod.stlink:      # untested
                 return upload_stm32_stlink(args, options)
     else:

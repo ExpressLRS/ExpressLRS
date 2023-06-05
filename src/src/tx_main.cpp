@@ -68,7 +68,6 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
-static uint8_t headTrackingEnabledChannel = 0;
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 bool headTrackingEnabled = false;
 static uint32_t lastPTRValidTimeMs;
@@ -483,7 +482,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         {
           uint8_t ptrStartChannel = config.GetPTRStartChannel();
           uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
-          bool enable = headTrackingEnabledChannel == HT_ON;
+          bool enable = config.GetPTREnableChannel() == HT_ON;
           if (config.GetPTREnableChannel() % 2 == 0)
           {
             enable |= chan >= CRSF_CHANNEL_VALUE_MID;
@@ -1312,9 +1311,15 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (firmwareOptions.is_airport && apInputBuffer.size() < AP_MAX_BUF_LEN && connectionState == connected && TxUSB->available())
+  if (firmwareOptions.is_airport && connectionState == connected)
   {
-    apInputBuffer.push(TxUSB->read());
+    auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
+    if (size > 0)
+    {
+      uint8_t buf[size];
+      TxUSB->readBytes(buf, size);
+      apInputBuffer.pushBytes(buf, size);
+    }
   }
 
   if (TxBackpack->available())

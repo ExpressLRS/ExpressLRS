@@ -475,8 +475,14 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
       }
     }
 
-    // second radio received the same packet to the processing radio
     gotRadio[secondRadioIdx] = isSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    // second radio received the same packet to the processing radio
+    if(!isSecondRadioGotData)
+    {
+      instance->rxSignalStats[secondRadioIdx].fail_count++;
+    }
+    #endif
   }
 
   int8_t rssi[2];
@@ -573,20 +579,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
 {
   switch (currBW)
   {
-  case SX127x_BW_7_80_KHZ:
-    return 7.8E3;
-  case SX127x_BW_10_40_KHZ:
-    return 10.4E3;
-  case SX127x_BW_15_60_KHZ:
-    return 15.6E3;
-  case SX127x_BW_20_80_KHZ:
-    return 20.8E3;
-  case SX127x_BW_31_25_KHZ:
-    return 31.25E3;
-  case SX127x_BW_41_70_KHZ:
-    return 41.7E3;
-  case SX127x_BW_62_50_KHZ:
-    return 62.5E3;
   case SX127x_BW_125_00_KHZ:
     return 125E3;
   case SX127x_BW_250_00_KHZ:
@@ -602,20 +594,6 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
 
   switch (currBW)
   {
-  case SX127x_BW_7_80_KHZ:
-    return 1026;
-  case SX127x_BW_10_40_KHZ:
-    return 769;
-  case SX127x_BW_15_60_KHZ:
-    return 513;
-  case SX127x_BW_20_80_KHZ:
-    return 385;
-  case SX127x_BW_31_25_KHZ:
-    return 256;
-  case SX127x_BW_41_70_KHZ:
-    return 192;
-  case SX127x_BW_62_50_KHZ:
-    return 128;
   case SX127x_BW_125_00_KHZ:
     return 64;
   case SX127x_BW_250_00_KHZ:

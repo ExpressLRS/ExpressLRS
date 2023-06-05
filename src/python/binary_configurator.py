@@ -234,7 +234,7 @@ def patch_unified(args, options):
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
 
-    json_flags['flash-discriminator'] = randint(1,2^32-1)
+    json_flags['flash-discriminator'] = randint(1,2**32-1)
 
     UnifiedConfiguration.doConfiguration(
         args.file,
@@ -398,6 +398,8 @@ def main():
             args.target = config.get('firmware')
             args.accept = config.get('prior_target_name')
             return binary_flash.upload(options, args)
+        elif 'upload_methods' in config and 'stock' in config['upload_methods']:
+            shutil.copy(args.file.name, 'firmware.elrs')
 
 if __name__ == '__main__':
     try:

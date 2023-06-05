@@ -274,7 +274,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     Radio.SetOutputPower(0b0000);
     dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #else
-    #if defined(TARGET_UNIFIED_TX) && defined(PLATFORM_ESP32)
+    #if defined(PLATFORM_ESP32)
     if (POWER_OUTPUT_DACWRITE)
     {
         Radio.SetOutputPower(0b0000);

@@ -74,6 +74,10 @@ static bool confirmFrameAvailable()
         return false;
     frameAvailable = false;
 
+    // ModelMatch failure always prevents passing the frame on
+    if (!connectionHasModelMatch)
+        return false;
+
     constexpr uint8_t CONFIG_TEAMRACE_POS_OFF = 0;
     if (config.GetTeamracePosition() == CONFIG_TEAMRACE_POS_OFF)
     {
@@ -134,18 +138,33 @@ static bool confirmFrameAvailable()
 
 static int timeout()
 {
-    if (connectionState != serialUpdate)
+    if (connectionState == serialUpdate)
     {
-        // Verify there is new ChannelData and they should be sent on
-        bool sendChannels = confirmFrameAvailable();
-        uint32_t duration = serialIO->sendRCFrameToFC(sendChannels, ChannelData);
-
-        serialIO->handleUARTout();
-        serialIO->handleUARTin();
-
-        return duration;
+        return DURATION_NEVER;  // stop callbacks when doing serial update
     }
-    return DURATION_IMMEDIATELY;
+
+    /***
+     * TODO: This contains a problem!!
+     * confirmFrameAvailable() is designed to be the thing that determines if RC frames are to be sent out
+     * which includes:
+     *      - No data received to be sent (interpacket delay)
+     *      - Connection does not have model match
+     *      - TeamRace enabled but different position selected
+     * However, the SBUS IO writer doesn't go off new data coming in, it just sends data at a 9ms cadence
+     * and therefore does not respect any of these conditions, relying on the one-off "failsafe" member
+     * modelmatch was addressed in #2211, but resolving the merge conflict here (capnbry) re-breaks it
+     *
+     * Commiting this anyway though to work out a better resolution
+    */
+
+    // Verify there is new ChannelData and they should be sent on
+    bool sendChannels = confirmFrameAvailable();
+    uint32_t duration = serialIO->sendRCFrameToFC(sendChannels, ChannelData);
+
+    // still get telemetry and send link stats if theres no model match
+    serialIO->handleUARTout();
+    serialIO->handleUARTin();
+    return duration;
 }
 
 device_t Serial_device = {
