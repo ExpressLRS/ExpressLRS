@@ -1548,7 +1548,7 @@
         "rx_2400": {
             "mini": {
                 "product_name": "SIYI FM30 Mini 2.4GHz RX",
-                "upload_methods": ["uart", "stlink"],
+                "upload_methods": ["uart", "stlink", "betaflight"],
                 "platform": "stm32",
                 "firmware": "FM30_RX_MINI",
                 "stlink": {
