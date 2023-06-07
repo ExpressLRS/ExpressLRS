@@ -17,7 +17,6 @@ void SerialIO::handleUARTout()
         while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
         {
             uint8_t OutPktLen = msp2crsf.FIFOout.pop();
-
             uint8_t OutData[OutPktLen];
             msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
             this->_outputPort->write(OutData, OutPktLen); // write the packet out
@@ -27,22 +26,32 @@ void SerialIO::handleUARTout()
 
     while (_fifo.size() > _fifo.peek() && (bytesWritten + _fifo.peek()) < maxBytesPerCall)
     {
-        noInterrupts();
         uint8_t OutPktLen = _fifo.pop();
         uint8_t OutData[OutPktLen];
         _fifo.popBytes(OutData, OutPktLen);
-        interrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
         bytesWritten += OutPktLen;
     }
 }
 
-
 void SerialIO::handleUARTin()
 {
-    while (_inputPort->available())
+    auto maxBytes = getMaxSerialReadSize();
+    uint8_t buffer[maxBytes];
+    auto size = min(_inputPort->available(), maxBytes);
+    _inputPort->readBytes(buffer, size);
+    processBytes(buffer, size);
+}
+
+void SerialIO::processBytes(uint8_t *bytes, uint16_t size)
+{
+    for (int i=0 ; i<size ; i++)
     {
-        uint8_t byte = _inputPort->read();
-        processByte(byte);
+        processByte(bytes[i]);
     }
+}
+
+void SerialIO::setFailsafe(bool failsafe)
+{
+    this->failsafe = failsafe;
 }

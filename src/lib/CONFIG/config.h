@@ -202,8 +202,9 @@ typedef struct {
                 forceTlmOff:1,
                 rateInitialIdx:4;   // Rate to start rateCycling at on boot
     uint8_t     modelId;
-    uint8_t     serialProtocol:3,
-                unused:5;
+    uint8_t     serialProtocol:4,
+                failsafeMode:2,
+                unused:2;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
@@ -231,6 +232,7 @@ public:
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+    eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
 
     // Setters
     void SetIsBound(bool isBound);
@@ -250,6 +252,7 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+    void SetFailsafeMode(eFailsafeMode failsafeMode);
 
 private:
     void UpgradeEepromV4();

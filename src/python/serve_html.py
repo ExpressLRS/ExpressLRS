@@ -27,6 +27,7 @@ config = {
             "no-sync-on-arm": False,
             "uart-inverted": True,
             "unlock-higher-power": False,
+            "is-airport": True,
             "rcvr-uart-baud": 400000,
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
@@ -36,6 +37,7 @@ config = {
             "wifi-ssid": "network-ssid"
         },
         "config": {
+            "uidtype": "On loan",
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
@@ -62,6 +64,7 @@ config = {
                 }
             ],
             "serial-protocol": 3,
+            "sbus-failsafe": 0,
             "product_name": "Generic ESP8285 + 5xPWM 2.4Ghz RX",
             "lua_name": "ELRS+PWM 2400RX",
             "reg_domain": "ISM2G4",
@@ -156,8 +159,16 @@ def options():
 
 @route('/config', method='POST')
 def update_config():
-    if (request.json['button-actions'] is not None):
+    if 'button-actions' in request.json:
         config['config']['button-actions'] = request.json['button-actions']
+    if 'pwm' in request.json:
+        config['config']['pwm'] = request.json['pwm']
+    if 'protocol' in request.json:
+        config['config']['serial-protocol'] = request.json['protocol']
+    if 'modelid' in request.json:
+        config['config']['modelid'] = request.json['modelid']
+    if 'forcetlm' in request.json:
+        config['config']['force-tlm'] = request.json['forcetlm']
     return "Config Updated"
 
 @route('/import', method='POST')

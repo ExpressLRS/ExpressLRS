@@ -28,7 +28,7 @@ typedef enum {
 
     // Radio power
     HARDWARE_power_enable,
-    HARDWARE_power_apc1, // stm32
+    HARDWARE_power_apc1,
     HARDWARE_power_apc2,
     HARDWARE_power_rxen,
     HARDWARE_power_txen,

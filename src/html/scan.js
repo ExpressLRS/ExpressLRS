@@ -50,7 +50,7 @@ function enumSelectGenerate(id, val, arOptions) {
 @@if not isTX:
 function updatePwmSettings(arPwm) {
   if (arPwm === undefined) {
-    if (_('pwm_tab')) _('pwm_tab').style.display = 'none';
+    if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
   }
   var pin1Index = undefined;
@@ -202,11 +202,46 @@ function timeoutCurrentColors() {
   }
 }
 
-function updateConfig(data) {
+function updateConfig(data, options) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
   if (data.uid) _('uid').value = data.uid.toString();
-  if (data.uidtype) _('uid-type').textContent = data.uidtype;
+
+  let bg = '';
+  let fg = '';
+  let text = data.uidtype;
+  let desc = '';
+  if (!data.uidtype || data.uidtype === 'Not set') {
+    bg = '#D50000';  // default 'red' for 'Not set'
+    fg = 'white';
+    text = 'Not set';
+    desc = 'The default binding UID from the device address will be used';
+  }
+  if (data.uidtype === 'Flashed') {
+    bg = '#1976D2'; // blue/white
+    fg = 'white';
+    desc = 'The binding UID was generated from a binding phrase set at flash time';
+  }
+  if (data.uidtype === 'Overridden') {
+    bg = '#689F38'; // green
+    fg = 'black';
+    desc = 'The binding UID has been generated from a bind-phrase previously entered into the "binding phrase" field above';
+  }
+  if (data.uidtype === 'Traditional') {
+    bg = '#D50000'; // red
+    fg = 'white';
+    desc = 'The binding UID has been set using traditional binding method i.e. button or 3-times power cycle and bound via the Lua script';
+  }
+  if (data.uidtype === 'On loan') {
+    bg = '#FFA000'; // amber
+    fg = 'black';
+    desc = 'The binding UID has been set using the model-loan feature';
+  }
+  _('uid-type').style.backgroundColor = bg;
+  _('uid-type').style.color = fg;
+  _('uid-type').textContent = text;
+  _('uid-text').textContent = desc;
+
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
     _('ssid').textContent = data.ssid;
@@ -224,24 +259,31 @@ function updateConfig(data) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
-  _('force-tlm').checked = data.hasOwnProperty('forcetlm') && data.forcetlm;
+  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data.forcetlm;
   _('serial-protocol').onchange = () => {
-    if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+    if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
-      _('rcvr-uart-baud').value = '420000';
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
     }
-    if (_('serial-protocol').value == 4) {
-      _('rcvr-uart-baud').disabled = true;
-      _('rcvr-uart-baud').value = '115200';
+    else if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+      _('rcvr-uart-baud').disabled = false;
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
     }
-    else {
+    else if (_('serial-protocol').value == 2 || _('serial-protocol').value == 3) {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
+      _('sbus-config').style.display = 'block';
+      _('sbus-failsafe').value = data['sbus-failsafe'];
+    }
+    else if (_('serial-protocol').value == 4) {
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '115200';
     }
   }
   updatePwmSettings(data.pwm);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
+  _('is-airport').onchange = _('serial-protocol').onchange;
 @@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
@@ -269,7 +311,7 @@ function initOptions() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       updateOptions(data['options']);
-      updateConfig(data['config']);
+      updateConfig(data['config'], data['options']);
       setTimeout(getNetworks, 2000);
     }
   };
@@ -519,9 +561,10 @@ if (_('config') != undefined) {
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({
           "pwm": getPwmFormData(),
-          "protocol": +_('serial-protocol').value,
+          "serial-protocol": +_('serial-protocol').value,
+          "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
-          "forcetlm": +_('force-tlm').checked
+          "force-tlm": +_('force-tlm').checked
         });
       }));
 }
@@ -561,22 +604,30 @@ function submitOptions(e) {
   }));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      cuteAlert({
-        type: 'question',
-        title: 'Upload Succeeded',
-        message: 'Reboot to take effect',
-        confirmText: 'Reboot',
-        cancelText: 'Close'
-      }).then((e) => {
-        if (e == 'confirm') {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/reboot');
-          xhr.setRequestHeader('Content-Type', 'application/json');
-          xhr.onreadystatechange = function() {};
-          xhr.send();
-        }
-      });
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'question',
+          title: 'Upload Succeeded',
+          message: 'Reboot to take effect',
+          confirmText: 'Reboot',
+          cancelText: 'Close'
+        }).then((e) => {
+          if (e == 'confirm') {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/reboot');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {};
+            xhr.send();
+          }
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Upload Failed',
+          message: this.responseText
+        });
+      }
     }
   };
 }
@@ -591,19 +642,27 @@ function submitButtonActions(e) {
   xhr.open('POST', '/config');
   xhr.setRequestHeader('Content-Type', 'application/json');
   // put in the colors
-  buttonActions[0].color = to8bit(_(`button1-color`).value)
-  buttonActions[1].color = to8bit(_(`button2-color`).value)
+  if (buttonActions[0]) buttonActions[0].color = to8bit(_(`button1-color`).value)
+  if (buttonActions[1]) buttonActions[1].color = to8bit(_(`button2-color`).value)
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 204) {
-      cuteAlert({
-        type: 'info',
-        title: 'Success',
-        message: 'Button actions have been saved'
-      });
-    }
-  };
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        cuteAlert({
+          type: 'info',
+          title: 'Success',
+          message: 'Button actions have been saved'
+        });
+      } else {
+        cuteAlert({
+          type: 'error',
+          title: 'Failed',
+          message: 'An error occurred while saving button configuration'
+        });
+      }
+    };
+  }
 }
 _('submit-actions').addEventListener('click', submitButtonActions);
 @@end
@@ -623,6 +682,7 @@ function updateOptions(data) {
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
   else _('connect').style.display = 'none';
   if (data['customised']) _('reset-options').style.display = 'block';
+  _('submit-options').disabled = false;
 }
 
 @@if isTX:

@@ -21,23 +21,38 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
+static int event()
+{
+    static connectionState_e lastConnectionState = disconnected;
+    serialIO->setFailsafe(connectionState == disconnected && lastConnectionState == connected);
+    lastConnectionState = connectionState;
+    return DURATION_IGNORE;
+}
+
 static int timeout()
 {
-    if (connectionState != serialUpdate)
+    if (connectionState == serialUpdate)
     {
-        uint32_t duration = serialIO->sendRCFrameToFC(frameAvailable, ChannelData);
-        frameAvailable = false;
-        serialIO->handleUARTout();
-        serialIO->handleUARTin();
-        return duration;
+        return DURATION_NEVER;  // stop callbacks when doing serial update
     }
-    return DURATION_IMMEDIATELY;
+
+    uint32_t duration = 10; // 10ms callback (i.e. when no theres no model match)
+    // only send frames if we have a model match
+    if (connectionHasModelMatch)
+    {
+        duration = serialIO->sendRCFrameToFC(frameAvailable, ChannelData);
+    }
+    frameAvailable = false;
+    // still get telemetry and send link stats if theres no model match
+    serialIO->handleUARTout();
+    serialIO->handleUARTin();
+    return duration;
 }
 
 device_t Serial_device = {
     .initialize = nullptr,
     .start = start,
-    .event = nullptr,
+    .event = event,
     .timeout = timeout
 };
 

@@ -35,17 +35,22 @@
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
+					This form <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+					Note: The Binding phrase is <b>not</b> remembered, it is a temporary field used to generate the binding UID.
+					<br/>
 					<br/>
 					<div class="mui-textfield">
 						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
 						<label for="phrase">Binding Phrase</label>
 					</div>
 					<form id='upload_options' method='POST' action="/options">
+						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
 						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
 						<input type="hidden" id='wifi-password' name='wifi-password'/>
+						<span class="badge" id="uid-type"></span>&nbsp;<span id="uid-text"></span>
+						<br/>
 						<div class="mui-textfield">
 							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
-							<label>UID <b id='uid-type'></b> (Auto updated by changing the bind-phrase above)</label>
 						</div>
 @@if sx127x:
 						<div class="mui-select">
@@ -98,7 +103,7 @@
 							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
 						</div>
 @@end
-						<button id='submit-options' class="mui-btn mui-btn--primary">Save & Reboot</button>
+						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save</button>
 						<div id="reset-options" style="display: none;">
 							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>
@@ -166,12 +171,12 @@
 @@if not isTX:
 			<div class="mui-tabs__pane" id="pane-justified-3">
 				<div class="mui-panel">
-					<div id="pwm_tab">
+					<div id="model_tab">
 						<h2>PWM Output</h2>
 						Set PWM output mode and failsafe positions.
 						<ul>
 							<li><b>Output:</b> Receiver output pin</li>
-							<li><b>Mode:</b> Output frequency, binary On/Off, or Serial (for MCU pins 1 and 3 only) mode</li>
+							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off or Serial (for MCU pins 1 and 3 only) mode</li>
 							<ul>
 								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>below and <b>UART baud</b> on the <b>Options</b> tab</li>
 							</ul>
@@ -201,10 +206,28 @@
 									<option value='2'>SBUS</option>
 									<option value='3'>Inverted SBUS</option>
 									<option value='4'>SUMD</option>
+									<option value='5'>DJI RS Pro</option>
 								</select>
 								<label>Serial Protocol</label>
 							</div>
 						</div>
+						<div id="sbus-config" style="display: none;">
+							<h2>SBUS Failsafe</h2>
+							Set the failsafe behaviour when using the SBUS protocol:<br/>
+							<ul>
+								<li>"No Pulses" stops sending SBUS data when a connection to the transmitter is lost</li>
+								<li>"Last Position" continues to send the last received channel data along with the FAILSAFE bit set</li>
+							</ul>
+							<br/>
+							<div class="mui-select">
+								<select id='sbus-failsafe' name='serial-failsafe'>
+									<option value='0'>No Pulses</option>
+									<option value='1'>Last Position</option>
+								</select>
+								<label>SBUS Failsafe</label>
+							</div>
+						</div>
+
 						<h2>Model Match</h2>
 						Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
 						in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.

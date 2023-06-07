@@ -1,0 +1,35 @@
+name: Cleanup stale artifacts
+on:
+  schedule:
+    - cron: "30 2 * * *"
+
+jobs:
+  cleanup-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Remove stale artifacts from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+          AWS_REGION: "auto"
+        run: |
+          if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
+            echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
+            exit 0
+          fi
+
+          echo "Generating artifact index"
+          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | grep PRE | awk '{print $2}' | sed s/\\/// > /tmp/artifacts
+
+          git branch --list --remotes --format '%(objectname)' > /tmp/hashes
+          git tag --list --format '%(objectname)' >> /tmp/hashes
+
+          for i in `grep -v -f /tmp/hashes /tmp/artifacts`; do
+            aws s3 rm --recursive --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/$i
+          done

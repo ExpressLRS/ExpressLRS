@@ -242,6 +242,17 @@ static void HandleReset(AsyncWebServerRequest *request)
   rebootTime = millis() + 100;
 }
 
+static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
+    request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
+    return;
+  }
+  File file = SPIFFS.open("/options.json", "w");
+  serializeJson(json, file);
+  request->send(200);
+}
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
 #if defined(PLATFORM_ESP32)
@@ -315,8 +326,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
-    json["config"]["forcetlm"] = config.GetForceTlmOff();
+    json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
@@ -333,7 +345,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
     else
     #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = "Flashed";
+    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
     #if defined(TARGET_RX)
     else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
     else json["config"]["uidtype"] = "Not set";
@@ -434,16 +446,20 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
 #else
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  uint8_t protocol = json["protocol"] | 0;
+  uint8_t protocol = json["serial-protocol"] | 0;
   DBGLN("Setting serial protocol %u", protocol);
   config.SetSerialProtocol((eSerialProtocol)protocol);
+
+  uint8_t failsafe = json["sbus-failsafe"] | 0;
+  DBGLN("Setting SBUS failsafe mode %u", failsafe);
+  config.SetFailsafeMode((eFailsafeMode)failsafe);
 
   long modelid = json["modelid"] | 255;
   if (modelid < 0 || modelid > 63) modelid = 255;
   DBGLN("Setting model match id %u", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
 
-  long forceTlm = json["forcetlm"] | 0;
+  long forceTlm = json["force-tlm"] | 0;
   DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
   config.SetForceTlmOff(forceTlm != 0);
 
@@ -948,11 +964,12 @@ static void startServices()
   server.on("/hardware.html", WebUpdateSendContent);
   server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
-  server.on("/options.json", getFile).onBody(putFile);
+  server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
+  server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
