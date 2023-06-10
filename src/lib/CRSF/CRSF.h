@@ -92,6 +92,11 @@ public:
     static void ICACHE_RAM_ATTR RcPacketToChannelsData();
     #endif
 
+    #if defined(CRSF_RX_MODULE)
+    static void updateUplinkPower(uint8_t uplinkPower);
+    static bool clearUpdatedUplinkPower();
+    #endif
+
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
 
@@ -136,6 +141,9 @@ private:
     static bool UARTwdt();
     static uint32_t autobaud();
     static void flush_port_input(void);
+#endif
+#if defined(CRSF_RX_MODULE)
+    static bool HasUpdatedUplinkPower;
 #endif
 };
 

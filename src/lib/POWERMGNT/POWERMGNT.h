@@ -41,10 +41,12 @@ typedef enum
     PWR_500mW = 5,
     PWR_1000mW = 6,
     PWR_2000mW = 7,
-    PWR_COUNT = 8
+    PWR_COUNT = 8,
+    PWR_MATCH_TX = PWR_COUNT,
 } PowerLevels_e;
 
 uint8_t powerToCrsfPower(PowerLevels_e Power);
+PowerLevels_e crsfpowerToPower(uint8_t crsfpower);
 
 class PowerLevelContainer
 {
@@ -70,35 +72,35 @@ private:
 public:
     /**
      * @brief Set the power level, constrained to MinPower..MaxPower
-     * 
+     *
      * @param Power the power level to set
      */
     static void setPower(PowerLevels_e Power);
 
     /**
      * @brief Increment to the next higher power level, capped at MaxPower
-     * 
+     *
      * @return PowerLevels_e the new power level
      */
     static PowerLevels_e incPower();
 
     /**
      * @brief Decrement to the next lower power level, capped at MinPower
-     * 
+     *
      * @return PowerLevels_e the new power level
      */
     static PowerLevels_e decPower();
 
     /**
      * @brief Get the currently selected power level
-     * 
+     *
      * @return PowerLevels_e the currently selected power level
      */
     static PowerLevels_e currPower() { return CurrentPower; }
 
     /**
      * @brief Get the MinPower level supported by this device
-     * 
+     *
      * @return PowerLevels_e the minimum power level supported
      */
     static PowerLevels_e getMinPower() { return MinPower; }
@@ -108,7 +110,7 @@ public:
      * For devices that support the HighPower override, i.e. R9M with the fan hack,
      * the MaxPower is normally HighPower unless the 'unlock_higher_power' option
      * is set at compile time.
-     * 
+     *
      * @return PowerLevels_e the maximum power level supported
      */
     static PowerLevels_e getMaxPower() {
@@ -121,7 +123,7 @@ public:
 
     /**
      * @brief Get the Default power level for this device
-     * 
+     *
      * @return PowerLevels_e the default power level
      */
     static PowerLevels_e getDefaultPower();
@@ -133,7 +135,7 @@ public:
 
     /**
      * @brief Get the currently configured power level in dBm
-     * 
+     *
      * @return uint8_t the dBm for the current power level
      */
     static uint8_t getPowerIndBm();
@@ -152,7 +154,7 @@ public:
      * @brief Get the current value given to the SX1280 for it's output power.
      * This value may have been adjusted up/dowm from nominal by the PDET routine, if supported
      * by the device (i.e. modules with SKY85321 PA/LNA)
-     * 
+     *
      * @return int8_t the current (adjusted) SX1280 power level
      */
     static int8_t currentSX1280Output();

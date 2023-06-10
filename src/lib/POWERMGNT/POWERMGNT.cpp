@@ -20,6 +20,23 @@ uint8_t powerToCrsfPower(PowerLevels_e Power)
     }
 }
 
+PowerLevels_e crsfpowerToPower(uint8_t crsfpower)
+{
+    switch (crsfpower)
+    {
+    case 1: return PWR_10mW;
+    case 2: return PWR_25mW;
+    case 3: return PWR_100mW;
+    case 4: return PWR_500mW;
+    case 5: return PWR_1000mW;
+    case 6: return PWR_2000mW;
+    case 7: return PWR_250mW;
+    case 8: return PWR_50mW;
+    default:
+        return PWR_10mW;
+    }
+}
+
 #ifndef UNIT_TEST
 
 #include "common.h"

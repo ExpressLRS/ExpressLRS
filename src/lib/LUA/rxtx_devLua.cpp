@@ -1,7 +1,7 @@
 #include "rxtx_devLua.h"
 #include "POWERMGNT.h"
 
-char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 const char STR_EMPTYSPACE[] = { 0 };
 const char STR_LUA_PACKETRATES[] =
 #if defined(RADIO_SX127X)
@@ -41,4 +41,10 @@ void luadevGeneratePowerOpts(luaItem_selection *luaPower)
     pwr = (PowerLevels_e)((unsigned int)pwr + 1);
   }
   *out = '\0';
+
+#if defined(TARGET_RX)
+  // The RX has the dynamic option added on to the end
+  // the space on the end is to make it display "MatchTX mW"
+  strcat(strPowerLevels, ";MatchTX ");
+#endif
 }

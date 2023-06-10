@@ -98,6 +98,10 @@ uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
 #endif // CRSF_TX_MODULE
 
+#if defined(CRSF_RX_MODULE)
+bool CRSF::HasUpdatedUplinkPower = false;
+#endif // CRSF_RX_MODULE
+
 void CRSF::Begin()
 {
     DBGLN("About to start CRSF task...");
@@ -913,6 +917,33 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
+
+#endif // CRSF_TX_MODULE
+
+#if defined(CRSF_RX_MODULE)
+
+/***
+ * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
+*/
+void CRSF::updateUplinkPower(uint8_t uplinkPower)
+{
+    if (uplinkPower != LinkStatistics.uplink_TX_Power)
+    {
+        LinkStatistics.uplink_TX_Power = uplinkPower;
+        HasUpdatedUplinkPower = true;
+    }
+}
+
+/***
+ * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
+*/
+bool CRSF::clearUpdatedUplinkPower()
+{
+    bool retVal = HasUpdatedUplinkPower;
+    HasUpdatedUplinkPower = false;
+    return retVal;
+}
+
 #endif // CRSF_RX_MODULE
 
 /***
@@ -980,7 +1011,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 
 void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;
