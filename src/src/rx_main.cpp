@@ -1106,15 +1106,15 @@ static void updatePower(bool initialize)
     } /* !PWR_MATCH_TX (fixed power) */
     else
     {
-        if (initialize)
-        {
-            CRSF::updateUplinkPower(POWERMGNT::getDefaultPower());
-        }
         if (CRSF::clearUpdatedUplinkPower())
         {
             PowerLevels_e newPower = crsfpowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
             DBGLN("Matching TX power %u", newPower);
             POWERMGNT::setPower(newPower);
+        }
+        else if (initialize)
+        {
+            POWERMGNT::setPower(POWERMGNT::getDefaultPower());
         }
     } /* PWR_MATCH_TX */
 }
