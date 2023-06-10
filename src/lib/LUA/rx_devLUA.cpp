@@ -287,8 +287,6 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
 
 #if defined(POWER_OUTPUT_VALUES)
 
-#include "logging.h"
-
 static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 {
   uint8_t newPower = arg + POWERMGNT::getMinPower();
@@ -395,15 +393,9 @@ static int event()
   }
 
 #if defined(POWER_OUTPUT_VALUES)
-  if (config.GetPower() == PWR_MATCH_TX)
-  {
-    // The last item will be MaxPower - MinPower + 1
-    setLuaTextSelectionValue(&luaTlmPower, POWERMGNT::getMaxPower() - POWERMGNT::getMinPower() + 1);
-  }
-  else
-  {
-    setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - POWERMGNT::getMinPower());
-  }
+  // The last item (for MatchTX) will be MaxPower - MinPower + 1
+  uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+  setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 
