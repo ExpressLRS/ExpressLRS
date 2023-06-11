@@ -1160,7 +1160,7 @@ void MspReceiveComplete()
 
 static void setupSerial()
 {
-    bool sbusSerialOutput = false;
+    bool sbusSerialOutput = true;
 	bool sumdSerialOutput = false;
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
