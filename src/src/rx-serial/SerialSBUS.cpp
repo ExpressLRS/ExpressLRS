@@ -14,7 +14,8 @@ const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
 void SerialSBUS::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
-    // unsupported
+    linkQuality = lq;
+    rssiDBM = rssi;
 }
 
 void SerialSBUS::sendLinkStatisticsToFC()
@@ -69,8 +70,8 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
         PackedRCdataOut.ch11 = channelData[11];
         PackedRCdataOut.ch12 = channelData[12];
         PackedRCdataOut.ch13 = channelData[13];
-        PackedRCdataOut.ch14 = channelData[14];
-        PackedRCdataOut.ch15 = channelData[15];
+        PackedRCdataOut.ch14 = linkQuality;
+        PackedRCdataOut.ch15 = rssiDBM;
     }
 
     uint8_t extraData = 0;

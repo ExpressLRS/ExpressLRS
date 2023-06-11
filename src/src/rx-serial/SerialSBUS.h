@@ -12,5 +12,8 @@ public:
     void sendLinkStatisticsToFC() override;
 
 private:
+    uint16_t linkQuality = 0;
+    uint16_t rssiDBM = 0;
+    
     void processByte(uint8_t byte) override {};
 };
