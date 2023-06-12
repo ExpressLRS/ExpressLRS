@@ -266,17 +266,10 @@ void POWERMGNT::setDefaultPower()
 
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
+    Power = constrain(Power, getMinPower(), getMaxPower());
     if (Power == CurrentPower)
         return;
 
-    if (Power < MinPower)
-    {
-        Power = MinPower;
-    }
-    else if (Power > getMaxPower())
-    {
-        Power = getMaxPower();
-    }
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     Radio.SetOutputPower(0b0000);
