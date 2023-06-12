@@ -294,12 +294,9 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
   {
     newPower = PWR_MATCH_TX;
   }
-  else
-  {
-    POWERMGNT::setPower((PowerLevels_e)newPower);
-  }
 
   config.SetPower(newPower);
+  // POWERMGNT::setPower() will be called in updatePower() in the main loop
 }
 
 #endif // POWER_OUTPUT_VALUES
