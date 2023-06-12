@@ -149,11 +149,7 @@ def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266:
         shutil.copy2('firmware.bin.gz', os.path.join(args.out, 'firmware.bin.gz'))
     elif mcuType == MCUType.ESP32:
-        dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
-        shutil.copy2(os.path.join(dir, 'bootloader.bin'), args.out)
-        shutil.copy2(os.path.join(dir, 'partitions.bin'), args.out)
-        shutil.copy2(os.path.join(dir, 'boot_app0.bin'), args.out)
 
 def upload(options: FirmwareOptions, args):
     if args.baud == 0:
