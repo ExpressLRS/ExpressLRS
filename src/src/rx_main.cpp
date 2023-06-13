@@ -12,6 +12,7 @@
 #include "msptypes.h"
 #include "PFD.h"
 #include "options.h"
+#include "dynpower.h"
 #include "MeanAccumulator.h"
 #include "freqTable.h"
 
@@ -1094,31 +1095,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #endif
 }
 
-/***
- * @brief: Set power to configured power or update power to match the current TX power
- * @param initialize: Set to true if calling from setup() to force even PWR_MATCH_TX to default power
-*/
-static void updatePower(bool initialize)
-{
-    if (config.GetPower() != PWR_MATCH_TX)
-    {
-        POWERMGNT::setPower((PowerLevels_e)config.GetPower());
-    } /* !PWR_MATCH_TX (fixed power) */
-    else
-    {
-        if (CRSF::clearUpdatedUplinkPower())
-        {
-            PowerLevels_e newPower = crsfpowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
-            DBGLN("Matching TX power %u", newPower);
-            POWERMGNT::setPower(newPower);
-        }
-        else if (initialize)
-        {
-            POWERMGNT::setPower(POWERMGNT::getDefaultPower());
-        }
-    } /* PWR_MATCH_TX */
-}
-
 void UpdateModelMatch(uint8_t model)
 {
     DBGLN("Set ModelId=%u", model);
@@ -1405,7 +1381,7 @@ static void setupRadio()
         return;
     }
 
-    updatePower(true);
+    DynamicPower_UpdateRx(true);
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (config.GetPower() > PWR_10mW);
@@ -1780,8 +1756,8 @@ void loop()
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
-    updatePower(false);
     checkGeminiMode();
+    DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
 
 #if defined DEBUG_RCVR_SIGNAL_STATS
