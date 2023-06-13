@@ -99,10 +99,6 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#if defined(DEBUG_RCVR_SIGNAL_STATS)
-unsigned long lastReport = 0;
-#endif
-
 #if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
@@ -1536,6 +1532,47 @@ static void debugRcvrLinkstats()
 #endif
 }
 
+static void debugRcvrSignalStats(uint32_t now)
+{
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+    static uint32_t lastReport = 0;
+
+    // log column header:  cnt1, rssi1, snr1, snr1_max, telem1, fail1, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
+    if(now - lastReport >= 1000 && connectionState == connected)
+    {
+        for (int i = 0 ; i < (isDualRadio()?2:1) ; i++)
+        {
+            DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
+                Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
+                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
+                float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
+                Radio.rxSignalStats[i].telem_count,
+                Radio.rxSignalStats[i].fail_count);
+
+                Radio.rxSignalStats[i].irq_count = 0;
+                Radio.rxSignalStats[i].snr_sum = 0;
+                Radio.rxSignalStats[i].rssi_sum = 0;
+                Radio.rxSignalStats[i].snr_max = INT8_MIN;
+                Radio.rxSignalStats[i].telem_count = 0;
+                Radio.rxSignalStats[i].fail_count = 0;
+        }
+        if (isDualRadio())
+        {
+            DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+        }
+        else
+        {
+            DBGLN("");
+        }
+        Radio.irq_count_or = 0;
+        Radio.irq_count_both = 0;
+
+        lastReport = now;
+    }
+#endif
+}
+
 static void updateSwitchMode()
 {
     // Negative value means waiting for confirm of the new switch mode while connected
@@ -1757,42 +1794,7 @@ void loop()
     updateSwitchMode();
     checkGeminiMode();
     debugRcvrLinkstats();
-
-#if defined DEBUG_RCVR_SIGNAL_STATS
-    // log column header:  cnt1, rssi1, snr1, snr1_max, telem1, fail1, cnt2, rssi2, snr2, snr2_max, telem2, fail2, or, both
-    if(now - lastReport >= 1000 && connectionState == connected)
-    {
-        for (int i = 0 ; i < (isDualRadio()?2:1) ; i++)
-        {
-            DBG("%d\t%f\t%f\t%f\t%d\t%d\t",
-                Radio.rxSignalStats[i].irq_count,
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].rssi_sum)/Radio.rxSignalStats[i].irq_count,
-                (Radio.rxSignalStats[i].irq_count==0) ? 0 : double(Radio.rxSignalStats[i].snr_sum)/Radio.rxSignalStats[i].irq_count/RADIO_SNR_SCALE,
-                float(Radio.rxSignalStats[i].snr_max)/RADIO_SNR_SCALE,
-                Radio.rxSignalStats[i].telem_count,
-                Radio.rxSignalStats[i].fail_count);
-
-                Radio.rxSignalStats[i].irq_count = 0;
-                Radio.rxSignalStats[i].snr_sum = 0;
-                Radio.rxSignalStats[i].rssi_sum = 0;
-                Radio.rxSignalStats[i].snr_max = INT8_MIN;
-                Radio.rxSignalStats[i].telem_count = 0;
-                Radio.rxSignalStats[i].fail_count = 0;
-        }
-        if (isDualRadio())
-        {
-            DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
-        }
-        else
-        {
-            DBGLN("");
-        }
-        Radio.irq_count_or = 0;
-        Radio.irq_count_both = 0;
-
-        lastReport = now;
-    }
-#endif
+    debugRcvrSignalStats(now);
 }
 
 struct bootloader {
