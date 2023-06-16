@@ -262,6 +262,14 @@ td img.icon-pwm {
 					<tr><td></td><td>VBat pin<img class="icon-analog"/></td><td><input size='3' id='vbat' name='vbat' type='text'/></td><td>Analog input pin for reading VBAT voltage (1V max on 8285, 3.3V max on ESP32)</td></tr>
 					<tr><td></td><td>VBat offset</td><td><input size='7' id='vbat_offset' name='vbat_offset' type='text'/></td><td>Offset and scale are used together with the analog pin to calculate the voltage</td></tr>
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td><td>voltage = (analog - offset) / scale</td></tr>
+					<tr><td></td><td>VBat attenuation</td><td>
+						<select id='vbat_atten' name='vbat_atten'>
+							<option value='0'>0 dB</option>
+							<option value='1'>2.5 dB</option>
+							<option value='2'>6 dB</option>
+							<option value='3'>11 dB</option>
+						</select>
+					</td><td>ADC pin attenuation</td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
 					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power output level of the VTX PA (value is calculated based on power and frequency using VPD interpolation values)</td></tr>

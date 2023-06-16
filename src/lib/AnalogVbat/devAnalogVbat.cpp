@@ -33,7 +33,7 @@ static int start()
     }
     vbatUpdateScale = 1;
 #if defined(PLATFORM_ESP32)
-    analogSetPinAttenuation(GPIO_ANALOG_VBAT, ADC_0db);
+    analogSetPinAttenuation(GPIO_ANALOG_VBAT, (adc_attenuation_t)hardware_int(HARDWARE_vbat_atten));
     analogSetWidth(12);
 #endif
     return VBAT_SAMPLE_INTERVAL;
