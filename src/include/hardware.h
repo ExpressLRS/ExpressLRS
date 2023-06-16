@@ -123,6 +123,7 @@ typedef enum {
     HARDWARE_vbat,
     HARDWARE_vbat_offset,
     HARDWARE_vbat_scale,
+    HARDWARE_vbat_atten,
 
     // VTX
     HARDWARE_vtx_amp_pwm,

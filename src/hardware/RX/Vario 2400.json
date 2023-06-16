@@ -22,5 +22,6 @@
     "vbat": 39,
     "button": 0,
     "vbat_scale": 1038,
-    "vbat_offset": -153
+    "vbat_offset": -153,
+    "vbat_atten": 3
 }
