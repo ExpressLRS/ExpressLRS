@@ -478,7 +478,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        if (config.GetPTREnableChannel() != HT_OFF)
+        // if the backpack is communicating and PTR is not off
+        if (config.GetPTREnableChannel() != HT_OFF && backpackVersion[0] != 0)
         {
           uint8_t ptrStartChannel = config.GetPTRStartChannel();
           uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
