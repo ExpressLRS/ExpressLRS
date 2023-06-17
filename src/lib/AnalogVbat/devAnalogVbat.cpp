@@ -5,6 +5,7 @@
 #include "CRSF.h"
 #include "telemetry.h"
 #include "median.h"
+#include "logging.h"
 
 // Sample 5x samples over 500ms (unless SlowUpdate)
 #define VBAT_SMOOTH_CNT         5
@@ -33,7 +34,11 @@ static int start()
     }
     vbatUpdateScale = 1;
 #if defined(PLATFORM_ESP32)
-    analogSetPinAttenuation(GPIO_ANALOG_VBAT, (adc_attenuation_t)hardware_int(HARDWARE_vbat_atten));
+    int atten = hardware_int(HARDWARE_vbat_atten);
+    if (atten != -1)
+    {
+        analogSetPinAttenuation(GPIO_ANALOG_VBAT, (adc_attenuation_t)atten);
+    }
     analogSetWidth(12);
 #endif
     return VBAT_SAMPLE_INTERVAL;
@@ -64,7 +69,9 @@ static int timeout()
     {
         return DURATION_NEVER;
     }
+
     int adc = analogRead(GPIO_ANALOG_VBAT);
+    //DBGLN("$ADC,%d", adc);
     adc = (adc > ANALOG_VBAT_OFFSET) ? adc - ANALOG_VBAT_OFFSET : 0;
 
     unsigned int idx = vbatSmooth.add(adc);
