@@ -264,12 +264,13 @@ td img.icon-pwm {
 					<tr><td></td><td>VBat scale</td><td><input size='7' id='vbat_scale' name='vbat_scale' type='text'/></td><td>voltage = (analog - offset) / scale</td></tr>
 					<tr><td></td><td>VBat attenuation</td><td>
 						<select id='vbat_atten' name='vbat_atten'>
+							<option value='-1'>N/A</option>
 							<option value='0'>0 dB</option>
 							<option value='1'>2.5 dB</option>
 							<option value='2'>6 dB</option>
 							<option value='3'>11 dB</option>
 						</select>
-					</td><td>ADC pin attenuation</td></tr>
+					</td><td>ADC pin attenuation (ESP32)</td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
 					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power output level of the VTX PA (value is calculated based on power and frequency using VPD interpolation values)</td></tr>
