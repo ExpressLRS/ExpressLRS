@@ -409,6 +409,48 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   }
 }
 
+void injectBackpackPanTiltRollData(uint32_t const now)
+{
+  // Do not override channels if the backpack is NOT communicating or PanTiltRoll is disabled
+  if (config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
+  {
+    return;
+  }
+
+  uint8_t ptrStartChannel = config.GetPTRStartChannel();
+  bool enable = config.GetPTREnableChannel() == HT_ON;
+  if (!enable)
+  {
+    uint8_t chan = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
+    if (config.GetPTREnableChannel() % 2 == 0)
+    {
+      enable |= chan;
+    }
+    else
+    {
+      enable |= !chan;
+    }
+  }
+  if (enable != headTrackingEnabled)
+  {
+    headTrackingEnabled = enable;
+    HTEnableFlagReadyToSend = true;
+  }
+  // If enabled and this packet is less that 1 second old then use it
+  if (enable && now - lastPTRValidTimeMs < 1000)
+  {
+    ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+    ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+    ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+  }
+  else
+  {
+    ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
+    ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
+    ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
+  }
+}
+
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
   uint32_t const now = millis();
@@ -478,39 +520,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       }
       else
       {
-        // if the backpack is communicating and PTR is not off
-        if (config.GetPTREnableChannel() != HT_OFF && backpackVersion[0] != 0)
-        {
-          uint8_t ptrStartChannel = config.GetPTRStartChannel();
-          uint32_t chan = ChannelData[config.GetPTREnableChannel() / 2 + 3];
-          bool enable = config.GetPTREnableChannel() == HT_ON;
-          if (config.GetPTREnableChannel() % 2 == 0)
-          {
-            enable |= chan >= CRSF_CHANNEL_VALUE_MID;
-          }
-          else
-          {
-            enable |= chan < CRSF_CHANNEL_VALUE_MID;
-          }
-          if (enable != headTrackingEnabled)
-          {
-            headTrackingEnabled = enable;
-            HTEnableFlagReadyToSend = true;
-          }
-          // If enabled and this packet is less that 1 second old then use it
-          if (enable && now - lastPTRValidTimeMs < 1000)
-          {
-            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
-            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
-            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
-          }
-          else
-          {
-            ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
-            ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
-            ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
-          }
-        }
+        injectBackpackPanTiltRollData(now);
         OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
       }
     }
