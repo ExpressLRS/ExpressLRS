@@ -269,8 +269,12 @@ td img.icon-pwm {
 							<option value='1'>2.5 dB</option>
 							<option value='2'>6 dB</option>
 							<option value='3'>11 dB</option>
+							<option value='4'>0 dB + calibration</option>
+							<option value='5'>2.5 dB + calibration</option>
+							<option value='6'>6 dB + calibration</option>
+							<option value='7'>11 dB + calibration</option>
 						</select>
-					</td><td>ADC pin attenuation (ESP32)</td></tr>
+					</td><td>ADC pin attenuation (ESP32) and optional efuse-based calibration adjustment</td></tr>
 
 					<tr><td colspan='2'><b>SPI VTX</td></tr>
 					<tr><td></td><td>RF amp PWM pin<img class="icon-pwm"/></td><td><input size='3' id='vtx_amp_pwm' name='vtx_amp_pwm' type='text'/></td><td>Set the power output level of the VTX PA (value is calculated based on power and frequency using VPD interpolation values)</td></tr>
