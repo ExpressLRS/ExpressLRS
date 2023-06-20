@@ -84,7 +84,7 @@ uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
-uint32_t CRSF::UARTrequestedBaud = 400000;
+uint32_t CRSF::UARTrequestedBaud = 5250000;
 #if defined(PLATFORM_ESP32)
 bool CRSF::UARTinverted = false;
 #endif
