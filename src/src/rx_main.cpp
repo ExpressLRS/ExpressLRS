@@ -832,12 +832,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     if (connectionState != connected || SwitchModePending)
         return;
 
-    if (firmwareOptions.is_airport)
-    {
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        return;
-    }
-
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
@@ -1005,12 +999,6 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
-    if (otaPktPtr->std.type == PACKET_TYPE_TLM)
-    {
-        return true;
-    }
-
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
     bool doStartTimer = false;
@@ -1030,6 +1018,12 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
+        break;
+    case PACKET_TYPE_TLM:
+        if (firmwareOptions.is_airport)
+        {
+            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
         break;
     default:
         break;

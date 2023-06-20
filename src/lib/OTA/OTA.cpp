@@ -581,6 +581,8 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
 {
+    otaPktPtr->std.type = PACKET_TYPE_TLM;
+
     uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
