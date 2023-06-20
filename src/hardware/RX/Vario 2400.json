@@ -21,6 +21,7 @@
     "pwm_outputs": [14,1,3,15,2,4],
     "vbat": 39,
     "button": 0,
-    "vbat_scale": 1038,
-    "vbat_offset": -153
+    "vbat_scale": 1024,
+    "vbat_offset": -62,
+    "vbat_atten": 7
 }
