@@ -1287,6 +1287,17 @@ void reconfigureSerial()
     setupSerial();
 }
 
+static void telem_PackageReceived(crsf_header_t *package)
+{
+#if defined(USE_ANALOG_VBAT)
+    if (package->std.type == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        // If a battery sensor item is received, disable our internal VBAT measurement
+        Vbat_setUpdateRate(vurDisabled);
+    }
+#endif
+}
+
 static void setupConfigAndPocCheck()
 {
     eeprom.Begin();
@@ -1394,6 +1405,8 @@ static void setupRadio()
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
+
+    telemetry.OnPackageReceived = &telem_PackageReceived;
 }
 
 static void updateTelemetryBurst()

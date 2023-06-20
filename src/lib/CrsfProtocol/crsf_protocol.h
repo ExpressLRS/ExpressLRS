@@ -43,7 +43,7 @@
 
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
-#define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
+#define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_std_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_FRAME_CRC_SIZE 1
@@ -173,21 +173,30 @@ typedef struct crsf_header_s
     uint8_t device_addr; // from crsf_addr_e
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     uint8_t type;        // from crsf_frame_type_e
-} PACKED crsf_header_t;
+    uint8_t payload[0];     // payload data
+} PACKED crsf_std_header_t;
 
-#define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
+#define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_std_header_t h; payload p; uint8_t crc; } PACKED
 
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_ext_header_s
 {
-    // Common header fields, see crsf_header_t
+    // Common header fields, see crsf_std_header_t
     uint8_t device_addr;
     uint8_t frame_size;
     uint8_t type;
     // Extended fields
     uint8_t dest_addr;
     uint8_t orig_addr;
+    uint8_t payload[0];     // payload data
 } PACKED crsf_ext_header_t;
+
+// Structure for either std or ext crsf header, use type to determine which it is
+union crsf_header_t
+{
+    crsf_std_header_t std;
+    crsf_ext_header_t ext;
+};
 
 /**
  * Crossfire packed channel structure, each channel is 11 bits
@@ -218,7 +227,7 @@ typedef struct crsf_channels_s
  */
 typedef struct rcPacket_s
 {
-    crsf_header_t header;
+    crsf_std_header_t header;
     crsf_channels_s channels;
 } PACKED rcPacket_t;
 
@@ -311,6 +320,16 @@ typedef struct crsf_sensor_baro_vario_s
     uint16_t altitude; // Altitude in decimeters + 10000dm, or Altitude in meters if high bit is set, BigEndian
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_vario_t;
+
+typedef struct crsf_sensor_gps_s
+{
+    int32_t latitude;   // degree / 10,000,000 big endian
+    int32_t longitude;  // degree / 10,000,000 big endian
+    uint16_t groundspeed;  // km/h / 10 big endian
+    uint16_t heading;   // GPS heading, degree/100 big endian
+    uint16_t altitude;  // meters, +1000m big endian
+    uint8_t satellites; // satellites
+} PACKED crsf_sensor_gps_t;
 
 /*
  * 0x14 Link statistics

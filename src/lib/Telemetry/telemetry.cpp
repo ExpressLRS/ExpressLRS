@@ -54,14 +54,6 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
-void Telemetry::CheckCrsfBatterySensorDetected()
-{
-    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
-    {
-        crsfBatterySensorDetected = true;
-    }
-}
-
 PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
@@ -183,11 +175,10 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
                 if (data == crc)
                 {
-                    AppendTelemetryPackage(CRSFinBuffer);
+                    if (OnPackageReceived)
+                        OnPackageReceived((crsf_header_t *)CRSFinBuffer);
 
-                    // Special case to check here and not in AppendTelemetryPackage().  devAnalogVbat sends
-                    // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
-                    CheckCrsfBatterySensorDetected();
+                    AppendTelemetryPackage(CRSFinBuffer);
 
                     receivedPackages++;
                     return true;
@@ -210,7 +201,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
 bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
-    const crsf_header_t *header = (crsf_header_t *) package;
+    const crsf_std_header_t *header = (crsf_std_header_t *) package;
 
     if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'l')
     {

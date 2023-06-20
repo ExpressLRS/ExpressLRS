@@ -980,7 +980,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 
 void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;
@@ -993,7 +993,7 @@ void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, 
 
 void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
 {
-    crsf_header_t *header = (crsf_header_t *)frame;
+    crsf_std_header_t *header = (crsf_std_header_t *)frame;
     header->device_addr = destAddr;
     header->frame_size = frameSize;
     header->type = frameType;
