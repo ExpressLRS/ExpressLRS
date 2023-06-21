@@ -138,3 +138,5 @@
 #define GPIO_PIN_SPI_VTX_SCK hardware_pin(HARDWARE_vtx_sck)
 #define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_vpd_25mW)
 #define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)
+
+#define USE_RADAR
