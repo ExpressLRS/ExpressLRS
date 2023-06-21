@@ -6,6 +6,9 @@
 
 #if defined(USE_RADAR)
 
+#define RADAR_ID_LEN        20
+#define RADAR_SERIAL_LEN    17
+
 enum RadarPhyMethod_e {
     rpmDisabled,
     rpmWifiBeacon,
