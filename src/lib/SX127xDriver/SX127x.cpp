@@ -390,6 +390,11 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   // }
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
+  if (radioNumber == SX12XX_Radio_NONE)
+  {
+      return;
+  }
+
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
     {
