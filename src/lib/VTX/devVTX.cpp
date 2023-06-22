@@ -1,6 +1,6 @@
 #include "targets.h"
 #include "common.h"
-#include "device.h"
+#include "devVTX.h"
 
 #include "config.h"
 #include "CRSF.h"
@@ -21,6 +21,7 @@ extern CRSF crsf;
 extern Stream *TxBackpack;
 static uint8_t pitmodeAuxState = 0;
 static bool sendEepromWrite = true;
+static bool sendToBackpack = true;
 
 static enum VtxSendState_e
 {
@@ -30,10 +31,16 @@ static enum VtxSendState_e
   VTXSS_CONFIRMED  // Status of remote side is consistent with our config
 } VtxSendState;
 
-void VtxTriggerSend()
+void VtxTriggerSend(bool const toBackpack)
 {
     VtxSendState = VTXSS_MODIFIED;
     devicesTriggerEvent();
+    sendToBackpack = toBackpack;
+}
+
+void VtxTriggerSendWrapper(void)
+{
+    VtxTriggerSend();
 }
 
 void VtxPitmodeSwitchUpdate()
@@ -90,15 +97,16 @@ static void VtxConfigToMSPOut()
 
     crsf.AddMspMessage(&packet);
 
-    if (!crsf.IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    if (!crsf.IsArmed() && sendToBackpack) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
         MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
     }
+    sendToBackpack = true;
 }
 
 static void initialize()
 {
-    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSendWrapper);
 }
 
 static int event()

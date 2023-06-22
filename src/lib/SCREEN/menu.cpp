@@ -8,6 +8,7 @@
 #include "POWERMGNT.h"
 #include "CRSF.h"
 #include "OTA.h"
+#include "devVTX.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -22,7 +23,6 @@ extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-extern void VtxTriggerSend();
 extern void ResetPower();
 extern void setWifiUpdateMode();
 extern void SetSyncSpam();

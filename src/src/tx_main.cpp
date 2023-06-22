@@ -989,16 +989,25 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
   }
   else if (packet->function == MSP_SET_VTX_CONFIG)
   {
-    if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
+    if (2 <= packet->payloadSize && packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
       config.SetVtxBand(packet->payload[0] / 8 + 1);
       config.SetVtxChannel(packet->payload[0] % 8);
-    } else
+      if (3 <= packet->payloadSize)
+      {
+        config.SetVtxPower(packet->payload[2]);
+      }
+      if (4 <= packet->payloadSize)
+      {
+        config.SetVtxPitmode(!!packet->payload[3]);
+      }
+    }
+    else
     {
       return; // Packets containing frequency in MHz are not yet supported.
     }
 
-    VtxTriggerSend();
+    VtxTriggerSend(false);
   }
 #endif
   if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)

@@ -5,6 +5,7 @@
 #include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
+#include "devVTX.h"
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
 
@@ -266,7 +267,6 @@ static char luaBadGoodString[10];
 static int event();
 
 extern TxConfig config;
-extern void VtxTriggerSend();
 extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();

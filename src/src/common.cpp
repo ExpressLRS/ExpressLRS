@@ -172,7 +172,7 @@ void initUID()
     else
     {
     #ifdef PLATFORM_ESP32
-        esp_err_t WiFiErr = esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
+        /*esp_err_t WiFiErr =*/ esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
     #elif PLATFORM_STM32
         MasterUID[0] = (uint8_t)HAL_GetUIDw0();
         MasterUID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
