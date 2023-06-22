@@ -35,6 +35,12 @@
 #define ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE   4
 #define ENCAPSULATED_MSP_MAX_FRAME_LEN      (ENCAPSULATED_MSP_HEADER_CRC_LEN + ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
 
+#define MSP_SET_RADAR_POS        248 //SET radar position information
+#define MSP_SET_RADAR_ITD        249 //SET radar information to display
+
+#define MSP2_COMMON_SET_RADAR_POS       0x100B //SET radar position information
+#define MSP2_COMMON_SET_RADAR_ITD       0x100C //SET radar information to display
+
 // ELRS backpack protocol opcodes
 // See: https://docs.google.com/document/d/1u3c7OTiO4sFL2snI-hIo-uRSLfgBK4h16UrbA08Pd6U/edit#heading=h.1xw7en7jmvsj
 #define MSP_ELRS_BACKPACK_GET_CHANNEL_INDEX     0x0300

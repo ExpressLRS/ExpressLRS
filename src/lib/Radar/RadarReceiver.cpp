@@ -1,11 +1,11 @@
-#include "devRadar.h"
+#include "RadarReceiver.h"
 
 #if defined(USE_RADAR)
 
 #include "user_interface.h"
-#include "logging.h"
 #include "libopendroneid/opendroneid.h"
 #include "libopendroneid/odid_wifi.h"
+#include "logging.h"
 
 #if defined(PLATFORM_ESP8266)
 
@@ -47,15 +47,52 @@ typedef struct {
 #define IEEE80211_ELEMID_RATES		0x01
 #define IEEE80211_ELEMID_VENDOR		0xDD
 
-typedef struct tagRadarPilotInfo {
-    uint8_t mac[6]; // because we can't rely on users to not fly two things with the same OID
-    char operator_id[RADAR_ID_LEN+1];
-    int8_t rssi;         // dBm
-    uint32_t last_seen;  // ms
-    int32_t latitude;    // in * 10M
-    int32_t longitude;   // in * 10M
-    int16_t altitude;    // in m
-} RadarPilotInfo;
+#define RADAR_PILOT_TRACK_CNT   3
+#define RADAR_PILOT_TIMEOUT_MS  30000
+
+RadarPilotInfo pilots[RADAR_PILOT_TRACK_CNT];
+static uint8_t radarLastDirty;
+
+static RadarPilotInfo *Radar_FindOrAddPilotByMac(uint8_t *mac)
+{
+    uint32_t oldest = pilots[0].last_seen;
+    uint8_t oldestIdx = 0;
+    RadarPilotInfo *p;
+    for (uint8_t idx=0; idx<RADAR_PILOT_TRACK_CNT; ++idx)
+    {
+        p = &pilots[idx];
+        // Store the oldest item in case add is needed
+        if (p->last_seen < oldest)
+        {
+            oldest = p->last_seen;
+            oldestIdx = idx;
+        }
+        if (memcmp(mac, p->mac, MAC_LEN) == 0)
+            return p;
+    }
+
+    // Not found, replace the oldest
+    p = &pilots[oldestIdx];
+    memset(p, 0, sizeof(*p));
+    memcpy(p->mac, mac, MAC_LEN);
+    return p;
+}
+
+uint8_t Radar_FindNextDirtyIdx()
+{
+    uint8_t retVal = radarLastDirty;
+    do
+    {
+        retVal = (retVal + 1) % RADAR_PILOT_TRACK_CNT;
+        if (pilots[retVal].dirty)
+        {
+            radarLastDirty = retVal;
+            return retVal;
+        }
+    } while (retVal != radarLastDirty);
+
+    return RADAR_PILOT_IDX_INVALID;
+}
 
 static void wifi_promiscuous_cb(uint8 *buf, uint16 len)
 {
@@ -67,10 +104,13 @@ static void wifi_promiscuous_cb(uint8 *buf, uint16 len)
     if (hdr->frame_control != htons(0x8000))
         return;
 
-    RadarPilotInfo pilot;
+    RadarPilotInfo *pilot = Radar_FindOrAddPilotByMac(hdr->sa);
+
     size_t payloadlen = len - sizeof(wifi_pkt_rx_ctrl_t);
     size_t offset = sizeof(ieee80211_mgmt) + sizeof(ieee80211_beacon);
     bool found_odid = false;
+    char *ssid;
+    size_t ssid_len;
     while (offset < payloadlen && !found_odid)
     {
         switch (pkt->payload[offset]) // ieee80211 element_id
@@ -79,16 +119,16 @@ static void wifi_promiscuous_cb(uint8 *buf, uint16 len)
             {
                 // Operator ID is in the SSID field
                 ieee80211_ssid *iessid = (ieee80211_ssid *)&pkt->payload[offset];
-                uint8_t ssid_len = std::min((uint8_t)RADAR_ID_LEN, iessid->length);
-                memcpy(pilot.operator_id, iessid->ssid, ssid_len);
-                pilot.operator_id[ssid_len] = '\0';
+                ssid_len = std::min((uint8_t)RADAR_ID_LEN, iessid->length);
+                ssid = (char *)iessid->ssid;
                 offset += sizeof(ieee80211_ssid) + iessid->length;
                 break;
             }
         case IEEE80211_ELEMID_RATES:
             {
                 ieee80211_supported_rates *iesr = (ieee80211_supported_rates *)&pkt->payload[offset];
-                if (iesr->length > 1 || iesr->supported_rates != 0x8C)  // ODID beacon is 6 mbit
+                // ODID beacon reports 1 rate of 6mbit
+                if (iesr->length > 1 || iesr->supported_rates != 0x8C)
                     return;
                 offset += sizeof(ieee80211_supported_rates);
                 break;
@@ -114,9 +154,10 @@ static void wifi_promiscuous_cb(uint8 *buf, uint16 len)
 
     //DBGLN("Found ODID: %s", pilot.operator_id);
 
-    pilot.rssi = pkt->rx_ctrl.rssi;
-    pilot.last_seen = millis();
-    memcpy(pilot.mac, hdr->sa, sizeof(pilot.mac));
+    memcpy(pilot->operator_id, ssid, ssid_len);
+    pilot->operator_id[ssid_len] = '\0';
+    pilot->rssi = pkt->rx_ctrl.rssi;
+    pilot->last_seen = millis();
 
     //ODID_service_info *si = (struct ODID_service_info *)&pkt->payload[offset];
     // can use si->counter to maybe do link quality, by detecting missing packet
@@ -134,17 +175,21 @@ static void wifi_promiscuous_cb(uint8 *buf, uint16 len)
         {
             ODID_Location_encoded *loc = (ODID_Location_encoded *)&msg_pack_enc->Messages[i];
             // Conveniently, lat/lon are already 10M scale integer which is our format
-            pilot.latitude = loc->Latitude;
-            pilot.longitude = loc->Longitude;
+            pilot->latitude = loc->Latitude;
+            pilot->longitude = loc->Longitude;
             // Altitude is encoded 2x scale + 1000
-            pilot.altitude = loc->Height / 2 - 1000;
-            DBGLN("%d %d %d", pilot.latitude, pilot.longitude, pilot.altitude);
-            //return;
+            pilot->altitude = loc->Height / 2 - 1000;
+            // TODO: Fix these units
+            pilot->heading = loc->Direction;
+            pilot->speed = loc->SpeedHorizontal;
+            break;
         }
         offset += msg_pack_enc->SingleMessageSize;
         // off=94 len=116, means there's 22 of 25 bytes in msg[1]
         //DBGLN("off=%u len=%u", offset, payloadlen);
     }
+
+    pilot->dirty = 1;
 }
 
 void RadarRx_Begin()

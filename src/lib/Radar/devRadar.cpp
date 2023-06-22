@@ -14,7 +14,7 @@
 #include "libopendroneid/odid_wifi.h"
 #include "RadarReceiver.h"
 
-#define BEACON_REPORT_INTERVAL_MS 3000
+#define BEACON_REPORT_INTERVAL_MS 500
 #define BEACON_WIFI_CHANNEL       6
 // A pack with 2x BasicID, 1xLoc, 1xSelfID, 1xSystem, 1xOperatorID ~223 bytes
 #define WIFI_BUFF_SIZE 250
@@ -42,9 +42,17 @@ static const char *radar_SelfId = "Recreational";
 
 void Radar_UpdatePosition(const crsf_sensor_gps_t *gps)
 {
+    // A couple lat/lon offsets added to poition to keep from doxxing myself in demos
+#if !defined(RADAR_LAT_OFFSET)
+#define RADAR_LAT_OFFSET 0
+#endif
+#if !defined(RADAR_LON_OFFSET)
+#define RADAR_LON_OFFSET 0
+#endif
+
     // The values are Big Endian, convert them to native byte order
-    radar_Gps.latitude = be32toh(gps->latitude);
-    radar_Gps.longitude = be32toh(gps->longitude);
+    radar_Gps.latitude = be32toh(gps->latitude) + RADAR_LAT_OFFSET;
+    radar_Gps.longitude = be32toh(gps->longitude) + RADAR_LON_OFFSET;
     radar_Gps.groundspeed = be16toh(gps->groundspeed);
     radar_Gps.heading = be16toh(gps->heading);
     radar_Gps.altitude = be16toh(gps->altitude);
@@ -258,6 +266,37 @@ static void radar_sendBeacon()
     }
 }
 
+static void radar_notifyPilotUpdate()
+{
+    uint8_t idx = Radar_FindNextDirtyIdx();
+    if (idx == RADAR_PILOT_IDX_INVALID)
+        return;
+
+    RadarPilotInfo *p = &pilots[idx];
+    {
+        msp_radar_pos_t mspradar;
+        mspradar.id = idx;
+        mspradar.state = 1;  // TODO: Send LOST notification too, state=2
+        mspradar.lat = p->latitude;
+        mspradar.lon = p->longitude;
+        mspradar.alt = p->altitude;
+        mspradar.heading = p->heading;
+        mspradar.speed = p->speed;
+        mspradar.lq = 4; // TODO: Radar link quality
+
+        mspPacket_t packet;
+        packet.reset();
+        packet.makeCommand();
+        packet.function = MSP2_COMMON_SET_RADAR_POS;
+        packet.add((uint8_t *)&mspradar, sizeof(mspradar));
+
+        // Fffffffffff we have no method to generate a MSPinCRSF packet to send
+
+        // Sent, no longer dirty
+        p->dirty = 0;
+    }
+}
+
 static int event()
 {
     if (connectionState > MODE_STATES)
@@ -283,6 +322,8 @@ static int timeout()
     }
 
     radar_sendBeacon();
+    // TODO: notifyPilotUpdate needs to happen more frequently than sendBeacon
+    radar_notifyPilotUpdate();
 
     return BEACON_REPORT_INTERVAL_MS;
 }
