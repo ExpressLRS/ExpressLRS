@@ -260,6 +260,17 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "DIY_900_TX_ESP32_SX127x_RFM95"
+            },
+            "stm32-sx1272": {
+                "product_name": "DIY STM32 SX1272 TX",
+                "upload_methods": ["stlink"],
+                "platform": "stm32",
+                "firmware": "DIY_900_TX_STM32_SX1272",
+                "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
+                    "offset": "0x4000",
+                    "bootloader": "sx1272_pcb_bootloader.bin"
+                }
             }
         },
         "rx_900": {
@@ -287,6 +298,17 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "DIY_900_RX_HUZZAH_RFM95W"
+            },
+            "stm32-sx1272": {
+                "product_name": "DIY STM32 SX1272 RX",
+                "upload_methods": ["stlink"],
+                "platform": "stm32",
+                "firmware": "DIY_900_RX_STM32_SX1272",
+                "stlink": {
+                    "cpus": ["STM32F103C8T6", "STM32F103CBT6"],
+                    "offset": "0x4000",
+                    "bootloader": "sx1272_pcb_bootloader.bin"
+                }
             }
         },
         "tx_2400": {
