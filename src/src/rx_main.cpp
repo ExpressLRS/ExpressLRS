@@ -88,7 +88,6 @@ device_affinity_t ui_devices[] = {
 
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
-SX12XX_Radio_Number_t transmittingRadio;
 
 hwTimer hwTimer;
 POWERMGNT POWERMGNT;
@@ -505,7 +504,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
@@ -728,7 +727,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    if (tlmSent && transmittingRadio == SX12XX_Radio_NONE)
+    if (tlmSent && Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
     {
         Radio.TXdoneCallback();
     }

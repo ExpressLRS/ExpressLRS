@@ -388,6 +388,9 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   //   DBGLN("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
+
+  transmittingRadio = radioNumber;
+  
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
   if (radioNumber == SX12XX_Radio_NONE)
