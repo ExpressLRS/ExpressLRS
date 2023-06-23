@@ -77,6 +77,8 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
+SX12XX_Radio_Number_t transmittingRadio;
+
 device_affinity_t ui_devices[] = {
   {&CRSF_device, 1},
 #ifdef HAS_LED
@@ -529,7 +531,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+  transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
 
   if (isDualRadio())
   {
@@ -558,11 +560,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-
-	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
-  {                                                         // but do status update (issue #2028)
-		Radio.TXdoneCallback();
-  }
 }
 
 /*
@@ -570,6 +567,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
+  // No packet has been sent due to LBT.  Call TXdoneCallback to prepare for TLM.
+	if (transmittingRadio == SX12XX_Radio_NONE)
+  {
+		Radio.TXdoneCallback();
+  }
+
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
