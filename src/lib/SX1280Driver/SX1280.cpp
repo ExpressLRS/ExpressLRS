@@ -484,6 +484,12 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         return;
     }
 
+    if (radioNumber == SX12XX_Radio_NONE)
+    {
+        instance->SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
+        return;
+    }
+
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
     {

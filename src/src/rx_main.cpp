@@ -88,6 +88,7 @@ device_affinity_t ui_devices[] = {
 
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
+SX12XX_Radio_Number_t transmittingRadio;
 
 hwTimer hwTimer;
 POWERMGNT POWERMGNT;
@@ -144,6 +145,7 @@ static uint8_t telemetryBurstMax;
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
 
+static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// PFD Filters ////////////////
@@ -429,7 +431,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
-    if (config.GetForceTlmOff() || (connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
+    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
@@ -503,16 +505,19 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+    transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-
-    if (transmittingRadio != SX12XX_Radio_NONE)               // send packet if channel available
 #endif
+
+    if (config.GetForceTlmOff())
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+        transmittingRadio = SX12XX_Radio_NONE;
     }
+
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+ 
     return true;
 }
 
@@ -723,6 +728,11 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    if (tlmSent && transmittingRadio == SX12XX_Radio_NONE)
+    {
+        Radio.TXdoneCallback();
+    }
+
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
@@ -739,7 +749,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     Radio.isFirstRxIrq = true;
     updateDiversity();
-    bool tlmSent = HandleSendTelemetryResponse();
+    tlmSent = HandleSendTelemetryResponse();
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -831,12 +841,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     // during sync, where packets can be received before connection
     if (connectionState != connected || SwitchModePending)
         return;
-
-    if (firmwareOptions.is_airport)
-    {
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        return;
-    }
 
     bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData, ExpressLRS_currTlmDenom);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
@@ -1005,12 +1009,6 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    // don't use telemetry packets for PFD calculation since TX does not send such data and tlm frames from other rx are not in sync
-    if (otaPktPtr->std.type == PACKET_TYPE_TLM)
-    {
-        return true;
-    }
-
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
     bool doStartTimer = false;
@@ -1030,6 +1028,12 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
+        break;
+    case PACKET_TYPE_TLM:
+        if (firmwareOptions.is_airport)
+        {
+            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
         break;
     default:
         break;
