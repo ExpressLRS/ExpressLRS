@@ -88,6 +88,7 @@ device_affinity_t ui_devices[] = {
 
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
+SX12XX_Radio_Number_t transmittingRadio;
 
 hwTimer hwTimer;
 POWERMGNT POWERMGNT;
@@ -144,6 +145,7 @@ static uint8_t telemetryBurstMax;
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
 
+static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
 /// PFD Filters ////////////////
@@ -503,7 +505,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+    transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
@@ -726,6 +728,11 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    if (tlmSent && transmittingRadio == SX12XX_Radio_NONE)
+    {
+        Radio.TXdoneCallback();
+    }
+
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
@@ -742,7 +749,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     Radio.isFirstRxIrq = true;
     updateDiversity();
-    bool tlmSent = HandleSendTelemetryResponse();
+    tlmSent = HandleSendTelemetryResponse();
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
