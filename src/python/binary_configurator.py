@@ -411,10 +411,11 @@ def main():
             return binary_flash.upload(options, args)
         elif 'upload_methods' in config and 'stock' in config['upload_methods']:
             shutil.copy(args.file.name, 'firmware.elrs')
+    return 0
 
 if __name__ == '__main__':
     try:
-        main()
+        exit(main())
     except AssertionError as e:
         print(e)
         exit(1)
