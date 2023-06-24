@@ -67,11 +67,21 @@ def readString(mm, pos, maxlen):
     val = mm[pos:mm.find(b'\x00', pos)].decode()
     return pos + maxlen, val
 
+def generateUID(phrase):
+    uid = [
+        int(item) if item.isdigit() else -1
+        for item in phrase.split(',')
+    ]
+    if len(uid) == 6 and all(ele >= 0 and ele < 256 for ele in uid):
+        uid = bytes(uid)
+    else:
+        uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
+    return uid
+
 def patch_uid(mm, pos, args):
     if (args.phrase):
         mm[pos] = 1
-        bindingPhraseHash = hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()
-        mm[pos+1:pos + 7] = bindingPhraseHash[0:6]
+        mm[pos+1:pos + 7] = generateUID(args.phrase)
     pos += 7
     return pos
 
@@ -202,7 +212,7 @@ def patch_firmware(options, mm, pos, args):
 def patch_unified(args, options):
     json_flags = {}
     if args.phrase is not None:
-        json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
+        json_flags['uid'] = [x for x in generateUID(args.phrase)]
     if args.ssid is not None:
         json_flags['wifi-ssid'] = args.ssid
     if args.password is not None and args.ssid is not None:
