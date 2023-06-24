@@ -69,8 +69,6 @@ public:
     int8_t GetLastPacketSNRRaw(SX12XX_Radio_Number_t radioNumber);
     int8_t GetCurrRSSI(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
-    SX12XX_Radio_Number_t GetProcessingPacketRadio(){return processingPacketRadio;}
-    SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
 
     ////////////Non-blocking TX related Functions/////////////////
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
@@ -89,8 +87,6 @@ private:
     SX127x_ModulationModes ModFSKorLoRa;
     uint8_t currSyncWord;
     uint8_t currPreambleLen;
-    SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
     uint8_t lowFrequencyMode;

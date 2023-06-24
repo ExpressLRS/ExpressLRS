@@ -474,6 +474,8 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
 
 void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
+    transmittingRadio = radioNumber;
+    
     //catch TX timeout
     if (currOpmode == SX1280_MODE_TX)
     {

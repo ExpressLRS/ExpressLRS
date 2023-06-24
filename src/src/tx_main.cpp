@@ -558,11 +558,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #endif
 
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-
-	if (transmittingRadio == SX12XX_Radio_NONE)               // don't send packet if no radio available
-  {                                                         // but do status update (issue #2028)
-		Radio.TXdoneCallback();
-  }
 }
 
 /*
@@ -570,6 +565,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
+  // No packet has been sent due to LBT.  Call TXdoneCallback to prepare for TLM.
+	if (Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
+  {
+		Radio.TXdoneCallback();
+  }
+
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
