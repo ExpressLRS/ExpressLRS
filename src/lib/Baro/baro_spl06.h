@@ -18,7 +18,7 @@ public:
     void startTemperature();
     int32_t getTemperature();
 protected:
-    // 32x Pressure + 8x Temperature = 70ms per update1
+    // 32x Pressure + 8x Temperature = 70ms per update
     // 4x=8.4ms/2.5PaRMS, 8x=14.8ms, 16x=27.6ms/1.2Pa, 32x=53.2ms/0.9Pa, 64x=104.4ms/0.5Pa
     const uint8_t OVERSAMPLING_PRESSURE = 32;
     const uint8_t OVERSAMPLING_TEMPERATURE = 8;
