@@ -18,13 +18,13 @@ public:
     void startTemperature();
     int32_t getTemperature();
 protected:
-    // 32x Pressure + 8x Temperature = 70ms per update
+    // 32x Pressure + 8x Temperature = 70ms per update1
     // 4x=8.4ms/2.5PaRMS, 8x=14.8ms, 16x=27.6ms/1.2Pa, 32x=53.2ms/0.9Pa, 64x=104.4ms/0.5Pa
     const uint8_t OVERSAMPLING_PRESSURE = 32;
     const uint8_t OVERSAMPLING_TEMPERATURE = 8;
 
-    static void readRegister(uint8_t reg, uint8_t *data, uint8_t size);
-    static void writeRegister(uint8_t reg, uint8_t *data, uint8_t size);
+    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
+    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
 
     uint8_t oversampleToRegVal(const uint8_t oversamples) const;
     int32_t oversampleToScaleFactor(const uint8_t oversamples) const;
