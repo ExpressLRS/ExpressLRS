@@ -1,6 +1,8 @@
 #if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
 
 #include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
+//#include <U8x8lib.h>
+
 
 #include "oleddisplay.h"
 
@@ -16,6 +18,8 @@ extern WiFiMode_t wifiMode;
 
 // OLED specific header files.
 U8G2 *u8g2;
+//U8x8 *u8x8;
+
 
 #ifdef TARGET_TX_GHOST
 /**
@@ -80,7 +84,7 @@ void OLEDDisplay::init()
         u8g2 = new U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
     else if (OPT_USE_OLED_I2C)
         u8g2 = new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
-
+        //u8x8 = new U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(15, 4, 16);
     u8g2->begin();
     u8g2->clearBuffer();
 }
