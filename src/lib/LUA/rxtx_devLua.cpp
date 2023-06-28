@@ -20,7 +20,7 @@ void luadevGeneratePowerOpts(luaItem_selection *luaPower)
   char *out = strPowerLevels;
   PowerLevels_e pwr = PWR_10mW;
   // Count the semicolons to move `out` to point to the MINth item
-  while (pwr < MinPower)
+  while (pwr < POWERMGNT::getMinPower())
   {
     while (*out++ != ';') ;
     pwr = (PowerLevels_e)((unsigned int)pwr + 1);
@@ -45,6 +45,8 @@ void luadevGeneratePowerOpts(luaItem_selection *luaPower)
 #if defined(TARGET_RX)
   // The RX has the dynamic option added on to the end
   // the space on the end is to make it display "MatchTX mW"
-  strcat(strPowerLevels, ";MatchTX ");
+  // but only if it has more than one power level
+  if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
+    strcat(strPowerLevels, ";MatchTX ");
 #endif
 }
