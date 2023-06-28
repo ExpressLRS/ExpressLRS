@@ -207,6 +207,15 @@
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "DIY_900_TX_TTGO_V2_SX127x"
             },
+            "heltec_V2": {
+                "product_name": "DIY HELTEC V2 900MHz TX",
+                "lua_name": "DIY900 HELTEC V2",
+                "layout_file": "DIY 900 LORA32 HELTEC V2.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "DIY_900_TX_HELTEC_V2_SX127x"
+            },
             "e19": {
                 "product_name": "DIY ESP32 E19 900MHz TX",
                 "lua_name": "DIY900 E19",
