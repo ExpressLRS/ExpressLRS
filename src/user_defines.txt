@@ -59,6 +59,15 @@
 
 ### OTHER OPTIONS: ###
 
+# Set an "armed" range on Ch5. This allows you to set a range, in which the system is defined as armed. This allows
+# more flexibility than the arm range having to be greater than 1500. If not set, the arming range will match the old
+# range of 1500 to 2012. The total range is 988 to 2012.
+#
+# NOTE: If you change this setting. It must match on your TX and all RXs.
+#-DARM_RANGE_MIN=1500
+#-DARM_RANGE_MAX=2012
+
+# Wi-Fi Preferences
 -DAUTO_WIFI_ON_INTERVAL=60
 #-DHOME_WIFI_SSID=""
 #-DHOME_WIFI_PASSWORD=""

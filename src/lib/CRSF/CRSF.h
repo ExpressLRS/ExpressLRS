@@ -9,6 +9,7 @@
 #include "common.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "options.h"
 #include "LowPassFilter.h"
 #include "../CRC/crc.h"
 #include "telemetry_protocol.h"
@@ -61,7 +62,7 @@ public:
     static uint32_t VersionStrToU32(const char *verStr);
 
     #ifdef CRSF_TX_MODULE
-    static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
+    static bool IsArmed() { return ( (CRSF_to_US(ChannelData[4]) >= firmwareOptions.arm_range_min ) && (CRSF_to_US(ChannelData[4]) <= firmwareOptions.arm_range_max) ); } // AUX1
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 

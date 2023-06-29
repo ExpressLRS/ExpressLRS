@@ -231,6 +231,12 @@ def patch_unified(args, options):
     if args.lock_on_first_connection is not None:
         json_flags['lock-on-first-connection'] = args.lock_on_first_connection
 
+    if args.arm-range-min is not None:
+        json_flags['arm-range-min'] = args.arm_range_min
+
+    if args.arm-range-max is not None:
+        json_flags['arm-range-max'] = args.arm_range_max
+
     if args.domain is not None:
         json_flags['domain'] = domain_number(args.domain)
 
@@ -327,6 +333,9 @@ def main():
     parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
     parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
     parser.set_defaults(unlock_higher_power=None)
+    # Arming
+    parser.add_argument('--arm-range-min', type=int, help='Minimum uS for Ch 5 to be defined as armed')
+    parser.add_argument('--arm-range-max', type=int, help='Maximum uS for Ch 5 to be defined as armed')
     # Buzzer
     parser.add_argument('--buzzer-mode', type=BuzzerMode, choices=list(BuzzerMode), default=None, help='Which buzzer mode to use, if there is a buzzer')
     parser.add_argument('--buzzer-melody', type=str, default=None, help='If the mode is "custom", then this is the tune')
