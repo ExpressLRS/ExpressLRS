@@ -1077,6 +1077,14 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "iFlight_900_TX"
+            },
+            "v2": {
+                "product_name": "iFlight 900MHz TX V2",
+                "lua_name": "iFlight 900TX",
+                "layout_file": "iFlight 900 V2.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX"
             }
         },
         "rx_900": {
@@ -1099,6 +1107,14 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
                 "prior_target_name": "iFlight_2400_TX"
+            },
+            "v2": {
+                "product_name": "iFlight 2.4GHz TX V2",
+                "lua_name": "iFlight 2400TX",
+                "layout_file": "iFlight 2400 V2.json",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX"
             }
         },
         "rx_2400": {
