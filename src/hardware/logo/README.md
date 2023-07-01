@@ -1,5 +1,10 @@
-# Logos for TFT display
+# Logos for TFT/OLED display
 
-Logos for display on the color screen of a transmitter module must be sized 160x53.
+TFT color displays logos must be sized 160x53 in RGB565 raw format, so the file will be 16960 bytes in size.
 
-The logo must also be in RGB565 raw format, so the file will be 16960 bytes in size.
+Logos for display on the OLED screen must be size 128x64 for normal sized or 128x32 for small screen size.
+OLED logos are in monochrome raw format.
+
+```bash
+convert ~/Downloads/logo.bmp -monochrome -colors 2 -type bilevel -write MONO:logo.bin
+```
