@@ -1283,7 +1283,7 @@
                 "product_name": "Jumper AION Nano 2.4GHz TX",
                 "lua_name": "AION 2G4NANO TX",
                 "layout_file": "Jumper AION Nano.json",
-                "logo_file": "elrs64.bin",
+                "logo_file": "jumper.bin",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
