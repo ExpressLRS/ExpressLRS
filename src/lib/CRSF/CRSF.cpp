@@ -826,7 +826,7 @@ uint32_t CRSF::autobaud()
     // sample code at https://github.com/espressif/esp-idf/issues/3336
     // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
     // Based on testing use max and add 2 for lowest deviation
-    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 2);
+    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 3);
     int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
     for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
     {
