@@ -1180,6 +1180,8 @@ bool setupHardwareFromOptions()
     connectionState = hardwareUndefined;
     return false;
   }
+#else
+  options_init();
 #endif
 
   return true;
