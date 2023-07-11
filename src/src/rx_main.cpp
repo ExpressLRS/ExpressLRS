@@ -516,7 +516,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
- 
+
     return true;
 }
 
@@ -1651,6 +1651,8 @@ void setup()
 
         connectionState = hardwareUndefined;
     }
+    #else
+    hardwareConfigured = options_init();
     #endif
 
     if (hardwareConfigured)

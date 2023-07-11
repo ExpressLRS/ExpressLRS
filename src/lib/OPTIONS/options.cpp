@@ -29,7 +29,7 @@ const char *wifi_ap_address = "10.0.0.1";
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
-__attribute__ ((used)) const firmware_options_t firmwareOptions = {
+__attribute__ ((used)) static firmware_options_t flashedOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
     ._version_ = 1,
 #if defined(Regulatory_Domain_ISM_2400)
@@ -151,6 +151,18 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #endif
 #endif
 };
+
+/*
+ * This all seems rather convoluted, but it means that the compiler/linker optimisations
+ * don't create multiple copies of the UID. This code forces the firmwareOptions to be copied
+ * into RAM and all the other areas of code are forced to use the RAM copy.
+ */
+firmware_options_t firmwareOptions;
+bool options_init()
+{
+    firmwareOptions = flashedOptions;
+    return true;
+}
 
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
