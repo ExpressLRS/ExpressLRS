@@ -52,6 +52,7 @@ uint8_t vtxSPIPitmode = 1;
 static uint8_t vtxSPIPitmodeCurrent = 1;
 static uint8_t RfAmpVrefState = 0;
 static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t vtxPreviousSPIPWM = 0;
 static uint16_t vtxMinPWM = MIN_PWM;
 static uint16_t vtxMaxPWM = MAX_PWM;
 static uint16_t VpdSetPoint = 0;
@@ -150,6 +151,10 @@ static void RfAmpVrefOff()
 
 static void setPWM()
 {
+    if (vtxSPIPWM == vtxPreviousSPIPWM) {
+        return;
+    }
+
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
     {
@@ -164,6 +169,8 @@ static void setPWM()
 #else
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 #endif
+
+    vtxPreviousSPIPWM = vtxSPIPWM;
 }
 
 void VTxOutputMinimum()
