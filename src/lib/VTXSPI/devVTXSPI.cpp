@@ -76,8 +76,11 @@ static SPIClass *vtxSPI;
 
 static void rtc6705WriteRegister(uint32_t regData)
 {
+    bool shared = GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK ? true : false;
+    DBGLN("VTX: Register: %d, shared: %d", regData, shared);
+
     // When sharing the SPI Bus control of the NSS pin is done by us
-    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    if (shared)
     {
         vtxSPI->setBitOrder(LSBFIRST);
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
@@ -91,7 +94,7 @@ static void rtc6705WriteRegister(uint32_t regData)
         vtxSPI->transfer(buf, BUF_PACKET_SIZE);
     #endif
 
-    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    if (shared)
     {
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
         vtxSPI->setBitOrder(MSBFIRST);
@@ -120,20 +123,27 @@ static void rtc6705SetFrequency(uint32_t freq)
 
 static void rtc6705PowerAmpOn()
 {
+    DBGLN("VTX: PA On");
     uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_ON << 5);
     rtc6705WriteRegister(regData);
 }
 
 static void RfAmpVrefOn()
 {
-    if (!RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+    if (!RfAmpVrefState) {
+        DBGLN("VTX: AmpVrefOn, state: %d", RfAmpVrefState);
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+    }
 
     RfAmpVrefState = 1;
 }
 
 static void RfAmpVrefOff()
 {
-    if (RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    if (RfAmpVrefState) {
+        DBGLN("VTX: AmpVrefOff, state: %d", RfAmpVrefState);
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    }
 
     RfAmpVrefState = 0;
 }
@@ -143,10 +153,12 @@ static void setPWM()
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
     {
+        DBGLN("VTX: setPWM (dac), value: %d", vtxSPIPWM >> 4);
         dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM >> 4);
     }
     else
     {
+        DBGLN("VTX: setPWM (pwm), value: %d", vtxSPIPWM);
         ledcWrite(rfAmpPwmChannel, vtxSPIPWM);
     }
 #else
@@ -197,6 +209,8 @@ static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
         }
     }
 
+    DBGLN("VTX: linearVpd, value: %d", newVpd);
+
     return newVpd;
 }
 
@@ -222,7 +236,7 @@ static void SetVpdSetPoint()
         break;
     }
 
-    DBGLN("Setting new VPD setpoint: %d", VpdSetPoint);
+    DBGLN("VTX: new VPD setpoint: %d, power: %d", VpdSetPoint, vtxSPIPowerIdx);
 }
 
 static void checkOutputPower()
@@ -248,7 +262,7 @@ static void checkOutputPower()
             VTxOutputDecrease();
         }
 
-        //DBGLN("VTX VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
+        DBGLN("VTX: VPD setpoint: %d, raw: %d, filtered: %d, PWM: %d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
     }
 }
 
@@ -301,9 +315,11 @@ static void initialize()
                 vtxMinPWM = MIN_DAC;
                 vtxMaxPWM = MAX_DAC;
                 vtxSPIPWM = vtxMaxPWM;
+                DBGLN("VTX: Using DAC, min: %d, max: %d, spipwm: %d", vtxMinPWM, vtxMaxPWM, vtxSPIPWM);
             }
             else
             {
+                DBGLN("VTX: Using PWM, channel: %d", rfAmpPwmChannel);
                 ledcSetup(rfAmpPwmChannel, 10000, 12); // 12 bit 10khz
                 ledcAttachPin(GPIO_PIN_RF_AMP_PWM, rfAmpPwmChannel);
             }
@@ -361,21 +377,21 @@ static int timeout()
         rtc6705SetFrequency(vtxSPIFrequency);
         vtxSPIFrequencyCurrent = vtxSPIFrequency;
 
-        DBGLN("Set VTX frequency: %d", vtxSPIFrequency);
+        DBGLN("VTX: Set frequency: %d", vtxSPIFrequency);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }
 
     if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
-        DBGLN("Set VTX power: %d", vtxSPIPowerIdx);
+        DBGLN("VTX: set power: %d", vtxSPIPowerIdx);
         SetVpdSetPoint();
         vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
     }
 
     if (vtxSPIPitmodeCurrent != vtxSPIPitmode)
     {
-        DBGLN("Set PIT mode: %d", vtxSPIPitmode);
+        DBGLN("VTX: PIT mode: %d", vtxSPIPitmode);
         vtxSPIPitmodeCurrent = vtxSPIPitmode;
     }
 
