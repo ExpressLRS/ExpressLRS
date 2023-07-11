@@ -110,6 +110,8 @@ static void rtc6705ResetSynthRegA()
 
 static void rtc6705SetFrequency(uint32_t freq)
 {
+    DBGLN("VTX: frequency: %d", freq);
+    
     rtc6705ResetSynthRegA();
 
     VTxOutputMinimum(); // Set power to zero for clear channel switching
