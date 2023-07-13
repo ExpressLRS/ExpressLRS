@@ -493,7 +493,7 @@
         "tx_900": {
             "r9m": {
                 "product_name": "FrSky R9M 900MHz TX",
-                "upload_methods": ["stlink", "stock"],
+                "upload_methods": ["stlink", "stock", "wifi"],
                 "platform": "stm32",
                 "firmware": "Frsky_TX_R9M",
                 "features": ["buzzer", "unlock-higher-power", "fan"],
