@@ -179,7 +179,14 @@ void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
-    vtxSPIPWM = vtxMaxPWM;
+    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    {
+        vtxSPIPWM = vtxMinPWM;
+    } 
+    else 
+    {
+        vtxSPIPWM = vtxMaxPWM;
+    }
     setPWM();
 }
 
@@ -336,7 +343,7 @@ static void initialize()
             {
                 vtxMinPWM = MIN_DAC;
                 vtxMaxPWM = MAX_DAC;
-                vtxSPIPWM = vtxMaxPWM;
+                vtxSPIPWM = vtxMinPWM;
                 DBGLN("VTX: Using DAC, min: %d, max: %d, spipwm: %d", vtxMinPWM, vtxMaxPWM, vtxSPIPWM);
             }
             else
