@@ -160,8 +160,8 @@ static void setPWM()
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
     {
-        DBGLN("VTX: setPWM (dac), value: %d", vtxSPIPWM >> 4);
-        dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM >> 4);
+        DBGLN("VTX: setPWM (dac), value: %d", vtxSPIPWM);
+        dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
     }
     else
     {
