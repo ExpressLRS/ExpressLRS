@@ -185,13 +185,26 @@ void VTxOutputMinimum()
 
 static void VTxOutputIncrease()
 {
-    if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
+    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    {
+        if (vtxSPIPWM < vtxMaxPWM) vtxSPIPWM += 1;
+    }
+    else {
+        if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
+    }
     setPWM();
 }
 
 static void VTxOutputDecrease()
 {
-    if (vtxSPIPWM < vtxMaxPWM) vtxSPIPWM += 1;
+    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    {
+        if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
+    }
+    else
+    {
+        if (vtxSPIPWM < vtxMaxPWM) vtxSPIPWM += 1;
+    }
     setPWM();
 }
 
