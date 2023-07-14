@@ -333,6 +333,8 @@ static void initialize()
                 ledcAttachPin(GPIO_PIN_RF_AMP_PWM, rfAmpPwmChannel);
             }
         #endif
+
+        SetVpdSetPoint();
         setPWM();
 
         delay(RTC6705_BOOT_DELAY);
