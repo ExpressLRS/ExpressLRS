@@ -59,6 +59,7 @@ static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
 static bool stopVtxMonitoring = false;
+static bool vtxUseDAC = false;
 
 #define VPD_SETPOINT_0_MW                       VPD_BUFFER // to avoid overflow
 #define VPD_SETPOINT_YOLO_MW                    2250
@@ -158,7 +159,7 @@ static void setPWM()
     }
 
 #if defined(PLATFORM_ESP32)
-    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    if (vtxUseDAC)
     {
         DBGLN("VTX: setPWM (dac), value: %d", vtxSPIPWM);
         dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
@@ -179,7 +180,7 @@ void VTxOutputMinimum()
 {
     RfAmpVrefOff();
 
-    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    if (vtxUseDAC)
     {
         vtxSPIPWM = vtxMinPWM;
     } 
@@ -192,11 +193,12 @@ void VTxOutputMinimum()
 
 static void VTxOutputIncrease()
 {
-    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    if (vtxUseDAC)
     {
         if (vtxSPIPWM < vtxMaxPWM) vtxSPIPWM += 1;
     }
-    else {
+    else
+    {
         if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
     }
     setPWM();
@@ -204,7 +206,7 @@ static void VTxOutputIncrease()
 
 static void VTxOutputDecrease()
 {
-    if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
+    if (vtxUseDAC)
     {
         if (vtxSPIPWM > vtxMinPWM) vtxSPIPWM -= 1;
     }
@@ -338,9 +340,11 @@ static void initialize()
             analogWriteFreq(10000); // 10kHz
             analogWriteResolution(12); // 0 - 4095
         #else
-            // If using a DAC pin then adjust min/max and initial value
+            // If using a DAC pin then configure for DAC
             if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
             {
+                vtxUseDAC = true;
+
                 vtxMinPWM = MIN_DAC;
                 vtxMaxPWM = MAX_DAC;
                 vtxSPIPWM = vtxMinPWM;
