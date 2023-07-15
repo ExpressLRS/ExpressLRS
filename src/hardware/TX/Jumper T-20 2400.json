@@ -3,7 +3,6 @@
     "serial_tx": 1,
     "radio_busy": 21,
     "radio_dio1": 4,
-    "radio_dio2": 22,
     "radio_miso": 19,
     "radio_mosi": 23,
     "radio_nss": 5,

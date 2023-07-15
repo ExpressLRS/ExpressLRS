@@ -1249,7 +1249,7 @@
                 "layout_file": "Jumper T-20 900.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TX"
+                "firmware": "Unified_ESP32_900_TX"
             }
         },
         "rx_2400": {
