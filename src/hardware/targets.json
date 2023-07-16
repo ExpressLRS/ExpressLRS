@@ -645,6 +645,22 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_RX"
+            },
+            "lr1121_plain": {
+                "product_name": "Generic ESP8285 LR1121 900MHz RX",
+                "lua_name": "ELRS LR1121 RX",
+                "layout_file": "Generic 900 LR1121 8285.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_LR1121_RX"
+            },
+            "lr1121": {
+                "product_name": "Generic ESP32 LR1121 900MHz RX",
+                "lua_name": "ELRS LR1121 RX",
+                "layout_file": "Generic 900 LR1121.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_LR1121_RX"
             }
         },
         "tx_2400": {

@@ -5,12 +5,19 @@
 
 #if defined(RADIO_SX127X)
 #define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP))
+#elif defined(RADIO_LR1121)
+#define FreqCorrectionMax ((int32_t)(100000/FREQ_STEP)) // TODO - This needs checking !!!
 #elif defined(RADIO_SX128X)
 #define FreqCorrectionMax ((int32_t)(200000/FREQ_STEP))
 #endif
 #define FreqCorrectionMin (-FreqCorrectionMax)
 
+#if defined(RADIO_LR1121)
+#define FREQ_HZ_TO_REG_VAL(freq) (freq)
+#else
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
+#endif
+
 #define FREQ_SPREAD_SCALE 256
 
 typedef struct {

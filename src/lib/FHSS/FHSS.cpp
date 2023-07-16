@@ -3,8 +3,13 @@
 #include "options.h"
 #include <string.h>
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
+
+#if defined(RADIO_LR1121)
+#include "LR1121Driver.h"
+#else
 #include "SX127xDriver.h"
+#endif
 
 const fhss_config_t domains[] = {
     {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20},

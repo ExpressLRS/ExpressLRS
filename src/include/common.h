@@ -5,6 +5,8 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
@@ -101,6 +103,7 @@ typedef enum : uint8_t
 
 enum {
     RADIO_TYPE_SX127x_LORA,
+    RADIO_TYPE_LR1121_LORA,
     RADIO_TYPE_SX128x_LORA,
     RADIO_TYPE_SX128x_FLRC,
 };
@@ -202,6 +205,12 @@ enum eFailsafeMode : uint8_t
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
+
+#elif defined(RADIO_LR1121)
+#define RATE_MAX 6
+#define RATE_BINDING RATE_LORA_50HZ
+
+extern LR1121Driver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
