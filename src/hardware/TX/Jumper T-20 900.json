@@ -15,5 +15,5 @@
     "power_max": 6,
     "power_default": 4,
     "power_control": 0,
-    "power_values": [0,4,15]
+    "power_values": [0,3,15]
 }
