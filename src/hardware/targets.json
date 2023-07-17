@@ -881,6 +881,14 @@
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "HappyModel_RX_ES900RX"
+            },
+            "es900_dual": {
+                "product_name": "HappyModel ES900 Dual RX",
+                "lua_name": "HM ES900 Dual",
+                "layout_file": "Generic 900 True Diversity PA.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_RX"
             }
         },
         "tx_2400": {
