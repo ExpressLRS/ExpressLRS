@@ -52,7 +52,10 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
             sys.stderr.write(f'Error opening file "{layout_file}"\n')
             exit(1)
     firmware_file.write(b'\0')
-    # firmware_file.truncate(firmware_file.tell())  # Stupid Windoze! (Permission denied)
+    if 'prior_target_name' in config:
+        firmware_file.write(b'\xBE\xEF\xCA\xFE')
+        firmware_file.write(config['prior_target_name'].upper().encode())
+        firmware_file.write(b'\0')
 
 def doConfiguration(file, defines, config, moduletype, frequency, platform, device_name):
     product_name = "Unified"
