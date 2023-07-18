@@ -29,6 +29,8 @@ class BuzzerMode(Enum):
         return self.value
 
 class RegulatoryDomain(Enum):
+    us_433 = 'us_433'
+    us_433_wide = 'us_433_wide'
     eu_433 = 'eu_433'
     au_433 = 'au_433'
     in_866 = 'in_866'
@@ -185,6 +187,10 @@ def domain_number(domain):
         return 4
     elif domain == RegulatoryDomain.eu_433:
         return 5
+    elif domain == RegulatoryDomain.us_433:
+        return 6
+    elif domain == RegulatoryDomain.us_433_wide:
+        return 7
 
 def patch_firmware(options, mm, pos, args):
     if options.mcuType is MCUType.STM32:
