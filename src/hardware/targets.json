@@ -106,9 +106,9 @@
                 "layout_file": "Generic 900 True Diversity PWM 16.json",
                 "overlay": {
                     "pwm_outputs":[13,15,2,0,4,9,10,5,18,23,19,22,3,1],
-                    "vbat_offset": 4,
-                    "vbat_scale": 285,
-                    "vbat_atten": 4
+                    "vbat_offset": 18,
+                    "vbat_scale": 1284,
+                    "vbat_atten": 7
                 },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
@@ -212,9 +212,9 @@
                 "layout_file": "Generic 2400 True Diversity PA PWM 14.json",
                 "overlay": {
                     "radio_dcdc": true,
-                    "vbat_offset": 4,
-                    "vbat_scale": 285,
-                    "vbat_atten": 4
+                    "vbat_offset": 18,
+                    "vbat_scale": 1284,
+                    "vbat_atten": 7
                 },
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
