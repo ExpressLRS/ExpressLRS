@@ -43,6 +43,11 @@
 #include "WebContent.h"
 
 #include "config.h"
+
+#if defined(HAS_WIFI_JOYSTICK)
+#include "wifiJoystick.h"  
+#endif
+
 #if defined(TARGET_TX)
 extern TxConfig config;
 extern void setButtonColors(uint8_t b1, uint8_t b2);
@@ -650,6 +655,11 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   force_update = force_update || request->hasArg("force");
   if (index == 0) {
+
+#if defined(HAS_WIFI_JOYSTICK)
+    WifiJoystick::StopJoystickService();
+#endif 
+
     size_t filesize = request->header("X-FileSize").toInt();
     DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
     #if defined(PLATFORM_ESP8266)
@@ -714,6 +724,19 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
 }
+
+#if defined(HAS_WIFI_JOYSTICK)
+static void WebUStartWifiJoystick(AsyncWebServerRequest *request)
+{
+  if(request->hasArg("start"))
+  {
+    uint32_t updateInterval = request->hasArg("updateInterval") ? request->arg("updateInterval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
+    uint32_t channelCount = request->hasArg("channels") ? request->arg("channels").toInt() : JOYSTICK_DEFAULT_CHANNEL_COUNT;
+    WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval, channelCount);
+    request->send(200, "text/plain", "ok");
+  }
+}
+#endif
 
 static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
@@ -968,6 +991,10 @@ static void startServices()
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
 
+#if defined(HAS_WIFI_JOYSTICK)
+  server.on("/wifi_joystick", WebUStartWifiJoystick);
+#endif
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
@@ -983,6 +1010,10 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
+
+#if defined(HAS_WIFI_JOYSTICK)
+    WifiJoystick::StartJoystickService();
+#endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
@@ -1072,6 +1103,11 @@ static void HandleWebUpdate()
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
     #endif
+
+    #if defined(HAS_WIFI_JOYSTICK)
+      WifiJoystick::Loop(now);
+    #endif
+
   }
 }
 
