@@ -43,7 +43,7 @@ def validate_esp(vendor, type, devname, device):
         error(f'device "{vendor}.{type}.{devname}" must have a "lua_name" of 16 characters or less')
     # validate layout_file
     if not device['firmware'].startswith('Unified'):
-        error(f'ESP target "{vendor}.{type}.{devname}" must be using the Unifified firmware')
+        error(f'ESP target "{vendor}.{type}.{devname}" must be using a Unified firmware')
     if 'layout_file' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "layout_file" child element')
     else:
