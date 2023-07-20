@@ -851,6 +851,20 @@
             }
         }
     },
+    "sub250": {
+        "name": "Sub250",
+        "rx_2400": {
+            "nano": {
+                "product_name": "Sub250 2400 RX",
+                "lua_name": "Sub250 2400 RX",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "DIY_2400_RX_ESP8285_SX1280"
+            }
+        }
+    },
     "happymodel": {
         "name": "Happymodel",
         "tx_900": {
