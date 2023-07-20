@@ -162,7 +162,7 @@ static void BluetoothTelemetryUpdateDevice()
     if (pServer != nullptr)
         return;
 
-    _mutex = xSemaphoreCreateMutex(); 
+    _mutex = xSemaphoreCreateMutex();
 
     //NimBLEDevice::init(String(String(device_name) + " " + getMasterUIDString()).c_str());
     NimBLEDevice::init("ExpressLRS Telemetry");
@@ -245,7 +245,7 @@ void BluetoothTelemetryUpdateValues(const uint8_t *data)
     if ( (_mutex != nullptr) && (xSemaphoreTake( _mutex, ( TickType_t ) 10 ) == pdTRUE) )
     {
         uint8_t size = _crsf_buffer[CRSF_TELEMETRY_LENGTH_INDEX];
-        if ( (size != 0u) && (CRSF_FRAME_SIZE(size) <= CRSF_MAX_PACKET_LEN) ) 
+        if ( (size != 0u) && (CRSF_FRAME_SIZE(size) <= CRSF_MAX_PACKET_LEN) )
         {
             rcCRSF->setValue(_crsf_buffer, CRSF_FRAME_SIZE(size));
             rcCRSF->notify();
@@ -256,10 +256,10 @@ void BluetoothTelemetryUpdateValues(const uint8_t *data)
 
     uint32_t const now = millis();
 
-    if (now >= (uint32_t)(LastTMLLinkStatsPacketMillis + BLE_LINKSTATS_PACKET_PERIOD_MS)) 
+    if (now >= (uint32_t)(LastTMLLinkStatsPacketMillis + BLE_LINKSTATS_PACKET_PERIOD_MS))
     {
         LastTMLLinkStatsPacketMillis = now;
-        if (connectionState == connected) 
+        if (connectionState == connected)
         {
             BluetoothTelemetrySendLinkStatsPacket();
         }
@@ -286,6 +286,9 @@ static int timeout()
 {
     BluetoothTelemetryUpdateDevice();
     BluetoothTelemetryUpdateValues(nullptr);
+
+    if (nullptr == pServer)
+       return DURATION_NEVER;
 
     return DURATION_UPDATE;
 }
