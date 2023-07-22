@@ -5,7 +5,8 @@
 #include "devRedundantRx.h"
 
 #define U2TXD 18 // Currently unused.  The reduntant receivers rx pad can be soldered directly to the FC tx pad.
-#define U2RXD 5
+// #define U2RXD 5
+#define U2RXD 0
 
 void sendByteToFC(uint8_t data);
 bool getLQCurrentIsSet();
