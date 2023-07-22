@@ -16,6 +16,8 @@ public:
 
     void handleUARTin() {}
     void handleUARTout() { _fifo.flush(); }
+    
+    void sendByteToFC(uint8_t data) override {};
 
 private:
     void processByte(uint8_t byte) override {}

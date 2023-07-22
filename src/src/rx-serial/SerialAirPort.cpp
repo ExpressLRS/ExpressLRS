@@ -8,6 +8,10 @@
 FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
 
+void SerialAirPort::sendByteToFC(uint8_t data)
+{
+    _outputPort->write((uint8_t)data);
+}
 
 void SerialAirPort::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {

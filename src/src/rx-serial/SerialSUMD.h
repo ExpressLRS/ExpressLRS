@@ -13,6 +13,8 @@ public:
     uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override;
     void sendMSPFrameToFC(uint8_t* data) override;
     void sendLinkStatisticsToFC() override;
+    
+    void sendByteToFC(uint8_t data) override;
 
 private:
     uint16_t linkQuality = 0;

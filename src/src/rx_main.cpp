@@ -33,6 +33,7 @@
 #include "devSerialUpdate.h"
 #include "devBaro.h"
 #include "devMSPVTX.h"
+#include "devRedundantRx.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <FS.h>
@@ -84,6 +85,8 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
+
+  {&RedundantRx_device, 0},
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
@@ -1103,6 +1106,16 @@ void UpdateModelMatch(uint8_t model)
 void SendMSPFrameToFC(uint8_t *mspData)
 {
     serialIO->sendMSPFrameToFC(mspData);
+}
+
+void sendByteToFC(uint8_t data)
+{
+    serialIO->sendByteToFC(data);
+}
+
+bool getLQCurrentIsSet()
+{
+    return LQCalc.currentIsSet();
 }
 
 /**

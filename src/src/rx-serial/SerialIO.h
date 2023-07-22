@@ -21,6 +21,8 @@ public:
     virtual void handleUARTout();
     virtual void handleUARTin();
 
+    virtual void sendByteToFC(uint8_t data) = 0;
+
 protected:
     Stream *_outputPort;
     Stream *_inputPort;

@@ -11,6 +11,8 @@ public:
     void sendMSPFrameToFC(uint8_t* data) override;
     void sendLinkStatisticsToFC() override;
 
+    void sendByteToFC(uint8_t data) override;
+
 private:
     uint16_t linkQuality = 0;
     uint16_t rssiDBM = 0;

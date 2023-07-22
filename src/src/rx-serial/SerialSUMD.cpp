@@ -7,6 +7,11 @@
 #define SUMD_CRC_SIZE			2														// 16 bit CRC
 #define SUMD_FRAME_16CH_LEN		(SUMD_HEADER_SIZE+SUMD_DATA_SIZE_16CH+SUMD_CRC_SIZE)	
 
+void SerialSUMD::sendByteToFC(uint8_t data)
+{
+    _outputPort->write((uint8_t)data);
+}
+
 void SerialSUMD::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
     linkQuality = lq;

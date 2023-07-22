@@ -19,6 +19,8 @@ public:
 
     int getMaxSerialReadSize() override;
     void handleUARTout() override;
+    
+    void sendByteToFC(uint8_t data) override;
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;

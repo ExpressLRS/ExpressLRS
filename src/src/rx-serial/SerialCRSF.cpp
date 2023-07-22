@@ -8,6 +8,11 @@ extern void reset_into_bootloader();
 extern void EnterBindingMode();
 extern void UpdateModelMatch(uint8_t model);
 
+void SerialCRSF::sendByteToFC(uint8_t data)
+{
+    _outputPort->write((uint8_t)data);
+}
+
 void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
     linkQuality = lq;

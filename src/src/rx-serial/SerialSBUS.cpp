@@ -12,6 +12,11 @@ extern RxConfig config;
 
 const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
+void SerialSBUS::sendByteToFC(uint8_t data)
+{
+    _outputPort->write((uint8_t)data);
+}
+
 void SerialSBUS::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
     // unsupported
