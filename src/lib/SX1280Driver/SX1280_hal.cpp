@@ -119,17 +119,17 @@ void SX1280Hal::reset(void)
     {
         pinMode(GPIO_PIN_RST, OUTPUT);
         digitalWrite(GPIO_PIN_RST, LOW);
-    if (GPIO_PIN_RST_2 != UNDEF_PIN)
-    {
-        pinMode(GPIO_PIN_RST_2, OUTPUT);
-        digitalWrite(GPIO_PIN_RST_2, LOW);
-    }
+        if (GPIO_PIN_RST_2 != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_RST_2, OUTPUT);
+            digitalWrite(GPIO_PIN_RST_2, LOW);
+        }
         delay(50);
         digitalWrite(GPIO_PIN_RST, HIGH);
-    if (GPIO_PIN_RST_2 != UNDEF_PIN)
-    {
-        digitalWrite(GPIO_PIN_RST_2, HIGH);
-    }
+        if (GPIO_PIN_RST_2 != UNDEF_PIN)
+        {
+            digitalWrite(GPIO_PIN_RST_2, HIGH);
+        }
         delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
     }
 
