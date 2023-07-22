@@ -388,7 +388,15 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   //   DBGLN("abort TX");
   //   return; // we were already TXing so abort. this should never happen!!!
   // }
+
+  transmittingRadio = radioNumber;
+  
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
+
+  if (radioNumber == SX12XX_Radio_NONE)
+  {
+      return;
+  }
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
@@ -705,6 +713,7 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
+        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
     else if (irqStatus == SX127X_CLEAR_IRQ_FLAG_NONE)
     {

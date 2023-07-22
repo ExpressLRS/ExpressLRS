@@ -215,7 +215,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
     }
     else
     {
-        bool telemInEveryPacket = (tlmDenom < 8);
+        bool telemInEveryPacket = (tlmDenom > 1) && (tlmDenom < 8);
         value = HybridWideSwitchToOta(channelData, nextSwitchIndex + 1, telemInEveryPacket);
         if (telemInEveryPacket)
             value |= telemBit;
@@ -411,7 +411,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
 
     // The round-robin switch, 6-7 bits with the switch index implied by the nonce
     const uint8_t switchByte = ota4->rc.switches;
-    bool telemInEveryPacket = (tlmDenom < 8);
+    bool telemInEveryPacket = (tlmDenom > 1) && (tlmDenom < 8);
     uint8_t switchIndex = HybridWideNonceToSwitchIndex(OtaNonce);
     if (telemInEveryPacket || switchIndex == 7)
           TelemetryStatus = (switchByte & 0b01000000) >> 6;
@@ -581,6 +581,8 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
 {
+    otaPktPtr->std.type = PACKET_TYPE_TLM;
+
     uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {

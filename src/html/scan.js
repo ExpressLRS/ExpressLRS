@@ -259,7 +259,7 @@ function updateConfig(data, options) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
-  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data.forcetlm;
+  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data['force-tlm'];
   _('serial-protocol').onchange = () => {
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
