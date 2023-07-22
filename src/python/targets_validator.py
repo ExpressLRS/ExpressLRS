@@ -1,14 +1,22 @@
 import os, sys
 import json
 import glob
+import argparse
 
 hadError = False
+warnEnabled = False
 firmwares = set()
 
 def error(msg):
     global hadError
     hadError = True
     print(msg)
+
+def warn(msg):
+    if warnEnabled:
+        global hadError
+        hadError = True
+        print(msg)
 
 def validate_stm32(vendor, type, devname, device):
     for method in device['upload_methods']:
@@ -34,6 +42,8 @@ def validate_esp(vendor, type, devname, device):
     if len(device['lua_name']) > 16:
         error(f'device "{vendor}.{type}.{devname}" must have a "lua_name" of 16 characters or less')
     # validate layout_file
+    if not device['firmware'].startswith('Unified'):
+        error(f'ESP target "{vendor}.{type}.{devname}" must be using a Unified firmware')
     if 'layout_file' not in device:
         error(f'device "{vendor}.{type}.{devname}" must have a "layout_file" child element')
     else:
@@ -42,6 +52,9 @@ def validate_esp(vendor, type, devname, device):
             layout_file = device['layout_file']
             error(f'File specified by layout_file "{layout_file}" in target "{vendor}.{type}.{devname}", does not exist')
     # could validate overlay
+    if 'prior_target_name' not in device:
+        warn(f'device "{vendor}.{type}.{devname}" should have a "prior_target_name" child element')
+
 
 def validate_esp32(vendor, type, devname, device):
     for method in device['upload_methods']:
@@ -107,6 +120,11 @@ def validate_vendor(name, types):
                 validate_devices(name, type, device, types[type][device])
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Configure Binary Firmware")
+    parser.add_argument("--warn", "-w", action='store_true', default=False, help="Print warnings")
+    args = parser.parse_args()
+    warnEnabled = args.warn
+
     targets = {}
     with open('hardware/targets.json') as f:
         targets = json.load(f)

@@ -67,11 +67,21 @@ def readString(mm, pos, maxlen):
     val = mm[pos:mm.find(b'\x00', pos)].decode()
     return pos + maxlen, val
 
+def generateUID(phrase):
+    uid = [
+        int(item) if item.isdigit() else -1
+        for item in phrase.split(',')
+    ]
+    if len(uid) == 6 and all(ele >= 0 and ele < 256 for ele in uid):
+        uid = bytes(uid)
+    else:
+        uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
+    return uid
+
 def patch_uid(mm, pos, args):
     if (args.phrase):
         mm[pos] = 1
-        bindingPhraseHash = hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()
-        mm[pos+1:pos + 7] = bindingPhraseHash[0:6]
+        mm[pos+1:pos + 7] = generateUID(args.phrase)
     pos += 7
     return pos
 
@@ -202,7 +212,7 @@ def patch_firmware(options, mm, pos, args):
 def patch_unified(args, options):
     json_flags = {}
     if args.phrase is not None:
-        json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
+        json_flags['uid'] = [x for x in generateUID(args.phrase)]
     if args.ssid is not None:
         json_flags['wifi-ssid'] = args.ssid
     if args.password is not None and args.ssid is not None:
@@ -336,6 +346,7 @@ def main():
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument("--erase", action='store_true', default=False, help="Full chip erase before flashing on ESP devices")
     parser.add_argument('--out', action=writeable_dir, default=None)
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
@@ -376,7 +387,7 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if 'features' in config and 'buzzer' in config['features'] == True else False,
+            True if 'features' in config and 'buzzer' in config['features'] else False,
             MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
@@ -400,10 +411,11 @@ def main():
             return binary_flash.upload(options, args)
         elif 'upload_methods' in config and 'stock' in config['upload_methods']:
             shutil.copy(args.file.name, 'firmware.elrs')
+    return 0
 
 if __name__ == '__main__':
     try:
-        main()
+        exit(main())
     except AssertionError as e:
         print(e)
         exit(1)

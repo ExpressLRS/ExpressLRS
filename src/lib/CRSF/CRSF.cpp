@@ -84,7 +84,7 @@ uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
-uint32_t CRSF::UARTrequestedBaud = 400000;
+uint32_t CRSF::UARTrequestedBaud = 5250000;
 #if defined(PLATFORM_ESP32)
 bool CRSF::UARTinverted = false;
 #endif
@@ -826,7 +826,7 @@ uint32_t CRSF::autobaud()
     // sample code at https://github.com/espressif/esp-idf/issues/3336
     // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
     // Based on testing use max and add 2 for lowest deviation
-    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 2);
+    int32_t calulatedBaud = 80000000 / (max(low_period, high_period) + 3);
     int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
     for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
     {

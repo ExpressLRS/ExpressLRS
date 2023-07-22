@@ -32,5 +32,6 @@
 
     "vbat": 36,
     "vbat_offset": -197,
-    "vbat_scale": 1200
+    "vbat_scale": 1200,
+    "vbat_atten": 0
 }

@@ -156,6 +156,11 @@ jobs:
       - name: Copy hardware files to firmware folder
         run: cp -r src/hardware dist/firmware
 
+      - name: Copy Lua to to firmware folder
+        run: |
+          mkdir -p dist/firmware/lua
+          cp -r src/lua/elrsV3.lua dist/firmware/lua
+
       - name: Copy bootloader files to firmware folder
         run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
 
