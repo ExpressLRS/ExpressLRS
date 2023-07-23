@@ -14,12 +14,10 @@
     "power_control": 0,
     "power_values": [8,12,15],
     "button": 0,
+    "led": 25,
     "screen_rst": 16,
     "screen_sck": 15,
     "screen_sda": 4,
-    "screen_type": 1,
-    "debug_backpack_baud": 460800,
-    "debug_backpack_rx": 3,
-    "debug_backpack_tx": 1,
-    "led": 25
+    "screen_type": 1
+
 }
