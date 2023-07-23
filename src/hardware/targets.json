@@ -736,8 +736,17 @@
                     "bootloader": "sx1280_rx_nano_pcb_v0.5_bootloader.bin"
                 }
             },
-            "ep": {
-                "product_name": "HappyModel EP1/2 2.4GHz RX",
+            "ep1": {
+                "product_name": "HappyModel EP1 2.4GHz RX",
+                "lua_name": "HM EP 2400",
+                "layout_file": "Generic 2400.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_2400_RX",
+                "prior_target_name": "HappyModel_EP_2400_RX"
+            },
+            "ep2": {
+                "product_name": "HappyModel EP2 2.4GHz RX",
                 "lua_name": "HM EP 2400",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
