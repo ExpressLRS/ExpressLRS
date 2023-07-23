@@ -67,7 +67,7 @@ typedef enum
 #endif
 
 // SX127x series common registers
-#define SX127X_REG_FIFO 0x00
+#define SX127X_REG_FIFO 											0x00	//чтение / запись в FIFO
 #define SX127X_REG_OP_MODE 0x01
 #define SX127X_REG_FRF_MSB 0x06
 #define SX127X_REG_FRF_MID 0x07
