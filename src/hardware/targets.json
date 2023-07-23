@@ -89,7 +89,7 @@
                 "prior_target_name": "BETAFPV_2400_TX_MICRO_1000mw"
             },
             "literadio3": {
-                "product_name": "BETAFPV 2.4GHz LiteRadio 3",
+                "product_name": "BETAFPV 2.4GHz Lite Radio 3 Pro",
                 "lua_name": "BETAFPV LR3 Pro",
                 "layout_file": "BETAFPV 2400 LiteRadio 3.json",
                 "upload_methods": ["uart", "wifi", "etx"],
