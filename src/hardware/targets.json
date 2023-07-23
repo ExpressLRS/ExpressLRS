@@ -738,7 +738,7 @@
             },
             "ep1": {
                 "product_name": "HappyModel EP1 2.4GHz RX",
-                "lua_name": "HM EP 2400",
+                "lua_name": "HM EP1 2400",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -747,7 +747,7 @@
             },
             "ep2": {
                 "product_name": "HappyModel EP2 2.4GHz RX",
-                "lua_name": "HM EP 2400",
+                "lua_name": "HM EP2 2400",
                 "layout_file": "Generic 2400.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp8285",
@@ -1243,7 +1243,7 @@
         "name": "Radiomaster",
         "tx_2400": {
             "zorro": {
-                "product_name": "RadioMaster Zorro 2.4GHz TX",
+                "product_name": "RadioMaster Zorro Internal 2.4GHz TX",
                 "lua_name": "RadioMstr Zorro",
                 "layout_file": "Radiomaster Zorro.json",
                 "upload_methods": ["uart", "wifi", "etx"],
