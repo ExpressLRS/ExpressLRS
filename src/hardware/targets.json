@@ -933,7 +933,7 @@
         },
         "rx_2400": {
             "atto": {
-                "product_name": "Ghost Atto 2.4GHz TX",
+                "product_name": "Ghost Atto 2.4GHz RX",
                 "upload_methods": ["stlink", "betaflight"],
                 "platform": "stm32",
                 "firmware": "GHOST_ATTO_2400_RX",
