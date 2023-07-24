@@ -35,7 +35,6 @@ unsigned short const SOFTWARE_NUMBER_SVC_UUID = 0x2A28;
 unsigned short const HARDWARE_NUMBER_SVC_UUID = 0x2A27;
 unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
 
-extern CRSF crsf;
 
 static uint32_t LastTMLLinkStatsPacketMillis = 0;
 static uint32_t LastTLMRCPacketMillis = 0;
