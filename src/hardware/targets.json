@@ -43,7 +43,7 @@
                 "product_name": "AXIS Thor 2.4GHz TX",
                 "lua_name": "AXIS THOR 2400TX",
                 "layout_file": "AXIS Thor 2400.json",
-                "logo_file": "axis.bin",
+                "logo_file": "axis_tft.bin",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_2400_TX",
