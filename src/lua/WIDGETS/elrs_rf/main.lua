@@ -751,14 +751,13 @@ local function refresh(wgt, event, touchState)
     Y = drawRssi(wgt, Y, 2)
     Y = drawMModuleName(wgt, Y)
 
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y, STATE_TXT[wgt.state], FONT_6 + LIGHTGREY + RIGHT)
-    --widget load (debugging)
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y +11, string.format("load: %d%%", getUsage()), FONT_6 + LIGHTGREY + RIGHT)
-    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y + 11, string.format("state: %s, %s", wgt.state, STATE_TXT[wgt.state]), FONT_6 + GREY + RIGHT)
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+22, string.format("%s",wgt.tlm.tlm_enabled), FONT_6 + LIGHTGREY + RIGHT)
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+33, string.format("%s",wgt.tlm.rfmd), FONT_6 + LIGHTGREY + RIGHT)
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+44, string.format("%s",getValue(wgt.options.arm_switch)), FONT_6 + LIGHTGREY + RIGHT)
-    lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+55, string.format("%s",wgt.arm_switch_on), FONT_6 + LIGHTGREY + RIGHT)
+    -- debugging
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y, STATE_TXT[wgt.state], FONT_6 + LIGHTGREY + RIGHT)
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y +11, string.format("load: %d%%", getUsage()), FONT_6 + LIGHTGREY + RIGHT)
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+22, string.format("%s",wgt.tlm.tlm_enabled), FONT_6 + LIGHTGREY + RIGHT)
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+33, string.format("%s",wgt.tlm.rfmd), FONT_6 + LIGHTGREY + RIGHT)
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+44, string.format("%s",getValue(wgt.options.arm_switch)), FONT_6 + LIGHTGREY + RIGHT)
+    --lcd.drawText(wgt.zone.x + wgt.zone.w, wgt.zone.y+55, string.format("%s",wgt.arm_switch_on), FONT_6 + LIGHTGREY + RIGHT)
 
     --if is_app_mode then
     if wgt.zh > 200 then
