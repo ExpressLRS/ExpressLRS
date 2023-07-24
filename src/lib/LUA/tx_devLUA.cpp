@@ -606,12 +606,15 @@ static void registerLuaParameters()
         else
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
       });
+    }
       if (isDualRadio())
       {
         registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
           config.SetAntennaMode(arg);
         });
       }
+    if (!firmwareOptions.is_airport)
+    {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
         bool newModelMatch = arg;
         config.SetModelMatch(newModelMatch);

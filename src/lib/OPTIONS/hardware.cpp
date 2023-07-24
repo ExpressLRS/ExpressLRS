@@ -117,6 +117,7 @@ static const struct {
     {HARDWARE_vbat, "vbat", INT},
     {HARDWARE_vbat_offset, "vbat_offset", INT},
     {HARDWARE_vbat_scale, "vbat_scale", INT},
+    {HARDWARE_vbat_atten, "vbat_atten", INT},
     {HARDWARE_vtx_amp_pwm, "vtx_amp_pwm", INT},
     {HARDWARE_vtx_amp_vpd, "vtx_amp_vpd", INT},
     {HARDWARE_vtx_amp_vref, "vtx_amp_vref", INT},
