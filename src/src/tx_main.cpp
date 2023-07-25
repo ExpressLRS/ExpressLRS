@@ -341,7 +341,6 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 
 void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-  index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
@@ -655,7 +654,9 @@ static void UARTconnected()
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
-  SetRFLinkRate(config.GetRate());
+
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
     // When CRSF first connects, always go into a brief delay before
@@ -722,6 +723,10 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
+  // Adjust the air rate based on teh current baud rate
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
+
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
