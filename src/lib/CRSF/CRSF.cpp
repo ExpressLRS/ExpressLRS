@@ -83,8 +83,8 @@ uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
-uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 5250000;
+uint8_t CRSF::UARTcurrentBaudIdx = 0;   // only used for baud-cycling i.e. not baud-rate detection
 #if defined(PLATFORM_ESP32)
 bool CRSF::UARTinverted = false;
 #endif
@@ -108,7 +108,7 @@ void CRSF::Begin()
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
     UARTinverted = firmwareOptions.uart_inverted;
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
+    CRSF::Port.begin(UARTrequestedBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
@@ -121,7 +121,7 @@ void CRSF::Begin()
     }
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    CRSF::Port.begin(UARTrequestedBaud);
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
@@ -139,7 +139,7 @@ void CRSF::Begin()
     CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    CRSF::Port.begin(UARTrequestedBaud);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
