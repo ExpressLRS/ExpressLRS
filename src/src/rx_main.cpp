@@ -48,7 +48,6 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
-#define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
 device_affinity_t ui_devices[] = {
@@ -635,6 +634,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
 
     alreadyTLMresp = false;
     alreadyFHSS = false;
+    
+    // digitalWrite(13, LOW);
 }
 
 //////////////////////////////////////////////////////////////
@@ -727,6 +728,8 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
+    // digitalWrite(13, HIGH);
+
     if (tlmSent && Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
     {
         Radio.TXdoneCallback();
@@ -1008,7 +1011,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
+    PFDloop.extEvent(beginProcessing + ExpressLRS_currAirRate_RFperfParams->PacketToTockSlack);
 
     bool doStartTimer = false;
     unsigned long now = millis();
@@ -1325,6 +1328,13 @@ static void setupConfigAndPocCheck()
 
 static void setupTarget()
 {
+    // Tock
+    // pinMode(13, OUTPUT);
+    // digitalWrite(13, LOW);
+    //TXEN
+    // pinMode(15, OUTPUT);
+    // digitalWrite(15, LOW);
+
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
