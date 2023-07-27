@@ -888,7 +888,7 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "HappyModel_TX_ES900TX"
-            }
+            },
         },
         "rx_900": {
             "es915": {
@@ -919,7 +919,16 @@
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_RX"
-            }
+            },
+            "epw6": {
+                "product_name": "HappyModel EPW6 PWM RX",
+                "lua_name": "HM EPW6 900RX",
+                "layout_file": "Generic 900 PWMP.json",
+                "upload_methods": ["uart", "wifi", "betaflight"],
+                "platform": "esp8285",
+                "firmware": "Unified_ESP8285_900_RX",
+                "prior_target_name": "DIY_900_RX_PWMP"
+            },
         },
         "tx_2400": {
             "es24": {
