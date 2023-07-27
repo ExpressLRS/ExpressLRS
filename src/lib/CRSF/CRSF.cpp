@@ -812,9 +812,9 @@ uint32_t CRSF::autobaud()
 
     if ((*autobaud_reg & 1) == 0) {
         *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
-        return 400000;
+        return 0;
     } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
-        return 400000;
+        return 0;
 
     state = MEASURED;
 
@@ -851,7 +851,7 @@ bool CRSF::UARTwdt()
     uint32_t now = millis();
     if (now >= (UARTwdtLastChecked + UARTwdtInterval))
     {
-        if (BadPktsCount >= GoodPktsCount)
+        if (BadPktsCount >= GoodPktsCount || !CRSFstate)
         {
             DBGLN("Too many bad UART RX packets!");
 
@@ -863,34 +863,35 @@ bool CRSF::UARTwdt()
             }
 
             UARTrequestedBaud = autobaud();
+            if (UARTrequestedBaud != 0)
+            {
+                DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
-            DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
+                adjustMaxPacketSize();
 
-            adjustMaxPacketSize();
-
-            SerialOutFIFO.flush();
+                SerialOutFIFO.flush();
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-            CRSF::Port.flush();
-            CRSF::Port.updateBaudRate(UARTrequestedBaud);
+                CRSF::Port.flush();
+                CRSF::Port.updateBaudRate(UARTrequestedBaud);
 #elif defined(TARGET_TX_GHOST)
-            CRSF::Port.begin(UARTrequestedBaud);
-            USART1->CR1 &= ~USART_CR1_UE;
-            USART1->CR3 |= USART_CR3_HDSEL;
-            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
-            USART1->CR1 |= USART_CR1_UE;
+                CRSF::Port.begin(UARTrequestedBaud);
+                USART1->CR1 &= ~USART_CR1_UE;
+                USART1->CR3 |= USART_CR3_HDSEL;
+                USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
+                USART1->CR1 |= USART_CR1_UE;
 #elif defined(TARGET_TX_FM30_MINI)
-            CRSF::Port.begin(UARTrequestedBaud);
-            LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
-            USART2->CR1 &= ~USART_CR1_UE;
-            USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
-            USART2->CR1 |= USART_CR1_UE;
+                CRSF::Port.begin(UARTrequestedBaud);
+                LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
+                USART2->CR1 &= ~USART_CR1_UE;
+                USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+                USART2->CR1 |= USART_CR1_UE;
 #else
-            CRSF::Port.begin(UARTrequestedBaud);
+                CRSF::Port.begin(UARTrequestedBaud);
 #endif
-            duplex_set_RX();
-            // cleanup input buffer
-            flush_port_input();
-
+                duplex_set_RX();
+                // cleanup input buffer
+                flush_port_input();
+            }
             retval = true;
         }
 #ifdef DEBUG_OPENTX_SYNC
@@ -980,7 +981,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 
 void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;
