@@ -98,26 +98,23 @@ public:
      * For devices that support the HighPower override, i.e. R9M with the fan hack,
      * the MaxPower is normally HighPower unless the 'unlock_higher_power' option
      * is set at compile time.
-     * 
+     *
      * @return PowerLevels_e the maximum power level supported
      */
     static PowerLevels_e getMaxPower() {
-        PowerLevels_e returnedMaxPower = MaxPower;
-        PowerLevels_e returnedHighPower = HighPower;
-        
+        PowerLevels_e power;
+        #if defined(TARGET_RX)
+            power = MaxPower;
+        #else
+            power = firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
+        #endif
         #if defined(Regulatory_Domain_EU_CE_2400)
-            if (MaxPower > PWR_100mW)
+            if (power > PWR_100mW)
             {
-                returnedMaxPower = PWR_100mW;
-                returnedHighPower = PWR_100mW;
+                power = PWR_100mW;
             }
         #endif
-
-        #if defined(TARGET_RX)
-            return returnedMaxPower;
-        #else
-            return firmwareOptions.unlock_higher_power ? returnedMaxPower : returnedHighPower;
-        #endif
+        return power;
     }
 
     /**
