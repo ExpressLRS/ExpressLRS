@@ -159,7 +159,7 @@ static void setupValueIndex(bool init)
 
     case STATE_POWER_MAX:
         values_min = MinPower;
-        values_max = MaxPower;
+        values_max = POWERMGNT::getMaxPower();
         values_index = config.GetPower();
         break;
     case STATE_POWER_DYNAMIC:

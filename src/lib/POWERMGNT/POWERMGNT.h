@@ -17,16 +17,6 @@
     #define DefaultPower PWR_50mW
 #endif
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    #undef MaxPower
-    #define MaxPower PWR_100mW
-
-    #if defined(HighPower)
-        #undef HighPower
-        #define HighPower MaxPower
-    #endif
-#endif
-
 #if !defined(HighPower)
 #define HighPower MaxPower
 #endif
@@ -112,10 +102,21 @@ public:
      * @return PowerLevels_e the maximum power level supported
      */
     static PowerLevels_e getMaxPower() {
+        PowerLevels_e returnedMaxPower = MaxPower;
+        PowerLevels_e returnedHighPower = HighPower;
+        
+        #if defined(Regulatory_Domain_EU_CE_2400)
+            if (MaxPower > PWR_100mW)
+            {
+                returnedMaxPower = PWR_100mW;
+                returnedHighPower = PWR_100mW;
+            }
+        #endif
+
         #if defined(TARGET_RX)
-            return MaxPower;
+            return returnedMaxPower;
         #else
-            return firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
+            return firmwareOptions.unlock_higher_power ? returnedMaxPower : returnedHighPower;
         #endif
     }
 
