@@ -12,15 +12,15 @@
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
 extern char backpackVersion[];
-extern bool headTrackingEnabled;
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
-bool HTEnableFlagReadyToSend = false;
-bool DvrRecordingStateReadyToSend = false;
 bool BackpackTelemReadyToSend = false;
-
 bool lastRecordingState = false;
+
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
+static bool headTrackingEnabled = false;
+static uint32_t lastPTRValidTimeMs;
 
 #if defined(PLATFORM_ESP32)
 
@@ -29,7 +29,7 @@ bool lastRecordingState = false;
 #include "CRSF.h"
 #include "hwTimer.h"
 
-[[noreturn]] void startPassthrough()
+[[noreturn]] static void startPassthrough()
 {
     // stop everything
     devicesStop();
@@ -229,7 +229,7 @@ static void BackpackDvrRecordingStateMSPOut(bool recordingState)
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
-void BackpackBinding()
+static void BackpackBinding()
 {
     mspPacket_t packet;
     packet.reset();
@@ -243,10 +243,35 @@ void BackpackBinding()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
+void processPanTiltRollPacket(uint32_t now, mspPacket_t *packet)
+{
+    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    lastPTRValidTimeMs = now;
+}
+
+static void injectBackpackPanTiltRollData()
+{
+    if (!headTrackingEnabled || config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
+    {
+        return;
+    }
+
+    uint8_t ptrStartChannel = config.GetPTRStartChannel();
+    // If enabled and this packet is less than 1 second old then use it
+    if ((millis() - lastPTRValidTimeMs) < 1000)
+    {
+        ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+        ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+        ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+    }
+}
+
 static void AuxStateToMSPOut()
 {
     auto enable = config.GetPTREnableChannel() == HT_ON;
-    if (config.GetBackpackDisable())
+    if (config.GetBackpackDisable() || config.GetPTREnableChannel() == HT_OFF)
     {
         enable = false;
     }
@@ -258,8 +283,9 @@ static void AuxStateToMSPOut()
     if (enable != headTrackingEnabled)
     {
         headTrackingEnabled = enable;
-        HTEnableFlagReadyToSend = true;
+        BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
+    injectBackpackPanTiltRollData();
 
     if (config.GetDvrAux() != 0)
     {
@@ -272,7 +298,7 @@ static void AuxStateToMSPOut()
         {
             // Channel state has changed since we last checked, so schedule a MSP send
             lastRecordingState = recordingState;
-            DvrRecordingStateReadyToSend = true;
+            BackpackDvrRecordingStateMSPOut(recordingState);
         }
     }
 
@@ -383,34 +409,27 @@ static int timeout()
         DBGLN("Sending get backpack version command");
     }
 
-    if (TxBackpackWiFiReadyToSend && connectionState < MODE_STATES)
+    if (connectionState < MODE_STATES)
     {
-        TxBackpackWiFiReadyToSend = false;
-        BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
-    }
+        if (TxBackpackWiFiReadyToSend)
+        {
+            TxBackpackWiFiReadyToSend = false;
+            BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
+        }
 
-    if (VRxBackpackWiFiReadyToSend && connectionState < MODE_STATES)
-    {
-        VRxBackpackWiFiReadyToSend = false;
-        BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
-    }
+        if (VRxBackpackWiFiReadyToSend)
+        {
+            VRxBackpackWiFiReadyToSend = false;
+            BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
+        }
 
-    if (HTEnableFlagReadyToSend && connectionState < MODE_STATES)
-    {
-        HTEnableFlagReadyToSend = false;
-        BackpackHTFlagToMSPOut(headTrackingEnabled);
-    }
+        if (BackpackTelemReadyToSend)
+        {
+            BackpackTelemReadyToSend = false;
+            sendConfigToBackpack();
+        }
 
-    if (DvrRecordingStateReadyToSend && connectionState < MODE_STATES)
-    {
-        DvrRecordingStateReadyToSend = false;
-        BackpackDvrRecordingStateMSPOut(lastRecordingState);
-    }
-
-    if (BackpackTelemReadyToSend && connectionState < MODE_STATES)
-    {
-        BackpackTelemReadyToSend = false;
-        sendConfigToBackpack();
+        AuxStateToMSPOut();
     }
 
     return BACKPACK_TIMEOUT;
