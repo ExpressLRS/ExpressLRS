@@ -55,6 +55,7 @@ void SX127xHal::init()
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
     SPI.begin();
+    SPI.setHwCs(true);
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE0);
     SPI.setFrequency(10000000);
@@ -81,11 +82,11 @@ void ICACHE_RAM_ATTR SX127xHal::setNss(uint8_t radioNumber, bool state)
 #if defined(PLATFORM_ESP32)
     spiDisableSSPins(SPI.bus(), ~radioNumber);
     spiEnableSSPins(SPI.bus(), radioNumber);
+#elif defined(PLATFORM_ESP8266)
+    // we support only one hardware controlled CS pin
 #else
-    if (radioNumber & SX12XX_Radio_1)
-        digitalWrite(GPIO_PIN_NSS, state);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
-        digitalWrite(GPIO_PIN_NSS_2, state);
+    // only one (software-controlled) CS pin support on STM32 devices
+    digitalWrite(GPIO_PIN_NSS, state);
 #endif
 }
 
@@ -139,7 +140,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegisterBits(uint8_t reg, uint8_t value, ui
         uint8_t newValue = (currentValue & ~mask) | (value & mask);
         writeRegister(reg, newValue, SX12XX_Radio_1);
     }
-    
+
     if (GPIO_PIN_NSS_2 != UNDEF_PIN && radioNumber & SX12XX_Radio_2)
     {
         uint8_t currentValue = readRegister(reg, SX12XX_Radio_2);
