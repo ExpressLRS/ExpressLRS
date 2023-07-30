@@ -3,7 +3,7 @@
 #include "SX127xHal.h"
 #include "SX127xRegs.h"
 #include "logging.h"
-#include <SPI.h>
+#include <SPIEx.h>
 
 SX127xHal *SX127xHal::instance = NULL;
 
@@ -19,7 +19,7 @@ void SX127xHal::end()
     {
         detachInterrupt(GPIO_PIN_DIO0_2);
     }
-    SPI.end();
+    SPIEx.end();
     IsrCallback_1 = nullptr; // remove callbacks
     IsrCallback_2 = nullptr; // remove callbacks
 }
@@ -43,31 +43,31 @@ void SX127xHal::init()
     }
 
 #ifdef PLATFORM_ESP32
-    SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
+    SPIEx.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
-    SPI.setFrequency(10000000);
-    SPI.setHwCs(true);
+    SPIEx.setFrequency(10000000);
+    SPIEx.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
+        spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
     }
-    spiEnableSSPins(SPI.bus(), 0xFF);
+    spiEnableSSPins(SPIEx.bus(), 0xFF);
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
-    SPI.begin();
-    SPI.setHwCs(true);
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setFrequency(10000000);
+    SPIEx.begin();
+    SPIEx.setHwCs(true);
+    SPIEx.setBitOrder(MSBFIRST);
+    SPIEx.setDataMode(SPI_MODE0);
+    SPIEx.setFrequency(10000000);
 #elif defined(PLATFORM_STM32)
     DBGLN("Config SPI");
-    SPI.setMOSI(GPIO_PIN_MOSI);
-    SPI.setMISO(GPIO_PIN_MISO);
-    SPI.setSCLK(GPIO_PIN_SCK);
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.begin();
-    SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+    SPIEx.setMOSI(GPIO_PIN_MOSI);
+    SPIEx.setMISO(GPIO_PIN_MISO);
+    SPIEx.setSCLK(GPIO_PIN_SCK);
+    SPIEx.setBitOrder(MSBFIRST);
+    SPIEx.setDataMode(SPI_MODE0);
+    SPIEx.begin();
+    SPIEx.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO0), this->dioISR_1, RISING);
@@ -80,8 +80,8 @@ void SX127xHal::init()
 void ICACHE_RAM_ATTR SX127xHal::setNss(uint8_t radioNumber, bool state)
 {
 #if defined(PLATFORM_ESP32)
-    spiDisableSSPins(SPI.bus(), ~radioNumber);
-    spiEnableSSPins(SPI.bus(), radioNumber);
+    spiDisableSSPins(SPIEx.bus(), ~radioNumber);
+    spiEnableSSPins(SPIEx.bus(), radioNumber);
 #elif defined(PLATFORM_ESP8266)
     // we support only one hardware controlled CS pin
 #else
@@ -126,7 +126,7 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     buf[0] = reg | SPI_READ;
 
     setNss(radioNumber, LOW);
-    SPI.transfer(buf, numBytes + 1);
+    SPIEx.read(buf, numBytes + 1);
     setNss(radioNumber, HIGH);
 
     memcpy(data, buf + 1, numBytes);
@@ -161,7 +161,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_
     memcpy(buf + 1, data, numBytes);
 
     setNss(radioNumber, LOW);
-    SPI.transfer(buf, numBytes + 1);
+    SPIEx.write(buf, numBytes + 1);
     setNss(radioNumber, HIGH);
 }
 

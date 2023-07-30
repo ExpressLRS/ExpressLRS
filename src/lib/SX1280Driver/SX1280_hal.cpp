@@ -19,8 +19,12 @@ Modified and adapted by Alessandro Carcione for ELRS project
 #ifndef UNIT_TEST
 #include "SX1280_Regs.h"
 #include "SX1280_hal.h"
-#include <SPI.h>
+#include <SPIEx.h>
 #include "logging.h"
+
+#if defined(PLATFORM_ESP32)
+#include <soc/spi_struct.h>
+#endif
 
 SX1280Hal *SX1280Hal::instance = NULL;
 
@@ -36,7 +40,7 @@ void SX1280Hal::end()
     {
         detachInterrupt(GPIO_PIN_DIO1_2);
     }
-    SPI.end();
+    SPIEx.end();
     IsrCallback_1 = nullptr; // remove callbacks
     IsrCallback_2 = nullptr; // remove callbacks
 }
@@ -69,28 +73,28 @@ void SX1280Hal::init()
     }
 
 #ifdef PLATFORM_ESP32
-    SPI.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
+    SPIEx.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
-    SPI.setFrequency(17500000);
-    SPI.setHwCs(true);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN) spiAttachSS(SPI.bus(), 1, GPIO_PIN_NSS_2);
-    spiEnableSSPins(SPI.bus(), SX12XX_Radio_All);
+    SPIEx.setFrequency(17500000);
+    SPIEx.setHwCs(true);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN) spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
+    spiEnableSSPins(SPIEx.bus(), SX12XX_Radio_All);
 #elif defined(PLATFORM_ESP8266)
     DBGLN("PLATFORM_ESP8266");
-    SPI.begin();
-    SPI.setHwCs(true);
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setFrequency(17500000);
+    SPIEx.begin();
+    SPIEx.setHwCs(true);
+    SPIEx.setBitOrder(MSBFIRST);
+    SPIEx.setDataMode(SPI_MODE0);
+    SPIEx.setFrequency(17500000);
 #elif defined(PLATFORM_STM32)
     DBGLN("Config SPI");
-    SPI.setMOSI(GPIO_PIN_MOSI);
-    SPI.setMISO(GPIO_PIN_MISO);
-    SPI.setSCLK(GPIO_PIN_SCK);
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.begin();
-    SPI.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+    SPIEx.setMOSI(GPIO_PIN_MOSI);
+    SPIEx.setMISO(GPIO_PIN_MISO);
+    SPIEx.setSCLK(GPIO_PIN_SCK);
+    SPIEx.setBitOrder(MSBFIRST);
+    SPIEx.setDataMode(SPI_MODE0);
+    SPIEx.begin();
+    SPIEx.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
@@ -149,7 +153,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, (uint8_t)sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(busyDelay);
@@ -162,20 +166,19 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         0x00,
         0x00,
     };
-    #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
 
     if (command == SX1280_RADIO_GET_STATUS)
     {
-        SPI.transfer(OutBuffer, RADIO_GET_STATUS_BUF_SIZEOF);
+        const auto RADIO_GET_STATUS_BUF_SIZEOF = 3; // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
+        SPIEx.read(OutBuffer, RADIO_GET_STATUS_BUF_SIZEOF);
         buffer[0] = OutBuffer[0];
     }
     else
     {
-        memcpy(OutBuffer + 2, buffer, size);
-        SPI.transfer(OutBuffer, sizeof(OutBuffer));
+        SPIEx.read(OutBuffer, size + 2); // first 2 bytes returned are status!
         memcpy(buffer, OutBuffer + 2, size);
     }
     setNss(radioNumber, HIGH);
@@ -193,7 +196,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -216,7 +219,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
 
-    SPI.transfer(OutBuffer, uint8_t(sizeof(OutBuffer)));
+    SPIEx.read(OutBuffer, sizeof(OutBuffer));
     memcpy(buffer, OutBuffer + 4, size);
 
     setNss(radioNumber, HIGH);
@@ -241,7 +244,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     WaitOnBusy(radioNumber);
 
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -258,7 +261,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     WaitOnBusy(radioNumber);
 
     setNss(radioNumber, LOW);
-    SPI.transfer(OutBuffer, uint8_t(sizeof(OutBuffer)));
+    SPIEx.read(OutBuffer, sizeof(OutBuffer));
     setNss(radioNumber, HIGH);
 
     memcpy(buffer, OutBuffer + 3, size);
