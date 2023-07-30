@@ -141,9 +141,10 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1];
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1] = {
+        command,
+    };
 
-    OutBuffer[0] = (uint8_t)command;
     memcpy(OutBuffer + 1, buffer, size);
 
     WaitOnBusy(radioNumber);
@@ -156,7 +157,11 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2] = {
+        (uint8_t)command,
+        0x00,
+        0x00,
+    };
     #define RADIO_GET_STATUS_BUF_SIZEOF 3 // special case for command == SX1280_RADIO_GET_STATUS, fixed 3 bytes packet size
 
     WaitOnBusy(radioNumber);
@@ -164,16 +169,11 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
 
     if (command == SX1280_RADIO_GET_STATUS)
     {
-        OutBuffer[0] = (uint8_t)command;
-        OutBuffer[1] = 0x00;
-        OutBuffer[2] = 0x00;
         SPI.transfer(OutBuffer, RADIO_GET_STATUS_BUF_SIZEOF);
         buffer[0] = OutBuffer[0];
     }
     else
     {
-        OutBuffer[0] = (uint8_t)command;
-        OutBuffer[1] = 0x00;
         memcpy(OutBuffer + 2, buffer, size);
         SPI.transfer(OutBuffer, sizeof(OutBuffer));
         memcpy(buffer, OutBuffer + 2, size);
@@ -183,11 +183,11 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
-
-    OutBuffer[0] = (SX1280_RADIO_WRITE_REGISTER);
-    OutBuffer[1] = ((address & 0xFF00) >> 8);
-    OutBuffer[2] = (address & 0x00FF);
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3] = {
+        SX1280_RADIO_WRITE_REGISTER,
+        (uint8_t)((address & 0xFF00) >> 8),
+        (uint8_t)(address & 0x00FF),
+    };
 
     memcpy(OutBuffer + 3, buffer, size);
 
@@ -206,12 +206,12 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value, S
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4];
-
-    OutBuffer[0] = (SX1280_RADIO_READ_REGISTER);
-    OutBuffer[1] = ((address & 0xFF00) >> 8);
-    OutBuffer[2] = (address & 0x00FF);
-    OutBuffer[3] = 0x00;
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4] = {
+        SX1280_RADIO_READ_REGISTER,
+        (uint8_t)((address & 0xFF00) >> 8),
+        (uint8_t)(address & 0x00FF),
+        0x00,
+    };
 
     WaitOnBusy(radioNumber);
     setNss(radioNumber, LOW);
@@ -231,19 +231,12 @@ uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX12XX_Radio_N
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t localbuf[size];
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2] = {
+        SX1280_RADIO_WRITE_BUFFER,
+        offset
+    };
 
-    for (int i = 0; i < size; i++) // todo check if this is the right want to handle volatiles
-    {
-        localbuf[i] = buffer[i];
-    }
-
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2];
-
-    OutBuffer[0] = SX1280_RADIO_WRITE_BUFFER;
-    OutBuffer[1] = offset;
-
-    memcpy(OutBuffer + 2, localbuf, size);
+    memcpy(OutBuffer + 2, buffer, size);
 
     WaitOnBusy(radioNumber);
 
@@ -256,12 +249,11 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3];
-    uint8_t localbuf[size];
-
-    OutBuffer[0] = SX1280_RADIO_READ_BUFFER;
-    OutBuffer[1] = offset;
-    OutBuffer[2] = 0x00;
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3] = {
+        SX1280_RADIO_READ_BUFFER,
+        offset,
+        0x00
+    };
 
     WaitOnBusy(radioNumber);
 
@@ -269,12 +261,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     SPI.transfer(OutBuffer, uint8_t(sizeof(OutBuffer)));
     setNss(radioNumber, HIGH);
 
-    memcpy(localbuf, OutBuffer + 3, size);
-
-    for (int i = 0; i < size; i++) // todo check if this is the right wany to handle volatiles
-    {
-        buffer[i] = localbuf[i];
-    }
+    memcpy(buffer, OutBuffer + 3, size);
 }
 
 bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
