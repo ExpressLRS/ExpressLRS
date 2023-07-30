@@ -1172,7 +1172,8 @@ static void setupSerial()
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
-        #if defined(PLATFORM_ESP32_S3)
+        #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
+        // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
         USBSerial.begin(serialBaud);
         SerialLogger = &USBSerial;
         #else
