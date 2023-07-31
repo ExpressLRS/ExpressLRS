@@ -117,7 +117,13 @@ def appendConfiguration(source, target, env):
         moduletype = 'tx' if '_TX_' in target_name else 'rx'
         frequency = '2400' if '_2400_' in target_name else '900'
 
-    platform = 'esp32' if env.get('PIOPLATFORM', '') in ['espressif32'] else 'esp8285'
+    if env.get('PIOPLATFORM', '') == 'espressif32':
+        platform = 'esp32'
+        if 'esp32-s3' in env.get('BOARD', ''):
+            platform = 'esp32-s3'
+    else:
+        platform = 'esp8285'
+    print(platform)
 
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 
