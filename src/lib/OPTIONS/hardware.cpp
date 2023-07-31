@@ -37,6 +37,7 @@ static const struct {
     {HARDWARE_radio_nss, "radio_nss", INT},
     {HARDWARE_radio_nss_2, "radio_nss_2", INT},
     {HARDWARE_radio_rst, "radio_rst", INT},
+    {HARDWARE_radio_rst_2, "radio_rst_2", INT},
     {HARDWARE_radio_sck, "radio_sck", INT},
     {HARDWARE_radio_dcdc, "radio_dcdc", BOOL},
     {HARDWARE_radio_rfo_hf, "radio_rfo_hf", BOOL},
