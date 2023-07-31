@@ -48,6 +48,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
+#define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
 device_affinity_t ui_devices[] = {
@@ -1007,7 +1008,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    PFDloop.extEvent(beginProcessing + ExpressLRS_currAirRate_RFperfParams->PacketToTockSlack);
+    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
     bool doStartTimer = false;
     unsigned long now = millis();

@@ -129,7 +129,7 @@ typedef struct expresslrs_rf_pref_params_s
     int8_t DynpowerSnrThreshUp;           // Request a raise in power if the reported (average) SNR is at or below this
                                           // or DYNPOWER_UPTHRESH_SNR_NONE to use RSSI
     int8_t DynpowerSnrThreshDn;           // Like DynpowerSnrUpThreshold except to lower power
-    uint16_t PacketToTockSlack;           // Desired buffer time between Packet ISR and Tock ISR
+
 } expresslrs_rf_pref_params_s;
 
 typedef struct expresslrs_mod_settings_s
