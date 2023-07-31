@@ -22,10 +22,6 @@ Modified and adapted by Alessandro Carcione for ELRS project
 #include <SPIEx.h>
 #include "logging.h"
 
-#if defined(PLATFORM_ESP32)
-#include <soc/spi_struct.h>
-#endif
-
 SX1280Hal *SX1280Hal::instance = NULL;
 
 SX1280Hal::SX1280Hal()
@@ -105,19 +101,6 @@ void SX1280Hal::init()
     }
 }
 
-void ICACHE_RAM_ATTR SX1280Hal::setNss(uint8_t radioNumber, bool state)
-{
-#if defined(PLATFORM_ESP32)
-    spiDisableSSPins(SPI.bus(), ~radioNumber);
-    spiEnableSSPins(SPI.bus(), radioNumber);
-#elif defined(PLATFORM_ESP8266)
-    // we support only one hardware controlled CS pin
-#else
-    // only one (software-controlled) CS pin support on STM32 devices
-    digitalWrite(GPIO_PIN_NSS, state);
-#endif
-}
-
 void SX1280Hal::reset(void)
 {
     DBGLN("SX1280 Reset");
@@ -152,9 +135,9 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
     memcpy(OutBuffer + 1, buffer, size);
 
     WaitOnBusy(radioNumber);
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.write(OutBuffer, (uint8_t)sizeof(OutBuffer));
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(busyDelay);
 }
@@ -168,7 +151,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
     };
 
     WaitOnBusy(radioNumber);
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
 
     if (command == SX1280_RADIO_GET_STATUS)
     {
@@ -181,7 +164,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
         SPIEx.read(OutBuffer, size + 2); // first 2 bytes returned are status!
         memcpy(buffer, OutBuffer + 2, size);
     }
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
@@ -195,9 +178,9 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
     memcpy(OutBuffer + 3, buffer, size);
 
     WaitOnBusy(radioNumber);
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.write(OutBuffer, sizeof(OutBuffer));
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(15);
 }
@@ -217,12 +200,12 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     };
 
     WaitOnBusy(radioNumber);
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
 
     SPIEx.read(OutBuffer, sizeof(OutBuffer));
     memcpy(buffer, OutBuffer + 4, size);
 
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber)
@@ -243,9 +226,9 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 
     WaitOnBusy(radioNumber);
 
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.write(OutBuffer, sizeof(OutBuffer));
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(15);
 }
@@ -260,9 +243,9 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
 
     WaitOnBusy(radioNumber);
 
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.read(OutBuffer, sizeof(OutBuffer));
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 
     memcpy(buffer, OutBuffer + 3, size);
 }

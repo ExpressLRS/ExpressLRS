@@ -77,19 +77,6 @@ void SX127xHal::init()
     }
 }
 
-void ICACHE_RAM_ATTR SX127xHal::setNss(uint8_t radioNumber, bool state)
-{
-#if defined(PLATFORM_ESP32)
-    spiDisableSSPins(SPIEx.bus(), ~radioNumber);
-    spiEnableSSPins(SPIEx.bus(), radioNumber);
-#elif defined(PLATFORM_ESP8266)
-    // we support only one hardware controlled CS pin
-#else
-    // only one (software-controlled) CS pin support on STM32 devices
-    digitalWrite(GPIO_PIN_NSS, state);
-#endif
-}
-
 void SX127xHal::reset(void)
 {
     DBGLN("SX127x Reset");
@@ -125,9 +112,9 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
     buf[0] = reg | SPI_READ;
 
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.read(buf, numBytes + 1);
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 
     memcpy(data, buf + 1, numBytes);
 }
@@ -160,9 +147,9 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_
     buf[0] = reg | SPI_WRITE;
     memcpy(buf + 1, data, numBytes);
 
-    setNss(radioNumber, LOW);
+    SPIEx.setNss(radioNumber, LOW);
     SPIEx.write(buf, numBytes + 1);
-    setNss(radioNumber, HIGH);
+    SPIEx.setNss(radioNumber, HIGH);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR_1()

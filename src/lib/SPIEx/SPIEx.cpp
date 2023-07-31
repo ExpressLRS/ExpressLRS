@@ -1,9 +1,13 @@
 #include "SPIEx.h"
 
-void ICACHE_RAM_ATTR SPIExClass::transfer(uint8_t *data, uint32_t size, bool reading)
+#if defined(PLATFORM_ESP32)
+#include <soc/spi_struct.h>
+#endif
+
+void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t *data, uint32_t size, bool reading)
 {
 #if defined(PLATFORM_ESP32)
-    spi_dev_t *spi = *(reinterpret_cast<spi_dev_t**>(SPI.bus()));
+    spi_dev_t *spi = *(reinterpret_cast<spi_dev_t**>(bus()));
 
     // wait for SPI to become non-busy
     while(spi->cmd.usr) {}
@@ -65,8 +69,22 @@ void ICACHE_RAM_ATTR SPIExClass::transfer(uint8_t *data, uint32_t size, bool rea
         }
     }
 #else
-    SPI.transfer(data, size);
+    transfer(data, size);
 #endif
+}
+
+void ICACHE_RAM_ATTR SPIExClass::setNss(uint8_t radioNumber, bool state)
+{
+    #if defined(PLATFORM_ESP32)
+    // Set the CS pins which we want crontrolled by teh SPI module from this point
+    spiDisableSSPins(SPIEx.bus(), ~radioNumber);
+    spiEnableSSPins(SPIEx.bus(), radioNumber);
+    #elif defined(PLATFORM_ESP8266)
+    // we support only one hardware controlled CS pin, so theres nothing to do here
+    #elif defined(PLATFORM_STM32)
+    // only one (software-controlled) CS pin supported on STM32 devices, so set the state of the pin
+    digitalWrite(GPIO_PIN_NSS, state);
+    #endif
 }
 
 SPIExClass SPIEx;
