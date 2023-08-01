@@ -2,7 +2,7 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "ServoMgr.h"
-
+#include "DShotRMT.h"
 #include "device.h"
 #include "common.h"
 

@@ -11,9 +11,9 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
-static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
-static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX";
-static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial RX";
+static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;DShot;10kHzDuty;On/Off";
+static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;DShot;10kHzDuty;On/Off;Serial TX";
+static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;DShot;10kHzDuty;On/Off;Serial RX";
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},

@@ -64,7 +64,7 @@ function updatePwmSettings(arPwm) {
     const mode = (item.config >> 15) & 15; // 4 bits
     const narrow = (item.config >> 19) & 1;
     const pin = item.pin;
-    const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
+    const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', `DShot`, '10KHzDuty', 'On/Off'];
     if (pin == 1) {
       modes.push('Serial TX');
       modes.push(undefined);  // true PWM

@@ -173,6 +173,7 @@ enum eServoOutputMode : uint8_t
     som160Hz,
     som333Hz,
     som400Hz,
+    somDShot,   // DShot300
     som10KHzDuty,
     somOnOff,   // Digital 0/1 mode
     somSerial,  // Serial TX or RX depending on pin
