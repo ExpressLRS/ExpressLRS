@@ -128,7 +128,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber, uint32_t busyDelay)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 1] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 1)] = {
         command,
     };
 
@@ -136,7 +136,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
     WaitOnBusy(radioNumber);
     SPIEx.setNss(radioNumber, LOW);
-    SPIEx.write(OutBuffer, (uint8_t)sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, size + 1);
     SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(busyDelay);
@@ -144,7 +144,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteCommand(SX1280_RadioCommands_t command, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 2)] = {
         (uint8_t)command,
         0x00,
         0x00,
@@ -169,7 +169,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadCommand(SX1280_RadioCommands_t command, uint
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 3)] = {
         SX1280_RADIO_WRITE_REGISTER,
         (uint8_t)((address & 0xFF00) >> 8),
         (uint8_t)(address & 0x00FF),
@@ -179,7 +179,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t *buffer,
 
     WaitOnBusy(radioNumber);
     SPIEx.setNss(radioNumber, LOW);
-    SPIEx.write(OutBuffer, sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, size + 3);
     SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -192,7 +192,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteRegister(uint16_t address, uint8_t value, S
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 4] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 4)] = {
         SX1280_RADIO_READ_REGISTER,
         (uint8_t)((address & 0xFF00) >> 8),
         (uint8_t)(address & 0x00FF),
@@ -202,7 +202,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
     WaitOnBusy(radioNumber);
     SPIEx.setNss(radioNumber, LOW);
 
-    SPIEx.read(OutBuffer, sizeof(OutBuffer));
+    SPIEx.read(OutBuffer, size + 4);
     memcpy(buffer, OutBuffer + 4, size);
 
     SPIEx.setNss(radioNumber, HIGH);
@@ -217,7 +217,7 @@ uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX12XX_Radio_N
 
 void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 2] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 2)] = {
         SX1280_RADIO_WRITE_BUFFER,
         offset
     };
@@ -227,7 +227,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
     WaitOnBusy(radioNumber);
 
     SPIEx.setNss(radioNumber, LOW);
-    SPIEx.write(OutBuffer, sizeof(OutBuffer));
+    SPIEx.write(OutBuffer, size + 2);
     SPIEx.setNss(radioNumber, HIGH);
 
     BusyDelay(15);
@@ -235,7 +235,7 @@ void ICACHE_RAM_ATTR SX1280Hal::WriteBuffer(uint8_t offset, uint8_t *buffer, uin
 
 void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[size + 3] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 3)] = {
         SX1280_RADIO_READ_BUFFER,
         offset,
         0x00
@@ -244,7 +244,7 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadBuffer(uint8_t offset, uint8_t *buffer, uint
     WaitOnBusy(radioNumber);
 
     SPIEx.setNss(radioNumber, LOW);
-    SPIEx.read(OutBuffer, sizeof(OutBuffer));
+    SPIEx.read(OutBuffer, size + 3);
     SPIEx.setNss(radioNumber, HIGH);
 
     memcpy(buffer, OutBuffer + 3, size);

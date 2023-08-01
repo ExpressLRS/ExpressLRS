@@ -109,7 +109,7 @@ uint8_t ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, SX12XX_Radio_Number
 
 void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+    WORD_ALIGNED_ATTR uint8_t buf[WORD_PADDED(numBytes + 1)];
     buf[0] = reg | SPI_READ;
 
     SPIEx.setNss(radioNumber, LOW);
@@ -143,7 +143,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data, SX12XX_
 
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t buf[numBytes + 1];
+    WORD_ALIGNED_ATTR uint8_t buf[WORD_PADDED(numBytes + 1)];
     buf[0] = reg | SPI_WRITE;
     memcpy(buf + 1, data, numBytes);
 
