@@ -112,9 +112,7 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     WORD_ALIGNED_ATTR uint8_t buf[WORD_PADDED(numBytes + 1)];
     buf[0] = reg | SPI_READ;
 
-    SPIEx.setNss(radioNumber, LOW);
-    SPIEx.read(buf, numBytes + 1);
-    SPIEx.setNss(radioNumber, HIGH);
+    SPIEx.read(radioNumber, buf, numBytes + 1);
 
     memcpy(data, buf + 1, numBytes);
 }
@@ -147,9 +145,7 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_
     buf[0] = reg | SPI_WRITE;
     memcpy(buf + 1, data, numBytes);
 
-    SPIEx.setNss(radioNumber, LOW);
-    SPIEx.write(buf, numBytes + 1);
-    SPIEx.setNss(radioNumber, HIGH);
+    SPIEx.write(radioNumber, buf, numBytes + 1);
 }
 
 void ICACHE_RAM_ATTR SX127xHal::dioISR_1()
