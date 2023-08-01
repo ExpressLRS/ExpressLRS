@@ -327,6 +327,10 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
     {
       rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
     }
+    else if (crsf.GetCurrentBaudRate() == 400000 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 333Hz if we are on 400k baud on external module
+    {
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 3003);
+    }
     else if (crsf.GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
     {
       rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
@@ -335,9 +339,8 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
   return rateIndex;
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-  index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
@@ -651,7 +654,9 @@ static void UARTconnected()
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
-  SetRFLinkRate(config.GetRate());
+
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
     // When CRSF first connects, always go into a brief delay before
@@ -718,6 +723,10 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
+  // Adjust the air rate based on teh current baud rate
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
+
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
