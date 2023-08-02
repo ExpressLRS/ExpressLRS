@@ -51,8 +51,6 @@ public:
     uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
-    SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
-    SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
 
 private:
     // constant used for no power change pending
@@ -62,8 +60,6 @@ private:
     SX1280_RadioOperatingModes_t currOpmode;
     uint8_t packet_mode;
     bool modeSupportsFei;
-    SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
 
