@@ -1549,6 +1549,15 @@
     "radiomaster": {
         "name": "RadioMaster",
         "tx_2400": {
+            "pocket": {
+                "product_name": "RadioMaster Pocket 2.4GHz TX",
+                "lua_name": "RM Pocket",
+                "layout_file": "Radiomaster Zorro.json",
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "RadioMaster_Zorro_2400_TX"
+            },
             "zorro": {
                 "product_name": "RadioMaster Zorro Internal 2.4GHz TX",
                 "lua_name": "RM Zorro",
