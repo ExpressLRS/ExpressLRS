@@ -277,6 +277,35 @@ local function fieldInt16Save(field)
   fieldSignedSave(field, 2)
 end
 
+-- FLOAT
+local function fieldFloatLoad(field, data, offset)
+  field.value = fieldGetValue(data, offset, 4)
+  field.min = fieldGetValue(data, offset+4, 4)
+  field.max = fieldGetValue(data, offset+8, 4)
+  field.default = fieldGetValue(data, offset+12, 4)
+  fieldUnsignedToSigned(field, 4)
+  field.prec = data[offset+16]
+  if field.prec > 3 then
+    field.prec = 3
+  end
+  field.step = fieldGetValue(data, offset+17, 4)
+  field.unit, offset = fieldGetString(data, offset+21)
+end
+
+local function formatFloat(num, decimals)
+  local mult = 10^(decimals or 0)
+  local val = num / mult
+  return string.format("%." .. decimals .. "f", val)
+end
+
+local function fieldFloatDisplay(field, y, attr)
+  lcd.drawText(140, y, formatFloat(field.value, field.prec) .. field.unit, attr)
+end
+
+local function fieldFloatSave(field)
+  fieldUnsignedSave(field, 4)
+end
+
 -- TEXT SELECTION
 local function fieldTextSelectionLoad(field, data, offset)
   field.values, offset = fieldGetSelectOpts(data, offset, field.nc == nil and field.values)
@@ -445,7 +474,7 @@ local functions = {
   nil,
   nil,
   nil,
-  nil, --9 FLOAT(8)
+  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display = nil }, --10 SELECT(9)
   { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --11 STRING(10) editing NOTIMPL
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
