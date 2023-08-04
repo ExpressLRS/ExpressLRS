@@ -11,22 +11,23 @@
 #include "baro_spl06.h"
 #include "baro_spl06_regs.h"
 
-void SPL06::writeRegister(uint8_t reg, uint8_t *data, uint8_t size)
+void SPL06::writeRegister(uint8_t reg, uint8_t *data, size_t size)
 {
-    Wire.beginTransmission(SPL06_I2C_ADDR);
+    Wire.beginTransmission((uint16_t)SPL06_I2C_ADDR);
     Wire.write(reg);
     Wire.write(data, size);
     Wire.endTransmission();
 }
 
-void SPL06::readRegister(uint8_t reg, uint8_t *data, uint8_t size)
+void SPL06::readRegister(uint8_t reg, uint8_t *data, size_t size)
 {
-    Wire.beginTransmission(SPL06_I2C_ADDR);
+    Wire.beginTransmission((uint16_t)SPL06_I2C_ADDR);
     Wire.write(reg);
-    Wire.endTransmission();
-
-    Wire.requestFrom((uint8_t)SPL06_I2C_ADDR, size);
-    Wire.readBytes(data, size);
+    if (Wire.endTransmission() == 0)
+    {
+        Wire.requestFrom((uint16_t)SPL06_I2C_ADDR, size);
+        Wire.readBytes(data, size);
+    }
 }
 
 uint8_t SPL06::oversampleToRegVal(const uint8_t oversamples) const
