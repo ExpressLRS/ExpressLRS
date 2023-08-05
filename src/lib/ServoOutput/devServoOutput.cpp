@@ -9,8 +9,9 @@
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 
+#if (defined(PLATFORM_ESP32))
 DShotRMT dshot_01(GPIO_NUM_3, RMT_CHANNEL_0); //Pin output is hardcoded because I can't get DShotRMT to work otherwise without initializing it here.
-
+#endif
 
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
@@ -40,8 +41,10 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
         return (1000000U / 400U);
     case som10KHzDuty:
         return (1000000U / 10000U);
+#if (defined(PLATFORM_ESP32))
 	case somDShot:
         return (1000000U / 1000U); // Run DShot at 1kHz? Seems to work fine.
+#endif
     default:
         return 0;
     }
@@ -50,26 +53,30 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-	if ((eServoOutputMode)chConfig->val.mode == somDShot)
-    {
-        dshot_01.send_dshot_value((((us - 1000) * 2) + 47)); // Convert PWM signal in us to DShot value
-    }
+	if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+	{
+		servoMgr->writeDigital(ch, us > 1500U);
+	}
 	else
 	{
-		if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+		if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
 		{
-			servoMgr->writeDigital(ch, us > 1500U);
+			servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
 		}
 		else
 		{
-			if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+#if (defined(PLATFORM_ESP32))
+			if ((eServoOutputMode)chConfig->val.mode == somDShot)
 			{
-				servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
+				dshot_01.send_dshot_value((((us - 1000) * 2) + 47)); // Convert PWM signal in us to DShot value
 			}
 			else
 			{
+#endif
 				servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+#if (defined(PLATFORM_ESP32))
 			}
+#endif
 		}
 	}
 }
@@ -153,11 +160,13 @@ static void initialize()
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }
+#if (defined(PLATFORM_ESP32))
 		else if (mode == somDShot)
 		{
 				// I assume DShot output pins should be configured here
 				// DShotRMT dshot_01(GPIO_NUM_14, RMT_CHANNEL_0);
 		}
+#endif
         SERVO_PINS[ch] = pin;
     }
 	
@@ -173,9 +182,9 @@ static int start()
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
     }
-	
+#if (defined(PLATFORM_ESP32))	
 	dshot_01.begin(DSHOT300); // Need to set protocol for all DShot outputs.
-	
+#endif
     return DURATION_NEVER;
 }
 

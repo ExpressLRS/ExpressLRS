@@ -1,3 +1,4 @@
+#if defined(PLATFORM_ESP32)
 //
 // Name:		DShotRMT.cpp
 // Created: 	20.03.2021 00:49:15
@@ -105,7 +106,7 @@ void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t te
 	dshot_packet_t dshot_rmt_packet = { };
 
 	if (throttle_value < DSHOT_THROTTLE_MIN) {
-		throttle_value = DSHOT_THROTTLE_MIN; // Need to send 0 value to initialize
+		throttle_value = DSHOT_THROTTLE_MIN; 
 	}
 
 	if (throttle_value > DSHOT_THROTTLE_MAX) {
@@ -180,15 +181,7 @@ rmt_item32_t* DShotRMT::encode_dshot_to_rmt(uint16_t parsed_packet) {
 
 	// ...end marker added to each frame
 	dshot_tx_rmt_item[DSHOT_PAUSE_BIT].duration1 = (DSHOT_PAUSE / 2);
-  // dshot_tx_rmt_item[DSHOT_PAUSE_BIT].duration1 = 0;
-  // Serial.println(dshot_tx_rmt_item[15].duration1);
-  // dshot_tx_rmt_item[15].duration1 = 1815;
-  // 180 = 34.75us pause
-  // 100 = 26.75us pause
-  // 0 = 17us
-  // 0.1 us/tick
-  // Serial.print("item 17: ");
-  // Serial.println(dshot_tx_rmt_item[17].duration1);
+
 	return dshot_tx_rmt_item;
 }
 
@@ -231,3 +224,4 @@ void DShotRMT::output_rmt_data(const dshot_packet_t& dshot_packet) {
 	//
 	rmt_write_items(dshot_tx_rmt_config.channel, dshot_tx_rmt_item, DSHOT_PACKET_LENGTH, false);
 }
+#endif

@@ -1,3 +1,4 @@
+#if defined(PLATFORM_ESP32)
 //
 // Name:		DShotRMT.h
 // Created: 	20.03.2021 00:49:15
@@ -8,6 +9,7 @@
 
 #include <Arduino.h>
 // #include "BlheliCmdMap.h"
+// Added back to DShotRMT.h
 
 // ...utilizing the IR Module library for generating the DShot signal
 #include <driver/rmt.h>
@@ -135,3 +137,4 @@ class DShotRMT {
 
 	void output_rmt_data(const dshot_packet_t& dshot_packet);
 };
+#endif
