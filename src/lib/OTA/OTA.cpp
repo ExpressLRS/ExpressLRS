@@ -583,19 +583,19 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_
 {
     otaPktPtr->std.type = PACKET_TYPE_TLM;
 
-    uint8_t count = inputBuffer->size();
+    uint16_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
-        count = std::min(count, (uint8_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint16_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->full.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
-        count = std::min(count, (uint8_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint16_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->std.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
-        otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_DATA;
+        otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_RAW;
     }
 }
 

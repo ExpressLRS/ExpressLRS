@@ -21,6 +21,7 @@
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
+#include "rx-serial/SerialMavlink.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -444,7 +445,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
+    bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
+    bool noMavlinkDataQueued = config.GetSerialProtocol() == PROTOCOL_MAVLINK && mavlinkOutputBuffer.size() == 0;
+    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued && noMavlinkDataQueued;
+
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -480,11 +485,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (firmwareOptions.is_airport)
-        {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
-        }
-        else
+        if (TelemetrySender.IsActive())
         {
             if (OtaIsFullRes)
             {
@@ -499,6 +500,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     otaPkt.std.tlm_dl.payload,
                     sizeof(otaPkt.std.tlm_dl.payload));
             }
+        }
+        else if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        }
+        else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            OtaPackAirportData(&otaPkt, &mavlinkInputBuffer);
         }
     }
 
@@ -1029,10 +1038,15 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_TLM:
-        if (firmwareOptions.is_airport)
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            OtaUnpackAirportData(otaPktPtr, &mavlinkOutputBuffer);
+        }
+        else
         {
             OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         }
+        
         break;
     default:
         break;
@@ -1161,6 +1175,7 @@ static void setupSerial()
 {
     bool sbusSerialOutput = false;
 	bool sumdSerialOutput = false;
+    bool mavlinkSerialOutput = false;
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
@@ -1184,6 +1199,11 @@ static void setupSerial()
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        mavlinkSerialOutput = true;
+        serialBaud = 460800;
     }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
@@ -1258,6 +1278,10 @@ static void setupSerial()
     else if (sumdSerialOutput)
     {
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (mavlinkSerialOutput)
+    {
+        serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else
     {

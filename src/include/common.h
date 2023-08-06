@@ -186,7 +186,8 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_SBUS,
     PROTOCOL_INVERTED_SBUS,
 	PROTOCOL_SUMD,
-    PROTOCOL_DJI_RS_PRO
+    PROTOCOL_DJI_RS_PRO,
+    PROTOCOL_MAVLINK
 };
 
 enum eFailsafeMode : uint8_t

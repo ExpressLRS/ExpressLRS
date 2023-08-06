@@ -37,6 +37,10 @@ Stream *TxUSB;
 // Variables / constants for Airport //
 FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+bool lastPacketWasData = false;
+
+// TODO: Remove this! Manual define for mavlink mode on TX
+bool mavlinkTX = false;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -214,7 +218,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
     else
     {
-      if (firmwareOptions.is_airport)
+      if (firmwareOptions.is_airport || mavlinkTX)
       {
         OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         return true;
@@ -235,14 +239,14 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
-        if (firmwareOptions.is_airport)
-        {
-          OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-          return true;
-        }
         TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
+        break;
+
+      case ELRS_TELEMETRY_TYPE_RAW:
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        return true;
         break;
     }
   }
@@ -514,14 +518,18 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
 
-      if (firmwareOptions.is_airport)
+      bool shouldSendData = firmwareOptions.is_airport || (mavlinkTX && !lastPacketWasData);
+
+      if (shouldSendData)
       {
         OtaPackAirportData(&otaPkt, &apInputBuffer);
+        lastPacketWasData = true;
       }
       else
       {
         injectBackpackPanTiltRollData(now);
         OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+        lastPacketWasData = false;
       }
     }
   }
@@ -828,7 +836,7 @@ static void UpdateConnectDisconnectStatus()
       crsf.ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
-      if (firmwareOptions.is_airport)
+      if (firmwareOptions.is_airport || mavlinkTX)
       {
         apInputBuffer.flush();
         apOutputBuffer.flush();
@@ -1027,7 +1035,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 
 static void HandleUARTout()
 {
-  if (firmwareOptions.is_airport)
+  if (firmwareOptions.is_airport || mavlinkTX)
   {
     while (apOutputBuffer.size())
     {
@@ -1045,7 +1053,7 @@ static void setupSerial()
   int8_t rxPin = UNDEF_PIN;
   int8_t txPin = UNDEF_PIN;
 
-  if (firmwareOptions.is_airport)
+  if (firmwareOptions.is_airport || mavlinkTX)
   {
     #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
       // Airport enabled - set TxUSB port to pins 1 and 3
@@ -1323,7 +1331,7 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if (firmwareOptions.is_airport && connectionState == connected)
+  if ((firmwareOptions.is_airport || mavlinkTX) && connectionState == connected)
   {
     auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
     if (size > 0)
