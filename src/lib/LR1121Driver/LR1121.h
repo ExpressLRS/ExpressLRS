@@ -58,7 +58,6 @@ private:
     bool modeSupportsFei;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
-    lr11xx_radio_lora_sf_t currentSF;
 
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
@@ -68,7 +67,7 @@ private:
                              uint8_t PayloadLength, uint8_t InvertIQ);
 
     void SetDioIrqParams();
-    void CorrectRegisterForSF6(SX12XX_Radio_Number_t radioNumber);
+    void CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber);
 
     static void IsrCallback_1();
     static void IsrCallback_2();

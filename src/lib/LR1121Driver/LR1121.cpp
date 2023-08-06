@@ -30,7 +30,6 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
-    currentSF = LR11XX_RADIO_LORA_SF6;
 }
 
 void LR1121Driver::End()
@@ -146,12 +145,10 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
 
-    // CorrectRegisterForSF6(SX12XX_Radio_All);
     // 8.1.1 SetPacketType
     uint8_t abuf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, abuf, sizeof(abuf), SX12XX_Radio_All);
 
-    // CorrectRegisterForSF6(SX12XX_Radio_All);
     ConfigModParamsLoRa(bw, sf, cr);
 
 #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
@@ -159,13 +156,15 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 #else
     lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
 #endif
-    // CorrectRegisterForSF6(SX12XX_Radio_All);
-    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, 0); // InvertIQ is always set 0.  Packet receiption is worse when inverted on the sx1276.
+    
+    // InvertIQ is always STANDARD for 900 and SX1276
+    if (bw == LR11XX_RADIO_LORA_BW_500)
+    {
+        InvertIQ = (bool)LR11XX_RADIO_LORA_IQ_STANDARD;
+    }
+    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
 
     SetFrequencyReg(regfreq, SX12XX_Radio_All);
-
-    // SetMode(LR1121_MODE_FS, SX12XX_Radio_All);    
-    CorrectRegisterForSF6(SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
@@ -177,14 +176,15 @@ void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
     }
 }
 
-void LR1121Driver::CorrectRegisterForSF6(SX12XX_Radio_Number_t radioNumber)
+void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber)
 {
     // 8.3.1 SetModulationParams
     // - SF6 can be made compatible with the SX127x family in implicit mode via a register setting1.
-    // - 1.Set bit 18 of register at address 0xf20414 to 1
+    // - Set bit 18 of register at address 0xf20414 to 1
+    // - Set bit 23 of register at address 0xf20414 to 0.  This information is from Semecth in an email.
     // 3.7.3 WriteRegMemMask32
 
-    // if (currentSF == LR11XX_RADIO_LORA_SF6)
+    if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6)
     {
         uint8_t wrbuf[12];
         // Address
@@ -194,42 +194,16 @@ void LR1121Driver::CorrectRegisterForSF6(SX12XX_Radio_Number_t radioNumber)
         wrbuf[3] = 0x14;
         // Mask
         wrbuf[4] = 0x00; // MSB
-        wrbuf[5] = 0b00000100;
+        wrbuf[5] = 0b10000100; // bit18=1 and bit23=0
         wrbuf[6] = 0x00;
         wrbuf[7] = 0x00; 
         // Data
         wrbuf[8] = 0x00; // MSB
-        wrbuf[9] = 0b00000100;
+        wrbuf[9] = 0b00000100; // bit18=1 and bit23=0
         wrbuf[10] = 0x00;
         wrbuf[11] = 0x00;
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber); // NOT WORKING!!!!
+        hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber);
     }
-
-    // uint8_t inbuf[5];
-    // inbuf[0] = 0x00;
-    // inbuf[1] = 0xf2;
-    // inbuf[2] = 0x04;
-    // inbuf[3] = 0x14;
-    // inbuf[4] = 1;
-    // hal.ReadCommand(0x010A, inbuf, sizeof(inbuf), inbuf, sizeof(inbuf), radioNumber);
-
-    // uint8_t wrbuf[8];
-    // wrbuf[0] = 0x00;
-    // wrbuf[1] = 0xf2;
-    // wrbuf[2] = 0x04;
-    // wrbuf[3] = 0x14;
-    // wrbuf[4] = inbuf[1];
-    // wrbuf[5] = inbuf[2] | 0b00000100;
-    // wrbuf[6] = inbuf[3];
-    // wrbuf[7] = inbuf[4];
-    // hal.WriteCommand(0x0105, wrbuf, sizeof(wrbuf), radioNumber);
-
-    // inbuf[0] = 0x00;
-    // inbuf[1] = 0xf2;
-    // inbuf[2] = 0x04;
-    // inbuf[3] = 0x14;
-    // inbuf[4] = 1;
-    // hal.ReadCommand(0x010A, inbuf, sizeof(inbuf), inbuf, sizeof(inbuf), radioNumber);
 }
 
 /***
@@ -254,18 +228,44 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     pwrCurrent = pwrPending;
     pwrPending = PWRPENDING_NONE;    
 
+    // // 9.5.1 SetPaConfig
+    // // Table 9-2: Optimized Settings for HP PA with Same Matching Network
+    // uint8_t Pabuf[4];
+    // Pabuf[0] = LR11XX_RADIO_PA_SEL_HF; // PaSel - 0x02: Selects the high frequency PA
+    // Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+    // Pabuf[2] = 0x00; // PaDutyCycle
+    // Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+    // hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
+
+    // // 9.5.2 SetTxParams
+    // uint8_t buf[2] = { 13, LR11XX_RADIO_RAMP_48_US };
+    // hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+
     // 9.5.1 SetPaConfig
     // Table 9-2: Optimized Settings for HP PA with Same Matching Network
     uint8_t Pabuf[4];
     Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
     Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-    Pabuf[2] = 0x01; // PaDutyCycle
-    Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+    Pabuf[2] = 0x04; // PaDutyCycle
+    Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
 
     // 9.5.2 SetTxParams
-    uint8_t buf[2] = { pwrCurrent, LR11XX_RADIO_RAMP_48_US };
+    uint8_t buf[2] = { 0x16, LR11XX_RADIO_RAMP_48_US };
     hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+
+    // // 9.5.1 SetPaConfig
+    // // Table 9-2: Optimized Settings for HP PA with Same Matching Network
+    // uint8_t Pabuf[4];
+    // Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
+    // Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+    // Pabuf[2] = 0x01; // PaDutyCycle
+    // Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+    // hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
+
+    // // 9.5.2 SetTxParams
+    // uint8_t buf[2] = { pwrCurrent, LR11XX_RADIO_RAMP_48_US };
+    // hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
@@ -324,8 +324,6 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
 
 void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
 {
-    currentSF = (lr11xx_radio_lora_sf_t)sf;
-
     // 8.3.1 SetModulationParams
     uint8_t buf[4];
     buf[0] = sf;
@@ -334,7 +332,7 @@ void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     buf[3] = 0x00; // 0x00: LowDataRateOptimize off
     hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), SX12XX_Radio_All);    
 
-    // CorrectRegisterForSF6(SX12XX_Radio_All);
+    CorrectRegisterForSF6(sf, SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,
@@ -347,7 +345,7 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     buf[2] = HeaderType; // HeaderType defines if the header is explicit or implicit
     buf[3] = PayloadLength; // PayloadLen defines the size of the payload
     buf[4] = LR11XX_RADIO_LORA_CRC_OFF;
-    buf[5] = LR11XX_RADIO_LORA_IQ_STANDARD;
+    buf[5] = InvertIQ;
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), SX12XX_Radio_All);
 
 }
@@ -489,7 +487,6 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode)
 {
     SetMode(LR1121_MODE_RX, SX12XX_Radio_All);
-    // CorrectRegisterForSF6(SX12XX_Radio_All);
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
@@ -513,11 +510,11 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     hal.ReadCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, status, sizeof(status), SX12XX_Radio_1);
     
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    LastPacketRSSI = -(int8_t)(status[1] / 2);
+    // LastPacketRSSI = -(int8_t)(status[1] / 2);
 
     // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
     // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
-    // LastPacketRSSI = -(int8_t)(status[3] / 2); // SignalRssiPkt
+    LastPacketRSSI = -(int8_t)(status[3] / 2); // SignalRssiPkt
 
     LastPacketSNRRaw = (int8_t)status[2];
 }
