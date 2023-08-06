@@ -609,6 +609,15 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "Unified_ESP32_900_TX"
+            },
+            "lr1121": {
+                "product_name": "Generic ESP32 900MHz LR1121 TX",
+                "lua_name": "lr1121 TX",
+                "layout_file": "Generic 900 LR1121.json",
+                "upload_methods": ["uart", "wifi", "etx"],
+                "platform": "esp32",
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "Unified_ESP32_900_TX"
             }
         },
         "rx_900": {
