@@ -14,11 +14,11 @@
 
 #if defined(RADIO_LR1121)
 #define FREQ_HZ_TO_REG_VAL(freq) (freq)
+#define FREQ_SPREAD_SCALE 1
 #else
 #define FREQ_HZ_TO_REG_VAL(freq) ((uint32_t)((double)freq/(double)FREQ_STEP))
-#endif
-
 #define FREQ_SPREAD_SCALE 256
+#endif
 
 typedef struct {
     const char  *domain;
