@@ -5,12 +5,20 @@
 #include "config.h"
 #include "helpers.h"
 #include "rxtx_intf.h"
+#include "logging.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 
 #if (defined(PLATFORM_ESP32))
-DShotRMT dshot_01(GPIO_NUM_3, RMT_CHANNEL_0); //Pin output is hardcoded because I can't get DShotRMT to work otherwise without initializing it here.
+static DShotRMT *dshotInstances[PWM_MAX_CHANNELS]; 
+// struct dshotConfig {
+    // gpio_num_t gpio;
+    // rmt_channel_t rmtChannel;
+// };
+rmt_channel_t rmtChannel = RMT_CHANNEL_0; // I think all DShot output can be on the same RMT channel since it will all be at the same speed.
+dshot_mode_t dshotProtocol = DSHOT300;
+// DShotRMT dshot_01(GPIO_NUM_3, RMT_CHANNEL_0); //Pin output is hardcoded because I can't get DShotRMT to work otherwise without initializing it here.
 #endif
 
 // true when the RX has a new channels packet
@@ -68,7 +76,8 @@ static void servoWrite(uint8_t ch, uint16_t us)
 #if (defined(PLATFORM_ESP32))
 			if ((eServoOutputMode)chConfig->val.mode == somDShot)
 			{
-				dshot_01.send_dshot_value((((us - 1000) * 2) + 47)); // Convert PWM signal in us to DShot value
+                DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+                dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
 			}
 			else
 			{
@@ -144,12 +153,15 @@ static void initialize()
         return;
     }
 
+
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
+        DBGLN("Initializing PWM output: ch: %d, pin: %u", ch, pin);
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
+        // if (pin == 1)  // Need pin 3 as output when testing on BetaFPV SuperD
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }
@@ -163,13 +175,15 @@ static void initialize()
 #if (defined(PLATFORM_ESP32))
 		else if (mode == somDShot)
 		{
-				// I assume DShot output pins should be configured here
-				// DShotRMT dshot_01(GPIO_NUM_14, RMT_CHANNEL_0);
-		}
+            DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
+            gpio_num_t gpio = (gpio_num_t)pin;
+            DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %d", gpio, ch, rmtChannel);
+           dshotInstances[ch] = new DShotRMT(pin, rmtChannel); // Initialize the DShotRMT instance
+        }
 #endif
         SERVO_PINS[ch] = pin;
     }
-	
+
     // Initialize all servos to low ASAP
     servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
     servoMgr->initialize();
@@ -181,10 +195,16 @@ static int start()
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
+#if (defined(PLATFORM_ESP32))
+		if (((eServoOutputMode)chConfig->val.mode) == somDShot)
+		{
+            DBGLN("DShot start loop for channel: %d", ch);
+			dshotInstances[ch]->begin(dshotProtocol, false);
+            // dshotInstances[ch]->begin(DSHOT300, false);
+        }
+#endif		
     }
-#if (defined(PLATFORM_ESP32))	
-	dshot_01.begin(DSHOT300); // Need to set protocol for all DShot outputs.
-#endif
+
     return DURATION_NEVER;
 }
 
