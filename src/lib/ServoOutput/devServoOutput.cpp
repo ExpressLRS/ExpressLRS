@@ -173,12 +173,12 @@ static void initialize()
             pin = ServoMgr::PIN_DISCONNECTED;
         }
 #if (defined(PLATFORM_ESP32))
-		else if (mode == somDShot)
+		if (mode == somDShot)
 		{
             DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
             gpio_num_t gpio = (gpio_num_t)pin;
             DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %d", gpio, ch, rmtChannel);
-           dshotInstances[ch] = new DShotRMT(pin, rmtChannel); // Initialize the DShotRMT instance
+           dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
         }
 #endif
         SERVO_PINS[ch] = pin;
