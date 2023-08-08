@@ -40,7 +40,7 @@ FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
 bool lastPacketWasData = false;
 
 // TODO: Remove this! Manual define for mavlink mode on TX
-bool mavlinkTX = false;
+bool mavlinkTX = true;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -1372,6 +1372,11 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
+      uint8_t count = CRSFinBuffer[0];
+      for (uint8_t i = 0; i < count; ++i)
+      {
+        TxUSB->write(CRSFinBuffer[i + 1]);
+      }
       crsf.sendTelemetryToTX(CRSFinBuffer);
       TelemetryReceiver.Unlock();
   }

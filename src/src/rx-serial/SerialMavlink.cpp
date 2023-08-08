@@ -10,8 +10,8 @@
 #define MAV_FTP_OPCODE_OPENFILERO 4
 
 // Variables / constants for Airport //
-FIFO_GENERIC<MAX_MAVLINK_BUF_LEN> mavlinkInputBuffer;
-FIFO_GENERIC<MAX_MAVLINK_BUF_LEN> mavlinkOutputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkInputBuffer;
+FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 
 
 void SerialMavlink::setLinkQualityStats(uint16_t lq, uint16_t rssi)
@@ -48,7 +48,7 @@ uint32_t SerialMavlink::sendRCFrameToFC(bool frameAvailable, uint32_t *channelDa
         1500,
         2000);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-    _outputPort->write(buf, len);
+    // _outputPort->write(buf, len);
     
     return DURATION_IMMEDIATELY;
 }

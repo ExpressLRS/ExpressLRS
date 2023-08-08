@@ -87,6 +87,8 @@ device_affinity_t ui_devices[] = {
 #endif
 };
 
+uint8_t mavBuffer[64];
+
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
 
@@ -507,7 +509,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            OtaPackAirportData(&otaPkt, &mavlinkInputBuffer);
+            // OtaPackAirportData(&otaPkt, &mavlinkInputBuffer);
         }
     }
 
@@ -1818,6 +1820,18 @@ void loop()
     {
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
+
+    uint16_t count = mavlinkInputBuffer.size();
+    if (count > 0 && !TelemetrySender.IsActive())
+    {
+        count = std::min(count, (uint16_t)32);
+        mavlinkInputBuffer.popBytes(mavBuffer + 1, count);
+        mavBuffer[0] = count;
+        nextPayload = mavBuffer;
+        nextPlayloadSize = count + 1;
+        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+    }
+
     updateTelemetryBurst();
     updateBindingMode(now);
     updateSwitchMode();
