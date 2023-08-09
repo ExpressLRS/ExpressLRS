@@ -38,3 +38,5 @@ public:
      */
     void setMicroseconds(pwm_channel_t channel, uint16_t microseconds);
 };
+
+extern PWMController PWM;
