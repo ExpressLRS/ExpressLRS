@@ -1269,7 +1269,8 @@
                 "layout_file": "Jumper T-20 2400.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_2400_TX"
+                "firmware": "Unified_ESP32_2400_TX",
+                "prior_target_name": "Jumper_AION_2400_T-Pro_TX"
             },
             "t-pro": {
                 "product_name": "Jumper AION T-Pro 2.4GHz TX",
@@ -1306,7 +1307,8 @@
                 "layout_file": "Jumper T-20 900.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_TX"
+                "firmware": "Unified_ESP32_900_TX",
+                "prior_target_name": "Jumper_AION_2400_T-Pro_TX"
             }
         },
         "rx_2400": {
