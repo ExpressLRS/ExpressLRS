@@ -17,16 +17,6 @@
     #define DefaultPower PWR_50mW
 #endif
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    #undef MaxPower
-    #define MaxPower PWR_100mW
-
-    #if defined(HighPower)
-        #undef HighPower
-        #define HighPower MaxPower
-    #endif
-#endif
-
 #if !defined(HighPower)
 #define HighPower MaxPower
 #endif
@@ -108,15 +98,23 @@ public:
      * For devices that support the HighPower override, i.e. R9M with the fan hack,
      * the MaxPower is normally HighPower unless the 'unlock_higher_power' option
      * is set at compile time.
-     * 
+     *
      * @return PowerLevels_e the maximum power level supported
      */
     static PowerLevels_e getMaxPower() {
+        PowerLevels_e power;
         #if defined(TARGET_RX)
-            return MaxPower;
+            power = MaxPower;
         #else
-            return firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
+            power = firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
         #endif
+        #if defined(Regulatory_Domain_EU_CE_2400)
+            if (power > PWR_100mW)
+            {
+                power = PWR_100mW;
+            }
+        #endif
+        return power;
     }
 
     /**
