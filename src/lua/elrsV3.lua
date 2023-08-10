@@ -891,23 +891,29 @@ local function touch2evt(event, touchState)
 end
 
 local function setLCDvar()
-  -- Set the title function depending on if LCD is color, and free the other function and
-  -- set textselection unit function, use GetLastPost or sizeText
-  if (lcd.RGB ~= nil) then
-    lcd_title = lcd_title_color
-    functions[9] = {
-      load=fieldFloatLoad,
-      save=fieldFloatSave,
-      display=fieldFloatDisplay
-    }
-    functions[10].display=fieldTextSelectionDisplay_color
-  else
-    lcd_title = lcd_title_bw
+
+  local ver, radio, major = getVersion()
+  if (radio == "x9d")
+  or (radio == "xlite")
+  or (radio == "xlites") then
     fieldFloatLoad = nil
     formatFloat = nil
     fieldFloatDisplay = nil
     fieldFloatSave = nil
     collectgarbage("collect")
+  else
+    functions[9].load=fieldFloatLoad
+    functions[9].save=fieldFloatSave
+    functions[9].display=fieldFloatDisplay
+  end
+
+  -- Set the title function depending on if LCD is color, and free the other function and
+  -- set textselection unit function, use GetLastPost or sizeText
+  if (lcd.RGB ~= nil) then
+    lcd_title = lcd_title_color
+    functions[10].display=fieldTextSelectionDisplay_color
+  else
+    lcd_title = lcd_title_bw
     functions[10].display=fieldTextSelectionDisplay_bw
     touch2evt = nil
   end
@@ -915,10 +921,9 @@ local function setLCDvar()
   lcd_title_bw = nil
   fieldTextSelectionDisplay_bw = nil
   fieldTextSelectionDisplay_color = nil
-    -- Determine if popupConfirmation takes 3 arguments or 2
+  -- Determine if popupConfirmation takes 3 arguments or 2
   -- if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
   -- major 1 is assumed to be FreedomTX
-  local ver, radio, major = getVersion()
   if major ~= 1 then
     popupCompat = popupConfirmation
   end
