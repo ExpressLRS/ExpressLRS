@@ -902,9 +902,11 @@ local function setLCDvar()
     fieldFloatSave = nil
     collectgarbage("collect")
   else
-    functions[9].load=fieldFloatLoad
-    functions[9].save=fieldFloatSave
-    functions[9].display=fieldFloatDisplay
+    functions[9] = {
+      load=fieldFloatLoad,
+      save=fieldFloatSave,
+      display=fieldFloatDisplay
+    }
   end
 
   -- Set the title function depending on if LCD is color, and free the other function and
