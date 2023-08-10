@@ -299,7 +299,7 @@ local function formatFloat(num, decimals)
 end
 
 local function fieldFloatDisplay(field, y, attr)
-  lcd.drawText(140, y, formatFloat(field.value, field.prec) .. field.unit, attr)
+  lcd.drawText(COL2, y, formatFloat(field.value, field.prec) .. field.unit, attr)
 end
 
 local function fieldFloatSave(field)
@@ -474,7 +474,7 @@ local functions = {
   nil,
   nil,
   nil,
-  { load=fieldFloatLoad, save=fieldFloatSave, display=fieldFloatDisplay },
+  nil, --9 FLOAT(8) note: this one is only loaded on color radios
   { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display = nil }, --10 SELECT(9)
   { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --11 STRING(10) editing NOTIMPL
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
@@ -895,9 +895,19 @@ local function setLCDvar()
   -- set textselection unit function, use GetLastPost or sizeText
   if (lcd.RGB ~= nil) then
     lcd_title = lcd_title_color
+    functions[9] = {
+      load=fieldFloatLoad,
+      save=fieldFloatSave,
+      display=fieldFloatDisplay
+    }
     functions[10].display=fieldTextSelectionDisplay_color
   else
     lcd_title = lcd_title_bw
+    fieldFloatLoad = nil
+    formatFloat = nil
+    fieldFloatDisplay = nil
+    fieldFloatSave = nil
+    collectgarbage("collect")
     functions[10].display=fieldTextSelectionDisplay_bw
     touch2evt = nil
   end
