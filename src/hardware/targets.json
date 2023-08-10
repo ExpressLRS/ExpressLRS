@@ -529,7 +529,7 @@
             },
             "r9m-lite-pro": {
                 "product_name": "FrSky R9M Lite Pro 900MHz TX",
-                "upload_methods": ["stlink"],
+                "upload_methods": ["stlink","stock"],
                 "platform": "stm32",
                 "firmware": "Frsky_TX_R9M_LITE_PRO",
                 "stlink": {
@@ -1191,7 +1191,7 @@
         "tx_2400": {
             "ghost": {
                 "product_name": "Ghost 2.4GHz TX",
-                "upload_methods": ["stlink"],
+                "upload_methods": ["stlink","stock"],
                 "platform": "stm32",
                 "firmware": "GHOST_2400_TX",
                 "features": ["buzzer"],
@@ -1203,7 +1203,7 @@
             },
             "ghost_lite": {
                 "product_name": "Ghost Lite 2.4GHz TX",
-                "upload_methods": ["stlink"],
+                "upload_methods": ["stlink","stock"],
                 "platform": "stm32",
                 "firmware": "GHOST_2400_TX_LITE",
                 "features": ["buzzer"],
