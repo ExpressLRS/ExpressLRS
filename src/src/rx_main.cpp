@@ -1135,6 +1135,17 @@ void MspReceiveComplete()
                 UpdateModelMatch(MspData[9]);
                 break;
             }
+            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            {
+                vtxSPIFrequency = getFreqByIdx(MspData[8]);
+                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+                {
+                    vtxSPIPowerIdx = MspData[10];
+                    vtxSPIPitmode = MspData[11];
+                }
+                devicesTriggerEvent();
+                break;
+            }
             // FALLTHROUGH
         default:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))

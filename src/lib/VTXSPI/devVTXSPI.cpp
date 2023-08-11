@@ -345,12 +345,12 @@ static int event()
 
 static int timeout()
 {
-    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    if ((GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN) || stopVtxMonitoring)
     {
         return DURATION_NEVER;
     }
 
-    if ((hwTimer::running && !hwTimer::isTick) || stopVtxMonitoring)
+    if (hwTimer::running && !hwTimer::isTick)
     {
         // Dont run spi and analog reads during rx hopping, wifi or updating
         return DURATION_IMMEDIATELY;
