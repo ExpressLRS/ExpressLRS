@@ -16,9 +16,10 @@ static DShotRMT *dshotInstances[PWM_MAX_CHANNELS];
     // gpio_num_t gpio;
     // rmt_channel_t rmtChannel;
 // };
-rmt_channel_t rmtChannel = RMT_CHANNEL_0; // I think all DShot output can be on the same RMT channel since it will all be at the same speed.
-dshot_mode_t dshotProtocol = DSHOT300;
-// DShotRMT dshot_01(GPIO_NUM_3, RMT_CHANNEL_0); //Pin output is hardcoded because I can't get DShotRMT to work otherwise without initializing it here.
+// rmt_channel_t rmtChannel = RMT_CHANNEL_0;
+static uint8_t rmtCH = 0;
+static uint8_t RMT_MAX_CHANNELS = 8;
+static dshot_mode_t dshotProtocol = DSHOT300;
 #endif
 
 // true when the RX has a new channels packet
@@ -76,7 +77,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
 #if (defined(PLATFORM_ESP32))
 			if ((eServoOutputMode)chConfig->val.mode == somDShot)
 			{
-                DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+                // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
                 dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
 			}
 			else
@@ -175,10 +176,18 @@ static void initialize()
 #if (defined(PLATFORM_ESP32))
 		if (mode == somDShot)
 		{
-            DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
-            gpio_num_t gpio = (gpio_num_t)pin;
-            DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %d", gpio, ch, rmtChannel);
-           dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+            // DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
+			if(rmtCH < RMT_MAX_CHANNELS){
+				gpio_num_t gpio = (gpio_num_t)pin;
+                rmt_channel_t rmtChannel = (rmt_channel_t)rmtCH;
+				DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
+				dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+				// dshotInstances[ch] = new DShotRMT(gpion, rmtCH); // Initialize the DShotRMT instance
+				rmtCH++;
+			}
+			// else{
+				// Return some error that all RMT channels are in use
+			// }
         }
 #endif
         SERVO_PINS[ch] = pin;
@@ -195,14 +204,16 @@ static int start()
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
+		
 #if (defined(PLATFORM_ESP32))
 		if (((eServoOutputMode)chConfig->val.mode) == somDShot)
 		{
             DBGLN("DShot start loop for channel: %d", ch);
-			dshotInstances[ch]->begin(dshotProtocol, false);
+			dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
             // dshotInstances[ch]->begin(DSHOT300, false);
         }
 #endif		
+
     }
 
     return DURATION_NEVER;
