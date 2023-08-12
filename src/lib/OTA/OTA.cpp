@@ -579,7 +579,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
     OtaSwitchModeCurrent = switchMode;
 }
 
-void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
+void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer, bool tlmFlag)
 {
     otaPktPtr->std.type = PACKET_TYPE_TLM;
 
@@ -588,27 +588,35 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_
     {
         count = std::min(count, (uint16_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->full.airport.count = count;
+        otaPktPtr->full.airport.tlmFlag = tlmFlag;
         inputBuffer->popBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
         count = std::min(count, (uint16_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->std.airport.count = count;
+        otaPktPtr->std.airport.tlmFlag = tlmFlag;
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
         otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_RAW;
     }
 }
 
-void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer)
+bool OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer)
 {
+    bool tlmFlag = false;
+
     if (OtaIsFullRes)
     {
         uint8_t count = otaPktPtr->full.airport.count;
+        tlmFlag = otaPktPtr->full.airport.tlmFlag;
         outputBuffer->pushBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
         uint8_t count = otaPktPtr->std.airport.count;
+        tlmFlag = otaPktPtr->std.airport.tlmFlag;
         outputBuffer->pushBytes(otaPktPtr->std.airport.payload, count);
     }
+
+    return tlmFlag;
 }

@@ -84,7 +84,8 @@ typedef struct {
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t type:ELRS4_TELEMETRY_SHIFT,
-                    count:(8 - ELRS4_TELEMETRY_SHIFT);
+                    tlmFlag:1,
+                    count:5;
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
     };
@@ -139,7 +140,7 @@ typedef struct {
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t packetType: 2,
-                    containsLinkStats: 1,
+                    tlmFlag: 1,
                     count: 5;
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
@@ -187,8 +188,8 @@ typedef std::function<bool (OTA_Packet_s const * const otaPktPtr, uint32_t *chan
 extern UnpackChannelData_t OtaUnpackChannelData;
 #endif
 
-void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer);
-void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer);
+void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer, bool tlmFlag);
+bool OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer);
 
 #if defined(DEBUG_RCVR_LINKSTATS)
 extern uint32_t debugRcvrLinkstatsPacketId;

@@ -38,17 +38,17 @@ uint32_t SerialMavlink::sendRCFrameToFC(bool frameAvailable, uint32_t *channelDa
         CRSF_to_US(channelData[6]),
         CRSF_to_US(channelData[7]),
         CRSF_to_US(channelData[8]),
-        1500,
-        1600,
-        1700,
-        1800,
-        1900,
-        2000,
-        1000,
-        1500,
-        2000);
+        CRSF_to_US(channelData[9]),
+        CRSF_to_US(channelData[10]),
+        CRSF_to_US(channelData[11]),
+        CRSF_to_US(channelData[12]),
+        CRSF_to_US(channelData[13]),
+        __UINT16_MAX__,
+        __UINT16_MAX__,
+        __UINT16_MAX__,
+        __UINT16_MAX__);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-    // _outputPort->write(buf, len);
+    _outputPort->write(buf, len);
     
     return DURATION_IMMEDIATELY;
 }

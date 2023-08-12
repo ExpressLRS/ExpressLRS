@@ -448,8 +448,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     otaPkt.std.type = PACKET_TYPE_TLM;
 
     bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
-    bool noMavlinkDataQueued = config.GetSerialProtocol() == PROTOCOL_MAVLINK && mavlinkOutputBuffer.size() == 0;
-    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued && noMavlinkDataQueued;
+    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued;
 
     if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
     {
@@ -505,11 +504,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else if (firmwareOptions.is_airport)
         {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
-        }
-        else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
-        {
-            // OtaPackAirportData(&otaPkt, &mavlinkInputBuffer);
+            OtaPackAirportData(&otaPkt, &apInputBuffer, false);
         }
     }
 
@@ -1042,7 +1037,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     case PACKET_TYPE_TLM:
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            OtaUnpackAirportData(otaPktPtr, &mavlinkOutputBuffer);
+            bool telemetryConfirmValue = OtaUnpackAirportData(otaPktPtr, &mavlinkOutputBuffer);
+            TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
         }
         else
         {
@@ -1824,7 +1820,7 @@ void loop()
     uint16_t count = mavlinkInputBuffer.size();
     if (count > 0 && !TelemetrySender.IsActive())
     {
-        count = std::min(count, (uint16_t)32);
+        count = std::min(count, (uint16_t)60);
         mavlinkInputBuffer.popBytes(mavBuffer + 1, count);
         mavBuffer[0] = count;
         nextPayload = mavBuffer;

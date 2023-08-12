@@ -218,7 +218,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
     else
     {
-      if (firmwareOptions.is_airport || mavlinkTX)
+      if (firmwareOptions.is_airport)
       {
         OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         return true;
@@ -522,7 +522,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
       if (shouldSendData)
       {
-        OtaPackAirportData(&otaPkt, &apInputBuffer);
+        OtaPackAirportData(&otaPkt, &apInputBuffer, TelemetryReceiver.GetCurrentConfirm());
         lastPacketWasData = true;
       }
       else
