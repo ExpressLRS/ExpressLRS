@@ -107,8 +107,8 @@ function updatePwmSettings(arPwm) {
     const pin1Mode = _(`pwm_${pin1Index}_mode`);
     const pin3Mode = _(`pwm_${pin3Index}_mode`);
     pin1Mode.onchange = () => {
-      if (pin1Mode.value == 8) { // Serial
-        pin3Mode.value = 8;
+      if (pin1Mode.value == modes.length) { // Serial
+        pin3Mode.value = modes.length;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -125,8 +125,8 @@ function updatePwmSettings(arPwm) {
       }
     }
     pin3Mode.onchange = () => {
-      if (pin3Mode.value == 8) { // Serial
-        pin1Mode.value = 8;
+      if (pin3Mode.value == modes.length) { // Serial
+        pin1Mode.value = modes.length;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -136,7 +136,7 @@ function updatePwmSettings(arPwm) {
     }
     const pin3 = pin3Mode.value;
     pin1Mode.onchange();
-    if(pin1Mode.value != 8) pin3Mode.value = pin3;
+    if(pin1Mode.value != modes.length) pin3Mode.value = pin3;
   }
 }
 @@end

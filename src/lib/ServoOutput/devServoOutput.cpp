@@ -11,12 +11,7 @@ static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 
 #if (defined(PLATFORM_ESP32))
-static DShotRMT *dshotInstances[PWM_MAX_CHANNELS]; 
-// struct dshotConfig {
-    // gpio_num_t gpio;
-    // rmt_channel_t rmtChannel;
-// };
-// rmt_channel_t rmtChannel = RMT_CHANNEL_0;
+static DShotRMT *dshotInstances[PWM_MAX_CHANNELS];
 static uint8_t rmtCH = 0;
 static uint8_t RMT_MAX_CHANNELS = 8;
 static dshot_mode_t dshotProtocol = DSHOT300;
@@ -66,29 +61,21 @@ static void servoWrite(uint8_t ch, uint16_t us)
 	{
 		servoMgr->writeDigital(ch, us > 1500U);
 	}
-	else
-	{
-		if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
-		{
-			servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
-		}
-		else
-		{
+	else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+    {
+        servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
+    }
 #if (defined(PLATFORM_ESP32))
-			if ((eServoOutputMode)chConfig->val.mode == somDShot)
-			{
-                // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
-                dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
-			}
-			else
-			{
+    else if ((eServoOutputMode)chConfig->val.mode == somDShot)
+    {
+        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+        dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+    }
 #endif
-				servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
-#if (defined(PLATFORM_ESP32))
-			}
-#endif
-		}
-	}
+    else
+    {
+        servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+    }
 }
 
 static void servosFailsafe()
@@ -162,7 +149,6 @@ static void initialize()
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == 1 || pin == 3)
-        // if (pin == 1)  // Need pin 3 as output when testing on BetaFPV SuperD
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }
@@ -177,17 +163,14 @@ static void initialize()
 		if (mode == somDShot)
 		{
             // DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
-			if(rmtCH < RMT_MAX_CHANNELS){
+			if(rmtCH < RMT_MAX_CHANNELS)
+            {
 				gpio_num_t gpio = (gpio_num_t)pin;
                 rmt_channel_t rmtChannel = (rmt_channel_t)rmtCH;
 				DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
 				dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
-				// dshotInstances[ch] = new DShotRMT(gpion, rmtCH); // Initialize the DShotRMT instance
 				rmtCH++;
 			}
-			// else{
-				// Return some error that all RMT channels are in use
-			// }
         }
 #endif
         SERVO_PINS[ch] = pin;
@@ -204,15 +187,14 @@ static int start()
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
-		
+
 #if (defined(PLATFORM_ESP32))
 		if (((eServoOutputMode)chConfig->val.mode) == somDShot)
 		{
             DBGLN("DShot start loop for channel: %d", ch);
 			dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
-            // dshotInstances[ch]->begin(DSHOT300, false);
         }
-#endif		
+#endif
 
     }
 
