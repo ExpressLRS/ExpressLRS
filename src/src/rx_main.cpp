@@ -1821,10 +1821,13 @@ void loop()
     if (count > 0 && !TelemetrySender.IsActive())
     {
         count = std::min(count, (uint16_t)60);
-        mavlinkInputBuffer.popBytes(mavBuffer + 1, count);
-        mavBuffer[0] = count;
+        // First 2 bytes conform to crsf_header_s format
+        mavBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
+        mavBuffer[1] = count;
+        // Following n bytes are just raw mavlink
+        mavlinkInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
         nextPayload = mavBuffer;
-        nextPlayloadSize = count + 1;
+        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
 

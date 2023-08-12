@@ -1372,12 +1372,20 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
-      uint8_t count = CRSFinBuffer[0];
-      for (uint8_t i = 0; i < count; ++i)
+      if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
-        TxUSB->write(CRSFinBuffer[i + 1]);
+        // raw mavlink data - forward to USB rather than handset
+        uint8_t count = CRSFinBuffer[1];
+        for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
+        {
+          TxUSB->write(CRSFinBuffer[i]);
+        }
       }
-      crsf.sendTelemetryToTX(CRSFinBuffer);
+      else
+      {
+        // Send all other tlm to handset
+        crsf.sendTelemetryToTX(CRSFinBuffer);
+      }
       TelemetryReceiver.Unlock();
   }
 
