@@ -38,9 +38,19 @@ unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
 
 static uint32_t LastTMLLinkStatsPacketMillis = 0;
 static uint32_t LastTLMRCPacketMillis = 0;
-static bool initOnce = false;
 
 static SemaphoreHandle_t _mutex = nullptr;
+
+class BLEServerCB : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer *pServer, ble_gap_conn_desc  *param) override
+  {
+    if ( pServer != nullptr)
+    {
+        NimBLEDevice::startAdvertising();
+    }
+  }
+};
+static BLEServerCB bleServerCB;
 
 static String getMasterUIDString()
 {
@@ -141,11 +151,34 @@ void BluetoothTelemetryShutdown()
     {
         DBGLN("Stopping BLE Telemetry!");
 
-        NimBLEDevice::stopAdvertising();
-        NimBLEDevice::deinit(true);
+        pServer->setCallbacks(nullptr);
         pServer = nullptr;
         rcCRSF = nullptr;
+        NimBLEDevice::stopAdvertising();
+        NimBLEDevice::deinit(true);
         vSemaphoreDelete(_mutex);
+    }
+}
+
+static void assignRandomAddress()
+{
+    static bool doGenerateAddress = true;
+    if (doGenerateAddress)
+    {
+      ble_addr_t blead;
+      ble_hs_id_gen_rnd(1, &blead);
+      ble_hs_id_set_rnd(blead.val);
+      doGenerateAddress = false;
+    }
+    NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
+}
+
+static void onAdvertisingStopped(NimBLEAdvertising *pAdv)
+{
+    if (pServer != nullptr)
+    {
+        assignRandomAddress();
+        pAdv->start(0, &onAdvertisingStopped);
     }
 }
 
@@ -169,23 +202,14 @@ static void BluetoothTelemetryUpdateDevice()
     //we do not want devices which are bound to BLE Joystick to connect to Telemetry service.
     //start BLE Device with random address
     //avoid frequent address changes
-    if ( initOnce == false )
-    {
-        initOnce = true;
+    assignRandomAddress();
 
-        ble_addr_t blead;
-        ble_hs_id_gen_rnd(1, &blead);
-        ble_hs_id_set_rnd(blead.val);
-    }
-    NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
-
-    //Set MTU to max packet length + 3 bytes to be able to send packets longer then default 20 bytes.
+      //Set MTU to max packet length + 3 bytes to be able to send packets longer then default 20 bytes.
     //Should be set on both ends - smaller from two is used.
-    BLEDevice::setMTU(CRSF_MAX_PACKET_LEN + 3);
+    NimBLEDevice::setMTU(CRSF_MAX_PACKET_LEN + 3);
 
-    /** Set low transmit power, default is 6db */
-    BLEDevice::setPower(ESP_PWR_LVL_P6);
     pServer = NimBLEDevice::createServer();
+    pServer->setCallbacks(&bleServerCB, true);
     NimBLEService *rcService = pServer->createService(TELEMETRY_SVC_UUID);
     rcCRSF = rcService->createCharacteristic(TELEMETRY_CRSF_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, CRSF_MAX_PACKET_LEN);
     rcService->start();
@@ -209,11 +233,23 @@ static void BluetoothTelemetryUpdateDevice()
 
     dInfo->start();
 
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_DEFAULT);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_ADV);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL0);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL1);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL2);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL3);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL4);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL5);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL6);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL7);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P6, ESP_BLE_PWR_TYPE_CONN_HDL8);
+
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(rcService->getUUID());
 
     pAdvertising->addServiceUUID(dInfo->getUUID());
-    pAdvertising->start();
+    pAdvertising->start(0, &onAdvertisingStopped);
 
     DBGLN("Starting BLE Telemetry!");
 }
