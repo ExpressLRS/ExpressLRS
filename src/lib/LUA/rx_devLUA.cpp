@@ -11,9 +11,16 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
+#if defined(PLATFORM_ESP32)
 static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot";
+static const char *noDShot = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
 static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial TX";
 static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX";
+#else
+static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
+static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX";
+static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial RX";
+#endif
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -168,6 +175,12 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
   {
     luaMappingOutputMode.options = txModes;
   }
+  #if defined(PLATFORM_ESP32)
+  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 0)
+  {
+    luaMappingOutputMode.options = noDShot;
+  }
+  #endif
   else
   {
     luaMappingOutputMode.options = pwmModes;

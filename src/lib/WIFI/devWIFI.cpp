@@ -330,6 +330,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
+    #if defined(PLATFORM_ESP32)
+    json["config"]["allow-dshot"] = true;
+    #endif
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
     json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
