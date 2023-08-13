@@ -104,7 +104,6 @@ private:
 
 	dshot_mode_t mode = DSHOT_OFF;
 	bool bidirectional = false;
-	uint16_t ticks_per_bit = 0;
 	uint16_t ticks_zero_high = 0;
 	uint16_t ticks_zero_low = 0;
 	uint16_t ticks_one_high = 0;

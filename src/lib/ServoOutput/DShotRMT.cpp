@@ -21,6 +21,8 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 	mode = dshot_mode;
 	bidirectional = is_bidirectional;
 
+	uint16_t ticks_per_bit;
+
 	switch (mode) {
 		case DSHOT150:
 			ticks_per_bit = 64; // ...Bit Period Time 6.67 us
