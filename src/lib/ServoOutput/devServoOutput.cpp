@@ -193,6 +193,7 @@ static int start()
 		{
             DBGLN("DShot start loop for channel: %d", ch);
 			dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
+			dshotInstances[ch]->send_dshot_value(0); // Set throttle low so the ESC can continue initialsation
         }
 #endif
 
