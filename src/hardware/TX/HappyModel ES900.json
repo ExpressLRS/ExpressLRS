@@ -12,7 +12,7 @@
     "power_rxen": 13,
     "power_txen": 12,
     "power_min": 0,
-    "power_high": 4,
+    "power_high": 6,
     "power_max": 6,
     "power_default": 2,
     "power_control": 3,
