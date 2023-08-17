@@ -24,7 +24,7 @@ public:
 protected:
     Stream *_outputPort;
     Stream *_inputPort;
-    FIFO _fifo;
+    FIFO<256> _fifo;
     bool failsafe = false;
 
     virtual void processBytes(uint8_t *bytes, uint16_t size);
