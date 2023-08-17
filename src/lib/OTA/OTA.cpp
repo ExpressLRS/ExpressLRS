@@ -601,6 +601,7 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_
 
 void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer)
 {
+    outputBuffer->lock();
     if (OtaIsFullRes)
     {
         uint8_t count = otaPktPtr->full.airport.count;
@@ -611,4 +612,5 @@ void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_
         uint8_t count = otaPktPtr->std.airport.count;
         outputBuffer->pushBytes(otaPktPtr->std.airport.payload, count);
     }
+    outputBuffer->unlock();
 }

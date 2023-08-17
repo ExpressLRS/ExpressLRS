@@ -1029,9 +1029,14 @@ static void HandleUARTout()
 {
   if (firmwareOptions.is_airport)
   {
-    while (apOutputBuffer.size())
+    auto size = apOutputBuffer.size();
+    if (size)
     {
-      TxUSB->write(apOutputBuffer.pop());
+      uint8_t buf[size];
+      apOutputBuffer.lock();
+      apOutputBuffer.popBytes(buf, size);
+      apOutputBuffer.unlock();
+      TxUSB->write(buf, size);
     }
   }
 }
@@ -1330,7 +1335,9 @@ void loop()
     {
       uint8_t buf[size];
       TxUSB->readBytes(buf, size);
+      apInputBuffer.lock();
       apInputBuffer.pushBytes(buf, size);
+      apInputBuffer.unlock();
     }
   }
 

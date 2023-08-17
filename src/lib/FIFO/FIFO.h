@@ -52,6 +52,9 @@ public:
     FIFO();
     ~FIFO();
 
+    void lock();
+    void unlock();
+
     // Push a single byte to the FIFO, FIFO is flushed if this byte will not fit and the byte is not pushed
     void push(const uint8_t data);
 

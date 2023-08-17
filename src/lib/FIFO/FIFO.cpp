@@ -30,20 +30,6 @@
 #include "FIFO.h"
 #include "logging.h"
 
-#if defined(PLATFORM_ESP32)
-#define ENTER_CRITICAL  portENTER_CRITICAL(&mux)
-#define EXIT_CRITICAL   portEXIT_CRITICAL(&mux)
-#elif defined(PLATFORM_ESP8266)
-#define ENTER_CRITICAL  noInterrupts()
-#define EXIT_CRITICAL   interrupts()
-#elif defined(PLATFORM_STM32)
-#define ENTER_CRITICAL  noInterrupts()
-#define EXIT_CRITICAL   interrupts()
-#else
-#define ENTER_CRITICAL
-#define EXIT_CRITICAL
-#endif
-
 FIFO::FIFO()
 {
     head = 0;
@@ -53,6 +39,30 @@ FIFO::FIFO()
 
 FIFO::~FIFO()
 {
+}
+
+void ICACHE_RAM_ATTR FIFO::lock()
+{
+#if defined(PLATFORM_ESP32)
+    portENTER_CRITICAL(&mux);
+#elif defined(PLATFORM_ESP8266)
+    noInterrupts();
+#elif defined(PLATFORM_STM32)
+    noInterrupts();
+#else
+#endif
+}
+
+void ICACHE_RAM_ATTR FIFO::unlock()
+{
+#if defined(PLATFORM_ESP32)
+    portEXIT_CRITICAL(&mux);
+#elif defined(PLATFORM_ESP8266)
+    interrupts();
+#elif defined(PLATFORM_STM32)
+    interrupts();
+#else
+#endif
 }
 
 void ICACHE_RAM_ATTR FIFO::push(const uint8_t data)
@@ -65,11 +75,9 @@ void ICACHE_RAM_ATTR FIFO::push(const uint8_t data)
     }
     else
     {
-        ENTER_CRITICAL;
         numElements++;
         buffer[tail] = data;
         tail = (tail + 1) % FIFO_SIZE;
-        EXIT_CRITICAL;
     }
 }
 
@@ -81,14 +89,12 @@ void ICACHE_RAM_ATTR FIFO::pushBytes(const uint8_t *data, uint8_t len)
         flush();
         return;
     }
-    ENTER_CRITICAL;
     for (int i = 0; i < len; i++)
     {
         buffer[tail] = data[i];
         tail = (tail + 1) % FIFO_SIZE;
     }
     numElements += len;
-    EXIT_CRITICAL;
 }
 
 uint8_t ICACHE_RAM_ATTR FIFO::pop()
@@ -98,11 +104,9 @@ uint8_t ICACHE_RAM_ATTR FIFO::pop()
         // DBGLN(F("Buffer empty"));
         return 0;
     }
-    ENTER_CRITICAL;
     numElements--;
     uint8_t data = buffer[head];
     head = (head + 1) % FIFO_SIZE;
-    EXIT_CRITICAL;
     return data;
 }
 
@@ -114,14 +118,12 @@ void ICACHE_RAM_ATTR FIFO::popBytes(uint8_t *data, uint8_t len)
         flush();
         return;
     }
-    ENTER_CRITICAL;
     numElements -= len;
     for (int i = 0; i < len; i++)
     {
         data[i] = buffer[head];
         head = (head + 1) % FIFO_SIZE;
     }
-    EXIT_CRITICAL;
 }
 
 uint8_t ICACHE_RAM_ATTR FIFO::peek()
@@ -142,11 +144,9 @@ uint16_t ICACHE_RAM_ATTR FIFO::size()
 
 void ICACHE_RAM_ATTR FIFO::flush()
 {
-    ENTER_CRITICAL;
     head = 0;
     tail = 0;
     numElements = 0;
-    EXIT_CRITICAL;
 }
 
 bool ICACHE_RAM_ATTR FIFO::ensure(uint8_t requiredSize)
@@ -155,13 +155,11 @@ bool ICACHE_RAM_ATTR FIFO::ensure(uint8_t requiredSize)
     {
         return false;
     }
-    ENTER_CRITICAL;
     while(!available(requiredSize))
     {
         uint8_t len = pop();
         head = (head + len) % FIFO_SIZE;
         numElements -= len;
     }
-    EXIT_CRITICAL;
     return true;
 }

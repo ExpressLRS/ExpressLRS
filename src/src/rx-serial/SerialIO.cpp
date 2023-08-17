@@ -26,9 +26,11 @@ void SerialIO::handleUARTout()
 
     while (_fifo.size() > _fifo.peek() && (bytesWritten + _fifo.peek()) < maxBytesPerCall)
     {
+        _fifo.lock();
         uint8_t OutPktLen = _fifo.pop();
         uint8_t OutData[OutPktLen];
         _fifo.popBytes(OutData, OutPktLen);
+        _fifo.unlock();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
         bytesWritten += OutPktLen;
     }

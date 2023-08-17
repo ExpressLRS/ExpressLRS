@@ -38,7 +38,9 @@ void SerialAirPort::processBytes(uint8_t *bytes, u_int16_t size)
 {
     if (connectionState == connected)
     {
+        apInputBuffer.lock();
         apInputBuffer.pushBytes(bytes, size);
+        apInputBuffer.unlock();
     }
 }
 
