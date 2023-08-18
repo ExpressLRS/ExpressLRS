@@ -612,7 +612,7 @@
             },
             "lr1121": {
                 "product_name": "Generic ESP32 900MHz LR1121 TX",
-                "lua_name": "lr1121 TX",
+                "lua_name": "LR1121 TX",
                 "layout_file": "Generic 900 LR1121.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",

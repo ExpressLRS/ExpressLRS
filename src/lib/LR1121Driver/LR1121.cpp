@@ -30,6 +30,7 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
+    subGRF = false;
 }
 
 void LR1121Driver::End()
@@ -49,7 +50,9 @@ bool LR1121Driver::Begin()
 
     // Validate that the LR1121 is working.
     uint8_t version[5];
-    hal.ReadCommand(LR11XX_SYSTEM_GET_VERSION_OC, version, sizeof(version), SX12XX_Radio_1);
+    hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_1);
+    hal.ReadCommand(version, sizeof(version), SX12XX_Radio_1);
+
     DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version[2]);
     if (version[2] != 0x03)
     {
@@ -140,7 +143,15 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
+    subGRF = (bw == LR11XX_RADIO_LORA_BW_500);
+
     IQinverted = InvertIQ;
+    // IQinverted is always STANDARD for 900 and SX1276
+    if (subGRF)
+    {
+        IQinverted = (bool)LR11XX_RADIO_LORA_IQ_STANDARD;
+    }
+
     SetRxTimeoutUs(interval);
 
     SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
@@ -156,15 +167,13 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 #else
     lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
 #endif
-    
-    // InvertIQ is always STANDARD for 900 and SX1276
-    if (bw == LR11XX_RADIO_LORA_BW_500)
-    {
-        InvertIQ = (bool)LR11XX_RADIO_LORA_IQ_STANDARD;
-    }
-    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
+
+    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted);
 
     SetFrequencyReg(regfreq, SX12XX_Radio_All);
+
+    // Force power update to set the subG or 2G4 RF amp.
+    pwrPending = pwrCurrent;
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
@@ -184,7 +193,7 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
     // - Set bit 23 of register at address 0xf20414 to 0.  This information is from Semecth in an email.
     // 3.7.3 WriteRegMemMask32
 
-    if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6)
+    if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6 && subGRF)
     {
         uint8_t wrbuf[12];
         // Address
@@ -228,44 +237,49 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     pwrCurrent = pwrPending;
     pwrPending = PWRPENDING_NONE;    
 
-    // // 9.5.1 SetPaConfig
-    // // Table 9-2: Optimized Settings for HP PA with Same Matching Network
-    // uint8_t Pabuf[4];
-    // Pabuf[0] = LR11XX_RADIO_PA_SEL_HF; // PaSel - 0x02: Selects the high frequency PA
-    // Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-    // Pabuf[2] = 0x00; // PaDutyCycle
-    // Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-    // hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
+    if (subGRF)
+    {
+        // 9.5.1 SetPaConfig
+        // Table 9-2: Optimized Settings for HP PA with Same Matching Network
+        uint8_t Pabuf[4];
+        Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
+        Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+        Pabuf[2] = 0x04; // PaDutyCycle
+        Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+        hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
 
-    // // 9.5.2 SetTxParams
-    // uint8_t buf[2] = { 13, LR11XX_RADIO_RAMP_48_US };
-    // hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+        // 9.5.2 SetTxParams
+        uint8_t buf[2] = { 0x16, LR11XX_RADIO_RAMP_48_US };
+        hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
 
-    // 9.5.1 SetPaConfig
-    // Table 9-2: Optimized Settings for HP PA with Same Matching Network
-    uint8_t Pabuf[4];
-    Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-    Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-    Pabuf[2] = 0x04; // PaDutyCycle
-    Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-    hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
+        // // 9.5.1 SetPaConfig
+        // // Table 9-2: Optimized Settings for HP PA with Same Matching Network
+        // uint8_t Pabuf[4];
+        // Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
+        // Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+        // Pabuf[2] = 0x01; // PaDutyCycle
+        // Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+        // hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
 
-    // 9.5.2 SetTxParams
-    uint8_t buf[2] = { 0x16, LR11XX_RADIO_RAMP_48_US };
-    hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+        // // 9.5.2 SetTxParams
+        // uint8_t buf[2] = { pwrCurrent, LR11XX_RADIO_RAMP_48_US };
+        // hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+    }
+    else
+    {
+        // 9.5.1 SetPaConfig
+        // Table 9-2: Optimized Settings for HP PA with Same Matching Network
+        uint8_t Pabuf[4];
+        Pabuf[0] = LR11XX_RADIO_PA_SEL_HF; // PaSel - 0x02: Selects the high frequency PA
+        Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+        Pabuf[2] = 0x00; // PaDutyCycle
+        Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+        hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
 
-    // // 9.5.1 SetPaConfig
-    // // Table 9-2: Optimized Settings for HP PA with Same Matching Network
-    // uint8_t Pabuf[4];
-    // Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-    // Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-    // Pabuf[2] = 0x01; // PaDutyCycle
-    // Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-    // hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
-
-    // // 9.5.2 SetTxParams
-    // uint8_t buf[2] = { pwrCurrent, LR11XX_RADIO_RAMP_48_US };
-    // hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+        // 9.5.2 SetTxParams
+        uint8_t buf[2] = { 13, LR11XX_RADIO_RAMP_48_US };
+        hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+    }
 }
 
 void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
@@ -375,10 +389,10 @@ void LR1121Driver::SetDioIrqParams()
 
 uint32_t ICACHE_RAM_ATTR LR1121Driver::GetIrqStatus(SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t status[4] = {0};
-    hal.WriteCommand(0x0000, status, sizeof(status), radioNumber);
+    uint8_t status[6] = {0};
+    hal.ReadCommand(status, sizeof(status), radioNumber);
     // DBGLN("GetIrqStatus: %d", status[3]);
-    return status[0] << 24 | status[1] << 16 | status[2] << 8 | status[3];
+    return status[2] << 24 | status[3] << 16 | status[4] << 8 | status[5];
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::ClearIrqStatus(SX12XX_Radio_Number_t radioNumber)
@@ -460,7 +474,8 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 {
     // 7.2.11 GetRxBufferStatus
     uint8_t buf[3];
-    hal.ReadCommand(LR11XX_RADIO_GET_RXBUFFER_STATUS_OC, buf, sizeof(buf), SX12XX_Radio_All);
+    hal.WriteCommand(LR11XX_RADIO_GET_RXBUFFER_STATUS_OC, radioNumber);
+    hal.ReadCommand(buf, sizeof(buf), radioNumber);
 
     uint8_t const PayloadLengthRX = buf[1];
     uint8_t const RxStartBufferPointer = buf[2];
@@ -471,15 +486,10 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     inbuf[1] = PayloadLengthRX;
 
     uint8_t payloadbuf[PayloadLengthRX + 1];
-
-    hal.ReadCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), payloadbuf, sizeof(payloadbuf), SX12XX_Radio_All);
+    hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radioNumber);
+    hal.ReadCommand(payloadbuf, sizeof(payloadbuf), radioNumber);
 
     memcpy(RXdataBuffer, payloadbuf + 1, PayloadLengthRX);
-
-    // for (int i = 0; i < PayloadLengthRX; i++) // todo check if this is the right wany to handle volatiles
-    // {
-    //     RXdataBuffer[i] = payloadbuf[i + 1];
-    // }
 
     return RXdoneCallback(SX12XX_RX_OK);
 }
@@ -498,7 +508,8 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 {
     // uint8_t status = 0;
 
-    // hal.ReadCommand(LLCC68_RADIO_GET_RSSIINST, (uint8_t *)&status, 1, radioNumber);
+    // hal.WriteCommand(LLCC68_RADIO_GET_RSSIINST, radioNumber);
+    // hal.ReadCommand((uint8_t *)&status, 1, radioNumber);
     // return -(int8_t)(status / 2);
     return 0;
 }
@@ -507,7 +518,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
     // 8.3.7 GetPacketStatus
     uint8_t status[4];
-    hal.ReadCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, status, sizeof(status), SX12XX_Radio_1);
+    hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio);
+    hal.ReadCommand(status, sizeof(status), instance->processingPacketRadio);
     
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
     // LastPacketRSSI = -(int8_t)(status[1] / 2);
