@@ -193,6 +193,12 @@ static void AuxStateToMSPOut()
 
 void crsfTelemToMSPOut(uint8_t *data)
 {
+    if (config.GetBackpackTlmEnabled() == 0)
+    {
+        // Backpack telem is off
+        return;
+    }
+    
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
