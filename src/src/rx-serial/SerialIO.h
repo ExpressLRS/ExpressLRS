@@ -13,19 +13,18 @@ public:
     virtual void setLinkQualityStats(uint16_t lq, uint16_t rssi) = 0;
     virtual void sendLinkStatisticsToFC() = 0;
     virtual void sendMSPFrameToFC(uint8_t* data) = 0;
-    virtual void setFailsafe(bool failsafe);
-
     virtual uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) = 0;
 
     virtual int getMaxSerialReadSize() { return defaultMaxSerialReadSize; }
-    virtual void handleUARTout();
+
+    virtual void handleUARTout() {};
     virtual void handleUARTin();
 
+    void setFailsafe(bool failsafe);
+
 protected:
-    static const uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
     Stream *_outputPort;
     Stream *_inputPort;
-    FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
     bool failsafe = false;
 
     virtual void processBytes(uint8_t *bytes, uint16_t size);

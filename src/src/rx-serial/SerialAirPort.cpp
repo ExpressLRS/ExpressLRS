@@ -44,11 +44,14 @@ void SerialAirPort::processBytes(uint8_t *bytes, u_int16_t size)
 
 void SerialAirPort::handleUARTout()
 {
-    apOutputBuffer.lock();
     auto size = apOutputBuffer.size();
-    uint8_t buf[size];
-    apOutputBuffer.popBytes(buf, size);
-    apOutputBuffer.unlock();
-    _outputPort->write(buf, size);
+    if (size != 0)
+    {
+        uint8_t buf[size];
+        apOutputBuffer.lock();
+        apOutputBuffer.popBytes(buf, size);
+        apOutputBuffer.unlock();
+        _outputPort->write(buf, size);
+    }
 }
 #endif

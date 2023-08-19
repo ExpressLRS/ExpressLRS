@@ -2,11 +2,46 @@
 #include "CRSF.h"
 #include "device.h"
 #include "telemetry.h"
+#if defined(USE_MSP_WIFI)
+#include "msp2crsf.h"
+
+extern MSP2CROSSFIRE msp2crsf;
+#endif
 
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void EnterBindingMode();
 extern void UpdateModelMatch(uint8_t model);
+
+void SerialCRSF::handleUARTout()
+{
+    // don't write more than 128 bytes at a time to avoid RX buffer overflow
+    const int maxBytesPerCall = 128;
+    uint32_t bytesWritten = 0;
+    #if defined(USE_MSP_WIFI)
+        while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
+        {
+            msp2crsf.FIFOout.lock();
+            uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+            uint8_t OutData[OutPktLen];
+            msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+            msp2crsf.FIFOout.unlock();
+            this->_outputPort->write(OutData, OutPktLen); // write the packet out
+            bytesWritten += OutPktLen;
+        }
+    #endif
+
+    while (_fifo.size() > _fifo.peek() && (bytesWritten + _fifo.peek()) < maxBytesPerCall)
+    {
+        _fifo.lock();
+        uint8_t OutPktLen = _fifo.pop();
+        uint8_t OutData[OutPktLen];
+        _fifo.popBytes(OutData, OutPktLen);
+        _fifo.unlock();
+        this->_outputPort->write(OutData, OutPktLen); // write the packet out
+        bytesWritten += OutPktLen;
+    }
+}
 
 void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
 {
