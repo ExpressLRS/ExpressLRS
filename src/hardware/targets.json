@@ -885,6 +885,7 @@
                 "lua_name": "HM ES900TX",
                 "layout_file": "HappyModel ES900.json",
                 "upload_methods": ["uart", "wifi"],
+                "features": ["fan"],
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_TX",
                 "prior_target_name": "HappyModel_TX_ES900TX"
@@ -907,7 +908,6 @@
                 "lua_name": "HM ES900RX",
                 "layout_file": "Generic 900.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
-                "features": ["fan"],
                 "platform": "esp8285",
                 "firmware": "Unified_ESP8285_900_RX",
                 "prior_target_name": "HappyModel_RX_ES900RX"
