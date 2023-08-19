@@ -33,12 +33,15 @@ HardwareSerial CRSF::Port = Serial;
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 /// Out FIFO to buffer messages///
-static FIFO<256> SerialOutFIFO;
+static const auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
+static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
 
 inBuffer_U CRSF::inBuffer;
 
 Stream *CRSF::PortSecondary;
-static FIFO<256> MspWriteFIFO;
+
+static const auto MSP_SERIAL_OUT_FIFO_SIZE = 256U;
+static FIFO<MSP_SERIAL_OUT_FIFO_SIZE> MspWriteFIFO;
 
 void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
 void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
