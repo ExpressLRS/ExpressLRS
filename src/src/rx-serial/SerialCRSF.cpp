@@ -43,12 +43,6 @@ void SerialCRSF::handleUARTout()
     }
 }
 
-void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
-{
-    linkQuality = lq;
-    rssiDBM = rssi;
-}
-
 void SerialCRSF::sendLinkStatisticsToFC()
 {
     constexpr uint8_t outBuffer[] = {

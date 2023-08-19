@@ -12,7 +12,6 @@ public:
 
     virtual ~SerialAirPort() {}
 
-    void setLinkQualityStats(uint16_t lq, uint16_t rssi) override;
     uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override;
     void sendMSPFrameToFC(uint8_t* data) override;
     void sendLinkStatisticsToFC() override;

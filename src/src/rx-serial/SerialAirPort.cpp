@@ -9,11 +9,6 @@ FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 
-void SerialAirPort::setLinkQualityStats(uint16_t lq, uint16_t rssi)
-{
-    // unsupported
-}
-
 void SerialAirPort::sendLinkStatisticsToFC()
 {
     // unsupported

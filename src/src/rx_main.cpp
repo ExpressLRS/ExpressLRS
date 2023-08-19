@@ -301,11 +301,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    serialIO->setLinkQualityStats(
-        UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
-        UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
-    );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     CRSF::LinkStatistics.active_antenna = antenna;

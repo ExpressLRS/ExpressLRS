@@ -8,7 +8,6 @@ public:
 
     virtual ~SerialNOOP() {}
 
-    void setLinkQualityStats(uint16_t lq, uint16_t rssi) override {}
     void sendLinkStatisticsToFC() override {}
     void sendMSPFrameToFC(uint8_t* data) override {}
 
