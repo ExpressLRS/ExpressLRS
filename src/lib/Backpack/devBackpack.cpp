@@ -191,6 +191,27 @@ static void AuxStateToMSPOut()
 #endif // USE_TX_BACKPACK
 }
 
+void crsfTelemToMSPOut(uint8_t *data)
+{
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_CRSF_TLM;
+
+    uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+    if (size > CRSF_MAX_PACKET_LEN)
+    {
+        ERRLN("CRSF frame exceeds max length");
+    }
+    
+    for (uint8_t i = 0; i < size; ++i)
+    {
+      packet.addByte(data[i]);
+    }
+
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+}
+
 static void initialize()
 {
 #if defined(GPIO_PIN_BACKPACK_EN)
