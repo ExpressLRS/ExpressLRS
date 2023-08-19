@@ -63,6 +63,12 @@ def process_json_flag(define):
                 json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
             else:
                 json_flags['airport-uart-baud'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "ARM_RANGE_MIN":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            json_flags['arm-range-min'] = int(dequote(parts.group(2)))
+        if parts.group(1) == "ARM_RANGE_MAX":
+            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            json_flags['arm-range-max'] = int(dequote(parts.group(2)))
     if define == "-DUART_INVERTED" and not isRX:
         json_flags['uart-inverted'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:

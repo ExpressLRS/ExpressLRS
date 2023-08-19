@@ -150,6 +150,16 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 0,
 #endif
 #endif
+#if defined(ARM_RANGE_MIN)
+    .arm-range-min = ARM_RANGE_MIN,
+#else
+    .arm-range-min = 1500,
+#endif
+#if defined(ARM_RANGE_MAX)
+    .arm-range-max = ARM_RANGE_MAX,
+#else
+    .arm-range-max = 2012,
+#endif
 };
 
 /*
@@ -224,6 +234,8 @@ void saveOptions(Stream &stream, bool customised)
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
     doc["customised"] = customised;
+    doc["arm-range-min"] = firmwareOptions.arm_range_min;
+    doc["arm-range-max"] = firmwareOptions.arm_range_max;
     doc["flash-discriminator"] = flash_discriminator;
 
     serializeJson(doc, stream);
@@ -335,6 +347,8 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
+    firmwareOptions.arm_range_min = doc["arm-range-min"] | 1500;
+    firmwareOptions.arm_range_max = doc["arm-range-max"] | 2012;
     firmwareOptions.domain = doc["domain"] | 0;
     flash_discriminator = doc["flash-discriminator"] | 0U;
 

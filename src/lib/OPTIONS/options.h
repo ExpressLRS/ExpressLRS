@@ -24,6 +24,8 @@ typedef struct _options {
     uint8_t     domain;         // depends on radio chip
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
+    uint16_t    arm_range_min;  // Start of "armed" range
+    uint16_t    arm_range_max;  // End of "armed" range
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
