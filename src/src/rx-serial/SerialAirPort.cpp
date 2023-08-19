@@ -9,19 +9,9 @@ FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 
-void SerialAirPort::sendLinkStatisticsToFC()
-{
-    // unsupported
-}
-
 uint32_t SerialAirPort::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
     return DURATION_IMMEDIATELY;
-}
-
-void SerialAirPort::sendMSPFrameToFC(uint8_t* data)
-{
-    // unsupported
 }
 
 int SerialAirPort::getMaxSerialReadSize()

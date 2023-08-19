@@ -76,18 +76,3 @@ uint32_t SerialSUMD::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 
     return DURATION_IMMEDIATELY;
 }
-
-void SerialSUMD::sendLinkStatisticsToFC()
-{
-    // unsupported
-}
-
-void SerialSUMD::sendMSPFrameToFC(uint8_t* data)
-{
-    (void)data;
-    // unsupported
-}
-
-void processByte(uint8_t byte) {
-    // unsupported
-}

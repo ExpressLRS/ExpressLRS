@@ -44,8 +44,8 @@ static int timeout()
     }
     frameAvailable = false;
     // still get telemetry and send link stats if theres no model match
-    serialIO->handleUARTout();
     serialIO->handleUARTin();
+    serialIO->handleUARTout();
     return duration;
 }
 

@@ -9,14 +9,6 @@ void SerialIO::handleUARTin()
     processBytes(buffer, size);
 }
 
-void SerialIO::processBytes(uint8_t *bytes, uint16_t size)
-{
-    for (int i=0 ; i<size ; i++)
-    {
-        processByte(bytes[i]);
-    }
-}
-
 void SerialIO::setFailsafe(bool failsafe)
 {
     this->failsafe = failsafe;

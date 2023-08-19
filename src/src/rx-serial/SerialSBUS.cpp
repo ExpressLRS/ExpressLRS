@@ -12,11 +12,6 @@ extern RxConfig config;
 
 const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
-void SerialSBUS::sendLinkStatisticsToFC()
-{
-    // unsupported
-}
-
 uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
     static auto sendPackets = false;
@@ -77,11 +72,6 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     _outputPort->write((uint8_t)extraData);    // ch 17, 18, lost packet, failsafe
     _outputPort->write((uint8_t)0x00);    // FOOTER
     return SBUS_CALLBACK_INTERVAL_MS;
-}
-
-void SerialSBUS::sendMSPFrameToFC(uint8_t* data)
-{
-    // unsupported
 }
 
 #endif
