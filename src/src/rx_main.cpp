@@ -1096,7 +1096,7 @@ void UpdateModelMatch(uint8_t model)
 
 void SendMSPFrameToFC(uint8_t *mspData)
 {
-    serialIO->sendMSPFrameToFC(mspData);
+    serialIO->queueMSPFrameTransmission(mspData);
 }
 
 /**
@@ -1156,7 +1156,7 @@ void MspReceiveComplete()
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
-            serialIO->sendMSPFrameToFC(MspData);
+            serialIO->queueMSPFrameTransmission(MspData);
         }
     }
 
@@ -1505,7 +1505,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            serialIO->sendLinkStatisticsToFC();
+            serialIO->queueLinkStatisticsPacket();
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;

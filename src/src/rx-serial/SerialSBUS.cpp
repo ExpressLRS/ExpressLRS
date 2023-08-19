@@ -12,7 +12,7 @@ extern RxConfig config;
 
 const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
-uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     static auto sendPackets = false;
     if ((failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))

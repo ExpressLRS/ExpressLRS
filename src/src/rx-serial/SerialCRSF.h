@@ -5,14 +5,11 @@ public:
     explicit SerialCRSF(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     virtual ~SerialCRSF() {}
 
-    uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override;
-    void sendMSPFrameToFC(uint8_t* data) override;
-    void sendLinkStatisticsToFC() override;
-    void handleUARTout() override;
+    uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) override;
+    void queueMSPFrameTransmission(uint8_t* data) override;
+    void queueLinkStatisticsPacket() override;
+    void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
-    static const uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
-    FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
-
     void processBytes(uint8_t *bytes, uint16_t size) override;
 };

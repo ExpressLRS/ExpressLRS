@@ -13,37 +13,26 @@ extern void reset_into_bootloader();
 extern void EnterBindingMode();
 extern void UpdateModelMatch(uint8_t model);
 
-void SerialCRSF::handleUARTout()
+void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
-    // don't write more than 128 bytes at a time to avoid RX buffer overflow
-    const int maxBytesPerCall = 128;
     uint32_t bytesWritten = 0;
     #if defined(USE_MSP_WIFI)
-        while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesPerCall)
-        {
-            msp2crsf.FIFOout.lock();
-            uint8_t OutPktLen = msp2crsf.FIFOout.pop();
-            uint8_t OutData[OutPktLen];
-            msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-            msp2crsf.FIFOout.unlock();
-            this->_outputPort->write(OutData, OutPktLen); // write the packet out
-            bytesWritten += OutPktLen;
-        }
-    #endif
-
-    while (_fifo.size() > _fifo.peek() && (bytesWritten + _fifo.peek()) < maxBytesPerCall)
+    while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesToSend)
     {
-        _fifo.lock();
-        uint8_t OutPktLen = _fifo.pop();
+        msp2crsf.FIFOout.lock();
+        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
         uint8_t OutData[OutPktLen];
-        _fifo.popBytes(OutData, OutPktLen);
-        _fifo.unlock();
+        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+        msp2crsf.FIFOout.unlock();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
         bytesWritten += OutPktLen;
     }
+    #endif
+    // Call the super class to send the current FIFO (using any left-over bytes)
+    SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }
 
-void SerialCRSF::sendLinkStatisticsToFC()
+void SerialCRSF::queueLinkStatisticsPacket()
 {
     constexpr uint8_t outBuffer[] = {
         LinkStatisticsFrameLength + 4,
@@ -65,7 +54,7 @@ void SerialCRSF::sendLinkStatisticsToFC()
     _fifo.unlock();
 }
 
-uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
@@ -104,7 +93,7 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     return DURATION_IMMEDIATELY;
 }
 
-void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
+void SerialCRSF::queueMSPFrameTransmission(uint8_t* data)
 {
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
@@ -140,7 +129,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
             CRSF::GetDeviceInformation(deviceInformation, 0);
             CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            sendMSPFrameToFC(deviceInformation);
+            queueMSPFrameTransmission(deviceInformation);
         }
     }
 }

@@ -11,12 +11,12 @@ public:
     explicit SerialAirPort(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     virtual ~SerialAirPort() {}
 
-    void sendLinkStatisticsToFC() override {}
-    void sendMSPFrameToFC(uint8_t* data) override {}
-    uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override;
+    void queueLinkStatisticsPacket() override {}
+    void queueMSPFrameTransmission(uint8_t* data) override {}
+    uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) override;
 
     int getMaxSerialReadSize() override;
-    void handleUARTout() override;
+    void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;

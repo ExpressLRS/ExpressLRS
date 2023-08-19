@@ -9,7 +9,7 @@ FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 
-uint32_t SerialAirPort::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialAirPort::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     return DURATION_IMMEDIATELY;
 }
@@ -27,7 +27,7 @@ void SerialAirPort::processBytes(uint8_t *bytes, u_int16_t size)
     }
 }
 
-void SerialAirPort::handleUARTout()
+void SerialAirPort::sendQueuedData(uint32_t maxBytesToSend)
 {
     auto size = apOutputBuffer.size();
     if (size != 0)
