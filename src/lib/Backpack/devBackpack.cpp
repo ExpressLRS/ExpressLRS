@@ -208,6 +208,7 @@ void crsfTelemToMSPOut(uint8_t *data)
     if (size > CRSF_MAX_PACKET_LEN)
     {
         ERRLN("CRSF frame exceeds max length");
+        return;
     }
     
     for (uint8_t i = 0; i < size; ++i)
