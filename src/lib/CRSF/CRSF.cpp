@@ -85,7 +85,7 @@ uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 5250000;
 #if defined(PLATFORM_ESP32)
-bool CRSF::UARTinverted = false;
+bool CRSF::UARTinverted = true; // default to start looking for an inverted signal
 #endif
 
 bool CRSF::CRSFstate = false;
@@ -104,7 +104,10 @@ void CRSF::Begin()
 
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
-    UARTinverted = firmwareOptions.uart_inverted;
+    if (GPIO_PIN_RCSIGNAL_RX != GPIO_PIN_RCSIGNAL_TX)
+    {
+        UARTinverted = false; // on a full UART we will start uninverted checking first
+    }
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);

@@ -114,9 +114,7 @@ def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
-    if args.uart_inverted != None:
-        val &= ~1
-        val |= args.uart_inverted
+    val &= ~1   # unused1 - ex uart_inverted
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
@@ -226,8 +224,6 @@ def patch_unified(args, options):
         json_flags['unlock-higher-power'] = args.unlock_higher_power
     if args.fan_min_runtime is not None:
         json_flags['fan-runtime'] = args.fan_min_runtime
-    if args.uart_inverted is not None:
-        json_flags['uart-inverted'] = args.uart_inverted
 
     if args.airport_baud is not None:
         json_flags['is-airport'] = True
@@ -331,9 +327,6 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
-    parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
-    parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
-    parser.set_defaults(uart_inverted=None)
     parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
     parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
     parser.set_defaults(unlock_higher_power=None)
