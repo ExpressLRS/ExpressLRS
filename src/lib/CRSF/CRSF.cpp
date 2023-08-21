@@ -381,12 +381,12 @@ void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits
         bitsMerged -= srcBits;
     }
 
-    #if defined(PLATFORM_ESP32)
     if (prev_AUX1 != ChannelData[4])
     {
+        #if defined(PLATFORM_ESP32)
         devicesTriggerEvent();
+        #endif
     }
-    #endif
 }
 
 bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
