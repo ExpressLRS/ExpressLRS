@@ -103,7 +103,8 @@ typedef enum : uint8_t
 
 enum {
     RADIO_TYPE_SX127x_LORA,
-    RADIO_TYPE_LR1121_LORA,
+    RADIO_TYPE_LR1121_LORA_900,
+    RADIO_TYPE_LR1121_LORA_2G4,
     RADIO_TYPE_SX128x_LORA,
     RADIO_TYPE_SX128x_FLRC,
 };
@@ -207,8 +208,7 @@ enum eFailsafeMode : uint8_t
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 6
-// #define RATE_MAX 10
+#define RATE_MAX 10
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern LR1121Driver Radio;

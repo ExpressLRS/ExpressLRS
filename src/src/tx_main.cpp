@@ -349,6 +349,12 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
+  // When using the LR1121 the domain can change and require rebuilding the hop sequence.
+  // if (ModParams->radio_type != ExpressLRS_currAirRate_Modparams->radio_type) // Bootloops when this statment in uncommented :|
+  {
+    FHSSrandomiseFHSSsequence(uidMacSeedGet(), (bool)(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4));
+  }
+
   DBGLN("set rate %u", index);
   uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
@@ -476,7 +482,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
   // But only on the sync FHSS channel and with a timed delay between them
-  else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
+  else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && FHSSonSyncChannel())
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);

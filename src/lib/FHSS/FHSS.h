@@ -36,7 +36,7 @@ extern uint_fast8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
 
 // create and randomise an FHSS sequence
-void FHSSrandomiseFHSSsequence(uint32_t seed);
+void FHSSrandomiseFHSSsequence(uint32_t seed, bool set2G4 = false);
 
 // The number of frequencies for this regulatory domain
 static inline uint32_t FHSSgetChannelCount(void)
@@ -60,6 +60,12 @@ static inline uint32_t GetInitialFreq()
 static inline uint8_t FHSSgetCurrIndex()
 {
     return FHSSptr;
+}
+
+// Is the current frequency the sync frequency
+static inline uint8_t FHSSonSyncChannel()
+{
+    return FHSSsequence[FHSSptr] == sync_channel;
 }
 
 // Set the sequence pointer, used by RX on SYNC

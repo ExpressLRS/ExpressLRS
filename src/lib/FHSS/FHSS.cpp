@@ -12,13 +12,13 @@
 #endif
 
 const fhss_config_t domains[] = {
-    // {"AU915",  FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80},
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(865275000), FREQ_HZ_TO_REG_VAL(869575000), 13},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3}
+    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000),  FREQ_HZ_TO_REG_VAL(926900000),  20},
+    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000),  FREQ_HZ_TO_REG_VAL(926900000),  40},
+    {"EU868",  FREQ_HZ_TO_REG_VAL(865275000),  FREQ_HZ_TO_REG_VAL(869575000),  13},
+    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000),  FREQ_HZ_TO_REG_VAL(866950000),   4},
+    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000),  FREQ_HZ_TO_REG_VAL(434420000),   3},
+    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000),  FREQ_HZ_TO_REG_VAL(434450000),   3},
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
 };
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
@@ -62,9 +62,17 @@ Approach:
   another random entry, excluding the sync channel.
 
 */
-void FHSSrandomiseFHSSsequence(const uint32_t seed)
+void FHSSrandomiseFHSSsequence(const uint32_t seed, bool set2G4)
 {
-    FHSSconfig = &domains[firmwareOptions.domain];
+    if (set2G4)
+    {
+        FHSSconfig = &domains[6]; // ISM2G4
+    }
+    else
+    {
+        FHSSconfig = &domains[firmwareOptions.domain];
+    }
+
     DBGLN("Setting %s Mode", FHSSconfig->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
 

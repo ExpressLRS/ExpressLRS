@@ -93,8 +93,17 @@ void LR1121Hal::reset(void)
     {
         pinMode(GPIO_PIN_RST, OUTPUT);
         digitalWrite(GPIO_PIN_RST, LOW);
+        if (GPIO_PIN_RST_2 != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_RST_2, OUTPUT);
+            digitalWrite(GPIO_PIN_RST_2, LOW);
+        }
         delay(1);
         digitalWrite(GPIO_PIN_RST, HIGH);
+        if (GPIO_PIN_RST_2 != UNDEF_PIN)
+        {
+            digitalWrite(GPIO_PIN_RST_2, HIGH);
+        }
         delay(300); // LR1121 busy is high for 230ms after reset.  The WaitOnBusy timeout is only 1ms.  So this long delay is required.
     }
 
@@ -113,7 +122,7 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
     WaitOnBusy(radioNumber);
     SPIEx.write(radioNumber, OutBuffer, size + 2);
 
-    memcpy(buffer, OutBuffer+2, size);
+    memcpy(buffer, OutBuffer+2, size); // Returns Stat1, Stat2, IrqStat
 }
 
 void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
@@ -129,7 +138,9 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Numb
 
 void ICACHE_RAM_ATTR LR1121Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t InBuffer[WORD_PADDED(size)];
+    WORD_ALIGNED_ATTR uint8_t InBuffer[WORD_PADDED(size)] = {0};
+
+    memcpy(InBuffer, buffer, size);
 
     WaitOnBusy(radioNumber);
     SPIEx.read(radioNumber, InBuffer, size);

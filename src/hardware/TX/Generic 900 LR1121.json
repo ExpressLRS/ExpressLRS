@@ -1,6 +1,6 @@
 {
-    "serial_rx": 13,
-    "serial_tx": 13,
+    "serial_rx": 23,
+    "serial_tx": 23,
 
     "radio_miso": 33,
     "radio_mosi": 32,
