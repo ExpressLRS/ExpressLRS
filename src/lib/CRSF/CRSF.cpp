@@ -96,6 +96,8 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
+
+void sendLuaDevicePacket(bool force); // extern
 #endif // CRSF_TX_MODULE
 
 void CRSF::Begin()
@@ -226,9 +228,9 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
  * Build a an extended type packet and queue it in the SerialOutFIFO
  * This is just a regular packet with 2 extra bytes with the sub src and target
  **/
-void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
+void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len, bool force)
 {
-    if (!CRSF::CRSFstate)
+    if (!(CRSF::CRSFstate || force))
         return;
 
     uint8_t buf[6] = {
@@ -359,7 +361,7 @@ void ICACHE_RAM_ATTR CRSF::sendSyncPacketToTX() // in values in us.
         sync->rate = htobe32(packetRate);
         sync->offset = htobe32(offset);
 
-        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer));
+        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer), false);
 
         OpenTXsyncLastSent = now;
     }
@@ -887,9 +889,9 @@ bool CRSF::UARTwdt()
 #else
             CRSF::Port.begin(UARTrequestedBaud);
 #endif
-            duplex_set_RX();
-            // cleanup input buffer
-            flush_port_input();
+            sendLuaDevicePacket(true);
+            // handleUARTout() also flushes and turns the port back to RX
+            handleUARTout();
 
             retval = true;
         }
@@ -980,7 +982,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 
 void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;

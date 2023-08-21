@@ -65,7 +65,7 @@ public:
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
-    static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
+    static void packetQueueExtended(uint8_t type, void *data, uint8_t len, bool force);
 
     ///// Variables for OpenTX Syncing //////////////////////////
     #define OpenTXsyncPacketInterval 200 // in ms

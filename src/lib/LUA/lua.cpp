@@ -211,7 +211,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
 #ifdef TARGET_TX
-  CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+  CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2, false);
 #else
   memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
@@ -295,7 +295,7 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
-  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer));
+  crsf.packetQueueExtended(0x2E, &buffer, sizeof(buffer), false);
 }
 
 void luaRegisterDevicePingCallback(void (*callback)())
@@ -388,7 +388,7 @@ bool luaHandleUpdateParameter()
         devicePingCallback();
         luaSupressCriticalErrors();
 #endif
-        sendLuaDevicePacket();
+        sendLuaDevicePacket(false);
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
@@ -419,15 +419,15 @@ bool luaHandleUpdateParameter()
   return true;
 }
 
-void sendLuaDevicePacket(void)
+void sendLuaDevicePacket(bool force)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-  crsf.GetDeviceInformation(deviceInformation, lastLuaField);
+  CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
   // does append header + crc again so substract size from length
 #ifdef TARGET_TX
-  crsf.packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
+  CRSF::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH, force);
 #else
-  crsf.SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
   telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
 }
