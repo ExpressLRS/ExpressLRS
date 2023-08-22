@@ -61,8 +61,8 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch11 = channelData[11];
     PackedRCdataOut.ch12 = channelData[12];
     PackedRCdataOut.ch13 = channelData[13];
-    PackedRCdataOut.ch14 = linkQuality;
-    PackedRCdataOut.ch15 = rssiDBM;
+    PackedRCdataOut.ch14 = channelData[14];
+    PackedRCdataOut.ch15 = channelData[15];
 
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);

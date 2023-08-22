@@ -4,7 +4,11 @@
 #include "logging.h"
 #include "helpers.h"
 
+volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
+GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+
 #if defined(CRSF_TX_MODULE)
+
 #if defined(PLATFORM_ESP32)
 #include <soc/uart_reg.h>
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
@@ -15,7 +19,7 @@ portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port(0);
-#elif CRSF_TX_MODULE_STM32
+#elif defined(PLATFORM_STM32)
 HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
 #include "stm32f3xx_hal.h"
@@ -27,19 +31,13 @@ HardwareSerial CRSF::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSF::Port = Serial;
 #endif
-#endif
 
-GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
+#define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 /// Out FIFO to buffer messages///
 static FIFO SerialOutFIFO;
 
 inBuffer_U CRSF::inBuffer;
-
-volatile crsfPayloadLinkstatistics_s CRSF::LinkStatistics;
-
-#if CRSF_TX_MODULE
-#define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 Stream *CRSF::PortSecondary;
 static FIFO MspWriteFIFO;
@@ -96,13 +94,11 @@ bool CRSF::CRSFstate = false;
 
 uint8_t CRSF::MspData[ELRS_MSP_BUFFER] = {0};
 uint8_t CRSF::MspDataLength = 0;
-#endif // CRSF_TX_MODULE
 
 void CRSF::Begin()
 {
     DBGLN("About to start CRSF task...");
 
-#if CRSF_TX_MODULE
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
 #if defined(PLATFORM_ESP32)
@@ -146,8 +142,7 @@ void CRSF::Begin()
     USART1->CR3 |= USART_CR3_HDSEL;
     USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
     USART1->CR1 |= USART_CR1_UE;
-#endif
-#if defined(TARGET_TX_FM30_MINI)
+#elif defined(TARGET_TX_FM30_MINI)
     LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
     USART2->CR1 &= ~USART_CR1_UE;
     USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
@@ -157,16 +152,10 @@ void CRSF::Begin()
     CRSF::Port.flush();
     flush_port_input();
 #endif
-
-#endif // CRSF_TX_MODULE
-
-    //The master module requires that the serial communication is bidirectional
-    //The Reciever uses seperate rx and tx pins
 }
 
 void CRSF::End()
 {
-#if CRSF_TX_MODULE
     uint32_t startTime = millis();
     while (SerialOutFIFO.peek() > 0)
     {
@@ -178,10 +167,8 @@ void CRSF::End()
     }
     //CRSF::Port.end(); // don't call seria.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
-#endif // CRSF_TX_MODULE
 }
 
-#if CRSF_TX_MODULE
 void CRSF::flush_port_input(void)
 {
     // Make sure there is no garbage on the UART at the start
@@ -396,9 +383,9 @@ void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits
 
     if (prev_AUX1 != ChannelData[4])
     {
-    #if defined(PLATFORM_ESP32)
+        #if defined(PLATFORM_ESP32)
         devicesTriggerEvent();
-    #endif
+        #endif
     }
 }
 
@@ -980,7 +967,7 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
 
 void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));                
+    uint8_t *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;
