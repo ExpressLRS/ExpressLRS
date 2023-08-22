@@ -3,7 +3,6 @@
 #include "telemetry_protocol.h"
 
 // Variables / constants
-#define MAX_MAVLINK_BUF_LEN  2048
 extern FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkInputBuffer;
 extern FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 

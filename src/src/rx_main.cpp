@@ -87,8 +87,6 @@ device_affinity_t ui_devices[] = {
 #endif
 };
 
-uint8_t mavBuffer[64];
-
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
 
@@ -146,6 +144,8 @@ static uint8_t telemetryBurstMax;
 
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
+
+uint8_t mavBuffer[64];
 
 static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;

@@ -9,7 +9,7 @@
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
 
-// Variables / constants for Airport //
+// Variables / constants for Mavlink //
 FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkInputBuffer;
 FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 
@@ -26,6 +26,10 @@ void SerialMavlink::sendLinkStatisticsToFC()
 
 uint32_t SerialMavlink::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 {
+    if (!frameAvailable) {
+        return DURATION_IMMEDIATELY;
+    }
+    
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     mavlink_message_t msg;
     mavlink_msg_rc_channels_override_pack(255, 0, &msg, 1, 1, 
