@@ -1,5 +1,6 @@
 #include "SerialCRSF.h"
 #include "CRSF.h"
+#include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
 #if defined(USE_MSP_WIFI)
@@ -81,8 +82,22 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch11 = channelData[11];
     PackedRCdataOut.ch12 = channelData[12];
     PackedRCdataOut.ch13 = channelData[13];
-    PackedRCdataOut.ch14 = channelData[14];
-    PackedRCdataOut.ch15 = channelData[15];
+
+    // In 16ch mode, do not output RSSI/LQ on channels
+    if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
+    {
+        PackedRCdataOut.ch14 = channelData[14];
+        PackedRCdataOut.ch15 = channelData[15];
+    }
+    else
+    {
+        // Not in 16-channel mode, send LQ and RSSI dBm
+        int32_t rssiDBM = CRSF::LinkStatistics.active_antenna == 0 ? -CRSF::LinkStatistics.uplink_RSSI_1 : -CRSF::LinkStatistics.uplink_RSSI_2;
+
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(CRSF::LinkStatistics.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+    }
 
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
