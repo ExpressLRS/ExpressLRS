@@ -65,7 +65,7 @@ bool LR1121Driver::Begin()
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         // Validate that the LR1121 #2 is working.
-        version[5] = {0};
+        memset(version, 0, sizeof(version));
         hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_2);
         hal.ReadCommand(version, sizeof(version), SX12XX_Radio_2);
 
@@ -300,17 +300,19 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
 
     case LR1121_MODE_STDBY_RC:
         //2.1.2.1 SetStandby
+        buf[0] = 0x00;
+        hal.WriteCommand(LR11XX_SYSTEM_SET_STANDBY_OC, buf, 1, radioNumber);
+        break;
+
+    case LR1121_MODE_STDBY_XOSC:
+        //2.1.2.1 SetStandby
         buf[0] = 0x01;
         hal.WriteCommand(LR11XX_SYSTEM_SET_STANDBY_OC, buf, 1, radioNumber);
         break;
 
-    // The DC-DC supply regulation is automatically powered in STDBY_XOSC mode.
-    case LR1121_MODE_STDBY_XOSC:
-        // hal.WriteCommand(LR1121_RADIO_SET_STANDBY, LR1121_STDBY_XOSC, radioNumber, 50);
-        break;
-
     case LR1121_MODE_FS:
-        // hal.WriteCommand(LR1121_RADIO_SET_FS, buf, 0, radioNumber, 70);
+        // 2.1.9.1 SetFs
+        hal.WriteCommand(LR11XX_SYSTEM_SET_FS_OC, radioNumber);
         break;
 
     case LR1121_MODE_RX:
@@ -396,7 +398,7 @@ void LR1121Driver::SetDioIrqParams()
 }
 
 // IRQ is clear while reading.  2 for 1 SPI... WINNING!
-uint32_t ICACHE_RAM_ATTR LR1121Driver::GetIrqStatus(SX12XX_Radio_Number_t radioNumber)
+uint32_t ICACHE_RAM_ATTR LR1121Driver::GetAndClearIrqStatus(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status[6] = {0};
     status[0] = LR11XX_SYSTEM_CLEAR_IRQ_OC >> 8;
@@ -560,7 +562,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     instance->processingPacketRadio = radioNumber;
     // SX12XX_Radio_Number_t irqClearRadio = radioNumber;
 
-    uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
+    uint32_t irqStatus = instance->GetAndClearIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();

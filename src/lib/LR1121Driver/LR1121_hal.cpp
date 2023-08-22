@@ -121,8 +121,6 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
 
     WaitOnBusy(radioNumber);
     SPIEx.write(radioNumber, OutBuffer, size + 2);
-
-    memcpy(buffer, OutBuffer+2, size); // Returns Stat1, Stat2, IrqStat
 }
 
 void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
