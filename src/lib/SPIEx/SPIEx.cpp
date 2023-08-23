@@ -7,14 +7,14 @@
 void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint32_t size, bool reading)
 {
 #if defined(PLATFORM_ESP32)
-    // Set the CS pins which we want crontrolled by the SPI module for this operation
-    spiDisableSSPins(SPIEx.bus(), ~cs_mask);
-    spiEnableSSPins(SPIEx.bus(), cs_mask);
-
     spi_dev_t *spi = *(reinterpret_cast<spi_dev_t**>(bus()));
 
     // wait for SPI to become non-busy
     while(spi->cmd.usr) {}
+
+    // Set the CS pins which we want crontrolled by the SPI module for this operation
+    spiDisableSSPins(SPIEx.bus(), ~cs_mask);
+    spiEnableSSPins(SPIEx.bus(), cs_mask);
 
     spi->mosi_dlen.usr_mosi_dbitlen = ((size * 8) - 1);
     spi->miso_dlen.usr_miso_dbitlen = ((size * 8) - 1);
