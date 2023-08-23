@@ -337,6 +337,13 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
     interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
+
+    // When using the LR1121 the domain can change and require rebuilding the hop sequence.
+    // if (ModParams->radio_type != ExpressLRS_currAirRate_Modparams->radio_type) // Bootloops when this statment in uncommented :|
+    {
+        FHSSrandomiseFHSSsequence(uidMacSeedGet(), (bool)(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4));
+    }
+
     hwTimer.updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
