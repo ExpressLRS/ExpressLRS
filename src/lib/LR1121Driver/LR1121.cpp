@@ -17,12 +17,12 @@ static uint32_t endTX;
 // RxTimeout is expressed in periods of the 32.768kHz RTC
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 1000000000 / 32768 // TODO check for LR1121
 
-#ifdef USE_LR1121_DCDC
-    #ifndef OPT_USE_LR1121_DCDC
-        #define OPT_USE_LR1121_DCDC true
+#ifdef USE_HARDWARE_DCDC
+    #ifndef OPT_USE_HARDWARE_DCDC
+        #define OPT_USE_HARDWARE_DCDC true
     #endif
 #else
-    #define OPT_USE_LR1121_DCDC false
+    #define OPT_USE_HARDWARE_DCDC false
 #endif
 
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
@@ -124,10 +124,12 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     SetOutputPower(LR1121_POWER_MIN);
     CommitOutputPower();
 
-#if defined(USE_LR1121_DCDC)
-    if (OPT_USE_LR1121_DCDC)
+#if defined(USE_HARDWARE_DCDC)
+    if (OPT_USE_HARDWARE_DCDC)
     {
-        // hal.WriteCommand(LLCC68_RADIO_SET_REGULATORMODE, LLCC68_USE_DCDC, SX12XX_Radio_All);        // Enable DCDC converter instead of LDO
+        // 5.1.1 SetRegMode
+        uint8_t RegMode[1] = {1};    
+        hal.WriteCommand(LR11XX_SYSTEM_SET_REGMODE_OC, RegMode, sizeof(RegMode), SX12XX_Radio_All); // Enable DCDC converter instead of LDO
     }
 #endif
 
@@ -149,7 +151,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
-    subGRF = (bw == LR11XX_RADIO_LORA_BW_500);
+    subGRF = (bw == LR11XX_RADIO_LORA_BW_500); // This should be done better using something like RADIO_TYPE_LR1121_LORA_XXX
 
     IQinverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
     // IQinverted is always STANDARD for 900 and SX1276
@@ -163,8 +165,8 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
 
     // 8.1.1 SetPacketType
-    uint8_t abuf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, abuf, sizeof(abuf), SX12XX_Radio_All);
+    uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), SX12XX_Radio_All);
 
     ConfigModParamsLoRa(bw, sf, cr);
 
@@ -369,7 +371,6 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     buf[4] = LR11XX_RADIO_LORA_CRC_OFF;
     buf[5] = InvertIQ;
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), SX12XX_Radio_All);
-
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
@@ -390,23 +391,18 @@ void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_N
     SetFrequencyHz(freq, radioNumber);
 }
 
+// 4.1.1 SetDioIrqParams
 void LR1121Driver::SetDioIrqParams()
 {
     uint8_t buf[8] = {0};
-    buf[3] = 0b00001100;
+    buf[3] = LR1121_IRQ_TX_DONE | LR1121_IRQ_RX_DONE;
     hal.WriteCommand(LR11XX_SYSTEM_SET_DIOIRQPARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All);
 }
 
-// IRQ is clear while reading.  2 for 1 SPI... WINNING!
-uint32_t ICACHE_RAM_ATTR LR1121Driver::GetAndClearIrqStatus(SX12XX_Radio_Number_t radioNumber)
+// 3.4.1 GetStatus
+uint32_t ICACHE_RAM_ATTR LR1121Driver::GetIrqStatus(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status[6] = {0};
-    status[0] = LR11XX_SYSTEM_CLEAR_IRQ_OC >> 8;
-    status[1] = LR11XX_SYSTEM_CLEAR_IRQ_OC & 0xFF;
-    status[2] = 0xFF;
-    status[3] = 0xFF;
-    status[4] = 0xFF;
-    status[5] = 0xFF;
     hal.ReadCommand(status, sizeof(status), radioNumber);
     return status[2] << 24 | status[3] << 16 | status[4] << 8 | status[5];
 }
@@ -454,11 +450,11 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
     {
-        // instance->rxSignalStats[0].telem_count++;
+        instance->rxSignalStats[0].telem_count++;
     }
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_2)
     {
-        // instance->rxSignalStats[1].telem_count++;
+        instance->rxSignalStats[1].telem_count++;
     }
 #endif
 
@@ -520,14 +516,13 @@ bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
     return false;
 }
 
+// 7.2.8 GetRssiInst
 int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumber)
 {
-    // uint8_t status = 0;
-
-    // hal.WriteCommand(LLCC68_RADIO_GET_RSSIINST, radioNumber);
-    // hal.ReadCommand((uint8_t *)&status, 1, radioNumber);
-    // return -(int8_t)(status / 2);
-    return 0;
+    uint8_t status[2] = {0};
+    hal.WriteCommand(LR11XX_RADIO_GET_RSSI_INST_OC, radioNumber);
+    hal.ReadCommand(status, sizeof(status), radioNumber);
+    return -(int8_t)(status[1] / 2);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
@@ -560,24 +555,24 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
-    // SX12XX_Radio_Number_t irqClearRadio = radioNumber;
+    SX12XX_Radio_Number_t irqClearRadio = radioNumber;
 
-    uint32_t irqStatus = instance->GetAndClearIrqStatus(radioNumber);
+    uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
-        // irqClearRadio = SX12XX_Radio_All;
+        irqClearRadio = SX12XX_Radio_All;
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            // irqClearRadio = SX12XX_Radio_All;
+            irqClearRadio = SX12XX_Radio_All;
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
         {
-            // instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
+            instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
         instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
@@ -586,5 +581,5 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         return;
     }
-    // instance->ClearIrqStatus(irqClearRadio);
+    instance->ClearIrqStatus(irqClearRadio);
 }

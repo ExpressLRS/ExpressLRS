@@ -611,13 +611,12 @@
                 "prior_target_name": "Unified_ESP32_900_TX"
             },
             "lr1121": {
-                "product_name": "Generic ESP32 900MHz LR1121 TX",
+                "product_name": "Generic ESP32 LR1121 Gemini TX",
                 "lua_name": "LR1121 TX",
-                "layout_file": "Generic 900 LR1121.json",
+                "layout_file": "Generic LR1121 Gemini.json",
                 "upload_methods": ["uart", "wifi", "etx"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_TX",
-                "prior_target_name": "Unified_ESP32_900_TX"
+                "firmware": "Unified_ESP32_LR1121_TX"
             }
         },
         "rx_900": {
@@ -655,21 +654,13 @@
                 "platform": "esp32",
                 "firmware": "Unified_ESP32_900_RX"
             },
-            "lr1121_plain": {
-                "product_name": "Generic ESP8285 LR1121 900MHz RX",
-                "lua_name": "ELRS LR1121 RX",
-                "layout_file": "Generic 900 LR1121 8285.json",
-                "upload_methods": ["uart", "wifi", "betaflight"],
-                "platform": "esp8285",
-                "firmware": "Unified_ESP8285_900_LR1121_RX"
-            },
             "lr1121": {
-                "product_name": "Generic ESP32 LR1121 900MHz RX",
-                "lua_name": "ELRS LR1121 RX",
-                "layout_file": "Generic 900 LR1121.json",
+                "product_name": "Generic ESP32 True Diversity LR1121 RX",
+                "lua_name": "LR1121 RX",
+                "layout_file": "Generic LR1121 True Diversity.json",
                 "upload_methods": ["uart", "wifi", "betaflight"],
                 "platform": "esp32",
-                "firmware": "Unified_ESP32_900_LR1121_RX"
+                "firmware": "Unified_ESP32_LR1121_RX"
             }
         },
         "tx_2400": {

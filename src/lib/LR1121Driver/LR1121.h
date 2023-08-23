@@ -43,7 +43,7 @@ public:
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
     void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX);
 
-    uint32_t GetAndClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
+    uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
 
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);

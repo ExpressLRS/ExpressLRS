@@ -28,12 +28,12 @@
     "ledidx_rgb_status": [0],
     "ledidx_rgb_boot": [0],
 
+    "radio_dcdc": true,
+
     "use_backpack": false,
     "debug_backpack_baud": 460800,
     "debug_backpack_rx": 3,
     "debug_backpack_tx": 1,
     "backpack_boot": 23,
-    "backpack_en": 19,
-
-    "button": 0
+    "backpack_en": 19
 }

@@ -4,7 +4,7 @@
 
 // There is some special handling for this target
 #define TARGET_TX_FM30
-#define USE_SX1280_DCDC
+#define USE_HARDWARE_DCDC
 //#define CRITICAL_FLASH
 
 // GPIO pin definitions
