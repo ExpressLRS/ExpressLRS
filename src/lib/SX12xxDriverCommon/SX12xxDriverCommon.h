@@ -80,7 +80,6 @@ protected:
         TXdoneCallback = nullCallbackTx;
     }
 
-
     /**
      * @brief Calculates the reported SNR value using a fuzzy logic approach
      *
@@ -88,9 +87,9 @@ protected:
      * The reported SNR is determined by a smooth transition between the lower value of the two input SNRs and their average.
      * The transition is controlled by the difference between the input SNRs and the threshold value.
      *
-     * The sigmoid function is used to create a smooth S-shaped curve that maps the difference between the input SNRs
-     * to a value between 0 and 1. This value is then used to interpolate between the lower value and the average value,
-     * providing a smooth transition between the two conditions.
+     * A polynomial approximation is used to create a smooth S-shaped curve that maps the difference between the input SNRs
+     * to a value between 0 and 1. This approximation enables faster computation while maintaining a similar transition effect.
+     * This value is then used to interpolate between the lower value and the average value, providing a smooth transition between the two conditions.
      *
      * @param snr1 The first SNR value
      * @param snr2 The second SNR value
@@ -99,15 +98,18 @@ protected:
      */
     int8_t fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
     {
-        double diff = fabs(snr1 - snr2);
-        double lower_value = fmin(snr1, snr2);
-        double average_value = ((double)snr1 + snr2) / 2;
+        int8_t diff = abs(snr1 - snr2);
+        int8_t lower_value = (snr1 < snr2) ? snr1 : snr2;
+        int8_t average_value = (snr1 + snr2) / 2;
 
-        // Map the difference to a value between 0 and 1, using sigmoid function
-        // Scale and shift the sigmoid curve to cover the desired transition range
-        double transition_value  = 1.0 / (1.0 + exp(-1.0*((diff - threshold) * 10 / threshold)));
+        // Polynomial approximation for sigmoid function
+        int16_t scaled_diff = (diff - threshold) * 10 / threshold;
+        int16_t transition_value = scaled_diff / (1 + abs(scaled_diff));
 
-        // Interpolate between lower_value and average_value using the transition_value, then round to the nearest int
-        return (int8_t)round(lower_value * (1.0 - transition_value) + average_value * transition_value);
+        // Scale transition_value to the range [0, 1]
+        transition_value = (transition_value + 1) / 2;
+
+        // Interpolate between lower_value and average_value using the transition_value
+        return (int8_t)(lower_value * (1 - transition_value) + average_value * transition_value);
     }
 };
