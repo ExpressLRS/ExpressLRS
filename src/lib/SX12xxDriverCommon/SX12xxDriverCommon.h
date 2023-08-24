@@ -96,20 +96,26 @@ protected:
      * @param threshold The threshold value to control the transition between the lower value and the average value reporting strategy
      * @return The reported SNR value, which is either the lower value of the two input SNRs, their average, or a value in between, depending on the difference between the input SNRs and the threshold value
      */
-    int8_t fuzzy_snr(int8_t snr1, int8_t snr2, int8_t threshold)
+    int8_t fuzzy_snr(int16_t snr1, int16_t snr2, int16_t threshold)
     {
-        int8_t diff = abs(snr1 - snr2);
-        int8_t lower_value = (snr1 < snr2) ? snr1 : snr2;
-        int8_t average_value = (snr1 + snr2) / 2;
+        int16_t diff = (int16_t)abs(snr1 - snr2) << 4;
+        int16_t lower_value = (int16_t)(snr1 < snr2 ? snr1 : snr2) << 4;
+        int16_t average_value = ((int16_t)snr1 + snr2) << 3;
 
-        // Polynomial approximation for sigmoid function
-        int16_t scaled_diff = (diff - threshold) * 10 / threshold;
-        int16_t transition_value = scaled_diff / (1 + abs(scaled_diff));
+        int16_t threshold_scaled = (int16_t)threshold << 4;
 
-        // Scale transition_value to the range [0, 1]
-        transition_value = (transition_value + 1) / 2;
-
-        // Interpolate between lower_value and average_value using the transition_value
-        return (int8_t)(lower_value * (1 - transition_value) + average_value * transition_value);
+        if (diff < threshold_scaled)
+        {
+            return lower_value >> 4;
+        }
+        else if (diff > threshold_scaled * 2)
+        {
+            return average_value >> 4;
+        }
+        else
+        {
+            int16_t transition_value = (diff - threshold_scaled) / threshold;
+            return (int8_t)((lower_value * (16 - transition_value) + average_value * transition_value) >> 8);
+        }
     }
 };
