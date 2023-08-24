@@ -89,6 +89,7 @@ private:
     uint8_t currPreambleLen;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
+    uint8_t pwrDac;
     uint8_t lowFrequencyMode;
 
     static void IsrCallback_1();

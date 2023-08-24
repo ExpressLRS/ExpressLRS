@@ -115,7 +115,7 @@ void SX127xDriver::ConfigLoraDefaults()
   hal.writeRegisterBits(SX127X_REG_DIO_MAPPING_1, SX127X_DIO0_RXTX_DONE, SX127X_DIO0_MASK, SX12XX_Radio_All); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
   hal.writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON, SX12XX_Radio_All);
   hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF, SX12XX_Radio_All);
-  hal.writeRegisterBits(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, SX127X_OCP_MASK, SX12XX_Radio_All); //150ma max current
+  hal.writeRegisterBits(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_TRIM_240_MA, SX127X_OCP_MASK, SX12XX_Radio_All); //150ma max current
   SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
 }
 
@@ -223,19 +223,80 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
  ***/
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
-  uint8_t pwrNew;
+  //uint8_t pwrNew;
+  uint8_t paConfig = 0;
+  uint8_t paDac = 0;
   if (OPT_USE_SX1276_RFO_HF)
   {
-    pwrNew = SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power;
+    //pwrNew = SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power;
+    if( Power < -1 )
+    {
+      Power = -1;
+    }
+    if( Power > 14 )
+    {
+      Power = 14;
+    }
+    paConfig = ( paConfig & SX127X_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( Power + 1 ) & 0x0F );
   }
   else
   {
-    pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
+    //pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
+    //pwrNew = SX127X_PA_SELECT_BOOST | ( uint8_t )( ( uint16_t )( Power - 5 ) & 0x0F );
+
+    //paConfig = SX1276Read( REG_PACONFIG );
+    //paDac = SX1276Read( REG_PADAC );
+    paConfig = hal.readRegister(REG_PACONFIG, SX12XX_Radio_All);
+    paDac = hal.readRegister(REG_PADAC, SX12XX_Radio_All);
+
+    paConfig = ( paConfig & SX127X_PACONFIG_PASELECT_MASK ) | SX127X_PACONFIG_PASELECT_PABOOST ;
+    paConfig = ( paConfig & SX127X_PACONFIG_MAX_POWER_MASK ) | 0x70;
+
+    if( ( paConfig & SX127X_PACONFIG_PASELECT_PABOOST ) == SX127X_PACONFIG_PASELECT_PABOOST )
+    {
+        if( Power > 17 )
+        {
+            paDac = ( paDac & SX127X_PADAC_20DBM_MASK ) | SX127X_PADAC_20DBM_ON;
+        }
+        else
+        {
+            paDac = ( paDac & SX127X_PADAC_20DBM_MASK ) | SX127X_PADAC_20DBM_OFF;
+        }
+        if( ( paDac & SX127X_PADAC_20DBM_ON ) == SX127X_PADAC_20DBM_ON )
+        {
+          if( Power < 5 )
+          {
+              Power = 5;
+          }
+          if( Power > 20 )
+          {
+              Power = 20;
+          }
+          paConfig = ( paConfig & SX127X_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( Power - 5 ) & 0x0F );
+        }
+        else
+        {
+          if( Power < 2 )
+          {
+              Power = 2;
+          }
+          if( Power > 17 )
+          {
+              Power = 17;
+          }
+          paConfig = ( paConfig & SX127X_PACONFIG_OUTPUTPOWER_MASK ) | ( uint8_t )( ( uint16_t )( Power - 2 ) & 0x0F );
+      }
+    }
   }
 
-  if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
+  if ((pwrPending == PWRPENDING_NONE && pwrCurrent != paConfig) || pwrPending != paConfig)
   {
-    pwrPending = pwrNew;
+    pwrPending = paConfig;
+  }
+
+  if (paDac != pwrDac)
+  {
+    pwrDac = paDac;
   }
 }
 
@@ -243,6 +304,17 @@ void ICACHE_RAM_ATTR SX127xDriver::CommitOutputPower()
 {
   if (pwrPending == PWRPENDING_NONE)
     return;
+
+  uint8_t paDac = hal.readRegister(REG_PADAC, SX12XX_Radio_All);  
+  if( pwrPending > 17 )
+  {
+    paDac = ( paDac & SX127X_PADAC_20DBM_MASK ) | SX127X_PADAC_20DBM_ON;
+  }
+  else
+  {
+    paDac = ( paDac & SX127X_PADAC_20DBM_MASK ) | SX127X_PADAC_20DBM_OFF;
+  }
+  hal.writeRegister(REG_PADAC, pwrDac, SX12XX_Radio_All);
 
   pwrCurrent = pwrPending;
   pwrPending = PWRPENDING_NONE;
