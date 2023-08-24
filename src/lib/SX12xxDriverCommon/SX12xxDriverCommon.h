@@ -98,22 +98,21 @@ protected:
      */
     int8_t fuzzy_snr(int16_t snr1, int16_t snr2, int16_t threshold)
     {
-        // scale up the values to get more precision
-        int16_t diff = (int16_t)abs(snr1 - snr2) << 7;
-        int16_t lower_value = (int16_t)(snr1 < snr2 ? snr1 : snr2) << 7;
-        int16_t average_value = ((int16_t)snr1 + snr2) << 6;
+        int16_t diff = (int16_t)abs(snr1 - snr2) << 4;
+        int16_t lower_value = (int16_t)(snr1 < snr2 ? snr1 : snr2) << 4;
+        int16_t average_value = ((int16_t)snr1 + snr2) << 3;
 
-        int16_t threshold_scaled = (int16_t)threshold << 7;
+        int16_t threshold_scaled = (int16_t)threshold << 4;
 
         if (diff < threshold_scaled) {
-            return lower_value >> 7;
+            return lower_value >> 4;
         }
         else if (diff > threshold_scaled * 2) {
-            return average_value >> 7;
+            return average_value >> 4;
         }
         else {
             int16_t transition_value = (diff - threshold_scaled) / threshold;
-            return (int8_t)((lower_value * (128 - transition_value) + average_value * transition_value) >> 14);
+            return (int8_t)((lower_value * (16 - transition_value) + average_value * transition_value) >> 8);
         }
     }
 };
