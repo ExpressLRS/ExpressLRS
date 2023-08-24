@@ -243,8 +243,7 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
     paConfig = hal.readRegister(REG_PACONFIG, SX12XX_Radio_All);
     paDac = hal.readRegister(REG_PADAC, SX12XX_Radio_All);
 
-    paConfig = ( paConfig & SX127X_PACONFIG_PASELECT_MASK ) | SX127X_PACONFIG_PASELECT_PABOOST ;
-    paConfig = ( paConfig & SX127X_PACONFIG_MAX_POWER_MASK ) | 0x70;
+    paConfig = ( paConfig & SX127X_PACONFIG_PASELECT_MASK ) | SX127X_PACONFIG_PASELECT_PABOOST;
 
     if( ( paConfig & SX127X_PACONFIG_PASELECT_PABOOST ) == SX127X_PACONFIG_PASELECT_PABOOST )
     {
