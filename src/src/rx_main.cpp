@@ -48,7 +48,7 @@
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
-#define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
+#define PACKET_TO_TOCK_SLACK 280 // Desired buffer time between Packet ISR and Tock ISR
 ///////////////////
 
 device_affinity_t ui_devices[] = {
