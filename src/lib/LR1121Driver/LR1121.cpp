@@ -403,6 +403,12 @@ void LR1121Driver::SetDioIrqParams()
 uint32_t ICACHE_RAM_ATTR LR1121Driver::GetIrqStatus(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status[6] = {0};
+    status[0] = LR11XX_SYSTEM_CLEAR_IRQ_OC >> 8;
+    status[1] = LR11XX_SYSTEM_CLEAR_IRQ_OC & 0xFF;
+    status[2] = 0xFF;
+    status[3] = 0xFF;
+    status[4] = 0xFF;
+    status[5] = 0xFF;
     hal.ReadCommand(status, sizeof(status), radioNumber);
     return status[2] << 24 | status[3] << 16 | status[4] << 8 | status[5];
 }
@@ -527,19 +533,130 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
-    // 8.3.7 GetPacketStatus
-    uint8_t status[4] = {0};
-    hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio);
-    hal.ReadCommand(status, sizeof(status), instance->processingPacketRadio);
-    
-    // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    LastPacketRSSI = -(int8_t)(status[1] / 2);
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+    bool gotRadio[2] = {false, false}; // one-radio default.
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+    uint8_t secondRadioIdx = !processingRadioIdx;
 
-    // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
-    // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
-    // LastPacketRSSI = -(int8_t)(status[3] / 2); // SignalRssiPkt
+    // processingRadio always passed the sanity check here
+    gotRadio[processingRadioIdx] = true;
 
-    LastPacketSNRRaw = (int8_t)status[2];
+    // if it's a dual radio, and if it's the first IRQ
+    // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
+    if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        bool isSecondRadioGotData = false;
+
+        uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
+        if(secondIrqStatus & LR1121_IRQ_RX_DONE)
+        {
+            // 7.2.11 GetRxBufferStatus
+            uint8_t buf[3] = {0};
+            hal.WriteCommand(LR11XX_RADIO_GET_RXBUFFER_STATUS_OC, radio[secondRadioIdx]);
+            hal.ReadCommand(buf, sizeof(buf), radio[secondRadioIdx]);
+
+            uint8_t const PayloadLengthRX = buf[1];
+            uint8_t const RxStartBufferPointer = buf[2];
+
+            // 3.7.5 ReadBuffer8
+            uint8_t inbuf[2];
+            inbuf[0] = RxStartBufferPointer;
+            inbuf[1] = PayloadLengthRX;
+
+            WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[PayloadLengthRX + 1] = {0};
+
+            hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
+            hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
+
+            // leaving only the type in the first byte (crcHigh was cleared)
+            RXdataBuffer[0] &= 0b11;
+            RXdataBuffer_second[1] &= 0b11; // 1st index because the first byte returned is a status bytes, and not packet data. 
+
+            // if the second packet is same to the first, it's valid
+            if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
+            {
+                isSecondRadioGotData = true;
+            }
+        }
+
+        // second radio received the same packet to the processing radio
+        gotRadio[secondRadioIdx] = isSecondRadioGotData;
+        #if defined(DEBUG_RCVR_SIGNAL_STATS)
+        if(!isSecondRadioGotData)
+        {
+            instance->rxSignalStats[secondRadioIdx].fail_count++;
+        }
+        #endif
+    }
+
+    uint8_t status[4];
+    int8_t rssi[2];
+    int8_t snr[2];
+
+    // Get both radios ready at the same time to return packet stats
+    hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio | (gotRadio[secondRadioIdx] ? radio[secondRadioIdx] : 0));
+
+    for(uint8_t i=0; i<2; i++)
+    {
+        if (gotRadio[i])
+        {
+            // 8.3.7 GetPacketStatus
+            memset(status, 0, sizeof(status));
+            // hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, radio[i]);
+            hal.ReadCommand(status, sizeof(status), radio[i]);
+            
+            // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
+            rssi[i] = -(int8_t)(status[1] / 2);
+
+            // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
+            // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
+            // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
+
+            snr[i] = (int8_t)status[2];
+
+            // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
+            (i == 0) ? LastPacketRSSI = rssi[i] : LastPacketRSSI2 = rssi[i];
+            // Update whatever SNRs we have
+            LastPacketSNRRaw = snr[i];
+        }
+    }
+
+    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
+    instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
+
+    // when both radio got the packet, use the better RSSI one
+    if(gotRadio[0] && gotRadio[1])
+    {
+        LastPacketSNRRaw = instance->fuzzy_snr(snr[0], snr[1], instance->FuzzySNRThreshold);
+        // Update the last successful packet radio to be the one with better signal strength
+        instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
+    }
+
+#if defined(DEBUG_RCVR_SIGNAL_STATS)
+    // stat updates
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        if (gotRadio[i])
+        {
+            instance->rxSignalStats[i].irq_count++;
+            instance->rxSignalStats[i].rssi_sum += rssi[i];
+            instance->rxSignalStats[i].snr_sum += snr[i];
+            if (snr[i] > instance->rxSignalStats[i].snr_max)
+            {
+                instance->rxSignalStats[i].snr_max = snr[i];
+            }
+            LastPacketSNRRaw = snr[i];
+        }
+    }
+    if(gotRadio[0] || gotRadio[1])
+    {
+        instance->irq_count_or++;
+    }
+    if(gotRadio[0] && gotRadio[1])
+    {
+        instance->irq_count_both++;
+    }
+#endif
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
@@ -555,19 +672,16 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
-    SX12XX_Radio_Number_t irqClearRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
-        irqClearRadio = SX12XX_Radio_All;
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            irqClearRadio = SX12XX_Radio_All;
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
@@ -577,9 +691,4 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
 #endif
         instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
-    else if (irqStatus == LR1121_IRQ_RADIO_NONE)
-    {
-        return;
-    }
-    instance->ClearIrqStatus(irqClearRadio);
 }
