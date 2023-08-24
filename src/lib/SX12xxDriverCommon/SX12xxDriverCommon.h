@@ -104,13 +104,16 @@ protected:
 
         int16_t threshold_scaled = (int16_t)threshold << 4;
 
-        if (diff < threshold_scaled) {
+        if (diff < threshold_scaled)
+        {
             return lower_value >> 4;
         }
-        else if (diff > threshold_scaled * 2) {
+        else if (diff > threshold_scaled * 2)
+        {
             return average_value >> 4;
         }
-        else {
+        else
+        {
             int16_t transition_value = (diff - threshold_scaled) / threshold;
             return (int8_t)((lower_value * (16 - transition_value) + average_value * transition_value) >> 8);
         }
