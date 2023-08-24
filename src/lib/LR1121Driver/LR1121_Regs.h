@@ -37,7 +37,7 @@
 #define LR1121_XTAL_FREQ 32000000
 #define FREQ_STEP 61.03515625 // TODO check and fix... this is a cut and past from sx1276
 
-#define LR1121_POWER_MIN (-9)
+#define LR1121_POWER_MIN (-17)
 #define LR1121_POWER_MAX (22)
 
 #define LR1121_IRQ_TX_DONE 0x00000004

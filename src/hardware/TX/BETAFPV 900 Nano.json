@@ -8,7 +8,7 @@
     "radio_nss": 5,
     "radio_rst": 14,
     "radio_sck": 18,
-    "radio_rfo_hf": true,
+    "radio_rfo_lp": true,
     "power_rxen": 27,
     "power_txen": 26,
     "power_min": 3,
