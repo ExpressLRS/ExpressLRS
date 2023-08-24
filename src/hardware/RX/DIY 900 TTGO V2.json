@@ -8,10 +8,10 @@
     "radio_rst": 23,
     "radio_sck": 5,
     "power_min": 0,
-    "power_high": 2,
-    "power_max": 2,
-    "power_default": 2,
+    "power_high": 3,
+    "power_max": 3,
+    "power_default": 3,
     "power_control": 0,
-    "power_values": [8,12,15],
+    "power_values": [8,12,15,20],
     "led": 25
 }
