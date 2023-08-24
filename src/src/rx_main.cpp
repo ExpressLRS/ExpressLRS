@@ -1172,8 +1172,13 @@ static void setupSerial()
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
+        #if defined(PLATFORM_ESP32_S3)
+        USBSerial.begin(serialBaud);
+        SerialLogger = &USBSerial;
+        #else
         Serial.begin(serialBaud);
         SerialLogger = &Serial;
+        #endif
         #else
         SerialLogger = new NullStream();
         #endif
