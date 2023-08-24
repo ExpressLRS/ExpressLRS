@@ -223,12 +223,11 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
  ***/
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
-  //uint8_t pwrNew;
   uint8_t paConfig = 0;
   uint8_t paDac = 0;
+  
   if (OPT_USE_SX1276_RFO_HF)
   {
-    //pwrNew = SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power;
     if( Power < -1 )
     {
       Power = -1;
@@ -241,11 +240,6 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
   }
   else
   {
-    //pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
-    //pwrNew = SX127X_PA_SELECT_BOOST | ( uint8_t )( ( uint16_t )( Power - 5 ) & 0x0F );
-
-    //paConfig = SX1276Read( REG_PACONFIG );
-    //paDac = SX1276Read( REG_PADAC );
     paConfig = hal.readRegister(REG_PACONFIG, SX12XX_Radio_All);
     paDac = hal.readRegister(REG_PADAC, SX12XX_Radio_All);
 
