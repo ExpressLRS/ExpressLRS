@@ -1,8 +1,7 @@
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_S3)
 
 #include "ServoMgr.h"
 #include "logging.h"
-#include "waveform_8266.h"
 #include <math.h>
 
 ServoMgr::ServoMgr(const uint8_t *const pins, const uint8_t outputCnt, uint32_t defaultInterval)
@@ -14,7 +13,6 @@ ServoMgr::ServoMgr(const uint8_t *const pins, const uint8_t outputCnt, uint32_t 
     }
 }
 
-#if defined(PLATFORM_ESP32)
 #include "driver/ledc.h"
 
 #ifdef SOC_LEDC_SUPPORT_XTAL_CLOCK
@@ -22,8 +20,6 @@ ServoMgr::ServoMgr(const uint8_t *const pins, const uint8_t outputCnt, uint32_t 
 #else
 #define LEDC_DEFAULT_CLK LEDC_AUTO_CLK
 #endif
-
-extern uint8_t channels_resolution[];
 
 /*
  * Modified versions of the ledcSetup/ledcAttachPin from Arduino ESP32 Hal which allows
@@ -46,7 +42,6 @@ static void ledcSetupEx(uint8_t chan, ledc_timer_t timer, uint32_t freq, uint8_t
         log_e("ledc setup failed!");
         return;
     }
-    channels_resolution[chan] = bit_num;
 }
 
 static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
@@ -91,7 +86,6 @@ void ServoMgr::allocateLedcChn(uint8_t ch, uint16_t intervalUs, uint8_t pin)
     }
     DBGLN("Could not allocate timer for channel %d", ch);
 }
-#endif
 
 void ServoMgr::initialize()
 {
@@ -114,11 +108,7 @@ void ServoMgr::writeMicroseconds(uint8_t ch, uint16_t valueUs)
         return;
     }
     _activePwmChannels |= (1 << ch);
-#if defined(PLATFORM_ESP32)
     ledcWrite(ch, map(valueUs, 0, _refreshInterval[ch], 0, (1 << _resolution_bits[ch]) - 1));
-#else
-    startWaveform8266(pin, valueUs, _refreshInterval[ch] - valueUs);
-#endif
 }
 
 void ServoMgr::writeDuty(uint8_t ch, uint16_t duty)
@@ -129,12 +119,7 @@ void ServoMgr::writeDuty(uint8_t ch, uint16_t duty)
         return;
     }
     _activePwmChannels |= (1 << ch);
-#if defined(PLATFORM_ESP32)
     ledcWrite(ch, map(duty, 0, 1000, 0, (1 << _resolution_bits[ch]) - 1));
-#else
-    uint16_t high = map(duty, 0, 1000, 0, _refreshInterval[ch]);
-    startWaveform8266(pin, high, _refreshInterval[ch] - high);
-#endif
 }
 
 void ServoMgr::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
@@ -142,14 +127,12 @@ void ServoMgr::setRefreshInterval(uint8_t ch, uint16_t intervalUs)
     if (intervalUs != 0)
     {
         _refreshInterval[ch] = intervalUs;
-#if defined(PLATFORM_ESP32)
         const uint8_t pin = _pins[ch];
         if (pin == PIN_DISCONNECTED)
         {
             return;
         }
         allocateLedcChn(ch, intervalUs, pin);
-#endif
     }
 }
 
@@ -161,11 +144,7 @@ void ServoMgr::stopPwm(uint8_t ch)
         return;
     }
     _activePwmChannels &= ~(1 << ch);
-#if defined(PLATFORM_ESP32)
     ledcDetachPin(pin);
-#else
-    stopWaveform8266(pin);
-#endif
     digitalWrite(pin, LOW);
 }
 

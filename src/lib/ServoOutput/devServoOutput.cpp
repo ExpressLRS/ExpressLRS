@@ -1,6 +1,7 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "devServoOutput.h"
+#include "PWM.h"
 #include "CRSF.h"
 #include "config.h"
 #include "helpers.h"
@@ -129,7 +130,11 @@ static void initialize()
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
+#if defined(PLATFORM_ESP32_S3)
+        if (pin == 43 || pin == 44)
+#else
         if (pin == 1 || pin == 3)
+#endif
         {
             pin = ServoMgr::PIN_DISCONNECTED;
         }

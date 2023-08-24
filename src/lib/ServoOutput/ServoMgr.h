@@ -21,7 +21,6 @@ public:
     // Set a pin high/low (will stopPwm first if active)
     void writeDigital(uint8_t ch, bool value);
 
-    inline uint16_t getRefreshInterval(uint8_t ch) const { return _refreshInterval[ch]; }
     void setRefreshInterval(uint8_t ch, uint16_t intervalUs);
     inline bool isPwmActive(uint8_t ch) const { return _activePwmChannels & (1 << ch); }
     inline bool isAnyPwmActive() const { return _activePwmChannels; }
