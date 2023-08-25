@@ -176,10 +176,11 @@ static struct luaItem_selection luaVtxBand = {
     STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaVtxChannel = {
-    {"Channel", CRSF_TEXT_SELECTION},
+static struct luaItem_int8 luaVtxChannel = {
+    {"Channel", CRSF_UINT8},
     0, // value
-    "1;2;3;4;5;6;7;8",
+    1, // min
+    8, // max
     STR_EMPTYSPACE
 };
 
@@ -261,6 +262,25 @@ static struct luaItem_string luaBackpackVersion = {
     backpackVersion};
 
 //---------------------------- BACKPACK ------------------
+
+// static struct luaItem_float luaFloatExample = {
+//     {"Float Tst", CRSF_FLOAT},
+//     htobe32((uint32_t)-15), // value
+//     htobe32((uint32_t)-50), // min
+//     htobe32((uint32_t)50), // max
+//     0, // default
+//     3, // precision
+//     htobe32((uint32_t)5), // step
+//     "flt"
+// };
+
+// static struct luaItem_int16 luaInt16Example = {
+//     {"Int16 Tst", CRSF_INT16},
+//     htobe16((uint16_t)-300), // value
+//     htobe16((uint16_t)-1000), // min
+//     htobe16((uint16_t)1000), // max
+//     STR_EMPTYSPACE
+// };
 
 static char luaBadGoodString[10];
 static int event();
@@ -476,7 +496,7 @@ static void updateFolderName_VtxAdmin()
     vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
 
     // Channel
-    vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxChannel, &vtxFolderDynamicName[vtxFolderLabelOffset], config.GetVtxChannel());
+    vtxFolderDynamicName[vtxFolderLabelOffset++] = '1' + config.GetVtxChannel();
 
     // VTX Power
     uint8_t vtxPwr = config.GetVtxPower();
@@ -664,7 +684,7 @@ static void registerLuaParameters()
       config.SetVtxBand(arg);
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      config.SetVtxChannel(arg);
+      config.SetVtxChannel(arg - 1);
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPower(arg);
@@ -784,7 +804,7 @@ static int event()
   setLuaTextSelectionValue(&luaDynamicPower, dynamic);
 
   setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
-  setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
+  setLuaUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
