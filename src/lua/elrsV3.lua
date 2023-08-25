@@ -16,7 +16,7 @@ local fieldPopup
 local fieldTimeout = 0
 local loadQ = {}
 local fieldChunk = 0
-local fieldData = {}
+local fieldData = nil
 local fields = {}
 local devices = {}
 local goodBadPkt = "?/???    ?"
@@ -50,7 +50,7 @@ end
 
 local function reloadAllField()
   fieldChunk = 0
-  fieldData = {}
+  fieldData = nil
   -- loadQ is actually a stack
   loadQ = {}
   for fieldId = fields_count, 1, -1 do
@@ -425,32 +425,45 @@ local functions = {
 local function parseParameterInfoMessage(data)
   local fieldId = (fieldPopup and fieldPopup.id) or loadQ[#loadQ]
   if data[2] ~= deviceId or data[3] ~= fieldId then
-    fieldData = {}
+    fieldData = nil
     fieldChunk = 0
     return
   end
   local field = fields[fieldId]
   local chunksRemain = data[4]
   -- If no field or the chunksremain changed when we have data, don't continue
-  if not field or (chunksRemain ~= expectChunksRemain and #fieldData ~= 0) then
+  if not field or (fieldData and chunksRemain ~= expectChunksRemain) then
     return
   end
-  expectChunksRemain = chunksRemain - 1
-  for i=5, #data do
-    fieldData[#fieldData + 1] = data[i]
+
+  local offset
+  -- If data is chunked, copy it to persistent buffer
+  if chunksRemain > 0 or fieldChunk > 0 then
+    fieldData = fieldData or {}
+    for i=5, #data do
+      fieldData[#fieldData + 1] = data[i]
+      data[i] = nil
+    end
+    offset = 1
+  else
+    -- All data arrived in one chunk, operate directly on data
+    fieldData = data
+    offset = 5
   end
+
   if chunksRemain > 0 then
     fieldChunk = fieldChunk + 1
+    expectChunksRemain = chunksRemain - 1
   else
+    -- Field data stream is now complete, process into a field
     loadQ[#loadQ] = nil
-    -- Populate field from fieldData
-    if #fieldData > 3 then
-      local offset
+
+    if #fieldData > (offset + 2) then
       field.id = fieldId
-      field.parent = (fieldData[1] ~= 0) and fieldData[1] or nil
-      field.type = bit32.band(fieldData[2], 0x7f)
-      field.hidden = bit32.btest(fieldData[2], 0x80) or nil
-      field.name, offset = fieldGetString(fieldData, 3, field.name)
+      field.parent = (fieldData[offset] ~= 0) and fieldData[offset] or nil
+      field.type = bit32.band(fieldData[offset+1], 0x7f)
+      field.hidden = bit32.btest(fieldData[offset+1], 0x80) or nil
+      field.name, offset = fieldGetString(fieldData, offset+2, field.name)
       if functions[field.type+1].load then
         functions[field.type+1].load(field, fieldData, offset)
       end
@@ -459,7 +472,7 @@ local function parseParameterInfoMessage(data)
     end
 
     fieldChunk = 0
-    fieldData = {}
+    fieldData = nil
 
     -- Last field loaded, add the list of devices to the end
     if #loadQ == 0 then
@@ -475,7 +488,7 @@ end
 
 local function parseElrsInfoMessage(data)
   if data[2] ~= deviceId then
-    fieldData = {}
+    fieldData = nil
     fieldChunk = 0
     return
   end
@@ -635,7 +648,7 @@ local function reloadCurField()
   local field = getField(lineIndex)
   fieldTimeout = 0
   fieldChunk = 0
-  fieldData = {}
+  fieldData = nil
   loadQ[#loadQ+1] = field.id
 end
 
