@@ -23,9 +23,8 @@ local goodBadPkt = "?/???    ?"
 local elrsFlags = 0
 local elrsFlagsInfo = ""
 local fields_count = 0
-local backButtonId = 2
 local devicesRefreshTimeout = 50
-local folderAccess = nil
+local currentFolderId = nil
 local commandRunningIndicator = 1
 local expectChunksRemain = -1
 local deviceIsELRS_TX = nil
@@ -46,11 +45,7 @@ local function allocateFields()
   for i=1, fields_count + 2 + #devices do
     fields[i] = { }
   end
-  backButtonId = #fields
-  fields[backButtonId] = {name="----BACK----", type=14}
-  -- 255 is used as a parent to hide the field
-  fields[backButtonId].parent = folderAccess or 255
-  fields[backButtonId + 1] = {name="----EXIT----", exit=true, type=14}
+  fields[#fields] = {name="----EXIT----", type=14}
 end
 
 local function reloadAllField()
@@ -67,7 +62,7 @@ local function getField(line)
   local counter = 1
   for i = 1, #fields do
     local field = fields[i]
-    if folderAccess == field.parent and not field.hidden then
+    if currentFolderId == field.parent and not field.hidden then
       if counter < line then
         counter = counter + 1
       else
@@ -290,12 +285,13 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
-  folderAccess = field.id
-  local backFld = fields[backButtonId]
+  currentFolderId = field.id
+  local backFld = fields[#fields]
+  backFld.name = "----BACK----"
   -- Store the lineIndex and pageOffset to return to in the backFld
   backFld.li = lineIndex
   backFld.po = pageOffset
-  backFld.parent = folderAccess
+  backFld.parent = currentFolderId
 
   lineIndex = 1
   pageOffset = 0
@@ -336,21 +332,22 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function fieldBackExec(field)
-  if field.exit then
-    exitscript = 1
-  else
+  if field.parent then
     lineIndex = field.li or 1
     pageOffset = field.po or 0
 
-    field.parent = 255
+    field.name = "----EXIT----"
+    field.parent = nil
     field.li = nil
     field.po = nil
-    folderAccess = nil
+    currentFolderId = nil
+  else
+    exitscript = 1
   end
 end
 
 local function changeDeviceId(devId) --change to selected device ID
-  folderAccess = nil
+  currentFolderId = nil
   deviceIsELRS_TX = nil
   elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
@@ -370,8 +367,8 @@ local function fieldDeviceIdSelect(field)
 end
 
 local function createDeviceFields() -- put other devices in the field list
-  fields[fields_count + 2 + #devices] = fields[backButtonId]
-  backButtonId = fields_count + 2 + #devices  -- move back button to the end of the list, so it will always show up at the bottom.
+  -- move back button to the end of the list, so it will always show up at the bottom.
+  fields[fields_count + 2 + #devices] = fields[#fields]
   for i=1, #devices do
     local parent = (devices[i].id == deviceId) and 255 or (fields_count+1)
     fields[fields_count+1+i] = {name=devices[i].name, parent=parent, type=15}
@@ -671,7 +668,7 @@ local function handleDevicePageEvent(event)
   if #fields == 0 then --if there is no field yet
     return
   else
-    if fields[backButtonId].name == nil then --if back button is not assigned yet, means there is no field yet.
+    if fields[#fields].name == nil then --if back button is not assigned yet, means there is no field yet.
       return
     end
   end
@@ -681,15 +678,16 @@ local function handleDevicePageEvent(event)
       edit = nil
       reloadCurField()
     else
-      if folderAccess == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
+      if currentFolderId == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
         if deviceId ~= 0xEE then
           changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
         else
           reloadAllField()
         end
         crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+      else
+        fieldBackExec(fields[#fields])
       end
-      fieldBackExec(fields[backButtonId])
     end
   elseif event == EVT_VIRTUAL_ENTER then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
@@ -772,13 +770,12 @@ local function runPopupPage(event)
     fieldTimeout = getTime() + 200 -- 2s
   end
 
-  local result
   if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
       popupCompat(fieldPopup.info, "Stopped!", event)
       reloadAllField()
       fieldPopup = nil
   elseif fieldPopup.status == 3 then -- confirmation required
-    result = popupCompat(fieldPopup.info, "PRESS [OK] to confirm", event)
+    local result = popupCompat(fieldPopup.info, "PRESS [OK] to confirm", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "OK" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 4 }) -- lcsConfirmed
@@ -791,7 +788,7 @@ local function runPopupPage(event)
     if fieldChunk == 0 then
       commandRunningIndicator = (commandRunningIndicator % 4) + 1
     end
-    result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
+    local result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "CANCEL" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 }) -- lcsCancel
@@ -885,8 +882,7 @@ local function setMock()
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
   fields, goodBadPkt, deviceName = mock()
-  backButtonId = #fields - 1
-  fields_count = #fields - 2
+  fields_count = #fields - 1
   loadQ = { fields_count }
   deviceIsELRS_TX = true
 end
