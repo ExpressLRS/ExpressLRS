@@ -116,6 +116,17 @@ static uint8_t *luaInt16StructToArray(const void *luaStruct, uint8_t *next)
   return (uint8_t *)stpcpy((char *)next, p1->units);
 }
 
+/***
+ * Removed until needed
+static uint8_t *luaFloatStructToArray(const void *luaStruct, uint8_t *next)
+{
+  const struct luaItem_float *p1 = (const struct luaItem_float *)luaStruct;
+  memcpy(next, &p1->properties, sizeof(p1->properties));
+  next += sizeof(p1->properties);
+  return (uint8_t *)stpcpy((char *)next, p1->units);
+}
+**/
+
 static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
@@ -170,6 +181,9 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_INT16: // fallthrough
     case CRSF_UINT16:
       dataEnd = luaInt16StructToArray(luaData, chunkStart);
+      break;
+    //case CRSF_FLOAT:
+    //  dataEnd = luaFloatStructToArray(luaData, chunkStart);
       break;
     case CRSF_STRING: // fallthough
     case CRSF_INFO:
