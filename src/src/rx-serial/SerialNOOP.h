@@ -14,8 +14,8 @@ public:
 
     uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override { return  10; }
 
-    void handleUARTin() {}
-    void handleUARTout() { _fifo.flush(); }
+    void handleUARTin() override {}
+    void handleUARTout() override { _fifo.flush(); }
 
 private:
     void processByte(uint8_t byte) override {}

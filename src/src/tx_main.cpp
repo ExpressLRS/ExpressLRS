@@ -35,8 +35,8 @@ Stream *TxBackpack;
 Stream *TxUSB;
 
 // Variables / constants for Airport //
-FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
-FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+FIFO<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -1029,9 +1029,14 @@ static void HandleUARTout()
 {
   if (firmwareOptions.is_airport)
   {
-    while (apOutputBuffer.size())
+    auto size = apOutputBuffer.size();
+    if (size)
     {
-      TxUSB->write(apOutputBuffer.pop());
+      uint8_t buf[size];
+      apOutputBuffer.lock();
+      apOutputBuffer.popBytes(buf, size);
+      apOutputBuffer.unlock();
+      TxUSB->write(buf, size);
     }
   }
 }
@@ -1330,7 +1335,9 @@ void loop()
     {
       uint8_t buf[size];
       TxUSB->readBytes(buf, size);
+      apInputBuffer.lock();
       apInputBuffer.pushBytes(buf, size);
+      apInputBuffer.unlock();
     }
   }
 

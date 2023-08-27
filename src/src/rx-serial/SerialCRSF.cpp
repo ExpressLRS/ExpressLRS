@@ -26,12 +26,14 @@ void SerialCRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
 
+    _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
     {
         _fifo.pushBytes(outBuffer, sizeof(outBuffer));
         _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
         _fifo.push(crc);
     }
+    _fifo.unlock();
 }
 
 uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
@@ -79,8 +81,10 @@ void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
         data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        _fifo.lock();
         _fifo.push(totalBufferLen);
         _fifo.pushBytes(data, totalBufferLen);
+        _fifo.unlock();
     }
 }
 
