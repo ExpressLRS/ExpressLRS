@@ -179,6 +179,8 @@ enum eServoOutputMode : uint8_t
     somDShot,   // DShot300
 #endif
     somSerial,  // Serial TX or RX depending on pin
+    somSCL,     // I2C clock signal
+    somSDA,     // I2C data line
     somPwm,     // True PWM mode (NOT SUPPORTED)
 };
 
