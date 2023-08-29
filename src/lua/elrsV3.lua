@@ -71,15 +71,6 @@ local function getField(line)
   end
 end
 
-local function constrain(x, low, high)
-  if x < low then
-    return low
-  elseif x > high then
-    return high
-  end
-  return x
-end
-
 local function incrField(step)
   local field = getField(lineIndex)
   local min, max = 0, 0
@@ -91,7 +82,22 @@ local function incrField(step)
     min = 0
     max = #field.values - 1
   end
-  field.value = constrain(field.value + step, min, max)
+
+  local newval = field.value
+  repeat
+    newval = newval + step
+    if newval < min then
+      newval = min
+    elseif newval > max then
+      newval = max
+    end
+
+    -- keep looping until a non-blank selection value is found
+    if field.values == nil or #field.values[newval+1] ~= 0 then
+      field.value = newval
+      return
+    end
+  until (newval == min or newval == max)
 end
 
 -- Select the next or previous editable field

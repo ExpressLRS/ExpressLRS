@@ -1,7 +1,7 @@
 #ifdef TARGET_RX
 
 #include "rxtx_devLua.h"
-#include "devCRSF.h"
+#include "helpers.h"
 #include "devServoOutput.h"
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
@@ -11,16 +11,8 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
-#if defined(PLATFORM_ESP32)
-static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot";
-static const char *noDShot = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
-static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial TX";
-static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX";
-#else
-static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
-static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX";
-static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial RX";
-#endif
+static const char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
+static char outputModes[128];
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -162,29 +154,47 @@ static struct luaItem_command luaReturnModel = {
 //---------------------------- Model Loan Out -----------------------------
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-
 static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
 {
   setLuaUint8Value(&luaMappingChannelOut, arg);
-  // Must trigger an event because this is not a persistent config item
+  strcpy(outputModes, pwmModes);
+  #if defined(PLATFORM_ESP32)
+  if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)
+  {
+    strcat(outputModes, ";DShot");
+  }
+  #endif
   if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
   {
-    luaMappingOutputMode.options = rxModes;
+    strcat(outputModes, ";Serial RX");
   }
   else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
   {
-    luaMappingOutputMode.options = txModes;
+    strcat(outputModes, ";Serial TX");
   }
-  #if defined(PLATFORM_ESP32)
-  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 0)
-  {
-    luaMappingOutputMode.options = noDShot;
-  }
-  #endif
   else
   {
-    luaMappingOutputMode.options = pwmModes;
+    strcat(outputModes, ";");
   }
+  if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SCL)
+  {
+    strcat(outputModes, ";I2C SCL;");
+  }
+  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SDA)
+  {
+    strcat(outputModes, ";;I2C SDA");
+  }
+  else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN)
+  {
+    strcat(outputModes, ";I2C SCL;I2C SDA");
+  }
+  // trim off trailing semicolons
+  for(auto lastPos = strnlen(outputModes, sizeof(outputModes))-1 ; outputModes[lastPos] == ';' ; lastPos--)
+  {
+    outputModes[lastPos] = 0;
+  }
+  luaMappingOutputMode.options = outputModes;
+  // Must trigger an event because this is not a persistent config item
   devicesTriggerEvent();
 }
 
@@ -198,7 +208,7 @@ static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t a
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static uint8_t configureSerialPin(uint8_t pin, uint8_t sibling, uint8_t oldMode, uint8_t newMode)
+static uint8_t configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
 {
   for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
   {
@@ -229,6 +239,7 @@ static uint8_t configureSerialPin(uint8_t pin, uint8_t sibling, uint8_t oldMode,
 
 static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t arg)
 {
+  UNUSED(item);
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
   rx_config_pwm_t newPwmCh;
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
@@ -238,21 +249,18 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   // Check if pin == 1/3 and do other pin adjustment accordingly
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
-    newPwmCh.val.mode = configureSerialPin(1, 3, oldMode, arg);
+    newPwmCh.val.mode = configureSerialPin(3, oldMode, newPwmCh.val.mode);
   }
   else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
   {
-    newPwmCh.val.mode = configureSerialPin(3, 1, oldMode, arg);
-  }
-  else if (arg == somSerial)
-  {
-    newPwmCh.val.mode = oldMode;
+    newPwmCh.val.mode = configureSerialPin(1, oldMode, newPwmCh.val.mode);
   }
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
 static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t arg)
 {
+  UNUSED(item);
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
   rx_config_pwm_t newPwmCh;
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
@@ -280,8 +288,8 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
     for (unsigned ch=0; ch<(unsigned)GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;
-      newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-      // The value must fit into the 10 bit range of the failsafe
+        // The value must fit into the 10 bit range of the failsafe
+        newPwmCh.raw = config.GetPwmChannel(ch)->raw;
       newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
       //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+988U);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
@@ -302,6 +310,7 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
 
 static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 {
+  UNUSED(item);
   uint8_t newPower = arg + POWERMGNT::getMinPower();
   if (newPower > POWERMGNT::getMaxPower())
   {
@@ -356,14 +365,14 @@ static void registerLuaParameters()
     config.SetRateInitialIdx(newRate);
   });
   registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
     if (arg == 6) {
       deferExecution(200, [](){ InLoanBindingMode = true; });
     }
     sendLuaCommandResponse(&luaLoanModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
   });
   registerLUAParameter(&luaReturnModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose conenction to the TX
+    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
     if (arg == 6) {
       deferExecution(200, []() { returnModelFromLoan = true; });
     }
@@ -372,6 +381,7 @@ static void registerLuaParameters()
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
+    luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
     registerLUAParameter(&luaMappingFolder);
     registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
     registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
@@ -383,7 +393,7 @@ static void registerLuaParameters()
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
-  registerLUAParameter(NULL);
+  registerLUAParameter(nullptr);
 }
 
 static int event()
@@ -435,7 +445,7 @@ static int timeout()
 {
   luaHandleUpdateParameter();
   // Receivers can only `UpdateParamReq == true` every 4th packet due to the transmitter cadence in 1:2
-  // Channels, Downlink Telem Slot, Uplink Telem (the write command), Downlink Telem Slot...
+  // Channels, Down-link Telemetry Slot, Uplink Telemetry (the write command), Down-link Telemetry Slot...
   // (interval * 4 / 1000) or 1 second if not connected
   return (connectionState == connected) ? ExpressLRS_currAirRate_Modparams->interval / 250 : 1000;
 }
@@ -448,7 +458,7 @@ static int start()
 }
 
 device_t LUA_device = {
-  .initialize = NULL,
+  .initialize = nullptr,
   .start = start,
   .event = event,
   .timeout = timeout
