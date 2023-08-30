@@ -217,20 +217,34 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
   currSyncWord = _syncWord;
 }
 
+void SX127xDriver::SetOutputPower(uint8_t Power)
+{
+  Power &= 0x0F;
+  if (OPT_USE_SX1276_RFO_HF)
+  {
+    SetOutputPowerRaw(SX127X_MAX_OUTPUT_POWER_RFO_HF | Power);
+  }
+  else
+  {
+    SetOutputPowerRaw(SX127X_MAX_OUTPUT_POWER | Power);
+  }
+}
+
 /***
  * @brief: Schedule an output power change after the next transmit
  * The radio must be in SX127x_OPMODE_STANDBY to change the power
  ***/
-void SX127xDriver::SetOutputPower(uint8_t Power)
+void SX127xDriver::SetOutputPowerRaw(uint8_t Power)
 {
   uint8_t pwrNew;
+  Power &= 0x7F;
   if (OPT_USE_SX1276_RFO_HF)
   {
-    pwrNew = SX127X_PA_SELECT_RFO | SX127X_MAX_OUTPUT_POWER_RFO_HF | Power;
+    pwrNew = SX127X_PA_SELECT_RFO | Power;
   }
   else
   {
-    pwrNew = SX127X_PA_SELECT_BOOST | SX127X_MAX_OUTPUT_POWER | Power;
+    pwrNew = SX127X_PA_SELECT_BOOST | Power;
   }
 
   if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
@@ -390,7 +404,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
   // }
 
   transmittingRadio = radioNumber;
-  
+
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
   if (radioNumber == SX12XX_Radio_NONE)

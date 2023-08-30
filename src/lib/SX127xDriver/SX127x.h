@@ -39,6 +39,7 @@ public:
     void SetCRCMode(bool on); //false for off
     void SetSyncWord(uint8_t syncWord);
     void SetOutputPower(uint8_t Power);
+    void SetOutputPowerRaw(uint8_t Power);
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
     void SetRxTimeoutUs(uint32_t interval);

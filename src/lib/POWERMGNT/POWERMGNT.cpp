@@ -277,7 +277,18 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     #if defined(PLATFORM_ESP32)
     if (POWER_OUTPUT_DACWRITE)
     {
-        Radio.SetOutputPower(0b0000);
+        if (POWER_OUTPUT_VALUES2 != nullptr)
+        {
+#if defined(RADIO_SX127X)
+            Radio.SetOutputPowerRaw(POWER_OUTPUT_VALUES2[Power - MinPower]);
+#else
+            Radio.SetOutputPower(POWER_OUTPUT_VALUES2[Power - MinPower]);
+#endif
+        }
+        else
+        {
+            Radio.SetOutputPower(0b0000);
+        }
         dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
     }
     else
