@@ -62,21 +62,6 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     HWtimerInterval = newTimerInterval * (HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
 }
 
-void ICACHE_RAM_ATTR hwTimer::resetFreqOffset()
-{
-    FreqOffset = 0;
-}
-
-void ICACHE_RAM_ATTR hwTimer::incFreqOffset()
-{
-    FreqOffset++;
-}
-
-void ICACHE_RAM_ATTR hwTimer::decFreqOffset()
-{
-    FreqOffset--;
-}
-
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
 {
     int32_t minVal = -(HWtimerInterval >> 2);

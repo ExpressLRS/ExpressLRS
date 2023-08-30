@@ -88,29 +88,12 @@ void hwTimer::updateInterval(uint32_t newTimerInterval)
     HWtimerInterval = newTimerInterval;
 }
 
-#if defined(TARGET_RX)
-void hwTimer::resetFreqOffset()
-{
-    FreqOffset = 0;
-}
-
-void hwTimer::incFreqOffset()
-{
-    FreqOffset++;
-}
-
-void hwTimer::decFreqOffset()
-{
-    FreqOffset--;
-}
-
 void hwTimer::phaseShift(int32_t newPhaseShift)
 {
     int32_t minVal = -(HWtimerInterval >> 2);
     int32_t maxVal = (HWtimerInterval >> 2);
     PhaseShift = constrain(newPhaseShift, minVal, maxVal);
 }
-#endif
 
 void hwTimer::callback(void)
 {

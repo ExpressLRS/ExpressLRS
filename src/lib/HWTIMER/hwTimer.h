@@ -52,25 +52,26 @@ public:
     /**
      * @brief Change the interval between callbacks.
      * The time between tick and tock is half the provided interval.
+     * The timer should not be running when updateInterval() is called.
      *
      * @param time in microseconds for a full tick/tock.
      */
     static void updateInterval(uint32_t time = TimerIntervalUSDefault);
-
     /**
      * @brief Reset the frequency offset to zero microseconds
      */
-    static void resetFreqOffset();
+    static ICACHE_RAM_ATTR void inline resetFreqOffset() { FreqOffset = 0; }
 
     /**
      * @brief Increment the frequency offset by one microsecond
      */
-    static void incFreqOffset();
+    static ICACHE_RAM_ATTR void inline incFreqOffset() { FreqOffset++; }
+
 
     /**
      * @brief Decrement the frequency offset by one microsecond
      */
-    static void decFreqOffset();
+    static ICACHE_RAM_ATTR void inline decFreqOffset() { FreqOffset--; }
 
     /**
      * @brief Provides a coarse one time adjustment to the frequency to
