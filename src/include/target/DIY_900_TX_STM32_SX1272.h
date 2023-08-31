@@ -37,4 +37,4 @@
 #define MinPower                PWR_10mW
 #define MaxPower                PWR_50mW
 #define DefaultPower            PWR_50mW
-#define POWER_OUTPUT_VALUES     {8,12,15}
+#define POWER_OUTPUT_VALUES     {120,124,127}

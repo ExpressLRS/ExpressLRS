@@ -19,13 +19,13 @@
     "power_txen": 14,
     "power_rxen_2": 9,
     "power_txen_2": 15,
-    
+
     "power_min": 0,
     "power_high": 2,
     "power_max": 2,
     "power_default": 2,
     "power_control": 0,
-    "power_values": [8,12,15],
+    "power_values": [120,124,127],
 
     "led_rgb": 22,
     "led_rgb_isgrb": true,
