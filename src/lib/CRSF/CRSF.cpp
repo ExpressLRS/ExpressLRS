@@ -120,8 +120,6 @@ void CRSF::Begin()
         if (RecvModelUpdate) RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
-    // Kill of the default serial port
-    Serial.end();
     // Uses default UART pins
     CRSF::Port.begin(UARTrequestedBaud);
     // Invert RX/TX (not done, connection is full duplex uninverted)
