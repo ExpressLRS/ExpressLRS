@@ -1173,10 +1173,6 @@ static void setupTarget()
 bool setupHardwareFromOptions()
 {
 #if defined(TARGET_UNIFIED_TX)
-  // Setup default logging in case of failure, or no layout
-  Serial.begin(115200);
-  TxBackpack = &Serial;
-
   if (!options_init())
   {
     // Register the WiFi with the framework
