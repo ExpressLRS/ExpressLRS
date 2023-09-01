@@ -53,8 +53,9 @@ function updatePwmSettings(arPwm, allowDshot) {
     if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
   }
-  var pin1Index = undefined;
-  var pin3Index = undefined;
+  var pinRxIndex = undefined;
+  var pinTxIndex = undefined;
+  var pinModes = []
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
   const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="mui--text-center">Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
   arPwm.forEach((item, index) => {
@@ -63,24 +64,38 @@ function updatePwmSettings(arPwm, allowDshot) {
     const inv = (item.config >> 14) & 1;
     const mode = (item.config >> 15) & 15; // 4 bits
     const narrow = (item.config >> 19) & 1;
-    const pin = item.pin;
+    const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
-    // only ESP32 devices allow DShot
-    if (allowDshot === true) {
-      if (pin != 0)
-        modes.push('DShot');
-      else
-        modes.push(undefined);
+    if (features & 16) {
+      modes.push('DShot');
+    } else {
+      modes.push('DShot');
     }
-    if (pin == 1) {
+    if (features & 1) {
       modes.push('Serial TX');
+      modes.push(undefined);  // SCL
+      modes.push(undefined);  // SDA
       modes.push(undefined);  // true PWM
-      pin1Index = index;
-    }
-    if (pin == 3) {
+      pinRxIndex = index;
+    } else if (features & 2) {
       modes.push('Serial RX');
+      modes.push(undefined);  // SCL
+      modes.push(undefined);  // SDA
       modes.push(undefined);  // true PWM
-      pin3Index = index;
+      pinTxIndex = index;
+    } else {
+      modes.push(undefined);  // Serial
+      if (features & 4) {
+        modes.push('I2C SCL');
+      } else {
+        modes.push(undefined);
+      }
+      if (features & 8) {
+        modes.push('I2C SDA');
+      } else {
+        modes.push(undefined);
+      }
+      modes.push(undefined);  // true PWM
     }
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
@@ -94,6 +109,7 @@ function updatePwmSettings(arPwm, allowDshot) {
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
             <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
+    pinModes[index] = mode;
   });
   htmlFields.push('</table></div>');
 
@@ -103,47 +119,70 @@ function updatePwmSettings(arPwm, allowDshot) {
 
   _('pwm').appendChild(grp);
 
-  var setDisabled = (index, onoff) => {
+  const setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
     _(`pwm_${index}_inv`).disabled = onoff;
     _(`pwm_${index}_nar`).disabled = onoff;
     _(`pwm_${index}_fs`).disabled = onoff;
   }
-  // put some contraints on pin1/3 mode selects
-  if (pin1Index !== undefined && pin3Index !== undefined) {
-    const pin1Mode = _(`pwm_${pin1Index}_mode`);
-    const pin3Mode = _(`pwm_${pin3Index}_mode`);
-    pin1Mode.onchange = () => {
-      if (pin1Mode.value == pin1Mode.length) { // Serial
-        pin3Mode.value = pin1Mode.length;
-        setDisabled(pin1Index, true);
-        setDisabled(pin3Index, true);
-        pin3Mode.disabled = true;
+  arPwm.forEach((item,index)=>{
+    const pinMode = _(`pwm_${index}_mode`)
+    pinMode.onchange = () => {
+      setDisabled(index, pinMode.value > 9);
+      const updateOthers = (value, enable) => {
+        if (value > 9) { // disable others
+          arPwm.forEach((item, other) => {
+            if (other != index) {
+              document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
+                if (opt.value == value) {
+                    opt.disabled = enable;
+                }
+              });
+            }
+          })
+        }
+      }
+      updateOthers(pinMode.value, true); // disable others
+      updateOthers(pinModes[index], false); // enable others
+      pinModes[index] = pinMode.value;
+    }
+    pinMode.onchange();
+  });
+  // put some contraints on pinRx/3 mode selects
+  if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
+    const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
+    const pinTxMode = _(`pwm_${pinTxIndex}_mode`);
+    pinRxMode.onchange = () => {
+      if (pinRxMode.value == 9) { // Serial
+        pinTxMode.value = 9;
+        setDisabled(pinRxIndex, true);
+        setDisabled(pinTxIndex, true);
+        pinTxMode.disabled = true;
         _('serial-config').style.display = 'block';
         _('baud-config').style.display = 'block';
       }
       else {
-        pin3Mode.value = 0;
-        setDisabled(pin1Index, false);
-        setDisabled(pin3Index, false);
-        pin3Mode.disabled = false;
+        pinTxMode.value = 0;
+        setDisabled(pinRxIndex, false);
+        setDisabled(pinTxIndex, false);
+        pinTxMode.disabled = false;
         _('serial-config').style.display = 'none';
         _('baud-config').style.display = 'none';
       }
     }
-    pin3Mode.onchange = () => {
-      if (pin3Mode.value == pin3Mode.length) { // Serial
-        pin1Mode.value = pin3Mode.length;
-        setDisabled(pin1Index, true);
-        setDisabled(pin3Index, true);
-        pin3Mode.disabled = true;
+    pinTxMode.onchange = () => {
+      if (pinTxMode.value == 9) { // Serial
+        pinRxMode.value = 9;
+        setDisabled(pinRxIndex, true);
+        setDisabled(pinTxIndex, true);
+        pinTxMode.disabled = true;
         _('serial-config').style.display = 'block';
         _('baud-config').style.display = 'block';
       }
     }
-    const pin3 = pin3Mode.value;
-    pin1Mode.onchange();
-    if(pin1Mode.value != pin1Mode.length) pin3Mode.value = pin3;
+    const pinTx = pinTxMode.value;
+    pinRxMode.onchange();
+    if(pinRxMode.value != 9) pinTxMode.value = pinTx;
   }
 }
 @@end

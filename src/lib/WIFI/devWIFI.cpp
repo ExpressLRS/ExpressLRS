@@ -16,10 +16,13 @@
 #include <Update.h>
 #include <esp_partition.h>
 #include <esp_ota_ops.h>
+#include <soc/uart_pins.h>
 #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
+#define U0TXD_GPIO_NUM  (1)
+#define U0RXD_GPIO_NUM  (3)
 #endif
 #include <DNSServer.h>
 
@@ -335,8 +338,17 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #endif
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-    json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
-    json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
+      json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      uint8_t features = 0;
+      auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
+      if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
+      else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
+      else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
+      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
+      else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
+      if (pin != 0) features |= 16; // DShot supported
+      json["config"]["pwm"][ch]["features"] = features;
     }
     #endif
     #endif
