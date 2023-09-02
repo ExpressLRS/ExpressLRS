@@ -727,6 +727,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
+        instance->ClearIrqStatus(SX12XX_Radio_All);
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
