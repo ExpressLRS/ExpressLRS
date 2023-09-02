@@ -1725,10 +1725,12 @@ void setup()
         #endif
 
         initUID();
-        setupTarget();
 
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
+
+        setupTarget();
+
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
         if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)

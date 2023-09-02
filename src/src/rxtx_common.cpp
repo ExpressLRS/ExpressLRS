@@ -1,6 +1,7 @@
 #include "targets.h"
 #include "common.h"
 #include "config.h"
+#include "logging.h"
 
 #include <functional>
 
@@ -12,11 +13,14 @@ static uint32_t startDeferredTime = 0;
 static uint32_t deferredTimeout = 0;
 static std::function<void()> deferredFunction = nullptr;
 
+boolean i2c_enabled = false;
+
 static void setupWire()
 {
 #if defined(USE_I2C)
-    int scl = GPIO_PIN_SCL;
-    int sda = GPIO_PIN_SDA;
+    int gpio_scl = GPIO_PIN_SCL;
+    int gpio_sda = GPIO_PIN_SDA;
+
 #if defined(TARGET_RX) && defined(GPIO_PIN_PWM_OUTPUTS)
     // If I2C pins are not defined in the hardware, then look for configured I2C
     if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN)
@@ -28,11 +32,11 @@ static void setupWire()
             auto pwm = config.GetPwmChannel(ch);
             if (pin == GPIO_PIN_SCL && pwm->val.mode != somSCL)
             {
-                scl = pin;
+                gpio_scl = pin;
             }
             if (pin == GPIO_PIN_SDA && pwm->val.mode != somSDA)
             {
-                sda = pin;
+                gpio_sda = pin;
             }
         }
     }
@@ -45,27 +49,29 @@ static void setupWire()
             // if the pin is SDA or SCL and it's not configured for I2C then undef the pins
             if ((pin == GPIO_PIN_SCL && pwm->val.mode != somSCL) || (pin == GPIO_PIN_SDA && pwm->val.mode != somSDA))
             {
-                scl = UNDEF_PIN;
-                sda = UNDEF_PIN;
+                gpio_scl = UNDEF_PIN;
+                gpio_sda = UNDEF_PIN;
                 break;
             }
         }
     }
 #endif
-    if(sda != UNDEF_PIN && scl != UNDEF_PIN)
+    if(gpio_sda != UNDEF_PIN && gpio_scl != UNDEF_PIN)
     {
+        DBGLN("Starting wire on SCL %d, SDA %d", gpio_scl, gpio_sda);
 #if defined(PLATFORM_STM32)
         // Wire::begin() passing ints is ambiguously overloaded, use the set functions
         // which themselves might get the PinName overloads
-        Wire.setSCL(scl);
-        Wire.setSDA(sda);
+        Wire.setSCL(gpio_scl);
+        Wire.setSDA(gpio_sda);
         Wire.begin();
 #else
         // ESP hopes to get Wire::begin(int, int)
         // ESP32 hopes to get Wire::begin(int = -1, int = -1, uint32 = 0)
-        Wire.begin(sda, scl);
+        Wire.begin(gpio_sda, gpio_scl);
         Wire.setClock(400000);
 #endif
+        i2c_enabled = true;
     }
 #endif
 }
