@@ -5,8 +5,8 @@
 #include "common.h"
 
 // Variables / constants for Airport //
-FIFO_GENERIC<AP_MAX_BUF_LEN> apInputBuffer;
-FIFO_GENERIC<AP_MAX_BUF_LEN> apOutputBuffer;
+FIFO<AP_MAX_BUF_LEN> apInputBuffer;
+FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 
 void SerialAirPort::setLinkQualityStats(uint16_t lq, uint16_t rssi)
@@ -38,15 +38,17 @@ void SerialAirPort::processBytes(uint8_t *bytes, u_int16_t size)
 {
     if (connectionState == connected)
     {
-        apInputBuffer.pushBytes(bytes, size);
+        apInputBuffer.atomicPushBytes(bytes, size);
     }
 }
 
 void SerialAirPort::handleUARTout()
 {
+    apOutputBuffer.lock();
     auto size = apOutputBuffer.size();
     uint8_t buf[size];
     apOutputBuffer.popBytes(buf, size);
+    apOutputBuffer.unlock();
     _outputPort->write(buf, size);
 }
 #endif

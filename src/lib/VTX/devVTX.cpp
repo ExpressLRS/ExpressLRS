@@ -17,7 +17,6 @@
 // reset between the user switching equipment
 #define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
 
-extern CRSF crsf;
 extern Stream *TxBackpack;
 static uint8_t pitmodeAuxState = 0;
 static bool sendEepromWrite = true;
@@ -61,7 +60,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    crsf.AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet);
 }
 
 static void VtxConfigToMSPOut()
@@ -88,9 +87,9 @@ static void VtxConfigToMSPOut()
         }
     }
 
-    crsf.AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet);
 
-    if (!crsf.IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    if (!CRSF::IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
         MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
     }
@@ -164,7 +163,7 @@ static int timeout()
         VtxSendState = VTXSS_UNKNOWN;
         // Never received a connection, clear the queue which now
         // has multiple VTX config packets in it
-        crsf.ResetMspQueue();
+        CRSF::ResetMspQueue();
     }
 
     return DURATION_NEVER;
