@@ -263,25 +263,6 @@ static struct luaItem_string luaBackpackVersion = {
 
 //---------------------------- BACKPACK ------------------
 
-// static struct luaItem_float luaFloatExample = {
-//     {"Float Tst", CRSF_FLOAT},
-//     htobe32((uint32_t)-15), // value
-//     htobe32((uint32_t)-50), // min
-//     htobe32((uint32_t)50), // max
-//     0, // default
-//     3, // precision
-//     htobe32((uint32_t)5), // step
-//     "flt"
-// };
-
-// static struct luaItem_int16 luaInt16Example = {
-//     {"Int16 Tst", CRSF_INT16},
-//     htobe16((uint16_t)-300), // value
-//     htobe16((uint16_t)-1000), // min
-//     htobe16((uint16_t)1000), // max
-//     STR_EMPTYSPACE
-// };
-
 static char luaBadGoodString[10];
 static int event();
 
