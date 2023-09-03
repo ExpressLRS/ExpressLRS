@@ -212,6 +212,17 @@ public:
     }
 
     /**
+     * @brief return the number of bytes free in the FIFO
+     * Safe to call without locking
+     *
+     * @return number of bytes free in the FIFO
+     */
+    ICACHE_RAM_ATTR uint16_t inline free()
+    {
+        return FIFO_SIZE - numElements;
+    }
+
+    /**
      * @brief push a 16-bit size prefix onto the FIFO
      *
      * @param size the size prefix to be pushed to the FIFO
