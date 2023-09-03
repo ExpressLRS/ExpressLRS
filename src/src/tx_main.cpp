@@ -1368,7 +1368,7 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
-    crsf::sendTelemetryToTX(CRSFinBuffer);
+    CRSF::sendTelemetryToTX(CRSFinBuffer);
     crsfTelemToMSPOut(CRSFinBuffer);
     TelemetryReceiver.Unlock();
   }
