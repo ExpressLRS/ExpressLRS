@@ -273,7 +273,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     }
 
     // Uplink data
-    crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
+    CRSF::LinkStatistics.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
@@ -304,7 +304,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
 
     // If slot 7, the uplink_TX_Power should be in the low 6 bits
     if (switchIdx == 7)
-        TEST_ASSERT_EQUAL(crsf.LinkStatistics.uplink_TX_Power, switches & 0b111111);
+        TEST_ASSERT_EQUAL(CRSF::LinkStatistics.uplink_TX_Power, switches & 0b111111);
     else
     {
         uint16_t ch = ChannelData[5+switchIdx];
@@ -358,7 +358,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     }
 
     // Uplink data
-    crsf.LinkStatistics.uplink_TX_Power = 3; // 100mW
+    CRSF::LinkStatistics.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
@@ -369,7 +369,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     OtaPackChannelData(otaPktPtr, ChannelData, nonce % 2, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
-    crsf.LinkStatistics.uplink_TX_Power = 0;
+    CRSF::LinkStatistics.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
     bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData, tlmDenom);
@@ -390,7 +390,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
 
     if (switchIdx == 7)
     {
-        TEST_ASSERT_EQUAL(crsf.LinkStatistics.uplink_TX_Power, 3);
+        TEST_ASSERT_EQUAL(CRSF::LinkStatistics.uplink_TX_Power, 3);
     }
     else
     {
@@ -440,12 +440,12 @@ void test_encodingFullresPowerLevels()
 
         // This is what we're testing here, just the power
         uint8_t crsfPower = powerToCrsfPower((PowerLevels_e)pwr);
-        crsf.LinkStatistics.uplink_TX_Power = crsfPower;
+        CRSF::LinkStatistics.uplink_TX_Power = crsfPower;
 
         OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
         OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
 
-        TEST_ASSERT_EQUAL(crsfPower, crsf.LinkStatistics.uplink_TX_Power);
+        TEST_ASSERT_EQUAL(crsfPower, CRSF::LinkStatistics.uplink_TX_Power);
     }
 }
 
@@ -457,7 +457,7 @@ void test_encodingFullres8ch()
     TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
-    crsf.LinkStatistics.uplink_TX_Power = PWR_250mW;
+    CRSF::LinkStatistics.uplink_TX_Power = PWR_250mW;
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));

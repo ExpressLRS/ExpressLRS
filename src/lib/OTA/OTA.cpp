@@ -579,10 +579,11 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
     OtaSwitchModeCurrent = switchMode;
 }
 
-void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * inputBuffer)
+void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *inputBuffer)
 {
     otaPktPtr->std.type = PACKET_TYPE_TLM;
 
+    inputBuffer->lock();
     uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
@@ -597,18 +598,19 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
         otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_DATA;
     }
+    inputBuffer->unlock();
 }
 
-void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO_GENERIC<AP_MAX_BUF_LEN>  * outputBuffer)
+void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *outputBuffer)
 {
     if (OtaIsFullRes)
     {
         uint8_t count = otaPktPtr->full.airport.count;
-        outputBuffer->pushBytes(otaPktPtr->full.airport.payload, count);
+        outputBuffer->atomicPushBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
         uint8_t count = otaPktPtr->std.airport.count;
-        outputBuffer->pushBytes(otaPktPtr->std.airport.payload, count);
+        outputBuffer->atomicPushBytes(otaPktPtr->std.airport.payload, count);
     }
 }

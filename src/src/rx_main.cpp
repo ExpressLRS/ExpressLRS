@@ -90,8 +90,6 @@ device_affinity_t ui_devices[] = {
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
 
-hwTimer hwTimer;
-POWERMGNT POWERMGNT;
 PFD PFDloop;
 Crc2Byte ota_crc;
 ELRS_EEPROM eeprom;
@@ -338,7 +336,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
     interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
-    hwTimer.updateInterval(interval);
+    hwTimer::updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
 #if defined(RADIO_SX128X)
@@ -582,25 +580,25 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             {
                 if (Offset > 0)
                 {
-                    hwTimer.incFreqOffset();
+                    hwTimer::incFreqOffset();
                 }
                 else if (Offset < 0)
                 {
-                    hwTimer.decFreqOffset();
+                    hwTimer::decFreqOffset();
                 }
             }
         }
 
         if (connectionState != connected)
         {
-            hwTimer.phaseShift(RawOffset >> 1);
+            hwTimer::phaseShift(RawOffset >> 1);
         }
         else
         {
-            hwTimer.phaseShift(Offset >> 2);
+            hwTimer::phaseShift(Offset >> 2);
         }
 
-        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
+        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::FreqOffset, uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
 
@@ -762,12 +760,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection(bool resumeRx)
 {
-    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer.FreqOffset);
+    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::FreqOffset);
 
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
-    hwTimer.resetFreqOffset();
+    hwTimer::resetFreqOffset();
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -783,7 +781,7 @@ void LostConnection(bool resumeRx)
         if (hwTimer::running)
         {
             while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
-            hwTimer.stop();
+            hwTimer::stop();
         }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
@@ -806,7 +804,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     SnrMean.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
-    // The caller MUST call hwTimer.resume(). It is not done here because
+    // The caller MUST call hwTimer::resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
 }
 
@@ -1062,7 +1060,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
     if (doStartTimer)
-        hwTimer.resume(); // will throw an interrupt immediately
+        hwTimer::resume(); // will throw an interrupt immediately
 
     return true;
 }
@@ -1134,6 +1132,17 @@ void MspReceiveComplete()
             if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
             {
                 UpdateModelMatch(MspData[9]);
+                break;
+            }
+            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            {
+                vtxSPIFrequency = getFreqByIdx(MspData[8]);
+                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+                {
+                    vtxSPIPowerIdx = MspData[10];
+                    vtxSPIPitmode = MspData[11];
+                }
+                devicesTriggerEvent();
                 break;
             }
             // FALLTHROUGH
@@ -1372,7 +1381,7 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
-    POWERMGNT.init();
+    POWERMGNT::init();
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
@@ -1708,12 +1717,12 @@ void setup()
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
             // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-            hwTimer.callbackTock = &HWtimerCallbackTock;
-            hwTimer.callbackTick = &HWtimerCallbackTick;
+            hwTimer::callbackTock = &HWtimerCallbackTock;
+            hwTimer::callbackTick = &HWtimerCallbackTick;
 
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            hwTimer.init();
+            hwTimer::init();
         }
     }
 
