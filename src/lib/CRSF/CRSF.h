@@ -60,7 +60,7 @@ public:
     static void End(); //stop timers etc
 
     static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
-    static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    static void ICACHE_RAM_ATTR makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4]);
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);

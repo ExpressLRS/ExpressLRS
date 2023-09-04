@@ -1362,7 +1362,11 @@ void loop()
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
-    CRSF::sendLinkStatisticsToTX();
+    // 3 byte header + 1 byte CRC
+    uint8_t linkStatisticsFrame[LinkStatisticsFrameLength + 4];
+    CRSF::makeLinkStatisticsPacket(linkStatisticsFrame);
+    CRSF::sendTelemetryToTX(linkStatisticsFrame);
+    crsfTelemToMSPOut(linkStatisticsFrame);
     TLMpacketReported = now;
   }
 
