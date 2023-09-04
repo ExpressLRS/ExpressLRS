@@ -17,6 +17,7 @@
 #define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
 #define MSP_VTX_PAYLOAD_OFFSET  11
+#define MSP_VTX_TIMEOUT_NO_CONNECTION 5000
 
 typedef enum
 {
@@ -26,6 +27,7 @@ typedef enum
   SET_RCE_PIT_MODE,
   SEND_EEPROM_WRITE,
   MONITORING,
+  STOP_MSPVTX,
   MSP_STATE_MAX
 } mspVtxState_e;
 
@@ -347,7 +349,7 @@ static void mspVtxStateUpdate(void)
 
 void disableMspVtx(void)
 {
-    mspState = MSP_STATE_MAX;
+    mspState = STOP_MSPVTX;
 }
 
 static int event(void)
@@ -361,6 +363,11 @@ static int event(void)
 
 static int timeout(void)
 {
+    if (mspState == STOP_MSPVTX || (mspState != MONITORING && millis() > MSP_VTX_TIMEOUT_NO_CONNECTION))
+    {
+        return DURATION_NEVER;
+    }
+
     if (hwTimer::running && !hwTimer::isTick)
     {
         // Only run code during rx free time or when disconnected.

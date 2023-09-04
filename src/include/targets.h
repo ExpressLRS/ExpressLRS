@@ -94,6 +94,9 @@
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
 #endif
+#ifndef GPIO_PIN_RST_2
+#define GPIO_PIN_RST_2 UNDEF_PIN
+#endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
 #endif
