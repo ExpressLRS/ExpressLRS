@@ -113,7 +113,7 @@ void devicesTriggerEvent()
     #endif
 }
 
-int devicesUpdate(unsigned long now)
+static int _devicesUpdate(unsigned long now)
 {
     int32_t core = CURRENT_CORE;
 
@@ -156,6 +156,11 @@ int devicesUpdate(unsigned long now)
     return smallest_delay;
 }
 
+void devicesUpdate(unsigned long now)
+{
+    _devicesUpdate(now);
+}
+
 #if defined(PLATFORM_ESP32)
 static void deviceTask(void *pvArgs)
 {
@@ -167,7 +172,7 @@ static void deviceTask(void *pvArgs)
     xSemaphoreGive(completeSemaphore);
     for (;;)
     {
-        int delay = devicesUpdate(millis());
+        int delay = _devicesUpdate(millis());
         // sleep the core until the desired time or it's awakened by an event
         xSemaphoreTake(taskSemaphore, delay == DURATION_NEVER ? portMAX_DELAY : pdMS_TO_TICKS(delay));
     }
