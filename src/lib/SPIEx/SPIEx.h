@@ -2,10 +2,10 @@
 #include <SPI.h>
 
 /**
- * @brief An extension to the platform SPI class then provides som performance enhancements.
+ * @brief An extension to the platform SPI class that provides some performance enhancements.
  *
  * 1. The provided data buffer is expected to be word-aligned and word-padded, this allow the
- *    data to be copied to the SPI fifo un word-sized chunks.
+ *    data to be copied to the SPI fifo in word-sized chunks.
  * 2. The wait for non-busy is removed from the end of the write call so the processor can
  *    continue to do work while the SPI module is pumping the data from the FIFO to the external
  *    device.
@@ -22,9 +22,9 @@ public:
     /**
      * @brief Perform an SPI read operation on the SPI bus.
      *
-     * If the SPI bus is busy the processor wait for the current operation to complete before starting
+     * If the SPI bus is busy the processor waits for the current operation to complete before starting
      * this operation.
-     * Once the SPI bus is free, The data is copied to the SPI fifo and the processor waits for the operation
+     * Once the SPI bus is free, the data is copied to the SPI fifo and the processor waits for the operation
      * to complete then copies the incoming data back into the provided data buffer.
      *
      * @param cs_mask mask of CS pins to enable for this operation
@@ -36,16 +36,14 @@ public:
     /**
      * @brief Perform an SPI write operation on the SPI bus.
      *
-     * If the SPI bus is busy the processor wait for the current operation to complete before starting
+     * If the SPI bus is busy the processor waits for the current operation to complete before starting
      * this operation.
      * One the SPI bus is not busy, it copies the data to the SPI fifo then returns without waiting for
      * the operation to complete allowing the processor to do other work.
      *
-     * If the SPI bus is busy at the when start this operation starts,
-     *
      * @param cs_mask mask of CS pins to enable for this operation
      * @param data word-aligned and padded data buffer
-     * @param size the number of bytes to be write to the SPI device
+     * @param size the number of bytes to be written to the SPI device
      */
     void inline ICACHE_RAM_ATTR write(uint8_t cs_mask, uint8_t * data, uint32_t size) { _transfer(cs_mask, data, size, false); }
 
