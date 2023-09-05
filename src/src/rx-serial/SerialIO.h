@@ -4,7 +4,7 @@
 #include "FIFO.h"
 
 /**
- * @brief Abstract class that is to be extended by implementqtion classes for different serial protocols on the recevier side.
+ * @brief Abstract class that is to be extended by implementation classes for different serial protocols on the receiver side.
  *
  * At a minimum, a new protocol extension class should implement the following functions
  *
@@ -35,13 +35,13 @@ public:
      * @brief Signals the protocol to queue a link statistics packet
      *
      * The packet should be queued into the `_fifo` member variable as RC packets
-     * are prioritised and ancilliary data is sent after the RC data when the
+     * are prioritised and ancillary data is sent after the RC data when the
      * `sendQueuedData` function is called.
      */
     virtual void queueLinkStatisticsPacket() = 0;
 
     /**
-     * @brief Signals that the MSP frame should be queued for transmision.
+     * @brief Signals that the MSP frame should be queued for transmission.
      *
      * The MSP frame should be queued as in `queueLinkStatisticsPacket` so it can be
      * sent after any RC data.
@@ -54,8 +54,8 @@ public:
      * @brief send the RC channel data to the serial port stream `_outputPort` member
      * variable.
      *
-     * If the function whishes to be called as fast as possible, then it should return
-     * DURATION_IMMEDIATE, otherwise is should return the number of milliseconds delay
+     * If the function wishes to be called as fast as possible, then it should return
+     * DURATION_IMMEDIATE, otherwise it should return the number of milliseconds delay
      * before this method is called again.
      *
      * @param frameAvailable indicates that a new OTA frame of data has been received
@@ -66,8 +66,8 @@ public:
     virtual uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) = 0;
 
     /**
-     * @brief send any previsouly queued data to the serial port stream `_outputPort`
-     * member varialbe.
+     * @brief send any previously queued data to the serial port stream `_outputPort`
+     * member variable.
      */
     virtual void sendQueuedData(uint32_t maxBytesToSend);
 
@@ -77,7 +77,7 @@ public:
      * The maximum number of bytes to read per call is obtained
      * from the `getMaxSerialReadSize` method call.
      *
-     * This method *should* not be overridden by custom implementatinos, it is
+     * This method *should* not be overridden by custom implementations, it is
      * only overridden by the `SerialNOOP` implementation.
      */
     virtual void processSerialInput();
@@ -105,7 +105,7 @@ protected:
     FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
 
     /**
-     * @brief Get the maximum number of bytes to read from teh serial port per call
+     * @brief Get the maximum number of bytes to read from the serial port per call
      *
      * @return the maximum number of bytes to read
      */
