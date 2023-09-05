@@ -171,7 +171,6 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_UINT16:
       dataEnd = luaInt16StructToArray(luaData, chunkStart);
       break;
-      break;
     case CRSF_STRING: // fallthough
     case CRSF_INFO:
       dataEnd = luaStringStructToArray(luaData, chunkStart);
