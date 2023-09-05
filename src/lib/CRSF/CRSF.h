@@ -134,6 +134,14 @@ private:
     static uint32_t autobaud();
     static void flush_port_input(void);
 #endif
+#if defined(CRSF_RX_MODULE)
+public:
+    static void updateUplinkPower(uint8_t uplinkPower);
+    static bool clearUpdatedUplinkPower();
+
+private:
+    static bool HasUpdatedUplinkPower;
+#endif
 };
 
 extern GENERIC_CRC8 crsf_crc;

@@ -1,6 +1,7 @@
+#include <dynpower.h>
+
 #if defined(TARGET_TX)
 
-#include <dynpower.h>
 #include <common.h>
 #include <LBT.h>
 
@@ -196,3 +197,32 @@ void DynamicPower_Update(uint32_t now)
 }
 
 #endif // TARGET_TX
+
+#if defined(TARGET_RX)
+
+/***
+ * @brief: Set power to configured power or update power to match the current TX power
+ * @param initialize: Set to true if calling from setup() to force even PWR_MATCH_TX to default power
+*/
+void DynamicPower_UpdateRx(bool initialize)
+{
+  if (config.GetPower() != PWR_MATCH_TX)
+  {
+    POWERMGNT::setPower((PowerLevels_e)config.GetPower());
+  } /* !PWR_MATCH_TX (fixed power) */
+  else
+  {
+    if (CRSF::clearUpdatedUplinkPower())
+    {
+      PowerLevels_e newPower = crsfpowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
+      DBGLN("Matching TX power %u", newPower);
+      POWERMGNT::setPower(newPower);
+    }
+    else if (initialize)
+    {
+      POWERMGNT::setPower(POWERMGNT::getDefaultPower());
+    }
+  } /* PWR_MATCH_TX */
+}
+
+#endif // TARGET_RX

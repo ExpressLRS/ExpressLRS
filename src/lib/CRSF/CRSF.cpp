@@ -888,6 +888,35 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
+
+#endif // CRSF_TX_MODULE
+
+#if defined(CRSF_RX_MODULE)
+
+bool CRSF::HasUpdatedUplinkPower = false;
+
+/***
+ * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
+ */
+void CRSF::updateUplinkPower(uint8_t uplinkPower)
+{
+    if (uplinkPower != LinkStatistics.uplink_TX_Power)
+    {
+        LinkStatistics.uplink_TX_Power = uplinkPower;
+        HasUpdatedUplinkPower = true;
+    }
+}
+
+/***
+ * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
+ */
+bool CRSF::clearUpdatedUplinkPower()
+{
+    bool retVal = HasUpdatedUplinkPower;
+    HasUpdatedUplinkPower = false;
+    return retVal;
+}
+
 #endif // CRSF_RX_MODULE
 
 /***
