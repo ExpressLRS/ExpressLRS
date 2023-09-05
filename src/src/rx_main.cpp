@@ -12,6 +12,7 @@
 #include "msptypes.h"
 #include "PFD.h"
 #include "options.h"
+#include "dynpower.h"
 #include "MeanAccumulator.h"
 #include "freqTable.h"
 
@@ -1388,7 +1389,7 @@ static void setupRadio()
         return;
     }
 
-    POWERMGNT::setPower((PowerLevels_e)config.GetPower());
+    DynamicPower_UpdateRx(true);
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (config.GetPower() > PWR_10mW);
@@ -1807,6 +1808,7 @@ void loop()
     updateBindingMode(now);
     updateSwitchMode();
     checkGeminiMode();
+    DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
 }

@@ -117,10 +117,29 @@ void OLEDDisplay::displaySplashScreen()
 #else
 #ifdef USE_OLED_SPI_SMALL
     if (OPT_USE_OLED_SPI_SMALL)
-        u8g2->drawXBM(48, 0, 32, 32, elrs32);
+    {
+        auto constexpr sz = 128 * 32 / 8;
+        uint8_t image[sz];
+        if (spi_flash_read(logo_image, image, sz) == ESP_OK)
+        {
+            u8g2->drawXBM(0, 0, 128, 32, image);
+        }
+    }
     else
 #endif
-        u8g2->drawXBM(32, 0, 64, 64, elrs64);
+    {
+        auto constexpr sz = 128 * 64 / 8;
+        uint8_t image[sz];
+        if (spi_flash_read(logo_image, image, sz) == ESP_OK)
+        {
+            u8g2->drawXBM(0, 0, 128, 64, image);
+        }
+
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "ELRS-%.6s", version);
+        u8g2->setFont(u8g2_font_profont10_mr);
+        drawCentered(60, buffer);
+    }
 #endif
     u8g2->sendBuffer();
 }

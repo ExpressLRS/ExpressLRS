@@ -179,31 +179,17 @@ void CRSF::flush_port_input(void)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
+void ICACHE_RAM_ATTR CRSF::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
 {
-    if (!CRSF::CRSFstate)
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
     {
-        return;
+        buffer[i + 3] = ((uint8_t *)&LinkStatistics)[i];
     }
-
-    constexpr uint8_t outBuffer[4] = {
-        LinkStatisticsFrameLength + 4,
-        CRSF_ADDRESS_RADIO_TRANSMITTER,
-        LinkStatisticsFrameLength + 2,
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
-
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
-
-    SerialOutFIFO.lock();
-    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
-    {
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-        SerialOutFIFO.push(crc);
-    }
-    SerialOutFIFO.unlock();
+    uint8_t crc = crsf_crc.calc(buffer[2]);
+    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 }
 
 /**
@@ -888,6 +874,35 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
+
+#endif // CRSF_TX_MODULE
+
+#if defined(CRSF_RX_MODULE)
+
+bool CRSF::HasUpdatedUplinkPower = false;
+
+/***
+ * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
+ */
+void CRSF::updateUplinkPower(uint8_t uplinkPower)
+{
+    if (uplinkPower != LinkStatistics.uplink_TX_Power)
+    {
+        LinkStatistics.uplink_TX_Power = uplinkPower;
+        HasUpdatedUplinkPower = true;
+    }
+}
+
+/***
+ * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
+ */
+bool CRSF::clearUpdatedUplinkPower()
+{
+    bool retVal = HasUpdatedUplinkPower;
+    HasUpdatedUplinkPower = false;
+    return retVal;
+}
+
 #endif // CRSF_RX_MODULE
 
 /***

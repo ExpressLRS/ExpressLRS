@@ -417,7 +417,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
           TelemetryStatus = (switchByte & 0b01000000) >> 6;
     if (switchIndex == 7)
     {
-        CRSF::LinkStatistics.uplink_TX_Power = switchByte & 0b111111;
+        CRSF::updateUplinkPower(switchByte & 0b111111);
     }
     else
     {
@@ -477,7 +477,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh]);
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
-    CRSF::LinkStatistics.uplink_TX_Power = ota8->rc.uplinkPower + 1;
+    CRSF::updateUplinkPower(ota8->rc.uplinkPower + 1);
     return ota8->rc.telemetryStatus;
 }
 #endif
