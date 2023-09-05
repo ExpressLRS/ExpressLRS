@@ -15,7 +15,7 @@ public:
     pwm_channel_t allocate(uint8_t pin, uint32_t frequency);
 
     /**
-     * @brief release a channel back to the allocater
+     * @brief release a channel back to the allocator
      *
      * @param channel the channel to release
      */

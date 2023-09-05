@@ -1,18 +1,17 @@
 #include "PWM.h"
 
 #if defined(PLATFORM_ESP32)
-#include <math.h>
 #include <driver/ledc.h>
 #include <driver/mcpwm.h>
+#include <math.h>
 
 #include "logging.h"
 
+#define MCPWM_CHANNELS 12
+#define LEDC_CHANNELS 8
 
-#define MCPWM_CHANNELS  12
-#define LEDC_CHANNELS   8
-
-#define MCPWM_CHANNEL_FLAG  0x100
-#define LEDC_CHANNEL_FLAG   0x200
+#define MCPWM_CHANNEL_FLAG 0x100
+#define LEDC_CHANNEL_FLAG 0x200
 
 #define IS_MCPWM_CHANNEL(ch) (ch & MCPWM_CHANNEL_FLAG)
 #define IS_LEDC_CHANNEL(ch) (ch & LEDC_CHANNEL_FLAG)
@@ -20,7 +19,8 @@
 #define LEDC_CHANNEL(ch) (ch & 0xFF)
 #define MCPWM_CHANNEL(ch) (ch & 0xFF)
 
-static const struct {
+static const struct
+{
     mcpwm_unit_t unit;
     mcpwm_io_signals_t signal;
     mcpwm_timer_t timer;
@@ -42,12 +42,13 @@ static const struct {
 
 static uint32_t mcpwm_frequencies[MCPWM_CHANNELS] = {0};
 
-static struct {
+static struct
+{
     int8_t pin;
     uint8_t resolution_bits;
     uint32_t interval;
 } ledc_config[LEDC_CHANNELS] = {
-    {-1, 0, 0}
+    {-1, 0, 0},
 };
 uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
 
@@ -90,18 +91,18 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
     // 1. see if we can allocate a MCPWM channel at this frequency
     int channel = -1;
     // 1a. see if theres a MCPWM already using this frequency we can piggy-back on
-    for (int i=0 ; i<MCPWM_CHANNELS ; i++)
+    for (int i = 0; i < MCPWM_CHANNELS; i++)
     {
         if (mcpwm_frequencies[i] == frequency)
         {
-            if (i%2 == 0 && mcpwm_frequencies[i+1]==0)
+            if (i % 2 == 0 && mcpwm_frequencies[i + 1] == 0)
             {
-                channel = i+1;
+                channel = i + 1;
                 break;
             }
-            if (i%2 == 1 && mcpwm_frequencies[i-1]==0)
+            if (i % 2 == 1 && mcpwm_frequencies[i - 1] == 0)
             {
-                channel = i-1;
+                channel = i - 1;
                 break;
             }
         }
@@ -109,9 +110,9 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
     if (channel == -1)
     {
         // 1b. check if theres an unassigned pair we can allocate to this frequency
-        for (auto i=0 ; i<MCPWM_CHANNELS ; i+=2)
+        for (auto i = 0; i < MCPWM_CHANNELS; i += 2)
         {
-            if (mcpwm_frequencies[i] == 0 && mcpwm_frequencies[i+1] == 0)
+            if (mcpwm_frequencies[i] == 0 && mcpwm_frequencies[i + 1] == 0)
             {
                 channel = i;
                 break;
@@ -134,14 +135,14 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
     }
 
     // 2. try for a LEDC channel
-    for (int ch=0 ; ch<LEDC_CHANNELS ; ch++)
+    for (int ch = 0; ch < LEDC_CHANNELS; ch++)
     {
         if (ledc_config[ch].resolution_bits == 0)
         {
             auto bits = (uint8_t)(log2f(80000000.0f / frequency)); // clk src is 80Mhz
             if (bits >= LEDC_TIMER_BIT_MAX)
             {
-                bits = LEDC_TIMER_BIT_MAX-1;
+                bits = LEDC_TIMER_BIT_MAX - 1;
             }
             for (auto timer_idx = 0; timer_idx < LEDC_TIMER_MAX; timer_idx++)
             {
@@ -201,7 +202,7 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
     else if (IS_MCPWM_CHANNEL(channel))
     {
         auto ch = MCPWM_CHANNEL(channel);
-        mcpwm_set_duty(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, duty/10.0f);
+        mcpwm_set_duty(mcpwm_config[ch].unit, mcpwm_config[ch].timer, mcpwm_config[ch].generator, duty / 10.0f);
     }
 }
 
