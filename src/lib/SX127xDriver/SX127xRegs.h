@@ -125,6 +125,7 @@ typedef enum
 // SX127X_REG_PA_CONFIG
 #define SX127X_PA_SELECT_RFO 0b00000000    //  7     7     RFO pin output, power limited to +14 dBm
 #define SX127X_PA_SELECT_BOOST 0b10000000  //  7     7     PA_BOOST pin output, power limited to +20 dBm
+#define SX127X_PA_POWER_MASK 0b01111111    //  6     0     PA MAX_POWER and OUTPUT_POWER combined bit mask
 // SX127X_REG_OCP
 #define SX127X_OCP_OFF 0b00000000   //  5     5     PA overload current protection disabled
 #define SX127X_OCP_ON 0b00100000    //  5     5     PA overload current protection enabled

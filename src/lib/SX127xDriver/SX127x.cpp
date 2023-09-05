@@ -224,7 +224,8 @@ void SX127xDriver::SetSyncWord(uint8_t syncWord)
 void SX127xDriver::SetOutputPower(uint8_t Power)
 {
   uint8_t pwrNew;
-  Power &= 0x7F;
+  Power &= SX127X_PA_POWER_MASK;
+
   if (OPT_USE_SX1276_RFO_HF)
   {
     pwrNew = SX127X_PA_SELECT_RFO | Power;
