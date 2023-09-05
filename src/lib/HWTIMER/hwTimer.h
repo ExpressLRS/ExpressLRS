@@ -37,7 +37,7 @@ public:
     /**
      * @brief Stop the timer.
      *
-     * The timer is stopped and no more callbacks a re performed.
+     * The timer is stopped and no more callbacks are performed.
      */
     static void stop();
 
