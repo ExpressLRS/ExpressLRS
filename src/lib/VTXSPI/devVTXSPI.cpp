@@ -47,16 +47,24 @@ pwm_channel_t rfAmpPwmChannel = -1;
 
 uint16_t vtxSPIFrequency = 6000;
 static uint16_t vtxSPIFrequencyCurrent = 6000;
+
 uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
+
 uint8_t vtxSPIPitmode = 1;
 static uint8_t vtxSPIPitmodeCurrent = 1;
+
 static uint8_t RfAmpVrefState = 0;
+
 static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t vtxPreviousSPIPWM = 0;
+
 static uint16_t vtxMinPWM = MIN_PWM;
 static uint16_t vtxMaxPWM = MAX_PWM;
+
 static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
+
 
 static bool stopVtxMonitoring = false;
 
@@ -153,6 +161,10 @@ static void RfAmpVrefOff()
 
 static void setPWM()
 {
+    if (vtxSPIPWM == vtxPreviousSPIPWM) {
+        return;
+    }
+
 #if defined(PLATFORM_ESP32_S3)
     PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
 #elif defined(PLATFORM_ESP32)
@@ -167,6 +179,8 @@ static void setPWM()
 #else
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 #endif
+
+    vtxPreviousSPIPWM = vtxSPIPWM;
 }
 
 void VTxOutputMinimum()
