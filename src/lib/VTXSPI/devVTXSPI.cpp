@@ -86,14 +86,14 @@ uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
 static SPIClass *vtxSPI;
+static bool vtxSPIIsShared = false;
 
 static void rtc6705WriteRegister(uint32_t regData)
 {
-    bool shared = GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK ? true : false;
-    DBGLN("VTX: Register: %d, shared: %d", regData, shared);
+    DBGLN("VTX: Register: %d", regData);
 
     // When sharing the SPI Bus control of the NSS pin is done by us
-    if (shared)
+    if (vtxSPIIsShared)
     {
         vtxSPI->setBitOrder(LSBFIRST);
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
@@ -115,7 +115,7 @@ static void rtc6705WriteRegister(uint32_t regData)
     // Since the RTC6705 just ignores the extra bits, we send 32 bits and the RTC6705 ignores the last 7 bits.
     vtxSPI->transfer32(regData);
 
-    if (shared)
+    if (vtxSPIIsShared)
     {
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
         vtxSPI->setBitOrder(MSBFIRST);
@@ -381,8 +381,12 @@ static void initialize()
 
     if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
     {
-        if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
+        vtxSPIIsShared = GPIO_PIN_SPI_VTX_SCK == UNDEF_PIN || GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK;
+
+        if (!vtxSPIIsShared)
         {
+            DBGLN("VTX: Using dedicated SPI");
+
             vtxSPI = new SPIClass(HSPI);
             vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
             vtxSPI->setHwCs(true);
@@ -390,6 +394,8 @@ static void initialize()
         }
         else
         {
+            DBGLN("VTX: Using shared SPI");
+
             vtxSPI = &SPI;
             pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
             digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
