@@ -273,13 +273,12 @@ static void initialize()
     {
         if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
         {
-            vtxSPI = new SPIClass();
-            #if defined(PLATFORM_ESP32)
-            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            #if defined(PLATFORM_ESP32_S3)
+            vtxSPI = new SPIClass(FSPI);
             #else
-            vtxSPI->pins(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
-            vtxSPI->begin();
+            vtxSPI = new SPIClass(VSPI);
             #endif
+            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
             vtxSPI->setHwCs(true);
             vtxSPI->setBitOrder(LSBFIRST);
         }
