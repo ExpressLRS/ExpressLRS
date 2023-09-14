@@ -11,7 +11,7 @@ static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
 
 #if (defined(PLATFORM_ESP32))
-static DShotRMT *dshotInstances[PWM_MAX_CHANNELS];
+static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
 static uint8_t rmtCH = 0;
 static uint8_t RMT_MAX_CHANNELS = 8;
 static dshot_mode_t dshotProtocol = DSHOT300;
@@ -69,7 +69,10 @@ static void servoWrite(uint8_t ch, uint16_t us)
     else if ((eServoOutputMode)chConfig->val.mode == somDShot)
     {
         // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
-        dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+        if (dshotInstances[ch])
+        {
+            dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+        }
     }
 #endif
     else
