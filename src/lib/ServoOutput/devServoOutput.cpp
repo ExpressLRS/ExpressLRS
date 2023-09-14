@@ -4,8 +4,8 @@
 #include "CRSF.h"
 #include "config.h"
 #include "helpers.h"
-#include "rxtx_intf.h"
 #include "logging.h"
+#include "rxtx_intf.h"
 
 static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
 static ServoMgr *servoMgr;
@@ -46,7 +46,7 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
     case som10KHzDuty:
         return (1000000U / 10000U);
 #if (defined(PLATFORM_ESP32))
-	case somDShot:
+    case somDShot:
         return (1000000U / 1000U); // Run DShot at 1kHz? Seems to work fine.
 #endif
     default:
@@ -57,11 +57,11 @@ uint16_t servoOutputModeToUs(eServoOutputMode mode)
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-	if ((eServoOutputMode)chConfig->val.mode == somOnOff)
-	{
-		servoMgr->writeDigital(ch, us > 1500U);
-	}
-	else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+    if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+    {
+        servoMgr->writeDigital(ch, us > 1500U);
+    }
+    else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
     {
         servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
     }
@@ -144,7 +144,6 @@ static void initialize()
         return;
     }
 
-
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
@@ -163,17 +162,17 @@ static void initialize()
             pin = ServoMgr::PIN_DISCONNECTED;
         }
 #if (defined(PLATFORM_ESP32))
-		if (mode == somDShot)
-		{
+        if (mode == somDShot)
+        {
             // DBGLN("Initializing DShot: pin: %u, ch: %d", pin, ch);
-			if(rmtCH < RMT_MAX_CHANNELS)
+            if (rmtCH < RMT_MAX_CHANNELS)
             {
-				gpio_num_t gpio = (gpio_num_t)pin;
+                gpio_num_t gpio = (gpio_num_t)pin;
                 rmt_channel_t rmtChannel = (rmt_channel_t)rmtCH;
-				DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
-				dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
-				rmtCH++;
-			}
+                DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
+                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+                rmtCH++;
+            }
         }
 #endif
         SERVO_PINS[ch] = pin;
@@ -192,14 +191,13 @@ static int start()
         servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
 
 #if (defined(PLATFORM_ESP32))
-		if (((eServoOutputMode)chConfig->val.mode) == somDShot)
-		{
+        if (((eServoOutputMode)chConfig->val.mode) == somDShot)
+        {
             DBGLN("DShot start loop for channel: %d", ch);
-			dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
-			dshotInstances[ch]->send_dshot_value(0); // Set throttle low so the ESC can continue initialsation
+            dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
+            dshotInstances[ch]->send_dshot_value(0);         // Set throttle low so the ESC can continue initialsation
         }
 #endif
-
     }
 
     return DURATION_NEVER;
