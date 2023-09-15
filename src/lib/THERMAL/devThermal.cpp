@@ -244,7 +244,7 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
 #if defined(HAS_THERMAL)
     if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)

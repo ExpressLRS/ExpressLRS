@@ -35,7 +35,7 @@
 #define READ_BIT                                0x00
 #define WRITE_BIT                               0x01
 
-#define RTC6705_BOOT_DELAY                      350
+#define RTC6705_BOOT_DELAY_MS                   350
 #define RTC6705_PLL_SETTLE_TIME_MS              500 // ms - after changing frequency turn amps back on after this time for clean switching
 #define VTX_POWER_INTERVAL_MS                   20
 
@@ -53,6 +53,9 @@ static uint8_t vtxSPIPowerIdxCurrent = 0;
 
 uint8_t vtxSPIPitmode = 1;
 static uint8_t vtxSPIPitmodeCurrent = 1;
+
+bool vtxPowerAmpEnableCurrent = false;
+bool vtxPowerAmpEnable = false;
 
 static uint8_t RfAmpVrefState = 0;
 
@@ -437,8 +440,6 @@ static void initialize()
         DBGLN("VTX: PWM, min: %d, max: %d, spipwm: %d", vtxMinPWM, vtxMaxPWM, vtxSPIPWM);
 
         setPWM();
-
-        delay(RTC6705_BOOT_DELAY);
     }
 }
 
@@ -457,21 +458,33 @@ static int start()
     return RTC6705_PLL_SETTLE_TIME_MS;
 #endif
 
-    rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
+    vtxSPIFrequency = 5999; // Boot with VTx set away from standard frequencies.
+    vtxPowerAmpEnable = true;
 
-    rtc6705PowerAmpOn();
-
-    return VTX_POWER_INTERVAL_MS;
+    return RTC6705_BOOT_DELAY_MS;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
     {
         return DURATION_NEVER;
     }
 
-    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx || vtxSPIPitmodeCurrent != vtxSPIPitmode)
+    if (!timeout_expired) {
+        // An event occurred while waiting for existing timeout to elapse (e.g. RTC6705_BOOT_DELAY_MS, RTC6705_PLL_SETTLE_TIME_MS)
+        // We will have to handle the potentially updated values (frequency, power, pitmode, pa, etc) during timeout when it eventually gets called.
+        
+        // We don't want to update/override the previously-set timeout value.
+        return DURATION_IGNORE;
+    }
+
+    if (
+        vtxSPIFrequencyCurrent != vtxSPIFrequency ||
+        vtxSPIPowerIdxCurrent != vtxSPIPowerIdx ||
+        vtxSPIPitmodeCurrent != vtxSPIPitmode ||
+        vtxPowerAmpEnableCurrent != vtxPowerAmpEnable
+    )
     {
         return DURATION_IMMEDIATELY;
     }
@@ -496,6 +509,9 @@ static int timeout()
     return gatherOutputCalibrationData();
 #endif
 
+    uint32_t now = millis();
+    DBGLN("VTX: timeout, now: %d", now);
+
     if (vtxSPIFrequencyCurrent != vtxSPIFrequency)
     {
         DBGLN("VTX: Changing frequency, old: %d, new: %d", vtxSPIFrequencyCurrent, vtxSPIFrequency);
@@ -504,6 +520,19 @@ static int timeout()
         vtxSPIFrequencyCurrent = vtxSPIFrequency;
 
         return RTC6705_PLL_SETTLE_TIME_MS;
+    }
+
+    // Note: it's important that the PA is handled after the frequency.
+    if (vtxPowerAmpEnableCurrent != vtxPowerAmpEnable)
+    {
+        DBGLN("VTX: Changing internal PA, old: %d, new: %d", vtxPowerAmpEnableCurrent, vtxPowerAmpEnable);
+        if (vtxPowerAmpEnable)
+        {
+            rtc6705PowerAmpOn();
+        }
+        vtxPowerAmpEnableCurrent = vtxPowerAmpEnable;
+
+        return VTX_POWER_INTERVAL_MS;
     }
 
     if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)

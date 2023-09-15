@@ -321,7 +321,7 @@ static int timeout()
     return BACKPACK_TIMEOUT;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
 #if defined(GPIO_PIN_BACKPACK_EN)
     if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)

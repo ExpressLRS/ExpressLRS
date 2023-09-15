@@ -131,7 +131,8 @@ static int _devicesUpdate(unsigned long now)
         if (uiDevices[i].core == core || core == -1) {
             if (handleEvents && uiDevices[i].device->event)
             {
-                int delay = (uiDevices[i].device->event)();
+                bool timeout_expired = now >= deviceTimeout[i];
+                int delay = (uiDevices[i].device->event)(timeout_expired);
                 if (delay != DURATION_IGNORE)
                 {
                     deviceTimeout[i] = delay == DURATION_NEVER ? 0xFFFFFFFF : now + delay;

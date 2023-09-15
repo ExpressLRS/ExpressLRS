@@ -22,7 +22,7 @@ static void initialize()
     running = true;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (connectionState == serialUpdate && running)
     {

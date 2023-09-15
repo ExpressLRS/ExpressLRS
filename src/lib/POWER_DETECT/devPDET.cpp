@@ -46,7 +46,7 @@ static int start()
  *
  * @return int duration in ms to call the 'timeout' function
  */
-static int event()
+static int event(bool timeout_expired)
 {
     if (GPIO_PIN_PA_PDET == UNDEF_PIN || connectionState > connectionState_e::MODE_STATES)
     {

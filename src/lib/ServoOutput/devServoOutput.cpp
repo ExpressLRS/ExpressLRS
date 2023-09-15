@@ -231,7 +231,7 @@ static int start()
     return DURATION_NEVER;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {

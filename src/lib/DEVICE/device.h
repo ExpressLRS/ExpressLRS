@@ -25,7 +25,7 @@ typedef struct {
      * If DURATION_IGNORE is returned, then the current timeout value kept and timeout()
      * will be called when it expires.
      */
-    int (*event)();
+    int (*event)(bool timeout_expired);
 
     /**
      * @brief The current timeout duration has expired so take appropriate action and return

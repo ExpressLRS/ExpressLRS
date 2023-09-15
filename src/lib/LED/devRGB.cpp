@@ -436,6 +436,11 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
+static int event(bool timeout_expired)
+{
+    return DURATION_IMMEDIATELY;
+}
+
 static int timeout()
 {
     if (GPIO_PIN_LED_WS2812 == UNDEF_PIN)
@@ -507,7 +512,7 @@ static int timeout()
 device_t RGB_device = {
     .initialize = initialize,
     .start = start,
-    .event = timeout,
+    .event = event,
     .timeout = timeout
 };
 

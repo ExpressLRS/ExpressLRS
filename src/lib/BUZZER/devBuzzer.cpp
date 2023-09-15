@@ -88,7 +88,7 @@ static int start()
     return DURATION_NEVER;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (GPIO_PIN_BUZZER == UNDEF_PIN || firmwareOptions.buzzer_mode == buzzerQuiet)
     {

@@ -77,7 +77,7 @@ static int timeout()
     return DURATION_NEVER;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (connectionState == bleJoystick) {
         hwTimer::stop();

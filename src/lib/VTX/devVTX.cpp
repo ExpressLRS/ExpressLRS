@@ -101,7 +101,7 @@ static void initialize()
     registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (VtxSendState == VTXSS_MODIFIED ||
         (VtxSendState == VTXSS_UNKNOWN && connectionState == connected))
