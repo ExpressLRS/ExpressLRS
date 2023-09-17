@@ -62,8 +62,10 @@ void CROSSFIRE2MSP::parse(const uint8_t *data)
         outBuffer[idx] = getChecksum(outBuffer + 3, pktLen, MSPvers); // +3 because the header isn't in checksum
         frameComplete = true;
 
+        FIFOout.lock();
         FIFOout.pushSize(idx + 1);
         FIFOout.pushBytes(outBuffer, idx + 1);
+        FIFOout.unlock();
     }
 }
 

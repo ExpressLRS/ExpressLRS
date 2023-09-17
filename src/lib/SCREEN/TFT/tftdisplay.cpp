@@ -131,7 +131,6 @@ void TFTDisplay::init()
 
     gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
-    displaySplashScreen();
 }
 
 void TFTDisplay::doScreenBackLight(screen_backlight_t state)
@@ -169,7 +168,12 @@ void TFTDisplay::displaySplashScreen()
 {
     gfx->fillScreen(WHITE);
 
-    gfx->draw16bitRGBBitmap(0, 0, vendor_logo, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y);
+    size_t sz = INIT_PAGE_LOGO_X * INIT_PAGE_LOGO_Y;
+    uint16_t image[sz];
+    if (spi_flash_read(logo_image, image, sz * 2) == ESP_OK)
+    {
+        gfx->draw16bitRGBBitmap(0, 0, image, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y);
+    }
 
     gfx->fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, BLACK);

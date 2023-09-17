@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include "ESPAsyncWebServer.h"
-#include "FIFO_GENERIC.h"
+#include "FIFO.h"
 
 #define BUFFER_OUTPUT_SIZE 1024
 #define BUFFER_INPUT_SIZE 1024
@@ -29,8 +29,8 @@ private:
     static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
 
-    FIFO_GENERIC<BUFFER_OUTPUT_SIZE> FIFOout;
-    FIFO_GENERIC<BUFFER_INPUT_SIZE> FIFOin;
+    FIFO<BUFFER_OUTPUT_SIZE> FIFOout;
+    FIFO<BUFFER_INPUT_SIZE> FIFOin;
 
 public:
     TCPSOCKET(const uint32_t port);
