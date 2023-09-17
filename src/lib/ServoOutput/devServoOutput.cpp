@@ -236,11 +236,13 @@ static int event()
                 PWM.release(PWM_CHANNELS[ch]);
                 PWM_CHANNELS[ch] = -1;
             }
+#if defined(PLATFORM_ESP32)
             if (dshotInstances[ch] != nullptr)
             {
                 delete dshotInstances[ch];
                 dshotInstances[ch] = nullptr;
             }
+#endif
             SERVO_PINS[ch] = UNDEF_PIN;
         }
         return DURATION_NEVER;
