@@ -173,7 +173,8 @@ td img.icon-pwm {
 							<option value='3'>via ESP DACWRITE</option>
 						</select>
 					</td><td>How the power level is set</td></tr>
-					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td><td>Comma-separated list of values that set the power output</td></tr>
+					<tr><td></td><td>Power Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td><td>Comma-separated list of values that set the power output (if using a DAC these are the DAC values)</td></tr>
+					<tr><td></td><td>Secondary Power Value(s)</td><td><input size='40' id='power_values2' name='power_values2' type='text' class='array'/></td><td>Comma-separated list of values that set the power output (if using a DAC then these set the Semtech power output)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
 					<tr><td></td><td>PDET pin<img class="icon-analog"/></td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>

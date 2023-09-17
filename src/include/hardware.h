@@ -46,6 +46,7 @@ typedef enum {
 
     HARDWARE_power_control,
     HARDWARE_power_values,
+    HARDWARE_power_values2,
 
     // Input
     HARDWARE_joystick,
