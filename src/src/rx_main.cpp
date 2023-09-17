@@ -1268,8 +1268,7 @@ static void setupSerial()
     
     if(sbusSerialOutput) 
         config = SERIAL_8E2;
-    else
-    if(hottTlmSerial)
+    else if(hottTlmSerial)
         config = SERIAL_8N2;
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
@@ -1279,8 +1278,7 @@ static void setupSerial()
 
     if(sbusSerialOutput) 
         config = SERIAL_8E2;
-    else
-    if(hottTlmSerial)
+    else if(hottTlmSerial)
         config = SERIAL_8N2;
     
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
