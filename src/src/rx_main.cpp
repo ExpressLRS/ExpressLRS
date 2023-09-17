@@ -36,6 +36,7 @@
 #include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
@@ -1717,12 +1718,9 @@ void setup()
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
             // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-            hwTimer::callbackTock = &HWtimerCallbackTock;
-            hwTimer::callbackTick = &HWtimerCallbackTick;
-
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            hwTimer::init();
+            hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
         }
     }
 

@@ -54,6 +54,7 @@ uint32_t SyncPacketLastSent = 0;
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
+static bool commitInProgress = false;
 
 LQCALC<25> LQCalc;
 
@@ -557,13 +558,29 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 }
 
+void ICACHE_RAM_ATTR nonceAdvance()
+{
+  OtaNonce++;
+  if ((OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    ++FHSSptr;
+  }
+}
+
 /*
  * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
-void ICACHE_RAM_ATTR timerCallbackNormal()
+void ICACHE_RAM_ATTR timerCallback()
 {
+  /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
+  if (commitInProgress)
+  {
+    nonceAdvance();
+    return;
+  }
+
   // No packet has been sent due to LBT.  Call TXdoneCallback to prepare for TLM.
-	if (Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
+  if (Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
   {
 		Radio.TXdoneCallback();
   }
@@ -624,16 +641,6 @@ void ICACHE_RAM_ATTR timerCallbackNormal()
     busyTransmitting = true;
     SendRCdataToRF();
   }
-}
-
-/*
- * Called as the timer ISR while waiting for eeprom flush
- */
-void ICACHE_RAM_ATTR timerCallbackIdle()
-{
-  OtaNonce++;
-  if ((OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-    ++FHSSptr;
 }
 
 static void UARTdisconnected()
@@ -719,8 +726,8 @@ static void ConfigChangeCommit()
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
   ChangeRadioParams();
-  // Resume the timer, will take one hop for the radio to be on the right frequency if we missed a hop
-  hwTimer::callbackTock = &timerCallbackNormal;
+  // Clear the commitInProgress flag so normal processing resumes
+  commitInProgress = false;
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
   devicesTriggerEvent();
@@ -752,10 +759,10 @@ static void CheckConfigChangePending()
 
     --pauseCycles; // the last cycle will actually be a transmit
     while (pauseCycles--)
-      timerCallbackIdle();
+      nonceAdvance();
 #endif
-    // Prevent any other RF SPI traffic during the commit from RX or scheduled TX
-    hwTimer::callbackTock = &timerCallbackIdle;
+    // Set the commitInProgress flag to prevent any other RF SPI traffic during the commit from RX or scheduled TX
+    commitInProgress = true;
     // If telemetry expected in the next interval, the radio was in RX mode
     // and will skip sending the next packet when the timer resumes.
     // Return to normal send mode because if the skipped packet happened
@@ -1229,7 +1236,6 @@ void setup()
       CRSF::disconnected = &UARTdisconnected;
     }
     CRSF::RecvModelUpdate = &ModelUpdateReq;
-    hwTimer::callbackTock = &timerCallbackNormal;
     DBGLN("ExpressLRS TX Module Booted...");
 
     eeprom.Begin(); // Init the eeprom
@@ -1272,7 +1278,7 @@ void setup()
   #if defined(Regulatory_Domain_EU_CE_2400)
       BeginClearChannelAssessment();
   #endif
-      hwTimer::init();
+      hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
     }
   }
