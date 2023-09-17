@@ -298,6 +298,22 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
 
 #endif // GPIO_PIN_PWM_OUTPUTS
 
+#if defined(POWER_OUTPUT_VALUES)
+
+static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
+{
+  uint8_t newPower = arg + POWERMGNT::getMinPower();
+  if (newPower > POWERMGNT::getMaxPower())
+  {
+    newPower = PWR_MATCH_TX;
+  }
+
+  config.SetPower(newPower);
+  // POWERMGNT::setPower() will be called in updatePower() in the main loop
+}
+
+#endif // POWER_OUTPUT_VALUES
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -333,11 +349,7 @@ static void registerLuaParameters()
 
 #if defined(POWER_OUTPUT_VALUES)
   luadevGeneratePowerOpts(&luaTlmPower);
-  registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
-    POWERMGNT::setPower((PowerLevels_e)(arg + MinPower));
-    // POWERMGNT will constrain the value to the proper level
-    config.SetPower(POWERMGNT::currPower());
-  });
+  registerLUAParameter(&luaTlmPower, &luaparamSetPower);
 #endif
   registerLUAParameter(&luaRateInitIdx, [](struct luaPropertiesCommon* item, uint8_t arg) {
     uint8_t newRate = RATE_MAX - 1 - arg;
@@ -391,7 +403,9 @@ static int event()
   }
 
 #if defined(POWER_OUTPUT_VALUES)
-  setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - MinPower);
+  // The last item (for MatchTX) will be MaxPower - MinPower + 1
+  uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+  setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 

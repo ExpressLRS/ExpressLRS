@@ -180,6 +180,7 @@ bool options_init()
 
 char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
+uint32_t logo_image;
 
 // Discriminator value used to determine if the device has been reflashed and therefore
 // the SPIFSS settings are obsolete and the flashed settings should be used in preference
@@ -400,6 +401,12 @@ bool options_init()
     options_LoadFromFlashOrFile(strmFlash);
     // hardware.json
     bool hasHardware = hardware_init(strmFlash);
+    // flash location of logo image in RGB565 format
+    logo_image = baseAddr + ESP.getSketchSize() +
+        ELRSOPTS_PRODUCTNAME_SIZE +
+        ELRSOPTS_DEVICENAME_SIZE +
+        ELRSOPTS_OPTIONS_SIZE +
+        ELRSOPTS_HARDWARE_SIZE;
 
     debugFreeInitLogger();
 

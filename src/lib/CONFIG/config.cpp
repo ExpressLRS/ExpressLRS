@@ -557,6 +557,16 @@ TxConfig::SetBackpackDisable(bool backpackDisable)
 }
 
 void
+TxConfig::SetBackpackTlmEnabled(bool enabled)
+{
+    if (m_config.backpackTlmEnabled != enabled)
+    {
+        m_config.backpackTlmEnabled = enabled;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
 TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 {
     if (m_config.buttonColors[button].raw != action->raw) {

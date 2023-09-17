@@ -256,6 +256,12 @@ static struct luaItem_selection luaHeadTrackingStartChannel = {
     luastrHeadTrackingStart,
     STR_EMPTYSPACE};
 
+static struct luaItem_selection luaBackpackTelemetry = {
+    {"Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    STR_EMPTYSPACE};
+
 static struct luaItem_string luaBackpackVersion = {
     {"Version", CRSF_INFO},
     backpackVersion};
@@ -720,7 +726,6 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
-
       registerLUAParameter(
           &luaHeadTrackingEnableChannel, [](luaPropertiesCommon *item, uint8_t arg) {
               config.SetPTREnableChannel(arg);
@@ -731,6 +736,10 @@ static void registerLuaParameters()
               config.SetPTRStartChannel(arg);
           },
           luaBackpackFolder.common.id);
+      registerLUAParameter(
+            &luaBackpackTelemetry, [](luaPropertiesCommon *item, uint8_t arg) {
+                config.SetBackpackTlmEnabled(arg);
+            }, luaBackpackFolder.common.id);
 
       registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
@@ -797,6 +806,7 @@ static int event()
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
     setLuaTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetBackpackDisable() ? 0 : config.GetPTREnableChannel());
     setLuaTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
+    setLuaTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackTlmEnabled() ? 1 : 0);
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)

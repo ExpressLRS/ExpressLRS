@@ -60,6 +60,7 @@ constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
 extern firmware_options_t firmwareOptions;
 extern char product_name[];
 extern char device_name[];
+extern uint32_t logo_image;
 extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();

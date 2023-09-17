@@ -1,7 +1,6 @@
 #pragma once
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
-#include "ServoMgr.h"
 #include "device.h"
 #include "common.h"
 
