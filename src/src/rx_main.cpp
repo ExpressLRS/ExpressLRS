@@ -301,11 +301,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    serialIO->setLinkQualityStats(
-        UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
-        UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
-    );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     CRSF::LinkStatistics.active_antenna = antenna;
@@ -1101,7 +1096,7 @@ void UpdateModelMatch(uint8_t model)
 
 void SendMSPFrameToFC(uint8_t *mspData)
 {
-    serialIO->sendMSPFrameToFC(mspData);
+    serialIO->queueMSPFrameTransmission(mspData);
 }
 
 /**
@@ -1161,7 +1156,7 @@ void MspReceiveComplete()
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
-            serialIO->sendMSPFrameToFC(MspData);
+            serialIO->queueMSPFrameTransmission(MspData);
         }
     }
 
@@ -1510,7 +1505,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            serialIO->sendLinkStatisticsToFC();
+            serialIO->queueLinkStatisticsPacket();
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
