@@ -9,18 +9,12 @@ public:
 
     virtual ~SerialHoTT_TLM() {}
 
-    uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }; 
+    uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }; 
     int getMaxSerialReadSize() override;
-    void handleUARTout() override;
-
-    void setLinkQualityStats(uint16_t lq, uint16_t rssi) override { /* not supported */ };
-    void sendMSPFrameToFC(uint8_t* data) override { /* not supported */ };
-    void sendLinkStatisticsToFC() override { /* not supported */ };
+    void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
-    
-    void processByte(uint8_t byte) override { /* not supported */ };
 
     void pollNextDevice();
     void pollDevice(uint8_t id);

@@ -289,7 +289,7 @@ void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
     hottInputBuffer.pushBytes(bytes, size);
 }
 
-void SerialHoTT_TLM::handleUARTout()
+void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
 {  
     uint32_t now = millis();
 
