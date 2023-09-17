@@ -3,31 +3,126 @@
 #include "targets.h"
 #include "FIFO.h"
 
+/**
+ * @brief Abstract class that is to be extended by implementation classes for different serial protocols on the receiver side.
+ *
+ * At a minimum, a new protocol extension class should implement the following functions
+ *
+ * * queueLinkStatisticsPacket
+ * * queueMSPFrameTransmission
+ * * sendRCFrame
+ * * sendQueuedData
+ * * processBytes
+ */
 class SerialIO {
 public:
-    const int defaultMaxSerialReadSize = 64;
 
     SerialIO(Stream *output, Stream *input) : _outputPort(output), _inputPort(input) {}
     virtual ~SerialIO() {}
 
-    virtual void setLinkQualityStats(uint16_t lq, uint16_t rssi) = 0;
-    virtual void sendLinkStatisticsToFC() = 0;
-    virtual void sendMSPFrameToFC(uint8_t* data) = 0;
-    virtual void setFailsafe(bool failsafe);
+    /**
+     * @brief Set the Failsafe flag
+     *
+     * This allows the serial protocol implementation to react accordingly.
+     * e.g. if it needs to set a flag in the serial messages, or stop sending over
+     * serial port.
+     *
+     * @param failsafe true when the firmware has detected a failsafe condition.
+     */
+    void setFailsafe(bool failsafe);
 
-    virtual uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) = 0;
+    /**
+     * @brief Signals the protocol to queue a link statistics packet
+     *
+     * The packet should be queued into the `_fifo` member variable as RC packets
+     * are prioritised and ancillary data is sent after the RC data when the
+     * `sendQueuedData` function is called.
+     */
+    virtual void queueLinkStatisticsPacket() = 0;
 
-    virtual int getMaxSerialReadSize() { return defaultMaxSerialReadSize; }
-    virtual void handleUARTout();
-    virtual void handleUARTin();
+    /**
+     * @brief Signals that the MSP frame should be queued for transmission.
+     *
+     * The MSP frame should be queued as in `queueLinkStatisticsPacket` so it can be
+     * sent after any RC data.
+     *
+     * @param data pointer to the MSP packet
+     */
+    virtual void queueMSPFrameTransmission(uint8_t* data) = 0;
+
+    /**
+     * @brief send the RC channel data to the serial port stream `_outputPort` member
+     * variable.
+     *
+     * If the function wishes to be called as fast as possible, then it should return
+     * DURATION_IMMEDIATE, otherwise it should return the number of milliseconds delay
+     * before this method is called again.
+     *
+     * @param frameAvailable indicates that a new OTA frame of data has been received
+     * since the last call to this function
+     * @param channelData pointer to the 16 channels of data
+     * @return number of milliseconds to delay before this method is called again
+     */
+    virtual uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) = 0;
+
+    /**
+     * @brief send any previously queued data to the serial port stream `_outputPort`
+     * member variable.
+     */
+    virtual void sendQueuedData(uint32_t maxBytesToSend);
+
+    /**
+     * @brief read bytes from the serial port and process them.
+     *
+     * The maximum number of bytes to read per call is obtained
+     * from the `getMaxSerialReadSize` method call.
+     *
+     * This method *should* not be overridden by custom implementations, it is
+     * only overridden by the `SerialNOOP` implementation.
+     */
+    virtual void processSerialInput();
+
+    /**
+     * @brief Get the maximum number of bytes to write to the serial port in each call.
+     *
+     * @return maximum number of bytes to write
+     */
+    virtual int getMaxSerialWriteSize() { return defaultMaxSerialWriteSize; }
 
 protected:
-    static const uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
+    /// @brief the output stream for the serial port
     Stream *_outputPort;
-    Stream *_inputPort;
-    FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
+    /// @brief flag that indicates the receiver is in the failsafe state
     bool failsafe = false;
 
-    virtual void processBytes(uint8_t *bytes, uint16_t size);
-    virtual void processByte(uint8_t byte) = 0;
+    static const uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
+
+
+    /**
+     * @brief the FIFO that should be used to queue serial data to in the
+     * `queueLinkStatisticsPacket` and `queueMSPFrameTransmission` method implementations.
+     */
+    FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
+
+    /**
+     * @brief Get the maximum number of bytes to read from the serial port per call
+     *
+     * @return the maximum number of bytes to read
+     */
+    virtual int getMaxSerialReadSize() { return defaultMaxSerialReadSize; }
+
+    /**
+     * @brief Protocol specific method to process the bytes that have been read
+     * from the serial port by the framework calling the `processSerialInput` method.
+     *
+     * @param bytes pointer to the byte array that contains the serial data
+     * @param size number of bytes in the buffer
+     */
+    virtual void processBytes(uint8_t *bytes, uint16_t size) = 0;
+
+private:
+    const int defaultMaxSerialReadSize = 64;
+    const int defaultMaxSerialWriteSize = 128;
+
+    Stream *_inputPort;
 };

@@ -36,6 +36,7 @@
 #include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
@@ -300,11 +301,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    serialIO->setLinkQualityStats(
-        UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
-        UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
-    );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     CRSF::LinkStatistics.active_antenna = antenna;
@@ -1100,7 +1096,7 @@ void UpdateModelMatch(uint8_t model)
 
 void SendMSPFrameToFC(uint8_t *mspData)
 {
-    serialIO->sendMSPFrameToFC(mspData);
+    serialIO->queueMSPFrameTransmission(mspData);
 }
 
 /**
@@ -1160,7 +1156,7 @@ void MspReceiveComplete()
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
-            serialIO->sendMSPFrameToFC(MspData);
+            serialIO->queueMSPFrameTransmission(MspData);
         }
     }
 
@@ -1509,7 +1505,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            serialIO->sendLinkStatisticsToFC();
+            serialIO->queueLinkStatisticsPacket();
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
@@ -1717,12 +1713,9 @@ void setup()
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
             // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-            hwTimer::callbackTock = &HWtimerCallbackTock;
-            hwTimer::callbackTick = &HWtimerCallbackTick;
-
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            hwTimer::init();
+            hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
         }
     }
 
