@@ -983,7 +983,7 @@ void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, 
 
 void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
 {
-    crsf_header_t *header = (crsf_header_t *)frame;
+    crsf_std_header_t *header = (crsf_std_header_t *)frame;
     header->device_addr = destAddr;
     header->frame_size = frameSize;
     header->type = frameType;

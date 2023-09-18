@@ -34,6 +34,7 @@
 #include "devSerialUpdate.h"
 #include "devBaro.h"
 #include "devMSPVTX.h"
+#include "devRadar.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
@@ -85,6 +86,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
+#endif
+#ifdef USE_RADAR
+  {&Radar_device, 0},
 #endif
 };
 
@@ -1292,6 +1296,24 @@ void reconfigureSerial()
     setupSerial();
 }
 
+static void telem_PackageReceived(crsf_header_t *package)
+{
+#if defined(USE_ANALOG_VBAT)
+    if (package->std.type == CRSF_FRAMETYPE_BATTERY_SENSOR)
+    {
+        // If a battery sensor item is received, disable our internal VBAT measurement
+        Vbat_setUpdateRate(vurDisabled);
+    }
+#endif
+#if defined(USE_RADAR)
+    if (package->std.type == CRSF_FRAMETYPE_GPS)
+    {
+        const crsf_sensor_gps_t *gps = (const crsf_sensor_gps_t *)package->std.payload;
+        Radar_UpdatePosition(gps);
+    }
+#endif
+}
+
 static void setupConfigAndPocCheck()
 {
     eeprom.Begin();
@@ -1399,6 +1421,8 @@ static void setupRadio()
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
+
+    telemetry.OnPackageReceived = &telem_PackageReceived;
 }
 
 static void updateTelemetryBurst()

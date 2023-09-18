@@ -17,7 +17,7 @@
 
 typedef uint16_t vbatAnalogStorage_t;
 static MedianAvgFilter<vbatAnalogStorage_t, VBAT_SMOOTH_CNT>vbatSmooth;
-static uint8_t vbatUpdateScale;
+static VbatUpdateRate_e vbatUpdateRate;
 
 #if defined(PLATFORM_ESP32)
 #include "esp_adc_cal.h"
@@ -29,10 +29,11 @@ extern Telemetry telemetry;
 
 /**
  * @brief: Enable SlowUpdate mode to reduce the frequency Vbat telemetry is sent
+ *  or disable sending entirelty
  ***/
-void Vbat_enableSlowUpdate(bool enable)
+void Vbat_setUpdateRate(VbatUpdateRate_e rate)
 {
-    vbatUpdateScale = enable ? 2 : 1;
+    vbatUpdateRate = rate;
 }
 
 static int start()
@@ -41,7 +42,7 @@ static int start()
     {
         return DURATION_NEVER;
     }
-    vbatUpdateScale = 1;
+    vbatUpdateRate = vurNormal;
 #if defined(PLATFORM_ESP32)
     analogSetWidth(12);
 
@@ -92,7 +93,7 @@ static void reportVbat()
 
 static int timeout()
 {
-    if (GPIO_ANALOG_VBAT == UNDEF_PIN || telemetry.GetCrsfBatterySensorDetected())
+    if (GPIO_ANALOG_VBAT == UNDEF_PIN || vbatUpdateRate == vurDisabled)
     {
         return DURATION_NEVER;
     }
@@ -110,7 +111,8 @@ static int timeout()
     if (idx == 0 && connectionState == connected)
         reportVbat();
 
-    return VBAT_SAMPLE_INTERVAL * vbatUpdateScale;
+    // Half rate for vbatUpdateRate == vurSlow
+    return VBAT_SAMPLE_INTERVAL * (vbatUpdateRate + 1);
 }
 
 device_t AnalogVbat_device = {
