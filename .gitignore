@@ -8,3 +8,6 @@ src/.vscode
 src/data/*.ini
 src/data/*.json
 src/hardware
+src/VERSION
+src/firmware.bin.gz
+src/user_defines.txt
