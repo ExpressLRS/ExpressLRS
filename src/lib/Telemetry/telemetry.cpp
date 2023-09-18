@@ -56,7 +56,7 @@ bool Telemetry::ShouldSendDeviceFrame()
 
 void Telemetry::SetCrsfBatterySensorDetected(bool on)
 {
-        crsfBatterySensorDetected = on;
+    crsfBatterySensorDetected = on;
 }
 
 void Telemetry::CheckCrsfBatterySensorDetected()

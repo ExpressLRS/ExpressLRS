@@ -22,6 +22,7 @@
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
+#include "rx-serial/SerialHoTT_TLM.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -108,8 +109,6 @@ MSP2CROSSFIRE msp2crsf;
 #endif
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-#include "rx-serial/SerialHoTT_TLM.h"
-
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
@@ -1204,7 +1203,7 @@ static void setupSerial()
         serialBaud = 115200;
     }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-	else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
+    else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
         hottTlmSerial = true;
         serialBaud = 19200;
@@ -1266,20 +1265,28 @@ static void setupSerial()
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = SERIAL_8N1;
     
-    if(sbusSerialOutput) 
+    if(sbusSerialOutput)
+    {
         config = SERIAL_8E2;
+    }    
     else if(hottTlmSerial)
+    {
         config = SERIAL_8N2;
+    }
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
     uint32_t config = SERIAL_8N1;
 
-    if(sbusSerialOutput) 
+    if(sbusSerialOutput)
+    { 
         config = SERIAL_8E2;
+    }
     else if(hottTlmSerial)
+    {
         config = SERIAL_8N2;
+    }
     
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
