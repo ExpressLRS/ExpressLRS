@@ -68,9 +68,9 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
+bool headTrackingEnabled = false;
 #if !defined(CRITICAL_FLASH)
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
-bool headTrackingEnabled = false;
 static uint32_t lastPTRValidTimeMs;
 #endif
 
