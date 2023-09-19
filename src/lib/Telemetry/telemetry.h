@@ -58,10 +58,10 @@ public:
     bool ShouldCallUpdateModelMatch();
     bool ShouldSendDeviceFrame();
     void CheckCrsfBatterySensorDetected();
-    void SetCrsfBatterySensorDetected(bool on);
+    void SetCrsfBatterySensorDetected();
     bool GetCrsfBatterySensorDetected() { return crsfBatterySensorDetected; };
     void CheckCrsfBaroSensorDetected();
-    void SetCrsfBaroSensorDetected(bool on);
+    void SetCrsfBaroSensorDetected();
     bool GetCrsfBaroSensorDetected() { return crsfBaroSensorDetected; };
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);

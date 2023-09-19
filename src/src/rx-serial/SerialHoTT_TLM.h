@@ -9,8 +9,10 @@
 
 #define FRAME_SIZE 45          // HoTT telemetry frame size
 #define CMD_LEN 2              // HoTT poll command length
+#define STARTBYTE_INDEX 0      // index of start byte
 #define DEVICE_INDEX 1         // index of device ID
-#define CRC_INDEX 44           // index of CRC
+#define ENDBYTE_INDEX 43       // index of end byte
+#define CRC_INDEX  44          // index of CRC
 
 #define START_FRAME_B 0x7C     // HoTT start of frame marker
 #define END_FRAME 0x7D         // HoTT end of frame marker

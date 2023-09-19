@@ -37,6 +37,25 @@ int SerialHoTT_TLM::getMaxSerialReadSize()
 void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
 {
     hottInputBuffer.pushBytes(bytes, size);
+
+    uint8_t bufferSize = hottInputBuffer.size();
+
+    if (bufferSize == sizeof(hottBusFrame))
+    {
+        // frame complete, prepare to poll next device after lead out time elapsed
+        lastPoll = millis() - HOTT_POLL_RATE + HOTT_LEAD_OUT;
+
+        // fetch received serial data
+        hottInputBuffer.popBytes((uint8_t *)&hottBusFrame, bufferSize);
+
+        // process received frame if CRC is ok
+        if (hottBusFrame.payload[STARTBYTE_INDEX] == START_FRAME_B &&
+            hottBusFrame.payload[ENDBYTE_INDEX] == END_FRAME &&
+            hottBusFrame.payload[CRC_INDEX] == calcFrameCRC((uint8_t *)&hottBusFrame.payload))
+        {
+            processFrame();
+        }
+    }
 }
 
 void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
@@ -58,23 +77,7 @@ void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
         pollNextDevice();
     }
 
-    uint8_t size = hottInputBuffer.size();
-
-    if (size == sizeof(hottBusFrame))
-    {
-        // frame complete, prepare to poll next device after lead out time elapsed
-        lastPoll = now - HOTT_POLL_RATE + HOTT_LEAD_OUT;
-
-        // fetch received serial data
-        hottInputBuffer.popBytes((uint8_t *)&hottBusFrame, size);
-
-        // process received frame if CRC is ok
-        if (hottBusFrame.payload[CRC_INDEX] == calcFrameCRC((uint8_t *)&hottBusFrame.payload))
-        {
-            processFrame();
-        }
-    }
-
+    // CRSF packet scheduler
     scheduleCRSFtelemetry(now);
 }
 
@@ -83,20 +86,8 @@ void SerialHoTT_TLM::pollNextDevice()
     // clear serial in buffer
     hottInputBuffer.flush();
 
-    // work out next device to be polled in discovery mode (just poll all devices)
-    if (discoveryMode)
-    {
-        if (nextDevice == LAST_DEVICE)
-        {
-            nextDevice = FIRST_DEVICE;
-        }
-
-        pollDevice(device[nextDevice++].deviceID);
-
-        return;
-    }
-
-    // work out next device to be polled in normal op mode (only poll discovered ones)
+    // work out next device to be polled all in discovery
+    // mode, only detected ones in non-discovery mode)
     for (uint i = 0; i < LAST_DEVICE; i++)
     {
         if (nextDevice == LAST_DEVICE)
@@ -104,7 +95,7 @@ void SerialHoTT_TLM::pollNextDevice()
             nextDevice = FIRST_DEVICE;
         }
 
-        if (device[nextDevice].present)
+        if (device[nextDevice].present || discoveryMode)
         {
             pollDevice(device[nextDevice++].deviceID);
 
@@ -196,7 +187,7 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
 void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBaroSensorDetected(true);
+    telemetry.SetCrsfBaroSensorDetected();
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t)
@@ -243,7 +234,7 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
 void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBatterySensorDetected(true);
+    telemetry.SetCrsfBatterySensorDetected();
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_battery_t)

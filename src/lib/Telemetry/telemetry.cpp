@@ -54,22 +54,22 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
-void Telemetry::SetCrsfBatterySensorDetected(bool on)
+void Telemetry::SetCrsfBatterySensorDetected()
 {
-    crsfBatterySensorDetected = on;
+    crsfBatterySensorDetected = true;
 }
 
 void Telemetry::CheckCrsfBatterySensorDetected()
 {
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
     {
-        crsfBatterySensorDetected = true;
+        SetCrsfBatterySensorDetected();
     }
 }
 
-void Telemetry::SetCrsfBaroSensorDetected(bool on)
+void Telemetry::SetCrsfBaroSensorDetected()
 {
-        crsfBaroSensorDetected = on;
+    crsfBaroSensorDetected = true;
 }
 
 void Telemetry::CheckCrsfBaroSensorDetected()
@@ -77,7 +77,7 @@ void Telemetry::CheckCrsfBaroSensorDetected()
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BARO_ALTITUDE ||
         CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_VARIO)
     {
-        crsfBaroSensorDetected = true;
+        SetCrsfBaroSensorDetected();
     }
 }
 
