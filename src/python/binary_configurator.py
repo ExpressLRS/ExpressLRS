@@ -306,6 +306,10 @@ class writeable_dir(argparse.Action):
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a writeable dir".format(prospective_dir))
 
+class deprecate_action(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        delattr(namespace, self.dest)
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
@@ -347,6 +351,9 @@ def main():
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
     parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (onl for 2.4GHz firmware)")
+    # Deprecated options, left for backward compatibility
+    parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
+    parser.add_argument('--no-uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
 
     #
     # Firmware file to patch/configure
