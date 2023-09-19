@@ -1172,8 +1172,14 @@ static void setupSerial()
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
+        #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
+        // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
+        USBSerial.begin(serialBaud);
+        SerialLogger = &USBSerial;
+        #else
         Serial.begin(serialBaud);
         SerialLogger = &Serial;
+        #endif
         #else
         SerialLogger = new NullStream();
         #endif
@@ -1269,7 +1275,12 @@ static void setupSerial()
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if defined(PLATFORM_ESP32_S3)
+    USBSerial.begin(460800);
+    SerialLogger = &USBSerial;
+#else
     SerialLogger = &Serial;
+#endif
 }
 
 static void serialShutdown()

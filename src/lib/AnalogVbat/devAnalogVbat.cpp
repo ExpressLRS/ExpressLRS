@@ -43,7 +43,7 @@ static int start()
     }
     vbatUpdateScale = 1;
 #if defined(PLATFORM_ESP32)
-    analogSetWidth(12);
+    analogReadResolution(12);
 
     int atten = hardware_int(HARDWARE_vbat_atten);
     if (atten != -1)
