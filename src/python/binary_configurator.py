@@ -388,7 +388,7 @@ def main():
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
             True if 'features' in config and 'buzzer' in config['features'] else False,
-            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
+            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'].startswith('esp32') else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
             config['lua_name'] if 'lua_name' in config else '',
