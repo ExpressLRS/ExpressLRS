@@ -156,7 +156,7 @@ typedef struct
     uint8_t mPer3sec = 120;                   // 36 climbrate in m/3sec. Value of 120 = 0m/3sec
     uint16_t rpm = 0;                         // 37 RPM. Steps: 10 U/min
     uint8_t electricMin = 0;                  // 39 Electric minutes. Time does start, when motor current is > 3 A
-    uint8_t electricsec = 0;                  // 40 Electric seconds.
+    uint8_t electricSec = 0;                  // 40 Electric seconds.
     uint16_t speed = 0;                       // 41 speed in km/h. Steps 1km/h
     uint8_t endByte = END_FRAME;              // 43 0x7D
     uint8_t Crc;                              // 44 CRC
