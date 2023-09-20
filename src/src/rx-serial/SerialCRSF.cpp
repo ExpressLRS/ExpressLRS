@@ -1,5 +1,5 @@
 #include "SerialCRSF.h"
-#include "CRSF.h"
+#include "common.h"
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"

@@ -4,7 +4,7 @@
 #include "../test_msp/mock_serial.h"
 
 #include "common.h"
-#include "devCRSF.h"
+#include "CRSF.h"
 
 using namespace std;
 

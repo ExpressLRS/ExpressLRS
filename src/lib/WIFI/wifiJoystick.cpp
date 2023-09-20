@@ -8,6 +8,7 @@
 #include <WiFiUdp.h>
 #include "common.h"
 #include "CRSF.h"
+#include "controller.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 #include "logging.h"
@@ -70,9 +71,9 @@ void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uin
         updateInterval = JOYSTICK_DEFAULT_UPDATE_INTERVAL;
     }
     hwTimer::updateInterval(updateInterval);
-    CRSF::setSyncParams(updateInterval);
+    controller->setPacketInterval(updateInterval);
 
-    CRSF::RCdataCallback = &UpdateValues;
+    controller->setRCDataCallback(UpdateValues);
 
     // Channel Count
     if (newChannelCount == 0)

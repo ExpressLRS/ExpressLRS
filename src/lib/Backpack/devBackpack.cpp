@@ -1,9 +1,10 @@
 #include "targets.h"
+
 #include "common.h"
 #include "device.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "CRSF.h"
+#include "CRSFController.h"
 #include "config.h"
 #include "logging.h"
 
@@ -35,19 +36,19 @@ void startPassthrough()
     devicesStop();
     Radio.End();
     hwTimer::stop();
-    CRSF::End();
+    controller->End();
 
     uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
         #if defined(PLATFORM_ESP32_S3)
-            CRSF::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43，If PLATFORM_ESP32_S3 macro is defined, pins are configured as 44 and 43
+            CRSFController::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43，If PLATFORM_ESP32_S3 macro is defined, pins are configured as 44 and 43
         #else
-            CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1，Otherwise continue to use default pin configuration 3 and 1
+            CRSFController::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1，Otherwise continue to use default pin configuration 3 and 1
         #endif
     else
     {
-        CRSF::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSFController::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     }
     disableLoopWDT();
 
@@ -65,7 +66,7 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
     delay(50);
 
-    CRSF::Port.flush();
+    CRSFController::Port.flush();
     backpack.flush();
 
     uint8_t buf[64];
@@ -75,17 +76,17 @@ void startPassthrough()
     // go hard!
     for (;;)
     {
-        int r = CRSF::Port.available();
+        int r = CRSFController::Port.available();
         if (r > sizeof(buf))
             r = sizeof(buf);
-        r = CRSF::Port.readBytes(buf, r);
+        r = CRSFController::Port.readBytes(buf, r);
         backpack.write(buf, r);
 
         r = backpack.available();
         if (r > sizeof(buf))
             r = sizeof(buf);
         r = backpack.readBytes(buf, r);
-        CRSF::Port.write(buf, r);
+        CRSFController::Port.write(buf, r);
     }
 }
 #endif
@@ -199,7 +200,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         // Backpack telem is off
         return;
     }
-    
+
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
@@ -211,7 +212,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         ERRLN("CRSF frame exceeds max length");
         return;
     }
-    
+
     for (uint8_t i = 0; i < size; ++i)
     {
       packet.addByte(data[i]);
@@ -235,8 +236,7 @@ static void initialize()
         // Rely on event() to boot
     }
 #endif
-
-    CRSF::RCdataCallback = AuxStateToMSPOut;
+    controller->setRCDataCallback(AuxStateToMSPOut);
 }
 
 static int start()

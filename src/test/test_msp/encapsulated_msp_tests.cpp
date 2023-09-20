@@ -5,7 +5,7 @@
 #include "msptypes.h"
 #include "mock_serial.h"
 
-#include "devCRSF.h"
+#include "CRSF.h"
 
 void test_encapsulated_msp_send(void)
 {

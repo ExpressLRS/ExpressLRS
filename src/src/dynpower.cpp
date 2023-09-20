@@ -1,8 +1,7 @@
 #include <dynpower.h>
 
 #if defined(TARGET_TX)
-
-#include <common.h>
+#include <controller.h>
 #include <LBT.h>
 
 // LQ-based boost defines
@@ -89,7 +88,7 @@ void DynamicPower_Update(uint32_t now)
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  bool armed = CRSF::IsArmed();
+  bool armed = controller->IsArmed();
   if ((connectionState == disconnected && armed) ||
     (boostChannel && (CRSF_to_BIT(ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {

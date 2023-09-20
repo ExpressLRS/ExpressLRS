@@ -5,10 +5,10 @@
 
 #ifdef TARGET_RX
 #include "telemetry.h"
-#endif
 
-#ifdef TARGET_RX
 extern Telemetry telemetry;
+#else
+#include "CRSFController.h"
 #endif
 
 //LUA VARIABLES//
@@ -142,7 +142,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 #ifdef TARGET_TX
   // Set the hidden flag
   chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
-  if (CRSF::elrsLUAmode) {
+  if (CRSFController::elrsLUAmode) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
 #else
@@ -195,7 +195,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
 #ifdef TARGET_TX
-  uint8_t chunkMax = CRSF::GetMaxPacketBytes() - 6 - 2;
+  uint8_t chunkMax = controller->GetMaxPacketBytes() - 6 - 2;
 #else
   uint8_t chunkMax = CRSF_MAX_PACKET_LEN - 6 - 2;
 #endif
@@ -209,7 +209,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
 #ifdef TARGET_TX
-  CRSF::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+  CRSFController::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
 #else
   memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
@@ -259,7 +259,7 @@ static void updateElrsFlags()
 {
   setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
   setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setLuaWarningFlag(LUA_FLAG_ISARMED, CRSF::IsArmed());
+  setLuaWarningFlag(LUA_FLAG_ISARMED, controller->IsArmed());
 }
 
 void sendELRSstatus()
@@ -287,13 +287,13 @@ void sendELRSstatus()
   uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1];
   struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
 
-  params->pktsBad = CRSF::BadPktsCountResult;
-  params->pktsGood = htobe16(CRSF::GoodPktsCountResult);
+  params->pktsBad = CRSFController::BadPktsCountResult;
+  params->pktsGood = htobe16(CRSFController::GoodPktsCountResult);
   params->flags = luaWarningFlags;
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
-  CRSF::packetQueueExtended(0x2E, &buffer, sizeof(buffer));
+  CRSFController::packetQueueExtended(0x2E, &buffer, sizeof(buffer));
 }
 
 void luaRegisterDevicePingCallback(void (*callback)())
@@ -303,7 +303,7 @@ void luaRegisterDevicePingCallback(void (*callback)())
 
 #endif
 
-void ICACHE_RAM_ATTR luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
+void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
 {
   parameterType = type;
   parameterIndex = index;
@@ -423,7 +423,7 @@ void sendLuaDevicePacket(void)
   CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
   // does append header + crc again so substract size from length
 #ifdef TARGET_TX
-  CRSF::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
+  CRSFController::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
 #else
   CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
   telemetry.AppendTelemetryPackage(deviceInformation);

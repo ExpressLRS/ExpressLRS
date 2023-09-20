@@ -3,7 +3,8 @@
 #if defined(PLATFORM_ESP32)
 
 #include "common.h"
-#include "CRSF.h"
+#include "crsf_protocol.h"
+#include "controller.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 #include "logging.h"
@@ -61,7 +62,7 @@ void BluetoothJoystickBegin()
 
     POWERMGNT::setPower(MinPower);
     Radio.End();
-    CRSF::RCdataCallback = BluetoothJoystickUpdateValues;
+    controller->setRCDataCallback(BluetoothJoystickUpdateValues);
 
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);

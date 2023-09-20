@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "CRSF.h"
+#include "msptypes.h"
 
 using namespace std;
 
