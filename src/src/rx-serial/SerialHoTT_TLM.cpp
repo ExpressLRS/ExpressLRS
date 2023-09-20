@@ -152,7 +152,10 @@ uint8_t SerialHoTT_TLM::calcFrameCRC(uint8_t *buf)
     uint16_t sum = 0;
 
     for (uint8_t i = 0; i < FRAME_SIZE - 1; i++)
+    {
         sum += buf[i];
+    }
+
     return sum = sum & 0xff;
 }
 
@@ -261,15 +264,15 @@ uint16_t SerialHoTT_TLM::getHoTTvoltage()
 {
     if (device[EAM].present)
     {
-        return eam.main_voltage;
+        return eam.mainVoltage;
     }
     else if (device[GAM].present)
     {
-        return (gam.InputVoltage);
+        return (gam.inputVoltage);
     }
     else if (device[ESC].present)
     {
-        return esc.input_v;
+        return esc.inputVoltage;
     }
 
     return 0;
@@ -283,7 +286,7 @@ uint16_t SerialHoTT_TLM::getHoTTcurrent()
     }
     else if (device[GAM].present)
     {
-        return gam.Current;
+        return gam.current;
     }
     else if (device[ESC].present)
     {
@@ -297,11 +300,11 @@ uint32_t SerialHoTT_TLM::getHoTTcapacity()
 {
     if (device[EAM].present)
     {
-        return eam.batt_cap;
+        return eam.capacity;
     }
     else if (device[GAM].present)
     {
-        return (gam.Capacity);
+        return (gam.capacity);
     }
     else if (device[ESC].present)
     {
@@ -315,7 +318,7 @@ int16_t SerialHoTT_TLM::getHoTTaltitude()
 {
     if (device[GPS].present)
     {
-        return gps.Altitude;
+        return gps.altitude;
     }
     else if (device[VARIO].present)
     {
@@ -327,7 +330,7 @@ int16_t SerialHoTT_TLM::getHoTTaltitude()
     }
     else if (device[GAM].present)
     {
-        return gam.Altitude;
+        return gam.altitude;
     }
 
     return 0;
@@ -337,19 +340,19 @@ int16_t SerialHoTT_TLM::getHoTTvv()
 {
     if (device[GPS].present)
     {
-        return (gps.m_per_sec);
+        return (gps.mPerSec);
     }
     else if (device[VARIO].present)
     {
-        return (vario.climbrate);
+        return (vario.mPerSec);
     }
     else if (device[EAM].present)
     {
-        return (eam.climbrate);
+        return (eam.mPerSec);
     }
     else if (device[GAM].present)
     {
-        return (gam.m_per_sec);
+        return (gam.mPerSec);
     }
 
     return 0;
@@ -359,7 +362,7 @@ uint8_t SerialHoTT_TLM::getHoTTremaining()
 {
     if (device[GAM].present)
     {
-        return gam.fuel_scale;
+        return gam.fuelScale;
     }
 
     return 0;
@@ -372,14 +375,16 @@ int32_t SerialHoTT_TLM::getHoTTlatitude()
         return 0;
     }
 
-    uint8_t deg = gps.Lat_DegMin / 100;
+    uint8_t deg = gps.latDegMin / DegMinScale;
 
-    int32_t Lat = deg * 10000000L +
-                  ((gps.Lat_DegMin - (deg * 100)) * 1000000L) / 6 +
-                  (gps.Lat_Sec * 100) / 6;
+    int32_t Lat = deg * DegScale +
+                  ((gps.latDegMin - (deg * DegMinScale)) * MinScale) / MinDivide +
+                  (gps.latSec * SecScale) / MinDivide;
 
-    if (gps.Lat_NS != 0)
+    if (gps.latNS != 0)
+    {
         Lat = -Lat;
+    }
 
     return (Lat);
 }
@@ -391,13 +396,13 @@ int32_t SerialHoTT_TLM::getHoTTlongitude()
         return 0;
     }
 
-    uint8_t deg = gps.Lon_DegMin / 100;
+    uint8_t deg = gps.lonDegMin / DegMinScale;
 
-    int32_t Lon = deg * 10000000L +
-                  ((gps.Lon_DegMin - (deg * 100)) * 1000000L) / 6 +
-                  (gps.Lon_Sec * 100) / 6;
+    int32_t Lon = deg * DegScale +
+                  ((gps.lonDegMin - (deg * DegMinScale)) * MinScale) / MinDivide +
+                  (gps.lonSec * SecScale) / MinDivide;
 
-    if (gps.Lon_EW != 0)
+    if (gps.lonEW != 0)
         Lon = -Lon;
 
     return Lon;
@@ -407,7 +412,7 @@ uint16_t SerialHoTT_TLM::getHoTTgroundspeed()
 {
     if (device[GPS].present)
     {
-        return gps.Speed;
+        return gps.speed;
     }
 
     return 0;
@@ -420,7 +425,7 @@ uint16_t SerialHoTT_TLM::getHoTTheading()
         return 0;
     }
 
-    uint16_t heading = gps.Direction * 2;
+    uint16_t heading = gps.direction * 2;
 
     if (heading > 180)
     {
@@ -434,7 +439,7 @@ uint8_t SerialHoTT_TLM::getHoTTsatellites()
 {
     if (device[GPS].present)
     {
-        return gps.Satellites;
+        return gps.satellites;
     }
 
     return 0;
@@ -444,7 +449,7 @@ uint16_t SerialHoTT_TLM::getHoTTMSLaltitude()
 {
     if (device[GPS].present)
     {
-        return gps.MSLAltitude;
+        return gps.mslAltitude;
     }
 
     return 0;
