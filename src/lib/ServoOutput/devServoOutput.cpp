@@ -1,13 +1,14 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 
 #include "devServoOutput.h"
+#include "PWM.h"
 #include "CRSF.h"
 #include "config.h"
 #include "helpers.h"
 #include "rxtx_intf.h"
 
-static uint8_t SERVO_PINS[PWM_MAX_CHANNELS];
-static ServoMgr *servoMgr;
+static int8_t SERVO_PINS[PWM_MAX_CHANNELS] = {-1};
+static pwm_channel_t PWM_CHANNELS[PWM_MAX_CHANNELS] = {-1};
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
@@ -18,24 +19,24 @@ void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
     newChannelsAvailable = true;
 }
 
-uint16_t servoOutputModeToUs(eServoOutputMode mode)
+uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
 {
     switch (mode)
     {
     case som50Hz:
-        return (1000000U / 50U);
+        return 50U;
     case som60Hz:
-        return (1000000U / 60U);
+        return 60U;
     case som100Hz:
-        return (1000000U / 100U);
+        return 100U;
     case som160Hz:
-        return (1000000U / 160U);
+        return 160U;
     case som333Hz:
-        return (1000000U / 333U);
+        return 333U;
     case som400Hz:
-        return (1000000U / 400U);
+        return 400U;
     case som10KHzDuty:
-        return (1000000U / 10000U);
+        return 10000U;
     default:
         return 0;
     }
@@ -46,17 +47,17 @@ static void servoWrite(uint8_t ch, uint16_t us)
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
     if ((eServoOutputMode)chConfig->val.mode == somOnOff)
     {
-        servoMgr->writeDigital(ch, us > 1500U);
+        digitalWrite(SERVO_PINS[ch], us > 1500);
     }
     else
     {
         if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
         {
-            servoMgr->writeDuty(ch, constrain(us, 1000, 2000) - 1000);
+            PWM.setDuty(PWM_CHANNELS[ch], constrain(us, 1000, 2000) - 1000);
         }
         else
         {
-            servoMgr->writeMicroseconds(ch, us / (chConfig->val.narrow + 1));
+            PWM.setMicroseconds(PWM_CHANNELS[ch], us / (chConfig->val.narrow + 1));
         }
     }
 }
@@ -64,7 +65,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
 static void servosFailsafe()
 {
     constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
-    for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
@@ -82,7 +83,7 @@ static int servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (unsigned ch = 0; ch < servoMgr->getOutputCnt(); ++ch)
+        for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
@@ -107,8 +108,7 @@ static int servosUpdate(unsigned long now)
     // LQ goes to 0 (100 packets missed in a row)
     // OR last update older than FAILSAFE_ABS_TIMEOUT_MS
     // go to failsafe
-    else if (lastUpdate &&
-             ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
+    else if (lastUpdate && ((getLq() == 0) || (now - lastUpdate > FAILSAFE_ABS_TIMEOUT_MS)))
     {
         servosFailsafe();
         lastUpdate = 0;
@@ -129,31 +129,41 @@ static void initialize()
         uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
+#if defined(PLATFORM_ESP32_S3)
+        if (pin == 43 || pin == 44)
+#else
         if (pin == 1 || pin == 3)
+#endif
         {
-            pin = ServoMgr::PIN_DISCONNECTED;
+            pin = UNDEF_PIN;
         }
 #endif
         // Mark servo pins that are being used for serial as disconnected
         eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
         if (mode == somSerial)
         {
-            pin = ServoMgr::PIN_DISCONNECTED;
+            pin = UNDEF_PIN;
         }
         SERVO_PINS[ch] = pin;
+        // Initialize all servos to low ASAP
+        if (pin != UNDEF_PIN)
+        {
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, LOW);
+        }
     }
-
-    // Initialize all servos to low ASAP
-    servoMgr = new ServoMgr(SERVO_PINS, GPIO_PIN_PWM_OUTPUTS_COUNT, 20000U);
-    servoMgr->initialize();
 }
 
 static int start()
 {
-    for (unsigned ch = 0; servoMgr && ch < servoMgr->getOutputCnt(); ++ch)
+    for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        servoMgr->setRefreshInterval(ch, servoOutputModeToUs((eServoOutputMode)chConfig->val.mode));
+        auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
+        if (frequency)
+        {
+            PWM_CHANNELS[ch] = PWM.allocate(SERVO_PINS[ch], frequency);
+        }
     }
 
     return DURATION_NEVER;
@@ -161,7 +171,7 @@ static int start()
 
 static int event()
 {
-    if (servoMgr == nullptr || connectionState == disconnected)
+    if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX
         // so it is safe to shut down when disconnected
@@ -169,7 +179,15 @@ static int event()
     }
     else if (connectionState == wifiUpdate)
     {
-        servoMgr->stopAllPwm();
+        for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            if (PWM_CHANNELS[ch] != -1)
+            {
+                PWM.release(PWM_CHANNELS[ch]);
+                PWM_CHANNELS[ch] = -1;
+            }
+            SERVO_PINS[ch] = -1;
+        }
         return DURATION_NEVER;
     }
     return DURATION_IMMEDIATELY;

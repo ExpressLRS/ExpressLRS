@@ -18,6 +18,7 @@ typedef enum {
     HARDWARE_radio_nss,
     HARDWARE_radio_nss_2,
     HARDWARE_radio_rst,
+    HARDWARE_radio_rst_2,
     HARDWARE_radio_sck,
     HARDWARE_radio_dcdc,
     HARDWARE_radio_rfo_hf,
@@ -46,6 +47,7 @@ typedef enum {
 
     HARDWARE_power_control,
     HARDWARE_power_values,
+    HARDWARE_power_values2,
 
     // Input
     HARDWARE_joystick,

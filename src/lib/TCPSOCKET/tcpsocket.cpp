@@ -61,7 +61,7 @@ bool TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it
         return false; // nothing to do
     }
 
-    if (FIFOout.free() > (uint32_t)(len + 2))
+    if (FIFOout.available(len + 2))
     {
         FIFOout.pushSize(len);
         FIFOout.pushBytes(data, len);
@@ -93,7 +93,7 @@ void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t 
     instance->TCPclient = client;
     instance->clientTimeoutLastData = millis();
 
-    if (instance->FIFOin.free() > (uint32_t)(len + 2)) // +2 because it takes 2 bytes to store the size of the FIFO chunk
+    if (instance->FIFOin.available(len + 2)) // +2 because it takes 2 bytes to store the size of the FIFO chunk
     {
         instance->FIFOin.pushSize(len);
         instance->FIFOin.pushBytes((uint8_t *)data, len);

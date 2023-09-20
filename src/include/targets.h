@@ -11,6 +11,7 @@
 /////////////////////////
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
+#define WORD_PADDED(size) (((size)+3)/4)
 
 #ifdef PLATFORM_STM32
 /* ICACHE_RAM_ATTR1 is always linked into RAM */
@@ -92,6 +93,9 @@
 #endif
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RST_2
+#define GPIO_PIN_RST_2 UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN

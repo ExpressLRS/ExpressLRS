@@ -26,6 +26,7 @@
 #define MSP_ELRS_SET_RX_WIFI_MODE           0x0E
 #define MSP_ELRS_SET_RX_LOAN_MODE           0x0F
 #define MSP_ELRS_GET_BACKPACK_VERSION       0x10
+#define MSP_ELRS_BACKPACK_CRSF_TLM          0x11
 
 #define MSP_ELRS_POWER_CALI_GET             0x20
 #define MSP_ELRS_POWER_CALI_SET             0x21

@@ -47,11 +47,17 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
                 hardware = json.load(h)
                 if 'overlay' in config:
                     hardware.update(config['overlay'])
-                firmware_file.write(json.JSONEncoder().encode(hardware).encode())
+                layout = (json.JSONEncoder().encode(hardware).encode() + (b'\0' * 2048))[0:2048]
+                firmware_file.write(layout)
         except EnvironmentError:
             sys.stderr.write(f'Error opening file "{layout_file}"\n')
             exit(1)
-    firmware_file.write(b'\0')
+    else:
+        firmware_file.write(b'\0' * 2048)
+    if config is not None and 'logo_file' in config:
+        logo_file = f"hardware/logo/{config['logo_file']}"
+        with open(logo_file, 'rb') as f:
+            firmware_file.write(f.read())
     if config is not None and 'prior_target_name' in config:
         firmware_file.write(b'\xBE\xEF\xCA\xFE')
         firmware_file.write(config['prior_target_name'].upper().encode())
@@ -111,7 +117,13 @@ def appendConfiguration(source, target, env):
         moduletype = 'tx' if '_TX_' in target_name else 'rx'
         frequency = '2400' if '_2400_' in target_name else '900'
 
-    platform = 'esp32' if env.get('PIOPLATFORM', '') in ['espressif32'] else 'esp8285'
+    if env.get('PIOPLATFORM', '') == 'espressif32':
+        platform = 'esp32'
+        if 'esp32-s3' in env.get('BOARD', ''):
+            platform = 'esp32-s3'
+    else:
+        platform = 'esp8285'
+    print(platform)
 
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 

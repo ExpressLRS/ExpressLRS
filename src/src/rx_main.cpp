@@ -12,6 +12,7 @@
 #include "msptypes.h"
 #include "PFD.h"
 #include "options.h"
+#include "dynpower.h"
 #include "MeanAccumulator.h"
 #include "freqTable.h"
 
@@ -36,6 +37,7 @@
 #include "devMSPVTX.h"
 
 #if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
@@ -90,8 +92,6 @@ device_affinity_t ui_devices[] = {
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;
 
-hwTimer hwTimer;
-POWERMGNT POWERMGNT;
 PFD PFDloop;
 Crc2Byte ota_crc;
 ELRS_EEPROM eeprom;
@@ -304,11 +304,6 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
     }
 
-    serialIO->setLinkQualityStats(
-        UINT10_to_CRSF(fmap(uplinkLQ, 0, 100, 0, 1023)),
-        UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
-                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023))
-    );
     SnrMean.add(Radio.LastPacketSNRRaw);
 
     CRSF::LinkStatistics.active_antenna = antenna;
@@ -340,7 +335,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
     interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
-    hwTimer.updateInterval(interval);
+    hwTimer::updateInterval(interval);
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
 #if defined(RADIO_SX128X)
@@ -587,25 +582,25 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             {
                 if (Offset > 0)
                 {
-                    hwTimer.incFreqOffset();
+                    hwTimer::incFreqOffset();
                 }
                 else if (Offset < 0)
                 {
-                    hwTimer.decFreqOffset();
+                    hwTimer::decFreqOffset();
                 }
             }
         }
 
         if (connectionState != connected)
         {
-            hwTimer.phaseShift(RawOffset >> 1);
+            hwTimer::phaseShift(RawOffset >> 1);
         }
         else
         {
-            hwTimer.phaseShift(Offset >> 2);
+            hwTimer::phaseShift(Offset >> 2);
         }
 
-        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer.FreqOffset, uplinkLQ);
+        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::FreqOffset, uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
 
@@ -767,12 +762,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection(bool resumeRx)
 {
-    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer.FreqOffset);
+    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::FreqOffset);
 
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
-    hwTimer.resetFreqOffset();
+    hwTimer::resetFreqOffset();
     PfdPrevRawOffset = 0;
     GotConnectionMillis = 0;
     uplinkLQ = 0;
@@ -788,7 +783,7 @@ void LostConnection(bool resumeRx)
         if (hwTimer::running)
         {
             while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
-            hwTimer.stop();
+            hwTimer::stop();
         }
         SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
         // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
@@ -811,7 +806,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     SnrMean.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
 
-    // The caller MUST call hwTimer.resume(). It is not done here because
+    // The caller MUST call hwTimer::resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
 }
 
@@ -1073,7 +1068,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
     if (doStartTimer)
-        hwTimer.resume(); // will throw an interrupt immediately
+        hwTimer::resume(); // will throw an interrupt immediately
 
     return true;
 }
@@ -1113,7 +1108,7 @@ void UpdateModelMatch(uint8_t model)
 
 void SendMSPFrameToFC(uint8_t *mspData)
 {
-    serialIO->sendMSPFrameToFC(mspData);
+    serialIO->queueMSPFrameTransmission(mspData);
 }
 
 /**
@@ -1147,6 +1142,17 @@ void MspReceiveComplete()
                 UpdateModelMatch(MspData[9]);
                 break;
             }
+            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            {
+                vtxSPIFrequency = getFreqByIdx(MspData[8]);
+                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+                {
+                    vtxSPIPowerIdx = MspData[10];
+                    vtxSPIPitmode = MspData[11];
+                }
+                devicesTriggerEvent();
+                break;
+            }
             // FALLTHROUGH
         default:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
@@ -1162,7 +1168,7 @@ void MspReceiveComplete()
         // No MSP data to the FC if no model match
         if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
-            serialIO->sendMSPFrameToFC(MspData);
+            serialIO->queueMSPFrameTransmission(MspData);
         }
     }
 
@@ -1179,8 +1185,14 @@ static void setupSerial()
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
+        #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
+        // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
+        USBSerial.begin(serialBaud);
+        SerialLogger = &USBSerial;
+        #else
         Serial.begin(serialBaud);
         SerialLogger = &Serial;
+        #endif
         #else
         SerialLogger = new NullStream();
         #endif
@@ -1285,7 +1297,12 @@ static void setupSerial()
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if defined(PLATFORM_ESP32_S3)
+    USBSerial.begin(460800);
+    SerialLogger = &USBSerial;
+#else
     SerialLogger = &Serial;
+#endif
 }
 
 static void serialShutdown()
@@ -1393,7 +1410,7 @@ static void setupRadio()
     //Radio.currSyncWord = UID[3];
 #endif
     bool init_success = Radio.Begin();
-    POWERMGNT.init();
+    POWERMGNT::init();
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
@@ -1401,7 +1418,7 @@ static void setupRadio()
         return;
     }
 
-    POWERMGNT.setPower((PowerLevels_e)config.GetPower());
+    DynamicPower_UpdateRx(true);
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (config.GetPower() > PWR_10mW);
@@ -1521,7 +1538,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            serialIO->sendLinkStatisticsToFC();
+            serialIO->queueLinkStatisticsPacket();
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
@@ -1729,12 +1746,9 @@ void setup()
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
             // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
-            hwTimer.callbackTock = &HWtimerCallbackTock;
-            hwTimer.callbackTick = &HWtimerCallbackTick;
-
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
-            hwTimer.init();
+            hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
         }
     }
 
@@ -1835,6 +1849,7 @@ void loop()
     updateBindingMode(now);
     updateSwitchMode();
     checkGeminiMode();
+    DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
 }

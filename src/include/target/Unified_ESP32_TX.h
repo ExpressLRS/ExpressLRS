@@ -52,6 +52,7 @@
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
 #define GPIO_PIN_NSS_2 hardware_pin(HARDWARE_radio_nss_2)
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
+#define GPIO_PIN_RST_2 hardware_pin(HARDWARE_radio_rst_2)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
 #define USE_SX1280_DCDC
 #define OPT_USE_SX1280_DCDC hardware_flag(HARDWARE_radio_dcdc)
@@ -87,6 +88,7 @@
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
+#define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
 
 // Input
 #define HAS_FIVE_WAY_BUTTON
