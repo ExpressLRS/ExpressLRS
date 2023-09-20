@@ -44,7 +44,7 @@
 #ifndef UCRC_T_H
 #define UCRC_T_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <fstream> // for std::ifstream
 #include <ios>     // for std::ios_base, etc.

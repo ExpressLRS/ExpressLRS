@@ -1,6 +1,6 @@
 #include <cstdint>
-#include <unity.h>
 #include <iostream>
+#include <unity.h>
 
 #include "common.h"
 #include "CRSF.h"

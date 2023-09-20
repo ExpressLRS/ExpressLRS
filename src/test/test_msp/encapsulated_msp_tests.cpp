@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <iostream>
 #include <unity.h>
 #include "msp.h"
 #include "msptypes.h"
