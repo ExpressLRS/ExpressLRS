@@ -179,31 +179,17 @@ void CRSF::flush_port_input(void)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
+void ICACHE_RAM_ATTR CRSF::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
 {
-    if (!CRSF::CRSFstate)
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
     {
-        return;
+        buffer[i + 3] = ((uint8_t *)&LinkStatistics)[i];
     }
-
-    constexpr uint8_t outBuffer[4] = {
-        LinkStatisticsFrameLength + 4,
-        CRSF_ADDRESS_RADIO_TRANSMITTER,
-        LinkStatisticsFrameLength + 2,
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
-
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
-
-    SerialOutFIFO.lock();
-    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
-    {
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-        SerialOutFIFO.push(crc);
-    }
-    SerialOutFIFO.unlock();
+    uint8_t crc = crsf_crc.calc(buffer[2]);
+    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 }
 
 /**
@@ -768,13 +754,60 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32_S3)
 uint32_t CRSF::autobaud()
 {
     static enum { INIT, MEASURED, INVERTED } state;
 
-    uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
-    uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
+    if (state == MEASURED)
+    {
+        UARTinverted = !UARTinverted;
+        state = INVERTED;
+        return UARTrequestedBaud;
+    }
+    else if (state == INVERTED)
+    {
+        UARTinverted = !UARTinverted;
+        state = INIT;
+    }
+
+    if (REG_GET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN) == 0)
+    {
+        REG_WRITE(UART_RX_FILT_REG(0), (4 << UART_GLITCH_FILT_S) | UART_GLITCH_FILT_EN); // enable, glitch filter 4
+        REG_WRITE(UART_LOWPULSE_REG(0), 4095); // reset register to max value
+        REG_WRITE(UART_HIGHPULSE_REG(0), 4095); // reset register to max value
+        REG_SET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN); // enable autobaud
+        return 400000;
+    }
+    else if (REG_GET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN) && REG_READ(UART_RXD_CNT_REG(0)) < 300)
+    {
+        return 400000;
+    }
+
+    state = MEASURED;
+
+    uint32_t low_period  = REG_READ(UART_LOWPULSE_REG(0));
+    uint32_t high_period = REG_READ(UART_HIGHPULSE_REG(0));
+    REG_CLR_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN); // disable autobaud
+    REG_CLR_BIT(UART_RX_FILT_REG(0), UART_GLITCH_FILT_EN); // disable glitch filtering
+
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    // According to the tecnnical reference
+    int32_t calulatedBaud = UART_CLK_FREQ / (low_period + high_period + 2);
+    int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
+    for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
+    {
+        if (abs(calulatedBaud - bestBaud) > abs(calulatedBaud - (int32_t)TxToHandsetBauds[i]))
+        {
+            bestBaud = (int32_t)TxToHandsetBauds[i];
+        }
+    }
+    return bestBaud;
+}
+#elif defined(PLATFORM_ESP32)
+uint32_t CRSF::autobaud()
+{
+    static enum { INIT, MEASURED, INVERTED } state;
 
     if (state == MEASURED) {
         UARTinverted = !UARTinverted;
@@ -785,17 +818,17 @@ uint32_t CRSF::autobaud()
         state = INIT;
     }
 
-    if ((*autobaud_reg & 1) == 0) {
-        *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
+    if (REG_GET_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN) == 0) {
+        REG_WRITE(UART_AUTOBAUD_REG(0), 4 << UART_GLITCH_FILT_S | UART_AUTOBAUD_EN);    // enable, glitch filter 4
         return 400000;
-    } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
+    } else if (REG_GET_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN) && REG_READ(UART_RXD_CNT_REG(0)) < 300)
         return 400000;
 
     state = MEASURED;
 
-    uint32_t low_period  = *(uint32_t *)UART_LOWPULSE_REG(0);
-    uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
-    *autobaud_reg = (4 << 8) | 0;
+    uint32_t low_period  = REG_READ(UART_LOWPULSE_REG(0));
+    uint32_t high_period = REG_READ(UART_HIGHPULSE_REG(0));
+    REG_CLR_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN);   // disable autobaud
 
     DBGLN("autobaud: low %d, high %d", low_period, high_period);
     // sample code at https://github.com/espressif/esp-idf/issues/3336
@@ -888,6 +921,35 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
+
+#endif // CRSF_TX_MODULE
+
+#if defined(CRSF_RX_MODULE)
+
+bool CRSF::HasUpdatedUplinkPower = false;
+
+/***
+ * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
+ */
+void CRSF::updateUplinkPower(uint8_t uplinkPower)
+{
+    if (uplinkPower != LinkStatistics.uplink_TX_Power)
+    {
+        LinkStatistics.uplink_TX_Power = uplinkPower;
+        HasUpdatedUplinkPower = true;
+    }
+}
+
+/***
+ * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
+ */
+bool CRSF::clearUpdatedUplinkPower()
+{
+    bool retVal = HasUpdatedUplinkPower;
+    HasUpdatedUplinkPower = false;
+    return retVal;
+}
+
 #endif // CRSF_RX_MODULE
 
 /***

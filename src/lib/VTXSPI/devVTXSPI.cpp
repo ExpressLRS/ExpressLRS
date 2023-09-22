@@ -7,6 +7,7 @@
 #include "hwTimer.h"
 #include "logging.h"
 #include <SPI.h>
+#include "PWM.h"
 
 #define SYNTHESIZER_REGISTER_A                  0x00
 #define SYNTHESIZER_REGISTER_B                  0x01
@@ -41,7 +42,7 @@
 #define BUF_PACKET_SIZE                         4 // 25b packet in 4 bytes
 
 #if defined(PLATFORM_ESP32)
-constexpr uint8_t rfAmpPwmChannel = 0;
+pwm_channel_t rfAmpPwmChannel = -1;
 #endif
 
 uint16_t vtxSPIFrequency = 6000;
@@ -140,14 +141,16 @@ static void RfAmpVrefOff()
 
 static void setPWM()
 {
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32_S3)
+    PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
+#elif defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
     {
         dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM >> 4);
     }
     else
     {
-        ledcWrite(rfAmpPwmChannel, vtxSPIPWM);
+        PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
     }
 #else
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
@@ -270,13 +273,12 @@ static void initialize()
     {
         if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
         {
-            vtxSPI = new SPIClass();
-            #if defined(PLATFORM_ESP32)
-            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
+            #if defined(PLATFORM_ESP32_S3)
+            vtxSPI = new SPIClass(FSPI);
             #else
-            vtxSPI->pins(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
-            vtxSPI->begin();
+            vtxSPI = new SPIClass(VSPI);
             #endif
+            vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
             vtxSPI->setHwCs(true);
             vtxSPI->setBitOrder(LSBFIRST);
         }
@@ -290,11 +292,9 @@ static void initialize()
         pinMode(GPIO_PIN_RF_AMP_VREF, OUTPUT);
         digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
 
-        #if defined(PLATFORM_ESP8266)
-            pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
-            analogWriteFreq(10000); // 10kHz
-            analogWriteResolution(12); // 0 - 4095
-        #else
+        #if defined(PLATFORM_ESP32_S3)
+            rfAmpPwmChannel = PWM.allocate(GPIO_PIN_RF_AMP_PWM, 10000);
+        #elif defined(PLATFORM_ESP32)
             // If using a DAC pin then adjust min/max and initial value
             if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
             {
@@ -304,9 +304,12 @@ static void initialize()
             }
             else
             {
-                ledcSetup(rfAmpPwmChannel, 10000, 12); // 12 bit 10khz
-                ledcAttachPin(GPIO_PIN_RF_AMP_PWM, rfAmpPwmChannel);
+                rfAmpPwmChannel = PWM.allocate(GPIO_PIN_RF_AMP_PWM, 10000);
             }
+        #else
+            pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
+            analogWriteFreq(10000); // 10kHz
+            analogWriteResolution(12); // 0 - 4095
         #endif
         setPWM();
 
