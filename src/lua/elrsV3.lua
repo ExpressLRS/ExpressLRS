@@ -38,7 +38,6 @@ local COL2
 local maxLineIndex
 local textYoffset
 local textSize
-local byteToStr
 
 local function allocateFields()
   fields = {}
@@ -117,7 +116,7 @@ local function selectField(step)
   end
 end
 
-local function fieldGetSelectOpts(data, offset, last)
+local function fieldGetStrOrOpts(data, offset, last)
   if last then
     while data[offset] ~= 0 do
       offset = offset + 1
@@ -126,6 +125,7 @@ local function fieldGetSelectOpts(data, offset, last)
   end
 
   -- Split a table of byte values (string) with ; separator into a table
+  -- If there is only one item, return just the string, not a table
   local r = {}
   local opt = ''
   local b = data[offset]
@@ -134,29 +134,27 @@ local function fieldGetSelectOpts(data, offset, last)
       r[#r+1] = opt
       opt = ''
     else
-      opt = opt .. byteToStr(b)
+      -- On firmwares that have constants defined for the arrow chars, use them in place of
+      -- the \xc0 \xc1 chars (which are OpenTX-en)
+      -- Use the table to convert the char, else use string.char if not in the table
+      local c = ({
+        [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
+        [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
+      })[b] or string.char(b)
+      opt = opt .. c
     end
     offset = offset + 1
     b = data[offset]
   end
 
-  r[#r+1] = opt
+  --
+  if #r > 0 then
+    r[#r+1] = opt
+  else
+    r = opt
+  end
   opt = nil
   return r, offset + 1, collectgarbage("collect")
-end
-
-local function fieldGetString(data, offset, last)
-  if last then
-    return last, offset + #last + 1
-  end
-
-  local result = ""
-  while data[offset] ~= 0 do
-    result = result .. byteToStr(data[offset])
-    offset = offset + 1
-  end
-
-  return result, offset + 1, collectgarbage("collect")
 end
 
 local function getDevice(name)
@@ -181,7 +179,7 @@ local function fieldUnsignedLoad(field, data, offset, size, unitoffset)
   field.min = fieldGetValue(data, offset+size, size)
   field.max = fieldGetValue(data, offset+2*size, size)
   --field.default = fieldGetValue(data, offset+3*size, size)
-  field.unit = fieldGetString(data, offset+(unitoffset or (4*size)), field.unit)
+  field.unit = fieldGetStrOrOpts(data, offset+(unitoffset or (4*size)), field.unit)
   -- Only store the size if it isn't 1 (covers most fields / selection)
   if size ~= 1 then
     field.size = size
@@ -252,11 +250,11 @@ end
 
 -- TEXT SELECTION
 local function fieldTextSelLoad(field, data, offset)
-  field.values, offset = fieldGetSelectOpts(data, offset, field.nc == nil and field.values)
+  field.values, offset = fieldGetStrOrOpts(data, offset, field.nc == nil and field.values)
   field.value = data[offset]
   -- min max and default (offset+1 to 3) are not used on selections
   -- units never uses cache
-  field.unit = fieldGetString(data, offset+4)
+  field.unit = fieldGetStrOrOpts(data, offset+4)
   field.nc = nil -- use cache next time
 end
 
@@ -274,7 +272,7 @@ end
 
 -- STRING
 local function fieldStringLoad(field, data, offset)
-  field.value, offset = fieldGetString(data, offset)
+  field.value, offset = fieldGetStrOrOpts(data, offset)
   if #data >= offset then
     field.maxlen = data[offset]
   end
@@ -309,7 +307,7 @@ end
 local function fieldCommandLoad(field, data, offset)
   field.status = data[offset]
   field.timeout = data[offset+1]
-  field.info = fieldGetString(data, offset+2)
+  field.info = fieldGetStrOrOpts(data, offset+2)
   if field.status == 0 then
     fieldPopup = nil
   end
@@ -379,7 +377,7 @@ local function parseDeviceInfoMessage(data)
   local offset
   local id = data[2]
   local newName
-  newName, offset = fieldGetString(data, 3)
+  newName, offset = fieldGetStrOrOpts(data, 3)
   local device = getDevice(newName)
   if device == nil then
     device = { id = id, name = newName }
@@ -463,7 +461,7 @@ local function parseParameterInfoMessage(data)
       field.parent = (fieldData[offset] ~= 0) and fieldData[offset] or nil
       field.type = bit32.band(fieldData[offset+1], 0x7f)
       field.hidden = bit32.btest(fieldData[offset+1], 0x80) or nil
-      field.name, offset = fieldGetString(fieldData, offset+2, field.name)
+      field.name, offset = fieldGetStrOrOpts(fieldData, offset+2, field.name)
       if functions[field.type+1].load then
         functions[field.type+1].load(field, fieldData, offset)
       end
@@ -501,7 +499,7 @@ local function parseElrsInfoMessage(data)
     elrsFlags = newFlags
     titleShowWarnTimeout = 0
   end
-  elrsFlagsInfo = fieldGetString(data, 7)
+  elrsFlagsInfo = fieldGetStrOrOpts(data, 7)
 
   local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
   goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
@@ -811,22 +809,6 @@ local function runPopupPage(event)
   end
 end
 
-local function loadSymbolChars()
-  -- On firmwares that have constants defined for the arrow chars, use them in place of
-  -- the \xc0 \xc1 chars (which are OpenTX-en)
-  if __opentx then
-    byteToStr = function (b)
-      -- Use the table to convert the char, else use string.char if not in the table
-      return ({
-        [192] = __opentx.CHAR_UP,
-        [193] = __opentx.CHAR_DOWN
-      })[b] or string.char(b)
-    end
-  else
-    byteToStr = string.char
-  end
-end
-
 local function touch2evt(event, touchState)
   -- Convert swipe events to normal events Left/Right/Up/Down -> EXIT/ENTER/PREV/NEXT
   -- PREV/NEXT are swapped if editing
@@ -884,8 +866,6 @@ local function setLCDvar()
     textYoffset = 3
     textSize = 8
   end
-  loadSymbolChars()
-  loadSymbolChars = nil
 end
 
 local function setMock()
