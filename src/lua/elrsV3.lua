@@ -116,7 +116,7 @@ local function selectField(step)
   end
 end
 
-local function fieldGetStrOrOpts(data, offset, last)
+local function fieldGetStrOrOpts(data, offset, last, isOpts)
   if last then
     while data[offset] ~= 0 do
       offset = offset + 1
@@ -124,37 +124,33 @@ local function fieldGetStrOrOpts(data, offset, last)
     return last, offset + 1
   end
 
-  -- Split a table of byte values (string) with ; separator into a table
-  -- If there is only one item, return just the string, not a table
-  local r = {}
+  -- For isOpts: Split a table of byte values (string) with ; separator into a table
+  -- Else just read a string until the first null byte
+  local r = isOpts and {}
   local opt = ''
   local b = data[offset]
   while b ~= 0 do
-    if b == 59 then -- ';'
+    if r and b == 59 then -- ';'
       r[#r+1] = opt
       opt = ''
     else
       -- On firmwares that have constants defined for the arrow chars, use them in place of
       -- the \xc0 \xc1 chars (which are OpenTX-en)
       -- Use the table to convert the char, else use string.char if not in the table
-      local c = ({
+      opt = opt .. (({
         [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
         [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
-      })[b] or string.char(b)
-      opt = opt .. c
+      })[b] or string.char(b))
     end
     offset = offset + 1
     b = data[offset]
   end
 
-  --
-  if #r > 0 then
+  if r then
     r[#r+1] = opt
-  else
-    r = opt
+    opt = r
   end
-  opt = nil
-  return r, offset + 1, collectgarbage("collect")
+  return opt, offset + 1, collectgarbage("collect")
 end
 
 local function getDevice(name)
@@ -250,7 +246,7 @@ end
 
 -- TEXT SELECTION
 local function fieldTextSelLoad(field, data, offset)
-  field.values, offset = fieldGetStrOrOpts(data, offset, field.nc == nil and field.values)
+  field.values, offset = fieldGetStrOrOpts(data, offset, field.nc == nil and field.values, true)
   field.value = data[offset]
   -- min max and default (offset+1 to 3) are not used on selections
   -- units never uses cache
