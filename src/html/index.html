@@ -223,24 +223,28 @@
 									<option value='4'>SUMD</option>
 									<option value='5'>DJI RS Pro</option>
 									<option value='6'>HoTT Telemetry</option>
+									<option value='7'>DSMX 11MS</option>
+									<option value='8'>DSMX 22MS</option>
+									<option value='9'>DSM2 11MS</option>
+									<option value='10'>DSM2 22MS</option>
 								</select>
 								<label for='serial-protocol'>Serial Protocol</label>
 							</div>
 						</div>
-						<div id="sbus-config" style="display: none;">
-							<h2>SBUS Failsafe</h2>
-							Set the failsafe behaviour when using the SBUS protocol:<br/>
+						<div id="failsafe-config" style="display: none;">
+							<h2>Failsafe</h2>
+							Set the failsafe behaviour when using the SBUS or Spektrum remote receiver protocol:<br/>
 							<ul>
-								<li>"No Pulses" stops sending SBUS data when a connection to the transmitter is lost</li>
+								<li>"No Pulses" stops sending data when a connection to the transmitter is lost</li>
 								<li>"Last Position" continues to send the last received channel data along with the FAILSAFE bit set</li>
 							</ul>
 							<br/>
 							<div class="mui-select">
-								<select id='sbus-failsafe' name='serial-failsafe'>
+								<select id='serial-failsafe' name='serial-failsafe'>
 									<option value='0'>No Pulses</option>
 									<option value='1'>Last Position</option>
 								</select>
-								<label for="sbus-failsafe">SBUS Failsafe</label>
+								<label for="serial-failsafe">Failsafe</label>
 							</div>
 						</div>
 

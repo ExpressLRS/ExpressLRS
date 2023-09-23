@@ -337,8 +337,8 @@ function updateConfig(data, options) {
     else if (proto === 2 || proto === 3 || proto === 5) { // SBUS (and inverted) or DJI-RS Pro
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
-      _('sbus-config').style.display = 'block';
-      _('sbus-failsafe').value = data['sbus-failsafe'];
+      _('failsafe-config').style.display = 'block';
+      _('serial-failsafe').value = data['serial-failsafe'];
     }
     else if (proto === 4) { // SUMD
       _('rcvr-uart-baud').disabled = true;
@@ -349,6 +349,12 @@ function updateConfig(data, options) {
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '19200';
       _('sbus-config').style.display = 'none';
+    }
+    else if (proto >= 7 && proto <= 10) { // Spektrum Remote Receiver
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '115200';
+      _('failsafe-config').style.display = 'block';
+      _('serial-failsafe').value = data['serial-failsafe'];
     }
   }
   updatePwmSettings(data.pwm);
@@ -634,7 +640,7 @@ if (_('config')) {
         return JSON.stringify({
           "pwm": getPwmFormData(),
           "serial-protocol": +_('serial-protocol').value,
-          "sbus-failsafe": +_('sbus-failsafe').value,
+          "serial-failsafe": +_('serial-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked
         });

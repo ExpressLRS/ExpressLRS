@@ -23,6 +23,7 @@
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
+#include "rx-serial/SerialSatellite.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -1186,6 +1187,7 @@ static void setupSerial()
 {
     bool sbusSerialOutput = false;
 	bool sumdSerialOutput = false;
+    bool spektrumSatelliteSerialOutput = false;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     bool hottTlmSerial = false;
@@ -1227,6 +1229,11 @@ static void setupSerial()
         serialBaud = 19200;
     }
 #endif
+    else if (config.GetSerialProtocol() >= PROTOCOL_SPEKTRUM_REMOTE_DSMX_11MS && config.GetSerialProtocol() <= PROTOCOL_SPEKTRUM_REMOTE_DSM2_22MS)
+    {
+        spektrumSatelliteSerialOutput = true;
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #ifdef PLATFORM_STM32
@@ -1327,6 +1334,10 @@ static void setupSerial()
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     #endif
+    else if (spektrumSatelliteSerialOutput)
+    {
+        serialIO = new SerialSatellite(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);

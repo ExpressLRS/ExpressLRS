@@ -1087,4 +1087,5 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
         m_modified = true;
     }
 }
+
 #endif

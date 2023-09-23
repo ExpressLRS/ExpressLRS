@@ -18,7 +18,7 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;DSMX 11MS;DSMX 22MS;DSM2 11MS;DSM2 22MS",
     STR_EMPTYSPACE
 };
 
@@ -348,7 +348,11 @@ static void registerLuaParameters()
     }
   });
 
-  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+  if (config.GetSerialProtocol() == PROTOCOL_SBUS ||
+      config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS ||
+      config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO ||
+      (config.GetSerialProtocol() >= PROTOCOL_SPEKTRUM_REMOTE_DSMX_11MS &&
+       config.GetSerialProtocol() <= PROTOCOL_SPEKTRUM_REMOTE_DSM2_22MS))
   {
     registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetFailsafeMode((eFailsafeMode)arg);
