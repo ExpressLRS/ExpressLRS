@@ -39,8 +39,9 @@ void PPMController::End()
 
 bool PPMController::IsArmed()
 {
+    bool maybeArmed = numChannels < 5 || CRSF_to_BIT(ChannelData[4]);
     auto now = millis();
-    return lastPPM && now - lastPPM < 1000;
+    return maybeArmed && lastPPM && now - lastPPM < 1000;
 }
 
 void PPMController::handleInput()
@@ -52,6 +53,7 @@ void PPMController::handleInput()
     if (items)
     {
         length /= 4; // one RMT = 4 Bytes
+        numChannels = length;
         for (int i = 0; i < length; i++)
         {
             auto item = items[i];

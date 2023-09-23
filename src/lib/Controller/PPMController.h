@@ -11,6 +11,7 @@ public:
     void handleInput() override;
 
 private:
-    unsigned long lastPPM = 0;
+    uint32_t lastPPM = 0;
+    size_t numChannels = 0;
     RingbufHandle_t rb = nullptr;
 };
