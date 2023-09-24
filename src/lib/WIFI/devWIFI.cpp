@@ -859,10 +859,6 @@ static void startMDNS()
   {
     options += " -DUNLOCK_HIGHER_POWER";
   }
-  if (firmwareOptions.uart_inverted)
-  {
-    options += " -DUART_INVERTED";
-  }
   options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
   options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
   #endif
