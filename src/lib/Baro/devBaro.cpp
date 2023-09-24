@@ -93,8 +93,12 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     crsfBaro.p.verticalspd = htobe16(verticalspd_smoothed);
     //DBGLN("diff=%d smooth=%d dT=%u", altitude_diff_cm, verticalspd_smoothed, dT_ms);
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-    telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+    // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet 
+    if (!telemetry.GetCrsfBaroSensorDetected())
+    {
+        CRSF::SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+    }
 }
 
 static int start()
