@@ -74,6 +74,11 @@ public:
     static ICACHE_RAM_ATTR void inline decFreqOffset() { FreqOffset--; }
 
     /**
+     * @brief Get the frequency offset
+     */
+    static ICACHE_RAM_ATTR int32_t inline getFreqOffset() { return FreqOffset; }
+
+    /**
      * @brief Provides a coarse one time adjustment to the frequency to
      * align the phase of two timers.
      *

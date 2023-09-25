@@ -757,7 +757,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection(bool resumeRx)
 {
-    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::FreqOffset);
+    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
