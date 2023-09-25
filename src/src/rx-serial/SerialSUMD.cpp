@@ -7,7 +7,7 @@
 #define SUMD_CRC_SIZE			2														// 16 bit CRC
 #define SUMD_FRAME_16CH_LEN		(SUMD_HEADER_SIZE+SUMD_DATA_SIZE_16CH+SUMD_CRC_SIZE)
 
-uint32_t SerialSUMD::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialSUMD::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable) {
         return DURATION_IMMEDIATELY;
