@@ -4,7 +4,6 @@
 #include "PWM.h"
 #include "CRSF.h"
 #include "config.h"
-#include "helpers.h"
 #include "logging.h"
 #include "rxtx_intf.h"
 
@@ -23,7 +22,7 @@ static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
-void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
+void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
     newChannelsAvailable = true;
 }
@@ -88,15 +87,15 @@ static void servosFailsafe()
     for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
+        // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
-        // Always write the failsafe position even if the servo never has been started,
+        // Always write the failsafe position even if the servo has never been started,
         // so all the servos go to their expected position
         servoWrite(ch, us);
     }
 }
 
-static int servosUpdate(unsigned long now)
+static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
     if (newChannelsAvailable)
@@ -107,7 +106,7 @@ static int servosUpdate(unsigned long now)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
-            // crsfVal might 0 if this is a switch channel and it has not been
+            // crsfVal might 0 if this is a switch channel, and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
             {
@@ -115,7 +114,7 @@ static int servosUpdate(unsigned long now)
             }
 
             uint16_t us = CRSF_to_US(crsfVal);
-            // Flip the output around the mid value if inverted
+            // Flip the output around the mid-value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
             {
@@ -133,8 +132,6 @@ static int servosUpdate(unsigned long now)
         servosFailsafe();
         lastUpdate = 0;
     }
-
-    return DURATION_IMMEDIATELY;
 }
 
 static void initialize()
@@ -216,6 +213,8 @@ static int start()
         }
 #endif
     }
+    // set servo outputs to failsafe position on start in case they want to play silly buggers!
+    servosFailsafe();
     return DURATION_NEVER;
 }
 
@@ -223,7 +222,7 @@ static int event()
 {
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {
-        // Disconnected should come after failsafe on the RX
+        // Disconnected should come after failsafe on the RX,
         // so it is safe to shut down when disconnected
         return DURATION_NEVER;
     }
@@ -252,7 +251,8 @@ static int event()
 
 static int timeout()
 {
-    return servosUpdate(millis());
+    servosUpdate(millis());
+    return DURATION_IMMEDIATELY;
 }
 
 device_t ServoOut_device = {

@@ -7,6 +7,12 @@
 
 #include "logging.h"
 
+#if defined(PLATFORM_ESP32_S3)
+#define SPEED_MODE LEDC_LOW_SPEED_MODE
+#else
+#define SPEED_MODE LEDC_HIGH_SPEED_MODE
+#endif
+
 #define MCPWM_CHANNELS 12
 #define LEDC_CHANNELS 8
 
@@ -61,7 +67,7 @@ uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
 static void ledcSetupEx(uint8_t chan, ledc_timer_t timer, uint32_t freq, uint8_t bit_num)
 {
     ledc_timer_config_t ledc_timer = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .speed_mode = SPEED_MODE,
         .duty_resolution = (ledc_timer_bit_t)bit_num,
         .timer_num = timer,
         .freq_hz = freq,
@@ -77,13 +83,16 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
 {
     ledc_channel_config_t ledc_channel = {
         .gpio_num = pin,
-        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .speed_mode = SPEED_MODE,
         .channel = (ledc_channel_t)chan,
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = (ledc_timer_t)timer,
         .duty = 0,
         .hpoint = 0};
-    ledc_channel_config(&ledc_channel);
+    if (ledc_channel_config(&ledc_channel) != OK)
+    {
+        ERRLN("ledc_channel_config failed");
+    }
 }
 
 pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
@@ -128,7 +137,10 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
             .duty_mode = MCPWM_DUTY_MODE_0,
             .counter_mode = MCPWM_UP_COUNTER,
         };
-        mcpwm_gpio_init(mcpwm_config[channel].unit, mcpwm_config[channel].signal, pin);
+        if (mcpwm_gpio_init(mcpwm_config[channel].unit, mcpwm_config[channel].signal, pin) != ESP_OK)
+        {
+            DBGLN("failed %d", pin);
+        }
         mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
         mcpwm_frequencies[channel] = frequency;
         return channel | MCPWM_CHANNEL_FLAG;
