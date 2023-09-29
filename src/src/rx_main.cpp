@@ -22,6 +22,7 @@
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
+#include "rx-serial/SerialHoTT_TLM.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -756,7 +757,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection(bool resumeRx)
 {
-    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::FreqOffset);
+    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
@@ -1168,12 +1169,22 @@ static void setupSerial()
     bool sbusSerialOutput = false;
 	bool sumdSerialOutput = false;
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    bool hottTlmSerial = false;
+#endif
+
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
         #if defined(DEBUG_LOG)
+        #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
+        // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
+        USBSerial.begin(serialBaud);
+        SerialLogger = &USBSerial;
+        #else
         Serial.begin(serialBaud);
         SerialLogger = &Serial;
+        #endif
         #else
         SerialLogger = new NullStream();
         #endif
@@ -1191,6 +1202,13 @@ static void setupSerial()
         sumdSerialOutput = true;
         serialBaud = 115200;
     }
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
+    {
+        hottTlmSerial = true;
+        serialBaud = 19200;
+    }    
+#endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #ifdef PLATFORM_STM32
@@ -1245,11 +1263,31 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    SerialConfig config = SERIAL_8N1;
+    
+    if(sbusSerialOutput)
+    {
+        config = SERIAL_8E2;
+    }    
+    else if(hottTlmSerial)
+    {
+        config = SERIAL_8N2;
+    }
+
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    uint32_t config = SERIAL_8N1;
+
+    if(sbusSerialOutput)
+    { 
+        config = SERIAL_8E2;
+    }
+    else if(hottTlmSerial)
+    {
+        config = SERIAL_8N2;
+    }
+    
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
@@ -1265,11 +1303,22 @@ static void setupSerial()
     {
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    else if (hottTlmSerial)
+    {
+        serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    #endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if defined(PLATFORM_ESP32_S3)
+    USBSerial.begin(460800);
+    SerialLogger = &USBSerial;
+#else
     SerialLogger = &Serial;
+#endif
 }
 
 static void serialShutdown()

@@ -2,8 +2,8 @@
 #include "hwTimer.h"
 #include "logging.h"
 
-void (*hwTimer::callbackTick)() = [](){};
-void (*hwTimer::callbackTock)() = [](){};
+void (*hwTimer::callbackTick)() = nullptr;
+void (*hwTimer::callbackTock)() = nullptr;
 
 volatile bool hwTimer::running = false;
 volatile bool hwTimer::isTick = false;
@@ -70,6 +70,11 @@ void ICACHE_RAM_ATTR hwTimer::updateInterval(uint32_t time)
 {
     // timer should not be running when updateInterval() is called
     HWtimerInterval = time * HWTIMER_TICKS_PER_US;
+    if (timer)
+    {
+        DBGLN("hwTimer interval: %d", time);
+        timerAlarmWrite(timer, HWtimerInterval, true);
+    }
 }
 
 void ICACHE_RAM_ATTR hwTimer::phaseShift(int32_t newPhaseShift)
