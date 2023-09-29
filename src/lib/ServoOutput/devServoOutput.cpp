@@ -5,10 +5,19 @@
 #include "CRSF.h"
 #include "config.h"
 #include "helpers.h"
+#include "logging.h"
 #include "rxtx_intf.h"
 
 static int8_t SERVO_PINS[PWM_MAX_CHANNELS] = {-1};
 static pwm_channel_t PWM_CHANNELS[PWM_MAX_CHANNELS] = {-1};
+
+#if (defined(PLATFORM_ESP32))
+static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
+static uint8_t rmtCH = 0;
+static uint8_t RMT_MAX_CHANNELS = 8;
+static dshot_mode_t dshotProtocol = DSHOT300;
+#endif
+
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
@@ -45,13 +54,24 @@ uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-    if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+#if defined(PLATFORM_ESP32)
+    if ((eServoOutputMode)chConfig->val.mode == somDShot)
     {
-        digitalWrite(SERVO_PINS[ch], us > 1500);
+        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+        if (dshotInstances[ch])
+        {
+            dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+        }
     }
     else
+#endif
+    if (SERVO_PINS[ch] != UNDEF_PIN)
     {
-        if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+        {
+            digitalWrite(SERVO_PINS[ch], us > 1500);
+        }
+        else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
         {
             PWM.setDuty(PWM_CHANNELS[ch], constrain(us, 1000, 2000) - 1000);
         }
@@ -126,7 +146,7 @@ static void initialize()
 
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-        uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
+        int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
 #if defined(PLATFORM_ESP32_S3)
@@ -144,10 +164,34 @@ static void initialize()
         {
             pin = UNDEF_PIN;
         }
+#if defined(PLATFORM_ESP32)
+        else if (mode == somDShot)
+        {
+            if (rmtCH < RMT_MAX_CHANNELS)
+            {
+                gpio_num_t gpio = (gpio_num_t)pin;
+                rmt_channel_t rmtChannel = (rmt_channel_t)rmtCH;
+                DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
+                pinMode(pin, OUTPUT);
+                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+                rmtCH++;
+            }
+            pin = UNDEF_PIN;
+        }
+#endif
         SERVO_PINS[ch] = pin;
         // Initialize all servos to low ASAP
         if (pin != UNDEF_PIN)
         {
+            if (mode == somOnOff)
+            {
+                DBGLN("Initializing digital output: ch: %d, pin: %d", ch, pin);
+            }
+            else
+            {
+                DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
+            }
+
             pinMode(pin, OUTPUT);
             digitalWrite(pin, LOW);
         }
@@ -160,12 +204,18 @@ static int start()
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
-        if (frequency)
+        if (frequency && SERVO_PINS[ch] != UNDEF_PIN)
         {
             PWM_CHANNELS[ch] = PWM.allocate(SERVO_PINS[ch], frequency);
         }
+#if defined(PLATFORM_ESP32)
+        else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
+        {
+            dshotInstances[ch]->begin(dshotProtocol, false); // Set DShot protocol and bidirectional dshot bool
+            dshotInstances[ch]->send_dshot_value(0);         // Set throttle low so the ESC can continue initialsation
+        }
+#endif
     }
-
     return DURATION_NEVER;
 }
 
@@ -186,7 +236,14 @@ static int event()
                 PWM.release(PWM_CHANNELS[ch]);
                 PWM_CHANNELS[ch] = -1;
             }
-            SERVO_PINS[ch] = -1;
+#if defined(PLATFORM_ESP32)
+            if (dshotInstances[ch] != nullptr)
+            {
+                delete dshotInstances[ch];
+                dshotInstances[ch] = nullptr;
+            }
+#endif
+            SERVO_PINS[ch] = UNDEF_PIN;
         }
         return DURATION_NEVER;
     }

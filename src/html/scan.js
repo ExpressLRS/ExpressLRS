@@ -48,7 +48,7 @@ function enumSelectGenerate(id, val, arOptions) {
 }
 
 @@if not isTX:
-function updatePwmSettings(arPwm) {
+function updatePwmSettings(arPwm, allowDshot) {
   if (arPwm === undefined) {
     if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
@@ -65,6 +65,13 @@ function updatePwmSettings(arPwm) {
     const narrow = (item.config >> 19) & 1;
     const pin = item.pin;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
+    // only ESP32 devices allow DShot
+    if (allowDshot === true) {
+      if (pin != 0)
+        modes.push('DShot');
+      else
+        modes.push(undefined);
+    }
     if (pin == 1) {
       modes.push('Serial TX');
       modes.push(undefined);  // true PWM
@@ -107,8 +114,8 @@ function updatePwmSettings(arPwm) {
     const pin1Mode = _(`pwm_${pin1Index}_mode`);
     const pin3Mode = _(`pwm_${pin3Index}_mode`);
     pin1Mode.onchange = () => {
-      if (pin1Mode.value == 8) { // Serial
-        pin3Mode.value = 8;
+      if (pin1Mode.value == pin1Mode.length) { // Serial
+        pin3Mode.value = pin1Mode.length;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -125,8 +132,8 @@ function updatePwmSettings(arPwm) {
       }
     }
     pin3Mode.onchange = () => {
-      if (pin3Mode.value == 8) { // Serial
-        pin1Mode.value = 8;
+      if (pin3Mode.value == pin3Mode.length) { // Serial
+        pin1Mode.value = pin3Mode.length;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
@@ -136,7 +143,7 @@ function updatePwmSettings(arPwm) {
     }
     const pin3 = pin3Mode.value;
     pin1Mode.onchange();
-    if(pin1Mode.value != 8) pin3Mode.value = pin3;
+    if(pin1Mode.value != pin1Mode.length) pin3Mode.value = pin3;
   }
 }
 @@end
@@ -280,7 +287,7 @@ function updateConfig(data, options) {
       _('rcvr-uart-baud').value = '115200';
     }
   }
-  updatePwmSettings(data.pwm);
+  updatePwmSettings(data.pwm, data['allow-dshot']);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
   _('is-airport').onchange = _('serial-protocol').onchange;
