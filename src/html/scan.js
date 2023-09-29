@@ -173,42 +173,6 @@ function init() {
   initOptions();
 }
 
-function changeCurrentColors() {
-  if (colorTimer === undefined) {
-    sendCurrentColors();
-    colorTimer = setInterval(timeoutCurrentColors, 50);
-  } else {
-    colorUpdated = true;
-  }
-}
-
-function sendCurrentColors() {
-  const formData = new FormData(_('upload_options'));
-  const data = Object.fromEntries(formData);
-  colors = [];
-  for (const [k, v] of Object.entries(data)) {
-    if (_(k) && _(k).type == 'color') {
-      const index = parseInt(k.substring('6')) - 1;
-      if (_(k + '-div').style.display === 'none') colors[index] = -1;
-      else colors[index] = parseInt(v.substring(1), 16);
-    }
-  }
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.open('POST', '/buttons', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/json');
-  xmlhttp.send(JSON.stringify(colors));
-  colorUpdated = false;
-}
-
-function timeoutCurrentColors() {
-  if (colorUpdated) {
-    sendCurrentColors();
-  } else {
-    clearInterval(colorTimer);
-    colorTimer = undefined;
-  }
-}
-
 function updateConfig(data, options) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
@@ -676,8 +640,9 @@ _('submit-actions').addEventListener('click', submitButtonActions);
 
 function updateOptions(data) {
   for (const [key, value] of Object.entries(data)) {
+    if (key ==='wifi-on-interval' && value === -1) continue;
     if (_(key)) {
-      if (_(key).type == 'checkbox') {
+      if (_(key).type === 'checkbox') {
         _(key).checked = value;
       } else {
         if (Array.isArray(value)) _(key).value = value.toString();

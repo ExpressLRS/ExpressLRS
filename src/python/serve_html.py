@@ -32,7 +32,7 @@ config = {
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
             "domain": 1,
-            "wifi-on-interval": 60,
+            # "wifi-on-interval": 60,
             "wifi-password": "w1f1-pAssw0rd",
             "wifi-ssid": "network-ssid"
         },
