@@ -213,8 +213,6 @@ static int start()
         }
 #endif
     }
-    // set servo outputs to failsafe position on start in case they want to play silly buggers!
-    servosFailsafe();
     return DURATION_NEVER;
 }
 
