@@ -759,6 +759,10 @@ void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
+    // Use this rate as the initial rate next time if we connected on it
+    if (connectionState == connected)
+        config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
+
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
@@ -1207,7 +1211,7 @@ static void setupSerial()
     {
         hottTlmSerial = true;
         serialBaud = 19200;
-    }    
+    }
 #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
@@ -1264,11 +1268,11 @@ static void setupSerial()
 
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = SERIAL_8N1;
-    
+
     if(sbusSerialOutput)
     {
         config = SERIAL_8E2;
-    }    
+    }
     else if(hottTlmSerial)
     {
         config = SERIAL_8N2;
@@ -1280,14 +1284,14 @@ static void setupSerial()
     uint32_t config = SERIAL_8N1;
 
     if(sbusSerialOutput)
-    { 
+    {
         config = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
         config = SERIAL_8N2;
     }
-    
+
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
