@@ -34,7 +34,7 @@ public:
      * @brief Set the output PWM signal high for the supplied microseconds
      *
      * @param channel the channel to adjust the signal on
-     * @param microseconds the high time in microsends
+     * @param microseconds the high time in microseconds
      */
     void setMicroseconds(pwm_channel_t channel, uint16_t microseconds);
 };
