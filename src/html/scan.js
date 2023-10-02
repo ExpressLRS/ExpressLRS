@@ -54,8 +54,10 @@ function updatePwmSettings(arPwm, allowDshot) {
     if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
   }
-  var pin1Index = undefined;
-  var pin3Index = undefined;
+  let pin1Index = undefined;
+  let pin1SerialIndex = undefined;
+  let pin3Index = undefined;
+  let pin3SerialIndex = undefined;
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
   const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="mui--text-center">Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
   arPwm.forEach((item, index) => {
@@ -75,14 +77,15 @@ function updatePwmSettings(arPwm, allowDshot) {
     }
     if (pin === 1) {
       modes.push('Serial TX');
-      modes.push(undefined);  // true PWM
       pin1Index = index;
+      pin1SerialIndex = modes.length-1;
     }
     if (pin === 3) {
       modes.push('Serial RX');
-      modes.push(undefined);  // true PWM
       pin3Index = index;
+      pin3SerialIndex = modes.length-1;
     }
+    modes.push(undefined);  // true PWM
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
@@ -104,7 +107,7 @@ function updatePwmSettings(arPwm, allowDshot) {
 
   _('pwm').appendChild(grp);
 
-  var setDisabled = (index, onoff) => {
+  let setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
     _(`pwm_${index}_inv`).disabled = onoff;
     _(`pwm_${index}_nar`).disabled = onoff;
@@ -115,12 +118,12 @@ function updatePwmSettings(arPwm, allowDshot) {
     const pin1Mode = _(`pwm_${pin1Index}_mode`);
     const pin3Mode = _(`pwm_${pin3Index}_mode`);
     pin1Mode.onchange = () => {
-      if (pin1Mode.value == pin1Mode.length) { // Serial
-        pin3Mode.value = pin1Mode.length;
+      if (Number(pin1Mode.value) === pin1SerialIndex) { // Serial
+        pin3Mode.value = pin3SerialIndex;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
-        _('serial-config').style.display = 'block';
+        _('serial-config').style.display = _('is-airport').checked ? 'none' : 'block';
         _('baud-config').style.display = 'block';
       }
       else {
@@ -133,18 +136,18 @@ function updatePwmSettings(arPwm, allowDshot) {
       }
     }
     pin3Mode.onchange = () => {
-      if (pin3Mode.value == pin3Mode.length) { // Serial
-        pin1Mode.value = pin3Mode.length;
+      if (Number(pin3Mode.value) === pin3SerialIndex) { // Serial
+        pin1Mode.value = pin1SerialIndex;
         setDisabled(pin1Index, true);
         setDisabled(pin3Index, true);
         pin3Mode.disabled = true;
-        _('serial-config').style.display = 'block';
+        _('serial-config').style.display = _('is-airport').checked ? 'none' : 'block';
         _('baud-config').style.display = 'block';
       }
     }
     const pin3 = pin3Mode.value;
     pin1Mode.onchange();
-    if(pin1Mode.value != pin1Mode.length) pin3Mode.value = pin3;
+    if(Number(pin1Mode.value) !== pin1SerialIndex) pin3Mode.value = pin3;
   }
 }
 @@end
@@ -245,23 +248,35 @@ function updateConfig(data, options) {
   _('modelid').value = storedModelId;
   _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data['force-tlm'];
   _('serial-protocol').onchange = () => {
+    const proto = Number(_('serial-protocol').value);
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('serial-config').style.display = 'none';
+      _('sbus-config').style.display = 'none';
+      return;
     }
-    else if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+    _('serial-config').style.display = 'block';
+    if (proto === 0 || proto === 1) { // Airport or CRSF
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('sbus-config').style.display = 'none';
     }
-    else if (_('serial-protocol').value == 2 || _('serial-protocol').value == 3) {
+    else if (proto === 2 || proto === 3 || proto === 5) { // SBUS (and inverted) or DJI-RS Pro
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
       _('sbus-config').style.display = 'block';
       _('sbus-failsafe').value = data['sbus-failsafe'];
     }
-    else if (_('serial-protocol').value == 4) {
+    else if (proto === 4) { // SUMD
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '115200';
+      _('sbus-config').style.display = 'none';
+    }
+    else if (proto === 6) { // HoTT
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '19200';
+      _('sbus-config').style.display = 'none';
     }
   }
   updatePwmSettings(data.pwm, data['allow-dshot']);
