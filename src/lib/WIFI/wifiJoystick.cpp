@@ -106,7 +106,7 @@ void WifiJoystick::Loop(unsigned long now)
 Frame format:
 1 byte frame type
 1 byte channel count
-channel count * 2 bytes channel data in range -992 to 992
+channel count * 2 bytes channel data in range 0 to 32767
 */
 void WifiJoystick::UpdateValues()
 {
@@ -120,7 +120,7 @@ void WifiJoystick::UpdateValues()
     udp->write(channelCount);
     for (uint8_t i = 0; i < channelCount; i++)
     {
-        uint16_t channel = ChannelData[i] - CRSF_CHANNEL_VALUE_MID;
+        uint16_t channel = map(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
         udp->write((uint8_t*)&channel, 2);
     }
     udp->endPacket();
