@@ -29,6 +29,7 @@ static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
+static const char luastrOffOn[] = "Off;On";
 
 static const char luastrDisabled[] = "Disabled";
 
@@ -104,7 +105,7 @@ static struct luaItem_selection luaSwitch = {
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     modelMatchUnit
 };
 
@@ -209,7 +210,7 @@ static struct luaItem_command luaVtxSend = {
 struct luaItem_selection luaBluetoothTelem = {
     {"BT Telemetry", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     STR_EMPTYSPACE
 };
 #endif
@@ -223,7 +224,7 @@ static struct luaItem_folder luaBackpackFolder = {
 static struct luaItem_selection luaBackpackEnable = {
     {"Backpack", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     STR_EMPTYSPACE};
 #endif
 
@@ -260,7 +261,7 @@ static struct luaItem_selection luaHeadTrackingStartChannel = {
 static struct luaItem_selection luaBackpackTelemetry = {
     {"Telemetry", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     STR_EMPTYSPACE};
 
 static struct luaItem_string luaBackpackVersion = {
@@ -347,6 +348,7 @@ static void luadevUpdateBackpackOpts()
     luaDvrStopDelay.options = luastrDisabled;
     luaHeadTrackingEnableChannel.options = luastrDisabled;
     luaHeadTrackingStartChannel.options = luastrDisabled;
+    luaBackpackTelemetry.options = luastrDisabled;
   }
   else
   {
@@ -355,6 +357,7 @@ static void luadevUpdateBackpackOpts()
     luaDvrStopDelay.options = luastrDvrDelay;
     luaHeadTrackingEnableChannel.options = luastrHeadTrackingEnable;
     luaHeadTrackingStartChannel.options = luastrHeadTrackingStart;
+    luaBackpackTelemetry.options = luastrOffOn;
   }
 }
 
