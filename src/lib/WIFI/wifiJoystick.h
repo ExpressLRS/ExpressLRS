@@ -37,7 +37,7 @@
  *
  * Step 3:
  *   receive frames in the format of:
- *   1 byte: Frame type = 1
+ *   1 byte: Frame type = 1 for channel data
  *   1 byte: channel count
  *   <channel count>*2 bytes: channel data each channel 2 bytes in range 0 to 32767
  *
