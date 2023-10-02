@@ -932,6 +932,11 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "type", "rx");
   #endif
   #endif
+
+  #ifdef HAS_WIFI_JOYSTICK
+    MDNS.addService("elrs-joystick", "udp", JOYSTICK_PORT);
+    MDNS.addServiceTxt("elrs-joystick", "udp", "version", JOYSTICK_VERSION_STRING);
+  #endif
 }
 
 static void startServices()
