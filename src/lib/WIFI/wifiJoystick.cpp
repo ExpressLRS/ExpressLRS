@@ -37,9 +37,12 @@ void WifiJoystick::StartJoystickService()
 void WifiJoystick::StopJoystickService()
 {
     active = false;
-    udp->stop();
-    delete udp;
-    udp = NULL;
+    if (udp)
+    {
+        udp->stop();
+        delete udp;
+        udp = NULL;
+    }
 }
 
 void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval, uint8_t newChannelCount)
