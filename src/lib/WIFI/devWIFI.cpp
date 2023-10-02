@@ -731,7 +731,7 @@ static void WebUStartWifiJoystick(AsyncWebServerRequest *request)
 {
   if(request->hasArg("start"))
   {
-    uint32_t updateInterval = request->hasArg("updateInterval") ? request->arg("updateInterval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
+    int32_t updateInterval = request->hasArg("updateInterval") ? request->arg("updateInterval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
     uint32_t channelCount = request->hasArg("channels") ? request->arg("channels").toInt() : JOYSTICK_DEFAULT_CHANNEL_COUNT;
     WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval, channelCount);
     request->send(200, "text/plain", "ok");

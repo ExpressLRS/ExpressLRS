@@ -18,7 +18,7 @@ public:
     static void StartJoystickService();
     static void StopJoystickService();
     static void UpdateValues();
-    static void StartSending(IPAddress ip, uint32_t updateInterval, uint8_t newChannelCount);
+    static void StartSending(const IPAddress& ip, int32_t updateInterval, uint8_t newChannelCount);
     static void Loop(unsigned long now);
 private:
     static WiFiUDP *udp;

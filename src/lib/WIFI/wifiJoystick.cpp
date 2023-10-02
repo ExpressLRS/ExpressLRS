@@ -45,7 +45,7 @@ void WifiJoystick::StopJoystickService()
     }
 }
 
-void WifiJoystick::StartSending(IPAddress ip, uint32_t updateInterval, uint8_t newChannelCount)
+void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uint8_t newChannelCount)
 {
     if (!udp)
     {
