@@ -31,8 +31,6 @@ static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
 
-static const char luastrDisabled[] = "Disabled";
-
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 static struct luaItem_selection luaAirRate = {
@@ -343,21 +341,23 @@ static void luadevUpdateBackpackOpts()
   if (config.GetBackpackDisable())
   {
     // If backpack is disabled, set all the Backpack select options to "Disabled"
-    luaDvrAux.options = luastrDisabled;
-    luaDvrStartDelay.options = luastrDisabled;
-    luaDvrStopDelay.options = luastrDisabled;
-    luaHeadTrackingEnableChannel.options = luastrDisabled;
-    luaHeadTrackingStartChannel.options = luastrDisabled;
-    luaBackpackTelemetry.options = luastrDisabled;
+    LUA_FIELD_HIDE(luaDvrAux);
+    LUA_FIELD_HIDE(luaDvrStartDelay);
+    LUA_FIELD_HIDE(luaDvrStopDelay);
+    LUA_FIELD_HIDE(luaHeadTrackingEnableChannel);
+    LUA_FIELD_HIDE(luaHeadTrackingStartChannel);
+    LUA_FIELD_HIDE(luaBackpackTelemetry);
+    LUA_FIELD_HIDE(luaBackpackVersion);
   }
   else
   {
-    luaDvrAux.options = luastrDvrAux;
-    luaDvrStartDelay.options = luastrDvrDelay;
-    luaDvrStopDelay.options = luastrDvrDelay;
-    luaHeadTrackingEnableChannel.options = luastrHeadTrackingEnable;
-    luaHeadTrackingStartChannel.options = luastrHeadTrackingStart;
-    luaBackpackTelemetry.options = luastrOffOn;
+    LUA_FIELD_SHOW(luaDvrAux);
+    LUA_FIELD_SHOW(luaDvrStartDelay);
+    LUA_FIELD_SHOW(luaDvrStopDelay);
+    LUA_FIELD_SHOW(luaHeadTrackingEnableChannel);
+    LUA_FIELD_SHOW(luaHeadTrackingStartChannel);
+    LUA_FIELD_SHOW(luaBackpackTelemetry);
+    LUA_FIELD_SHOW(luaBackpackVersion);
   }
 }
 
