@@ -21,7 +21,7 @@ sx127x = False
 
 config = {
         "options": {
-            'uid': [1,2,3,4,5,6],
+            "uid": [1,2,3,4,5,6],   # this is the 'flashed' UID and may be empty if using traditional binding on an RX.
             "tlm-interval": 240,
             "fan-runtime": 30,
             "no-sync-on-arm": False,
@@ -37,6 +37,7 @@ config = {
             "wifi-ssid": "network-ssid"
         },
         "config": {
+            "uid": [1,2,3,4,5,6],   # this is the 'running' UID
             "uidtype": "On loan",
             "ssid":"network-ssid",
             "mode":"STA",
@@ -170,6 +171,11 @@ def update_config():
     if 'forcetlm' in request.json:
         config['config']['force-tlm'] = request.json['forcetlm']
     return "Config Updated"
+
+@route('/options.json', method='POST')
+def update_options():
+    config['options'] = request.json
+    return "Options Updated"
 
 @route('/import', method='POST')
 def import_config():
