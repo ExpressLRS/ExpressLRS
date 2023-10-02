@@ -84,9 +84,14 @@ void WifiJoystick::Loop(unsigned long now)
 
        const char header[] = "ELRS_JOYSTICK";
 
+       uint8_t lower = (JOYSTICK_PORT) & 0xff;
+       uint8_t higher = (JOYSTICK_PORT >> (8*1)) & 0xff;
+
        udp->beginPacket("255.255.255.255", JOYSTICK_PORT);
        udp->write((uint8_t*)header, strlen(header));
        udp->write(JOYSTICK_VERSION);
+       udp->write(higher);
+       udp->write(lower);
        udp->write((uint8_t*)device_name, strlen(device_name));
        udp->endPacket();
 
