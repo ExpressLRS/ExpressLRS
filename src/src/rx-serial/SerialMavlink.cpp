@@ -10,21 +10,10 @@
 #define MAV_FTP_OPCODE_OPENFILERO 4
 
 // Variables / constants for Mavlink //
-FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkInputBuffer;
-FIFO_GENERIC<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
+FIFO<AP_MAX_BUF_LEN> mavlinkInputBuffer;
+FIFO<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 
-
-void SerialMavlink::setLinkQualityStats(uint16_t lq, uint16_t rssi)
-{
-    // unsupported
-}
-
-void SerialMavlink::sendLinkStatisticsToFC()
-{
-    // unsupported
-}
-
-uint32_t SerialMavlink::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     if (!frameAvailable) {
         return DURATION_IMMEDIATELY;
@@ -57,11 +46,6 @@ uint32_t SerialMavlink::sendRCFrameToFC(bool frameAvailable, uint32_t *channelDa
     return DURATION_IMMEDIATELY;
 }
 
-void SerialMavlink::sendMSPFrameToFC(uint8_t* data)
-{
-    // unsupported
-}
-
 int SerialMavlink::getMaxSerialReadSize()
 {
     return AP_MAX_BUF_LEN - mavlinkInputBuffer.size();
@@ -71,11 +55,11 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 {
     if (connectionState == connected)
     {
-        mavlinkInputBuffer.pushBytes(bytes, size);
+        mavlinkInputBuffer.atomicPushBytes(bytes, size);
     }
 }
 
-void SerialMavlink::handleUARTout()
+void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
     // Software-based flow control for mavlink
     uint16_t percentageFull = (mavlinkInputBuffer.size() * 100) / AP_MAX_BUF_LEN;
@@ -125,8 +109,16 @@ void SerialMavlink::handleUARTout()
     }
 
     auto size = mavlinkOutputBuffer.size();
+    if (size == 0)
+    {
+        // nothing to send
+        return;
+    }
+
     uint8_t apBuf[size];
+    mavlinkOutputBuffer.lock();
     mavlinkOutputBuffer.popBytes(apBuf, size);
+    mavlinkOutputBuffer.unlock();
 
     for (uint8_t i = 0; i < size; ++i)
     {
