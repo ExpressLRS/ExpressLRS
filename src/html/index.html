@@ -110,15 +110,15 @@
 					<h2>Import/Export</h2>
 					<br/>
 					<div>
-						<a href="/config?export" download="models.json" target="_blank" class="mui-btn mui-btn--small mui-btn--dark">Download model configuration file</a>
+						<a href="/config?export" download="models.json" target="_blank" class="mui-btn mui-btn--small mui-btn--dark">Save model configuration file</a>
 					</div>
 					<div>
-						<form action="" method="POST" enctype="multipart/form-data">
-							<div>
-								<label for="fileselect">Select a model configuration file to upload</label>
-								<input type="file" id="fileselect" name="fileselect[]" />
-							</div>
-						</form>
+						<button class="mui-btn mui-btn--small mui-btn--primary">
+							<label>
+								Upload model configuration file
+								<input type="file" id="fileselect" name="fileselect[]" class="upload" />
+							</label>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -130,15 +130,15 @@
 					If this happens you will need to recover via USB/Serial. You may also download the
 					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br/><br/>
-					<form id='upload_form' method='POST' enctype='multipart/form-data'>
-						<div class="group">
-							<input id='firmware_file' type='file' name='update'>
-							<button id='upload_btn' type='submit' class="mui-btn mui-btn--primary">Update</button>
-						</div>
-						<br/>
-						<h3 id="status"></h3>
-						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
-					</form>
+					<button id="upload_btn" class="mui-btn mui-btn--primary">
+						<label>
+							Flash firmware file
+							<input type="file" id="firmware_file" name="update" class="upload" />
+						</label>
+					</button>
+					<br/>
+					<h3 id="status"></h3>
+					<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
 				</div>
 			</div>
 

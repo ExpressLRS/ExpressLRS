@@ -458,7 +458,7 @@ function abortHandler(event) {
   });
 }
 
-_('upload_form').addEventListener('submit', (e) => {
+_('firmware_file').addEventListener('change', (e) => {
   e.preventDefault();
   uploadFile();
 });
