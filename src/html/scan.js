@@ -554,7 +554,7 @@ _('reset-options').addEventListener('click', callback('Reset Runtime Options', '
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
-if (_('config') !== undefined) {
+if (_('config')) {
   _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
