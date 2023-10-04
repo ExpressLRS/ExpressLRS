@@ -13,7 +13,7 @@
     text-align: center;
 }
 
-.upload {
+.upload > label > input {
 	clip: rect(0 0 0 0);
 	clip-path: inset(50%);
 	height: 1px;
@@ -24,11 +24,11 @@
 	white-space: nowrap;
 	width: 1px;
 }
-label:has(.upload) {
+.upload > label {
 	cursor: pointer;
 	padding: 10px 16px 10px 16px;
 }
-button:has(label .upload) {
+.upload {
 	padding: 0;
 	tab-index: -1;
 }
