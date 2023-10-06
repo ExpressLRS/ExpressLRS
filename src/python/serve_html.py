@@ -194,6 +194,7 @@ def mode():
     net_counter = net_counter + 1
     if (net_counter > 3):
         return '["Test Network 1", "Test Network 2", "Test Network 3", "Test Network 4", "Test Network 5"]'
+    response.status = 204
     return '[]'
 
 if __name__ == '__main__':

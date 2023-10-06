@@ -311,7 +311,6 @@ function initOptions() {
       updateOptions(data['options']);
       updateConfig(data['config'], data['options']);
       initBindingPhraseGen();
-      setTimeout(getNetworks, 2000);
     }
   };
   xmlhttp.open('GET', '/config', true);
@@ -337,6 +336,8 @@ function getNetworks() {
   xmlhttp.open('GET', 'networks.json', true);
   xmlhttp.send();
 }
+
+_('network-tab').addEventListener('mui.tabs.showstart', getNetworks);
 
 // =========================================================
 
