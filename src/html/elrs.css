@@ -21,6 +21,19 @@ body, input, select, textarea {
     line-height: 1.65em;
 }
 
+.fixed-column {
+	width: 20px;
+	padding-left: 4px !important;
+	padding-right: 4px !important;
+}
+
+.compact {
+	padding-left: 10px !important;
+	padding-right: 10px !important;
+	padding-top: 5px !important;
+	margin-bottom: 5px !important;
+}
+
 @media screen and (max-width: 800px) {
     .logo {
         width:25%;
