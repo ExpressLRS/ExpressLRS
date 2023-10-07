@@ -175,9 +175,7 @@ enum eServoOutputMode : uint8_t
     som400Hz,
     som10KHzDuty,
     somOnOff,   // Digital 0/1 mode
-#if defined(PLATFORM_ESP32)
     somDShot,   // DShot300
-#endif
     somSerial,  // Serial TX or RX depending on pin
     somSCL,     // I2C clock signal
     somSDA,     // I2C data line

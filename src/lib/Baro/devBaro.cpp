@@ -29,7 +29,7 @@ static bool Baro_Detect()
             baro = new SPL06();
             return true;
         }
-        DBGLN("No baro detected");
+        // DBGLN("No baro detected");
     } // I2C
 #endif
     return false;

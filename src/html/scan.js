@@ -48,7 +48,7 @@ function enumSelectGenerate(id, val, arOptions) {
 }
 
 @@if not isTX:
-function updatePwmSettings(arPwm, allowDshot) {
+function updatePwmSettings(arPwm) {
   if (arPwm === undefined) {
     if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
@@ -69,7 +69,7 @@ function updatePwmSettings(arPwm, allowDshot) {
     if (features & 16) {
       modes.push('DShot');
     } else {
-      modes.push('DShot');
+      modes.push(undefined);
     }
     if (features & 1) {
       modes.push('Serial TX');
@@ -326,7 +326,7 @@ function updateConfig(data, options) {
       _('rcvr-uart-baud').value = '115200';
     }
   }
-  updatePwmSettings(data.pwm, data['allow-dshot']);
+  updatePwmSettings(data.pwm);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
   _('is-airport').onchange = _('serial-protocol').onchange;

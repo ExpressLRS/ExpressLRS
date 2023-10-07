@@ -51,22 +51,22 @@ config = {
                 {
                     "config": 1536,
                     "pin": 4,
-                    "features": 12
+                    "features": 12 + 16
                 },
                 {
                     "config": 2048,
                     "pin": 5,
-                    "features": 12
+                    "features": 12 + 16
                 },
                 {
                     "config": 3584,
                     "pin": 1,
-                    "features": 1
+                    "features": 1 + 16
                 },
                 {
                     "config": 4608,
                     "pin": 3,
-                    "features": 2
+                    "features": 2 + 16
                 }
             ],
             "serial-protocol": 3,

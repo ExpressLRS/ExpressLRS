@@ -11,8 +11,9 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
-static const char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
-static char outputModes[128];
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA";
+#endif
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -156,46 +157,66 @@ static struct luaItem_command luaReturnModel = {
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
 {
-  setLuaUint8Value(&luaMappingChannelOut, arg);
-  strcpy(outputModes, pwmModes);
-  #if defined(PLATFORM_ESP32)
-  if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)
-  {
-    strcat(outputModes, ";DShot");
-  }
-  #endif
-  if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
-  {
-    strcat(outputModes, ";Serial RX");
-  }
-  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
-  {
-    strcat(outputModes, ";Serial TX");
-  }
-  else
-  {
-    strcat(outputModes, ";");
-  }
-  if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SCL)
-  {
-    strcat(outputModes, ";I2C SCL;");
-  }
-  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SDA)
-  {
-    strcat(outputModes, ";;I2C SDA");
-  }
-  else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN)
-  {
-    strcat(outputModes, ";I2C SCL;I2C SDA");
-  }
-  // trim off trailing semicolons
-  for(auto lastPos = strnlen(outputModes, sizeof(outputModes))-1 ; outputModes[lastPos] == ';' ; lastPos--)
-  {
-    outputModes[lastPos] = 0;
-  }
-  luaMappingOutputMode.options = outputModes;
-  // Must trigger an event because this is not a persistent config item
-  devicesTriggerEvent();
+    setLuaUint8Value(&luaMappingChannelOut, arg);
+
+    // When the selected output channel changes, update the available PWM modes for that pin
+    // Truncate the select options before the ; following On/Off
+    pwmModes[50] = '\0';
+
+#if defined(PLATFORM_ESP32)
+    // DShot output (1 option)
+    // ;DShot
+    // ESP8266 enum skips this, so it is never present
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)
+    {
+        strcat(pwmModes, ";DShot");
+    }
+    else
+#endif
+    {
+        strcat(pwmModes, ";");
+    }
+
+    // SerialIO outputs (1 option)
+    // ;[Serial RX] | [Serial TX]
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
+    {
+        strcat(pwmModes, ";Serial RX");
+    }
+    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
+    {
+        strcat(pwmModes, ";Serial TX");
+    }
+    else
+    {
+        strcat(pwmModes, ";");
+    }
+
+    // I2C pins (2 options)
+    // ;[I2C SCL] ;[I2C SDA]
+    // If the target defines SCL/SDA then those pins MUST be used,
+    // otherwise allow any pin to be either SCL or SDA
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SCL)
+    {
+        strcat(pwmModes, ";I2C SCL;");
+    }
+    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SDA)
+    {
+        strcat(pwmModes, ";;I2C SDA");
+    }
+    else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN)
+    {
+        strcat(pwmModes, ";I2C SCL;I2C SDA");
+    }
+
+    // trim off trailing semicolons (assumes pwmModes has at least 1 non-semicolon)
+    for (auto lastPos = strlen(pwmModes)-1; pwmModes[lastPos] == ';'; lastPos--)
+    {
+        pwmModes[lastPos] = '\0';
+    }
+
+    // Trigger an event to update the related fields to represent the selected channel
+    devicesTriggerEvent();
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
@@ -288,8 +309,8 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
     for (unsigned ch=0; ch<(unsigned)GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;
-        // The value must fit into the 10 bit range of the failsafe
-        newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+      // The value must fit into the 10 bit range of the failsafe
+      newPwmCh.raw = config.GetPwmChannel(ch)->raw;
       newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
       //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+988U);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
@@ -445,7 +466,7 @@ static int timeout()
 {
   luaHandleUpdateParameter();
   // Receivers can only `UpdateParamReq == true` every 4th packet due to the transmitter cadence in 1:2
-  // Channels, Down-link Telemetry Slot, Uplink Telemetry (the write command), Down-link Telemetry Slot...
+  // Channels, Downlink Telemetry Slot, Uplink Telemetry (the write command), Downlink Telemetry Slot...
   // (interval * 4 / 1000) or 1 second if not connected
   return (connectionState == connected) ? ExpressLRS_currAirRate_Modparams->interval / 250 : 1000;
 }

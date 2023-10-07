@@ -333,9 +333,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    #if defined(PLATFORM_ESP32)
-    json["config"]["allow-dshot"] = true;
-    #endif
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
@@ -347,7 +344,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
       else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
       else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
+      #if defined(PLATFORM_ESP32)
       if (pin != 0) features |= 16; // DShot supported
+      #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
     #endif

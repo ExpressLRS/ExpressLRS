@@ -971,19 +971,20 @@ RxConfig::SetDefaults(bool commit)
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
-        SetPwmChannel(ch, 512, ch, false, som50Hz, false);
+        uint8_t mode = som50Hz;
         // setup defaults for hardware defined I2C pins that are also IO pins
         if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
         {
             if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
             {
-                SetPwmChannel(ch, 512, ch, false, somSCL, false);
+                mode = somSCL;
             }
             else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SDA)
             {
-                SetPwmChannel(ch, 512, ch, false, somSDA, false);
+                mode = somSDA;
             }
         }
+        SetPwmChannel(ch, 512, ch, false, mode, false);
     }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif

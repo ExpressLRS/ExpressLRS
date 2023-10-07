@@ -22,37 +22,25 @@ static void setupWire()
     int gpio_sda = GPIO_PIN_SDA;
 
 #if defined(TARGET_RX) && defined(GPIO_PIN_PWM_OUTPUTS)
-    // If I2C pins are not defined in the hardware, then look for configured I2C
-    if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN)
+    for (uint8_t ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
-        // find the configured SCL/SDA pins, if any
-        for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+        auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
+        auto pwm = config.GetPwmChannel(ch);
+        // if the PWM pin is nominated as SDA or SCL, and it's not configured for I2C then undef the pins
+        if ((pin == GPIO_PIN_SCL && pwm->val.mode != somSCL) || (pin == GPIO_PIN_SDA && pwm->val.mode != somSDA))
         {
-            auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
-            auto pwm = config.GetPwmChannel(ch);
-            if (pin == GPIO_PIN_SCL && pwm->val.mode != somSCL)
-            {
-                gpio_scl = pin;
-            }
-            if (pin == GPIO_PIN_SDA && pwm->val.mode != somSDA)
-            {
-                gpio_sda = pin;
-            }
+            gpio_scl = UNDEF_PIN;
+            gpio_sda = UNDEF_PIN;
+            break;
         }
-    }
-    else
-    {
-        for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+        // If I2C pins are not defined in the hardware, then look for configured I2C
+        if (GPIO_PIN_SCL == UNDEF_PIN && pwm->val.mode == somSCL)
         {
-            auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
-            auto pwm = config.GetPwmChannel(ch);
-            // if the pin is SDA or SCL and it's not configured for I2C then undef the pins
-            if ((pin == GPIO_PIN_SCL && pwm->val.mode != somSCL) || (pin == GPIO_PIN_SDA && pwm->val.mode != somSDA))
-            {
-                gpio_scl = UNDEF_PIN;
-                gpio_sda = UNDEF_PIN;
-                break;
-            }
+            gpio_scl = pin;
+        }
+        if (GPIO_PIN_SCL == UNDEF_PIN && pwm->val.mode == somSDA)
+        {
+            gpio_sda = pin;
         }
     }
 #endif
