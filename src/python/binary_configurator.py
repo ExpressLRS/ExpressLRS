@@ -313,7 +313,8 @@ class writeable_dir(argparse.Action):
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
-    parser.add_argument('--dir', action=readable_dir, default=None)
+    parser.add_argument('--dir', action=readable_dir, default=None, help='The directory that contains the "hardware" and other firmware directories')
+    parser.add_argument('--fdir', action=readable_dir, default=None, help='If specified, then the firmware files are loaded from this directory')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -347,7 +348,7 @@ def main():
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
     parser.add_argument("--erase", action='store_true', default=False, help="Full chip erase before flashing on ESP devices")
-    parser.add_argument('--out', action=writeable_dir, default=None)
+    parser.add_argument('--out', action=writeable_dir, default=".")
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
@@ -361,19 +362,20 @@ def main():
 
     args = parser.parse_args()
 
-    if args.dir != None:
+    if args.dir is not None:
         os.chdir(args.dir)
 
-    if args.file == None:
+    if args.file is None:
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
+            firmware_dir = '' if args.fdir is None else args.fdir + '/'
+            srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
-            shutil.copy2(srcdir + '/firmware.bin', ".")
-            if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")
-            if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', ".")
-            if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', ".")
+            shutil.copy2(srcdir + '/firmware.bin', args.out)
+            if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', args.out)
+            if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', args.out)
+            if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', args.out)
             args.file = open(dst, 'r+b')
         except FileNotFoundError:
             print("Firmware files not found, did you download and unpack them in this directory?")
