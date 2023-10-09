@@ -111,11 +111,11 @@ protected:
 
         if (diff < threshold_scaled)
         {
-            return (int8_t)lower_value >> 4;
+            return (int8_t)(lower_value >> 4);
         }
         else if (diff > threshold_scaled * 2)
         {
-            return (int8_t)average_value >> 4;
+            return (int8_t)(average_value >> 4);
         }
         else
         {
