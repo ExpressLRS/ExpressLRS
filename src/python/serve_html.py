@@ -21,7 +21,7 @@ sx127x = False
 
 config = {
         "options": {
-            'uid': [1,2,3,4,5,6],
+            "uid": [1,2,3,4,5,6],   # this is the 'flashed' UID and may be empty if using traditional binding on an RX.
             "tlm-interval": 240,
             "fan-runtime": 30,
             "no-sync-on-arm": False,
@@ -32,11 +32,12 @@ config = {
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
             "domain": 1,
-            "wifi-on-interval": 60,
+            # "wifi-on-interval": 60,
             "wifi-password": "w1f1-pAssw0rd",
             "wifi-ssid": "network-ssid"
         },
         "config": {
+            "uid": [1,2,3,4,5,6],   # this is the 'running' UID
             "uidtype": "On loan",
             "ssid":"network-ssid",
             "mode":"STA",
@@ -181,6 +182,11 @@ def update_config():
         config['config']['force-tlm'] = request.json['forcetlm']
     return "Config Updated"
 
+@route('/options.json', method='POST')
+def update_options():
+    config['options'] = request.json
+    return "Options Updated"
+
 @route('/import', method='POST')
 def import_config():
     json = request.json
@@ -198,6 +204,7 @@ def mode():
     net_counter = net_counter + 1
     if (net_counter > 3):
         return '["Test Network 1", "Test Network 2", "Test Network 3", "Test Network 4", "Test Network 5"]'
+    response.status = 204
     return '[]'
 
 if __name__ == '__main__':

@@ -13,6 +13,26 @@
     text-align: center;
 }
 
+.upload > label > input {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	white-space: nowrap;
+	width: 1px;
+}
+.upload > label {
+	cursor: pointer;
+	padding: 10px 16px 10px 16px;
+}
+.upload {
+	padding: 0;
+	tab-index: -1;
+}
+
 body, input, select, textarea {
     color: #666;
     font-family: "Source Sans Pro", Helvetica, sans-serif;
