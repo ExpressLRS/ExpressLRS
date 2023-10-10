@@ -939,6 +939,7 @@ static void startMDNS()
 
   #ifdef HAS_WIFI_JOYSTICK
     MDNS.addService("elrs", "udp", JOYSTICK_PORT);
+    MDNS.addServiceTxt("elrs", "udp", "device", (const char *)device_name);
     MDNS.addServiceTxt("elrs", "udp", "version", String(JOYSTICK_VERSION).c_str());
   #endif
 }
