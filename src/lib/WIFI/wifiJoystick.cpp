@@ -71,42 +71,46 @@ void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uin
 
 void WifiJoystick::Loop(unsigned long now)
 {
-   static unsigned long millis = 0;
-   if(!udp || active)
-   {
+    static unsigned long last = 0;
+    if (!udp || active)
+    {
        return;
-   }
+    }
 
-   // broadcast wifi joystick options
-   if(now >= millis + 5000)
-   {
-      // DBGLN("SSID: %s", WiFi.SSID());
+    // Advertise the existance of the server via broadcast
+    constexpr unsigned BROADCAST_INTERVAL = 5000U;
+    if (now - last > BROADCAST_INTERVAL)
+    {
+        last = now;
 
-       const char header[] = "ELRS_JOYSTICK";
+        struct ElrsUdpAdvertisement_s {
+            uint32_t magic;     // ['E', 'L', 'R', 'S']
+            uint8_t version;    // JOYSTICK_VERSION
+            uint16_t port;      // JOYSTICK_PORT, network byte order
+            uint8_t name_len;   // length of the device name that follows
+            char name[0];       // device name
+        } eua = {
+            .magic = htobe32(0x454C5253),
+            .version = JOYSTICK_VERSION,
+            .port = htons(JOYSTICK_PORT),
+            .name_len = (uint8_t)strlen(device_name)
+        };
 
-       uint8_t lower = (JOYSTICK_PORT) & 0xff;
-       uint8_t higher = (JOYSTICK_PORT >> (8*1)) & 0xff;
-
-       udp->beginPacket("255.255.255.255", JOYSTICK_PORT);
-       udp->write((uint8_t*)header, strlen(header));
-       udp->write(JOYSTICK_VERSION);
-       udp->write(higher);
-       udp->write(lower);
-       udp->write((uint8_t*)device_name, strlen(device_name));
+       udp->beginPacket(IPAddress(255, 255, 255, 255), JOYSTICK_PORT);
+       udp->write((uint8_t*)&eua, sizeof(eua));
+       udp->write((uint8_t*)device_name, eua.name_len);
        udp->endPacket();
+    }
 
-       millis = now;
-   }
-
-   udp->flush();
-
+    // Free any received data
+    udp->flush();
 }
 
 /*
 Frame format:
-1 byte frame type
+1 byte frame type (JOYSTICK_CHANNEL_FRAME)
 1 byte channel count
-channel count * 2 bytes channel data in range 0 to 32767
+channel count * 2 bytes channel data in range 0 to 0xffff, network byte order
 */
 void WifiJoystick::UpdateValues()
 {
@@ -120,7 +124,9 @@ void WifiJoystick::UpdateValues()
     udp->write(channelCount);
     for (uint8_t i = 0; i < channelCount; i++)
     {
-        uint16_t channel = map(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 32767);
+        uint16_t channel = htons(map(
+            constrain(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX),
+            CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 0xffff));
         udp->write((uint8_t*)&channel, 2);
     }
     udp->endPacket();
