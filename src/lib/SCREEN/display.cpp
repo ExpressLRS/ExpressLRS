@@ -1,6 +1,8 @@
 #include "display.h"
 #include "helpers.h"
 
+extern bool OtaIsFullRes;
+
 const char *Display::message_string[] = {
     "ExpressLRS",
     "[  Connected  ]",
@@ -10,6 +12,8 @@ const char *Display::message_string[] = {
 
 const char *Display::main_menu_strings[][2] = {
     {"PACKET", "RATE"},
+    {"SWITCH", "MODE"},
+    {"ANTENNA", "MODE"},
     {"TX", "POWER"},
     {"TELEM", "RATIO"},
     {"MOTION", "DETECT"},
@@ -57,6 +61,24 @@ static const char *rate_string[] = {
     "D50Hz"
 };
 #endif
+
+static const char *switch_mode[] = {
+    "Wide",
+    "Hybrid",
+};
+
+static const char *switch_mode_full[] = {
+    "8Ch",
+    "16Ch /2",
+    "12Ch Mix"
+};
+
+static const char *antenna_mode[] = {
+    "Gemini",
+    "Ant 1",
+    "Ant 2",
+    "Switch",
+};
 
 static const char *power_string[] = {
     "10mW",
@@ -166,6 +188,14 @@ int Display::getValueCount(menu_item_t menu)
     {
     case STATE_PACKET:
         return ARRAY_SIZE(rate_string);
+    case STATE_SWITCH:
+        if (OtaIsFullRes)
+        {
+            return ARRAY_SIZE(switch_mode_full);
+        }
+        return ARRAY_SIZE(switch_mode);
+    case STATE_ANTENNA:
+        return ARRAY_SIZE(antenna_mode);
     case STATE_TELEMETRY:
         return ARRAY_SIZE(ratio_string);
     case STATE_POWERSAVE:
@@ -198,6 +228,14 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
     {
     case STATE_PACKET:
         return rate_string[value_index];
+    case STATE_SWITCH:
+        if (OtaIsFullRes)
+        {
+            return switch_mode_full[value_index];
+        }
+        return switch_mode[value_index];
+    case STATE_ANTENNA:
+        return antenna_mode[value_index];
     case STATE_TELEMETRY:
         return ratio_string[value_index];
     case STATE_TELEMETRY_CURR:
