@@ -31,8 +31,8 @@
  * Step 3:
  *   Send HTTP POST request to device URL http://<IP>/udpcontrol
  *   Param: "action" must be "joystick_begin"
- *   Param: "interval" in us to send updates, or 0 for default (10ms)
- *   Param: "channels" number of channels to send in each frame, or 0 for default (8)
+ *   Param (optional): "interval" in us to send updates, or 0 for default (10ms)
+ *   Param (optional): "channels" number of channels to send in each frame, or 0 for default (8)
  *   e.g. http://<IP>/udpcontrol?action=joystick_begin&interval=10000&channels=8
  *
  * Step 3:
