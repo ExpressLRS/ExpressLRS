@@ -732,9 +732,8 @@ static void WebUdpControl(AsyncWebServerRequest *request)
   const String &action = request->arg("action");
   if (action.equals("joystick_begin"))
   {
-    int32_t updateInterval = request->hasArg("interval") ? request->arg("interval").toInt() : JOYSTICK_DEFAULT_UPDATE_INTERVAL;
-    uint32_t channelCount = request->hasArg("channels") ? request->arg("channels").toInt() : JOYSTICK_DEFAULT_CHANNEL_COUNT;
-    WifiJoystick::StartSending(request->client()->remoteIP(), updateInterval, channelCount);
+    WifiJoystick::StartSending(request->client()->remoteIP(),
+      request->arg("interval").toInt(), request->arg("channels").toInt());
     request->send(200, "text/plain", "ok");
   }
   else if (action.equals("joystick_end"))

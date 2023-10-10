@@ -53,18 +53,29 @@ void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uin
         return;
     }
 
+    // RF should already be shut down if in wifi mode
+    // Adjust the timer to run at the requested interval
+    // with a hard lower limit of 1000Hz
+    if (updateInterval == 0 || updateInterval < 1000)
+    {
+        updateInterval = JOYSTICK_DEFAULT_UPDATE_INTERVAL;
+    }
     hwTimer::updateInterval(updateInterval);
     CRSF::setSyncParams(updateInterval);
-    POWERMGNT::setPower(MinPower);
-    Radio.End();
 
     CRSF::RCdataCallback = &UpdateValues;
+
+    // Channel Count
+    if (newChannelCount == 0)
+    {
+        newChannelCount = JOYSTICK_DEFAULT_CHANNEL_COUNT;
+    }
+    else if (newChannelCount > 16)
+    {
+        newChannelCount = 16;
+    }
     channelCount = newChannelCount;
 
-    if (channelCount > 16)
-    {
-        channelCount = 16;
-    }
     active = true;
 }
 
