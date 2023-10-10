@@ -47,18 +47,18 @@ void WifiJoystick::StopJoystickService()
 
 void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uint8_t newChannelCount)
 {
-    if (!udp)
+    remoteIP = ip;
+    if (!udp || active)
     {
         return;
     }
-    remoteIP = ip;
 
     hwTimer::updateInterval(updateInterval);
     CRSF::setSyncParams(updateInterval);
     POWERMGNT::setPower(MinPower);
     Radio.End();
 
-    CRSF::RCdataCallback = UpdateValues;
+    CRSF::RCdataCallback = &UpdateValues;
     channelCount = newChannelCount;
 
     if (channelCount > 16)
@@ -101,9 +101,6 @@ void WifiJoystick::Loop(unsigned long now)
        udp->write((uint8_t*)device_name, eua.name_len);
        udp->endPacket();
     }
-
-    // Free any received data
-    udp->flush();
 }
 
 void WifiJoystick::UpdateValues()
@@ -123,7 +120,8 @@ void WifiJoystick::UpdateValues()
             CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 0xffff));
         udp->write((uint8_t*)&channel, 2);
     }
-    udp->endPacket();
+
+    active = udp->endPacket() != 0;
 }
 
 #endif
