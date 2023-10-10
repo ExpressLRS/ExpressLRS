@@ -562,6 +562,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 #if defined(Regulatory_Domain_EU_CE_2400)
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+
+  if (transmittingRadio == SX12XX_Radio_NONE)
+  {
+    // no packet will be sent due to LBT
+    // call TXdoneCallback() to prepare for TLM
+    // and fall through to call TXnb() which will
+    // set the transceiver the correct fallback mode
+    Radio.TXdoneCallback();
+  }
 #endif
 
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
@@ -572,12 +581,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
  */
 void ICACHE_RAM_ATTR timerCallbackNormal()
 {
-  // No packet has been sent due to LBT.  Call TXdoneCallback to prepare for TLM.
-	if (Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
-  {
-		Radio.TXdoneCallback();
-  }
-
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
