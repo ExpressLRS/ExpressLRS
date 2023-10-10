@@ -657,9 +657,10 @@ local function reloadRelatedFields(field)
   for fieldId = fields_count, 1, -1 do
     -- Skip this field, will be added to end
     local fldTest = fields[fieldId]
+    local fldType = fldTest.type or 99 -- type could be nil if still loading
     if fieldId ~= field.id
       and fldTest.parent == field.parent
-      and (fldTest.type or 99) < 11 then -- type could be nil if still loading
+      and (fldType < 11 or fldType == 12) then -- ignores FOLDER/COMMAND/devices/EXIT
       fldTest.nc = true -- "no cache" the options
       loadQ[#loadQ+1] = fieldId
     end

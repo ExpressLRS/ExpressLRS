@@ -21,7 +21,7 @@ enum lua_Flags{
 
 struct luaPropertiesCommon {
     const char* const name;    // display name
-    const crsf_value_type_e type;
+    crsf_value_type_e type;
     uint8_t id;         // Sequential id assigned by enumeration
     uint8_t parent;     // id of parent folder
 } PACKED;
@@ -115,12 +115,12 @@ struct luaItem_float {
 } PACKED;
 
 struct luaItem_string {
-    const struct luaPropertiesCommon common;
+    struct luaPropertiesCommon common;
     const char* value;
 } PACKED;
 
 struct luaItem_folder {
-    const struct luaPropertiesCommon common;
+    struct luaPropertiesCommon common;
     char* dyn_name;
 } PACKED;
 
@@ -137,6 +137,9 @@ uint8_t getLuaWarningFlags(void);
 
 void luaRegisterDevicePingCallback(void (*callback)());
 #endif
+
+#define LUA_FIELD_HIDE(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type | CRSF_FIELD_HIDDEN); }
+#define LUA_FIELD_SHOW(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type & ~CRSF_FIELD_HIDDEN); }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
