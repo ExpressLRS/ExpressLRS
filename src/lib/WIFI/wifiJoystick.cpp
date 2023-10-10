@@ -106,12 +106,6 @@ void WifiJoystick::Loop(unsigned long now)
     udp->flush();
 }
 
-/*
-Frame format:
-1 byte frame type (JOYSTICK_CHANNEL_FRAME)
-1 byte channel count
-channel count * 2 bytes channel data in range 0 to 0xffff, network byte order
-*/
 void WifiJoystick::UpdateValues()
 {
     if (!udp || !active)
@@ -120,7 +114,7 @@ void WifiJoystick::UpdateValues()
     }
 
     udp->beginPacket(remoteIP, JOYSTICK_PORT);
-    udp->write(JOYSTICK_CHANNEL_FRAME);
+    udp->write(WifiJoystick::FRAME_CHANNELS);
     udp->write(channelCount);
     for (uint8_t i = 0; i < channelCount; i++)
     {
