@@ -1,6 +1,6 @@
 @@require(PLATFORM, VERSION, isTX, sx127x)
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
 	<title>Welcome to your ExpressLRS System</title>
@@ -69,16 +69,14 @@ td img.icon-pwm {
 			You can <a download href="/hardware.json">download</a> the configuration or <a href="/reset?hardware">reset</a> to pre-configured defaults and reboot.
 		</div>
 		<div class="mui-panel">
-			<form id="notused" action="" method="POST" enctype="multipart/form-data">
-				<fieldset>
-					<input type="hidden" id="MAX_FILE_SIZE" name="MAX_FILE_SIZE" value="10000" />
-					<div>
-						<label for="fileselect">Load target configuration (remember to press "Save Target Configuration" below):</label>
-						<input type="file" id="fileselect" name="fileselect[]" />
-						<div id="filedrag">or drop files here</div>
-					</div>
-				</fieldset>
-			</form>
+			<label>Upload target configuration (remember to press "Save Target Configuration" below):</label>
+			<button class="mui-btn mui-btn--small mui-btn--primary upload">
+				<label>
+					Upload
+					<input type="file" id="fileselect" name="fileselect[]" />
+				</label>
+			</button>
+			<div id="filedrag">or drop files here</div>
 		</div>
 		<div class="mui-panel">
 			<form id='upload_hardware' method='POST' action="/hardware">

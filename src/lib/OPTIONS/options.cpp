@@ -1,6 +1,5 @@
 #include "targets.h"
 #include "options.h"
-#include "helpers.h"
 
 #include "logging.h"
 
@@ -204,7 +203,10 @@ void saveOptions(Stream &stream, bool customised)
         JsonArray uid = doc.createNestedArray("uid");
         copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
     }
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.wifi_auto_on_interval != -1)
+    {
+        doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    }
     if (firmwareOptions.home_wifi_ssid[0])
     {
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
