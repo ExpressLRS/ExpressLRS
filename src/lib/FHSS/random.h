@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <limits>
 
 /// @brief Class with static methods for random generation
 class randomGeneration {
