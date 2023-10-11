@@ -21,7 +21,7 @@
  *   Alternative: Listen for UDP broadcasts that contains a frame in the structure of
  *     4 bytes: ['E', 'L', 'R', 'S']
  *     1 byte: Protocol Version
- *     2 byte unsigned: PORT, network byte order
+ *     2 byte unsigned: PORT, little-endian
  *     1 byte: length of Device Name
  *     ASCII Text: Device Name
  *
@@ -39,7 +39,7 @@
  *   receive frames in the format of:
  *   1 byte: Frame type (WifiJoystickFrameType_e)CHANNELS
  *   1 byte: Number of channels that follow
- *   2 bytes unsigned * channel count: Channel data in range 0 to 0xffff, network byte order
+ *   2 bytes unsigned * channel count: Channel data in range 0 to 0xffff, little-endian
  *
  * Step 4:
  *  To end joystick data being sent, POST to the control URL

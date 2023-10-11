@@ -25,6 +25,15 @@ IPAddress WifiJoystick::remoteIP;
 uint8_t WifiJoystick::channelCount = JOYSTICK_DEFAULT_CHANNEL_COUNT;
 bool WifiJoystick::active = false;
 
+static inline uint16_t htole16(uint16_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return __builtin_bswap16(val);
+#else
+    return val;
+#endif
+}
+
 void WifiJoystick::StartJoystickService()
 {
     if (!udp)
@@ -95,15 +104,15 @@ void WifiJoystick::Loop(unsigned long now)
         last = now;
 
         struct ElrsUdpAdvertisement_s {
-            uint32_t magic;     // ['E', 'L', 'R', 'S']
+            uint32_t magic;     // char[4] = ['E', 'L', 'R', 'S']
             uint8_t version;    // JOYSTICK_VERSION
-            uint16_t port;      // JOYSTICK_PORT, network byte order
+            uint16_t port;      // JOYSTICK_PORT, little endian
             uint8_t name_len;   // length of the device name that follows
             char name[0];       // device name
         } eua = {
-            .magic = htobe32(0x454C5253),
+            .magic = htobe32(0x454C5253), // always big-endian so ELRS is in order
             .version = JOYSTICK_VERSION,
-            .port = htons(JOYSTICK_PORT),
+            .port = htole16(JOYSTICK_PORT),
             .name_len = (uint8_t)strlen(device_name)
         };
 
@@ -126,7 +135,7 @@ void WifiJoystick::UpdateValues()
     udp->write(channelCount);
     for (uint8_t i = 0; i < channelCount; i++)
     {
-        uint16_t channel = htons(map(
+        uint16_t channel = htole16(map(
             constrain(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX),
             CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 0xffff));
         udp->write((uint8_t*)&channel, 2);
