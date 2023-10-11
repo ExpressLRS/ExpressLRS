@@ -1,17 +1,24 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <limits>
 
-// the max value returned by rng
-#define RNG_MAX 0x7FFF
+/// @brief Class with static methods for random generation
+class randomGeneration {
+public:
+    /// @brief Sets new seed for random generation
+    /// @param newSeed new seed
+    static void setSeed(const uint32_t newSeed);
 
-uint16_t rng(void);
+    /// @brief Returns random value in range [0, upper], where upper < 256
+    /// @param upper upper bound of random value
+    /// @return random value in range [0, upper]
+    static uint8_t randomValueByUpperBound(const uint8_t upper);
+private:
+    /// @brief Seed for random generation
+    static uint32_t seed;
 
-void rngSeed(uint32_t newSeed);
-// 0..255 returned
-uint8_t rng8Bit(void);
-// 0..31 returned
-uint8_t rng5Bit(void);
-
-// returns 0 <= x < upper where n < 256
-uint8_t rngN(uint8_t upper);
+    /// @brief Returns random value
+    /// @return random value
+    static uint16_t random();
+};

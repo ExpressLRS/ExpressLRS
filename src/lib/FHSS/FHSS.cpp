@@ -69,7 +69,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
-    rngSeed(seed);
+    randomGeneration::setSeed(seed);
 
     // initialize the sequence array
     for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
@@ -89,7 +89,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         if (i % FHSSconfig->freq_count != 0)
         {
             uint8_t offset = (i / FHSSconfig->freq_count) * FHSSconfig->freq_count; // offset to start of current block
-            uint8_t rand = rngN(FHSSconfig->freq_count-1)+1; // random number between 1 and FHSS_FREQ_CNT
+            uint8_t rand = randomGeneration::randomValueByUpperBound(FHSSconfig->freq_count-1)+1; // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
             uint8_t temp = FHSSsequence[i];
