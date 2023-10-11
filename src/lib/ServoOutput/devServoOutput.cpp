@@ -141,6 +141,12 @@ static void initialize()
         return;
     }
 
+    for (int i=0 ; i<PWM_MAX_CHANNELS ; i++)
+    {
+        SERVO_PINS[i] = -1;
+        PWM_CHANNELS[i] = -1;
+    }
+
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];

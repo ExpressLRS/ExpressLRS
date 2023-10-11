@@ -89,9 +89,10 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
         .timer_sel = (ledc_timer_t)timer,
         .duty = 0,
         .hpoint = 0};
-    if (ledc_channel_config(&ledc_channel) != OK)
+    auto err = ledc_channel_config(&ledc_channel);
+    if (err != OK)
     {
-        ERRLN("ledc_channel_config failed");
+        ERRLN("ledc_channel_config failed with error 0x%x on pin %d", err, pin);
     }
 }
 
@@ -137,9 +138,10 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
             .duty_mode = MCPWM_DUTY_MODE_0,
             .counter_mode = MCPWM_UP_COUNTER,
         };
-        if (mcpwm_gpio_init(mcpwm_config[channel].unit, mcpwm_config[channel].signal, pin) != ESP_OK)
+        auto err = mcpwm_gpio_init(mcpwm_config[channel].unit, mcpwm_config[channel].signal, pin);
+        if (err != ESP_OK)
         {
-            DBGLN("failed %d", pin);
+            DBGLN("mcpwm_gpio_init failed with error 0x%x on pin %d", err, pin);
         }
         mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
         mcpwm_frequencies[channel] = frequency;
@@ -190,7 +192,7 @@ void PWMController::release(pwm_channel_t channel)
         mcpwm_stop(mcpwm_config[ch].unit, mcpwm_config[ch].timer);
         mcpwm_frequencies[ch] = 0;
     }
-    else if (IS_MCPWM_CHANNEL(channel))
+    else if (IS_LEDC_CHANNEL(channel))
     {
         auto ch = LEDC_CHANNEL(channel);
         ledcDetachPin(ledc_config[ch].pin);
