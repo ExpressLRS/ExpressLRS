@@ -51,7 +51,7 @@ void debugFreeInitLogger();
       LOGGING_UART.print("ERROR: "); \
       debugPrintf(msg, ##__VA_ARGS__); \
       LOGGING_UART.println(); \
-  })(LOGGING_UART.println("ERROR: " msg))
+  },LOGGING_UART.println("ERROR: " msg))
 #endif
 
 #if defined(DEBUG_LOG) && !defined(CRITICAL_FLASH)
