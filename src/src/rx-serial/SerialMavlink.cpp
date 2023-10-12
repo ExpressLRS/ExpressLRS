@@ -154,14 +154,16 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
                         mavlink_msg_file_transfer_protocol_pack(msg.sysid, msg.compid, &msg2, 0, 0, target_component, (uint8_t*)url);
                         uint16_t len = mavlink_msg_to_send_buffer(buf, &msg2);
                         _outputPort->write(buf, len);
-                        return;
                     }
                 }
             }
+            else
+            {
+                uint8_t buf[MAVLINK_MAX_PAYLOAD_LEN];
+                uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+                _outputPort->write(buf, len);
+            }
             
-            uint8_t buf[MAVLINK_MAX_PAYLOAD_LEN];
-            uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-            _outputPort->write(buf, len);
         }
     }
 }
