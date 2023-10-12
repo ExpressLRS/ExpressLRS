@@ -3,7 +3,6 @@
 #if defined(PLATFORM_ESP32)
 #include <driver/ledc.h>
 #include <driver/mcpwm.h>
-#include <math.h>
 
 #include "logging.h"
 
@@ -53,10 +52,8 @@ static struct
     int8_t pin;
     uint8_t resolution_bits;
     uint32_t interval;
-} ledc_config[LEDC_CHANNELS] = {
-    {-1, 0, 0},
-};
-uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
+} ledc_config[LEDC_CHANNELS];
+static uint32_t ledcTimerConfigs[LEDC_TIMER_MAX] = {0};
 
 /*
  * Modified versions of the ledcSetup/ledcAttachPin from Arduino ESP32 Hal which allows
@@ -153,7 +150,12 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
     {
         if (ledc_config[ch].resolution_bits == 0)
         {
-            auto bits = (uint8_t)(log2f(80000000.0f / frequency)); // clk src is 80Mhz
+            uint8_t bits = 0;
+            uint32_t clock = 80000000U / frequency; // APB clk src is 80Mhz
+            while (clock >>= 1)
+            {
+                ++bits;
+            }
             if (bits >= LEDC_TIMER_BIT_MAX)
             {
                 bits = LEDC_TIMER_BIT_MAX - 1;
