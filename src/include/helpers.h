@@ -1,5 +1,7 @@
 #pragma once
 
+#include "targets.h"
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #ifndef UNUSED
@@ -9,33 +11,32 @@
 class NullStream : public Stream
 {
   public:
-    int available(void)
+    int available() override
     {
         return 0;
     }
 
-    void flush(void)
+    void flush() override
     {
-        return;
     }
 
-    int peek(void)
-    {
-        return -1;
-    }
-
-    int read(void)
+    int peek() override
     {
         return -1;
     }
 
-    size_t write(uint8_t u_Data)
+    int read() override
+    {
+        return -1;
+    }
+
+    size_t write(uint8_t u_Data) override
     {
         UNUSED(u_Data);
         return 0x01;
     }
 
-    size_t write(const uint8_t *buffer, size_t size)
+    size_t write(const uint8_t *buffer, size_t size) override
     {
         UNUSED(buffer);
         return size;
