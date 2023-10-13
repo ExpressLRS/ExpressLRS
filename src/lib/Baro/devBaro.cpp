@@ -5,6 +5,7 @@
 #include "logging.h"
 #include "telemetry.h"
 #include "baro_spl06.h"
+#include "baro_bmp280.h"
 //#include "baro_bmp085.h"
 
 #define BARO_STARTUP_INTERVAL       100
@@ -26,6 +27,12 @@ static bool Baro_Detect()
         {
             DBGLN("Detected baro: SPL06");
             baro = new SPL06();
+            return true;
+        }
+        if (BMP280::detect())
+        {
+            DBGLN("Detected baro: BMP280");
+            baro = new BMP280();
             return true;
         }
         // Untested
