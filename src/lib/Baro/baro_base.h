@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 class BaroBase
 {
@@ -34,4 +35,16 @@ public:
 protected:
     bool m_initialized;
     int32_t m_altitudeHome;
+};
+
+class BaroI2CBase : public BaroBase
+{
+public:
+    BaroI2CBase() : BaroBase() {}
+protected:
+    // Child classes must override this function and return the I2C address
+    static const uint8_t getI2CAddress() { return 0; };
+
+    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
+    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
 };

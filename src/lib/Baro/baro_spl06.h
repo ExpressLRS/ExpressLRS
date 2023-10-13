@@ -1,15 +1,17 @@
 #pragma once
 
 #include "baro_base.h"
+#include "baro_spl06_regs.h"
 
-class SPL06 : public BaroBase
+class SPL06 : public BaroI2CBase
 {
 public:
-    SPL06() : BaroBase(), m_calib{0} {}
+    SPL06() : BaroI2CBase(), m_calib{0} {}
 
     // Detect if chip is present
     static bool detect();
 
+    // BaroBase methods
     void initialize();
     uint8_t getPressureDuration();
     void startPressure();
@@ -23,8 +25,8 @@ protected:
     const uint8_t OVERSAMPLING_PRESSURE = 32;
     const uint8_t OVERSAMPLING_TEMPERATURE = 8;
 
-    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
-    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
+    // Override from i2cbase
+    static const uint8_t getI2CAddress() { return SPL06_I2C_ADDR; }
 
     uint8_t oversampleToRegVal(const uint8_t oversamples) const;
     int32_t oversampleToScaleFactor(const uint8_t oversamples) const;
