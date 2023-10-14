@@ -358,7 +358,7 @@ void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
   hwTimer::updateInterval(interval);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
@@ -404,7 +404,7 @@ void ICACHE_RAM_ATTR HandleFHSS()
 void ICACHE_RAM_ATTR HandlePrepareForTLM()
 {
   // If TLM enabled and next packet is going to be telemetry, start listening to have a large receive window (time-wise)
-  if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0)
+  if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom))
   {
     Radio.RXnb();
     TelemetryRcvPhase = ttrpPreReceiveGap;
@@ -470,7 +470,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
 
   // Sync spam only happens on slot 1 and 2 and can't be disabled
-  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
+  if (syncSpamCounter || WithinSyncSpamResidualWindow)
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
@@ -478,7 +478,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   // Regular sync rotates through 4x slots, twice on each slot, and telemetry pushes it to the next slot up
   // But only on the sync FHSS channel and with a timed delay between them
-  else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
+  else if ((!skipSync) && (now - SyncPacketLastSent > SyncInterval) && (Radio.currFreq == GetInitialFreq()))
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
@@ -610,6 +610,11 @@ void ICACHE_RAM_ATTR timerCallback()
   {
     switchDiversityAntennas();
   }
+
+  HandleFHSS();
+
+  if (TelemetryRcvPhase != ttrpPreReceiveGap)
+    HandlePrepareForTLM();
 
   // Nonce advances on every timer tick
   if (!InBindingMode)
@@ -805,7 +810,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
   if (connectionState != awaitingModelId)
   {
-    HandleFHSS();
     HandlePrepareForTLM();
 #if defined(Regulatory_Domain_EU_CE_2400)
     if (TelemetryRcvPhase != ttrpPreReceiveGap)
