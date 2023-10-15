@@ -70,11 +70,11 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     {
         lastSentFlowCtrl = now;
         
-        uint8_t rssi = CRSF::LinkStatistics.uplink_Link_quality;
-        uint8_t remrssi = CRSF::LinkStatistics.downlink_RSSI;
+        uint8_t rssi = ((uint8_t)((float)CRSF::LinkStatistics.uplink_Link_quality * 2.55));
+        uint8_t remrssi = CRSF::LinkStatistics.uplink_RSSI_1;
         uint8_t txbuf = 0;
         uint8_t noise = CRSF::LinkStatistics.uplink_SNR;
-        uint8_t remnoise = CRSF::LinkStatistics.downlink_SNR;
+        uint8_t remnoise = 0;
         uint16_t rxerrors = 0;
         uint16_t fixed = 0;
 
