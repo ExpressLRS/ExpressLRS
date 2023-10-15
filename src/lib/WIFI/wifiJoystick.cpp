@@ -137,7 +137,7 @@ void WifiJoystick::UpdateValues()
     {
         uint16_t channel = htole16(map(
             constrain(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX),
-            CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 0xffff));
+            CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 0x7fff));
         udp->write((uint8_t*)&channel, 2);
     }
 

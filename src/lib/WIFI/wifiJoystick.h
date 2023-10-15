@@ -39,7 +39,7 @@
  *   receive frames in the format of:
  *   1 byte: Frame type (WifiJoystickFrameType_e)CHANNELS
  *   1 byte: Number of channels that follow
- *   2 bytes unsigned * channel count: Channel data in range 0 to 0xffff, little-endian
+ *   2 bytes unsigned * channel count: Channel data in range 0 to 0x7fff, little-endian
  *
  * Step 4:
  *  To end joystick data being sent, POST to the control URL
