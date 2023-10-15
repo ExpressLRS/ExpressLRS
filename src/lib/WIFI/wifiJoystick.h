@@ -17,7 +17,7 @@
  * Usage for simulator or driver on PC:
  *
  * Step 1: Find device. There are two options:
- *   Recommended: Use MDNS to query for a UDP service called elrs to find out IP+Port, Protocol version can be found in service txt version
+ *   Recommended: Use MDNS to query for a UDP service called elrs to find out IP+Port, Protocol version can be found in service txt record
  *   Alternative: Listen for UDP broadcasts that contains a frame in the structure of
  *     4 bytes: ['E', 'L', 'R', 'S']
  *     1 byte: Protocol Version
@@ -35,13 +35,13 @@
  *   Param (optional): "channels" number of channels to send in each frame, or 0 for default (8)
  *   e.g. http://<IP>/udpcontrol?action=joystick_begin&interval=10000&channels=8
  *
- * Step 3:
+ * Step 4:
  *   receive frames in the format of:
  *   1 byte: Frame type (WifiJoystickFrameType_e)CHANNELS
  *   1 byte: Number of channels that follow
  *   2 bytes unsigned * channel count: Channel data in range 0 to 0x7fff, little-endian
  *
- * Step 4:
+ * Step 5:
  *  To end joystick data being sent, POST to the control URL
  *  Param: "action" must be "joystick_end"
  *  e.g http://<IP>/udpcontrol?action=joystick_end
