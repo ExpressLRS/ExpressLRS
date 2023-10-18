@@ -739,6 +739,7 @@ static void WebUdpControl(AsyncWebServerRequest *request)
   else if (action.equals("joystick_end"))
   {
     WifiJoystick::StopSending();
+    request->send(200, "text/plain", "ok");
   }
 }
 #endif
