@@ -109,7 +109,7 @@ void WifiJoystick::Loop(unsigned long now)
             uint16_t port;      // JOYSTICK_PORT, little endian
             uint8_t name_len;   // length of the device name that follows
             char name[0];       // device name
-        } eua = {
+        } PACKED eua = {
             .magic = htobe32(0x454C5253), // always big-endian so ELRS is in order
             .version = JOYSTICK_VERSION,
             .port = htole16(JOYSTICK_PORT),
