@@ -1718,6 +1718,11 @@ void setup()
 #endif
 
     devicesStart();
+
+    if (config.GetAutoBindMode())
+    {
+        config.SetIsBound(false);
+    }
 }
 
 void loop()

@@ -204,7 +204,8 @@ typedef struct {
     uint8_t     modelId;
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
-                unused:2;
+                autoBindMode:1,
+                unused:1;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
 } rx_config_t;
 
@@ -225,6 +226,7 @@ public:
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
+    uint8_t GetAutoBindMode() const { return m_config.autoBindMode; }
     bool     IsModified() const { return m_modified; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
@@ -243,6 +245,7 @@ public:
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);
     void SetAntennaMode(uint8_t antennaMode);
+    void SetAutoBindMode(uint8_t autoBindMode);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     #if defined(GPIO_PIN_PWM_OUTPUTS)

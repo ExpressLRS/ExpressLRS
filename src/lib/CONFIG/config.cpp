@@ -914,6 +914,16 @@ RxConfig::SetAntennaMode(uint8_t antennaMode)
 }
 
 void
+RxConfig::SetAutoBindMode(uint8_t autoBindMode)
+{
+    if (m_config.autoBindMode != autoBindMode)
+    {
+        m_config.autoBindMode = autoBindMode;
+        m_modified = true;
+    }
+}
+
+void
 RxConfig::SetDefaults(bool commit)
 {
     // Reset everything to 0/false and then just set anything that zero is not appropriate
@@ -926,6 +936,7 @@ RxConfig::SetDefaults(bool commit)
         m_config.antennaMode = 2; // 2 is diversity
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
+    m_config.autoBindMode = 0; // Off.  Boot with UID as normal.
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)

@@ -71,6 +71,13 @@ static struct luaItem_string luaModelNumber = {
     modelString
 };
 
+static struct luaItem_selection luaAutoBind = {
+    {"Auto Bind", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    STR_EMPTYSPACE
+};
+
 static struct luaItem_string luaELRSversion = {
     {version, CRSF_INFO},
     commit
@@ -357,6 +364,11 @@ static void registerLuaParameters()
 #endif
 
   registerLUAParameter(&luaModelNumber);
+
+  registerLUAParameter(&luaAutoBind, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetAutoBindMode(arg);
+  });
+  
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }
@@ -376,6 +388,8 @@ static int event()
   {
     setLuaTextSelectionValue(&luaDiversityMode, config.GetAntennaMode()); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
   }
+
+  setLuaTextSelectionValue(&luaAutoBind, config.GetAutoBindMode());
 
 #if defined(POWER_OUTPUT_VALUES)
   setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - MinPower);
