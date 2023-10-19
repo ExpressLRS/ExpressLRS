@@ -71,7 +71,7 @@ public:
     void GetLastPacketStats();
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, bool sendGeminiBuffer, uint8_t * dataGemini);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 

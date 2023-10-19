@@ -383,7 +383,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, bool sendGeminiBuffer, uint8_t * dataGemini)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -413,7 +413,16 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
 
   RFAMP.TXenable(radioNumber);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
-  hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
+
+  if (sendGeminiBuffer)
+  {
+    hal.writeRegister(SX127X_REG_FIFO, data, size, SX12XX_Radio_1);
+    hal.writeRegister(SX127X_REG_FIFO, dataGemini, size, SX12XX_Radio_2);
+  }
+  else
+  {
+    hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
+  }
 
   SetMode(SX127x_OPMODE_TX, radioNumber);
 }
@@ -466,24 +475,24 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
   if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
   {
     bool isSecondRadioGotData = false;
-    uint16_t secondIrqStatus = instance->GetIrqFlags(radio[secondRadioIdx]);
+    // uint16_t secondIrqStatus = instance->GetIrqFlags(radio[secondRadioIdx]);
 
-    if(secondIrqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
-    {
-      WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
-      uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radio[secondRadioIdx]);
-      hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
-      hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
+    // if(secondIrqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
+    // {
+    //   WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
+    //   uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radio[secondRadioIdx]);
+    //   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
+    //   hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
 
-      // leaving only the type in the first byte (crcHigh was cleared)
-      RXdataBuffer[0] &= 0b11;
-      RXdataBuffer_second[0] &= 0b11;
-      // if the second packet is same to the first, it's valid
-      if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
-      {
-        isSecondRadioGotData = true;
-      }
-    }
+    //   // leaving only the type in the first byte (crcHigh was cleared)
+    //   RXdataBuffer[0] &= 0b11;
+    //   RXdataBuffer_second[0] &= 0b11;
+    //   // if the second packet is same to the first, it's valid
+    //   if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
+    //   {
+    //     isSecondRadioGotData = true;
+    //   }
+    // }
 
     gotRadio[secondRadioIdx] = isSecondRadioGotData;
     #if defined(DEBUG_RCVR_SIGNAL_STATS)

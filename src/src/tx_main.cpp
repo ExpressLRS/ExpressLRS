@@ -174,6 +174,10 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   MspSender.ConfirmCurrentPayload(ls->mspConfirm);
 }
 
+uint8_t packageIndexRadio1 = 0xFF;
+uint8_t packageIndexRadio2 = 0xFF;
+uint8_t tlmSenderDoubleBuffer[10] = {0};
+
 bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
@@ -195,12 +199,14 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     return false;
   }
 
-  LastTLMpacketRecvMillis = millis();
-  LQCalc.add();
-
-  Radio.GetLastPacketStats();
-  CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+  if (!LQCalc.currentIsSet())
+  {
+    LQCalc.add();
+    LastTLMpacketRecvMillis = millis();
+    Radio.GetLastPacketStats();
+    CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+    CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+  }
 
   // Full res mode
   if (OtaIsFullRes)
@@ -237,9 +243,29 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
-        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
-          otaPktPtr->std.tlm_dl.payload,
-          sizeof(otaPktPtr->std.tlm_dl.payload));
+        // TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
+        //   otaPktPtr->std.tlm_dl.payload,
+        //   sizeof(otaPktPtr->std.tlm_dl.payload));
+        
+        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+        {
+          packageIndexRadio1 = otaPktPtr->std.tlm_dl.packageIndex;
+          memcpy(tlmSenderDoubleBuffer, otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
+        }
+        else
+        {
+          packageIndexRadio2 = otaPktPtr->std.tlm_dl.packageIndex;
+          memcpy(&tlmSenderDoubleBuffer[sizeof(otaPktPtr->std.tlm_dl.payload)], otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
+        }
+
+        if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
+        {
+          TelemetryReceiver.ReceiveData(packageIndexRadio1, tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+          packageIndexRadio1 = 0xFF;
+          packageIndexRadio2 = 0xFF;
+        }
+
+        return false;
         break;
 
       case ELRS_TELEMETRY_TYPE_RAW:
@@ -563,7 +589,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
-  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio, false, (uint8_t*)&otaPkt);
 }
 
 void ICACHE_RAM_ATTR nonceAdvance()
@@ -786,10 +812,10 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  if (LQCalc.currentIsSet())
-  {
-    return false; // Already received tlm, do not run ProcessTLMpacket() again.
-  }
+  // if (LQCalc.currentIsSet())
+  // {
+  //   return false; // Already received tlm, do not run ProcessTLMpacket() again.
+  // }
 
   bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;
@@ -1148,6 +1174,9 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
+  pinMode(19, OUTPUT);
+  digitalWrite(19, LOW);
+
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted

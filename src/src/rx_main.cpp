@@ -491,10 +491,31 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             }
             else
             {
+                // otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                //     otaPkt.std.tlm_dl.payload,
+                //     sizeof(otaPkt.std.tlm_dl.payload));
+
+                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[geminiMode ? 2 * sizeof(otaPkt.std.tlm_dl.payload) : sizeof(otaPkt.std.tlm_dl.payload)] = {0};
+
                 otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.std.tlm_dl.payload,
-                    sizeof(otaPkt.std.tlm_dl.payload));
+                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
+                
+                if (geminiMode)
+                {
+                    OtaGeneratePacketCrc(&otaPkt);
+
+                    WORD_ALIGNED_ATTR OTA_Packet_s otaPktGemini = {0};
+                    otaPktGemini.std.type = PACKET_TYPE_TLM;
+                    otaPktGemini.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                    otaPktGemini.std.tlm_dl.packageIndex = otaPkt.std.tlm_dl.packageIndex;
+                    memcpy(otaPktGemini.std.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.tlm_dl.payload)], sizeof(otaPktGemini.std.tlm_dl.payload));
+
+                    OtaGeneratePacketCrc(&otaPktGemini);
+
+                    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPktGemini);
+                    return true;
+                }
             }
         }
         else if (firmwareOptions.is_airport)
@@ -516,7 +537,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         transmittingRadio = SX12XX_Radio_NONE;
     }
 
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio, false, (uint8_t*)&otaPkt);
 
     return true;
 }
