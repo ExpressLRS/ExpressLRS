@@ -201,8 +201,9 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
   if (!LQCalc.currentIsSet())
   {
-    LQCalc.add();
     LastTLMpacketRecvMillis = millis();
+    LQCalc.add();
+
     Radio.GetLastPacketStats();
     CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
     CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
@@ -1174,9 +1175,6 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
-  pinMode(19, OUTPUT);
-  digitalWrite(19, LOW);
-
 #if defined(TARGET_TX_FM30)
   pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
   digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted

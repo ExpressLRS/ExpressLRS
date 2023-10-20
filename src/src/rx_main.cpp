@@ -521,7 +521,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     {
                         Radio.TXnb((uint8_t*)&otaPktGemini, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPkt);
                     }
-                    
+
                     return true;
                 }
             }
