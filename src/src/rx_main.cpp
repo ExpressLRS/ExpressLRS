@@ -733,7 +733,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
         crsfRCFrameAvailable();
-        servoNewChannelsAvaliable();
+        servoNewChannelsAvailable();
     }
 
     if (!didFHSS)
@@ -846,7 +846,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
-            servoNewChannelsAvaliable();
+            servoNewChannelsAvailable();
         }
         else if (!LQCalcDVDA.currentIsSet())
         {
