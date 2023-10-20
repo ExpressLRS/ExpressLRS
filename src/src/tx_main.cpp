@@ -1358,7 +1358,19 @@ void loop()
 
   if (TxBackpack->available())
   {
-    if (msp.processReceivedByte(TxBackpack->read()))
+    if (mavlinkTX)
+    {
+      auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxBackpack->available());
+      if (size > 0)
+      {
+        uint8_t buf[size];
+        TxBackpack->readBytes(buf, size);
+        apInputBuffer.lock();
+        apInputBuffer.pushBytes(buf, size);
+        apInputBuffer.unlock();
+      }
+    }
+    else if (msp.processReceivedByte(TxBackpack->read()))
     {
       // Finished processing a complete packet
       ProcessMSPPacket(now, msp.getReceivedPacket());
@@ -1397,6 +1409,7 @@ void loop()
         for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
         {
           TxUSB->write(CRSFinBuffer[i]);
+          TxBackpack->write(CRSFinBuffer[i]);
         }
       }
       else
