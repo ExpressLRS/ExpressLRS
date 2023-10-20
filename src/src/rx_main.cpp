@@ -513,7 +513,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
                     OtaGeneratePacketCrc(&otaPktGemini);
 
-                    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPktGemini);
+                    if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
+                    {
+                        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPktGemini);
+                    }
+                    else
+                    {
+                        Radio.TXnb((uint8_t*)&otaPktGemini, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPkt);
+                    }
+                    
                     return true;
                 }
             }
