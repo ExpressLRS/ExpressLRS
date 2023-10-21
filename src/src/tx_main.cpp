@@ -244,29 +244,35 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
-        // TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
-        //   otaPktPtr->std.tlm_dl.payload,
-        //   sizeof(otaPktPtr->std.tlm_dl.payload));
-        
-        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+        // Dont split the packet for non mav protocol.  That would be a breaking change :(
+        if (!mavlinkTX || (isDualRadio() && config.GetAntennaMode() != TX_RADIO_MODE_GEMINI))
         {
-          packageIndexRadio1 = otaPktPtr->std.tlm_dl.packageIndex;
-          memcpy(tlmSenderDoubleBuffer, otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
+          TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
+            otaPktPtr->std.tlm_dl.payload,
+            sizeof(otaPktPtr->std.tlm_dl.payload));
         }
         else
         {
-          packageIndexRadio2 = otaPktPtr->std.tlm_dl.packageIndex;
-          memcpy(&tlmSenderDoubleBuffer[sizeof(otaPktPtr->std.tlm_dl.payload)], otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
-        }
+          if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+          {
+            packageIndexRadio1 = otaPktPtr->std.tlm_dl.packageIndex;
+            memcpy(tlmSenderDoubleBuffer, otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
+          }
+          else
+          {
+            packageIndexRadio2 = otaPktPtr->std.tlm_dl.packageIndex;
+            memcpy(&tlmSenderDoubleBuffer[sizeof(otaPktPtr->std.tlm_dl.payload)], otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
+          }
 
-        if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
-        {
-          TelemetryReceiver.ReceiveData(packageIndexRadio1, tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
-          packageIndexRadio1 = 0xFF;
-          packageIndexRadio2 = 0xFF;
-        }
+          if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
+          {
+            TelemetryReceiver.ReceiveData(packageIndexRadio1, tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+            packageIndexRadio1 = 0xFF;
+            packageIndexRadio2 = 0xFF;
+          }
 
-        return false;
+          return false;
+        }
         break;
 
       case ELRS_TELEMETRY_TYPE_RAW:
@@ -813,10 +819,10 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  // if (LQCalc.currentIsSet())
-  // {
-  //   return false; // Already received tlm, do not run ProcessTLMpacket() again.
-  // }
+  if (LQCalc.currentIsSet() && !mavlinkTX)
+  {
+    return false; // Already received tlm, do not run ProcessTLMpacket() again.
+  }
 
   bool packetSuccessful = ProcessTLMpacket(status);
   busyTransmitting = false;

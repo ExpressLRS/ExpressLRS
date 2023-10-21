@@ -147,7 +147,7 @@ uint8_t MspData[ELRS_MSP_BUFFER];
 
 uint8_t mavBuffer[64];
 
-WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[10] = {0};
+WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[20] = {0}; // Double the currently largest payload ELRS8_TELEMETRY_BYTES_PER_CALL
 
 static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
@@ -241,8 +241,7 @@ static inline void checkGeminiMode()
 {
     if (isDualRadio())
     {
-        // geminiMode = config.GetAntennaMode();
-        geminiMode = true;
+        geminiMode = config.GetAntennaMode();
     }
 }
 
@@ -494,37 +493,45 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             }
             else
             {
-                // otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                //     otaPkt.std.tlm_dl.payload,
-                //     sizeof(otaPkt.std.tlm_dl.payload));
-
-                uint8_t tlmSenderDataToGet = geminiMode ? sizeof(tlmSenderDoubleBuffer) : sizeof(otaPkt.std.tlm_dl.payload);
-                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, tlmSenderDataToGet);
-                memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
-                
-                if (geminiMode)
+                // Dont split the packet for non mav protocol.  That would be a breaking change :(
+                if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
                 {
-                    OtaGeneratePacketCrc(&otaPkt);
-
-                    WORD_ALIGNED_ATTR OTA_Packet_s otaPktGemini = {0};
-                    otaPktGemini.std.type = PACKET_TYPE_TLM;
-                    otaPktGemini.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                    otaPktGemini.std.tlm_dl.packageIndex = otaPkt.std.tlm_dl.packageIndex;
-                    memcpy(otaPktGemini.std.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.tlm_dl.payload)], sizeof(otaPktGemini.std.tlm_dl.payload));
-
-                    OtaGeneratePacketCrc(&otaPktGemini);
-
-                    if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                        otaPkt.std.tlm_dl.payload,
+                        sizeof(otaPkt.std.tlm_dl.payload));
+                }
+                else
+                {
+                    uint8_t tlmSenderDataToGet = geminiMode ? 2 * sizeof(otaPkt.std.tlm_dl.payload) : sizeof(otaPkt.std.tlm_dl.payload);
+                    otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, tlmSenderDataToGet);
+                    memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
+                    
+                    if (geminiMode)
                     {
-                        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPktGemini);
-                    }
-                    else
-                    {
-                        Radio.TXnb((uint8_t*)&otaPktGemini, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPkt);
-                    }
+                        OtaGeneratePacketCrc(&otaPkt);
 
-                    return true;
+                        WORD_ALIGNED_ATTR OTA_Packet_s otaPktGemini = {0};
+                        otaPktGemini.std.type = PACKET_TYPE_TLM;
+                        otaPktGemini.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
+                        otaPktGemini.std.tlm_dl.packageIndex = otaPkt.std.tlm_dl.packageIndex;
+                        memcpy(otaPktGemini.std.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.tlm_dl.payload)], sizeof(otaPktGemini.std.tlm_dl.payload));
+
+                        OtaGeneratePacketCrc(&otaPktGemini);
+
+                        // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
+                        // The payloads need to be switch when this happens.
+                        if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0)
+                        {
+                            Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPktGemini);
+                        }
+                        else
+                        {
+                            Radio.TXnb((uint8_t*)&otaPktGemini, ExpressLRS_currAirRate_Modparams->PayloadLength, SX12XX_Radio_All, true, (uint8_t*)&otaPkt);
+                        }
+
+                        return true;
+                    }
                 }
             }
         }
