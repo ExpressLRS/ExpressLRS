@@ -472,7 +472,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber, bool sendGeminiBuffer, uint8_t * dataGemini)
 {
     transmittingRadio = radioNumber;
     
@@ -518,7 +518,17 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
     RFAMP.TXenable(radioNumber); // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
+
+    if (sendGeminiBuffer)
+    {
+        hal.WriteBuffer(0x00, data, size, SX12XX_Radio_1);
+        hal.WriteBuffer(0x00, dataGemini, size, SX12XX_Radio_2);
+    }
+    else
+    {
+        hal.WriteBuffer(0x00, data, size, radioNumber);
+    }
+
     instance->SetMode(SX1280_MODE_TX, radioNumber);
 
 #ifdef DEBUG_SX1280_OTA_TIMING
@@ -609,32 +619,32 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     {
         bool isSecondRadioGotData = false;
 
-        uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
-        if(secondIrqStatus&SX1280_IRQ_RX_DONE)
-        {
-            rx_status second_rx_fail = SX12XX_RX_OK;
-            if (packet_mode == SX1280_PACKET_TYPE_FLRC)
-            {
-               second_rx_fail = ((secondIrqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
-                                ((secondIrqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
-                                ((secondIrqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
-            }
-            if (second_rx_fail == SX12XX_RX_OK)
-            {
-                uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
-                WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
-                hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
+        // uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
+        // if(secondIrqStatus&SX1280_IRQ_RX_DONE)
+        // {
+        //     rx_status second_rx_fail = SX12XX_RX_OK;
+        //     if (packet_mode == SX1280_PACKET_TYPE_FLRC)
+        //     {
+        //        second_rx_fail = ((secondIrqStatus & SX1280_IRQ_CRC_ERROR) ? SX12XX_RX_CRC_FAIL : SX12XX_RX_OK) |
+        //                         ((secondIrqStatus & SX1280_IRQ_SYNCWORD_VALID) ? SX12XX_RX_OK : SX12XX_RX_SYNCWORD_ERROR) |
+        //                         ((secondIrqStatus & SX1280_IRQ_SYNCWORD_ERROR) ? SX12XX_RX_SYNCWORD_ERROR : SX12XX_RX_OK);
+        //     }
+        //     if (second_rx_fail == SX12XX_RX_OK)
+        //     {
+        //         uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
+        //         WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
+        //         hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
 
-                // leaving only the type in the first byte (crcHigh was cleared)
-                RXdataBuffer[0] &= 0b11;
-                RXdataBuffer_second[0] &= 0b11;
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
-            }
-        }
+        //         // leaving only the type in the first byte (crcHigh was cleared)
+        //         RXdataBuffer[0] &= 0b11;
+        //         RXdataBuffer_second[0] &= 0b11;
+        //         // if the second packet is same to the first, it's valid
+        //         if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
+        //         {
+        //             isSecondRadioGotData = true;
+        //         }
+        //     }
+        // }
 
         // second radio received the same packet to the processing radio
         gotRadio[secondRadioIdx] = isSecondRadioGotData;
