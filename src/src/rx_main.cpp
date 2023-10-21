@@ -495,10 +495,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                 //     otaPkt.std.tlm_dl.payload,
                 //     sizeof(otaPkt.std.tlm_dl.payload));
 
-                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[geminiMode ? 2 * sizeof(otaPkt.std.tlm_dl.payload) : sizeof(otaPkt.std.tlm_dl.payload)] = {0};
+                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.std.tlm_dl.payload)] = {0};
 
                 otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer,
+                                                                                    geminiMode ? 2 * sizeof(otaPkt.std.tlm_dl.payload) : sizeof(otaPkt.std.tlm_dl.payload));
                 memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
                 
                 if (geminiMode)
