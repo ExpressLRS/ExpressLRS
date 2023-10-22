@@ -36,8 +36,8 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
         CRSF_to_US(channelData[11]),
         CRSF_to_US(channelData[12]),
         CRSF_to_US(channelData[13]),
-        __UINT16_MAX__,
-        __UINT16_MAX__,
+        CRSF_to_US(channelData[14]),
+        CRSF_to_US(channelData[15]),
         __UINT16_MAX__,
         __UINT16_MAX__);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
