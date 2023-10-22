@@ -1133,6 +1133,11 @@ void MspReceiveComplete()
         loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
         break;
+    case MSP_ELRS_MAVLINK_TLM: // 0xFD
+        // raw mavlink data
+        mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
+        MspReceiver.Unlock();
+        break;
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
@@ -1768,17 +1773,7 @@ void loop()
 
     if (MspReceiver.HasFinishedData())
     {
-        if (MspData[0] == MSP_ELRS_MAVLINK_TLM)
-        {
-            // raw mavlink data
-            uint8_t count = MspData[1];
-            mavlinkOutputBuffer.atomicPushBytes(&MspData[2], count);
-            MspReceiver.Unlock();
-        }
-        else
-        {
-            MspReceiveComplete();
-        }
+        MspReceiveComplete();
     }
 
     devicesUpdate(now);
