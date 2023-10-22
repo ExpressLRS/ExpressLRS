@@ -10,6 +10,9 @@ add the following query params for TX and/or 900Mhz testing
     hasSubGHz
 """
 
+import struct
+import ctypes
+
 from external.bottle import route, run, response, request
 from external.wheezy.template.engine import Engine
 from external.wheezy.template.ext.core import CoreExtension
@@ -20,6 +23,37 @@ isTX = False
 hasSubGHz = False
 is8285 = True
 chip = 'LR1121'
+
+class rx_config_pwm_t(ctypes.BigEndianStructure):
+    """Struct that holds the configuration for a single PWM channel.
+    Note the reverse ordering from the cstruct in src/lib/CONFIG/config.h
+    """
+    _fields_ = [
+        ("unused", ctypes.c_uint32, 9),
+        ("failsafeMode", ctypes.c_uint32, 2),
+        ("narrow", ctypes.c_uint32, 1),
+        ("mode", ctypes.c_uint32, 4),
+        ("inverted", ctypes.c_uint32, 1),
+        ("inputChannel", ctypes.c_uint32, 4),
+        ("failsafe", ctypes.c_uint32, 11),
+    ]
+
+def make_rx_config_pwm_t(inputChannel, inverted, mode, narrow, failsafe, failsafeMode):
+    """Create a rx_config_pwm_t value from the given parameters"""
+    pwmStruct = rx_config_pwm_t()
+    pwmStruct.inputChannel = inputChannel
+    pwmStruct.inverted = 1 if inverted else 0
+    pwmStruct.mode = mode
+    pwmStruct.narrow = 1 if narrow else 0
+    pwmStruct.failsafe = failsafe
+    pwmStruct.failsafeMode = failsafeMode
+    return struct.unpack_from('>I', pwmStruct)[0]
+
+def parse_rx_config_pwm_t(value):
+    """Create a rx_config_pwm_t from the given value"""
+    pwmStruct = rx_config_pwm_t()
+    struct.pack_into('>I', pwmStruct, 0, value)
+    return pwmStruct
 
 config = {
         "options": {
@@ -229,9 +263,11 @@ def update_config():
         config['config']['button-actions'] = request.json['button-actions']
     if 'pwm' in request.json:
         i=0
-        for x in request.json['pwm']:
-            print(x)
-            config['config']['pwm'][i]['config'] = x
+        for pwm_value in request.json['pwm']:
+            pwm_data = parse_rx_config_pwm_t(pwm_value)
+            print("PWM %d: Channel %d, Inverted %d, Mode %d, Narrow %d, Failsafe %dus, FailsafeMode %d" % (
+                    i, pwm_data.inputChannel, pwm_data.inverted, pwm_data.mode, pwm_data.narrow, pwm_data.failsafe, pwm_data.failsafeMode))
+            config['config']['pwm'][i]['config'] = pwm_value
             i = i + 1
     if 'protocol' in request.json:
         config['config']['serial-protocol'] = request.json['protocol']

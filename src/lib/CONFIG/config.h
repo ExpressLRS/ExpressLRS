@@ -193,13 +193,13 @@ typedef enum : uint8_t {
 
 typedef union {
     struct {
-        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        uint32_t failsafe:11,    // us output during failsafe
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:9;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
@@ -297,6 +297,7 @@ private:
     void UpgradeEepromV5();
     void UpgradeEepromV6();
     void UpgradeEepromV7V8();
+    void UpgradeEepromV9();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
