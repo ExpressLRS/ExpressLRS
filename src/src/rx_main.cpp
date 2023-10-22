@@ -873,12 +873,14 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
         packageIndex = otaPktPtr->full.msp_ul.packageIndex;
         payload = otaPktPtr->full.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+        TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
     }
     else
     {
         packageIndex = otaPktPtr->std.msp_ul.packageIndex;
         payload = otaPktPtr->std.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+        TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
     }
 
     // Always examine MSP packets for bind information if in bind mode
@@ -1766,7 +1768,17 @@ void loop()
 
     if (MspReceiver.HasFinishedData())
     {
-        MspReceiveComplete();
+        if (MspData[0] == MSP_ELRS_MAVLINK_TLM)
+        {
+            // raw mavlink data
+            uint8_t count = MspData[1];
+            mavlinkOutputBuffer.atomicPushBytes(&MspData[2], count);
+            MspReceiver.Unlock();
+        }
+        else
+        {
+            MspReceiveComplete();
+        }
     }
 
     devicesUpdate(now);
