@@ -1136,7 +1136,6 @@ void MspReceiveComplete()
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
-        MspReceiver.Unlock();
         break;
     default:
         //handle received CRSF package
