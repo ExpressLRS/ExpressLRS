@@ -146,7 +146,7 @@ condense_flags()
 
 json_flags['flash-discriminator'] = randint(1,2**32-1)
 
-if '-DRADIO_SX127X=1' or '-DRADIO_LR1121=1' in build_flags:
+if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
         fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
