@@ -23,7 +23,7 @@ static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off
 #endif
 
 static struct luaItem_selection luaSerialProtocol = {
-    {"Protocol", CRSF_TEXT_SELECTION},
+    {"Serial Protocol", CRSF_TEXT_SELECTION},
     0, // value
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
