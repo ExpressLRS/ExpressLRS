@@ -3,17 +3,13 @@
 class SerialCRSF : public SerialIO {
 public:
     explicit SerialCRSF(Stream &out, Stream &in) : SerialIO(&out, &in) {}
-
     virtual ~SerialCRSF() {}
 
-    void setLinkQualityStats(uint16_t lq, uint16_t rssi) override;
-    uint32_t sendRCFrameToFC(bool frameAvailable, uint32_t *channelData) override;
-    void sendMSPFrameToFC(uint8_t* data) override;
-    void sendLinkStatisticsToFC() override;
+    uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) override;
+    void queueMSPFrameTransmission(uint8_t* data) override;
+    void queueLinkStatisticsPacket() override;
+    void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
-    uint16_t linkQuality = 0;
-    uint16_t rssiDBM = 0;
-
-    void processByte(uint8_t byte) override;
+    void processBytes(uint8_t *bytes, uint16_t size) override;
 };

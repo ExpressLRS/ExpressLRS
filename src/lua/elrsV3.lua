@@ -1,18 +1,9 @@
 -- TNS|ExpressLRS|TNE
 ---- #########################################################################
 ---- #                                                                       #
----- # Copyright (C) OpenTX                                                  #
+---- # Copyright (C) OpenTX, adapted for ExpressLRS                          #
 -----#                                                                       #
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
----- #                                                                       #
----- # This program is free software; you can redistribute it and/or modify  #
----- # it under the terms of the GNU General Public License version 2 as     #
----- # published by the Free Software Foundation.                            #
----- #                                                                       #
----- # This program is distributed in the hope that it will be useful        #
----- # but WITHOUT ANY WARRANTY; without even the implied warranty of        #
----- # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
----- # GNU General Public License for more details.                          #
 ---- #                                                                       #
 ---- #########################################################################
 local deviceId = 0xEE
@@ -21,22 +12,19 @@ local deviceName = ""
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
-local charIndex = 1
 local fieldPopup
 local fieldTimeout = 0
 local loadQ = {}
 local fieldChunk = 0
-local fieldData = {}
+local fieldData = nil
 local fields = {}
 local devices = {}
 local goodBadPkt = "?/???    ?"
 local elrsFlags = 0
 local elrsFlagsInfo = ""
 local fields_count = 0
-local backButtonId = 2
-local exitButtonId = 3
 local devicesRefreshTimeout = 50
-local folderAccess = nil
+local currentFolderId = nil
 local commandRunningIndicator = 1
 local expectChunksRemain = -1
 local deviceIsELRS_TX = nil
@@ -45,30 +33,23 @@ local titleShowWarn = nil
 local titleShowWarnTimeout = 100
 local exitscript = 0
 
+local COL1
 local COL2
 local maxLineIndex
-local textXoffset
 local textYoffset
 local textSize
-local byteToStr
 
 local function allocateFields()
   fields = {}
   for i=1, fields_count + 2 + #devices do
     fields[i] = { }
   end
-  backButtonId = fields_count + 2 + #devices
-  fields[backButtonId] = {name="----BACK----", parent = 255, type=14}
-  if folderAccess ~= nil then
-    fields[backButtonId].parent = folderAccess
-  end
-  exitButtonId = backButtonId + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
+  fields[#fields] = {name="----EXIT----", type=14}
 end
 
 local function reloadAllField()
   fieldChunk = 0
-  fieldData = {}
+  fieldData = nil
   -- loadQ is actually a stack
   loadQ = {}
   for fieldId = fields_count, 1, -1 do
@@ -80,7 +61,7 @@ local function getField(line)
   local counter = 1
   for i = 1, #fields do
     local field = fields[i]
-    if folderAccess == field.parent and not field.hidden then
+    if currentFolderId == field.parent and not field.hidden then
       if counter < line then
         counter = counter + 1
       else
@@ -99,14 +80,13 @@ local function constrain(x, low, high)
   return x
 end
 
--- Change display attribute to current field
 local function incrField(step)
   local field = getField(lineIndex)
   local min, max = 0, 0
-  if ((field.type <= 5) or (field.type == 8)) then
+  if field.type <= 8 then
     min = field.min or 0
     max = field.max or 0
-    step = field.step * step
+    step = (field.step or 1) * step
   elseif field.type == 9 then
     min = 0
     max = #field.values - 1
@@ -136,7 +116,7 @@ local function selectField(step)
   end
 end
 
-local function fieldGetSelectOpts(data, offset, last)
+local function fieldGetStrOrOpts(data, offset, last, isOpts)
   if last then
     while data[offset] ~= 0 do
       offset = offset + 1
@@ -144,38 +124,33 @@ local function fieldGetSelectOpts(data, offset, last)
     return last, offset + 1
   end
 
-  -- Split a table of byte values (string) with ; separator into a table
-  local r = {}
+  -- For isOpts: Split a table of byte values (string) with ; separator into a table
+  -- Else just read a string until the first null byte
+  local r = isOpts and {}
   local opt = ''
   local b = data[offset]
   while b ~= 0 do
-    if b == 59 then -- ';'
+    if r and b == 59 then -- ';'
       r[#r+1] = opt
       opt = ''
     else
-      opt = opt .. byteToStr(b)
+      -- On firmwares that have constants defined for the arrow chars, use them in place of
+      -- the \xc0 \xc1 chars (which are OpenTX-en)
+      -- Use the table to convert the char, else use string.char if not in the table
+      opt = opt .. (({
+        [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
+        [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
+      })[b] or string.char(b))
     end
     offset = offset + 1
     b = data[offset]
   end
 
-  r[#r+1] = opt
-  opt = nil
-  return r, offset + 1, collectgarbage("collect")
-end
-
-local function fieldGetString(data, offset, last)
-  if last then
-    return last, offset + #last + 1
+  if r then
+    r[#r+1] = opt
+    opt = r
   end
-
-  local result = ""
-  while data[offset] ~= 0 do
-    result = result .. byteToStr(data[offset])
-    offset = offset + 1
-  end
-
-  return result, offset + 1, collectgarbage("collect")
+  return opt, offset + 1, collectgarbage("collect")
 end
 
 local function getDevice(name)
@@ -194,13 +169,17 @@ local function fieldGetValue(data, offset, size)
   return result
 end
 
-local function fieldUnsignedLoad(field, data, offset, size)
+-- UINT8/INT8/UINT16/INT16 + FLOAT + TEXTSELECT
+local function fieldUnsignedLoad(field, data, offset, size, unitoffset)
   field.value = fieldGetValue(data, offset, size)
   field.min = fieldGetValue(data, offset+size, size)
   field.max = fieldGetValue(data, offset+2*size, size)
   --field.default = fieldGetValue(data, offset+3*size, size)
-  field.unit = fieldGetString(data, offset+4*size, field.unit)
-  field.step = 1
+  field.unit = fieldGetStrOrOpts(data, offset+(unitoffset or (4*size)), field.unit)
+  -- Only store the size if it isn't 1 (covers most fields / selection)
+  if size ~= 1 then
+    field.size = size
+  end
 end
 
 local function fieldUnsignedToSigned(field, size)
@@ -211,101 +190,85 @@ local function fieldUnsignedToSigned(field, size)
   --field.default = field.default - bit32.band(field.default, bandval) * 2
 end
 
-local function fieldSignedLoad(field, data, offset, size)
-  fieldUnsignedLoad(field, data, offset, size)
+local function fieldSignedLoad(field, data, offset, size, unitoffset)
+  fieldUnsignedLoad(field, data, offset, size, unitoffset)
   fieldUnsignedToSigned(field, size)
+  -- signed ints are INTdicated by a negative size
+  field.size = -size
 end
 
-local function fieldIntSave(index, value, size)
-  local frame = { deviceId, handsetId, index }
-  for i=size-1, 0, -1 do
-    frame[#frame + 1] = (bit32.rshift(value, 8*i) % 256)
+local function fieldIntLoad(field, data, offset)
+  -- Type is U8/I8/U16/I16, use that to determine the size and signedness
+  local loadFn = (field.type % 2 == 0) and fieldUnsignedLoad or fieldSignedLoad
+  loadFn(field, data, offset, math.floor(field.type / 2) + 1)
+end
+
+local function fieldIntSave(field)
+  local value = field.value
+  local size = field.size or 1
+  -- Convert signed to 2s complement
+  if size < 0 then
+    size = -size
+    if value < 0 then
+      value = bit32.lshift(0x100, (size-1)*8) + value
+    end
+  end
+
+  local frame = { deviceId, handsetId, field.id }
+  for i = size-1, 0, -1 do
+    frame[#frame + 1] = bit32.rshift(value, 8*i) % 256
   end
   crossfireTelemetryPush(0x2D, frame)
-end
-
-local function fieldUnsignedSave(field, size)
-  local value = field.value
-  fieldIntSave(field.id, value, size)
-end
-
-local function fieldSignedSave(field, size)
-  local value = field.value
-  if value < 0 then
-    value = bit32.lshift(0x100, (size-1)*8) + value
-  end
-  fieldIntSave(field.id, value, size)
 end
 
 local function fieldIntDisplay(field, y, attr)
   lcd.drawText(COL2, y, field.value .. field.unit, attr)
 end
 
--- UINT8
-local function fieldUint8Load(field, data, offset)
-  fieldUnsignedLoad(field, data, offset, 1)
+-- -- FLOAT
+local function fieldFloatLoad(field, data, offset)
+  fieldSignedLoad(field, data, offset, 4, 21)
+  field.prec = data[offset+16]
+  if field.prec > 3 then
+    field.prec = 3
+  end
+  field.step = fieldGetValue(data, offset+17, 4)
+
+  -- precompute the format string to preserve the precision
+  field.fmt = "%." .. tostring(field.prec) .. "f" .. field.unit
+  -- Convert precision to a divider
+  field.prec = 10 ^ field.prec
 end
 
-local function fieldUint8Save(field)
-  fieldUnsignedSave(field, 1)
-end
-
--- INT8
-local function fieldInt8Load(field, data, offset)
-  fieldSignedLoad(field, data, offset, 1)
-end
-
-local function fieldInt8Save(field)
-  fieldSignedSave(field, 1)
-end
-
--- UINT16
-local function fieldUint16Load(field, data, offset)
-  fieldUnsignedLoad(field, data, offset, 2)
-end
-
-local function fieldUint16Save(field)
-  fieldUnsignedSave(field, 2)
-end
-
--- INT16
-local function fieldInt16Load(field, data, offset)
-  fieldSignedLoad(field, data, offset, 2)
-end
-
-local function fieldInt16Save(field)
-  fieldSignedSave(field, 2)
+local function fieldFloatDisplay(field, y, attr)
+  lcd.drawText(COL2, y, string.format(field.fmt, field.value / field.prec), attr)
 end
 
 -- TEXT SELECTION
-local function fieldTextSelectionLoad(field, data, offset)
-  field.values, offset = fieldGetSelectOpts(data, offset, field.nc == nil and field.values)
+local function fieldTextSelLoad(field, data, offset)
+  field.values, offset = fieldGetStrOrOpts(data, offset, field.nc == nil and field.values, true)
   field.value = data[offset]
   -- min max and default (offset+1 to 3) are not used on selections
   -- units never uses cache
-  field.unit = fieldGetString(data, offset+4)
+  field.unit = fieldGetStrOrOpts(data, offset+4)
   field.nc = nil -- use cache next time
 end
 
-local function fieldTextSelectionSave(field)
-  crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.value })
-end
-
-local function fieldTextSelectionDisplay_color(field, y, attr)
+local function fieldTextSelDisplay_color(field, y, attr)
   local val = field.values[field.value+1] or "ERR"
   lcd.drawText(COL2, y, val, attr)
   local strPix = lcd.sizeText and lcd.sizeText(val) or (10 * #val)
   lcd.drawText(COL2 + strPix, y, field.unit, 0)
 end
 
-local function fieldTextSelectionDisplay_bw(field, y, attr)
+local function fieldTextSelDisplay_bw(field, y, attr)
   lcd.drawText(COL2, y, field.values[field.value+1] or "ERR", attr)
   lcd.drawText(lcd.getLastPos(), y, field.unit, 0)
 end
 
 -- STRING
 local function fieldStringLoad(field, data, offset)
-  field.value, offset = fieldGetString(data, offset)
+  field.value, offset = fieldGetStrOrOpts(data, offset)
   if #data >= offset then
     field.maxlen = data[offset]
   end
@@ -316,12 +279,13 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldFolderOpen(field)
-  folderAccess = field.id
-  local backFld = fields[backButtonId]
+  currentFolderId = field.id
+  local backFld = fields[#fields]
+  backFld.name = "----BACK----"
   -- Store the lineIndex and pageOffset to return to in the backFld
   backFld.li = lineIndex
   backFld.po = pageOffset
-  backFld.parent = folderAccess
+  backFld.parent = currentFolderId
 
   lineIndex = 1
   pageOffset = 0
@@ -333,13 +297,13 @@ local function fieldFolderDeviceOpen(field)
 end
 
 local function fieldFolderDisplay(field,y ,attr)
-  lcd.drawText(textXoffset, y, "> " .. field.name, bit32.bor(attr, BOLD))
+  lcd.drawText(COL1, y, "> " .. field.name, bit32.bor(attr, BOLD))
 end
 
 local function fieldCommandLoad(field, data, offset)
   field.status = data[offset]
   field.timeout = data[offset+1]
-  field.info = fieldGetString(data, offset+2)
+  field.info = fieldGetStrOrOpts(data, offset+2)
   if field.status == 0 then
     fieldPopup = nil
   end
@@ -352,7 +316,6 @@ local function fieldCommandSave(field)
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, field.id, field.status })
       fieldPopup = field
       fieldPopup.lastStatus = 0
-      commandRunningIndicator = 1
       fieldTimeout = getTime() + field.timeout
     end
   end
@@ -362,23 +325,23 @@ local function fieldCommandDisplay(field, y, attr)
     lcd.drawText(10, y, "[" .. field.name .. "]", bit32.bor(attr, BOLD))
 end
 
-local function UIbackExec()
-  local backFld = fields[backButtonId]
-  lineIndex = backFld.li or 1
-  pageOffset = backFld.po or 0
+local function fieldBackExec(field)
+  if field.parent then
+    lineIndex = field.li or 1
+    pageOffset = field.po or 0
 
-  backFld.parent = 255
-  backFld.li = nil
-  backFld.po = nil
-  folderAccess = nil
-end
-
-local function UIexitExec()
-  exitscript = 1
+    field.name = "----EXIT----"
+    field.parent = nil
+    field.li = nil
+    field.po = nil
+    currentFolderId = nil
+  else
+    exitscript = 1
+  end
 end
 
 local function changeDeviceId(devId) --change to selected device ID
-  folderAccess = nil
+  currentFolderId = nil
   deviceIsELRS_TX = nil
   elrsFlags = 0
   --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
@@ -398,14 +361,11 @@ local function fieldDeviceIdSelect(field)
 end
 
 local function createDeviceFields() -- put other devices in the field list
-  fields[fields_count + 2 + #devices] = fields[backButtonId]
-  backButtonId = fields_count + 2 + #devices  -- move back button to the end of the list, so it will always show up at the bottom.
+  -- move back button to the end of the list, so it will always show up at the bottom.
+  fields[fields_count + 2 + #devices] = fields[#fields]
   for i=1, #devices do
-    if devices[i].id == deviceId then
-      fields[fields_count+1+i] = {name=devices[i].name, parent = 255, type=15}
-    else
-      fields[fields_count+1+i] = {name=devices[i].name, parent = fields_count+1, type=15}
-    end
+    local parent = (devices[i].id == deviceId) and 255 or (fields_count+1)
+    fields[fields_count+1+i] = {name=devices[i].name, parent=parent, type=15}
   end
 end
 
@@ -413,7 +373,7 @@ local function parseDeviceInfoMessage(data)
   local offset
   local id = data[2]
   local newName
-  newName, offset = fieldGetString(data, 3)
+  newName, offset = fieldGetStrOrOpts(data, 3)
   local device = getDevice(newName)
   if device == nil then
     device = { id = id, name = newName }
@@ -437,55 +397,67 @@ local function parseDeviceInfoMessage(data)
 end
 
 local functions = {
-  { load=fieldUint8Load, save=fieldUint8Save, display=fieldIntDisplay }, --1 UINT8(0)
-  { load=fieldInt8Load, save=fieldInt8Save, display=fieldIntDisplay }, --2 INT8(1)
-  { load=fieldUint16Load, save=fieldUint16Save, display=fieldIntDisplay }, --3 UINT16(2)
-  { load=fieldInt16Load, save=fieldInt16Save, display=fieldIntDisplay }, --4  INT16(3)
+  { load=fieldIntLoad, save=fieldIntSave, display=fieldIntDisplay }, --1 UINT8(0)
+  { load=fieldIntLoad, save=fieldIntSave, display=fieldIntDisplay }, --2 INT8(1)
+  { load=fieldIntLoad, save=fieldIntSave, display=fieldIntDisplay }, --3 UINT16(2)
+  { load=fieldIntLoad, save=fieldIntSave, display=fieldIntDisplay }, --4 INT16(3)
   nil,
   nil,
   nil,
   nil,
-  nil, --9 FLOAT(8)
-  { load=fieldTextSelectionLoad, save=fieldTextSelectionSave, display = nil }, --10 SELECT(9)
+  { load=fieldFloatLoad, save=fieldIntSave, display=fieldFloatDisplay },  --9 FLOAT(8)
+  { load=fieldTextSelLoad, save=fieldIntSave, display=nil }, --10 SELECT(9)
   { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --11 STRING(10) editing NOTIMPL
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
   { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --13 INFO(12)
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14 COMMAND(13)
-  { load=nil, save=UIbackExec, display=fieldCommandDisplay }, --15 back(14)
+  { load=nil, save=fieldBackExec, display=fieldCommandDisplay }, --15 back/exit(14)
   { load=nil, save=fieldDeviceIdSelect, display=fieldCommandDisplay }, --16 device(15)
   { load=nil, save=fieldFolderDeviceOpen, display=fieldFolderDisplay }, --17 deviceFOLDER(16)
-  { load=nil, save=UIexitExec, display=fieldCommandDisplay }, --18 exit(17)
 }
 
 local function parseParameterInfoMessage(data)
   local fieldId = (fieldPopup and fieldPopup.id) or loadQ[#loadQ]
   if data[2] ~= deviceId or data[3] ~= fieldId then
-    fieldData = {}
+    fieldData = nil
     fieldChunk = 0
     return
   end
   local field = fields[fieldId]
   local chunksRemain = data[4]
   -- If no field or the chunksremain changed when we have data, don't continue
-  if not field or (chunksRemain ~= expectChunksRemain and #fieldData ~= 0) then
+  if not field or (fieldData and chunksRemain ~= expectChunksRemain) then
     return
   end
-  expectChunksRemain = chunksRemain - 1
-  for i=5, #data do
-    fieldData[#fieldData + 1] = data[i]
+
+  local offset
+  -- If data is chunked, copy it to persistent buffer
+  if chunksRemain > 0 or fieldChunk > 0 then
+    fieldData = fieldData or {}
+    for i=5, #data do
+      fieldData[#fieldData + 1] = data[i]
+      data[i] = nil
+    end
+    offset = 1
+  else
+    -- All data arrived in one chunk, operate directly on data
+    fieldData = data
+    offset = 5
   end
+
   if chunksRemain > 0 then
     fieldChunk = fieldChunk + 1
+    expectChunksRemain = chunksRemain - 1
   else
+    -- Field data stream is now complete, process into a field
     loadQ[#loadQ] = nil
-    -- Populate field from fieldData
-    if #fieldData > 3 then
-      local offset
+
+    if #fieldData > (offset + 2) then
       field.id = fieldId
-      field.parent = (fieldData[1] ~= 0) and fieldData[1] or nil
-      field.type = bit32.band(fieldData[2], 0x7f)
-      field.hidden = bit32.btest(fieldData[2], 0x80) or nil
-      field.name, offset = fieldGetString(fieldData, 3, field.name)
+      field.parent = (fieldData[offset] ~= 0) and fieldData[offset] or nil
+      field.type = bit32.band(fieldData[offset+1], 0x7f)
+      field.hidden = bit32.btest(fieldData[offset+1], 0x80) or nil
+      field.name, offset = fieldGetStrOrOpts(fieldData, offset+2, field.name)
       if functions[field.type+1].load then
         functions[field.type+1].load(field, fieldData, offset)
       end
@@ -494,7 +466,7 @@ local function parseParameterInfoMessage(data)
     end
 
     fieldChunk = 0
-    fieldData = {}
+    fieldData = nil
 
     -- Last field loaded, add the list of devices to the end
     if #loadQ == 0 then
@@ -510,7 +482,7 @@ end
 
 local function parseElrsInfoMessage(data)
   if data[2] ~= deviceId then
-    fieldData = {}
+    fieldData = nil
     fieldChunk = 0
     return
   end
@@ -523,7 +495,7 @@ local function parseElrsInfoMessage(data)
     elrsFlags = newFlags
     titleShowWarnTimeout = 0
   end
-  elrsFlagsInfo = fieldGetString(data, 7)
+  elrsFlagsInfo = fieldGetStrOrOpts(data, 7)
 
   local state = (bit32.btest(elrsFlags, 1) and "C") or "-"
   goodBadPkt = string.format("%u/%u   %s", badPkt, goodPkt, state)
@@ -621,10 +593,10 @@ local function lcd_title_color()
   lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
   lcd.setColor(CUSTOM_COLOR, BLACK)
   if titleShowWarn then
-    lcd.drawText(textXoffset + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
   else
     local title = fields_count > 0 and deviceName or "Loading..."
-    lcd.drawText(textXoffset + 1, 4, title, CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, 4, title, CUSTOM_COLOR)
     lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
   end
   -- progress bar
@@ -652,17 +624,17 @@ local function lcd_title_bw()
   else
     lcd.drawFilledRectangle(0, 0, LCD_W, barHeight, GREY_DEFAULT)
     if titleShowWarn then
-      lcd.drawText(textXoffset, 1, elrsFlagsInfo, INVERS)
+      lcd.drawText(COL1, 1, elrsFlagsInfo, INVERS)
     else
       local title = fields_count > 0 and deviceName or "Loading..."
-      lcd.drawText(textXoffset, 1, title, INVERS)
+      lcd.drawText(COL1, 1, title, INVERS)
     end
   end
 end
 
 local function lcd_warn()
-  lcd.drawText(textXoffset, textSize*2, "Error:")
-  lcd.drawText(textXoffset, textSize*3, elrsFlagsInfo)
+  lcd.drawText(COL1, textSize*2, "Error:")
+  lcd.drawText(COL1, textSize*3, elrsFlagsInfo)
   lcd.drawText(LCD_W/2, textSize*5, "[OK]", BLINK + INVERS + CENTER)
 end
 
@@ -670,7 +642,7 @@ local function reloadCurField()
   local field = getField(lineIndex)
   fieldTimeout = 0
   fieldChunk = 0
-  fieldData = {}
+  fieldData = nil
   loadQ[#loadQ+1] = field.id
 end
 
@@ -685,9 +657,10 @@ local function reloadRelatedFields(field)
   for fieldId = fields_count, 1, -1 do
     -- Skip this field, will be added to end
     local fldTest = fields[fieldId]
+    local fldType = fldTest.type or 99 -- type could be nil if still loading
     if fieldId ~= field.id
       and fldTest.parent == field.parent
-      and (fldTest.type or 99) < 11 then -- type could be nil if still loading
+      and (fldType < 11 or fldType == 12) then -- ignores FOLDER/COMMAND/devices/EXIT
       fldTest.nc = true -- "no cache" the options
       loadQ[#loadQ+1] = fieldId
     end
@@ -703,7 +676,7 @@ local function handleDevicePageEvent(event)
   if #fields == 0 then --if there is no field yet
     return
   else
-    if fields[backButtonId].name == nil then --if back button is not assigned yet, means there is no field yet.
+    if fields[#fields].name == nil then --if back button is not assigned yet, means there is no field yet.
       return
     end
   end
@@ -713,15 +686,16 @@ local function handleDevicePageEvent(event)
       edit = nil
       reloadCurField()
     else
-      if folderAccess == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
+      if currentFolderId == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
         if deviceId ~= 0xEE then
           changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
         else
           reloadAllField()
         end
         crossfireTelemetryPush(0x28, { 0x00, 0xEA })
+      else
+        fieldBackExec(fields[#fields])
       end
-      UIbackExec()
     end
   elseif event == EVT_VIRTUAL_ENTER then -- toggle editing/selecting current field
     if elrsFlags > 0x1F then
@@ -783,7 +757,7 @@ local function runDevicePage(event)
           and ((edit and BLINK or 0) + INVERS)
           or 0
         if field.type < 11 or field.type == 12 then -- if not folder, command, or back
-          lcd.drawText(textXoffset, y*textSize+textYoffset, field.name, 0)
+          lcd.drawText(COL1, y*textSize+textYoffset, field.name, 0)
         end
         if functions[field.type+1].display then
           functions[field.type+1].display(field, y*textSize+textYoffset, attr)
@@ -804,13 +778,12 @@ local function runPopupPage(event)
     fieldTimeout = getTime() + 200 -- 2s
   end
 
-  local result
   if fieldPopup.status == 0 and fieldPopup.lastStatus ~= 0 then -- stopped
       popupCompat(fieldPopup.info, "Stopped!", event)
       reloadAllField()
       fieldPopup = nil
   elseif fieldPopup.status == 3 then -- confirmation required
-    result = popupCompat(fieldPopup.info, "PRESS [OK] to confirm", event)
+    local result = popupCompat(fieldPopup.info, "PRESS [OK] to confirm", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "OK" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 4 }) -- lcsConfirmed
@@ -823,29 +796,13 @@ local function runPopupPage(event)
     if fieldChunk == 0 then
       commandRunningIndicator = (commandRunningIndicator % 4) + 1
     end
-    result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
+    local result = popupCompat(fieldPopup.info .. " [" .. string.sub("|/-\\", commandRunningIndicator, commandRunningIndicator) .. "]", "Press [RTN] to exit", event)
     fieldPopup.lastStatus = fieldPopup.status
     if result == "CANCEL" then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 5 }) -- lcsCancel
       fieldTimeout = getTime() + fieldPopup.timeout -- we are expecting an immediate response
       fieldPopup = nil
     end
-  end
-end
-
-local function loadSymbolChars()
-  -- On firmwares that have constants defined for the arrow chars, use them in place of
-  -- the \xc0 \xc1 chars (which are OpenTX-en)
-  if __opentx then
-    byteToStr = function (b)
-      -- Use the table to convert the char, else use string.char if not in the table
-      return ({
-        [192] = __opentx.CHAR_UP,
-        [193] = __opentx.CHAR_DOWN
-      })[b] or string.char(b)
-    end
-  else
-    byteToStr = string.char
   end
 end
 
@@ -866,33 +823,33 @@ local function setLCDvar()
   -- set textselection unit function, use GetLastPost or sizeText
   if (lcd.RGB ~= nil) then
     lcd_title = lcd_title_color
-    functions[10].display=fieldTextSelectionDisplay_color
+    functions[10].display = fieldTextSelDisplay_color
   else
     lcd_title = lcd_title_bw
-    functions[10].display=fieldTextSelectionDisplay_bw
+    functions[10].display = fieldTextSelDisplay_bw
     touch2evt = nil
   end
   lcd_title_color = nil
   lcd_title_bw = nil
-  fieldTextSelectionDisplay_bw = nil
-  fieldTextSelectionDisplay_color = nil
-    -- Determine if popupConfirmation takes 3 arguments or 2
+  fieldTextSelDisplay_bw = nil
+  fieldTextSelDisplay_color = nil
+  -- Determine if popupConfirmation takes 3 arguments or 2
   -- if pcall(popupConfirmation, "", "", EVT_VIRTUAL_EXIT) then
   -- major 1 is assumed to be FreedomTX
-  local ver, radio, major = getVersion()
+  local _, _, major = getVersion()
   if major ~= 1 then
     popupCompat = popupConfirmation
   end
   if LCD_W == 480 then
+    COL1 = 3
     COL2 = 240
     maxLineIndex = 10
-    textXoffset = 3
     textYoffset = 10
     textSize = 22 --textSize is text Height
   elseif LCD_W == 320 then
+    COL1 = 3
     COL2 = 160
     maxLineIndex = 14
-    textXoffset = 3
     textYoffset = 10
     textSize = 22
   else
@@ -901,13 +858,11 @@ local function setLCDvar()
     else
       COL2 = 70
     end
+    COL1 = 0
     maxLineIndex = 6
-    textXoffset = 0
     textYoffset = 3
     textSize = 8
   end
-  loadSymbolChars()
-  loadSymbolChars = nil
 end
 
 local function setMock()
@@ -916,15 +871,10 @@ local function setMock()
   if string.sub(rv, -5) ~= "-simu" then return end
   local mock = loadScript("mockup/elrsmock.lua")
   if mock == nil then return end
-  fields, goodBadPkt, deviceName = mock(), "0/500   C", "ExpressLRS TX"
+  fields, goodBadPkt, deviceName = mock()
   fields_count = #fields - 1
   loadQ = { fields_count }
   deviceIsELRS_TX = true
-  backButtonId = #fields
-
-  fields_count = fields_count + 1
-  exitButtonId = fields_count + 1
-  fields[exitButtonId] = {id = exitButtonId, name="----EXIT----", type=17}
 end
 
 -- Init

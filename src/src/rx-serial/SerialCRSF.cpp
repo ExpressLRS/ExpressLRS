@@ -1,20 +1,39 @@
 #include "SerialCRSF.h"
 #include "CRSF.h"
+#include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
+#if defined(USE_MSP_WIFI)
+#include "msp2crsf.h"
+
+extern MSP2CROSSFIRE msp2crsf;
+#endif
 
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void EnterBindingMode();
 extern void UpdateModelMatch(uint8_t model);
 
-void SerialCRSF::setLinkQualityStats(uint16_t lq, uint16_t rssi)
+void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
-    linkQuality = lq;
-    rssiDBM = rssi;
+    uint32_t bytesWritten = 0;
+    #if defined(USE_MSP_WIFI)
+    while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesToSend)
+    {
+        msp2crsf.FIFOout.lock();
+        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
+        uint8_t OutData[OutPktLen];
+        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
+        msp2crsf.FIFOout.unlock();
+        this->_outputPort->write(OutData, OutPktLen); // write the packet out
+        bytesWritten += OutPktLen;
+    }
+    #endif
+    // Call the super class to send the current FIFO (using any left-over bytes)
+    SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }
 
-void SerialCRSF::sendLinkStatisticsToFC()
+void SerialCRSF::queueLinkStatisticsPacket()
 {
     constexpr uint8_t outBuffer[] = {
         LinkStatisticsFrameLength + 4,
@@ -26,15 +45,17 @@ void SerialCRSF::sendLinkStatisticsToFC()
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
     crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
 
+    _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
     {
         _fifo.pushBytes(outBuffer, sizeof(outBuffer));
         _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
         _fifo.push(crc);
     }
+    _fifo.unlock();
 }
 
-uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
@@ -61,8 +82,22 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     PackedRCdataOut.ch11 = channelData[11];
     PackedRCdataOut.ch12 = channelData[12];
     PackedRCdataOut.ch13 = channelData[13];
-    PackedRCdataOut.ch14 = channelData[14];
-    PackedRCdataOut.ch15 = channelData[15];
+
+    // In 16ch mode, do not output RSSI/LQ on channels
+    if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
+    {
+        PackedRCdataOut.ch14 = channelData[14];
+        PackedRCdataOut.ch15 = channelData[15];
+    }
+    else
+    {
+        // Not in 16-channel mode, send LQ and RSSI dBm
+        int32_t rssiDBM = CRSF::LinkStatistics.active_antenna == 0 ? -CRSF::LinkStatistics.uplink_RSSI_1 : -CRSF::LinkStatistics.uplink_RSSI_2;
+
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(CRSF::LinkStatistics.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                   ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+    }
 
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
     crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
@@ -73,38 +108,43 @@ uint32_t SerialCRSF::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     return DURATION_IMMEDIATELY;
 }
 
-void SerialCRSF::sendMSPFrameToFC(uint8_t* data)
+void SerialCRSF::queueMSPFrameTransmission(uint8_t* data)
 {
     const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
     if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
     {
         data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        _fifo.lock();
         _fifo.push(totalBufferLen);
         _fifo.pushBytes(data, totalBufferLen);
+        _fifo.unlock();
     }
 }
 
-void SerialCRSF::processByte(uint8_t byte)
+void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
 {
-    telemetry.RXhandleUARTin(byte);
+    for (int i=0 ; i<size ; i++)
+    {
+        telemetry.RXhandleUARTin(bytes[i]);
 
-    if (telemetry.ShouldCallBootloader())
-    {
-        reset_into_bootloader();
-    }
-    if (telemetry.ShouldCallEnterBind())
-    {
-        EnterBindingMode();
-    }
-    if (telemetry.ShouldCallUpdateModelMatch())
-    {
-        UpdateModelMatch(telemetry.GetUpdatedModelMatch());
-    }
-    if (telemetry.ShouldSendDeviceFrame())
-    {
-        uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-        CRSF::GetDeviceInformation(deviceInformation, 0);
-        CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-        sendMSPFrameToFC(deviceInformation);
+        if (telemetry.ShouldCallBootloader())
+        {
+            reset_into_bootloader();
+        }
+        if (telemetry.ShouldCallEnterBind())
+        {
+            EnterBindingMode();
+        }
+        if (telemetry.ShouldCallUpdateModelMatch())
+        {
+            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
+        if (telemetry.ShouldSendDeviceFrame())
+        {
+            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
+            CRSF::GetDeviceInformation(deviceInformation, 0);
+            CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            queueMSPFrameTransmission(deviceInformation);
+        }
     }
 }

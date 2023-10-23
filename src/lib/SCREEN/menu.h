@@ -6,6 +6,8 @@
 enum fsm_state_s {
     // This first ones have menu text & icons (and are used as array indexes)
     STATE_PACKET = 0,
+    STATE_SWITCH,
+    STATE_ANTENNA,
     STATE_POWER,
     STATE_TELEMETRY,
     STATE_POWERSAVE,

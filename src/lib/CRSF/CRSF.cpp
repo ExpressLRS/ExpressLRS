@@ -14,8 +14,6 @@ GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
 // for better performance, and on other targets (mostly using pin 13), it always uses Matrix
 HardwareSerial CRSF::Port(0);
-portMUX_TYPE FIFOmux = portMUX_INITIALIZER_UNLOCKED;
-
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSF::Port(0);
@@ -35,12 +33,15 @@ HardwareSerial CRSF::Port = Serial;
 #define HANDSET_TELEMETRY_FIFO_SIZE 128 // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 /// Out FIFO to buffer messages///
-static FIFO SerialOutFIFO;
+static const auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
+static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
 
 inBuffer_U CRSF::inBuffer;
 
 Stream *CRSF::PortSecondary;
-static FIFO MspWriteFIFO;
+
+static const auto MSP_SERIAL_OUT_FIFO_SIZE = 256U;
+static FIFO<MSP_SERIAL_OUT_FIFO_SIZE> MspWriteFIFO;
 
 void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
 void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
@@ -84,7 +85,7 @@ uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 
 uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 5250000;
 #if defined(PLATFORM_ESP32)
-bool CRSF::UARTinverted = false;
+bool CRSF::UARTinverted = true; // default to start looking for an inverted signal
 #endif
 
 bool CRSF::CRSFstate = false;
@@ -103,7 +104,10 @@ void CRSF::Begin()
 
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
-    UARTinverted = firmwareOptions.uart_inverted;
+    if (GPIO_PIN_RCSIGNAL_RX != GPIO_PIN_RCSIGNAL_TX)
+    {
+        UARTinverted = false; // on a full UART we will start uninverted checking first
+    }
     CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
@@ -178,35 +182,17 @@ void CRSF::flush_port_input(void)
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
+void ICACHE_RAM_ATTR CRSF::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
 {
-    if (!CRSF::CRSFstate)
+    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
     {
-        return;
+        buffer[i + 3] = ((uint8_t *)&LinkStatistics)[i];
     }
-
-    constexpr uint8_t outBuffer[4] = {
-        LinkStatisticsFrameLength + 4,
-        CRSF_ADDRESS_RADIO_TRANSMITTER,
-        LinkStatisticsFrameLength + 2,
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
-
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
-
-#ifdef PLATFORM_ESP32
-    portENTER_CRITICAL(&FIFOmux);
-#endif
-    if (SerialOutFIFO.ensure(outBuffer[0] + 1))
-    {
-        SerialOutFIFO.pushBytes(outBuffer, sizeof(outBuffer));
-        SerialOutFIFO.pushBytes((byte *)&LinkStatistics, LinkStatisticsFrameLength);
-        SerialOutFIFO.push(crc);
-    }
-#ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
+    uint8_t crc = crsf_crc.calc(buffer[2]);
+    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&LinkStatistics, LinkStatisticsFrameLength, crc);
 }
 
 /**
@@ -231,18 +217,14 @@ void CRSF::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
     crc = crsf_crc.calc((byte *)data, len, crc);
 
-#ifdef PLATFORM_ESP32
-    portENTER_CRITICAL(&FIFOmux);
-#endif
+    SerialOutFIFO.lock();
     if (SerialOutFIFO.ensure(buf[0] + 1))
     {
         SerialOutFIFO.pushBytes(buf, sizeof(buf));
         SerialOutFIFO.pushBytes((byte *)data, len);
         SerialOutFIFO.push(crc);
     }
-#ifdef PLATFORM_ESP32
-    portEXIT_CRITICAL(&FIFOmux);
-#endif
+    SerialOutFIFO.unlock();
 }
 
 void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
@@ -257,17 +239,13 @@ void ICACHE_RAM_ATTR CRSF::sendTelemetryToTX(uint8_t *data)
         }
 
         data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-#ifdef PLATFORM_ESP32
-        portENTER_CRITICAL(&FIFOmux);
-#endif
+        SerialOutFIFO.lock();
         if (SerialOutFIFO.ensure(size + 1))
         {
             SerialOutFIFO.push(size); // length
             SerialOutFIFO.pushBytes(data, size);
         }
-#ifdef PLATFORM_ESP32
-        portEXIT_CRITICAL(&FIFOmux);
-#endif
+        SerialOutFIFO.unlock();
     }
 }
 
@@ -468,11 +446,12 @@ void CRSF::ResetMspQueue()
 void CRSF::UnlockMspMessage()
 {
     // current msp message is sent so restore next buffered write
-    if (MspWriteFIFO.peek() > 0)
+    if (MspWriteFIFO.size() > 0)
     {
-        uint8_t length = MspWriteFIFO.pop();
-        MspDataLength = length;
-        MspWriteFIFO.popBytes(MspData, length);
+        MspWriteFIFO.lock();
+        MspDataLength = MspWriteFIFO.pop();
+        MspWriteFIFO.popBytes(MspData, MspDataLength);
+        MspWriteFIFO.unlock();
     }
     else
     {
@@ -535,11 +514,13 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(const uint8_t length, uint8_t* data)
     // store all write requests since an update does send multiple writes
     else
     {
+        MspWriteFIFO.lock();
         if (MspWriteFIFO.ensure(length + 1))
         {
             MspWriteFIFO.push(length);
             MspWriteFIFO.pushBytes((const uint8_t *)data, length);
         }
+        MspWriteFIFO.unlock();
     }
 }
 
@@ -661,18 +642,14 @@ void ICACHE_RAM_ATTR CRSF::handleUARTout()
         uint8_t periodBytesRemaining = maxPeriodBytes;
         while (periodBytesRemaining)
         {
-#ifdef PLATFORM_ESP32
-            portENTER_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-#endif
+            SerialOutFIFO.lock();
             // no package is in transit so get new data from the fifo
             if (packageLengthRemaining == 0) {
                 packageLengthRemaining = SerialOutFIFO.pop();
                 SerialOutFIFO.popBytes(CRSFoutBuffer, packageLengthRemaining);
                 sendingOffset = 0;
             }
-#ifdef PLATFORM_ESP32
-            portEXIT_CRITICAL(&FIFOmux); // stops other tasks from writing to the FIFO when we want to read it
-#endif
+            SerialOutFIFO.unlock();
 
             // if the package is long we need to split it up so it fits in the sending interval
             uint8_t writeLength;
@@ -780,13 +757,60 @@ void ICACHE_RAM_ATTR CRSF::adjustMaxPacketSize()
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32_S3)
 uint32_t CRSF::autobaud()
 {
     static enum { INIT, MEASURED, INVERTED } state;
 
-    uint32_t *autobaud_reg = (uint32_t *)UART_AUTOBAUD_REG(0);
-    uint32_t *rxd_cnt_reg = (uint32_t *)UART_RXD_CNT_REG(0);
+    if (state == MEASURED)
+    {
+        UARTinverted = !UARTinverted;
+        state = INVERTED;
+        return UARTrequestedBaud;
+    }
+    else if (state == INVERTED)
+    {
+        UARTinverted = !UARTinverted;
+        state = INIT;
+    }
+
+    if (REG_GET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN) == 0)
+    {
+        REG_WRITE(UART_RX_FILT_REG(0), (4 << UART_GLITCH_FILT_S) | UART_GLITCH_FILT_EN); // enable, glitch filter 4
+        REG_WRITE(UART_LOWPULSE_REG(0), 4095); // reset register to max value
+        REG_WRITE(UART_HIGHPULSE_REG(0), 4095); // reset register to max value
+        REG_SET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN); // enable autobaud
+        return 400000;
+    }
+    else if (REG_GET_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN) && REG_READ(UART_RXD_CNT_REG(0)) < 300)
+    {
+        return 400000;
+    }
+
+    state = MEASURED;
+
+    uint32_t low_period  = REG_READ(UART_LOWPULSE_REG(0));
+    uint32_t high_period = REG_READ(UART_HIGHPULSE_REG(0));
+    REG_CLR_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN); // disable autobaud
+    REG_CLR_BIT(UART_RX_FILT_REG(0), UART_GLITCH_FILT_EN); // disable glitch filtering
+
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    // According to the tecnnical reference
+    int32_t calulatedBaud = UART_CLK_FREQ / (low_period + high_period + 2);
+    int32_t bestBaud = (int32_t)TxToHandsetBauds[0];
+    for(int i=0 ; i<ARRAY_SIZE(TxToHandsetBauds) ; i++)
+    {
+        if (abs(calulatedBaud - bestBaud) > abs(calulatedBaud - (int32_t)TxToHandsetBauds[i]))
+        {
+            bestBaud = (int32_t)TxToHandsetBauds[i];
+        }
+    }
+    return bestBaud;
+}
+#elif defined(PLATFORM_ESP32)
+uint32_t CRSF::autobaud()
+{
+    static enum { INIT, MEASURED, INVERTED } state;
 
     if (state == MEASURED) {
         UARTinverted = !UARTinverted;
@@ -797,17 +821,17 @@ uint32_t CRSF::autobaud()
         state = INIT;
     }
 
-    if ((*autobaud_reg & 1) == 0) {
-        *autobaud_reg = (4 << 8) | 1;    // enable, glitch filter 4
+    if (REG_GET_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN) == 0) {
+        REG_WRITE(UART_AUTOBAUD_REG(0), 4 << UART_GLITCH_FILT_S | UART_AUTOBAUD_EN);    // enable, glitch filter 4
         return 400000;
-    } else if ((*autobaud_reg & 1) && (*rxd_cnt_reg < 300))
+    } else if (REG_GET_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN) && REG_READ(UART_RXD_CNT_REG(0)) < 300)
         return 400000;
 
     state = MEASURED;
 
-    uint32_t low_period  = *(uint32_t *)UART_LOWPULSE_REG(0);
-    uint32_t high_period = *(uint32_t *)UART_HIGHPULSE_REG(0);
-    *autobaud_reg = (4 << 8) | 0;
+    uint32_t low_period  = REG_READ(UART_LOWPULSE_REG(0));
+    uint32_t high_period = REG_READ(UART_HIGHPULSE_REG(0));
+    REG_CLR_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN);   // disable autobaud
 
     DBGLN("autobaud: low %d, high %d", low_period, high_period);
     // sample code at https://github.com/espressif/esp-idf/issues/3336
@@ -900,6 +924,35 @@ bool CRSF::UARTwdt()
 #endif
     return retval;
 }
+
+#endif // CRSF_TX_MODULE
+
+#if defined(CRSF_RX_MODULE)
+
+bool CRSF::HasUpdatedUplinkPower = false;
+
+/***
+ * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
+ */
+void CRSF::updateUplinkPower(uint8_t uplinkPower)
+{
+    if (uplinkPower != LinkStatistics.uplink_TX_Power)
+    {
+        LinkStatistics.uplink_TX_Power = uplinkPower;
+        HasUpdatedUplinkPower = true;
+    }
+}
+
+/***
+ * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
+ */
+bool CRSF::clearUpdatedUplinkPower()
+{
+    bool retVal = HasUpdatedUplinkPower;
+    HasUpdatedUplinkPower = false;
+    return retVal;
+}
+
 #endif // CRSF_RX_MODULE
 
 /***

@@ -330,6 +330,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
+    #if defined(PLATFORM_ESP32)
+    json["config"]["allow-dshot"] = true;
+    #endif
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
     json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
@@ -858,10 +861,6 @@ static void startMDNS()
   if (firmwareOptions.unlock_higher_power)
   {
     options += " -DUNLOCK_HIGHER_POWER";
-  }
-  if (firmwareOptions.uart_inverted)
-  {
-    options += " -DUART_INVERTED";
   }
   options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
   options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);

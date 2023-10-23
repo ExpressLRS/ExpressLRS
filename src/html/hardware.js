@@ -26,7 +26,7 @@ function onReady() {
 function loadData() {
   xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
       updateHardwareSettings(data);
     }
@@ -43,19 +43,19 @@ function submitHardwareSettings() {
   const formData = new FormData(_('upload_hardware'));
   xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v) {
     if (v === '') return undefined;
-    if (_(k) && _(k).type == 'checkbox') {
-      return v == 'on' ? true : false;
+    if (_(k) && _(k).type === 'checkbox') {
+      return v === 'on';
     }
     if (_(k) && _(k).classList.contains('array')) {
       const arr = v.split(',').map((element) => {
         return Number(element);
       });
-      return arr.length == 0 ? undefined : arr;
+      return arr.length === 0 ? undefined : arr;
     }
     return isNaN(v) ? v : +v;
   }));
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState === 4 && this.status === 200) {
       cuteAlert({
         type: 'question',
         title: 'Upload Succeeded',
@@ -63,7 +63,7 @@ function submitHardwareSettings() {
         confirmText: 'Reboot',
         cancelText: 'Close'
       }).then((e) => {
-        if (e == 'confirm') {
+        if (e === 'confirm') {
           const xhr = new XMLHttpRequest();
           xhr.open('POST', '/reboot');
           xhr.setRequestHeader('Content-Type', 'application/json');
@@ -79,7 +79,7 @@ function submitHardwareSettings() {
 function updateHardwareSettings(data) {
   for (const [key, value] of Object.entries(data)) {
     if (_(key)) {
-      if (_(key).type == 'checkbox') {
+      if (_(key).type === 'checkbox') {
         _(key).checked = value;
       } else {
         if (Array.isArray(value)) _(key).value = value.toString();
@@ -93,13 +93,13 @@ function updateHardwareSettings(data) {
 function fileDragHover(e) {
   e.stopPropagation();
   e.preventDefault();
-  e.target.className = (e.type == 'dragover' ? 'hover' : '');
+  if (e.target === _('filedrag')) e.target.className = (e.type === 'dragover' ? 'hover' : '');
 }
 
 function fileSelectHandler(e) {
   fileDragHover(e);
   const files = e.target.files || e.dataTransfer.files;
-  for (let i = 0, f; f = files[i]; i++) {
+  for (const f of files) {
     parseFile(f);
   }
 }

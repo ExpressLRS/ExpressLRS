@@ -12,17 +12,7 @@ extern RxConfig config;
 
 const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
-void SerialSBUS::setLinkQualityStats(uint16_t lq, uint16_t rssi)
-{
-    // unsupported
-}
-
-void SerialSBUS::sendLinkStatisticsToFC()
-{
-    // unsupported
-}
-
-uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     static auto sendPackets = false;
     if ((failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
@@ -33,7 +23,7 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
 
     // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
-    
+
     if (config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
     {
         PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
@@ -82,11 +72,6 @@ uint32_t SerialSBUS::sendRCFrameToFC(bool frameAvailable, uint32_t *channelData)
     _outputPort->write((uint8_t)extraData);    // ch 17, 18, lost packet, failsafe
     _outputPort->write((uint8_t)0x00);    // FOOTER
     return SBUS_CALLBACK_INTERVAL_MS;
-}
-
-void SerialSBUS::sendMSPFrameToFC(uint8_t* data)
-{
-    // unsupported
 }
 
 #endif

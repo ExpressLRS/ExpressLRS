@@ -11,14 +11,21 @@ extern bool InLoanBindingMode;
 extern bool returnModelFromLoan;
 
 static char modelString[] = "000";
+#if defined(PLATFORM_ESP32)
+static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot";
+static const char *noDShot = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
+static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial TX";
+static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX";
+#else
 static const char *pwmModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off";
 static const char *txModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial TX";
 static const char *rxModes = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;Serial RX";
+#endif
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
 };
 
@@ -168,6 +175,12 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
   {
     luaMappingOutputMode.options = txModes;
   }
+  #if defined(PLATFORM_ESP32)
+  else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 0)
+  {
+    luaMappingOutputMode.options = noDShot;
+  }
+  #endif
   else
   {
     luaMappingOutputMode.options = pwmModes;
@@ -285,6 +298,22 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
 
 #endif // GPIO_PIN_PWM_OUTPUTS
 
+#if defined(POWER_OUTPUT_VALUES)
+
+static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
+{
+  uint8_t newPower = arg + POWERMGNT::getMinPower();
+  if (newPower > POWERMGNT::getMaxPower())
+  {
+    newPower = PWR_MATCH_TX;
+  }
+
+  config.SetPower(newPower);
+  // POWERMGNT::setPower() will be called in updatePower() in the main loop
+}
+
+#endif // POWER_OUTPUT_VALUES
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -320,11 +349,7 @@ static void registerLuaParameters()
 
 #if defined(POWER_OUTPUT_VALUES)
   luadevGeneratePowerOpts(&luaTlmPower);
-  registerLUAParameter(&luaTlmPower, [](struct luaPropertiesCommon* item, uint8_t arg){
-    POWERMGNT::setPower((PowerLevels_e)(arg + MinPower));
-    // POWERMGNT will constrain the value to the proper level
-    config.SetPower(POWERMGNT::currPower());
-  });
+  registerLUAParameter(&luaTlmPower, &luaparamSetPower);
 #endif
   registerLUAParameter(&luaRateInitIdx, [](struct luaPropertiesCommon* item, uint8_t arg) {
     uint8_t newRate = RATE_MAX - 1 - arg;
@@ -378,7 +403,9 @@ static int event()
   }
 
 #if defined(POWER_OUTPUT_VALUES)
-  setLuaTextSelectionValue(&luaTlmPower, config.GetPower() - MinPower);
+  // The last item (for MatchTX) will be MaxPower - MinPower + 1
+  uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+  setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
 #endif
   setLuaTextSelectionValue(&luaRateInitIdx, RATE_MAX - 1 - config.GetRateInitialIdx());
 

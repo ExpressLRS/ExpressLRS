@@ -21,7 +21,7 @@ enum lua_Flags{
 
 struct luaPropertiesCommon {
     const char* const name;    // display name
-    const crsf_value_type_e type;
+    crsf_value_type_e type;
     uint8_t id;         // Sequential id assigned by enumeration
     uint8_t parent;     // id of parent folder
 } PACKED;
@@ -59,15 +59,15 @@ struct luaItem_command {
 struct luaPropertiesInt8 {
     union {
         struct {
-            int8_t value;
-            const int8_t min;
-            const int8_t max;
-        } s;
-        struct {
             uint8_t value;
             const uint8_t min;
             const uint8_t max;
         } u;
+        struct {
+            int8_t value;
+            const int8_t min;
+            const int8_t max;
+        } s;
     };
 } PACKED;
 
@@ -80,17 +80,17 @@ struct luaItem_int8 {
 struct luaPropertiesInt16 {
     union {
         struct {
-            int16_t value;
-            const int16_t min;
-            const int16_t max;
-        } s;
-        struct {
             uint16_t value;
             const uint16_t min;
             const uint16_t max;
         } u;
+        struct {
+            int16_t value;
+            const int16_t min;
+            const int16_t max;
+        } s;
     };
-}PACKED;
+} PACKED;
 
 struct luaItem_int16 {
     struct luaPropertiesCommon common;
@@ -98,13 +98,29 @@ struct luaItem_int16 {
     const char* const units;
 } PACKED;
 
+struct luaPropertiesFloat {
+    // value, min, max, and def are all signed, but stored as BE unsigned
+    uint32_t value;
+    const uint32_t min;
+    const uint32_t max;
+    const uint32_t def; // default value
+    const uint8_t precision;
+    const uint32_t step;
+} PACKED;
+
+struct luaItem_float {
+    struct luaPropertiesCommon common;
+    struct luaPropertiesFloat properties;
+    const char* const units;
+} PACKED;
+
 struct luaItem_string {
-    const struct luaPropertiesCommon common;
+    struct luaPropertiesCommon common;
     const char* value;
 } PACKED;
 
 struct luaItem_folder {
-    const struct luaPropertiesCommon common;
+    struct luaPropertiesCommon common;
     char* dyn_name;
 } PACKED;
 
@@ -121,6 +137,9 @@ uint8_t getLuaWarningFlags(void);
 
 void luaRegisterDevicePingCallback(void (*callback)());
 #endif
+
+#define LUA_FIELD_HIDE(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type | CRSF_FIELD_HIDDEN); }
+#define LUA_FIELD_SHOW(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type & ~CRSF_FIELD_HIDDEN); }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
@@ -143,10 +162,13 @@ inline void setLuaInt8Value(struct luaItem_int8 *luaStruct, int8_t newvalue) {
     luaStruct->properties.s.value = newvalue;
 }
 inline void setLuaUint16Value(struct luaItem_int16 *luaStruct, uint16_t newvalue) {
-    luaStruct->properties.u.value = (newvalue >> 8) | (newvalue << 8);
+    luaStruct->properties.u.value = htobe16(newvalue);
 }
 inline void setLuaInt16Value(struct luaItem_int16 *luaStruct, int16_t newvalue) {
-    luaStruct->properties.s.value = (newvalue >> 8) | (newvalue << 8);
+    luaStruct->properties.u.value = htobe16((uint16_t)newvalue);
+}
+inline void setLuaFloatValue(struct luaItem_float *luaStruct, int32_t newvalue) {
+    luaStruct->properties.value = htobe32((uint32_t)newvalue);
 }
 inline void setLuaStringValue(struct luaItem_string *luaStruct, const char *newvalue) {
     luaStruct->value = newvalue;

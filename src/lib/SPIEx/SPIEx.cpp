@@ -8,25 +8,32 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
 {
 #if defined(PLATFORM_ESP32)
     spi_dev_t *spi = *(reinterpret_cast<spi_dev_t**>(bus()));
-
     // wait for SPI to become non-busy
     while(spi->cmd.usr) {}
 
-    // Set the CS pins which we want crontrolled by the SPI module for this operation
-    spiDisableSSPins(SPIEx.bus(), ~cs_mask);
-    spiEnableSSPins(SPIEx.bus(), cs_mask);
+    // Set the CS pins which we want controlled by the SPI module for this operation
+    spiDisableSSPins(bus(), ~cs_mask);
+    spiEnableSSPins(bus(), cs_mask);
 
+#if defined(PLATFORM_ESP32_S3)
+    spi->ms_dlen.ms_data_bitlen = (size*8)-1;
+#else
     spi->mosi_dlen.usr_mosi_dbitlen = ((size * 8) - 1);
     spi->miso_dlen.usr_miso_dbitlen = ((size * 8) - 1);
+#endif
 
     // write the data to the SPI FIFO
     const uint32_t words = (size + 3) / 4;
-    uint32_t * const wordsBuf = reinterpret_cast<uint32_t *>(data);
+    auto * const wordsBuf = reinterpret_cast<uint32_t *>(data);
     for(int i=0; i<words; i++)
     {
         spi->data_buf[i] = wordsBuf[i]; //copy buffer to spi fifo
     }
 
+#if defined(PLATFORM_ESP32_S3)
+    spi->cmd.update = 1;
+    while (spi->cmd.update);
+#endif
     // start the SPI module
     spi->cmd.usr = 1;
 
@@ -82,4 +89,10 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
 #endif
 }
 
+#if defined(PLATFORM_ESP32_S3)
+SPIExClass SPIEx(FSPI);
+#elif defined(PLATFORM_ESP32)
+SPIExClass SPIEx(VSPI);
+#else
 SPIExClass SPIEx;
+#endif
