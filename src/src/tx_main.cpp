@@ -37,7 +37,7 @@ FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 // TODO: Remove this! Manual define for mavlink mode on TX
 bool mavlinkTX = true;
-bool lastPacketWasData = false;
+uint8_t mavBuffer[64];
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -494,12 +494,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.full.msp_ul.payload,
           sizeof(otaPkt.full.msp_ul.payload));
+        otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
       else
       {
         otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.std.msp_ul.payload,
           sizeof(otaPkt.std.msp_ul.payload));
+        otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions
@@ -516,19 +518,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
 
-      bool shouldSendData = firmwareOptions.is_airport || (mavlinkTX && !lastPacketWasData);
-
-      if (shouldSendData)
-      {
-        OtaPackAirportData(&otaPkt, &apInputBuffer, TelemetryReceiver.GetCurrentConfirm());
-        lastPacketWasData = true;
-      }
-      else
-      {
-        injectBackpackPanTiltRollData(now);
-        OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
-        lastPacketWasData = false;
-      }
+      injectBackpackPanTiltRollData(now);
+      OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
     }
   }
 
@@ -1452,5 +1443,21 @@ void loop()
         mspTransferActive = true;
       }
     }
+  }
+
+  // Use MspSender for MAVLINK uplink data
+  uint8_t *nextPayload = 0;
+  uint8_t nextPlayloadSize = 0;
+  uint16_t count = apInputBuffer.size();
+  if (count > 0 && !MspSender.IsActive())
+  {
+      count = std::min(count, (uint16_t)60);
+      mavBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+      mavBuffer[1] = count;
+      // Following n bytes are just raw mavlink
+      apInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+      nextPayload = mavBuffer;
+      nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+      MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
   }
 }
