@@ -349,6 +349,8 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
+    EnableLBT();
+
     // Binding always uses invertIQ
     bool invertIQ = bindMode || (UID[5] & 0x01);
 
@@ -1684,10 +1686,6 @@ static void setupRadio()
 
     DynamicPower_UpdateRx(true);  // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
-
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
@@ -2031,9 +2029,7 @@ static void CheckConfigChangePending()
         LostConnection(false);
         config.Commit();
         devicesTriggerEvent();
-#if defined(Regulatory_Domain_EU_CE_2400)
-        LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
+        EnableLBT();
         Radio.RXnb();
     }
 }

@@ -771,9 +771,7 @@ void ResetPower()
     POWERMGNT::setPower((PowerLevels_e)config.GetPower());
   }
   // TLM interval is set on the next SYNC packet
-#if defined(Regulatory_Domain_EU_CE_2400)
-  LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
+  EnableLBT();
 }
 
 static void ChangeRadioParams()

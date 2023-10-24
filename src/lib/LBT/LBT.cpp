@@ -2,6 +2,7 @@
 #include "common.h"
 #include "logging.h"
 #include "LBT.h"
+#include "config.h"
 
 LQCALC<100> LBTSuccessCalc;
 static uint32_t rxStartTime;
@@ -10,14 +11,38 @@ static uint32_t rxStartTime;
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
 #endif
 
-bool LBTEnabled = false;
+static bool LBTEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 
-static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
-  SX1280_RadioLoRaSpreadingFactors_t SF,
-  uint8_t radio_type
-)
+void EnableLBT()
 {
+#if defined(Regulatory_Domain_EU_CE_2400)
+    LBTEnabled = config.GetPower() > PWR_10mW;
+#if defined(RADIO_LR1121)
+    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
+#endif
+#endif
+}
+
+static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
+{
+#if defined(RADIO_LR1121)
+  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4)
+  {
+    switch((lr11xx_radio_lora_sf_t)SF)
+    {
+      case LR11XX_RADIO_LORA_SF5: return 100;
+      case LR11XX_RADIO_LORA_SF6: return 141;
+      case LR11XX_RADIO_LORA_SF7: return 218;
+      case LR11XX_RADIO_LORA_SF8: return 218;
+      default: return 218;
+    }
+  }
+  if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
+  {
+    return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
+  }
+#elif defined(RADIO_SX128X)
   // The necessary wait time from RX start to valid instant RSSI reading
   // changes with the spreading factor setting.
   // The worst case necessary wait time is TX->RX switch time + Lora symbol time
@@ -37,24 +62,22 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
 
   if (radio_type == RADIO_TYPE_SX128x_LORA)
   {
-    switch(SF)
-      {
-        case SX1280_LORA_SF5: return 100;
-        case SX1280_LORA_SF6: return 141;
-        case SX1280_LORA_SF7: return 218;
-        case SX1280_LORA_SF8: return 480;
-        default: return 480;
-      }
+    switch((SX1280_RadioLoRaSpreadingFactors_t)SF)
+    {
+      case SX1280_LORA_SF5: return 100;
+      case SX1280_LORA_SF6: return 141;
+      case SX1280_LORA_SF7: return 218;
+      case SX1280_LORA_SF8: return 480;
+      default: return 480;
+    }
   }
-  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  if (radio_type == RADIO_TYPE_SX128x_FLRC)
   {
     return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
-  else
-  {
-    ERRLN("LBT not support on this radio type");
-    return 0;
-  }
+#endif
+  ERRLN("LBT not support on this radio type");
+  return 0;
 }
 
 static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t radio_type)
@@ -65,7 +88,32 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
   // different RF frontends.
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
-
+#if defined(RADIO_LR1121)
+  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4)
+  {
+    switch(txPower)
+    {
+      case PWR_10mW: return -61 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_25mW: return -65 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_50mW: return -68 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_100mW: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      // Values above 100mW are not relevant, default to 100mW threshold
+      default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+    }
+  }
+  if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
+  {
+    switch(txPower)
+    {
+      case PWR_10mW: return -63 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_25mW: return -67 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_50mW: return -70 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      case PWR_100mW: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+      // Values above 100mW are not relevant, default to 100mW threshold
+      default: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
+    }
+  }
+#elif defined(RADIO_SX128X)
   if (radio_type == RADIO_TYPE_SX128x_LORA)
   {
     switch(txPower)
@@ -78,7 +126,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  else if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  if (radio_type == RADIO_TYPE_SX128x_FLRC)
   {
     switch(txPower)
     {
@@ -90,11 +138,9 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  else
-  {
-    ERRLN("LBT not support on this radio type");
-    return 0;
-  }
+  ERRLN("LBT not support on this radio type");
+#endif
+  return 0;
 }
 
 void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
@@ -103,10 +149,16 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
     return;
 
   rxStartTime = micros();
-  validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
+  validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 
 #if defined(TARGET_TX)
-  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);
+#if defined(RADIO_LR1121)
+  Radio.RXnb(LR1121_MODE_RX, validRSSIdelayUs);  
+#elif defined(RADIO_SX128X)
+  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);  
+#else
+#error No continuous receive mode defined for this radio type
+#endif
 #endif
 }
 

@@ -41,7 +41,7 @@ public:
     bool FrequencyErrorAvailable() const { return false; }
 
     void TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX);
+    void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX, uint32_t incomingTimeout = 0);
 
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
@@ -69,7 +69,7 @@ private:
 
     WORD_ALIGNED_ATTR uint8_t rx_buf[32] = {};
 
-    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
+    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
