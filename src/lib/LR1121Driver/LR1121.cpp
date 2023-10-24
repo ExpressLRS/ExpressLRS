@@ -111,20 +111,8 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     // 7.2.12 SetRxBoosted
     uint8_t abuf[1] = {1};
     hal.WriteCommand(LR11XX_RADIO_SET_RX_BOOSTED_OC, abuf, sizeof(abuf), SX12XX_Radio_All);
-
-    // 4.2.1 SetDioAsRfSwitch
-    // SKY13588-460LF
-    uint8_t buf[8];
-    buf[0] = 0b00000011; // RfswEnable
-    buf[1] = 0; // RfSwStbyCfg
-    buf[2] = 0b00000001; // RfSwRxCfg - DIO5 HIGH, DIO6 LOW
-    buf[3] = 0b00000011; // RfSwTxCfg
-    buf[4] = 0b00000010; // RfSwTxHPCfg
-    buf[5] = 0; // RfSwTxHfCfg
-    buf[6] = 0; // 
-    buf[7] = 0; // 
-    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, buf, sizeof(buf), SX12XX_Radio_All);
-
+    
+    SetDioAsRfSwitch();
     SetDioIrqParams();
 
     // Force the next power update, and the lowest power
@@ -146,11 +134,10 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 
 void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
-    // uint8_t buffer;         // we just need a buffer for the write command
     // SetFrequencyHz(freq, radioNumber);
     // CommitOutputPower();
     // hal.TXenable(radioNumber);
-    // hal.WriteCommand(LLCC68_RADIO_SET_TXCONTINUOUSWAVE, &buffer, 0, radioNumber);
+    // hal.WriteCommand(0x0219, radioNumber);
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
@@ -159,7 +146,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
-    subGRF = (bw == LR11XX_RADIO_LORA_BW_500); // This should be done better using something like RADIO_TYPE_LR1121_LORA_XXX
+    subGRF = regfreq < 1000000000;
 
     IQinverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
     // IQinverted is always STANDARD for 900 and SX1276
@@ -186,7 +173,37 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted);
 
-    SetFrequencyReg(regfreq, SX12XX_Radio_All);
+    SetOutputPower(pwrCurrent); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+
+    SetFrequencyHz(regfreq, SX12XX_Radio_All);
+}
+
+void LR1121Driver::SetDioAsRfSwitch()
+{
+    // 4.2.1 SetDioAsRfSwitch
+    // SKY13588-460LF - Development boards
+    // uint8_t buf[8];
+    // buf[0] = 0b00000011; // RfswEnable
+    // buf[1] = 0; // RfSwStbyCfg
+    // buf[2] = 0b00000001; // RfSwRxCfg - DIO5 HIGH, DIO6 LOW
+    // buf[3] = 0b00000011; // RfSwTxCfg
+    // buf[4] = 0b00000010; // RfSwTxHPCfg
+    // buf[5] = 0; // RfSwTxHfCfg
+    // buf[6] = 0; // 
+    // buf[7] = 0; // 
+    // hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, buf, sizeof(buf), SX12XX_Radio_All);  
+
+    // 4.2.1 SetDioAsRfSwitch
+    uint8_t switchbuf[8];
+    switchbuf[0] = 0b00001111; // RfswEnable
+    switchbuf[1] = 0b00000000; // RfSwStbyCfg
+    switchbuf[2] = 0b00000100; // RfSwRxCfg
+    switchbuf[3] = 0b00001000; // RfSwTxCfg
+    switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+    switchbuf[5] = 0b00000010; // RfSwTxHfCfg
+    switchbuf[6] = 0;          // 
+    switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);  
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
@@ -333,7 +350,23 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
         Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
         Pabuf[2] = 0x00; // PaDutyCycle
         Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-        Txbuf[0] = 13;
+        
+        if (pwrCurrent == 22) // +100mW
+        {
+            Txbuf[0] = 1;
+        }
+        else if (pwrCurrent > 19)
+        {
+            Txbuf[0] = -3;
+        }
+        else if (pwrCurrent > 16)
+        {
+            Txbuf[0] = -6;
+        }
+        else
+        {
+            Txbuf[0] = -10;
+        }
     }
 
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);

@@ -69,6 +69,7 @@ private:
                              uint8_t PayloadLength, uint8_t InvertIQ);
 
     void SetDioIrqParams();
+    void SetDioAsRfSwitch();
     void CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber);
 
     static void IsrCallback_1();
