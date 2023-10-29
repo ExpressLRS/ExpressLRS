@@ -89,6 +89,7 @@
 #define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
+#define POWER_OUTPUT_VALUES_DUAL hardware_i16_array(HARDWARE_power_values_dual)
 
 // Input
 #define HAS_FIVE_WAY_BUTTON

@@ -80,6 +80,7 @@ int8_t POWERMGNT::CurrentSX1280Power = 0;
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 static const int16_t *powerValues;
+static const int16_t *powerValuesDual;
 #else
 #if defined(POWER_OUTPUT_VALUES)
 static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
@@ -226,6 +227,10 @@ void POWERMGNT::init()
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     powerValues = POWER_OUTPUT_VALUES;
+    if (POWER_OUTPUT_VALUES_DUAL != nullptr)
+    {
+        powerValuesDual = POWER_OUTPUT_VALUES_DUAL;
+    }
 #endif
 #if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
@@ -303,6 +308,11 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     {
         CurrentSX1280Power = powerValues[Power - MinPower] + powerCaliValues[Power];
         Radio.SetOutputPower(CurrentSX1280Power);
+
+        if (POWER_OUTPUT_VALUES_DUAL != nullptr)
+        {
+            Radio.SetOutputPower(powerValuesDual[Power - MinPower], false); // Set the high frequency power setting.
+        }
     }
 #endif
     CurrentPower = Power;

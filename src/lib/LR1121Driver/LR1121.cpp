@@ -38,7 +38,8 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
-    subGRF = false;
+    radio1PwrSettings.updateRequired = true;
+    radio2PwrSettings.updateRequired = true;
     fallBackMode = LR1121_MODE_STDBY_XOSC;
 }
 
@@ -117,6 +118,7 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 
     // Force the next power update, and the lowest power
     pwrCurrent = PWRPENDING_NONE;
+    pwrCurrentHF = PWRPENDING_NONE;
     SetOutputPower(LR1121_POWER_MIN);
     CommitOutputPower();
 
@@ -142,28 +144,41 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
-                          uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
+                          uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc, SX12XX_Radio_Number_t radioNumber)
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
-    subGRF = regfreq < 1000000000;
+    
+    bool isSubG = regfreq < 1000000000;
+
+    if (radioNumber & SX12XX_Radio_1)
+    {
+        radio1PwrSettings.updateRequired = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+        radio1PwrSettings.isSubG = isSubG;
+    }
+    
+    if (radioNumber & SX12XX_Radio_2)
+    {
+        radio2PwrSettings.updateRequired = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+        radio2PwrSettings.isSubG = isSubG;
+    }
 
     IQinverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
     // IQinverted is always STANDARD for 900 and SX1276
-    if (subGRF)
+    if (isSubG)
     {
         IQinverted = LR11XX_RADIO_LORA_IQ_STANDARD;
     }
 
     SetRxTimeoutUs(interval);
 
-    SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
+    SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
     // 8.1.1 SetPacketType
     uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), SX12XX_Radio_All);
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
-    ConfigModParamsLoRa(bw, sf, cr);
+    ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
 #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
     lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_VARIABLE_LENGTH;
@@ -171,11 +186,9 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
 #endif
 
-    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted);
+    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
 
-    SetOutputPower(pwrCurrent); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-
-    SetFrequencyHz(regfreq, SX12XX_Radio_All);
+    SetFrequencyHz(regfreq, radioNumber);
 }
 
 void LR1121Driver::SetDioAsRfSwitch()
@@ -223,7 +236,7 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
     // - Set bit 23 of register at address 0xf20414 to 0.  This information is from Semecth in an email.
     // 3.7.3 WriteRegMemMask32
 
-    if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6 && subGRF)
+    if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6)
     {
         uint8_t wrbuf[12];
         // Address
@@ -248,30 +261,87 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
 /***
  * @brief: Schedule an output power change after the next transmit
  ***/
-void LR1121Driver::SetOutputPower(int8_t power)
+void LR1121Driver::SetOutputPower(int8_t power, bool isSubG)
 {
-    uint8_t pwrNew = constrain(power, LR1121_POWER_MIN, LR1121_POWER_MAX); // This needs to fixed and is RF amp specific.
+    // uint8_t pwrNew = constrain(power, LR1121_POWER_MIN, LR1121_POWER_MAX); // This needs to fixed and is RF amp specific.
+    uint8_t pwrNew = power; // Just get it right in the JSON!
 
-    if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
+    if (isSubG)
     {
-        pwrPending = pwrNew;
+        if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
+        {
+            pwrPending = pwrNew;
+        }
+    }
+    else
+    {
+        if ((pwrPendingHF == PWRPENDING_NONE && pwrCurrentHF != pwrNew) || pwrPendingHF != pwrNew)
+        {
+            pwrPendingHF = pwrNew;
+        }
     }
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 {
-    if (pwrPending == PWRPENDING_NONE)
-        return;
+    if (pwrPending != PWRPENDING_NONE)
+    {
+        pwrCurrent = pwrPending;
+        pwrPending = PWRPENDING_NONE;
 
-    pwrCurrent = pwrPending;
-    pwrPending = PWRPENDING_NONE;
+        if (radio1PwrSettings.isSubG)
+        {
+            radio1PwrSettings.updateRequired = false;
+            WriteOutputPower(pwrCurrent, true, SX12XX_Radio_1);
+        }
 
+        if (radio2PwrSettings.isSubG)
+        {
+            radio2PwrSettings.updateRequired = false;
+            WriteOutputPower(pwrCurrent, true, SX12XX_Radio_2);
+        }
+    }
+    
+    if (pwrPendingHF != PWRPENDING_NONE)
+    {
+        pwrCurrentHF = pwrPendingHF;
+        pwrPendingHF = PWRPENDING_NONE;
+        
+        if (!radio1PwrSettings.isSubG)
+        {
+            radio1PwrSettings.updateRequired = false;
+            WriteOutputPower(pwrCurrentHF, false, SX12XX_Radio_1);
+        }
+
+        if (!radio2PwrSettings.isSubG)
+        {
+            radio2PwrSettings.updateRequired = false;
+            WriteOutputPower(pwrCurrentHF, false, SX12XX_Radio_2);
+        }
+    }
+    
+    // Set power again after a config().  This needs to be done if the LR1121 has changed from low freq to high freq, and to set the RF amp correctly.
+    if (radio1PwrSettings.updateRequired)
+    {
+        radio1PwrSettings.updateRequired = false;
+        WriteOutputPower(radio1PwrSettings.isSubG ? pwrCurrent : pwrCurrentHF, radio1PwrSettings.isSubG, SX12XX_Radio_1);
+    }
+    
+    if (radio2PwrSettings.updateRequired)
+    {
+        radio2PwrSettings.updateRequired = false;
+        WriteOutputPower(radio2PwrSettings.isSubG ? pwrCurrent : pwrCurrentHF, radio2PwrSettings.isSubG, SX12XX_Radio_2);
+    }
+}
+
+void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubG, SX12XX_Radio_Number_t radioNumber)
+{
     uint8_t Pabuf[4] = {0};
-    uint8_t Txbuf[2] = {pwrCurrent, LR11XX_RADIO_RAMP_48_US};
+    uint8_t Txbuf[2] = {power, LR11XX_RADIO_RAMP_48_US};
 
     // 9.5.1 SetPaConfig
     // 9.5.2 SetTxParams
-    if (subGRF)
+    if (isSubG)
     {
         // 900M low power RF Amp
         // Table 9-1: Optimized Settings for LP PA with Same Matching Network
@@ -281,14 +351,14 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 
 // The Low Power amp is currently completely untested!
 
-            if (pwrCurrent > 14)
+            if (power > 14)
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
                 Pabuf[2] = 0x07; // PaDutyCycle
                 Txbuf[0] = 14;
             }
-            else if (pwrCurrent > 13)
+            else if (power > 13)
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
@@ -300,6 +370,7 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
                 Pabuf[2] = 0x01; // PaDutyCycle
+                Txbuf[0] = power;
             }
         }
         // 900M high power RF Amp
@@ -307,7 +378,7 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
         // -9dBm (0xF7) to +22dBm (0x16) by steps of 1dB if the high power PA is selected
         else
         {
-            if (pwrCurrent == 22) // +100mW
+            if (power >= 22) // +100mW
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
@@ -315,21 +386,21 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
                 Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
                 Txbuf[0] = 22;
             }
-            else if (pwrCurrent > 19)
+            else if (power > 19)
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
                 Pabuf[2] = 0x03; // PaDutyCycle
                 Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (21 - pwrCurrent);
+                Txbuf[0] = 22 - (21 - power);
             }
-            else if (pwrCurrent > 16)
+            else if (power > 16)
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
                 Pabuf[2] = 0x01; // PaDutyCycle
                 Pabuf[3] = 0x05; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (19 - pwrCurrent);
+                Txbuf[0] = 22 - (19 - power);
             }
             else
             {
@@ -337,7 +408,7 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
                 Pabuf[2] = 0x01; // PaDutyCycle
                 Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (16 - pwrCurrent);
+                Txbuf[0] = 22 - (16 - power);
             }
         }
     }
@@ -350,27 +421,11 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
         Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
         Pabuf[2] = 0x00; // PaDutyCycle
         Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-        
-        if (pwrCurrent == 22) // +100mW
-        {
-            Txbuf[0] = 1;
-        }
-        else if (pwrCurrent > 19)
-        {
-            Txbuf[0] = -3;
-        }
-        else if (pwrCurrent > 16)
-        {
-            Txbuf[0] = -6;
-        }
-        else
-        {
-            Txbuf[0] = -10;
-        }
+        Txbuf[0] = power;
     }
 
-    hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), SX12XX_Radio_All);
-    hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), SX12XX_Radio_All);
+    hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), radioNumber);
+    hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
 }
 
 void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
@@ -429,7 +484,7 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
     }
 }
 
-void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
+void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber)
 {
     // 8.3.1 SetModulationParams
     uint8_t buf[4];
@@ -437,13 +492,17 @@ void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     buf[1] = bw;
     buf[2] = cr;
     buf[3] = 0x00; // 0x00: LowDataRateOptimize off
-    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), SX12XX_Radio_All);    
+    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
 
-    CorrectRegisterForSF6(sf, SX12XX_Radio_All);
+    if (radioNumber & SX12XX_Radio_1 && radio1PwrSettings.isSubG)
+        CorrectRegisterForSF6(sf, SX12XX_Radio_1);
+
+    if (radioNumber & SX12XX_Radio_2 && radio2PwrSettings.isSubG)
+        CorrectRegisterForSF6(sf, SX12XX_Radio_2);
 }
 
 void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,
-                                       uint8_t PayloadLength, uint8_t InvertIQ)
+                                       uint8_t PayloadLength, uint8_t InvertIQ, SX12XX_Radio_Number_t radioNumber)
 {
     // 8.3.2 SetPacketParams
     uint8_t buf[6];
@@ -453,7 +512,7 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     buf[3] = PayloadLength; // PayloadLen defines the size of the payload
     buf[4] = LR11XX_RADIO_LORA_CRC_OFF;
     buf[5] = InvertIQ;
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), SX12XX_Radio_All);
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
