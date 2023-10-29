@@ -21,6 +21,20 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#ifdef USE_ENCRYPTION
+#include <encryption.h>
+#include <Crypto.h>
+#include <ChaCha.h>
+#include <string.h>
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+ChaCha cipher;
+encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -170,6 +184,60 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   MspSender.ConfirmCurrentPayload(ls->mspConfirm);
 }
 
+#ifdef USE_ENCRYPTION
+bool InitCrypto() {
+
+    uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                    201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
+                    211, 212, 213, 214, 215, 216};
+    size_t keySize = 32;
+    uint8_t rounds = 12;
+
+    uint8_t iv[]          = {101,102,103,104,105,106,107,108};
+    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+
+
+    // if (!cipher.setKey(key, sizeof(key)))
+    if (!cipher.setKey(key, keySize))
+    {
+        return false;
+    }
+    if (!cipher.setIV(iv, sizeof(iv)))
+    {
+        return false;
+    }
+    if (!cipher.setCounter(counter, sizeof(counter)))
+    {
+        return false;
+    }
+    cipher.setNumRounds(rounds);
+    return true;
+}
+
+
+void EnDecryptMsg(uint8_t *input, uint8_t *output)
+{
+  output[0] ^= 0x01;
+  output[1] ^= 0x02;
+  // ExpressLRS_currAirRate_Modparams->PayloadLength
+  /*
+  int resync = 200;
+  do
+  {
+    if (OtaIsFullRes)
+    {
+      cipher.encrypt(output, input, OTA8_PACKET_SIZE);
+    }
+    else
+    {
+      cipher.encrypt(output, input, OTA4_PACKET_SIZE);
+    }
+  } while (resync-- > 0 && !OtaValidatePacketCrc( (OTA_Packet_s *)output) );
+  */
+}
+#endif
+
+
 bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
@@ -177,6 +245,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     DBGLN("TLM HW CRC error");
     return false;
   }
+
+#ifdef USE_ENCRYPTION
+   // Ray TODO do not encrypt telemetry yet.
+  // decrypt_msg(Radio.RXdataBuffer, Radio.RXdataBuffer);
+#endif
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
   if (!OtaValidatePacketCrc(otaPktPtr))
@@ -220,6 +293,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
+    // Ray TODO process encryption ack in a OtaFullRes telemetry packet
     //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
     TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
   }
@@ -242,6 +316,12 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
         break;
+	  // Shouldn't be needed because MSP is auto-acked by StubbornSender
+	  /*
+      case ELRS_TELEMETRY_TYPE_ENCRYPTION:
+	    encryptionStateSend = ENCRYPTION_STATE_FULL;
+		break;
+	  */
     }
   }
   return true;
@@ -555,6 +635,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
+#ifdef USE_ENCRYPTION
+  if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+  {
+    EnDecryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
+  }
+#endif
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 }
 
@@ -913,6 +999,19 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   hwTimer::resume();
 }
 #endif
+
+#ifdef USE_ENCRYPTION
+// Ray todo
+// MSPDataPackage is a 65-byte buffer
+void SendCryptoOverMSP()
+{
+  MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
+  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
+  // MspSender.ResetState();
+  MspSender.SetDataToTransmit(MSPDataPackage, 5);
+}
+#endif
+
 
 void SendUIDOverMSP()
 {
@@ -1382,13 +1481,32 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
+    // Ray TODO process encryption ack here?
     CRSF::sendTelemetryToTX(CRSFinBuffer);
     crsfTelemToMSPOut(CRSFinBuffer);
     TelemetryReceiver.Unlock();
   }
 
-  // only send msp data when binding is not active
   static bool mspTransferActive = false;
+
+#ifdef USE_ENCRYPTION
+  // if ( (connectionState == connected) && (!mspTransferActive) )
+  if ( (connectionState == connected) && (!MspSender.IsActive()) )
+  { 
+    if (encryptionStateSend == ENCRYPTION_STATE_NONE)
+	{
+      // InitCrypto();
+	  SendCryptoOverMSP();
+	  encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
+    }
+	else if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED )
+	{
+        encryptionStateSend = ENCRYPTION_STATE_FULL;
+	}
+  }
+#endif
+
+  // only send msp data when binding is not active
   if (InBindingMode)
   {
     // exit bind mode if package after some repeats

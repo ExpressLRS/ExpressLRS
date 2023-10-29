@@ -43,6 +43,21 @@
 #include <SPIFFS.h>
 #endif
 
+
+#ifdef USE_ENCRYPTION
+#include <encryption.h>
+#include <Crypto.h>
+#include <ChaCha.h>
+#include <string.h>
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+ChaCha cipher;
+encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -422,6 +437,83 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 #endif
 }
 
+
+#ifdef USE_ENCRYPTION
+
+bool CryptoSetKeys(const encryption_params_t *params) {
+
+    static uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                    201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
+                    211, 212, 213, 214, 215, 216};
+    size_t keySize = 32;
+    uint8_t rounds = 12;
+	size_t nonceSize = 8;
+
+    static uint8_t nonce[]          = {101,102,103,104,105,106,107,108};
+    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+
+    memcpy(key, params->key, keySize);
+    memcpy(nonce, params->nonce, nonceSize);
+
+    if (!cipher.setKey(key, keySize))
+    {
+        return false;
+    }
+    if (!cipher.setIV(nonce, nonceSize))
+    {
+        return false;
+    }
+    if (!cipher.setCounter(counter, sizeof(counter)))
+    {
+        return false;
+    }
+    cipher.setNumRounds(rounds);
+    return true;
+}
+
+void EnDecryptMsg(uint8_t *input, uint8_t *output)
+{
+  output[0] ^= 0x01;
+  output[1] ^= 0x02;
+  // ExpressLRS_currAirRate_Modparams->PayloadLength
+
+  /*
+  int resync = 20;
+  do
+  {
+    if (OtaIsFullRes)
+    {
+      cipher.encrypt(output, input, OTA8_PACKET_SIZE);
+    }
+    else
+    {
+      cipher.encrypt(output, input, OTA4_PACKET_SIZE);
+    }
+  } while (resync-- > 0 && !OtaValidatePacketCrc( (OTA_Packet_s *)output) );
+  */
+}
+
+
+/* Not used currently
+void ICACHE_RAM_ATTR CryptoHandshake() {
+	if(encryptionStateSend == ENCRYPTION_STATE_NONE) {
+		Radio.RXnb();
+		return;
+	}
+
+    if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED) {
+		// Accept the proposal, setup keys, set encryptionState, and retransmit accept packet
+        // CryptoAcceptProposal();
+		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION
+		encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
+        // Do key setup
+		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION
+    }
+}
+*/
+
+#endif
+
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
@@ -465,6 +557,19 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // against Max below is for some reason 10 bytes more code
         telemetryBurstCount = 1;
     }
+	/* May not be needed since MSP messages are acked by StubbornReceiver
+	else if (NextTelemetryType == ELRS_TELEMETRY_TYPE_ENCRYPTION)
+	{
+		// Ray TODO TX may be expecting link stats in the telemetry packet
+		otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_ENCRYPTION;
+		if (OtaIsFullRes)
+		{
+		    otaPkt.full.tlm_dl.containsLinkStats = 0;
+		}
+		NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+		encryptionStateSend = ENCRYPTION_STATE_FULL;
+	}
+	*/
     else
     {
         if (telemetryBurstCount < telemetryBurstMax)
@@ -510,6 +615,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
+
+#ifdef USE_ENCRYPTION
+  // Ray TODO do not encrypt telemetry data yet.
+  /*
+  if (encryptionStateSend == ENCRYPTION_STATE_FULL) {
+      EnDecryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt);
+  }
+  */
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
@@ -994,7 +1108,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     }
     uint32_t const beginProcessing = micros();
 
+#ifdef USE_ENCRYPTION
+    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+	{
+		// Ray debug 100 does not work with this uncommented
+        EnDecryptMsg( Radio.RXdataBuffer, Radio.RXdataBuffer);
+    }
+
+
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+#endif
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
         DBGVLN("CRC error");
@@ -1025,6 +1148,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_TLM:
+	    // Possibly handle encryption handshake here
         if (firmwareOptions.is_airport)
         {
             OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
@@ -1105,6 +1229,9 @@ void SendMSPFrameToFC(uint8_t *mspData)
  **/
 void MspReceiveComplete()
 {
+#ifdef USE_ENCRYPTION
+	encryption_params_t *encryption_params;
+#endif
     switch (MspData[0])
     {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
@@ -1120,6 +1247,15 @@ void MspReceiveComplete()
         loanBindTimeout = LOAN_BIND_TIMEOUT_MSP;
         InLoanBindingMode = true;
         break;
+#ifdef USE_ENCRYPTION
+	case MSP_ELRS_INIT_ENCRYPT:
+	    encryption_params = (encryption_params_t *) MspData;
+		CryptoSetKeys(encryption_params);
+		// encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
+		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION;
+		encryptionStateSend = ENCRYPTION_STATE_FULL;
+		break;
+#endif
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
@@ -1765,6 +1901,10 @@ void setup()
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
             hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
+#ifdef USE_ENCRYPTION
+			// cryptoHandshake();
+#endif
+
         }
     }
 
@@ -1829,6 +1969,7 @@ void loop()
 
     if ((connectionState == tentative) && (abs(LPF_OffsetDx.value()) <= 10) && (LPF_Offset.value() < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
     {
+		// Do encryption handshake here?
         GotConnection(now);
     }
 
