@@ -270,7 +270,7 @@ def ask_for_firmware(args):
             config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
         else:
             i = 0
-            for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900"][].*[]', targets):
+            for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900","{moduletype}_dual"][].*[]', targets):
                 i += 1
                 products.append(k)
                 print(f"{i}) {k['product_name']}")
