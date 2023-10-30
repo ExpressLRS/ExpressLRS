@@ -12,8 +12,8 @@
 #define RADIO_SNR_SCALE 4
 
 typedef struct {
-    bool isSubG;
-    bool updateRequired;
+    bool isSubGHz = true;
+    bool updateRequired = true;
 } radioPowerSettings_s;
 
 class LR1121Driver: public SX12xxDriverCommon
@@ -37,7 +37,7 @@ public:
     void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
-    void SetOutputPower(int8_t power, bool isSubG = true);
+    void SetOutputPower(int8_t power, bool isSubGHz = true);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
@@ -61,8 +61,8 @@ private:
 
     // LR1121_RadioOperatingModes_t currOpmode;
     bool modeSupportsFei;
-    uint8_t pwrCurrent;
-    uint8_t pwrPending;
+    uint8_t pwrCurrentLF;
+    uint8_t pwrPendingLF;
     uint8_t pwrCurrentHF; // HF = High Frequency
     uint8_t pwrPendingHF;
     radioPowerSettings_s radio1PwrSettings;
@@ -86,5 +86,5 @@ private:
     bool RXnbISR(SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
     void CommitOutputPower();
-    void WriteOutputPower(uint8_t pwr, bool isSubG, SX12XX_Radio_Number_t radioNumber);
+    void WriteOutputPower(uint8_t pwr, bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
 };
