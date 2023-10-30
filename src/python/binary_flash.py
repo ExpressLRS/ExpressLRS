@@ -180,7 +180,12 @@ def upload(options: FirmwareOptions, args):
             elif args.flash == UploadMethod.stlink:      # untested
                 return upload_stm32_stlink(args, options)
     else:
-        if options.mcuType == MCUType.ESP32:
+        if options.mcuType == MCUType.ESP8266:
+            if args.flash == UploadMethod.uart:
+                return upload_esp8266_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, options, ['elrs_tx', 'elrs_tx.local'], False)
+        elif options.mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.edgetx:
                 return upload_esp32_etx(args)
             elif args.flash == UploadMethod.uart:
