@@ -11,11 +11,6 @@
 
 #define RADIO_SNR_SCALE 4
 
-typedef struct {
-    bool isSubGHz = true;
-    bool updateRequired = true;
-} radioPowerSettings_s;
-
 class LR1121Driver: public SX12xxDriverCommon
 {
 public:
@@ -65,8 +60,9 @@ private:
     uint8_t pwrPendingLF;
     uint8_t pwrCurrentHF; // HF = High Frequency
     uint8_t pwrPendingHF;
-    radioPowerSettings_s radio1PwrSettings;
-    radioPowerSettings_s radio2PwrSettings;
+    bool pwrForceUpdate;
+    bool radio1isSubGHz;
+    bool radio2isSubGHz;
     lr11xx_RadioOperatingModes_t fallBackMode;
 
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);

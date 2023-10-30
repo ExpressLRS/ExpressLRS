@@ -144,16 +144,10 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     bool isSubGHz = regfreq < 1000000000;
 
     if (radioNumber & SX12XX_Radio_1)
-    {
-        radio1PwrSettings.updateRequired = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-        radio1PwrSettings.isSubGHz = isSubGHz;
-    }
+        radio1isSubGHz = isSubGHz;
     
     if (radioNumber & SX12XX_Radio_2)
-    {
-        radio2PwrSettings.updateRequired = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-        radio2PwrSettings.isSubGHz = isSubGHz;
-    }
+        radio2isSubGHz = isSubGHz;
 
     IQinverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
     // IQinverted is always STANDARD for 900 and SX1276
@@ -181,6 +175,8 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
 
     SetFrequencyHz(regfreq, radioNumber);
+
+    pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
 }
 
 void LR1121Driver::SetDioAsRfSwitch()
@@ -255,11 +251,19 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
  ***/
 void LR1121Driver::SetOutputPower(int8_t power, bool isSubGHz)
 {
-    // uint8_t pwrNew = constrain(power, LR1121_POWER_MIN, LR1121_POWER_MAX); // This needs to fixed and is RF amp specific.
-    uint8_t pwrNew = power; // Just get it right in the JSON!
+    uint8_t pwrNew;
 
     if (isSubGHz)
     {
+        if (OPT_USE_RADIO_RFO_LP)
+        {
+            pwrNew = constrain(power, LR1121_POWER_MIN_LP_PA, LR1121_POWER_MAX_LP_PA);
+        }
+        else
+        {
+            pwrNew = constrain(power, LR1121_POWER_MIN_HP_PA, LR1121_POWER_MAX_HP_PA);
+        }
+
         if ((pwrPendingLF == PWRPENDING_NONE && pwrCurrentLF != pwrNew) || pwrPendingLF != pwrNew)
         {
             pwrPendingLF = pwrNew;
@@ -267,6 +271,8 @@ void LR1121Driver::SetOutputPower(int8_t power, bool isSubGHz)
     }
     else
     {
+        pwrNew = constrain(power, LR1121_POWER_MIN_HF_PA, LR1121_POWER_MAX_HF_PA);
+
         if ((pwrPendingHF == PWRPENDING_NONE && pwrCurrentHF != pwrNew) || pwrPendingHF != pwrNew)
         {
             pwrPendingHF = pwrNew;
@@ -280,49 +286,21 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     {
         pwrCurrentLF = pwrPendingLF;
         pwrPendingLF = PWRPENDING_NONE;
-
-        if (radio1PwrSettings.isSubGHz)
-        {
-            radio1PwrSettings.updateRequired = false;
-            WriteOutputPower(pwrCurrentLF, true, SX12XX_Radio_1);
-        }
-
-        if (radio2PwrSettings.isSubGHz)
-        {
-            radio2PwrSettings.updateRequired = false;
-            WriteOutputPower(pwrCurrentLF, true, SX12XX_Radio_2);
-        }
+        pwrForceUpdate = true;
     }
     
     if (pwrPendingHF != PWRPENDING_NONE)
     {
         pwrCurrentHF = pwrPendingHF;
         pwrPendingHF = PWRPENDING_NONE;
-        
-        if (!radio1PwrSettings.isSubGHz)
-        {
-            radio1PwrSettings.updateRequired = false;
-            WriteOutputPower(pwrCurrentHF, false, SX12XX_Radio_1);
-        }
+        pwrForceUpdate = true;
+    }
 
-        if (!radio2PwrSettings.isSubGHz)
-        {
-            radio2PwrSettings.updateRequired = false;
-            WriteOutputPower(pwrCurrentHF, false, SX12XX_Radio_2);
-        }
-    }
-    
-    // Set power again after a config().  This needs to be done if the LR1121 has changed from low freq to high freq, and to set the RF amp correctly.
-    if (radio1PwrSettings.updateRequired)
+    if (pwrForceUpdate)
     {
-        radio1PwrSettings.updateRequired = false;
-        WriteOutputPower(radio1PwrSettings.isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1PwrSettings.isSubGHz, SX12XX_Radio_1);
-    }
-    
-    if (radio2PwrSettings.updateRequired)
-    {
-        radio2PwrSettings.updateRequired = false;
-        WriteOutputPower(radio2PwrSettings.isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2PwrSettings.isSubGHz, SX12XX_Radio_2);
+        WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
+        WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        pwrForceUpdate = false;
     }
 }
 
@@ -486,10 +464,10 @@ void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12X
     buf[3] = 0x00; // 0x00: LowDataRateOptimize off
     hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
 
-    if (radioNumber & SX12XX_Radio_1 && radio1PwrSettings.isSubGHz)
+    if (radioNumber & SX12XX_Radio_1 && radio1isSubGHz)
         CorrectRegisterForSF6(sf, SX12XX_Radio_1);
 
-    if (radioNumber & SX12XX_Radio_2 && radio2PwrSettings.isSubGHz)
+    if (radioNumber & SX12XX_Radio_2 && radio2isSubGHz)
         CorrectRegisterForSF6(sf, SX12XX_Radio_2);
 }
 
