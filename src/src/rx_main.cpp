@@ -1337,6 +1337,8 @@ static void setupConfigAndPocCheck()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
+    config.SetSerialProtocol(PROTOCOL_MAVLINK);
+
     bool doPowerCount = config.GetOnLoan() || !firmwareOptions.hasUID;
     if (doPowerCount)
     {
