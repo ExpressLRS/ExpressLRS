@@ -62,6 +62,7 @@ SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
     timeout = 0xffff;
     currOpmode = SX1280_MODE_SLEEP;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
+    fallBackMode = SX1280_MODE_STDBY_RC;
 }
 
 void SX1280Driver::End()
@@ -114,6 +115,7 @@ bool SX1280Driver::Begin()
     }
 
 #if defined(TARGET_RX)
+    fallBackMode = SX1280_MODE_FS;
     hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
 #else
 /*
@@ -124,6 +126,7 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 */
     if (GPIO_PIN_NSS_2 == UNDEF_PIN)
     {
+        fallBackMode = SX1280_MODE_FS;
         hal.WriteCommand(SX1280_RADIO_SET_AUTOFS, 0x01, SX12XX_Radio_All); //Enable auto FS
     }
 #endif
@@ -182,8 +185,8 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetFrequencyReg(regfreq);
     SetRxTimeoutUs(interval);
 
-    uint8_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
-    uint8_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
+    uint16_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
+    uint16_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     SetDioIrqParams(irqMask, dio1Mask);
 }
 
@@ -480,7 +483,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     if (currOpmode == SX1280_MODE_TX)
     {
         DBGLN("Timeout!");
-        SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
+        SetMode(fallBackMode, SX12XX_Radio_All);
         ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX12XX_Radio_All);
         TXnbISR();
         return;
@@ -488,7 +491,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
 
     if (radioNumber == SX12XX_Radio_NONE)
     {
-        instance->SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
+        instance->SetMode(fallBackMode, SX12XX_Radio_All);
         return;
     }
 
@@ -509,11 +512,11 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         // Make sure the unused radio is in FS mode and will not receive the tx packet.
         if (radioNumber == SX12XX_Radio_1)
         {
-            instance->SetMode(SX1280_MODE_FS, SX12XX_Radio_2);
+            instance->SetMode(fallBackMode, SX12XX_Radio_2);
         }
         else
         {
-            instance->SetMode(SX1280_MODE_FS, SX12XX_Radio_1);
+            instance->SetMode(fallBackMode, SX12XX_Radio_1);
         }
     }
 
