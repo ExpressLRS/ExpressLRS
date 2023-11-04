@@ -179,6 +179,8 @@ void TxConfig::Load()
         // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
         if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
             m_config.backpackDisable = value8;
+        if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
+            m_config.backpackTlmEnabled = value8;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -337,6 +339,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
+        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmEnabled);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
