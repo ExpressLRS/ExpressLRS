@@ -304,6 +304,16 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
 
     SnrMean.add(Radio.LastPacketSNRRaw);
 
+    #if defined(DEBUG_LOG_MULTI_RX_10)
+    CRSF::LinkStatistics.uplink_RSSI_2 = 10;
+    #elif defined(DEBUG_LOG_MULTI_RX_20)
+    CRSF::LinkStatistics.uplink_RSSI_2 = 20;
+    #elif defined(DEBUG_LOG_MULTI_RX_30)
+    CRSF::LinkStatistics.uplink_RSSI_2 = 30;
+    #elif defined(DEBUG_LOG_MULTI_RX_40)
+    CRSF::LinkStatistics.uplink_RSSI_2 = 40;
+    #endif
+
     CRSF::LinkStatistics.active_antenna = antenna;
     CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
     //CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
@@ -433,10 +443,26 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
-    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
+    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0)
+#if defined(DEBUG_LOG_MULTI_RX_10)
+        || OtaNonce > 63
+#elif defined(DEBUG_LOG_MULTI_RX_20)
+        || OtaNonce <= 63 || OtaNonce > 127
+#elif defined(DEBUG_LOG_MULTI_RX_30)
+        || OtaNonce <= 127 || OtaNonce > 180
+#elif defined(DEBUG_LOG_MULTI_RX_40)
+        || OtaNonce <= 180
+#endif
+    )
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
+    // Simultaneous Testing
+    // if (OtaNonce <= 63) // RSSI2 0 LR1121
+    // if (OtaNonce > 63 && OtaNonce <= 127) // RSSI2 5 BETAFPV
+    // if (OtaNonce > 127 && OtaNonce <= 180) // RSSI2 2 RADIOMASTER
+    // if (OtaNonce > 180) // RSSI2 3 LR1121 dev boards
+
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment();
