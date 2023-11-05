@@ -457,12 +457,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
-    // Simultaneous Testing
-    // if (OtaNonce <= 63) // RSSI2 0 LR1121
-    // if (OtaNonce > 63 && OtaNonce <= 127) // RSSI2 5 BETAFPV
-    // if (OtaNonce > 127 && OtaNonce <= 180) // RSSI2 2 RADIOMASTER
-    // if (OtaNonce > 180) // RSSI2 3 LR1121 dev boards
-
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     BeginClearChannelAssessment();
