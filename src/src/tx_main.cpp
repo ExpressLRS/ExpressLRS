@@ -31,9 +31,14 @@
 #else
 #include <avr/pgmspace.h>
 #endif
-ChaCha cipher;
+ChaCha cipher(12);
+uint8_t encryptionCounter[8];
 encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+uint8_t MSPDataPackage[ELRS_MSP_BUFFER];
+#else
+uint8_t MSPDataPackage[5];
 #endif
+
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -76,7 +81,6 @@ volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
 bool InBindingMode = false;
-uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
@@ -185,55 +189,140 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 }
 
 #ifdef USE_ENCRYPTION
-bool InitCrypto() {
 
-    uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                    201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
-                    211, 212, 213, 214, 215, 216};
-    size_t keySize = 32;
-    uint8_t rounds = 12;
+// TODO test random functions on both RADIO_SX127X and RADIO_SX128X,
+// then delete unused functions.
+#ifdef RADIO_SX127X
+void RandRSSI(uint8_t *outrnd, size_t len)
+{
+  uint8_t rnd;
 
-    uint8_t iv[]          = {101,102,103,104,105,106,107,108};
-    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
-
-
-    // if (!cipher.setKey(key, sizeof(key)))
-    if (!cipher.setKey(key, keySize))
+  for (int i = 0; i < len, i++)
+  {
+    for (uint8_t bit = 0; bit < 8; bit++)
     {
-        return false;
+        FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
+        Radio.SetMode(SX127X_CAD);
+        rnd |= ( Radio.GetCurrRSSI(transmittingRadio) & 0x01 ) << bit;
+        delay(1);
     }
-    if (!cipher.setIV(iv, sizeof(iv)))
+  }
+
+}
+#elif RADIO_SX128X
+void RandRSSI(uint8_t *outrnd, size_t len)
+{
+  uint8_t rnd = 0;
+
+  for (int i = 0; i < len; i++)
+  {
+    for (uint8_t bit = 0; bit < 8; bit++)
     {
-        return false;
+        FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
+        Radio.RXnb(SX1280_MODE_RX_CONT);
+        rnd |= ( Radio.GetRssiInst(SX12XX_Radio_1) & 0x01 ) << bit;
+        delay(1);
     }
-    if (!cipher.setCounter(counter, sizeof(counter)))
+  }
+
+}
+#endif
+
+
+void GetRandomBytes(uint8_t *outrnd, size_t len)
+{
+  uint32_t rnd = 0;
+
+#ifdef RADIO_SX128X
+  Radio.RXnb(SX1280_MODE_RX_CONT);
+  for (int i = 0; i < len; i++)
+  {
+    for( uint8_t bit = 0; bit < 8; bit++ )
     {
-        return false;
+      rnd |= ( Radio.GetRssiInst(SX12XX_Radio_1) & 0x01 ) << bit;
+      delay(1);
     }
-    cipher.setNumRounds(rounds);
-    return true;
+    outrnd[i] = rnd;
+  }
+
+#endif
+#ifdef RADIO_SX127X
+  // Radio.ConfigLoraDefaults();
+  SetRxTimeoutUs(); // Sets continuous receive mode
+  Radio.RXnb();
+  for (int i = 0; i < len, i++)
+  {
+    for( uint8_t bit = 0; bit < 8; bit++ )
+    {
+      // REG_LR_RSSIWIDEBAND and SX1272Read not defined at this scope
+      // outrnd |= ( ( uint32_t )SX1272Read( REG_LR_RSSIWIDEBAND ) & 0x01 ) << bit;
+      delay(1);
+    }
+  }
+#endif
+}
+
+uint32_t GetRandom32t()
+{
+  uint32_t rnd = 0;
+#ifdef RADIO_SX128X
+  Radio.RXnb(SX1280_MODE_RX_CONT);
+#endif
+#ifdef RADIO_SX127X
+  // Radio.ConfigLoraDefaults();
+  SetRxTimeoutUs(); // Sets continuous receive mode
+  Radio.RXnb();
+#endif
+
+  for( int i = 0; i < 32; i++ )
+  {
+    delay(1);
+    // REG_LR_RSSIWIDEBAND and SX1272Read not defined at this scope
+    // Unfiltered RSSI value reading. Only takes the least sitgnificant bit
+    // rnd |= ( ( uint32_t )SX1272Read( REG_LR_RSSIWIDEBAND ) & 0x01 ) << i;
+  }
+  return rnd;
 }
 
 
-void EnDecryptMsg(uint8_t *input, uint8_t *output)
+bool InitCrypto()
 {
-  output[0] ^= 0x01;
-  output[1] ^= 0x02;
-  // ExpressLRS_currAirRate_Modparams->PayloadLength
-  /*
-  int resync = 200;
-  do
+
+    /*
+    size_t nonceSize = 8;
+    size_t ivSize = 8;
+    */
+  MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
+  encryption_params_t *encryption_params = (encryption_params_t *) MSPDataPackage + 1;
+	uint8_t rounds = 12;
+	size_t counterSize = 8;
+  uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+  size_t keySize = 16;
+
+  uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
+  uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+
+  memcpy(encryption_params->key, key, keySize);
+  memcpy(encryption_params->nonce, nonce, 8);
+  memcpy(encryptionCounter, counter, counterSize);
+  cipher.clear();
+
+  if ( !cipher.setKey(encryption_params->key, keySize) )
   {
-    if (OtaIsFullRes)
-    {
-      cipher.encrypt(output, input, OTA8_PACKET_SIZE);
-    }
-    else
-    {
-      cipher.encrypt(output, input, OTA4_PACKET_SIZE);
-    }
-  } while (resync-- > 0 && !OtaValidatePacketCrc( (OTA_Packet_s *)output) );
-  */
+      return false;
+  }
+  if ( !cipher.setIV(encryption_params->nonce, cipher.ivSize()) )
+  {
+      return false;
+  }
+  if (!cipher.setCounter(counter, counterSize))
+  {
+      return false;
+  }
+  cipher.setNumRounds(rounds);
+  MspSender.SetDataToTransmit(MSPDataPackage, sizeof(encryption_params) + 1);
+  // SendCryptoOverMSP();
+  return true;
 }
 #endif
 
@@ -638,7 +727,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 #ifdef USE_ENCRYPTION
   if (encryptionStateSend == ENCRYPTION_STATE_FULL)
   {
-    EnDecryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
+	  // InitCrypto();
+    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+    cipher.setCounter(counter, 8);
+    EncryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
   }
 #endif
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
@@ -999,19 +1091,6 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   hwTimer::resume();
 }
 #endif
-
-#ifdef USE_ENCRYPTION
-// Ray todo
-// MSPDataPackage is a 65-byte buffer
-void SendCryptoOverMSP()
-{
-  MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
-  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
-  // MspSender.ResetState();
-  MspSender.SetDataToTransmit(MSPDataPackage, 5);
-}
-#endif
-
 
 void SendUIDOverMSP()
 {
@@ -1495,8 +1574,9 @@ void loop()
   { 
     if (encryptionStateSend == ENCRYPTION_STATE_NONE)
 	{
-      // InitCrypto();
-	  SendCryptoOverMSP();
+    InitCrypto();
+	  // Moved to inside InitCrypto
+    // SendCryptoOverMSP();
 	  encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
     }
 	else if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED )

@@ -1,6 +1,20 @@
 #include "common.h"
 #include "OTA.h"
 
+#ifdef USE_ENCRYPTION
+#include <encryption.h>
+#include <Crypto.h>
+#include <ChaCha.h>
+#include <string.h>
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+// ChaCha cipher;
+// encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+#endif
+
 #if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
@@ -190,3 +204,119 @@ bool ICACHE_RAM_ATTR isDualRadio()
 {
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }
+
+#ifdef USE_ENCRYPTION
+extern ChaCha cipher;
+extern uint8_t encryptionCounter[8];
+
+// encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+void ICACHE_RAM_ATTR EncryptMsg(uint8_t *output, uint8_t *input)
+{
+  size_t packetSize;
+  // input[0] ^= 0x01;
+  // input[1] ^= 0x02;
+
+  // Ray TODO remove this - it is for debugging only
+  // uint8_t resetCounter[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  // cipher.setCounter(resetCounter, 8);
+  // cipher.setCounter(encryptionCounter, 8);
+
+  if (OtaIsFullRes)
+  {
+      packetSize = OTA8_PACKET_SIZE;
+  }
+  else
+  {
+      packetSize = OTA4_PACKET_SIZE;
+  }
+  // cipher.encrypt(encrypted, input, packetSize);
+  cipher.encrypt(output, input, packetSize);
+}
+
+bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
+{
+  // input[0] ^= 0x01;
+  // input[1] ^= 0x02;
+
+  // It works when it's just passed directly to EncryptMsg without anything else,
+  // given the counter is reset each time by the caller.
+  // EncryptMsg(input, input);
+  // return(true);
+
+  uint8_t decrypted[OTA8_PACKET_SIZE];
+  size_t packetSize;
+  bool success = false;
+  int resync = 32;
+  static bool encryptionStarted = false;
+  OTA_Packet_s *otaPktPtr;
+  uint8_t oldCrcHigh;
+
+  if (OtaIsFullRes)
+  {
+      packetSize = OTA8_PACKET_SIZE;
+  }
+  else
+  {
+      packetSize = OTA4_PACKET_SIZE;
+  }
+
+  // Ray TODO remove this - it is for debugging only
+  // uint8_t resetCounter[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  // cipher.setCounter(resetCounter, 8);
+  // cipher.setCounter(encryptionCounter, 8);
+
+  /*
+  // Process packaged unencrypted until encrtpyed ones start.
+  // This does seem to be needed
+  if (!encryptionStarted)
+  {
+    otaPktPtr = (OTA_Packet_s *) input;
+    // ValidatePacketCrcStd() changes a byte in the CRC, overwriting it's input.
+    // We will need to save std.crcHigh and reset it after checking.
+    if (packetSize == OTA4_PACKET_SIZE)
+    {
+      oldCrcHigh = otaPktPtr->std.crcHigh;
+    }
+    if ( OtaValidatePacketCrc(otaPktPtr) )
+    {
+      if (packetSize == OTA4_PACKET_SIZE)
+      {
+        otaPktPtr->std.crcHigh = oldCrcHigh;
+      }
+      return(true);
+    }
+  }
+  */
+
+
+  do
+  {
+    EncryptMsg(decrypted, input);
+
+    // ValidatePacketCrcStd() changes a byte in the CRC, overwriting it's input.
+    // We will need to save and reset otaPktPtr->std.crcHigh immeidately after checking
+    if (packetSize == OTA4_PACKET_SIZE)
+    {
+      otaPktPtr = (OTA_Packet_s *) decrypted;
+      oldCrcHigh = otaPktPtr->std.crcHigh;
+    }
+
+    success = OtaValidatePacketCrc(otaPktPtr);
+    if (packetSize == OTA4_PACKET_SIZE)
+    {
+      otaPktPtr->std.crcHigh = oldCrcHigh;
+    }
+    encryptionStarted = encryptionStarted || success;
+  } while ( resync-- > 0 && !success );
+
+  if (success)
+  {
+   memcpy(input, decrypted, packetSize);
+  } else if (!encryptionStarted)
+  {
+    cipher.setCounter(encryptionCounter, 8);
+  }
+  return(success);
+}
+#endif
+

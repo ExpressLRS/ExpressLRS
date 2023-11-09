@@ -49,13 +49,15 @@
 #include <Crypto.h>
 #include <ChaCha.h>
 #include <string.h>
+
 #if defined(ESP8266) || defined(ESP32)
 #include <pgmspace.h>
 #else
 #include <avr/pgmspace.h>
 #endif
-ChaCha cipher;
+ChaCha cipher(12);
 encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+uint8_t encryptionCounter[8];
 #endif
 
 ///LUA///
@@ -440,59 +442,45 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 #ifdef USE_ENCRYPTION
 
-bool CryptoSetKeys(const encryption_params_t *params) {
-
-    static uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                    201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
-                    211, 212, 213, 214, 215, 216};
-    size_t keySize = 32;
+// Ray TODO set argument to const
+bool CryptoSetKeys(encryption_params_t *params)
+{
+    /*
+    size_t nonceSize = 8;
+    size_t ivSize = 8;
+    */
     uint8_t rounds = 12;
-	size_t nonceSize = 8;
+    size_t counterSize = 8;
+    size_t keySize = 16;
 
-    static uint8_t nonce[]          = {101,102,103,104,105,106,107,108};
+    uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+
+    uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
     uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
 
-    memcpy(key, params->key, keySize);
-    memcpy(nonce, params->nonce, nonceSize);
+    // Ray TODO for debugging
+    // memcpy(params->key, key, keySize);
+    // memcpy(params->nonce, nonce, 8);
 
-    if (!cipher.setKey(key, keySize))
+
+    memcpy(encryptionCounter, counter, counterSize);
+    cipher.clear();
+    // if (!cipher.setKey(key, sizeof(key)))
+    if ( !cipher.setKey(params->key, keySize) )
     {
         return false;
     }
-    if (!cipher.setIV(nonce, nonceSize))
+    if ( !cipher.setIV(params->nonce, cipher.ivSize()) )
     {
         return false;
     }
-    if (!cipher.setCounter(counter, sizeof(counter)))
+    if (!cipher.setCounter(counter, counterSize))
     {
         return false;
     }
     cipher.setNumRounds(rounds);
     return true;
 }
-
-void EnDecryptMsg(uint8_t *input, uint8_t *output)
-{
-  output[0] ^= 0x01;
-  output[1] ^= 0x02;
-  // ExpressLRS_currAirRate_Modparams->PayloadLength
-
-  /*
-  int resync = 20;
-  do
-  {
-    if (OtaIsFullRes)
-    {
-      cipher.encrypt(output, input, OTA8_PACKET_SIZE);
-    }
-    else
-    {
-      cipher.encrypt(output, input, OTA4_PACKET_SIZE);
-    }
-  } while (resync-- > 0 && !OtaValidatePacketCrc( (OTA_Packet_s *)output) );
-  */
-}
-
 
 /* Not used currently
 void ICACHE_RAM_ATTR CryptoHandshake() {
@@ -1110,14 +1098,17 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 #ifdef USE_ENCRYPTION
     if (encryptionStateSend == ENCRYPTION_STATE_FULL)
-	{
-		// Ray debug 100 does not work with this uncommented
-        EnDecryptMsg( Radio.RXdataBuffer, Radio.RXdataBuffer);
-    }
+	  {
+		// memcpy(decrypted, Radio.RXdataBuffer, sizeof(otaPkt.full);
+		// Ray TDO handle counter properly
+      uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+      cipher.setCounter(counter, 8);
 
+	    DecryptMsg( Radio.RXdataBuffer );
+    }
+#endif
 
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
-#endif
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
         DBGVLN("CRC error");
@@ -1249,7 +1240,7 @@ void MspReceiveComplete()
         break;
 #ifdef USE_ENCRYPTION
 	case MSP_ELRS_INIT_ENCRYPT:
-	    encryption_params = (encryption_params_t *) MspData;
+	  encryption_params = (encryption_params_t *) MspData + 1;
 		CryptoSetKeys(encryption_params);
 		// encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
 		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION;
