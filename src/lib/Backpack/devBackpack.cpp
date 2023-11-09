@@ -41,9 +41,9 @@ void startPassthrough()
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
         #if defined(PLATFORM_ESP32_S3)
-            CRSF::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43
+            CRSF::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43，If PLATFORM_ESP32_S3 macro is defined, pins are configured as 44 and 43
         #else
-            CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1
+            CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1，Otherwise continue to use default pin configuration 3 and 1
         #endif
     else
     {
