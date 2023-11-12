@@ -78,7 +78,7 @@ static const struct {
     {HARDWARE_led_green_red, "led_green_red", INT},
     {HARDWARE_led_red, "led_red", INT},
     {HARDWARE_led_red_invert, "led_red_invert", BOOL},
-    {HARDWARE_led_reg_green, "led_red_green", INT},
+    {HARDWARE_led_red_green, "led_red_green", INT},
     {HARDWARE_led_rgb, "led_rgb", INT},
     {HARDWARE_led_rgb_isgrb, "led_rgb_isgrb", BOOL},
     {HARDWARE_ledidx_rgb_status, "ledidx_rgb_status", ARRAY},
