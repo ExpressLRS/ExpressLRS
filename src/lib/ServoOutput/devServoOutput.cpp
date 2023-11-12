@@ -155,9 +155,9 @@ static void initialize()
             pin = UNDEF_PIN;
         }
 #endif
-        // Mark servo pins that are being used for serial as disconnected
+        // Mark servo pins that are being used for serial (or other purposes) as disconnected
         eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-        if (mode == somSerial)
+        if (mode >= somSerial)
         {
             pin = UNDEF_PIN;
         }

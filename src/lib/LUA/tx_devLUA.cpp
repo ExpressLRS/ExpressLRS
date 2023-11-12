@@ -362,25 +362,28 @@ static void luadevUpdateBackpackOpts()
 }
 
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+static void setBleJoystickMode()
+{
+  connectionState = bleJoystick;
+}
+
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
-  std::function<void()> setTargetState;
+  void (*setTargetState)();
   connectionState_e targetState;
   const char *textConfirm;
   const char *textRunning;
   if ((void *)item == (void *)&luaWebUpdate)
   {
-    setTargetState = setWifiUpdateMode;
+    setTargetState = &setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
     targetState = wifiUpdate;
   }
   else
   {
-    setTargetState = []() {
-      connectionState = bleJoystick;
-    };
+    setTargetState = &setBleJoystickMode;
     textConfirm = "Start BLE Joystick?";
     textRunning = "Joystick Running...";
     targetState = bleJoystick;

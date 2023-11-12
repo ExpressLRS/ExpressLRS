@@ -82,8 +82,8 @@ uint8_t CRSF::CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
 uint8_t CRSF::maxPacketBytes = CRSF_MAX_PACKET_LEN;
 uint8_t CRSF::maxPeriodBytes = CRSF_MAX_PACKET_LEN;
 uint32_t CRSF::TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
-uint8_t CRSF::UARTcurrentBaudIdx = 0;
 uint32_t CRSF::UARTrequestedBaud = 5250000;
+uint8_t CRSF::UARTcurrentBaudIdx = 6;   // only used for baud-cycling, initialized to the end so the next one we try is the first in the list
 #if defined(PLATFORM_ESP32)
 bool CRSF::UARTinverted = true; // default to start looking for an inverted signal
 #endif
@@ -108,7 +108,7 @@ void CRSF::Begin()
     {
         UARTinverted = false; // on a full UART we will start uninverted checking first
     }
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx], SERIAL_8N1,
+    CRSF::Port.begin(UARTrequestedBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
     CRSF::duplex_set_RX();
@@ -121,7 +121,7 @@ void CRSF::Begin()
     }
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    CRSF::Port.begin(UARTrequestedBaud);
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
@@ -139,7 +139,7 @@ void CRSF::Begin()
     CRSF::Port.setHalfDuplex();
     #endif
 
-    CRSF::Port.begin(TxToHandsetBauds[UARTcurrentBaudIdx]);
+    CRSF::Port.begin(UARTrequestedBaud);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -862,7 +862,7 @@ bool CRSF::UARTwdt()
     uint32_t now = millis();
     if (now >= (UARTwdtLastChecked + UARTwdtInterval))
     {
-        if (BadPktsCount >= GoodPktsCount)
+        if (BadPktsCount >= GoodPktsCount || !CRSFstate)
         {
             DBGLN("Too many bad UART RX packets!");
 
@@ -874,34 +874,35 @@ bool CRSF::UARTwdt()
             }
 
             UARTrequestedBaud = autobaud();
+            if (UARTrequestedBaud != 0)
+            {
+                DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
-            DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
+                adjustMaxPacketSize();
 
-            adjustMaxPacketSize();
-
-            SerialOutFIFO.flush();
+                SerialOutFIFO.flush();
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-            CRSF::Port.flush();
-            CRSF::Port.updateBaudRate(UARTrequestedBaud);
+                CRSF::Port.flush();
+                CRSF::Port.updateBaudRate(UARTrequestedBaud);
 #elif defined(TARGET_TX_GHOST)
-            CRSF::Port.begin(UARTrequestedBaud);
-            USART1->CR1 &= ~USART_CR1_UE;
-            USART1->CR3 |= USART_CR3_HDSEL;
-            USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
-            USART1->CR1 |= USART_CR1_UE;
+                CRSF::Port.begin(UARTrequestedBaud);
+                USART1->CR1 &= ~USART_CR1_UE;
+                USART1->CR3 |= USART_CR3_HDSEL;
+                USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
+                USART1->CR1 |= USART_CR1_UE;
 #elif defined(TARGET_TX_FM30_MINI)
-            CRSF::Port.begin(UARTrequestedBaud);
-            LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
-            USART2->CR1 &= ~USART_CR1_UE;
-            USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
-            USART2->CR1 |= USART_CR1_UE;
+                CRSF::Port.begin(UARTrequestedBaud);
+                LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
+                USART2->CR1 &= ~USART_CR1_UE;
+                USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
+                USART2->CR1 |= USART_CR1_UE;
 #else
-            CRSF::Port.begin(UARTrequestedBaud);
+                CRSF::Port.begin(UARTrequestedBaud);
 #endif
-            duplex_set_RX();
-            // cleanup input buffer
-            flush_port_input();
-
+                duplex_set_RX();
+                // cleanup input buffer
+                flush_port_input();
+            }
             retval = true;
         }
 #ifdef DEBUG_OPENTX_SYNC
