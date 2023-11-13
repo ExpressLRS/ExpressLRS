@@ -400,7 +400,7 @@ void OLEDDisplay::displaySending()
 static void helperDrawImage(menu_item_t menu)
 {
     if (OPT_USE_OLED_SPI_SMALL)
-   {
+    {
 
         // Adjust these to move them around on the screen
         int x_pos = 65;
@@ -409,6 +409,12 @@ static void helperDrawImage(menu_item_t menu)
         switch(menu){
             case STATE_PACKET:
                 u8g2->drawXBM(x_pos, y_pos, 32, 22, rate_img32);
+                break;
+            case STATE_SWITCH:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, switch_img32);
+                break;
+            case STATE_ANTENNA:
+                u8g2->drawXBM(x_pos, y_pos, 32, 32, antenna_img32);
                 break;
             case STATE_POWER:
             case STATE_POWER_MAX:
@@ -468,6 +474,12 @@ static void helperDrawImage(menu_item_t menu)
         switch(menu){
             case STATE_PACKET:
                 u8g2->drawXBM(x_pos, y_pos, 64, 44, rate_img64);
+                break;
+            case STATE_SWITCH:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, switch_img64);
+                break;
+            case STATE_ANTENNA:
+                u8g2->drawXBM(x_pos, y_pos, 64, 64, antenna_img64);
                 break;
             case STATE_POWER:
             case STATE_POWER_MAX:

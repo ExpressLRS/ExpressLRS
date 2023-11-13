@@ -12,8 +12,8 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
     while(spi->cmd.usr) {}
 
     // Set the CS pins which we want controlled by the SPI module for this operation
-    spiDisableSSPins(SPIEx.bus(), ~cs_mask);
-    spiEnableSSPins(SPIEx.bus(), cs_mask);
+    spiDisableSSPins(bus(), ~cs_mask);
+    spiEnableSSPins(bus(), cs_mask);
 
 #if defined(PLATFORM_ESP32_S3)
     spi->ms_dlen.ms_data_bitlen = (size*8)-1;
@@ -89,4 +89,10 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
 #endif
 }
 
+#if defined(PLATFORM_ESP32_S3)
+SPIExClass SPIEx(FSPI);
+#elif defined(PLATFORM_ESP32)
+SPIExClass SPIEx(VSPI);
+#else
 SPIExClass SPIEx;
+#endif

@@ -4,17 +4,23 @@
 #include "PWM.h"
 #include "CRSF.h"
 #include "config.h"
-#include "helpers.h"
+#include "logging.h"
 #include "rxtx_intf.h"
 
-static int8_t SERVO_PINS[PWM_MAX_CHANNELS] = {-1};
-static pwm_channel_t PWM_CHANNELS[PWM_MAX_CHANNELS] = {-1};
+static int8_t servoPins[PWM_MAX_CHANNELS];
+static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
+
+#if (defined(PLATFORM_ESP32))
+static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
+const uint8_t RMT_MAX_CHANNELS = 8;
+#endif
+
 // true when the RX has a new channels packet
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
-void ICACHE_RAM_ATTR servoNewChannelsAvaliable()
+void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
     newChannelsAvailable = true;
 }
@@ -45,19 +51,30 @@ uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-    if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+#if defined(PLATFORM_ESP32)
+    if ((eServoOutputMode)chConfig->val.mode == somDShot)
     {
-        digitalWrite(SERVO_PINS[ch], us > 1500);
+        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+        if (dshotInstances[ch])
+        {
+            dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+        }
     }
     else
+#endif
+    if (servoPins[ch] != UNDEF_PIN)
     {
-        if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        if ((eServoOutputMode)chConfig->val.mode == somOnOff)
         {
-            PWM.setDuty(PWM_CHANNELS[ch], constrain(us, 1000, 2000) - 1000);
+            digitalWrite(servoPins[ch], us > 1500);
+        }
+        else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        {
+            PWM.setDuty(pwmChannels[ch], constrain(us, 1000, 2000) - 1000);
         }
         else
         {
-            PWM.setMicroseconds(PWM_CHANNELS[ch], us / (chConfig->val.narrow + 1));
+            PWM.setMicroseconds(pwmChannels[ch], us / (chConfig->val.narrow + 1));
         }
     }
 }
@@ -68,15 +85,15 @@ static void servosFailsafe()
     for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        // Note: Failsafe values do not respect the inverted flag, failsafes are absolute
+        // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
         uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
-        // Always write the failsafe position even if the servo never has been started,
+        // Always write the failsafe position even if the servo has never been started,
         // so all the servos go to their expected position
         servoWrite(ch, us);
     }
 }
 
-static int servosUpdate(unsigned long now)
+static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
     if (newChannelsAvailable)
@@ -87,7 +104,7 @@ static int servosUpdate(unsigned long now)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
-            // crsfVal might 0 if this is a switch channel and it has not been
+            // crsfVal might 0 if this is a switch channel, and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
             {
@@ -95,7 +112,7 @@ static int servosUpdate(unsigned long now)
             }
 
             uint16_t us = CRSF_to_US(crsfVal);
-            // Flip the output around the mid value if inverted
+            // Flip the output around the mid-value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
             {
@@ -113,8 +130,6 @@ static int servosUpdate(unsigned long now)
         servosFailsafe();
         lastUpdate = 0;
     }
-
-    return DURATION_IMMEDIATELY;
 }
 
 static void initialize()
@@ -124,9 +139,11 @@ static void initialize()
         return;
     }
 
+    uint8_t rmtCH = 0;
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-        uint8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
+        pwmChannels[ch] = -1;
+        int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
 #if defined(PLATFORM_ESP32_S3)
@@ -138,16 +155,40 @@ static void initialize()
             pin = UNDEF_PIN;
         }
 #endif
-        // Mark servo pins that are being used for serial as disconnected
+        // Mark servo pins that are being used for serial (or other purposes) as disconnected
         eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-        if (mode == somSerial)
+        if (mode >= somSerial)
         {
             pin = UNDEF_PIN;
         }
-        SERVO_PINS[ch] = pin;
+#if defined(PLATFORM_ESP32)
+        else if (mode == somDShot)
+        {
+            if (rmtCH < RMT_MAX_CHANNELS)
+            {
+                auto gpio = (gpio_num_t)pin;
+                auto rmtChannel = (rmt_channel_t)rmtCH;
+                DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
+                pinMode(pin, OUTPUT);
+                dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
+                rmtCH++;
+            }
+            pin = UNDEF_PIN;
+        }
+#endif
+        servoPins[ch] = pin;
         // Initialize all servos to low ASAP
         if (pin != UNDEF_PIN)
         {
+            if (mode == somOnOff)
+            {
+                DBGLN("Initializing digital output: ch: %d, pin: %d", ch, pin);
+            }
+            else
+            {
+                DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
+            }
+
             pinMode(pin, OUTPUT);
             digitalWrite(pin, LOW);
         }
@@ -160,12 +201,20 @@ static int start()
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
-        if (frequency)
+        if (frequency && servoPins[ch] != UNDEF_PIN)
         {
-            PWM_CHANNELS[ch] = PWM.allocate(SERVO_PINS[ch], frequency);
+            pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
         }
+#if defined(PLATFORM_ESP32)
+        else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
+        {
+            dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
+            dshotInstances[ch]->send_dshot_value(0);         // Set throttle low so the ESC can continue initialsation
+        }
+#endif
     }
-
+    // set servo outputs to failsafe position on start in case they want to play silly buggers!
+    servosFailsafe();
     return DURATION_NEVER;
 }
 
@@ -173,7 +222,7 @@ static int event()
 {
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {
-        // Disconnected should come after failsafe on the RX
+        // Disconnected should come after failsafe on the RX,
         // so it is safe to shut down when disconnected
         return DURATION_NEVER;
     }
@@ -181,12 +230,19 @@ static int event()
     {
         for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
-            if (PWM_CHANNELS[ch] != -1)
+            if (pwmChannels[ch] != -1)
             {
-                PWM.release(PWM_CHANNELS[ch]);
-                PWM_CHANNELS[ch] = -1;
+                PWM.release(pwmChannels[ch]);
+                pwmChannels[ch] = -1;
             }
-            SERVO_PINS[ch] = -1;
+#if defined(PLATFORM_ESP32)
+            if (dshotInstances[ch] != nullptr)
+            {
+                delete dshotInstances[ch];
+                dshotInstances[ch] = nullptr;
+            }
+#endif
+            servoPins[ch] = UNDEF_PIN;
         }
         return DURATION_NEVER;
     }
@@ -195,7 +251,8 @@ static int event()
 
 static int timeout()
 {
-    return servosUpdate(millis());
+    servosUpdate(millis());
+    return DURATION_IMMEDIATELY;
 }
 
 device_t ServoOut_device = {

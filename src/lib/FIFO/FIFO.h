@@ -113,7 +113,7 @@ public:
      * @param data pointer to the bytes to be pushed onto the FIFO
      * @param len number of bytes in `data` to push
      */
-    ICACHE_RAM_ATTR void inline pushBytes(const uint8_t *data, uint8_t len)
+    ICACHE_RAM_ATTR void inline pushBytes(const uint8_t *data, uint16_t len)
     {
         if (numElements + len > FIFO_SIZE)
         {
@@ -136,7 +136,7 @@ public:
      * @param data pointer to the bytes to be pushed onto the FIFO
      * @param len number of bytes in `data` to push
      */
-    ICACHE_RAM_ATTR void inline atomicPushBytes(const uint8_t *data, uint8_t len)
+    ICACHE_RAM_ATTR void inline atomicPushBytes(const uint8_t *data, uint16_t len)
     {
         lock();
         pushBytes(data, len);
@@ -167,7 +167,7 @@ public:
      * @param data pointer to a buffer where the bytes are popped into
      * @param len number of bytes to pop from teh FIFO
      */
-    ICACHE_RAM_ATTR void inline popBytes(uint8_t *data, uint8_t len)
+    ICACHE_RAM_ATTR void inline popBytes(uint8_t *data, uint16_t len)
     {
         if (numElements < len)
         {
@@ -276,7 +276,7 @@ public:
      *
      * @return true if the FIFO can accept the number of bytes requested
      */
-    ICACHE_RAM_ATTR bool inline available(uint8_t requiredSize)
+    ICACHE_RAM_ATTR bool inline available(uint16_t requiredSize)
     {
         return (numElements + requiredSize) < FIFO_SIZE;
     }
@@ -290,7 +290,7 @@ public:
      * @param requiredSize the number of bytes required to be available
      * @return true if the required amount of bytes will fit in the FIFO
      */
-    ICACHE_RAM_ATTR bool inline ensure(uint8_t requiredSize)
+    ICACHE_RAM_ATTR bool inline ensure(uint16_t requiredSize)
     {
         if(requiredSize > FIFO_SIZE)
         {

@@ -1,8 +1,8 @@
 #if defined(PLATFORM_ESP8266)
 #include "hwTimer.h"
 
-void (*hwTimer::callbackTick)() = [](){};
-void (*hwTimer::callbackTock)() = [](){};
+void (*hwTimer::callbackTick)() = nullptr;
+void (*hwTimer::callbackTock)() = nullptr;
 
 volatile bool hwTimer::running = false;
 volatile bool hwTimer::isTick = false;

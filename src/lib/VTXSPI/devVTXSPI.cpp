@@ -273,11 +273,7 @@ static void initialize()
     {
         if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
         {
-            #if defined(PLATFORM_ESP32_S3)
-            vtxSPI = new SPIClass(FSPI);
-            #else
-            vtxSPI = new SPIClass(VSPI);
-            #endif
+            vtxSPI = new SPIClass(HSPI);
             vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
             vtxSPI->setHwCs(true);
             vtxSPI->setBitOrder(LSBFIRST);
