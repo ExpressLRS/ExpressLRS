@@ -1246,7 +1246,6 @@ void setup()
     config.Load(); // Load the stored values from eeprom
 
     config.SetTlm(TLM_RATIO_1_2);
-    config.SetSwitchMode(1); //Hybrid
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
