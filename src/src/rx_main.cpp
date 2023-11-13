@@ -462,6 +462,8 @@ bool CryptoSetKeys(encryption_params_t *params)
     // memcpy(params->key, key, keySize);
     // memcpy(params->nonce, nonce, 8);
 
+    DBGLN("New key = %d, %d, %d, %d, %d, %d, %d", params->key[0], params->key[1], params->key[2], params->key[3],
+    params->key[4], params->key[5], params->key[6]);
 
     memcpy(encryptionCounter, counter, counterSize);
     cipher.clear();
@@ -1240,7 +1242,9 @@ void MspReceiveComplete()
         break;
 #ifdef USE_ENCRYPTION
 	case MSP_ELRS_INIT_ENCRYPT:
-	  encryption_params = (encryption_params_t *) MspData + 1;
+    DBGLN("MspData = %d, %d, %d, %d, %d, %d, %d", MspData[0], MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
+
+	  encryption_params = (encryption_params_t *) &MspData[1];
 		CryptoSetKeys(encryption_params);
 		// encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
 		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION;

@@ -293,7 +293,7 @@ bool InitCrypto()
     size_t ivSize = 8;
     */
   MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
-  encryption_params_t *encryption_params = (encryption_params_t *) MSPDataPackage + 1;
+  encryption_params_t *encryption_params = (encryption_params_t *) &MSPDataPackage[1];
 	uint8_t rounds = 12;
 	size_t counterSize = 8;
   uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
@@ -320,7 +320,7 @@ bool InitCrypto()
       return false;
   }
   cipher.setNumRounds(rounds);
-  MspSender.SetDataToTransmit(MSPDataPackage, sizeof(encryption_params) + 1);
+  MspSender.SetDataToTransmit(MSPDataPackage, sizeof(encryption_params_t) + 1);
   // SendCryptoOverMSP();
   return true;
 }
@@ -1573,16 +1573,16 @@ void loop()
   if ( (connectionState == connected) && (!MspSender.IsActive()) )
   { 
     if (encryptionStateSend == ENCRYPTION_STATE_NONE)
-	{
-    InitCrypto();
-	  // Moved to inside InitCrypto
-    // SendCryptoOverMSP();
-	  encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
+	  {
+      InitCrypto();
+	    // Moved to inside InitCrypto
+      // SendCryptoOverMSP();
+	    encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
     }
-	else if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED )
-	{
+	  else if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED )
+	  {
         encryptionStateSend = ENCRYPTION_STATE_FULL;
-	}
+	  }
   }
 #endif
 
