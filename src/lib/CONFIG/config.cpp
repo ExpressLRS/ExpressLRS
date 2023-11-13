@@ -179,6 +179,8 @@ void TxConfig::Load()
         // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
         if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
             m_config.backpackDisable = value8;
+        if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
+            m_config.backpackTlmEnabled = value8;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -337,6 +339,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
+        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmEnabled);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -716,6 +719,7 @@ void RxConfig::Load()
     UpgradeEepromV4();
     UpgradeEepromV5();
     UpgradeEepromV6();
+    UpgradeEepromV7();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -741,12 +745,13 @@ void RxConfig::UpgradeEepromV4()
         m_config.isBound = v4Config.isBound;
         m_config.modelId = v4Config.modelId;
         memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
-
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
             PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -781,10 +786,12 @@ void RxConfig::UpgradeEepromV5()
         m_config.rateInitialIdx = v5Config.rateInitialIdx;
         m_config.modelId = v5Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -814,11 +821,38 @@ void RxConfig::UpgradeEepromV6()
         m_config.rateInitialIdx = v6Config.rateInitialIdx;
         m_config.modelId = v6Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
+}
+
+// ========================================================
+// V7 Upgrade
+static void PwmConfigV7(rx_config_pwm_t * const current)
+{
+    if (current->val.mode > somOnOff)
+    {
+        current->val.mode += 1;
+    }
+}
+
+void RxConfig::UpgradeEepromV7()
+{
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    uint32_t version;
+    m_eeprom->Get(0, version);
+    if ((version & ~CONFIG_MAGIC_MASK) == 7)
+    {
+        for (unsigned ch=0; ch<16; ++ch)
+        {
+            PwmConfigV7(&m_config.pwmChannels[ch]);
+        }
+    }
+    #endif
 }
 
 // ========================================================
@@ -939,7 +973,22 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false, 0, false);
+    {
+        uint8_t mode = som50Hz;
+        // setup defaults for hardware defined I2C pins that are also IO pins
+        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
+        {
+            if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
+            {
+                mode = somSCL;
+            }
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SDA)
+            {
+                mode = somSDA;
+            }
+        }
+        SetPwmChannel(ch, 512, ch, false, mode, false);
+    }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 

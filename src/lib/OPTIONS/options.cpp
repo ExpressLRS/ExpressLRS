@@ -1,6 +1,5 @@
 #include "targets.h"
 #include "options.h"
-#include "helpers.h"
 
 #include "logging.h"
 
@@ -82,6 +81,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 100000,
 #elif defined(USE_SUMD_PROTOCOL)
     .uart_baud = 115200,
+#elif defined(USE_HOTT_TLM_PROTOCOL)
+    .uart_baud = 19200,
 #elif defined(USE_MAVLINK_PROTOCOL)
     .uart_baud = 460800,
 #elif defined(RCVR_UART_BAUD)
@@ -113,11 +114,7 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .fan_min_runtime = 30,
 #endif
-#if defined(UART_INVERTED) // Only on ESP32
-    .uart_inverted = true,
-#else
-    .uart_inverted = false,
-#endif
+    ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
     .unlock_higher_power = true,
 #else
@@ -208,7 +205,10 @@ void saveOptions(Stream &stream, bool customised)
         JsonArray uid = doc.createNestedArray("uid");
         copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
     }
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.wifi_auto_on_interval != -1)
+    {
+        doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    }
     if (firmwareOptions.home_wifi_ssid[0])
     {
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
@@ -217,7 +217,6 @@ void saveOptions(Stream &stream, bool customised)
     #if defined(TARGET_UNIFIED_TX)
     doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
@@ -319,7 +318,6 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
-    firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #if defined(USE_AIRPORT_AT_BAUD)
     firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;

@@ -70,9 +70,11 @@ uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
-static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 bool headTrackingEnabled = false;
+#if !defined(CRITICAL_FLASH)
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 static uint32_t lastPTRValidTimeMs;
+#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -329,6 +331,10 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
     {
       rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
     }
+    else if (CRSF::GetCurrentBaudRate() == 400000 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 333Hz if we are on 400k baud on external module
+    {
+      rateIndex = get_elrs_HandsetRate_max(rateIndex, 3003);
+    }
     else if (CRSF::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
     {
       rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
@@ -337,9 +343,8 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
   return rateIndex;
 }
 
-void ICACHE_RAM_ATTR SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 {
-  index = adjustPacketRateForBaud(index);
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
   bool invertIQ = UID[5] & 0x01;
@@ -413,6 +418,7 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
 
 void injectBackpackPanTiltRollData(uint32_t const now)
 {
+#if !defined(CRITICAL_FLASH)
   // Do not override channels if the backpack is NOT communicating or PanTiltRoll is disabled
   if (config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
   {
@@ -451,6 +457,7 @@ void injectBackpackPanTiltRollData(uint32_t const now)
     ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
     ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
   }
+#endif
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
@@ -552,6 +559,15 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 #if defined(Regulatory_Domain_EU_CE_2400)
   transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+
+  if (transmittingRadio == SX12XX_Radio_NONE)
+  {
+    // no packet will be sent due to LBT
+    // call TXdoneCallback() to prepare for TLM
+    // and fall through to call TXnb() which will
+    // set the transceiver the correct fallback mode
+    Radio.TXdoneCallback();
+  }
 #endif
 
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
@@ -654,7 +670,9 @@ static void UARTconnected()
   webserverPreventAutoStart = true;
   #endif
   rfModeLastChangedMS = millis(); // force syncspam on first packets
-  SetRFLinkRate(config.GetRate());
+
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
   if (connectionState == noCrossfire || connectionState < MODE_STATES)
   {
     // When CRSF first connects, always go into a brief delay before
@@ -721,6 +739,10 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
+  // Adjust the air rate based on teh current baud rate
+  auto index = adjustPacketRateForBaud(config.GetRate());
+  config.SetRate(index);
+
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
@@ -1013,18 +1035,18 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 
     VtxTriggerSend();
   }
-#endif
-  if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
-  {
-    memset(backpackVersion, 0, sizeof(backpackVersion));
-    memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
-  }
   else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
   {
     ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
     ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
     ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
     lastPTRValidTimeMs = now;
+  }
+#endif
+  if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
+  {
+    memset(backpackVersion, 0, sizeof(backpackVersion));
+    memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
   }
 }
 
@@ -1097,8 +1119,12 @@ static void setupSerial()
     serialPort = new NullStream();
   }
 #elif defined(TARGET_TX_FM30)
-  USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
-  serialPort->begin();
+  #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
+    USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
+    serialPort->begin();
+  #else
+    Stream *serialPort = new NullStream();
+  #endif
 #elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   HardwareSerial *serialPort = new HardwareSerial(2);
   #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
@@ -1130,6 +1156,9 @@ static void setupSerial()
   }
 #else
   TxUSB = new NullStream();
+  UNUSED(portConflict);
+  UNUSED(rxPin);
+  UNUSED(txPin);
 #endif
 }
 
@@ -1176,10 +1205,6 @@ static void setupTarget()
 bool setupHardwareFromOptions()
 {
 #if defined(TARGET_UNIFIED_TX)
-  // Setup default logging in case of failure, or no layout
-  Serial.begin(115200);
-  TxBackpack = &Serial;
-
   if (!options_init())
   {
     // Register the WiFi with the framework

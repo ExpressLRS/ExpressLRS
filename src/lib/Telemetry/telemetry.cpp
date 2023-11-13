@@ -54,11 +54,30 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
+void Telemetry::SetCrsfBatterySensorDetected()
+{
+    crsfBatterySensorDetected = true;
+}
+
 void Telemetry::CheckCrsfBatterySensorDetected()
 {
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
     {
-        crsfBatterySensorDetected = true;
+        SetCrsfBatterySensorDetected();
+    }
+}
+
+void Telemetry::SetCrsfBaroSensorDetected()
+{
+    crsfBaroSensorDetected = true;
+}
+
+void Telemetry::CheckCrsfBaroSensorDetected()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BARO_ALTITUDE ||
+        CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_VARIO)
+    {
+        SetCrsfBaroSensorDetected();
     }
 }
 
@@ -188,9 +207,10 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 {
                     AppendTelemetryPackage(CRSFinBuffer);
 
-                    // Special case to check here and not in AppendTelemetryPackage().  devAnalogVbat sends
+                    // Special case to check here and not in AppendTelemetryPackage(). devAnalogVbat and vario sends
                     // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
                     CheckCrsfBatterySensorDetected();
+                    CheckCrsfBaroSensorDetected();
 
                     receivedPackages++;
                     return true;

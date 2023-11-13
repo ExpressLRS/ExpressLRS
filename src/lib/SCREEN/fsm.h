@@ -1,4 +1,3 @@
-#include <functional>
 #include <deque>
 
 #include "targets.h"
@@ -37,8 +36,8 @@ typedef struct fsm_state_event_s
 typedef struct fsm_state_entry_s
 {
     fsm_state_t state;
-    std::function<bool()> available;
-    std::function<void(bool init)> entry;
+    bool (*available)();
+    void (*entry)(bool init);
     uint16_t timeout;
     fsm_state_event_t const *events;
     uint8_t event_count;

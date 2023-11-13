@@ -4,14 +4,16 @@
 #include "device.h"
 #include "common.h"
 
+#if (defined(PLATFORM_ESP32))
+#include "DShotRMT.h"
+#endif
+
 extern device_t ServoOut_device;
 #define HAS_SERVO_OUTPUT
 #define OPT_HAS_SERVO_OUTPUT (GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
 
 // Notify this unit that new channel data has arrived
-void servoNewChannelsAvaliable();
-// Convert eServoOutputMode to microseconds, or 0 for non-servo modes
-uint16_t servoOutputModeToUs(eServoOutputMode mode);
+void servoNewChannelsAvailable();
 #else
-inline void servoNewChannelsAvaliable(){};
+inline void servoNewChannelsAvailable(){};
 #endif

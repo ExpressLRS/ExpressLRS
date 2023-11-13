@@ -114,9 +114,7 @@ def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
-    if args.uart_inverted != None:
-        val &= ~1
-        val |= args.uart_inverted
+    val &= ~1   # unused1 - ex uart_inverted
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
@@ -226,8 +224,6 @@ def patch_unified(args, options):
         json_flags['unlock-higher-power'] = args.unlock_higher_power
     if args.fan_min_runtime is not None:
         json_flags['fan-runtime'] = args.fan_min_runtime
-    if args.uart_inverted is not None:
-        json_flags['uart-inverted'] = args.uart_inverted
 
     if args.airport_baud is not None:
         json_flags['is-airport'] = True
@@ -310,10 +306,15 @@ class writeable_dir(argparse.Action):
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a writeable dir".format(prospective_dir))
 
+class deprecate_action(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        delattr(namespace, self.dest)
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
-    parser.add_argument('--dir', action=readable_dir, default=None)
+    parser.add_argument('--dir', action=readable_dir, default=None, help='The directory that contains the "hardware" and other firmware directories')
+    parser.add_argument('--fdir', action=readable_dir, default=None, help='If specified, then the firmware files are loaded from this directory')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -331,9 +332,6 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
-    parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
-    parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
-    parser.set_defaults(uart_inverted=None)
     parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
     parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
     parser.set_defaults(unlock_higher_power=None)
@@ -354,6 +352,9 @@ def main():
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
     parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (onl for 2.4GHz firmware)")
+    # Deprecated options, left for backward compatibility
+    parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
+    parser.add_argument('--no-uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
 
     #
     # Firmware file to patch/configure
@@ -361,14 +362,15 @@ def main():
 
     args = parser.parse_args()
 
-    if args.dir != None:
+    if args.dir is not None:
         os.chdir(args.dir)
 
-    if args.file == None:
+    if args.file is None:
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
+            firmware_dir = '' if args.fdir is None else args.fdir + '/'
+            srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
             shutil.copy2(srcdir + '/firmware.bin', ".")
             if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")

@@ -1,7 +1,6 @@
 #ifndef H_OTA
 #define H_OTA
 
-#include <functional>
 #include <cstddef>
 #include "crc.h"
 #include "devCRSF.h"
@@ -168,8 +167,8 @@ void OtaUpdateSerializers(OtaSwitchMode_e const mode, uint8_t packetSize);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
 
 // CRC
-typedef std::function<bool (OTA_Packet_s * const otaPktPtr)> ValidatePacketCrc_t;
-typedef std::function<void (OTA_Packet_s * const otaPktPtr)> GeneratePacketCrc_t;
+typedef bool (*ValidatePacketCrc_t)(OTA_Packet_s * const otaPktPtr);
+typedef void (*GeneratePacketCrc_t)(OTA_Packet_s * const otaPktPtr);
 extern ValidatePacketCrc_t OtaValidatePacketCrc;
 extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 // Value is implicit leading 1, comment is Koopman formatting (implicit trailing 1) https://users.ece.cmu.edu/~koopman/crc/
@@ -178,7 +177,7 @@ extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
-typedef std::function<void (OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool TelemetryStatus, uint8_t tlmDenom)> PackChannelData_t;
+typedef void (*PackChannelData_t)(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool TelemetryStatus, uint8_t tlmDenom);
 extern PackChannelData_t OtaPackChannelData;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx);
@@ -187,7 +186,7 @@ void OtaSetFullResNextChannelSet(bool next);
 #endif
 
 #if defined(TARGET_RX) || defined(UNIT_TEST)
-typedef std::function<bool (OTA_Packet_s const * const otaPktPtr, uint32_t *channelData, uint8_t tlmDenom)> UnpackChannelData_t;
+typedef bool (*UnpackChannelData_t)(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData, uint8_t tlmDenom);
 extern UnpackChannelData_t OtaUnpackChannelData;
 #endif
 

@@ -22,6 +22,7 @@
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
+#include "rx-serial/SerialHoTT_TLM.h"
 #include "rx-serial/SerialMavlink.h"
 
 #include "rx-serial/devSerialIO.h"
@@ -738,7 +739,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
     {
         crsfRCFrameAvailable();
-        servoNewChannelsAvaliable();
+        servoNewChannelsAvailable();
     }
 
     if (!didFHSS)
@@ -763,6 +764,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
+
+    // Use this rate as the initial rate next time if we connected on it
+    if (connectionState == connected)
+        config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
 
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
@@ -851,7 +856,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
-            servoNewChannelsAvaliable();
+            servoNewChannelsAvailable();
         }
         else if (!LQCalcDVDA.currentIsSet())
         {
@@ -1187,6 +1192,10 @@ static void setupSerial()
 	bool sumdSerialOutput = false;
     bool mavlinkSerialOutput = false;
 
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    bool hottTlmSerial = false;
+#endif
+
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
@@ -1221,6 +1230,13 @@ static void setupSerial()
         mavlinkSerialOutput = true;
         serialBaud = 460800;
     }
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
+    {
+        hottTlmSerial = true;
+        serialBaud = 19200;
+    }
+#endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #ifdef PLATFORM_STM32
@@ -1275,11 +1291,31 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    SerialConfig config = SERIAL_8N1;
+
+    if(sbusSerialOutput)
+    {
+        config = SERIAL_8E2;
+    }
+    else if(hottTlmSerial)
+    {
+        config = SERIAL_8N2;
+    }
+
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
     Serial.begin(serialBaud, config, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1;
+    uint32_t config = SERIAL_8N1;
+
+    if(sbusSerialOutput)
+    {
+        config = SERIAL_8E2;
+    }
+    else if(hottTlmSerial)
+    {
+        config = SERIAL_8N2;
+    }
+
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
@@ -1299,6 +1335,12 @@ static void setupSerial()
     {
         serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    else if (hottTlmSerial)
+    {
+        serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    #endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -1682,10 +1724,6 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
-    // Setup default logging in case of failure, or no layout
-    Serial.begin(115200);
-    SerialLogger = &Serial;
-
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
@@ -1717,10 +1755,12 @@ void setup()
         #endif
 
         initUID();
-        setupTarget();
 
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
+
+        setupTarget();
+
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
         if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
