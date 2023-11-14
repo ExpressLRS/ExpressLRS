@@ -453,9 +453,9 @@ bool CryptoSetKeys(encryption_params_t *params)
     size_t counterSize = 8;
     size_t keySize = 16;
 
-    uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    // uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 
-    uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
+    // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
     uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
 
     // Ray TODO for debugging
@@ -1102,10 +1102,9 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     if (encryptionStateSend == ENCRYPTION_STATE_FULL)
 	  {
 		// memcpy(decrypted, Radio.RXdataBuffer, sizeof(otaPkt.full);
-		// Ray TDO handle counter properly
-      uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
-      cipher.setCounter(counter, 8);
-
+		// Ray TODO handle counter properly
+      // uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+      // cipher.setCounter(counter, 8);
 	    DecryptMsg( Radio.RXdataBuffer );
     }
 #endif

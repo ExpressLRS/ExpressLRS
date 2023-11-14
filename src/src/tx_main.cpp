@@ -728,8 +728,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (encryptionStateSend == ENCRYPTION_STATE_FULL)
   {
 	  // InitCrypto();
-    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
-    cipher.setCounter(counter, 8);
+    // uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+    // cipher.setCounter(counter, 8);
     EncryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
   }
 #endif
