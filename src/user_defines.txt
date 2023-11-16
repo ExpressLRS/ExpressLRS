@@ -22,6 +22,8 @@
 #-DRegulatory_Domain_IN_866
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
+#-DRegulatory_Domain_US_433
+#-DRegulatory_Domain_US_433_WIDE
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
