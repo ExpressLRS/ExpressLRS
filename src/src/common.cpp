@@ -294,7 +294,7 @@ bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
     EncryptMsg(decrypted, input);
 
     // ValidatePacketCrcStd() changes a byte in the CRC, overwriting it's input.
-    // We will need to save and reset otaPktPtr->std.crcHigh immeidately after checking
+    // We will need to save and reset otaPktPtr->std.crcHigh immediately after checking
     if (packetSize == OTA4_PACKET_SIZE)
     {
       otaPktPtr = (OTA_Packet_s *) decrypted;
@@ -312,6 +312,7 @@ bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
   if (success)
   {
    memcpy(input, decrypted, packetSize);
+   cipher.getCounter(encryptionCounter, 8);
   } else if (!encryptionStarted)
   {
     cipher.setCounter(encryptionCounter, 8);

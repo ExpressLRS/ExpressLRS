@@ -34,7 +34,11 @@
 ChaCha cipher(12);
 uint8_t encryptionCounter[8];
 encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+// uint8_t randombytes[24];
+encryption_params_t nonce_key;
 uint8_t MSPDataPackage[ELRS_MSP_BUFFER];
+// Todo remove - used for random()
+#include <stdlib.h>
 #else
 uint8_t MSPDataPackage[5];
 #endif
@@ -197,46 +201,74 @@ void RandRSSI(uint8_t *outrnd, size_t len)
 {
   uint8_t rnd;
 
-  for (int i = 0; i < len, i++)
+  for (int i = 0; i < len; i++)
   {
+    rnd = 0;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-        FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
+        // FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
         Radio.SetMode(SX127X_CAD);
         rnd |= ( Radio.GetCurrRSSI(transmittingRadio) & 0x01 ) << bit;
         delay(1);
     }
+    outrnd[i] = rnd;
   }
 
 }
 #elif RADIO_SX128X
-void RandRSSI(uint8_t *outrnd, size_t len)
+void RandRSSI_rad(uint8_t *outrnd, size_t len)
 {
-  uint8_t rnd = 0;
+  uint8_t rnd;
 
   for (int i = 0; i < len; i++)
   {
+    rnd = 0;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-        FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
+        // FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
+        delay(1);
         Radio.RXnb(SX1280_MODE_RX_CONT);
         rnd |= ( Radio.GetRssiInst(SX12XX_Radio_1) & 0x01 ) << bit;
-        delay(1);
     }
+    outrnd[i] = rnd;
   }
 
 }
+
+
+void RandRSSI(uint8_t *outrnd, size_t len)
+{
+  uint8_t rnd; 
+
+  Radio.RXnb(SX1280_MODE_RX_CONT);
+
+  for (int i = 0; i < len; i++)
+  { 
+    rnd = 0;
+    for (uint8_t bit = 0; bit < 8; bit++)
+    {
+        delay(1);
+        // rnd |= ( random() & 0x01 ) << bit;
+        rnd |= ( Radio.GetRssiInst(SX12XX_Radio_1) & 0x01 ) << bit;
+    }
+    outrnd[i] = rnd;
+  }
+}
+
+
 #endif
 
 
 void GetRandomBytes(uint8_t *outrnd, size_t len)
 {
-  uint32_t rnd = 0;
+  // 32 bit?
+  uint32_t rnd;
 
 #ifdef RADIO_SX128X
   Radio.RXnb(SX1280_MODE_RX_CONT);
   for (int i = 0; i < len; i++)
   {
+    rnd = 0;
     for( uint8_t bit = 0; bit < 8; bit++ )
     {
       rnd |= ( Radio.GetRssiInst(SX12XX_Radio_1) & 0x01 ) << bit;
@@ -250,7 +282,7 @@ void GetRandomBytes(uint8_t *outrnd, size_t len)
   // Radio.ConfigLoraDefaults();
   SetRxTimeoutUs(); // Sets continuous receive mode
   Radio.RXnb();
-  for (int i = 0; i < len, i++)
+  for (int i = 0; i < len; i++)
   {
     for( uint8_t bit = 0; bit < 8; bit++ )
     {
@@ -293,25 +325,34 @@ bool InitCrypto()
     size_t ivSize = 8;
     */
   MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
-  encryption_params_t *encryption_params = (encryption_params_t *) &MSPDataPackage[1];
+  memcpy(&MSPDataPackage[1], &nonce_key, 24);
+  
+  // encryption_params_t *encryption_params = (encryption_params_t *) &MSPDataPackage[1];
 	uint8_t rounds = 12;
 	size_t counterSize = 8;
-  uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+  // uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
   size_t keySize = 16;
 
-  uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
+  // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
   uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
 
-  memcpy(encryption_params->key, key, keySize);
-  memcpy(encryption_params->nonce, nonce, 8);
+
+  // key = &randombytes[0];
+  // nonce = &randombytes[16];
+
+  // memcpy(encryption_params->key, key, keySize);
+  // memcpy(encryption_params->nonce, nonce, 8);
+  // memcpy(encryption_params->key, &randombytes[0], keySize);
+  // memcpy(encryption_params->nonce, &randombytes[16], 8);
+
   memcpy(encryptionCounter, counter, counterSize);
   cipher.clear();
 
-  if ( !cipher.setKey(encryption_params->key, keySize) )
+  if ( !cipher.setKey(nonce_key.key, keySize) )
   {
       return false;
   }
-  if ( !cipher.setIV(encryption_params->nonce, cipher.ivSize()) )
+  if ( !cipher.setIV(nonce_key.nonce, cipher.ivSize()) )
   {
       return false;
   }
@@ -1407,6 +1448,9 @@ void setup()
     devicesInit();
     DBGLN("Initialised devices");
 
+    // DBGLN("%02X %02X %02X %02X %02X", randombytes[], randombytes[1], randombytes[2], randombytes[3], randombytes[4],
+    //     randombytes[5] );
+
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     Radio.RXdoneCallback = &RXdoneISR;
@@ -1425,6 +1469,8 @@ void setup()
     config.Load(); // Load the stored values from eeprom
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
+
+
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
     #endif
@@ -1457,6 +1503,9 @@ void setup()
       // Set the pkt rate, TLM ratio, and power from the stored eeprom values
       ChangeRadioParams();
 
+      // Should be a good time to do this, because BeginClearChannelAssessment also sets the radio to continuous recv
+      // RandRSSI(&randombytes[0], 4);
+      RandRSSI( (uint8_t *) &nonce_key, 24);
   #if defined(Regulatory_Domain_EU_CE_2400)
       BeginClearChannelAssessment();
   #endif
