@@ -61,6 +61,8 @@
 								<option value='3'>IN866</option>
 								<option value='4'>AU433</option>
 								<option value='5'>EU433</option>
+								<option value='6'>US433</option>
+								<option value='7'>US433-Wide</option>
 							</select>
 							<label for="domain">Regulatory domain</label>
 						</div>
@@ -177,11 +179,11 @@
 						Set PWM output mode and failsafe positions.
 						<ul>
 							<li><b>Output:</b> Receiver output pin</li>
-							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off or Serial (for MCU pins 1 and 3 only) mode
-								<ul>
-									<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>below and <b>UART baud</b> on the <b>Options</b> tab</li>
-								</ul>
-							</li>
+							<li><b>Features:</b> If an output is capable of supporting another function, that is indicated here</li>
+							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off, DShot, Serial, or I2C (some options are pin dependant)</li>
+							<ul>
+								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
+							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
 							<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
@@ -193,14 +195,13 @@
 								</ul>
 							</li>
 						</ul>
-						<br/><br/>
 						<form action="/pwm" id="pwm" method="POST">
 						</form>
 					</div>
 					<form class="mui-form" action='/config' id='config' method='POST'>
 						<div id="serial-config" style="display: block;">
 							<h2>Serial Protocol</h2>
-							Set the protocol used to communicate with the flight controller.
+							Set the protocol used to communicate with the flight controller or other external devices.
 							<br/><br/>
 							<div class="mui-select">
 								<select id='serial-protocol' name='serial-protocol'>

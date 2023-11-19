@@ -17,11 +17,13 @@ extern Telemetry telemetry;
 static BaroBase *baro;
 static eBaroReadState BaroReadState;
 
+extern bool i2c_enabled;
+
 static bool Baro_Detect()
 {
     // I2C Baros
 #if defined(USE_I2C)
-    if (GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    if (i2c_enabled)
     {
         if (SPL06::detect())
         {
@@ -42,10 +44,9 @@ static bool Baro_Detect()
         //     baro = new BMP085();
         //     return true;
         // }
+        // DBGLN("No baro detected");
     } // I2C
 #endif
-
-    //DBGLN("No baro detected");
     return false;
 }
 
