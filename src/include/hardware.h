@@ -71,7 +71,7 @@ typedef enum {
     HARDWARE_led_green_red,
     HARDWARE_led_red,
     HARDWARE_led_red_invert,
-    HARDWARE_led_reg_green,
+    HARDWARE_led_red_green,
     HARDWARE_led_rgb,
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,

@@ -44,24 +44,30 @@ config = {
             "modelid":255,
             "pwm":[
                 {
-                    "config": 512,
-                    "pin": 0
+                    # 10fs 4ch 1inv 4mode 1narrow
+                    "config": 0 + 0<<10 + 0<14 + 0<<15 + 0<<19,
+                    "pin": 0,
+                    "features": 12
                 },
                 {
                     "config": 1536,
-                    "pin": 4
+                    "pin": 4,
+                    "features": 12 + 16
                 },
                 {
                     "config": 2048,
-                    "pin": 5
+                    "pin": 5,
+                    "features": 12 + 16
                 },
                 {
                     "config": 3584,
-                    "pin": 1
+                    "pin": 1,
+                    "features": 1 + 16
                 },
                 {
                     "config": 4608,
-                    "pin": 3
+                    "pin": 3,
+                    "features": 2 + 16
                 }
             ],
             "serial-protocol": 3,
@@ -163,7 +169,11 @@ def update_config():
     if 'button-actions' in request.json:
         config['config']['button-actions'] = request.json['button-actions']
     if 'pwm' in request.json:
-        config['config']['pwm'] = request.json['pwm']
+        i=0
+        for x in request.json['pwm']:
+            print(x)
+            config['config']['pwm'][i]['config'] = x
+            i = i + 1
     if 'protocol' in request.json:
         config['config']['serial-protocol'] = request.json['protocol']
     if 'modelid' in request.json:

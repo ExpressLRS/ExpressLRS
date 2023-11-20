@@ -773,6 +773,10 @@ void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
+    // Use this rate as the initial rate next time if we connected on it
+    if (connectionState == connected)
+        config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
+
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
@@ -1221,7 +1225,7 @@ static void setupSerial()
     {
         hottTlmSerial = true;
         serialBaud = 19200;
-    }    
+    }
 #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
@@ -1278,11 +1282,11 @@ static void setupSerial()
 
 #if defined(PLATFORM_ESP8266)
     SerialConfig config = SERIAL_8N1;
-    
+
     if(sbusSerialOutput)
     {
         config = SERIAL_8E2;
-    }    
+    }
     else if(hottTlmSerial)
     {
         config = SERIAL_8N2;
@@ -1294,14 +1298,14 @@ static void setupSerial()
     uint32_t config = SERIAL_8N1;
 
     if(sbusSerialOutput)
-    { 
+    {
         config = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
         config = SERIAL_8N2;
     }
-    
+
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
@@ -1704,10 +1708,6 @@ void resetConfigAndReboot()
 void setup()
 {
     #if defined(TARGET_UNIFIED_RX)
-    // Setup default logging in case of failure, or no layout
-    Serial.begin(115200);
-    SerialLogger = &Serial;
-
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
@@ -1739,10 +1739,12 @@ void setup()
         #endif
 
         initUID();
-        setupTarget();
 
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
+
+        setupTarget();
+
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
         if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)

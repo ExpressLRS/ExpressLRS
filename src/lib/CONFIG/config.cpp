@@ -179,6 +179,8 @@ void TxConfig::Load()
         // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
         if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
             m_config.backpackDisable = value8;
+        if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
+            m_config.backpackTlmEnabled = value8;
     }
 
     for(unsigned i=0; i<64; i++)
@@ -337,6 +339,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
+        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmEnabled);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -970,7 +973,22 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false, 0, false);
+    {
+        uint8_t mode = som50Hz;
+        // setup defaults for hardware defined I2C pins that are also IO pins
+        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
+        {
+            if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
+            {
+                mode = somSCL;
+            }
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SDA)
+            {
+                mode = somSDA;
+            }
+        }
+        SetPwmChannel(ch, 512, ch, false, mode, false);
+    }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 
