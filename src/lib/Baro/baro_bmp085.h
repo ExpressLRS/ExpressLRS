@@ -7,7 +7,7 @@
 #include "baro_base.h"
 #include "baro_bmp085_regs.h"
 
-class BMP085 : public BaroI2CBase
+class BMP085 : public BaroI2CBase<BMP085_I2C_ADDR>
 {
 public:
     // Detect if chip is present
@@ -27,9 +27,6 @@ protected:
     // 0x=4.5ms, 1x=7.5ms, 2x=13.5ms, 3x=25.5ms
     //             +3        +9         +21
     const uint8_t OVERSAMPLING_PRESSURE = 3;
-
-    // Override from i2cbase
-    static const uint8_t getI2CAddress() { return BMP085_I2C_ADDR; }
 
     // calibration data, if initialized
     // Packed to be able to read all at once
