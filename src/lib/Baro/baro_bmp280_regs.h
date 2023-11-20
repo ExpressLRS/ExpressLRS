@@ -1,12 +1,13 @@
 #pragma once
 
-#define BMP280_I2C_ADDR                     0x77
+#define BMP280_I2C_ADDR                     0x76
 #define BMP280_CHIPID                       0x58 // Pressure,Temp
 #define BME280_CHIPID                       0x60 // Pressure,Temp,Humid
 
 // Registers
 #define BMP280_REG_CALIB_COEFFS_START       0x88
 #define BMP280_REG_CHIPID                   0xD0
+#define BMP280_REG_STATUS                   0xF3
 #define BMP280_REG_CTRL_MEAS                0xF4
 #define BMP280_REG_CONFIG                   0xF5
 #define BMP280_REG_PRESSURE_MSB             0xF7
@@ -18,7 +19,9 @@
 
 
 #define BMP280_LEN_TEMP_PRESS_DATA          6
-#define BMP280_FORCED_MODE                  0x01
+#define BMP280_MODE_SLEEP                   0x00
+#define BMP280_MODE_FORCED                  0x01
+#define BMP280_MODE_NORMAL                  0x03 // Freerunning mode
 
 #define BMP280_OVERSAMP_SKIPPED             0x00
 #define BMP280_OVERSAMP_1X                  0x01

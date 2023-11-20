@@ -37,14 +37,12 @@ protected:
     int32_t m_altitudeHome;
 };
 
-class BaroI2CBase : public BaroBase
-{
-public:
-    BaroI2CBase() : BaroBase() {}
-protected:
-    // Child classes must override this function and return the I2C address
-    static const uint8_t getI2CAddress() { return 0; };
+void I2cReadRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size);
+void I2cWriteRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size);
 
-    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
-    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
+template<uint8_t addr> class BaroI2CBase : public BaroBase
+{
+protected:
+    static void readRegister(uint8_t reg, uint8_t *data, size_t size) { I2cReadRegister(addr, reg, data, size); }
+    static void writeRegister(uint8_t reg, uint8_t *data, size_t size) { I2cWriteRegister(addr, reg, data, size); }
 };

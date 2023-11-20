@@ -12,18 +12,8 @@ int32_t BaroBase::pressureToAltitude(uint32_t pressuredPa)
     return 4433000 * (1.0 - pow(pressuredPa / seaLeveldPa, 0.1903));
 }
 
-void BaroI2CBase::writeRegister(uint8_t reg, uint8_t *data, size_t size)
+void I2cReadRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size)
 {
-    const uint16_t address = getI2CAddress();
-    Wire.beginTransmission(address);
-    Wire.write(reg);
-    Wire.write(data, size);
-    Wire.endTransmission();
-}
-
-void BaroI2CBase::readRegister(uint8_t reg, uint8_t *data, size_t size)
-{
-    const uint16_t address = getI2CAddress();
     Wire.beginTransmission(address);
     Wire.write(reg);
     if (Wire.endTransmission() == 0)
@@ -33,3 +23,10 @@ void BaroI2CBase::readRegister(uint8_t reg, uint8_t *data, size_t size)
     }
 }
 
+void I2cWriteRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size)
+{
+    Wire.beginTransmission(address);
+    Wire.write(reg);
+    Wire.write(data, size);
+    Wire.endTransmission();
+}
