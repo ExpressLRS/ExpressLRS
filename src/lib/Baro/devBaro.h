@@ -19,6 +19,7 @@ enum eBaroReadState : uint8_t
     brsUninitialized,
     brsReadTemp,
     brsWaitingTemp,
+    brsReadPres,
     brsWaitingPress
 };
 

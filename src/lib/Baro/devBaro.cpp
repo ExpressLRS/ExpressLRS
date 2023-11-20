@@ -148,10 +148,20 @@ static int timeout()
                 int32_t temp = baro->getTemperature();
                 if (temp == BaroBase::TEMPERATURE_INVALID)
                     return DURATION_IMMEDIATELY;
-                baro->startPressure();
-                BaroReadState = brsWaitingPress;
-                return baro->getPressureDuration();
             }
+            // fallthrough
+
+        case brsReadPres:
+            {
+                uint8_t pressDuration = baro->getPressureDuration();
+                BaroReadState = brsWaitingPress;
+                if (pressDuration != 0)
+                {
+                    baro->startPressure();
+                    return pressDuration;
+                }
+            }
+            // fallthrough
 
         case brsWaitingPress:
             {
@@ -163,9 +173,17 @@ static int timeout()
             // fallthrough
 
         case brsReadTemp:
-            BaroReadState = brsWaitingTemp;
-            baro->startTemperature();
-            return baro->getTemperatureDuration();
+            {
+                uint8_t tempDuration = baro->getTemperatureDuration();
+                if (tempDuration == 0)
+                {
+                    BaroReadState = brsReadPres;
+                    return DURATION_IMMEDIATELY;
+                }
+                BaroReadState = brsWaitingTemp;
+                baro->startTemperature();
+                return tempDuration;
+            }
     }
 }
 
