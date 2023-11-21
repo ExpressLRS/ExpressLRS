@@ -62,7 +62,7 @@ def upload_stm32_stlink(args, options: FirmwareOptions):
     app_start = flash_start + offset
 
     if options.bootloader is not None:
-        stlink.program_flash('bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
+        stlink.program_flash(args.fdir + '/bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
 
     stlink.program_flash(args.file.name, app_start, erase=True, verify=True, initialize_comms=True)
 
