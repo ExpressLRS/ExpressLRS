@@ -29,6 +29,8 @@ class BuzzerMode(Enum):
         return self.value
 
 class RegulatoryDomain(Enum):
+    us_433 = 'us_433'
+    us_433_wide = 'us_433_wide'
     eu_433 = 'eu_433'
     au_433 = 'au_433'
     in_866 = 'in_866'
@@ -193,6 +195,10 @@ def domain_number(domain):
         return 4
     elif domain == RegulatoryDomain.eu_433:
         return 5
+    elif domain == RegulatoryDomain.us_433:
+        return 6
+    elif domain == RegulatoryDomain.us_433_wide:
+        return 7
 
 def patch_firmware(options, mm, pos, args):
     if options.mcuType is MCUType.STM32:
@@ -313,7 +319,8 @@ class deprecate_action(argparse.Action):
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
-    parser.add_argument('--dir', action=readable_dir, default=None)
+    parser.add_argument('--dir', action=readable_dir, default=None, help='The directory that contains the "hardware" and other firmware directories')
+    parser.add_argument('--fdir', action=readable_dir, default=None, help='If specified, then the firmware files are loaded from this directory')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -361,14 +368,15 @@ def main():
 
     args = parser.parse_args()
 
-    if args.dir != None:
+    if args.dir is not None:
         os.chdir(args.dir)
 
-    if args.file == None:
+    if args.file is None:
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
+            firmware_dir = '' if args.fdir is None else args.fdir + '/'
+            srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
             shutil.copy2(srcdir + '/firmware.bin', ".")
             if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")

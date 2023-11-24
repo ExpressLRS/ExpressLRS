@@ -62,7 +62,8 @@ def upload_stm32_stlink(args, options: FirmwareOptions):
     app_start = flash_start + offset
 
     if options.bootloader is not None:
-        stlink.program_flash('bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
+        bootloader_dir = '' if args.fdir is None else args.fdir + '/'
+        stlink.program_flash(bootloader_dir + 'bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
 
     stlink.program_flash(args.file.name, app_start, erase=True, verify=True, initialize_comms=True)
 
@@ -180,7 +181,12 @@ def upload(options: FirmwareOptions, args):
             elif args.flash == UploadMethod.stlink:      # untested
                 return upload_stm32_stlink(args, options)
     else:
-        if options.mcuType == MCUType.ESP32:
+        if options.mcuType == MCUType.ESP8266:
+            if args.flash == UploadMethod.uart:
+                return upload_esp8266_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, options, ['elrs_tx', 'elrs_tx.local'], False)
+        elif options.mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.edgetx:
                 return upload_esp32_etx(args)
             elif args.flash == UploadMethod.uart:
