@@ -229,19 +229,11 @@ void ICACHE_RAM_ATTR EncryptMsg(uint8_t *output, uint8_t *input)
   {
       packetSize = OTA4_PACKET_SIZE;
   }
-  // cipher.encrypt(encrypted, input, packetSize);
   cipher.encrypt(output, input, packetSize);
 }
 
 bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
 {
-  // input[0] ^= 0x01;
-  // input[1] ^= 0x02;
-
-  // It works when it's just passed directly to EncryptMsg without anything else,
-  // given the counter is reset each time by the caller.
-  // EncryptMsg(input, input);
-  // return(true);
 
   uint8_t decrypted[OTA8_PACKET_SIZE];
   size_t packetSize;
