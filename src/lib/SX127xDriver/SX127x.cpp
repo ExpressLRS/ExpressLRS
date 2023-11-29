@@ -473,9 +473,6 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
       hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
       hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
 
-      // leaving only the type in the first byte (crcHigh was cleared)
-      RXdataBuffer[0] &= 0b11;
-      RXdataBuffer_second[0] &= 0b11;
       // if the second packet is same to the first, it's valid
       if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
       {
