@@ -199,7 +199,19 @@ static uint8_t configureSerialPin(uint8_t pin, uint8_t sibling, uint8_t oldMode,
       }
       else
       {
-        newPin3Config.val.mode = som50Hz;
+          rx_config_pwm_t oldSiblingConfig;
+          oldSiblingConfig.raw = config.GetPwmChannel(ch)->raw;
+
+          // Only when the old port was serial, switch it to PWM at the default 50Hz.
+          if (oldSiblingConfig.val.mode == somSerial)
+          {
+              newPin3Config.val.mode = som50Hz;
+          }
+          else
+          {
+              // retain the channel configuration if the sibiling is already in PWM mode
+              newPin3Config.raw = oldSiblingConfig.raw;
+          }
       }
       config.SetPwmChannelRaw(ch, newPin3Config.raw);
       break;
