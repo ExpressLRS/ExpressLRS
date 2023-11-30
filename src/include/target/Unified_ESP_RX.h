@@ -142,3 +142,5 @@
 #define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_vpd_25mW)
 #define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)
 #endif
+
+#define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
