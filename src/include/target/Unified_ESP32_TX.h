@@ -191,6 +191,13 @@
 #define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 
+/* for ppm input*/
+#define HAS_PPM_INPUT
+
+#define GPIO_PIN_INPUT_PPM hardware_pin(HARDWARE_input_ppm)
+
+
+
 /*
 // These are RX settings
 

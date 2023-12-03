@@ -138,6 +138,8 @@ typedef enum {
     HARDWARE_vtx_amp_vpd_25mW,
     HARDWARE_vtx_amp_vpd_100mW,
 
+    HARDWARE_input_ppm,
+
     HARDWARE_LAST
 } nameType;
 

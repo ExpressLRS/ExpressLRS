@@ -22,6 +22,7 @@ sx127x = False
 config = {
         "options": {
             "uid": [1,2,3,4,5,6],   # this is the 'flashed' UID and may be empty if using traditional binding on an RX.
+            "input_mode": 0, # input mode 0 for ppm 1 for crsf
             "tlm-interval": 240,
             "fan-runtime": 30,
             "no-sync-on-arm": False,

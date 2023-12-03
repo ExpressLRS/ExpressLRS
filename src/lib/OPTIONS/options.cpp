@@ -127,6 +127,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .is_airport = false,
 #endif
+#if defined(HAS_PPM_INPUT)
+    .input_mode = 0, //for ppm default
+#else 
+    .input_mode = 1,//for crsf default 
+#endif
 #if defined(GPIO_PIN_BUZZER)
     #if defined(DISABLE_ALL_BEEPS)
     .buzzer_mode = buzzerQuiet,
@@ -221,6 +226,7 @@ void saveOptions(Stream &stream, bool customised)
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
+    doc["input_mode"] = firmwareOptions.input_mode;
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
@@ -321,6 +327,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
+    firmwareOptions.input_mode = doc["input_mode"] | 0;
     #if defined(USE_AIRPORT_AT_BAUD)
     firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
     firmwareOptions.is_airport = doc["is-airport"] | true;

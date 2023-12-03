@@ -200,6 +200,11 @@ enum eFailsafeMode : uint8_t
     FAILSAFE_SET_POSITION
 };
 
+enum eInputMode: uint8_t{
+    INPUT_PPM,
+    INPUT_CRSF
+};
+
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 6

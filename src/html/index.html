@@ -72,6 +72,13 @@
 							<label for="wifi-on-interval">WiFi "auto on" interval in seconds (leave blank to disable)</label>
 						</div>
 @@if isTX:
+						<div class="mui-select">
+							<select id='input_mode' name='input_mode'>
+								<option value='0'>PPM</option>
+								<option value='1'>CRSF</option>
+							</select>
+							<label for="domain">Input mode ppm/crsf </label>
+						</div>
 						<div class="mui-textfield">
 							<input size='5' id='tlm-interval' name='tlm-interval' type='text'/>
 							<label for="tlm-interval">TLM report interval (ms)</label>

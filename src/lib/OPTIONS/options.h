@@ -42,6 +42,7 @@ typedef struct _options {
     bool        _unused1:1;
     bool        unlock_higher_power:1;
     bool        is_airport:1;
+    uint8_t     input_mode:1; 
 #if defined(GPIO_PIN_BUZZER)
     uint8_t     buzzer_mode;            // 0 = disable all, 1 = beep once, 2 = disable startup beep, 3 = default tune, 4 = custom tune
     uint16_t    buzzer_melody[32][2];

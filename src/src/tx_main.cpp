@@ -20,6 +20,7 @@
 #include "devThermal.h"
 #include "devPDET.h"
 #include "devBackpack.h"
+#include "devPPM.h"
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
@@ -602,6 +603,7 @@ void ICACHE_RAM_ATTR timerCallback()
   }
 
   // Sync OpenTX to this point
+  //TODO:: in ppm mode ,may cause resync  bug 
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {
     CRSF::JustSentRFpacket();
@@ -651,8 +653,10 @@ void ICACHE_RAM_ATTR timerCallback()
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
   //     this is the case when bench testing and TXing without a handset
+  // if in ppm mode , only send channel datas when ppm recive done 
+  //TODO: add ppm
   uint32_t lastRcData = CRSF::GetRCdataLastRecv();
-  if (!lastRcData || (micros() - lastRcData < 1000000))
+  if (!lastRcData || (micros() - lastRcData < 1000000)|| firmwareOptions.input_mode==INPUT_PPM)
   {
     busyTransmitting = true;
     SendRCdataToRF();
@@ -850,6 +854,7 @@ static void UpdateConnectDisconnectStatus()
   {
     if (connectionState != connected)
     {
+      DBGLN("reconnect state=%d",connectionState);
       connectionState = connected;
       CRSF::ForwardDevicePings = true;
       DBGLN("got downlink conn");
@@ -1250,6 +1255,12 @@ void setup()
     setupTarget();
     // Register the devices with the framework
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
+    if (firmwareOptions.input_mode==INPUT_PPM)
+    {
+      /* replace crsf to ppm */
+      ui_devices[0]={&PPM_device,1};
+    }
+    
     // Initialise the devices
     devicesInit();
     DBGLN("Initialised devices");
@@ -1316,12 +1327,20 @@ void setup()
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
   registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
 #endif
+  //switch CRSF to PPM
+  DBGLN("Input_mode %d (0_PPM/1_CRSF) with pin %d",firmwareOptions.input_mode,GPIO_PIN_INPUT_PPM);
+
 
   devicesStart();
 
   if (firmwareOptions.is_airport)
   {
     config.SetTlm(TLM_RATIO_1_2); // Force TLM ratio of 1:2 for balanced bi-dir link
+    config.SetMotionMode(0); // Ensure motion detection is off
+    UARTconnected();
+  }
+  //try to connnect in ppm mode
+  if(firmwareOptions.input_mode==INPUT_PPM){
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   }
