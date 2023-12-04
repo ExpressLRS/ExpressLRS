@@ -216,8 +216,9 @@ void RandRSSI(uint8_t *outrnd, size_t len)
   }
 
 }
+#endif
 
-
+#ifdef RADIO_SX128X
 void RandRSSI(uint8_t *outrnd, size_t len)
 {
   uint8_t rnd; 
@@ -284,11 +285,6 @@ uint32_t GetRandom32t()
 bool InitCrypto()
 {
 
-    /*
-    size_t nonceSize = 8;
-    size_t ivSize = 8;
-    */
-  
   encryption_params_t *enc_params;
 	uint8_t rounds = 12;
 	size_t counterSize = 8;
@@ -297,15 +293,6 @@ bool InitCrypto()
 
   // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
   uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
-
-
-  // key = &randombytes[0];
-  // nonce = &randombytes[16];
-
-  // memcpy(encryption_params->key, key, keySize);
-  // memcpy(encryption_params->nonce, nonce, 8);
-  // memcpy(encryption_params->key, &randombytes[0], keySize);
-  // memcpy(encryption_params->nonce, &randombytes[16], 8);
 
   memcpy(encryptionCounter, counter, counterSize);
   cipher.clear();
@@ -324,12 +311,15 @@ bool InitCrypto()
       return false;
   }
 
-  // memcpy(&MSPDataPackage[1], &nonce_key, 24);
   // Encrypt the session key and send it
   MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
   enc_params = (encryption_params_t *) &MSPDataPackage[1];
-  cipher.encrypt(enc_params->key, somekey, keySize);
-  memcpy( &MSPDataPackage[1], nonce_key->nonce, cipher.ivSize() );
+  unsigned char *master_key = (unsigned char *) calloc( keySize, sizeof(char) );
+  hexStr2Arr( master_key, stringify_expanded(USE_ENCRYPTION), keySize * 2 );
+
+  cipher.encrypt(enc_params->key, master_key, keySize);
+  free(master_key);
+  memcpy( &MSPDataPackage[1], nonce_key.nonce, cipher.ivSize() );
   MspSender.SetDataToTransmit(MSPDataPackage, sizeof(encryption_params_t) + 1);
 
   // Further packets are encrypted with the session key

@@ -311,5 +311,32 @@ bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
   }
   return(success);
 }
+
+/// in: valid chars are 0-9 + A-F + a-f
+/// out_len_max==0: convert until the end of input string, out_len_max>0 only convert this many numbers
+/// returns actual out size
+int hexStr2Arr(unsigned char* out, const char* in, size_t out_len_max)
+{
+    if (!out_len_max)
+        out_len_max = INT_MAX;
+
+    int in_len = strnlen(in, out_len_max * 2);
+    if (in_len % 2 != 0)
+        // return -1; // error, in str len should be even
+        in_len--;
+
+    // calc actual out len
+    const int out_len = out_len_max < (in_len / 2) ? out_len_max : (in_len / 2);
+
+    for (int i = 0; i < out_len; i++) {
+        char ch0 = in[2 * i];
+        char ch1 = in[2 * i + 1];
+        uint8_t nib0 = ( (ch0 & 0xF) + (ch0 >> 6) ) | ((ch0 >> 3) & 0x8);
+        uint8_t nib1 = ( (ch1 & 0xF) + (ch1 >> 6) ) | ((ch1 >> 3) & 0x8);
+        out[i] = (nib0 << 4) | nib1;
+    }
+    return out_len;
+}
+
 #endif
 
