@@ -1,7 +1,7 @@
 import setuptools
 setuptools.setup(
     name="binary_configurator",
-    version="3.3.0",
+    version="3.4.0",
     author="ExpressLRS Team",
     author_email="",
     description="ExpressLRS Binary Installer",
