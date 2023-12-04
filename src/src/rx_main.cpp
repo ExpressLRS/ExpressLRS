@@ -453,21 +453,43 @@ bool CryptoSetKeys(encryption_params_t *params)
     size_t counterSize = 8;
     size_t keySize = 16;
 
-    // uint8_t key[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-
-    // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
     uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
 
     // Ray TODO for debugging
     // memcpy(params->key, key, keySize);
     // memcpy(params->nonce, nonce, 8);
 
-    DBGLN("New key = %d, %d, %d, %d, %d, %d, %d", params->key[0], params->key[1], params->key[2], params->key[3],
+
+    // Decrypt the session key, which is encrypted with the master key
+    unsigned char *master_key = (unsigned char *) calloc( keySize + 1, sizeof(char) );
+    hexStr2Arr( master_key, stringify_expanded(USE_ENCRYPTION), keySize );
+    DBGLN("encrypted session key = %d, %d, %d, %d", params->key[0], params->key[1], params->key[2], params->key[3]);
+    DBGLN("master_key = %d, %d, %d, %d", master_key[0], master_key[1], master_key[2], master_key[3]);
+
+    cipher.clear();
+    if ( !cipher.setKey(master_key, keySize) )
+    {
+        return false;
+    }
+    if ( !cipher.setIV(params->nonce, cipher.ivSize()) )
+    {
+        return false;
+    }
+    if (!cipher.setCounter(counter, counterSize))
+    {
+        return false;
+    }
+    cipher.setNumRounds(rounds);
+    cipher.decrypt(params->key, params->key, keySize);
+    free(master_key);
+
+
+    DBGLN("New key = dec: %d, %d, %d hex:  %x, %x, %x", params->key[0], params->key[1], params->key[2], params->key[3],
     params->key[4], params->key[5], params->key[6]);
 
+    // Further packets are encrypted with the session key
     memcpy(encryptionCounter, counter, counterSize);
     cipher.clear();
-    // if (!cipher.setKey(key, sizeof(key)))
     if ( !cipher.setKey(params->key, keySize) )
     {
         return false;
@@ -1242,7 +1264,7 @@ void MspReceiveComplete()
         break;
 #ifdef USE_ENCRYPTION
 	case MSP_ELRS_INIT_ENCRYPT:
-    DBGLN("MspData = %d, %d, %d, %d, %d, %d, %d", MspData[0], MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
+    DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
 
 	  encryption_params = (encryption_params_t *) &MspData[1];
 		CryptoSetKeys(encryption_params);

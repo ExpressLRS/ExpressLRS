@@ -221,6 +221,7 @@ void RandRSSI(uint8_t *outrnd, size_t len)
 #ifdef RADIO_SX128X
 void RandRSSI(uint8_t *outrnd, size_t len)
 {
+
   uint8_t rnd; 
 
   Radio.RXnb(SX1280_MODE_RX_CONT);
@@ -288,7 +289,6 @@ bool InitCrypto()
   encryption_params_t *enc_params;
 	uint8_t rounds = 12;
 	size_t counterSize = 8;
-  // uint8_t key[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
   size_t keySize = 16;
 
   // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
@@ -297,8 +297,11 @@ bool InitCrypto()
   memcpy(encryptionCounter, counter, counterSize);
   cipher.clear();
 
+  unsigned char *master_key = (unsigned char *) calloc( keySize + 1, sizeof(char) );
+  hexStr2Arr( master_key, stringify_expanded(USE_ENCRYPTION), keySize );
+
   cipher.setNumRounds(rounds);
-  if ( !cipher.setKey(nonce_key.key, keySize) )
+  if ( !cipher.setKey(master_key, keySize) )
   {
       return false;
   }
@@ -310,16 +313,17 @@ bool InitCrypto()
   {
       return false;
   }
-
+  
   // Encrypt the session key and send it
   MSPDataPackage[0] = MSP_ELRS_INIT_ENCRYPT;
   enc_params = (encryption_params_t *) &MSPDataPackage[1];
-  unsigned char *master_key = (unsigned char *) calloc( keySize, sizeof(char) );
-  hexStr2Arr( master_key, stringify_expanded(USE_ENCRYPTION), keySize * 2 );
+  memcpy( enc_params->nonce, nonce_key.nonce, cipher.ivSize() );
+  memcpy( enc_params->key, nonce_key.key, keySize ); 
 
-  cipher.encrypt(enc_params->key, master_key, keySize);
+  // Ray TODO turn this encryption back on
+  cipher.encrypt(enc_params->key, enc_params->key, keySize);
   free(master_key);
-  memcpy( &MSPDataPackage[1], nonce_key.nonce, cipher.ivSize() );
+
   MspSender.SetDataToTransmit(MSPDataPackage, sizeof(encryption_params_t) + 1);
 
   // Further packets are encrypted with the session key
