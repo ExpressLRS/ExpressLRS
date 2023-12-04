@@ -964,6 +964,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
+    TLMrateIn = (TLMrateIn == TLM_RATIO_MAVLINK) ? TLM_RATIO_1_2 : TLMrateIn;
     uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
     if (ExpressLRS_currTlmDenom != TlmDenom)
     {

@@ -43,7 +43,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
+    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;MAVLink;Race",
     tlmBandwidth
 };
 
@@ -302,6 +302,16 @@ static void luadevUpdateTlmBandwidth()
     // For Standard ratio, display the ratio instead of bps
     strcpy(tlmBandwidth, " (1:");
     uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
+    itoa(ratioDiv, &tlmBandwidth[4], 10);
+    strcat(tlmBandwidth, ")");
+  }
+
+  // TLM_RATIO_MAVLINK
+  else if (eRatio == TLM_RATIO_MAVLINK)
+  {
+    // For Standard ratio, display the ratio instead of bps
+    strcpy(tlmBandwidth, " (1:");
+    uint8_t ratioDiv = TLMratioEnumToValue(TLM_RATIO_1_2);
     itoa(ratioDiv, &tlmBandwidth[4], 10);
     strcat(tlmBandwidth, ")");
   }

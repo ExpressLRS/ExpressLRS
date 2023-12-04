@@ -110,6 +110,7 @@ static const char *ratio_string[] = {
     "1:8",
     "1:4",
     "1:2",
+    "MAVLink",
     "Race"
 };
 

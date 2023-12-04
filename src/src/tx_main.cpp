@@ -280,6 +280,10 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   {
     retVal = ratioConfigured;
   }
+  else if (ratioConfigured == TLM_RATIO_MAVLINK)
+  {
+    retVal = TLM_RATIO_1_2;
+  }
 
   if (updateTelemDenom)
   {
@@ -1270,7 +1274,7 @@ void setup()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
 
-    config.SetTlm(TLM_RATIO_1_2);
+    config.SetTlm(TLM_RATIO_MAVLINK); // Tester defaults DELETE ME LATER
 
     Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
