@@ -606,8 +606,21 @@ static void registerLuaParameters()
         // Don't allow TLM ratio changes if using AIRPORT
         if (!firmwareOptions.is_airport)
         {
-          config.SetTlm(eRatio);
-        }
+          // If using MAVLink tlm ratio and not full res force Hybrid switch mode
+          if ((eRatio == TLM_RATIO_MAVLINK) && !OtaIsFullRes)
+          {
+            if (connectionState == disconnected)
+            {
+              config.SetTlm(eRatio);
+              config.SetSwitchMode(1);
+              OtaUpdateSerializers((OtaSwitchMode_e)1, ExpressLRS_currAirRate_Modparams->PayloadLength);
+            }
+            else
+              setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+          }
+          else
+            config.SetTlm(eRatio);
+          }
       }
     });
     #if defined(TARGET_TX_FM30)
@@ -623,6 +636,11 @@ static void registerLuaParameters()
         // the pack and unpack functions are matched
         if (connectionState == disconnected)
         {
+          // If using MAVLink tlm ratio and not full res force Hybrid switch mode
+          if ((config.GetTlm() == TLM_RATIO_MAVLINK) && !OtaIsFullRes)
+          {
+            arg = 1;
+          }
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
         }
@@ -790,10 +808,22 @@ static int event()
     return DURATION_NEVER;
   }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+  expresslrs_tlm_ratio_e currentTlm = (expresslrs_tlm_ratio_e)config.GetTlm();
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
-  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
-  setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
-  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  setLuaTextSelectionValue(&luaTlmRate, currentTlm);
+
+  // If using MAVLink tlm ratio and not full res only display Hybrid switch mode
+  if (!OtaIsFullRes && (currentTlm == TLM_RATIO_MAVLINK))
+  {
+    setLuaTextSelectionValue(&luaSwitch, 0);
+    luaSwitch.options = "Hybrid";
+  }
+  else
+  {
+    setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  }
+
   if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
