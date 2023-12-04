@@ -37,12 +37,10 @@ protected:
     int32_t m_altitudeHome;
 };
 
-void I2cReadRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size);
-void I2cWriteRegister(const uint16_t address, uint8_t reg, uint8_t *data, size_t size);
-
-template<uint8_t addr> class BaroI2CBase : public BaroBase
+class BaroI2CBase : public BaroBase
 {
 protected:
-    static void readRegister(uint8_t reg, uint8_t *data, size_t size) { I2cReadRegister(addr, reg, data, size); }
-    static void writeRegister(uint8_t reg, uint8_t *data, size_t size) { I2cWriteRegister(addr, reg, data, size); }
+    static uint8_t m_address;
+    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
+    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
 };

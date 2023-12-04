@@ -1,6 +1,7 @@
 #pragma once
 
 #define BMP280_I2C_ADDR                     0x76
+#define BMP280_I2C_ADDR_ALT                 0x77
 #define BMP280_CHIPID                       0x58 // Pressure,Temp
 #define BME280_CHIPID                       0x60 // Pressure,Temp,Humid
 

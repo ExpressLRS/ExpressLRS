@@ -91,6 +91,16 @@ bool BMP280::detect()
 {
     // Assumes Wire.begin() has already been called
     uint8_t chipid = 0;
-    readRegister(BMP280_REG_CHIPID, &chipid, sizeof(chipid));
-    return (chipid == BMP280_CHIPID || chipid == BME280_CHIPID);
+
+    // BMP280 can have two addresses based on the SDO pin.
+    // Adafruit breakout has it tied high, Aliexpress boards have it tied low
+    for (uint8_t addr : { BMP280_I2C_ADDR, BMP280_I2C_ADDR_ALT })
+    {
+       m_address = addr;
+       readRegister(BMP280_REG_CHIPID, &chipid, sizeof(chipid));
+       if (chipid == BMP280_CHIPID || chipid == BME280_CHIPID)
+           return true;
+    }
+
+    return false;
 }

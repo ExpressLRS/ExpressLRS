@@ -103,6 +103,7 @@ bool BMP085::detect()
 {
     // Assumes Wire.begin() has already been called
     uint8_t chipid = 0;
+    m_address = BMP085_I2C_ADDR;
     readRegister(BMP085_REG_CHIPID, &chipid, sizeof(chipid));
     return chipid == BMP085_CHIPID;
 }

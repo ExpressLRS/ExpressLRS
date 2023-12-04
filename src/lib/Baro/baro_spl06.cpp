@@ -152,6 +152,8 @@ bool SPL06::detect()
 {
     // Assumes Wire.begin() has already been called
     uint8_t chipid = 0;
+
+    m_address = SPL06_I2C_ADDR;
     readRegister(SPL06_CHIP_ID_REG, &chipid, sizeof(chipid));
     return chipid == SPL06_DEFAULT_CHIP_ID;
 }

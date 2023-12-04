@@ -3,7 +3,7 @@
 #include "baro_base.h"
 #include "baro_spl06_regs.h"
 
-class SPL06 : public BaroI2CBase<SPL06_I2C_ADDR>
+class SPL06 : public BaroI2CBase
 {
 public:
     SPL06() : BaroI2CBase(), m_calib{0} {}

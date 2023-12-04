@@ -3,7 +3,7 @@
 #include "baro_base.h"
 #include "baro_bmp280_regs.h"
 
-class BMP280 : public BaroI2CBase<BMP280_I2C_ADDR>
+class BMP280 : public BaroI2CBase
 {
 public:
     BMP280() : BaroI2CBase(), m_calib{0} {}

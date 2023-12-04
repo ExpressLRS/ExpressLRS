@@ -7,7 +7,7 @@
 #include "baro_base.h"
 #include "baro_bmp085_regs.h"
 
-class BMP085 : public BaroI2CBase<BMP085_I2C_ADDR>
+class BMP085 : public BaroI2CBase
 {
 public:
     // Detect if chip is present
