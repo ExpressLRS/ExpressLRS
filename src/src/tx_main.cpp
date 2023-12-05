@@ -196,6 +196,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   LastTLMpacketRecvMillis = millis();
+  LQCalc.add();
+
+  Radio.GetLastPacketStats();
+  CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+  CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
 
   // Full res mode
   if (OtaIsFullRes)
@@ -243,12 +248,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
     }
   }
-
-  LQCalc.add();
-  Radio.GetLastPacketStats();
-  crsf.LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  crsf.LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
-
   return true;
 }
 
