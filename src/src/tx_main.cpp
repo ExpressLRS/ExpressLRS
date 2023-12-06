@@ -352,24 +352,32 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
-  // When using the LR1121 the domain can change and require rebuilding the hop sequence.
-  // if (ModParams->radio_type != ExpressLRS_currAirRate_Modparams->radio_type) // Bootloops when this statment in uncommented :|
-  {
-    FHSSrandomiseFHSSsequence(uidMacSeedGet(), (bool)(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4));
-  }
-
   DBGLN("set rate %u", index);
   uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
   hwTimer::updateInterval(interval);
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, GetInitialFreq(),
+
+  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
+
+  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
                );
+
+  FHSSisDualBand = false;
+#if defined(RADIO_LR1121)
+  if (ModParams->bw != ModParams->bw2 || ModParams->sf != ModParams->sf2 || ModParams->cr != ModParams->cr2 || ModParams->PreambleLen != ModParams->PreambleLen2)
+  {
+    FHSSisDualBand = true;
+    Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
+                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval, SX12XX_Radio_2);
+  }
+#endif
+
   Radio.FuzzySNRThreshold = (RFperf->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE) ? 0 : (RFperf->DynpowerSnrThreshUp - RFperf->DynpowerSnrThreshDn);
 
   if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
@@ -396,7 +404,9 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
+    // Gemini mode
+    // If Dual Band always set the correct frequency to the radios.  The correct Tx amp is set during config.
+    if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
     {
       Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -975,7 +985,7 @@ void EnterBindingMode()
   // Start attempting to bind
   // Lock the RF rate and freq while binding
   SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
-  Radio.SetFrequencyReg(GetInitialFreq());
+  Radio.SetFrequencyReg(FHSSgetInitialFreq());
   if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
@@ -1277,7 +1287,7 @@ void setup()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
 
-    Radio.currFreq = GetInitialFreq(); //set frequency first or an error will occur!!!
+    Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
     #endif

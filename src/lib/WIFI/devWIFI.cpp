@@ -357,7 +357,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #endif
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
-    json["config"]["reg_domain"] = getRegulatoryDomain();
+    json["config"]["reg_domain"] = FHSSgetRegulatoryDomain();
 
     #if defined(TARGET_RX)
     if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
@@ -503,7 +503,7 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
   json["version"] = VERSION;
   json["product_name"] = product_name;
   json["lua_name"] = device_name;
-  json["reg_domain"] = getRegulatoryDomain();
+  json["reg_domain"] = FHSSgetRegulatoryDomain();
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);

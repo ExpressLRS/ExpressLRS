@@ -27,8 +27,7 @@ public:
     void End();
     void SetTxIdleMode() { SetMode(LR1121_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
-                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval,
-                uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
