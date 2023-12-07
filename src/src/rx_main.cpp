@@ -237,7 +237,7 @@ static inline void checkGeminiMode()
 {
     if (isDualRadio())
     {
-        geminiMode = config.GetAntennaMode();
+        geminiMode = config.GetAntennaMode() || FHSSuseDualBand; // Force Gemini when in DualBand mode.  Whats the point of using a single frequency!
     }
 }
 
@@ -347,6 +347,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     hwTimer::updateInterval(interval);
     
     FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
+    FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
@@ -355,14 +356,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
                  );
 
-  FHSSisDualBand = false;
 #if defined(RADIO_LR1121)
-  if (ModParams->bw != ModParams->bw2 || ModParams->sf != ModParams->sf2 || ModParams->cr != ModParams->cr2 || ModParams->PreambleLen != ModParams->PreambleLen2)
-  {
-    FHSSisDualBand = true;
-    Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, 0, SX12XX_Radio_2);
-  }
+    if (FHSSuseDualBand)
+    {
+        Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
+                    ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, 0, SX12XX_Radio_2);
+    }
 #endif
 
     Radio.FuzzySNRThreshold = (RFperf->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE) ? 0 : (RFperf->DynpowerSnrThreshDn - RFperf->DynpowerSnrThreshUp);
@@ -397,9 +396,9 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     alreadyFHSS = true;
 
-    if (geminiMode || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+    if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);

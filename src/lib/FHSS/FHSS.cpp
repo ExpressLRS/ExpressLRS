@@ -47,8 +47,8 @@ const fhss_config_t *FHSSconfig;
 const fhss_config_t *FHSSconfigDualBand;
 
 // Actual sequence of hops as indexes into the frequency list
-uint8_t FHSSsequence[256];
-uint8_t FHSSsequence_DualBand[256];
+uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
+uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];
 
 // Which entry in the sequence we currently are on
 uint8_t volatile FHSSptr;
@@ -61,19 +61,17 @@ uint_fast8_t sync_channel_DualBand;
 int32_t FreqCorrection;
 int32_t FreqCorrection_2;
 
+// Frequency hop separation
 uint32_t freq_spread;
 uint32_t freq_spread_DualBand;
 
+// Variable for Dual Band radios
 bool FHSSusePrimaryFreqBand = true;
-bool FHSSisDualBand;
+bool FHSSuseDualBand = false;
 
-void FHSSrandomiseFHSSsequence(const uint32_t seed, bool swapBands)
+void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     FHSSconfig = &domains[firmwareOptions.domain];
-#if defined(RADIO_LR1121)
-    if (swapBands)
-        FHSSconfig = &domainsDualBand[0];
-#endif
     sync_channel = (FHSSconfig->freq_count / 2) + 1;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
 
@@ -85,12 +83,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed, bool swapBands)
 
 #if defined(RADIO_LR1121)
     FHSSconfigDualBand = &domainsDualBand[0];
-    if (swapBands)
-        FHSSconfigDualBand = &domains[firmwareOptions.domain];
     sync_channel_DualBand = (FHSSconfigDualBand->freq_count / 2) + 1;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
 
-    DBGLN("Setting %s Mode", FHSSconfigDualBand->domain);
+    DBGLN("Setting Dual Band %s Mode", FHSSconfigDualBand->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfigDualBand->freq_count);
     DBGLN("Sync channel Dual Band = %u", sync_channel_DualBand);
 
@@ -118,7 +114,7 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint16_t i = 0; i < sizeof(FHSSsequence); i++)
+    for (uint16_t i = 0; i < FHSS_SEQUENCE_LEN; i++)
     {
         if (i % freqCount == 0) {
             inSequence[i] = syncChannel;
@@ -129,7 +125,7 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
         }
     }
 
-    for (uint16_t i=0; i < sizeof(FHSSsequence); i++)
+    for (uint16_t i = 0; i < FHSS_SEQUENCE_LEN; i++)
     {
         // if it's not the sync channel
         if (i % freqCount != 0)

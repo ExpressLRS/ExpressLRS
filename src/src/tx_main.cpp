@@ -360,6 +360,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
   hwTimer::updateInterval(interval);
 
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
+  FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
@@ -368,11 +369,9 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 #endif
                );
 
-  FHSSisDualBand = false;
 #if defined(RADIO_LR1121)
-  if (ModParams->bw != ModParams->bw2 || ModParams->sf != ModParams->sf2 || ModParams->cr != ModParams->cr2 || ModParams->PreambleLen != ModParams->PreambleLen2)
+  if (FHSSuseDualBand)
   {
-    FHSSisDualBand = true;
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
                 ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval, SX12XX_Radio_2);
   }
@@ -380,7 +379,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
 
   Radio.FuzzySNRThreshold = (RFperf->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE) ? 0 : (RFperf->DynpowerSnrThreshUp - RFperf->DynpowerSnrThreshDn);
 
-  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
+  if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand) // Gemini mode
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
@@ -405,8 +404,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
   if (!InBindingMode && modresult == 0)
   {
     // Gemini mode
-    // If Dual Band always set the correct frequency to the radios.  The correct Tx amp is set during config.
-    if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+    // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
+    if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
     {
       Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
       Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
