@@ -7,6 +7,8 @@
 #define SUMD_CRC_SIZE			2														// 16 bit CRC
 #define SUMD_FRAME_16CH_LEN		(SUMD_HEADER_SIZE+SUMD_DATA_SIZE_16CH+SUMD_CRC_SIZE)
 
+const auto SUMD_CALLBACK_INTERVAL_MS = 10;
+
 uint32_t SerialSUMD::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     if (!frameAvailable) {
@@ -74,5 +76,5 @@ uint32_t SerialSUMD::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 
 	_outputPort->write(outBuffer, sizeof(outBuffer));
 
-    return DURATION_IMMEDIATELY;
+    return SUMD_CALLBACK_INTERVAL_MS;
 }
