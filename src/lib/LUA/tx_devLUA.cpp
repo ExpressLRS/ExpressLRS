@@ -296,22 +296,13 @@ static void luadevUpdateModelID() {
 static void luadevUpdateTlmBandwidth()
 {
   expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)config.GetTlm();
-  // TLM_RATIO_STD / TLM_RATIO_DISARMED
-  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
+  // TLM_RATIO_STD / TLM_RATIO_DISARMED / TLM_RATIO_MAVLINK
+  if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED || eRatio == TLM_RATIO_MAVLINK)
   {
     // For Standard ratio, display the ratio instead of bps
     strcpy(tlmBandwidth, " (1:");
     uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    itoa(ratioDiv, &tlmBandwidth[4], 10);
-    strcat(tlmBandwidth, ")");
-  }
-
-  // TLM_RATIO_MAVLINK
-  else if (eRatio == TLM_RATIO_MAVLINK)
-  {
-    // For Standard ratio, display the ratio instead of bps
-    strcpy(tlmBandwidth, " (1:");
-    uint8_t ratioDiv = TLMratioEnumToValue(TLM_RATIO_1_2);
+    ratioDiv = eRatio == TLM_RATIO_MAVLINK ? 2 : ratioDiv; // MAVLink forces 1:2 ratio
     itoa(ratioDiv, &tlmBandwidth[4], 10);
     strcat(tlmBandwidth, ")");
   }
@@ -583,12 +574,17 @@ static void registerLuaParameters()
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
       uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
+      uint8_t packetSize = get_elrs_airRateConfig(actualRate)->PayloadLength;
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+        (OtaSwitchMode_e)config.GetSwitchMode(), packetSize);
       // If the switch mode is going to change, block the change while connected
       if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
       {
         config.SetRate(actualRate);
+        if (config.GetTlm() == TLM_RATIO_MAVLINK && packetSize != OTA8_PACKET_SIZE)
+        {
+          newSwitchMode = 1; // Force Hybrid switch mode
+        }
         config.SetSwitchMode(newSwitchMode);
         if (actualRate != selectedRate)
         {
@@ -603,24 +599,26 @@ static void registerLuaParameters()
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
       if (eRatio <= TLM_RATIO_DISARMED)
       {
-        // Don't allow TLM ratio changes if using AIRPORT
-        if (!firmwareOptions.is_airport)
+        // Restart if ratio changed to/from TLM_MAVLINK_RATIO to enable/disable TX MAVLink mode
+        if (eRatio == TLM_RATIO_MAVLINK || config.GetTlm() == TLM_RATIO_MAVLINK)
         {
-          // If using MAVLink tlm ratio and not full res force Hybrid switch mode
-          if ((eRatio == TLM_RATIO_MAVLINK) && !OtaIsFullRes)
+          if (connectionState == disconnected)
           {
-            if (connectionState == disconnected)
-            {
-              config.SetTlm(eRatio);
-              config.SetSwitchMode(1);
-              OtaUpdateSerializers((OtaSwitchMode_e)1, ExpressLRS_currAirRate_Modparams->PayloadLength);
-            }
-            else
-              setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+            if (eRatio == TLM_RATIO_MAVLINK && !OtaIsFullRes)
+              config.SetSwitchMode(1); // Force Hybrid switch mode
+            config.SetTlm(eRatio);
+            config.Commit();
+            delayMicroseconds(10000);
+            ESP.restart();
           }
           else
-            config.SetTlm(eRatio);
-          }
+            setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        }
+        // Don't allow TLM ratio changes if using AIRPORT
+        else if (!firmwareOptions.is_airport)
+        {
+          config.SetTlm(eRatio);
+        }
       }
     });
     #if defined(TARGET_TX_FM30)
@@ -636,10 +634,9 @@ static void registerLuaParameters()
         // the pack and unpack functions are matched
         if (connectionState == disconnected)
         {
-          // If using MAVLink tlm ratio and not full res force Hybrid switch mode
-          if ((config.GetTlm() == TLM_RATIO_MAVLINK) && !OtaIsFullRes)
+          if (config.GetTlm() == TLM_RATIO_MAVLINK && !OtaIsFullRes)
           {
-            arg = 1;
+            arg = 1; // Force Hybrid switch mode
           }
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);

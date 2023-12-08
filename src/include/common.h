@@ -32,7 +32,7 @@ typedef enum : uint8_t
     TLM_RATIO_1_8,
     TLM_RATIO_1_4,
     TLM_RATIO_1_2,
-    TLM_RATIO_MAVLINK, // Force TLM_RATIO_1_2
+    TLM_RATIO_MAVLINK, // Forces TLM_RATIO_1_2 and enables MAVLink mode on the TX
     TLM_RATIO_DISARMED, // TLM_RATIO_STD when disarmed, TLM_RATIO_NO_TLM when armed
 } expresslrs_tlm_ratio_e;
 
