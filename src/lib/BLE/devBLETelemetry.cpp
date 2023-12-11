@@ -109,7 +109,7 @@ static void BluetoothTelemetrySendLinkStatsPacket()
 
 static void BluetoothTelemetrySendRCFrame()
 {
-#ifdef BLE_SEND_CHANNELS_PACKET
+//#ifdef BLE_SEND_CHANNELS_PACKET
     if (!CRSF::CRSFstate)
     {
         return;
@@ -144,7 +144,7 @@ static void BluetoothTelemetrySendRCFrame()
 
     rcCRSF->setValue(outBuffer, RCframeLength + 4);
     rcCRSF->notify();
-#endif
+//#endif
 }
 
 void BluetoothTelemetryShutdown()
@@ -165,7 +165,6 @@ void BluetoothTelemetryShutdown()
 static void assignRandomAddress()
 {
     static uint8_t ble_address[6];
-    static uint8_t ble_orig_addr_last_byte;
     static bool doGenerateAddress = true;
     if (doGenerateAddress)
     {
@@ -173,10 +172,8 @@ static void assignRandomAddress()
         memcpy( ble_address, NimBLEDevice::getAddress().getNative(), 6 );
         ble_address[5] |= 0xC0;  //random address should have 11 at most significant bits
         ++ble_address[0];
-        ble_orig_addr_last_byte = ble_address[0];
         doGenerateAddress = false;
     }
-    ble_address[0] = ble_orig_addr_last_byte + NimBLEDevice::getClientListSize();
     NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
     ble_hs_id_set_rnd(ble_address);
 }
