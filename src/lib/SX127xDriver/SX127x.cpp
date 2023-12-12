@@ -88,7 +88,19 @@ bool SX127xDriver::Begin()
   ConfigLoraDefaults();
   // Force the next power update, and use the defaults for RFO_HF or PA_BOOST
   pwrCurrent = PWRPENDING_NONE;
-  SetOutputPower(0);
+#if defined(TARGET_UNIFIED_RX) || defined(TARGET_UNIFIED_TX)
+  if (POWER_OUTPUT_VALUES2 == nullptr)
+#endif
+  {
+    if (OPT_USE_SX1276_RFO_HF)
+    {
+      SetOutputPower(SX127X_MAX_OUTPUT_POWER_RFO_HF);
+    }
+    else
+    {
+      SetOutputPower(SX127X_MAX_OUTPUT_POWER);
+    }
+  }
   CommitOutputPower();
 
   return true;
