@@ -1043,6 +1043,9 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
     ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
     lastPTRValidTimeMs = now;
   }
+  else if (packet->function == MSP_SET_NAME) {
+    CRSF::AddMspMessage(packet);
+  }
 #endif
   if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
   {
