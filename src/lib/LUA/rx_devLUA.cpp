@@ -58,7 +58,7 @@ static struct luaItem_selection luaDiversityMode = {
 #endif
 
 static struct luaItem_folder luaTeamraceFolder = {
-    {"Teamrace", CRSF_FOLDER},
+    {"Team Race", CRSF_FOLDER},
 };
 
 static struct luaItem_selection luaTeamraceChannel = {
