@@ -15,7 +15,8 @@ const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     static auto sendPackets = false;
-    if ((failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
+    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch);
+    if ((effectivelyFailsafed && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
     {
         return SBUS_CALLBACK_INTERVAL_MS;
     }
@@ -64,7 +65,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
     }
 
     uint8_t extraData = 0;
-    extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
+    extraData |= effectivelyFailsafed ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
     extraData |= frameAvailable ? 0 : SBUS_FLAG_SIGNAL_LOSS;
 
     _outputPort->write(0x0F);    // HEADER
