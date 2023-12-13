@@ -2,7 +2,7 @@
 
 extern GENERIC_CRC8 crsf_crc;
 
-MSP2CROSSFIRE::MSP2CROSSFIRE() {} // empty constructor
+MSP2CROSSFIRE::MSP2CROSSFIRE() {}
 
 void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, uint8_t seqNumber)
 {
@@ -191,9 +191,11 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
         uint8_t crc = crsf_crc.calc(&header[3], 4, 0x00); // don't include the MSP header
         crc = crsf_crc.calc(&data[startIdx], CRSFpktLen, crc);
 
+        FIFOout.lock();
         FIFOout.pushBytes(header, sizeof(header));
         FIFOout.pushBytes(&data[startIdx], CRSFpktLen);
         FIFOout.push(crc);
+        FIFOout.unlock();
     }
 }
 

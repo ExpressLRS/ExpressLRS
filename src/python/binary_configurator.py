@@ -29,6 +29,8 @@ class BuzzerMode(Enum):
         return self.value
 
 class RegulatoryDomain(Enum):
+    us_433 = 'us_433'
+    us_433_wide = 'us_433_wide'
     eu_433 = 'eu_433'
     au_433 = 'au_433'
     in_866 = 'in_866'
@@ -67,11 +69,21 @@ def readString(mm, pos, maxlen):
     val = mm[pos:mm.find(b'\x00', pos)].decode()
     return pos + maxlen, val
 
+def generateUID(phrase):
+    uid = [
+        int(item) if item.isdigit() else -1
+        for item in phrase.split(',')
+    ]
+    if len(uid) == 6 and all(ele >= 0 and ele < 256 for ele in uid):
+        uid = bytes(uid)
+    else:
+        uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
+    return uid
+
 def patch_uid(mm, pos, args):
     if (args.phrase):
         mm[pos] = 1
-        bindingPhraseHash = hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()
-        mm[pos+1:pos + 7] = bindingPhraseHash[0:6]
+        mm[pos+1:pos + 7] = generateUID(args.phrase)
     pos += 7
     return pos
 
@@ -104,9 +116,7 @@ def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
     pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
-    if args.uart_inverted != None:
-        val &= ~1
-        val |= args.uart_inverted
+    val &= ~1   # unused1 - ex uart_inverted
     if args.unlock_higher_power != None:
         val &= ~2
         val |= (args.unlock_higher_power << 1)
@@ -185,6 +195,10 @@ def domain_number(domain):
         return 4
     elif domain == RegulatoryDomain.eu_433:
         return 5
+    elif domain == RegulatoryDomain.us_433:
+        return 6
+    elif domain == RegulatoryDomain.us_433_wide:
+        return 7
 
 def patch_firmware(options, mm, pos, args):
     if options.mcuType is MCUType.STM32:
@@ -202,7 +216,7 @@ def patch_firmware(options, mm, pos, args):
 def patch_unified(args, options):
     json_flags = {}
     if args.phrase is not None:
-        json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
+        json_flags['uid'] = [x for x in generateUID(args.phrase)]
     if args.ssid is not None:
         json_flags['wifi-ssid'] = args.ssid
     if args.password is not None and args.ssid is not None:
@@ -216,8 +230,6 @@ def patch_unified(args, options):
         json_flags['unlock-higher-power'] = args.unlock_higher_power
     if args.fan_min_runtime is not None:
         json_flags['fan-runtime'] = args.fan_min_runtime
-    if args.uart_inverted is not None:
-        json_flags['uart-inverted'] = args.uart_inverted
 
     if args.airport_baud is not None:
         json_flags['is-airport'] = True
@@ -300,10 +312,15 @@ class writeable_dir(argparse.Action):
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a writeable dir".format(prospective_dir))
 
+class deprecate_action(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        delattr(namespace, self.dest)
+
 def main():
     parser = argparse.ArgumentParser(description="Configure Binary Firmware")
     # firmware/targets directory
-    parser.add_argument('--dir', action=readable_dir, default=None)
+    parser.add_argument('--dir', action=readable_dir, default=None, help='The directory that contains the "hardware" and other firmware directories')
+    parser.add_argument('--fdir', action=readable_dir, default=None, help='If specified, then the firmware files are loaded from this directory')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
     # WiFi Params
@@ -321,9 +338,6 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
-    parser.add_argument('--uart-inverted', dest='uart_inverted', action='store_true', help='For most OpenTX based radios, this is the default')
-    parser.add_argument('--no-uart-inverted', dest='uart_inverted', action='store_false', help='If your radio is T8SG V2 or you use Deviation firmware set this flag.')
-    parser.set_defaults(uart_inverted=None)
     parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
     parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
     parser.set_defaults(unlock_higher_power=None)
@@ -336,6 +350,7 @@ def main():
     parser.add_argument('--target', type=str, help='Unified target JSON path')
     # Flashing options
     parser.add_argument("--flash", type=UploadMethod, choices=list(UploadMethod), help="Flashing Method")
+    parser.add_argument("--erase", action='store_true', default=False, help="Full chip erase before flashing on ESP devices")
     parser.add_argument('--out', action=writeable_dir, default=None)
     parser.add_argument("--port", type=str, help="SerialPort or WiFi address to flash firmware to")
     parser.add_argument("--baud", type=int, default=0, help="Baud rate for serial communication")
@@ -343,6 +358,9 @@ def main():
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
     parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (onl for 2.4GHz firmware)")
+    # Deprecated options, left for backward compatibility
+    parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
+    parser.add_argument('--no-uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
 
     #
     # Firmware file to patch/configure
@@ -350,14 +368,15 @@ def main():
 
     args = parser.parse_args()
 
-    if args.dir != None:
+    if args.dir is not None:
         os.chdir(args.dir)
 
-    if args.file == None:
+    if args.file is None:
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
-            srcdir = ('LBT/' if args.lbt else 'FCC/') + file
+            firmware_dir = '' if args.fdir is None else args.fdir + '/'
+            srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
             shutil.copy2(srcdir + '/firmware.bin', ".")
             if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', ".")
@@ -376,8 +395,8 @@ def main():
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
             False if config['platform'] == 'stm32' else True,
-            True if 'features' in config and 'buzzer' in config['features'] == True else False,
-            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'] == 'esp32' else MCUType.ESP8266,
+            True if 'features' in config and 'buzzer' in config['features'] else False,
+            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'].startswith('esp32') else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280,
             config['lua_name'] if 'lua_name' in config else '',
@@ -400,10 +419,11 @@ def main():
             return binary_flash.upload(options, args)
         elif 'upload_methods' in config and 'stock' in config['upload_methods']:
             shutil.copy(args.file.name, 'firmware.elrs')
+    return 0
 
 if __name__ == '__main__':
     try:
-        main()
+        exit(main())
     except AssertionError as e:
         print(e)
         exit(1)

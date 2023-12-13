@@ -41,20 +41,6 @@ jobs:
         platformio pkg update
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
 
-  validation:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    - name: Validate target files
-      run: |
-        cd src
-        python python/targets_validator.py
-
   targets:
     runs-on: ubuntu-latest
     outputs:
@@ -139,13 +125,19 @@ jobs:
       continue-on-error: true
 
   firmware:
-    needs: [build, validation, test]
+    needs: [build, test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Checkout targets repo
+        uses: actions/checkout@v3
+        with:
+          repository: ExpressLRS/targets
+          path: src/hardware
 
       - name: Get firmware artifacts
         uses: actions/download-artifact@v3
@@ -155,6 +147,11 @@ jobs:
 
       - name: Copy hardware files to firmware folder
         run: cp -r src/hardware dist/firmware
+
+      - name: Copy Lua to to firmware folder
+        run: |
+          mkdir -p dist/firmware/lua
+          cp -r src/lua/elrsV3.lua dist/firmware/lua
 
       - name: Copy bootloader files to firmware folder
         run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware

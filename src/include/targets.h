@@ -11,6 +11,7 @@
 /////////////////////////
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
+#define WORD_PADDED(size) (((size)+3)/4)
 
 #ifdef PLATFORM_STM32
 /* ICACHE_RAM_ATTR1 is always linked into RAM */
@@ -92,6 +93,9 @@
 #endif
 #ifndef GPIO_PIN_RST
 #define GPIO_PIN_RST UNDEF_PIN
+#endif
+#ifndef GPIO_PIN_RST_2
+#define GPIO_PIN_RST_2 UNDEF_PIN
 #endif
 #ifndef GPIO_PIN_BUSY
 #define GPIO_PIN_BUSY UNDEF_PIN
@@ -263,11 +267,14 @@ extern bool pwmSerialDefined;
 #undef Regulatory_Domain_FCC_915
 #undef Regulatory_Domain_AU_433
 #undef Regulatory_Domain_EU_433
+#undef Regulatory_Domain_US_433
+#undef Regulatory_Domain_US_433_WIDE
 
 #elif defined(RADIO_SX127X)
 #if !(defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915) || \
         defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866) || \
         defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || \
+        defined(Regulatory_Domain_US_433) || defined(Regulatory_Domain_US_433_WIDE) || \
         defined(UNIT_TEST))
 #error "Regulatory_Domain is not defined for 900MHz device. Check user_defines.txt!"
 #endif

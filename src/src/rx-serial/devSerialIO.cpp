@@ -159,11 +159,11 @@ static int timeout()
 
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable();
-    uint32_t duration = serialIO->sendRCFrameToFC(sendChannels, ChannelData);
+    uint32_t duration = serialIO->sendRCFrame(sendChannels, ChannelData);
 
     // still get telemetry and send link stats if theres no model match
-    serialIO->handleUARTout();
-    serialIO->handleUARTin();
+    serialIO->processSerialInput();
+    serialIO->sendQueuedData(serialIO->getMaxSerialWriteSize());
     return duration;
 }
 

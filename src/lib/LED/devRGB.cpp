@@ -36,8 +36,6 @@ static uint8_t *bootLEDs = statusLEDs;
 
 #if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)) && defined(GPIO_PIN_LED_WS2812)
 
-#include <NeoPixelBus.h>
-
 static uint8_t pixelCount;
 static uint8_t *statusLEDs;
 static uint8_t statusLEDcount;
@@ -47,26 +45,36 @@ static uint8_t *bootLEDs;
 static uint8_t bootLEDcount;
 
 #if defined(PLATFORM_ESP32)
-    #define METHOD Neo800KbpsMethod
-#elif defined(PLATFORM_ESP8266)
-    #define METHOD NeoEsp8266Uart1800KbpsMethod
-#endif
-
+#include "esp32rgb.h"
+static ESP32S3LedDriverGRB *stripgrb;
+static ESP32S3LedDriverRGB *striprgb;
+#else
+#include <NeoPixelBus.h>
+#define METHOD NeoEsp8266Uart1800KbpsMethod
 static NeoPixelBus<NeoGrbFeature, METHOD> *stripgrb;
 static NeoPixelBus<NeoRgbFeature, METHOD> *striprgb;
+#endif
 
 void WS281Binit()
 {
     if (OPT_WS2812_IS_GRB)
     {
+#if defined(PLATFORM_ESP32)
+        stripgrb = new ESP32S3LedDriverGRB(pixelCount, GPIO_PIN_LED_WS2812);
+#else
         stripgrb = new NeoPixelBus<NeoGrbFeature, METHOD>(pixelCount, GPIO_PIN_LED_WS2812);
+#endif
         stripgrb->Begin();
         stripgrb->ClearTo(RgbColor(0), 0, pixelCount-1);
         stripgrb->Show();
     }
     else
     {
+#if defined(PLATFORM_ESP32)
+        striprgb = new ESP32S3LedDriverRGB(pixelCount, GPIO_PIN_LED_WS2812);
+#else
         striprgb = new NeoPixelBus<NeoRgbFeature, METHOD> (pixelCount, GPIO_PIN_LED_WS2812);
+#endif
         striprgb->Begin();
         striprgb->ClearTo(RgbColor(0), 0, pixelCount-1);
         striprgb->Show();
@@ -77,13 +85,11 @@ void WS281BsetLED(int index, uint32_t color)
 {
     if (OPT_WS2812_IS_GRB)
     {
-        stripgrb->SetPixelColor(index, RgbColor(HtmlColor(color)));
-        stripgrb->Show();
+        stripgrb->SetPixelColor(index, RgbColor(color >> 16, color >> 8, color));
     }
     else
     {
-        striprgb->SetPixelColor(index, RgbColor(HtmlColor(color)));
-        striprgb->Show();
+        striprgb->SetPixelColor(index, RgbColor(color >> 16, color >> 8, color));
     }
 }
 
@@ -93,11 +99,11 @@ void WS281BsetLED(uint32_t color)
     {
         if (OPT_WS2812_IS_GRB)
         {
-            stripgrb->SetPixelColor(statusLEDs[i], RgbColor(HtmlColor(color)));
+            stripgrb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
         }
         else
         {
-            striprgb->SetPixelColor(statusLEDs[i], RgbColor(HtmlColor(color)));
+            striprgb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
         }
     }
     if (OPT_WS2812_IS_GRB)
@@ -305,13 +311,14 @@ static int blinkyUpdate() {
         for (int i=0 ; i<bootLEDcount ; i++)
         {
             c.h += 16;
+            auto color = HsvToRgb(c);
             if (OPT_WS2812_IS_GRB)
             {
-                stripgrb->SetPixelColor(bootLEDs[i], RgbColor(HtmlColor(HsvToRgb(c))));
+                stripgrb->SetPixelColor(bootLEDs[i], RgbColor(color >> 16, color >> 8, color));
             }
             else
             {
-                striprgb->SetPixelColor(bootLEDs[i], RgbColor(HtmlColor(HsvToRgb(c))));
+                striprgb->SetPixelColor(bootLEDs[i], RgbColor(color >> 16, color >> 8, color));
             }
         }
         if (OPT_WS2812_IS_GRB)
@@ -333,17 +340,23 @@ static int blinkyUpdate() {
                 if (OPT_WS2812_IS_GRB)
                 {
                     stripgrb->ClearTo(RgbColor(0), 0, pixelCount-1);
-                    stripgrb->Show();
                 }
                 else
                 {
                     striprgb->ClearTo(RgbColor(0), 0, pixelCount-1);
-                    striprgb->Show();
                 }
             }
-            #endif
             #if defined(TARGET_TX)
             setButtonColors(config.GetButtonActions(0)->val.color, config.GetButtonActions(1)->val.color);
+            #endif
+            if (OPT_WS2812_IS_GRB)
+            {
+                stripgrb->Show();
+            }
+            else
+            {
+                striprgb->Show();
+            }
             #endif
             return NORMAL_UPDATE_INTERVAL;
         }

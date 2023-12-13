@@ -63,8 +63,6 @@ def process_json_flag(define):
                 json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
             else:
                 json_flags['airport-uart-baud'] = int(dequote(parts.group(2)))
-    if define == "-DUART_INVERTED" and not isRX:
-        json_flags['uart-inverted'] = True
     if define == "-DUNLOCK_HIGHER_POWER"  and not isRX:
         json_flags['unlock-higher-power'] = True
     if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
@@ -170,6 +168,10 @@ if '-DRADIO_SX127X=1' in build_flags:
         json_flags['domain'] = 4
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_433'):
         json_flags['domain'] = 5
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_US_433'):
+        json_flags['domain'] = 6
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_US_433_WIDE'):
+        json_flags['domain'] = 7
 else:
     json_flags['domain'] = 0
 

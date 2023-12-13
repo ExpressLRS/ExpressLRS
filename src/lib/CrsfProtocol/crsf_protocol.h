@@ -5,10 +5,6 @@
 #include "crc.h"
 #include "options.h"
 
-#if TARGET_TX && PLATFORM_STM32
-#define CRSF_TX_MODULE_STM32 1
-#endif
-
 #if TARGET_TX
 #define CRSF_TX_MODULE 1
 #elif TARGET_RX || defined(UNIT_TEST)

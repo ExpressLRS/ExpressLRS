@@ -29,8 +29,7 @@ static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
-
-static const char luastrDisabled[] = "Disabled";
+static const char luastrOffOn[] = "Off;On";
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
@@ -104,7 +103,7 @@ static struct luaItem_selection luaSwitch = {
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     modelMatchUnit
 };
 
@@ -176,10 +175,11 @@ static struct luaItem_selection luaVtxBand = {
     STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaVtxChannel = {
-    {"Channel", CRSF_TEXT_SELECTION},
+static struct luaItem_int8 luaVtxChannel = {
+    {"Channel", CRSF_UINT8},
     0, // value
-    "1;2;3;4;5;6;7;8",
+    1, // min
+    8, // max
     STR_EMPTYSPACE
 };
 
@@ -208,7 +208,7 @@ static struct luaItem_command luaVtxSend = {
 struct luaItem_selection luaBluetoothTelem = {
     {"BT Telemetry", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     STR_EMPTYSPACE
 };
 #endif
@@ -222,7 +222,7 @@ static struct luaItem_folder luaBackpackFolder = {
 static struct luaItem_selection luaBackpackEnable = {
     {"Backpack", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;On",
+    luastrOffOn,
     STR_EMPTYSPACE};
 #endif
 
@@ -254,6 +254,12 @@ static struct luaItem_selection luaHeadTrackingStartChannel = {
     {"HT Start Channel", CRSF_TEXT_SELECTION},
     0, // value
     luastrHeadTrackingStart,
+    STR_EMPTYSPACE};
+
+static struct luaItem_selection luaBackpackTelemetry = {
+    {"Telemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    luastrOffOn,
     STR_EMPTYSPACE};
 
 static struct luaItem_string luaBackpackVersion = {
@@ -335,42 +341,49 @@ static void luadevUpdateBackpackOpts()
   if (config.GetBackpackDisable())
   {
     // If backpack is disabled, set all the Backpack select options to "Disabled"
-    luaDvrAux.options = luastrDisabled;
-    luaDvrStartDelay.options = luastrDisabled;
-    luaDvrStopDelay.options = luastrDisabled;
-    luaHeadTrackingEnableChannel.options = luastrDisabled;
-    luaHeadTrackingStartChannel.options = luastrDisabled;
+    LUA_FIELD_HIDE(luaDvrAux);
+    LUA_FIELD_HIDE(luaDvrStartDelay);
+    LUA_FIELD_HIDE(luaDvrStopDelay);
+    LUA_FIELD_HIDE(luaHeadTrackingEnableChannel);
+    LUA_FIELD_HIDE(luaHeadTrackingStartChannel);
+    LUA_FIELD_HIDE(luaBackpackTelemetry);
+    LUA_FIELD_HIDE(luaBackpackVersion);
   }
   else
   {
-    luaDvrAux.options = luastrDvrAux;
-    luaDvrStartDelay.options = luastrDvrDelay;
-    luaDvrStopDelay.options = luastrDvrDelay;
-    luaHeadTrackingEnableChannel.options = luastrHeadTrackingEnable;
-    luaHeadTrackingStartChannel.options = luastrHeadTrackingStart;
+    LUA_FIELD_SHOW(luaDvrAux);
+    LUA_FIELD_SHOW(luaDvrStartDelay);
+    LUA_FIELD_SHOW(luaDvrStopDelay);
+    LUA_FIELD_SHOW(luaHeadTrackingEnableChannel);
+    LUA_FIELD_SHOW(luaHeadTrackingStartChannel);
+    LUA_FIELD_SHOW(luaBackpackTelemetry);
+    LUA_FIELD_SHOW(luaBackpackVersion);
   }
 }
 
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+static void setBleJoystickMode()
+{
+  connectionState = bleJoystick;
+}
+
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
 {
   struct luaItem_command *cmd = (struct luaItem_command *)item;
-  std::function<void()> setTargetState;
+  void (*setTargetState)();
   connectionState_e targetState;
   const char *textConfirm;
   const char *textRunning;
   if ((void *)item == (void *)&luaWebUpdate)
   {
-    setTargetState = setWifiUpdateMode;
+    setTargetState = &setWifiUpdateMode;
     textConfirm = "Enter WiFi Update?";
     textRunning = "WiFi Running...";
     targetState = wifiUpdate;
   }
   else
   {
-    setTargetState = []() {
-      connectionState = bleJoystick;
-    };
+    setTargetState = &setBleJoystickMode;
     textConfirm = "Start BLE Joystick?";
     textRunning = "Joystick Running...";
     targetState = bleJoystick;
@@ -476,7 +489,7 @@ static void updateFolderName_VtxAdmin()
     vtxFolderDynamicName[vtxFolderLabelOffset++] = folderNameSeparator[1];
 
     // Channel
-    vtxFolderLabelOffset += findLuaSelectionLabel(&luaVtxChannel, &vtxFolderDynamicName[vtxFolderLabelOffset], config.GetVtxChannel());
+    vtxFolderDynamicName[vtxFolderLabelOffset++] = '1' + config.GetVtxChannel();
 
     // VTX Power
     uint8_t vtxPwr = config.GetVtxPower();
@@ -606,12 +619,15 @@ static void registerLuaParameters()
         else
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
       });
+    }
       if (isDualRadio())
       {
         registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
           config.SetAntennaMode(arg);
         });
       }
+    if (!firmwareOptions.is_airport)
+    {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
         bool newModelMatch = arg;
         config.SetModelMatch(newModelMatch);
@@ -661,7 +677,7 @@ static void registerLuaParameters()
       config.SetVtxBand(arg);
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxChannel, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      config.SetVtxChannel(arg);
+      config.SetVtxChannel(arg - 1);
     }, luaVtxFolder.common.id);
     registerLUAParameter(&luaVtxPwr, [](struct luaPropertiesCommon *item, uint8_t arg) {
       config.SetVtxPower(arg);
@@ -717,7 +733,6 @@ static void registerLuaParameters()
               config.SetDvrStopDelay(arg);
           },
           luaBackpackFolder.common.id);
-
       registerLUAParameter(
           &luaHeadTrackingEnableChannel, [](luaPropertiesCommon *item, uint8_t arg) {
               config.SetPTREnableChannel(arg);
@@ -728,6 +743,10 @@ static void registerLuaParameters()
               config.SetPTRStartChannel(arg);
           },
           luaBackpackFolder.common.id);
+      registerLUAParameter(
+            &luaBackpackTelemetry, [](luaPropertiesCommon *item, uint8_t arg) {
+                config.SetBackpackTlmEnabled(arg);
+            }, luaBackpackFolder.common.id);
 
       registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);
     }
@@ -781,7 +800,7 @@ static int event()
   setLuaTextSelectionValue(&luaDynamicPower, dynamic);
 
   setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
-  setLuaTextSelectionValue(&luaVtxChannel, config.GetVtxChannel());
+  setLuaUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
@@ -794,6 +813,7 @@ static int event()
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
     setLuaTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetBackpackDisable() ? 0 : config.GetPTREnableChannel());
     setLuaTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
+    setLuaTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackTlmEnabled() ? 1 : 0);
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 #if defined(TARGET_TX_FM30)

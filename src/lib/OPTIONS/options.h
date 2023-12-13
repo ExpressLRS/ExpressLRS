@@ -39,7 +39,7 @@ typedef struct _options {
 #if defined(TARGET_TX) || defined(UNIT_TEST)
     uint32_t    tlm_report_interval;
     uint32_t    fan_min_runtime;
-    bool        uart_inverted:1;
+    bool        _unused1:1;
     bool        unlock_higher_power:1;
     bool        is_airport:1;
 #if defined(GPIO_PIN_BUZZER)
@@ -60,6 +60,7 @@ constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
 extern firmware_options_t firmwareOptions;
 extern char product_name[];
 extern char device_name[];
+extern uint32_t logo_image;
 extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
@@ -69,8 +70,9 @@ extern uint32_t flash_discriminator;
 #include "EspFlashStream.h"
 extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
 #else
-extern const firmware_options_t firmwareOptions;
+extern firmware_options_t firmwareOptions;
 extern const char device_name[];
 extern const char *product_name;
+extern bool options_init();
 
 #endif

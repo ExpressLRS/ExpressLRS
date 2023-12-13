@@ -1,6 +1,5 @@
 #include "targets.h"
 #include "options.h"
-#include "helpers.h"
 
 #include "logging.h"
 
@@ -29,7 +28,7 @@ const char *wifi_ap_address = "10.0.0.1";
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
-__attribute__ ((used)) const firmware_options_t firmwareOptions = {
+__attribute__ ((used)) static firmware_options_t flashedOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
     ._version_ = 1,
 #if defined(Regulatory_Domain_ISM_2400)
@@ -47,6 +46,10 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .domain = 4,
     #elif defined(Regulatory_Domain_EU_433)
     .domain = 5,
+    #elif defined(Regulatory_Domain_US_433)
+    .domain = 6,
+    #elif defined(Regulatory_Domain_US_433_WIDE)
+    .domain = 7,
     #else
     #error No regulatory domain defined, please define one in user_defines.txt
     #endif
@@ -82,6 +85,8 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
     .uart_baud = 100000,
 #elif defined(USE_SUMD_PROTOCOL)
     .uart_baud = 115200,
+#elif defined(USE_HOTT_TLM_PROTOCOL)
+    .uart_baud = 19200,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -111,11 +116,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #else
     .fan_min_runtime = 30,
 #endif
-#if defined(UART_INVERTED) // Only on ESP32
-    .uart_inverted = true,
-#else
-    .uart_inverted = false,
-#endif
+    ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
     .unlock_higher_power = true,
 #else
@@ -152,6 +153,18 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 #endif
 };
 
+/*
+ * This all seems rather convoluted, but it means that the compiler/linker optimisations
+ * don't create multiple copies of the UID. This code forces the firmwareOptions to be copied
+ * into RAM and all the other areas of code are forced to use the RAM copy.
+ */
+firmware_options_t firmwareOptions;
+bool options_init()
+{
+    firmwareOptions = flashedOptions;
+    return true;
+}
+
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
 #include <ArduinoJson.h>
@@ -168,6 +181,7 @@ __attribute__ ((used)) const firmware_options_t firmwareOptions = {
 
 char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
+uint32_t logo_image;
 
 // Discriminator value used to determine if the device has been reflashed and therefore
 // the SPIFSS settings are obsolete and the flashed settings should be used in preference
@@ -193,7 +207,10 @@ void saveOptions(Stream &stream, bool customised)
         JsonArray uid = doc.createNestedArray("uid");
         copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
     }
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    if (firmwareOptions.wifi_auto_on_interval != -1)
+    {
+        doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
+    }
     if (firmwareOptions.home_wifi_ssid[0])
     {
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
@@ -202,7 +219,6 @@ void saveOptions(Stream &stream, bool customised)
     #if defined(TARGET_UNIFIED_TX)
     doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
@@ -304,7 +320,6 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
-    firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #if defined(USE_AIRPORT_AT_BAUD)
     firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
@@ -388,6 +403,12 @@ bool options_init()
     options_LoadFromFlashOrFile(strmFlash);
     // hardware.json
     bool hasHardware = hardware_init(strmFlash);
+    // flash location of logo image in RGB565 format
+    logo_image = baseAddr + ESP.getSketchSize() +
+        ELRSOPTS_PRODUCTNAME_SIZE +
+        ELRSOPTS_DEVICENAME_SIZE +
+        ELRSOPTS_OPTIONS_SIZE +
+        ELRSOPTS_HARDWARE_SIZE;
 
     debugFreeInitLogger();
 

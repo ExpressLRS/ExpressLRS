@@ -28,7 +28,15 @@ class CRSF
 public:
     /////Variables/////
 
-    #ifdef CRSF_TX_MODULE
+    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
+
+    static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
+    static void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
+    static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
+    static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+    static uint32_t VersionStrToU32(const char *verStr);
+
+#ifdef CRSF_TX_MODULE
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
@@ -47,22 +55,12 @@ public:
     /// UART Handling ///
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult; // need to latch the results
-    #endif
-
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statisitics Stored as Struct
 
     static void Begin(); //setup timers etc
     static void End(); //stop timers etc
 
-    static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
-    static void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
-    static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
-    static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
-    static uint32_t VersionStrToU32(const char *verStr);
-
-    #ifdef CRSF_TX_MODULE
     static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
-    static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    static void ICACHE_RAM_ATTR makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4]);
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
@@ -90,15 +88,14 @@ public:
 
     static uint32_t ICACHE_RAM_ATTR GetRCdataLastRecv();
     static void ICACHE_RAM_ATTR RcPacketToChannelsData();
-    #endif
 
     /////////////////////////////////////////////////////////////
     static bool CRSFstate;
 
 private:
+
     static inBuffer_U inBuffer;
 
-#if CRSF_TX_MODULE
     /// OpenTX mixer sync ///
     static int32_t RequestedRCpacketInterval;
     static volatile uint32_t RCdataLastRecv;
@@ -136,6 +133,14 @@ private:
     static bool UARTwdt();
     static uint32_t autobaud();
     static void flush_port_input(void);
+#endif
+#if defined(CRSF_RX_MODULE)
+public:
+    static void updateUplinkPower(uint8_t uplinkPower);
+    static bool clearUpdatedUplinkPower();
+
+private:
+    static bool HasUpdatedUplinkPower;
 #endif
 };
 

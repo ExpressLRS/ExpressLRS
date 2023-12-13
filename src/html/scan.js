@@ -9,6 +9,8 @@ let colorTimer = undefined;
 let colorUpdated  = false;
 let storedModelId = 255;
 let buttonActions = [];
+let originalUID = undefined;
+let originalUIDType = undefined;
 
 function _(el) {
   return document.getElementById(el);
@@ -39,12 +41,22 @@ function getPwmFormData() {
 
 function enumSelectGenerate(id, val, arOptions) {
   // Generate a <select> item with every option in arOptions, and select the val element (0-based)
-  const retVal = `<div class="mui-select"><select id="${id}">` +
+  const retVal = `<div class="mui-select compact"><select id="${id}">` +
         arOptions.map((item, idx) => {
-          if (item) return `<option value="${idx}"${(idx == val) ? ' selected' : ''} ${item == 'Disabled' ? 'disabled' : ''}>${item}</option>`;
+          if (item) return `<option value="${idx}"${(idx === val) ? ' selected' : ''} ${item === 'Disabled' ? 'disabled' : ''}>${item}</option>`;
           return '';
         }).join('') + '</select></div>';
   return retVal;
+}
+
+function generateFeatureBadges(features) {
+  let str = '';
+  if (!!(features & 1)) str += `<span style="color: #696969; background-color: #a8dcfa" class="badge">TX</span>`;
+  else if (!!(features & 2)) str += `<span style="color: #696969; background-color: #d2faa8" class="badge">RX</span>`;
+  if ((features & 12) === 12) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">I2C</span>`;
+  else if (!!(features & 4)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`;
+  else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
+  return str;
 }
 
 @@if not isTX:
@@ -53,40 +65,65 @@ function updatePwmSettings(arPwm) {
     if (_('model_tab')) _('model_tab').style.display = 'none';
     return;
   }
-  var pin1Index = undefined;
-  var pin3Index = undefined;
+  var pinRxIndex = undefined;
+  var pinTxIndex = undefined;
+  var pinModes = []
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-  const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="mui--text-center">Output</th><th>Mode</th><th>Input</th><th class="mui--text-center">Invert?</th><th class="mui--text-center">750us?</th><th>Failsafe</th></tr>'];
+  const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th>Failsafe</th></tr>'];
   arPwm.forEach((item, index) => {
     const failsafe = (item.config & 1023) + 988; // 10 bits
     const ch = (item.config >> 10) & 15; // 4 bits
     const inv = (item.config >> 14) & 1;
     const mode = (item.config >> 15) & 15; // 4 bits
     const narrow = (item.config >> 19) & 1;
-    const pin = item.pin;
+    const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
-    if (pin == 1) {
+    if (features & 16) {
+      modes.push('DShot');
+    } else {
+      modes.push(undefined);
+    }
+    if (features & 1) {
       modes.push('Serial TX');
+      modes.push(undefined);  // SCL
+      modes.push(undefined);  // SDA
       modes.push(undefined);  // true PWM
-      pin1Index = index;
-    }
-    if (pin == 3) {
+      pinRxIndex = index;
+    } else if (features & 2) {
       modes.push('Serial RX');
+      modes.push(undefined);  // SCL
+      modes.push(undefined);  // SDA
       modes.push(undefined);  // true PWM
-      pin3Index = index;
+      pinTxIndex = index;
+    } else {
+      modes.push(undefined);  // Serial
+      if (features & 4) {
+        modes.push('I2C SCL');
+      } else {
+        modes.push(undefined);
+      }
+      if (features & 8) {
+        modes.push('I2C SDA');
+      } else {
+        modes.push(undefined);
+      }
+      modes.push(undefined);  // true PWM
     }
+    modes.push(undefined);  // true PWM
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
           'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
           'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
-    htmlFields.push(`<tr><th class="mui--text-center">${index+1}</th>
+    htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td>
+            <td>${generateFeatureBadges(features)}</td>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
-            <td><div class="mui-textfield"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
+            <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
+    pinModes[index] = mode;
   });
   htmlFields.push('</table></div>');
 
@@ -96,47 +133,70 @@ function updatePwmSettings(arPwm) {
 
   _('pwm').appendChild(grp);
 
-  var setDisabled = (index, onoff) => {
+  const setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
     _(`pwm_${index}_inv`).disabled = onoff;
     _(`pwm_${index}_nar`).disabled = onoff;
     _(`pwm_${index}_fs`).disabled = onoff;
   }
-  // put some contraints on pin1/3 mode selects
-  if (pin1Index !== undefined && pin3Index !== undefined) {
-    const pin1Mode = _(`pwm_${pin1Index}_mode`);
-    const pin3Mode = _(`pwm_${pin3Index}_mode`);
-    pin1Mode.onchange = () => {
-      if (pin1Mode.value == 8) { // Serial
-        pin3Mode.value = 8;
-        setDisabled(pin1Index, true);
-        setDisabled(pin3Index, true);
-        pin3Mode.disabled = true;
+  arPwm.forEach((item,index)=>{
+    const pinMode = _(`pwm_${index}_mode`)
+    pinMode.onchange = () => {
+      setDisabled(index, pinMode.value > 9);
+      const updateOthers = (value, enable) => {
+        if (value > 9) { // disable others
+          arPwm.forEach((item, other) => {
+            if (other != index) {
+              document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
+                if (opt.value == value) {
+                    opt.disabled = enable;
+                }
+              });
+            }
+          })
+        }
+      }
+      updateOthers(pinMode.value, true); // disable others
+      updateOthers(pinModes[index], false); // enable others
+      pinModes[index] = pinMode.value;
+    }
+    pinMode.onchange();
+  });
+  // put some contraints on pinRx/Tx mode selects
+  if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
+    const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
+    const pinTxMode = _(`pwm_${pinTxIndex}_mode`);
+    pinRxMode.onchange = () => {
+      if (pinRxMode.value == 9) { // Serial
+        pinTxMode.value = 9;
+        setDisabled(pinRxIndex, true);
+        setDisabled(pinTxIndex, true);
+        pinTxMode.disabled = true;
         _('serial-config').style.display = 'block';
         _('baud-config').style.display = 'block';
       }
       else {
-        pin3Mode.value = 0;
-        setDisabled(pin1Index, false);
-        setDisabled(pin3Index, false);
-        pin3Mode.disabled = false;
+        pinTxMode.value = 0;
+        setDisabled(pinRxIndex, false);
+        setDisabled(pinTxIndex, false);
+        pinTxMode.disabled = false;
         _('serial-config').style.display = 'none';
         _('baud-config').style.display = 'none';
       }
     }
-    pin3Mode.onchange = () => {
-      if (pin3Mode.value == 8) { // Serial
-        pin1Mode.value = 8;
-        setDisabled(pin1Index, true);
-        setDisabled(pin3Index, true);
-        pin3Mode.disabled = true;
+    pinTxMode.onchange = () => {
+      if (pinTxMode.value == 9) { // Serial
+        pinRxMode.value = 9;
+        setDisabled(pinRxIndex, true);
+        setDisabled(pinTxIndex, true);
+        pinTxMode.disabled = true;
         _('serial-config').style.display = 'block';
         _('baud-config').style.display = 'block';
       }
     }
-    const pin3 = pin3Mode.value;
-    pin1Mode.onchange();
-    if(pin1Mode.value != 8) pin3Mode.value = pin3;
+    const pinTx = pinTxMode.value;
+    pinRxMode.onchange();
+    if(pinRxMode.value != 9) pinTxMode.value = pinTx;
   }
 }
 @@end
@@ -152,7 +212,7 @@ function init() {
   _('model-match').onclick = () => {
     if (_('model-match').checked) {
       _('modelid').style.display = 'block';
-      if (storedModelId == 255) {
+      if (storedModelId === 255) {
         _('modelid').value = '';
       } else {
         _('modelid').value = storedModelId;
@@ -166,73 +226,38 @@ function init() {
   initOptions();
 }
 
-function changeCurrentColors() {
-  if (colorTimer === undefined) {
-    sendCurrentColors();
-    colorTimer = setInterval(timeoutCurrentColors, 50);
-  } else {
-    colorUpdated = true;
-  }
-}
-
-function sendCurrentColors() {
-  const formData = new FormData(_('upload_options'));
-  const data = Object.fromEntries(formData);
-  colors = [];
-  for (const [k, v] of Object.entries(data)) {
-    if (_(k) && _(k).type == 'color') {
-      const index = parseInt(k.substring('6')) - 1;
-      if (_(k + '-div').style.display === 'none') colors[index] = -1;
-      else colors[index] = parseInt(v.substring(1), 16);
-    }
-  }
-  const xmlhttp = new XMLHttpRequest();
-  xmlhttp.open('POST', '/buttons', true);
-  xmlhttp.setRequestHeader('Content-type', 'application/json');
-  xmlhttp.send(JSON.stringify(colors));
-  colorUpdated = false;
-}
-
-function timeoutCurrentColors() {
-  if (colorUpdated) {
-    sendCurrentColors();
-  } else {
-    clearInterval(colorTimer);
-    colorTimer = undefined;
-  }
-}
-
-function updateConfig(data, options) {
-  if (data.product_name) _('product_name').textContent = data.product_name;
-  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
-  if (data.uid) _('uid').value = data.uid.toString();
-
+function updateUIDType(uidtype) {
   let bg = '';
   let fg = '';
-  let text = data.uidtype;
+  let text = uidtype;
   let desc = '';
-  if (!data.uidtype || data.uidtype === 'Not set') {
+  if (!uidtype || uidtype === 'Not set') {
     bg = '#D50000';  // default 'red' for 'Not set'
     fg = 'white';
     text = 'Not set';
     desc = 'The default binding UID from the device address will be used';
   }
-  if (data.uidtype === 'Flashed') {
+  if (uidtype === 'Flashed') {
     bg = '#1976D2'; // blue/white
     fg = 'white';
     desc = 'The binding UID was generated from a binding phrase set at flash time';
   }
-  if (data.uidtype === 'Overridden') {
+  if (uidtype === 'Overridden') {
     bg = '#689F38'; // green
     fg = 'black';
     desc = 'The binding UID has been generated from a bind-phrase previously entered into the "binding phrase" field above';
   }
-  if (data.uidtype === 'Traditional') {
+  if (uidtype === 'Traditional') {
     bg = '#D50000'; // red
     fg = 'white';
     desc = 'The binding UID has been set using traditional binding method i.e. button or 3-times power cycle and bound via the Lua script';
   }
-  if (data.uidtype === 'On loan') {
+  if (uidtype === 'Modified') {
+    bg = '#7c00d5'; // purple
+    fg = 'white';
+    desc = 'The binding UID has been modified, but not yet saved';
+  }
+  if (uidtype === 'On loan') {
     bg = '#FFA000'; // amber
     fg = 'black';
     desc = 'The binding UID has been set using the model-loan feature';
@@ -241,6 +266,17 @@ function updateConfig(data, options) {
   _('uid-type').style.color = fg;
   _('uid-type').textContent = text;
   _('uid-text').textContent = desc;
+}
+
+function updateConfig(data, options) {
+  if (data.product_name) _('product_name').textContent = data.product_name;
+  if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
+  if (data.uid) {
+    _('uid').value = data.uid.toString();
+    originalUID = data.uid;
+  }
+  originalUIDType = data.uidtype;
+  updateUIDType(data.uidtype);
 
   if (data.mode==='STA') {
     _('stamode').style.display = 'block';
@@ -249,7 +285,7 @@ function updateConfig(data, options) {
     _('apmode').style.display = 'block';
   }
 @@if not isTX:
-  if (data.hasOwnProperty('modelid') && data.modelid != 255) {
+  if (data.hasOwnProperty('modelid') && data.modelid !== 255) {
     _('modelid').style.display = 'block';
     _('model-match').checked = true;
     storedModelId = data.modelid;
@@ -259,25 +295,37 @@ function updateConfig(data, options) {
     storedModelId = 255;
   }
   _('modelid').value = storedModelId;
-  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data.forcetlm;
+  _('force-tlm').checked = data.hasOwnProperty('force-tlm') && data['force-tlm'];
   _('serial-protocol').onchange = () => {
+    const proto = Number(_('serial-protocol').value);
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('serial-config').style.display = 'none';
+      _('sbus-config').style.display = 'none';
+      return;
     }
-    else if (_('serial-protocol').value == 0 || _('serial-protocol').value == 1) {
+    _('serial-config').style.display = 'block';
+    if (proto === 0 || proto === 1) { // Airport or CRSF
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('sbus-config').style.display = 'none';
     }
-    else if (_('serial-protocol').value == 2 || _('serial-protocol').value == 3) {
+    else if (proto === 2 || proto === 3 || proto === 5) { // SBUS (and inverted) or DJI-RS Pro
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '100000';
       _('sbus-config').style.display = 'block';
       _('sbus-failsafe').value = data['sbus-failsafe'];
     }
-    else if (_('serial-protocol').value == 4) {
+    else if (proto === 4) { // SUMD
       _('rcvr-uart-baud').disabled = true;
       _('rcvr-uart-baud').value = '115200';
+      _('sbus-config').style.display = 'none';
+    }
+    else if (proto === 6) { // HoTT
+      _('rcvr-uart-baud').disabled = true;
+      _('rcvr-uart-baud').value = '19200';
+      _('sbus-config').style.display = 'none';
     }
   }
   updatePwmSettings(data.pwm);
@@ -305,14 +353,13 @@ function updateConfig(data, options) {
 }
 
 function initOptions() {
-  initBindingPhraseGen();
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
       updateOptions(data['options']);
       updateConfig(data['config'], data['options']);
-      setTimeout(getNetworks, 2000);
+      initBindingPhraseGen();
     }
   };
   xmlhttp.open('GET', '/config', true);
@@ -322,7 +369,7 @@ function initOptions() {
 function getNetworks() {
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.onload = function() {
-    if (this.status == 204) {
+    if (this.status === 204) {
       setTimeout(getNetworks, 2000);
     } else {
       const data = JSON.parse(this.responseText);
@@ -338,6 +385,8 @@ function getNetworks() {
   xmlhttp.open('GET', 'networks.json', true);
   xmlhttp.send();
 }
+
+_('network-tab').addEventListener('mui.tabs.showstart', getNetworks);
 
 // =========================================================
 
@@ -387,7 +436,7 @@ function completeHandler(event) {
       percent = percent + 2;
       _('progressBar').value = percent;
       _('status').innerHTML = percent + '% flashed... please wait';
-      if (percent == 100) {
+      if (percent === 100) {
         clearInterval(interval);
         _('status').innerHTML = '';
         _('progressBar').value = 0;
@@ -404,10 +453,10 @@ function completeHandler(event) {
     }).then((e)=>{
       const xmlhttp = new XMLHttpRequest();
       xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4) {
+        if (this.readyState === 4) {
           _('status').innerHTML = '';
           _('progressBar').value = 0;
-          if (this.status == 200) {
+          if (this.status === 200) {
             const data = JSON.parse(this.responseText);
             cuteAlert({
               type: 'info',
@@ -459,7 +508,7 @@ function abortHandler(event) {
   });
 }
 
-_('upload_form').addEventListener('submit', (e) => {
+_('firmware_file').addEventListener('change', (e) => {
   e.preventDefault();
   uploadFile();
 });
@@ -471,8 +520,8 @@ _('fileselect').addEventListener('change', (e) => {
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
       _('fileselect').value = '';
-      if (this.readyState == 4) {
-        if (this.status == 200) {
+      if (this.readyState === 4) {
+        if (this.status === 200) {
           cuteAlert({
             type: 'info',
             title: 'Upload Model Configuration',
@@ -502,8 +551,8 @@ function callback(title, msg, url, getdata, success) {
     e.preventDefault();
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
-      if (this.readyState == 4) {
-        if (this.status == 200) {
+      if (this.readyState === 4) {
+        if (this.status === 200) {
           if (success) success();
           cuteAlert({
             type: 'info',
@@ -555,7 +604,7 @@ _('reset-options').addEventListener('click', callback('Reset Runtime Options', '
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
-if (_('config') != undefined) {
+if (_('config')) {
   _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
@@ -587,25 +636,25 @@ function submitOptions(e) {
   xhr.send(JSON.stringify(formObject, function(k, v) {
     if (v === '') return undefined;
     if (_(k)) {
-      if (_(k).type == 'color') return undefined;
-      if (_(k).type == 'checkbox') return v === 'on';
+      if (_(k).type === 'color') return undefined;
+      if (_(k).type === 'checkbox') return v === 'on';
       if (_(k).classList.contains('datatype-boolean')) return v === 'true';
       if (_(k).classList.contains('array')) {
         const arr = v.split(',').map((element) => {
           return Number(element);
         });
-        return arr.length == 0 ? undefined : arr;
+        return arr.length === 0 ? undefined : arr;
       }
     }
     if (typeof v === 'boolean') return v;
-    if (v == 'true') return true;
-    if (v == 'false') return false;
+    if (v === 'true') return true;
+    if (v === 'false') return false;
     return isNaN(v) ? v : +v;
   }));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
+    if (this.readyState === 4) {
+      if (this.status === 200) {
         cuteAlert({
           type: 'question',
           title: 'Upload Succeeded',
@@ -613,7 +662,11 @@ function submitOptions(e) {
           confirmText: 'Reboot',
           cancelText: 'Close'
         }).then((e) => {
-          if (e == 'confirm') {
+          originalUID = _('uid').value;
+          originalUIDType = 'Flashed';
+          _('phrase').value = '';
+          updateUIDType(originalUIDType);
+          if (e === 'confirm') {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/reboot');
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -647,8 +700,8 @@ function submitButtonActions(e) {
   xhr.send(JSON.stringify({'button-actions': buttonActions}));
 
   xhr.onreadystatechange = function() {
-    if (this.readyState == 4) {
-      if (this.status == 200) {
+    if (this.readyState === 4) {
+      if (this.status === 200) {
         cuteAlert({
           type: 'info',
           title: 'Success',
@@ -661,7 +714,7 @@ function submitButtonActions(e) {
           message: 'An error occurred while saving button configuration'
         });
       }
-    };
+    }
   }
 }
 _('submit-actions').addEventListener('click', submitButtonActions);
@@ -669,8 +722,9 @@ _('submit-actions').addEventListener('click', submitButtonActions);
 
 function updateOptions(data) {
   for (const [key, value] of Object.entries(data)) {
+    if (key ==='wifi-on-interval' && value === -1) continue;
     if (_(key)) {
-      if (_(key).type == 'checkbox') {
+      if (_(key).type === 'checkbox') {
         _(key).checked = value;
       } else {
         if (Array.isArray(value)) _(key).value = value.toString();
@@ -731,7 +785,7 @@ function sendCurrentColors() {
   const data = Object.fromEntries(formData);
   colors = [];
   for (const [k, v] of Object.entries(data)) {
-    if (_(k) && _(k).type == 'color') {
+    if (_(k) && _(k).type === 'color') {
       const index = parseInt(k.substring('6')) - 1;
       if (_(k + '-div').style.display === 'none') colors[index] = -1;
       else colors[index] = to8bit(v);
@@ -922,24 +976,28 @@ md5 = function() {
 function uidBytesFromText(text) {
   const bindingPhraseFull = `-DMY_BINDING_PHRASE="${text}"`;
   const bindingPhraseHashed = md5(bindingPhraseFull);
-  const uidBytes = bindingPhraseHashed.subarray(0, 6);
-
-  return uidBytes;
+  return bindingPhraseHashed.subarray(0, 6);
 }
 
 function initBindingPhraseGen() {
   const uid = _('uid');
 
   function setOutput(text) {
-    const uidBytes = uidBytesFromText(text);
-    uid.value = uidBytes;
+    if (text.length === 0) {
+      uid.value = originalUID.toString();
+      updateUIDType(originalUIDType);
+    }
+    else {
+      uid.value = uidBytesFromText(text);
+      updateUIDType('Modified');
+    }
   }
 
   function updateValue(e) {
     setOutput(e.target.value);
   }
 
-  phrase.addEventListener('input', updateValue);
+  _('phrase').addEventListener('input', updateValue);
   setOutput('');
 }
 

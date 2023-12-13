@@ -23,8 +23,8 @@ protected:
     const uint8_t OVERSAMPLING_PRESSURE = 32;
     const uint8_t OVERSAMPLING_TEMPERATURE = 8;
 
-    static void readRegister(uint8_t reg, uint8_t *data, uint8_t size);
-    static void writeRegister(uint8_t reg, uint8_t *data, uint8_t size);
+    static void readRegister(uint8_t reg, uint8_t *data, size_t size);
+    static void writeRegister(uint8_t reg, uint8_t *data, size_t size);
 
     uint8_t oversampleToRegVal(const uint8_t oversamples) const;
     int32_t oversampleToScaleFactor(const uint8_t oversamples) const;

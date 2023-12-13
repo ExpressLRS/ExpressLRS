@@ -51,6 +51,7 @@
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
 #define GPIO_PIN_NSS_2 hardware_pin(HARDWARE_radio_nss_2)
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
+#define GPIO_PIN_RST_2 hardware_pin(HARDWARE_radio_rst_2)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
 #define USE_SX1280_DCDC
 #define OPT_USE_SX1280_DCDC hardware_flag(HARDWARE_radio_dcdc)
@@ -86,6 +87,7 @@
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
+#define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
@@ -99,7 +101,7 @@
 #define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_red_green)
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
 #define WS2812_IS_GRB
@@ -125,6 +127,7 @@
 #define ANALOG_VBAT_OFFSET hardware_int(HARDWARE_vbat_offset)
 #define ANALOG_VBAT_SCALE hardware_int(HARDWARE_vbat_scale)
 
+#if defined(PLATFORM_ESP32)
 // VTX
 #define HAS_VTX_SPI
 #define HAS_MSP_VTX
@@ -138,3 +141,4 @@
 #define GPIO_PIN_SPI_VTX_SCK hardware_pin(HARDWARE_vtx_sck)
 #define VPD_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_vpd_25mW)
 #define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)
+#endif

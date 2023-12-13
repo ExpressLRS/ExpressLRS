@@ -54,11 +54,30 @@ bool Telemetry::ShouldSendDeviceFrame()
     return deviceFrame;
 }
 
+void Telemetry::SetCrsfBatterySensorDetected()
+{
+    crsfBatterySensorDetected = true;
+}
+
 void Telemetry::CheckCrsfBatterySensorDetected()
 {
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BATTERY_SENSOR)
     {
-        crsfBatterySensorDetected = true;
+        SetCrsfBatterySensorDetected();
+    }
+}
+
+void Telemetry::SetCrsfBaroSensorDetected()
+{
+    crsfBaroSensorDetected = true;
+}
+
+void Telemetry::CheckCrsfBaroSensorDetected()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_BARO_ALTITUDE ||
+        CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_VARIO)
+    {
+        SetCrsfBaroSensorDetected();
     }
 }
 
@@ -148,7 +167,10 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 {
     switch(telemetry_state) {
         case TELEMETRY_IDLE:
-            if (data == CRSF_ADDRESS_CRSF_RECEIVER || data == CRSF_SYNC_BYTE)
+            // Telemetry from Betaflight/iNav starts with CRSF_SYNC_BYTE (CRSF_ADDRESS_FLIGHT_CONTROLLER)
+            // from a TX module it will be addressed to CRSF_ADDRESS_RADIO_TRANSMITTER (RX used as a relay)
+            // and things addressed to CRSF_ADDRESS_CRSF_RECEIVER I guess we should take too since that's us, but we'll just forward them
+            if (data == CRSF_SYNC_BYTE || data == CRSF_ADDRESS_RADIO_TRANSMITTER || data == CRSF_ADDRESS_CRSF_RECEIVER)
             {
                 currentTelemetryByte = 0;
                 telemetry_state = RECEIVING_LENGTH;
@@ -185,9 +207,10 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                 {
                     AppendTelemetryPackage(CRSFinBuffer);
 
-                    // Special case to check here and not in AppendTelemetryPackage().  devAnalogVbat sends
+                    // Special case to check here and not in AppendTelemetryPackage(). devAnalogVbat and vario sends
                     // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
                     CheckCrsfBatterySensorDetected();
+                    CheckCrsfBaroSensorDetected();
 
                     receivedPackages++;
                     return true;

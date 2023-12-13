@@ -136,3 +136,5 @@ typedef struct {
     uint8_t     modelId;
     v6_rx_config_pwm_t pwmChannels[16];
 } v6_rx_config_t;
+
+// V7 is the same as 6, just with extra values

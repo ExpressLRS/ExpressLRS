@@ -16,10 +16,13 @@
 #include <Update.h>
 #include <esp_partition.h>
 #include <esp_ota_ops.h>
+#include <soc/uart_pins.h>
 #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
+#define U0TXD_GPIO_NUM  (1)
+#define U0RXD_GPIO_NUM  (3)
 #endif
 #include <DNSServer.h>
 
@@ -43,7 +46,11 @@
 #include "WebContent.h"
 
 #include "config.h"
+
 #if defined(TARGET_TX)
+
+#include "wifiJoystick.h"
+
 extern TxConfig config;
 extern void setButtonColors(uint8_t b1, uint8_t b2);
 #else
@@ -332,8 +339,19 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-    json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
-    json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
+      json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      uint8_t features = 0;
+      auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
+      if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
+      else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
+      else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
+      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
+      else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
+      #if defined(PLATFORM_ESP32)
+      if (pin != 0) features |= 16; // DShot supported
+      #endif
+      json["config"]["pwm"][ch]["features"] = features;
     }
     #endif
     #endif
@@ -650,6 +668,10 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   force_update = force_update || request->hasArg("force");
   if (index == 0) {
+    #ifdef HAS_WIFI_JOYSTICK
+      WifiJoystick::StopJoystickService();
+    #endif
+
     size_t filesize = request->header("X-FileSize").toInt();
     DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
     #if defined(PLATFORM_ESP8266)
@@ -714,6 +736,24 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
 }
+
+#ifdef HAS_WIFI_JOYSTICK
+static void WebUdpControl(AsyncWebServerRequest *request)
+{
+  const String &action = request->arg("action");
+  if (action.equals("joystick_begin"))
+  {
+    WifiJoystick::StartSending(request->client()->remoteIP(),
+      request->arg("interval").toInt(), request->arg("channels").toInt());
+    request->send(200, "text/plain", "ok");
+  }
+  else if (action.equals("joystick_end"))
+  {
+    WifiJoystick::StopSending();
+    request->send(200, "text/plain", "ok");
+  }
+}
+#endif
 
 static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
@@ -859,10 +899,6 @@ static void startMDNS()
   {
     options += " -DUNLOCK_HIGHER_POWER";
   }
-  if (firmwareOptions.uart_inverted)
-  {
-    options += " -DUART_INVERTED";
-  }
   options += " -DTLM_REPORT_INTERVAL_MS=" + String(firmwareOptions.tlm_report_interval);
   options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
   #endif
@@ -911,6 +947,12 @@ static void startMDNS()
   #else
     MDNS.addServiceTxt("http", "tcp", "type", "rx");
   #endif
+  #endif
+
+  #ifdef HAS_WIFI_JOYSTICK
+    MDNS.addService("elrs", "udp", JOYSTICK_PORT);
+    MDNS.addServiceTxt("elrs", "udp", "device", (const char *)device_name);
+    MDNS.addServiceTxt("elrs", "udp", "version", String(JOYSTICK_VERSION).c_str());
   #endif
 }
 
@@ -967,6 +1009,9 @@ static void startServices()
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
+  #ifdef HAS_WIFI_JOYSTICK
+    server.on("/udpcontrol", HTTP_POST, WebUdpControl);
+  #endif
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/config", UpdateConfiguration));
   server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
@@ -983,6 +1028,10 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
+
+  #ifdef HAS_WIFI_JOYSTICK
+    WifiJoystick::StartJoystickService();
+  #endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
@@ -1071,6 +1120,10 @@ static void HandleWebUpdate()
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
+    #endif
+
+    #ifdef HAS_WIFI_JOYSTICK
+      WifiJoystick::Loop(now);
     #endif
   }
 }
