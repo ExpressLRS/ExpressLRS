@@ -262,22 +262,20 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     }
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
-    Radio.SetOutputPower(0b0000);
     int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];
     TxDAC.setPower(mV);
 #elif defined(POWER_OUTPUT_ANALOG)
-    Radio.SetOutputPower(0b0000);
     //Set DACs PA5 & PA4
     analogWrite(GPIO_PIN_RFamp_APC1, 3350); //0-4095 2.7V
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
-#elif defined(POWER_OUTPUT_DACWRITE) && !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
-    Radio.SetOutputPower(0b0000);
-    dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #else
     #if defined(PLATFORM_ESP32)
     if (POWER_OUTPUT_DACWRITE)
     {
-        Radio.SetOutputPower(0b0000);
+        if (POWER_OUTPUT_VALUES2 != nullptr)
+        {
+            Radio.SetOutputPower(POWER_OUTPUT_VALUES2[Power - MinPower]);
+        }
         dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
     }
     else
