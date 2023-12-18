@@ -51,7 +51,8 @@ class WifiJoystick
 {
 public:
     enum WifiJoystickFrameType_e {
-        FRAME_CHANNELS = 1
+        FRAME_CHANNELS = 1,
+        FRAME_ADVERTISE = 69, // reserve 'E' for advertisement
     };
     static void StartJoystickService();
     static void StopJoystickService();
