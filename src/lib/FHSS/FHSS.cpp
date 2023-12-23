@@ -90,7 +90,9 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     DBGLN("Number of FHSS frequencies = %u", FHSSconfigDualBand->freq_count);
     DBGLN("Sync channel Dual Band = %u", sync_channel_DualBand);
 
+    FHSSusePrimaryFreqBand = false;
     FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    FHSSusePrimaryFreqBand = true;
 #endif
 }
 
@@ -114,7 +116,7 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
     rngSeed(seed);
 
     // initialize the sequence array
-    for (uint16_t i = 0; i < FHSS_SEQUENCE_LEN; i++)
+    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
         if (i % freqCount == 0) {
             inSequence[i] = syncChannel;
@@ -125,7 +127,7 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
         }
     }
 
-    for (uint16_t i = 0; i < FHSS_SEQUENCE_LEN; i++)
+    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
         // if it's not the sync channel
         if (i % freqCount != 0)
