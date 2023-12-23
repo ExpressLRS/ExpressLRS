@@ -398,16 +398,16 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
+        // if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
         }
-        else
-        {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
-        }
+        // else
+        // {
+        //     Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+        //     Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+        // }
     }
     else
     {
@@ -450,17 +450,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
-    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0)
-#if defined(DEBUG_LOG_MULTI_RX_10)
-        || OtaNonce > 63
-#elif defined(DEBUG_LOG_MULTI_RX_20)
-        || OtaNonce <= 63 || OtaNonce > 127
-#elif defined(DEBUG_LOG_MULTI_RX_30)
-        || OtaNonce <= 127 || OtaNonce > 180
-#elif defined(DEBUG_LOG_MULTI_RX_40)
-        || OtaNonce <= 180
-#endif
-    )
+    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
@@ -540,7 +530,17 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
-    if (config.GetForceTlmOff())
+    if (config.GetForceTlmOff()
+#if defined(DEBUG_LOG_MULTI_RX_10)
+        || OtaNonce > 63
+#elif defined(DEBUG_LOG_MULTI_RX_20)
+        || OtaNonce <= 63 || OtaNonce > 127
+#elif defined(DEBUG_LOG_MULTI_RX_30)
+        || OtaNonce <= 127 || OtaNonce > 180
+#elif defined(DEBUG_LOG_MULTI_RX_40)
+        || OtaNonce <= 180
+#endif
+    )
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
