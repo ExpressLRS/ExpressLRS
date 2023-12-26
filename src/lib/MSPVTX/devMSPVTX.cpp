@@ -219,7 +219,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                 power = 1;
             }
 
-            if (power >= NUM_POWER_LEVELS)
+            if (power > NUM_POWER_LEVELS)
             {
                 power = 3; // 25 mW
             }

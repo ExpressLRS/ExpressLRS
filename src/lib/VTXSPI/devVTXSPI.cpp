@@ -65,9 +65,13 @@ static bool stopVtxMonitoring = false;
 #if defined(TARGET_UNIFIED_RX)
 const uint16_t *VpdSetPointArray25mW = nullptr;
 const uint16_t *VpdSetPointArray100mW = nullptr;
+const uint16_t *PwmArray25mW = nullptr;
+const uint16_t *PwmArray100mW = nullptr;
 #else
 uint16_t VpdSetPointArray25mW[] = VPD_VALUES_25MW;
 uint16_t VpdSetPointArray100mW[] = VPD_VALUES_100MW;
+uint16_t PwmArray25mW[] = PWM_VALUES_25MW;
+uint16_t PwmArray100mW[] = PWM_VALUES_100MW;
 #endif
 
 uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
@@ -203,29 +207,60 @@ static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
     return newVpd;
 }
 
+static uint16_t LinearInterpSetPwm(const uint16_t PwmArray[])
+{
+    uint16_t newPwm = 0;
+
+    if (vtxSPIFrequencyCurrent <= VpdFreqArray[0])
+    {
+        newPwm = PwmArray[0];
+    }
+    else if (vtxSPIFrequencyCurrent >= VpdFreqArray[VpdSetPointCount - 1])
+    {
+        newPwm = PwmArray[VpdSetPointCount - 1];
+    }
+    else
+    {
+        for (uint8_t i = 0; i < (VpdSetPointCount - 1); i++)
+        {
+            if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
+            {
+                newPwm = PwmArray[i] + ((PwmArray[i + 1]-PwmArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
+            }
+        }
+    }
+
+    return newPwm;
+}
+
 static void SetVpdSetPoint()
 {
     switch (vtxSPIPowerIdx)
     {
     case 1: // 0 mW
         VpdSetPoint = VPD_SETPOINT_0_MW;
+        vtxSPIPWM = vtxMaxPWM;
         break;
 
     case 2: // RCE
     case 3: // 25 mW
         VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray25mW);
+        vtxSPIPWM = LinearInterpSetPwm(PwmArray25mW);
         break;
 
     case 4: // 100 mW
         VpdSetPoint = LinearInterpVpdSetPointArray(VpdSetPointArray100mW);
+        vtxSPIPWM = LinearInterpSetPwm(PwmArray100mW);
         break;
 
     default: // YOLO mW
         VpdSetPoint = VPD_SETPOINT_YOLO_MW;
+        vtxSPIPWM = vtxMinPWM;
         break;
     }
 
-    DBGLN("Setting new VPD setpoint: %d", VpdSetPoint);
+    setPWM();
+    DBGLN("Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
 }
 
 static void checkOutputPower()
