@@ -290,6 +290,37 @@ static void checkOutputPower()
     }
 }
 
+#if defined(VTX_OUTPUT_CALIBRATION)
+int sampleCount = 0;
+int calibFreqIndex = 0;
+#define CALIB_SAMPLES 10
+
+static int gatherOutputCalibrationData()
+{
+    if (VpdSetPoint <= VPD_SETPOINT_YOLO_MW && calibFreqIndex < VpdSetPointCount)
+    {
+        sampleCount++;
+        checkOutputPower();
+        DBGLN("VTX Freq=%d, VPD setpoint=%d, VPD=%d, PWM=%d, sample=%d", VpdFreqArray[calibFreqIndex], VpdSetPoint, Vpd, vtxSPIPWM, sampleCount);
+        if (sampleCount >= CALIB_SAMPLES)
+        {
+            VpdSetPoint += VPD_BUFFER;
+            sampleCount = 0;
+        }
+
+        if (VpdSetPoint > VPD_SETPOINT_YOLO_MW)
+        {
+            calibFreqIndex++;
+            rtc6705SetFrequency(VpdFreqArray[calibFreqIndex]);
+            VpdSetPoint = VPD_BUFFER;
+            return RTC6705_PLL_SETTLE_TIME_MS;
+        }
+        return VTX_POWER_INTERVAL_MS;
+    }
+    return DURATION_NEVER;
+}
+#endif
+
 void disableVTxSpi()
 {
     stopVtxMonitoring = true;
@@ -355,6 +386,14 @@ static int start()
         return DURATION_NEVER;
     }
 
+#if defined(VTX_OUTPUT_CALIBRATION)
+    rtc6705SetFrequency(VpdFreqArray[calibFreqIndex]); // Set to the first calib frequency
+    vtxSPIPitmodeCurrent = 0;
+    VpdSetPoint = VPD_SETPOINT_0_MW;
+    rtc6705PowerAmpOn();
+    return RTC6705_PLL_SETTLE_TIME_MS;
+#endif
+
     rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
 
     rtc6705PowerAmpOn();
@@ -389,6 +428,10 @@ static int timeout()
         // Dont run spi and analog reads during rx hopping, wifi or updating
         return DURATION_IMMEDIATELY;
     }
+
+#if defined(VTX_OUTPUT_CALIBRATION)
+    return gatherOutputCalibrationData();
+#endif
 
     if (vtxSPIFrequencyCurrent != vtxSPIFrequency)
     {
