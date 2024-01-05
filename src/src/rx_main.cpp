@@ -1917,6 +1917,7 @@ void EnterBindingMode()
     UID[5] = BindingUID[5];
 
     OtaCrcInitializer = 0;
+    config.SetIsBound(false);
     InBindingMode = true;
 
     // Start attempting to bind

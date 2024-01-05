@@ -245,6 +245,13 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         callEnterBind = true;
         return true;
     }
+    if (header->frame_size == 7 && header->type == CRSF_FRAMETYPE_COMMAND &&
+        package[3] == CRSF_ADDRESS_CRSF_RECEIVER && package[4] == CRSF_ADDRESS_FLIGHT_CONTROLLER &&
+        package[5] == CRSF_COMMAND_SUBCMD_RX && package[6] == CRSF_COMMAND_SUBCMD_RX_BIND && package[7] == 0x9E)
+    {
+        callEnterBind = true;
+        return true;
+    }
     if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'm' && package[4] == 'm')
     {
         callUpdateModelMatch = true;
@@ -259,7 +266,6 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
     uint8_t targetIndex = 0;
     bool targetFound = false;
-
 
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {

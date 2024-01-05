@@ -92,11 +92,12 @@ typedef enum
 } crsf_frame_type_e;
 
 typedef enum {
-    SUBCOMMAND_CRSF = 0x10
+    CRSF_COMMAND_SUBCMD_RX = 0x10
 } crsf_command_e;
 
 typedef enum {
-    COMMAND_MODEL_SELECT_ID = 0x05
+    CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05
 } crsf_subcommand_e;
 
 enum {
