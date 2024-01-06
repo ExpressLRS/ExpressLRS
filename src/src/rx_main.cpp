@@ -1196,10 +1196,6 @@ static void setupSerial()
     bool hottTlmSerial = false;
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    bool hottTlmSerial = false;
-#endif
-
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
         // For PWM receivers with no serial pins defined, only turn on the Serial port if logging is on
