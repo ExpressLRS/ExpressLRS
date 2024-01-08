@@ -231,39 +231,58 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
     return true;
 }
 
-bool Telemetry::AppendTelemetryPackage(uint8_t *package)
+/**
+ * @brief: Check the CRSF frame for commands that should not be passed on
+ * @return: true if packet was internal and should not be processed further
+*/
+bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
 {
-    const crsf_header_t *header = (crsf_header_t *) package;
+    const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
 
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'l')
+    if (header->type == CRSF_FRAMETYPE_COMMAND)
     {
-        callBootloader = true;
-        return true;
+        // Non CRSF, dest=b src=l -> reboot to bootloader
+        if (package[3] == 'b' && package[4] == 'l')
+        {
+            callBootloader = true;
+            return true;
+        }
+        // 1. Non CRSF, dest=b src=b -> bind mode
+        // 2. CRSF bind command
+        if ((package[3] == 'b' && package[4] == 'd') ||
+            (header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
+            && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER
+            && header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER
+            && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
+            && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND))
+        {
+            callEnterBind = true;
+            return true;
+        }
+        // Non CRSF, dest=b src=m -> set modelmatch
+        if (package[3] == 'm' && package[4] == 'm')
+        {
+            callUpdateModelMatch = true;
+            modelMatchId = package[5];
+            return true;
+        }
     }
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'b' && package[4] == 'd')
-    {
-        callEnterBind = true;
-        return true;
-    }
-    if (header->frame_size == 7 && header->type == CRSF_FRAMETYPE_COMMAND &&
-        package[3] == CRSF_ADDRESS_CRSF_RECEIVER && package[4] == CRSF_ADDRESS_FLIGHT_CONTROLLER &&
-        package[5] == CRSF_COMMAND_SUBCMD_RX && package[6] == CRSF_COMMAND_SUBCMD_RX_BIND && package[7] == 0x9E)
-    {
-        callEnterBind = true;
-        return true;
-    }
-    if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'm' && package[4] == 'm')
-    {
-        callUpdateModelMatch = true;
-        modelMatchId = package[5];
-        return true;
-    }
-    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_ADDRESS_CRSF_RECEIVER)
+
+    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
     {
         sendDeviceFrame = true;
         return true;
     }
 
+    return false;
+}
+
+bool Telemetry::AppendTelemetryPackage(uint8_t *package)
+{
+    if (processInternalTelemetryPackage(package))
+        return true;
+
+    const crsf_header_t *header = (crsf_header_t *) package;
     uint8_t targetIndex = 0;
     bool targetFound = false;
 

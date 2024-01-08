@@ -184,6 +184,7 @@ typedef struct crsf_ext_header_s
     // Extended fields
     uint8_t dest_addr;
     uint8_t orig_addr;
+    uint8_t payload[0];
 } PACKED crsf_ext_header_t;
 
 /**
