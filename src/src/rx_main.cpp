@@ -1541,7 +1541,6 @@ static void updateBindingMode(unsigned long now)
         config.Commit();
 
         DBGLN("Power on counter >=3, enter binding mode...");
-        config.SetIsBound(false);
         EnterBindingMode();
     }
 }
