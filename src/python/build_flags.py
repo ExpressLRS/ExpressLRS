@@ -76,6 +76,10 @@ def process_build_flag(define):
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
             define = "-DMY_UID=" + UIDbytes
             sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+
+            stronghash=hashlib.sha256(define.encode()).hexdigest()
+            define = "-DUSE_ENCRYPTION=\"" + stronghash[0:32] + "\""
+            sys.stdout.write("\u001b[32mUSE_ENCRYPTION: " + stronghash[0:32] + "\n")
             sys.stdout.flush()
         if "MY_STARTUP_MELODY=" in define:
             parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
