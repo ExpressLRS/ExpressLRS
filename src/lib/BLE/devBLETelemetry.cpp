@@ -17,10 +17,9 @@ extern TxConfig config;
 NimBLEServer *pServer;
 NimBLECharacteristic *rcCRSF;
 
-#define DURATION_UPDATE 100  // timeout after 100ms
 
 //how often link stats packet is sent over BLE
-#define BLE_LINKSTATS_PACKET_PERIOD_MS 500
+#define BLE_LINKSTATS_PACKET_PERIOD_MS 200
 
 //how often channels(sticks positions) packet is sent over BLE
 #define BLE_CHANNELS_PACKET_PERIOD_MS 300
@@ -36,7 +35,6 @@ unsigned short const HARDWARE_NUMBER_SVC_UUID = 0x2A27;
 unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
 
 
-static uint32_t LastTMLLinkStatsPacketMillis = 0;
 static uint32_t LastTLMRCPacketMillis = 0;
 
 static SemaphoreHandle_t _mutex = nullptr;
@@ -261,11 +259,12 @@ static void BluetoothTelemetryUpdateDevice()
 
 
 static uint8_t _crsf_buffer[CRSF_MAX_PACKET_LEN] = {0u};
+static int nextTimeLinkStats = 0;
 
-void BluetoothTelemetryUpdateValues(const uint8_t *data)
+int BluetoothTelemetryUpdateValues(const uint8_t *data)
 {
     if (pServer == nullptr)
-        return;
+        return DURATION_NEVER;
 
     if (data != nullptr)
     {
@@ -276,10 +275,9 @@ void BluetoothTelemetryUpdateValues(const uint8_t *data)
           {
             memcpy(_crsf_buffer, data, CRSF_FRAME_SIZE(size));
             xSemaphoreGive( _mutex );
-            devicesTriggerEvent(); // trigger event to send the telemetry
           }
         }
-        return;
+        return DURATION_IMMEDIATELY;
     }
 
     if ( (_mutex != nullptr) && (xSemaphoreTake( _mutex, ( TickType_t ) 10 ) == pdTRUE) )
@@ -296,9 +294,19 @@ void BluetoothTelemetryUpdateValues(const uint8_t *data)
 
     uint32_t const now = millis();
 
-    if (now >= (uint32_t)(LastTMLLinkStatsPacketMillis + BLE_LINKSTATS_PACKET_PERIOD_MS))
+    if (now >= (uint32_t)(LastTLMRCPacketMillis + BLE_CHANNELS_PACKET_PERIOD_MS))
     {
-        LastTMLLinkStatsPacketMillis = now;
+        /* Periodically send RC channels packet for Android Telemetry viewer */
+        BluetoothTelemetrySendRCFrame();
+        LastTLMRCPacketMillis = now;
+    }
+
+    if (nextTimeLinkStats <= now)
+    {
+        nextTimeLinkStats = nextTimeLinkStats + BLE_LINKSTATS_PACKET_PERIOD_MS; // - ((int)now-nextTimeLinkStats);
+        if (nextTimeLinkStats <= (int)now) {
+            nextTimeLinkStats = (int)now + BLE_LINKSTATS_PACKET_PERIOD_MS;
+        }
         if (connectionState == connected)
         {
             BluetoothTelemetrySendLinkStatsPacket();
@@ -309,12 +317,7 @@ void BluetoothTelemetryUpdateValues(const uint8_t *data)
         }
     }
 
-    if (now >= (uint32_t)(LastTLMRCPacketMillis + BLE_CHANNELS_PACKET_PERIOD_MS))
-    {
-        /* Periodically send RC channels packet for Android Telemetry viewer */
-        BluetoothTelemetrySendRCFrame();
-        LastTLMRCPacketMillis = now;
-    }
+    return nextTimeLinkStats-now;
 }
 
 static int event()
@@ -325,12 +328,7 @@ static int event()
 static int timeout()
 {
     BluetoothTelemetryUpdateDevice();
-    BluetoothTelemetryUpdateValues(nullptr);
-
-    if (nullptr == pServer)
-       return DURATION_NEVER;
-
-    return DURATION_UPDATE;
+    return BluetoothTelemetryUpdateValues(nullptr);
 }
 
 device_t BLET_device = {

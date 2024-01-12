@@ -4,7 +4,7 @@
 
 #if defined(PLATFORM_ESP32)
 extern device_t BLET_device;
-void BluetoothTelemetryUpdateValues(const uint8_t *data);
+int BluetoothTelemetryUpdateValues(const uint8_t *data);
 void BluetoothTelemetryShutdown();
 #define HAS_BLETELEMETRY
 #endif
