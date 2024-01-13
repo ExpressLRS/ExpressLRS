@@ -442,7 +442,6 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 #ifdef USE_ENCRYPTION
 
-// Ray TODO set argument to const
 bool CryptoSetKeys(encryption_params_t *params)
 {
     /*
@@ -454,10 +453,6 @@ bool CryptoSetKeys(encryption_params_t *params)
     size_t keySize = 16;
 
     uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
-
-    // Ray TODO for debugging
-    // memcpy(params->key, key, keySize);
-    // memcpy(params->nonce, nonce, 8);
 
 
     // Decrypt the session key, which is encrypted with the master key

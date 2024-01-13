@@ -213,13 +213,6 @@ extern uint8_t encryptionCounter[8];
 void ICACHE_RAM_ATTR EncryptMsg(uint8_t *output, uint8_t *input)
 {
   size_t packetSize;
-  // input[0] ^= 0x01;
-  // input[1] ^= 0x02;
-
-  // Ray TODO remove this - it is for debugging only
-  // uint8_t resetCounter[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  // cipher.setCounter(resetCounter, 8);
-  // cipher.setCounter(encryptionCounter, 8);
 
   if (OtaIsFullRes)
   {
