@@ -34,6 +34,8 @@ unsigned short const SOFTWARE_NUMBER_SVC_UUID = 0x2A28;
 unsigned short const HARDWARE_NUMBER_SVC_UUID = 0x2A27;
 unsigned short const MANUFACTURER_NAME_SVC_UUID = 0x2A29;
 
+// fwd declaration
+static void assignRandomAddress();
 
 static uint32_t LastTLMRCPacketMillis = 0;
 
@@ -44,6 +46,7 @@ class BLEServerCB : public NimBLEServerCallbacks {
   {
     if ( pServer != nullptr)
     {
+        assignRandomAddress();
         NimBLEDevice::startAdvertising();
     }
   }
@@ -162,16 +165,10 @@ void BluetoothTelemetryShutdown()
 
 static void assignRandomAddress()
 {
-    static uint8_t ble_address[6];
-    static bool doGenerateAddress = true;
-    if (doGenerateAddress)
-    {
-        NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
-        memcpy( ble_address, NimBLEDevice::getAddress().getNative(), 6 );
-        ble_address[5] |= 0xC0;  //random address should have 11 at most significant bits
-        ++ble_address[0];
-        doGenerateAddress = false;
-    }
+    uint8_t ble_address[6];
+
+    memcpy( ble_address, NimBLEDevice::getAddress().getNative(), 6 );
+    ble_address[5] |= 0xC0;  //random static address should have 11 at most significant bits
     NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);
     ble_hs_id_set_rnd(ble_address);
 }
