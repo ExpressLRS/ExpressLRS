@@ -26,13 +26,15 @@ function getPwmFormData() {
     const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
     const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
     const failsafeField = _(`pwm_${ch}_fs`);
+    const failsafeModeField = _(`pwm_${ch}_fsmode`);
     let failsafe = failsafeField.value;
     if (failsafe > 2011) failsafe = 2011;
     if (failsafe < 988) failsafe = 988;
     failsafeField.value = failsafe;
+    let failsafeMode = failsafeModeField.value;
 
-    const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafe - 988);
-    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} inv=${invert} nar=${narrow} raw=${raw}`);
+    const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
+    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
     outData.push(raw);
     ++ch;
   }
@@ -69,9 +71,10 @@ function updatePwmSettings(arPwm) {
   var pinTxIndex = undefined;
   var pinModes = []
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-  const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th>Failsafe</th></tr>'];
+  const htmlFields = ['<div class="mui-panel"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th>Failsafe Mode</th><th>Failsafe Pos</th></tr>'];
   arPwm.forEach((item, index) => {
     const failsafe = (item.config & 1023) + 988; // 10 bits
+    const failsafeMode = (item.config >> 20) & 3; // 2 bits
     const ch = (item.config >> 10) & 15; // 4 bits
     const inv = (item.config >> 14) & 1;
     const mode = (item.config >> 15) & 15; // 4 bits
@@ -116,12 +119,15 @@ function updatePwmSettings(arPwm) {
           'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
           'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
           'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
+    const failsafeModeSelect = enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode,
+        ['Set Pos', 'No Pulse', 'Hold Pos']); // match eServoOutputFailsafeMode
     htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td>
             <td>${generateFeatureBadges(features)}</td>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
+            <td>${failsafeModeSelect}</td>
             <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6"/></div></td></tr>`);
     pinModes[index] = mode;
   });
@@ -138,6 +144,7 @@ function updatePwmSettings(arPwm) {
     _(`pwm_${index}_inv`).disabled = onoff;
     _(`pwm_${index}_nar`).disabled = onoff;
     _(`pwm_${index}_fs`).disabled = onoff;
+    _(`pwm_${index}_fsmode`).disabled = onoff;
   }
   arPwm.forEach((item,index)=>{
     const pinMode = _(`pwm_${index}_mode`)
@@ -161,7 +168,23 @@ function updatePwmSettings(arPwm) {
       pinModes[index] = pinMode.value;
     }
     pinMode.onchange();
+
+    // disable and hide the failsafe position field if not using the set-position failsafe mode
+    const failsafeMode = _(`pwm_${index}_fsmode`);
+    failsafeMode.onchange = () => {
+      const failsafeField = _(`pwm_${index}_fs`);
+      if (failsafeMode.value == 0) {
+        failsafeField.disabled = false;
+        failsafeField.style.display = 'block';
+      }
+      else {
+        failsafeField.disabled = true;
+        failsafeField.style.display = 'none';
+      }
+    };
+    failsafeMode.onchange();
   });
+
   // put some contraints on pinRx/Tx mode selects
   if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
     const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
