@@ -506,10 +506,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
+#if defined(FORCE_TLM_OFF)
+    transmittingRadio = SX12XX_Radio_NONE;
+#else
     if (config.GetForceTlmOff())
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
