@@ -1096,6 +1096,8 @@ static void HandleWebUpdate()
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
         #endif
         changeTime = now;
+        WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+        WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
         WiFi.begin(station_ssid, station_password);
         startServices();
       default:
