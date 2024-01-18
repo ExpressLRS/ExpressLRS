@@ -34,6 +34,7 @@ extern int32_t FreqCorrection;      // Only used for the SX1276
 extern int32_t FreqCorrection_2;    // Only used for the SX1276
 
 // Primary Band
+extern uint16_t primaryBandCount;
 extern uint32_t freq_spread;
 extern uint8_t FHSSsequence[];
 extern uint_fast8_t sync_channel;
@@ -42,6 +43,7 @@ extern const fhss_config_t *FHSSconfig;
 // DualBand Variables
 extern bool FHSSusePrimaryFreqBand;
 extern bool FHSSuseDualBand;
+extern uint16_t secondaryBandCount;
 extern uint32_t freq_spread_DualBand;
 extern uint8_t FHSSsequence_DualBand[];
 extern uint_fast8_t sync_channel_DualBand;
@@ -67,13 +69,25 @@ static inline uint32_t FHSSgetChannelCount(void)
 // get the number of entries in the FHSS sequence
 static inline uint16_t FHSSgetSequenceCount()
 {
+    if (FHSSuseDualBand) // Use the smaller of the 2 bands as not to go beyond the max index for each sequence.
+    {
+        if (primaryBandCount < secondaryBandCount)
+        {
+            return primaryBandCount;
+        }
+        else
+        {
+            return secondaryBandCount;
+        }
+    }
+
     if (FHSSusePrimaryFreqBand)
     {
-        return (FHSS_SEQUENCE_LEN / FHSSconfig->freq_count) * FHSSconfig->freq_count;
+        return primaryBandCount;
     }
     else
     {
-        return (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
+        return secondaryBandCount;
     }
 }
 

@@ -69,11 +69,15 @@ uint32_t freq_spread_DualBand;
 bool FHSSusePrimaryFreqBand = true;
 bool FHSSuseDualBand = false;
 
+uint16_t primaryBandCount;
+uint16_t secondaryBandCount;
+
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     FHSSconfig = &domains[firmwareOptions.domain];
     sync_channel = (FHSSconfig->freq_count / 2) + 1;
     freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
+    primaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfig->freq_count) * FHSSconfig->freq_count;
 
     DBGLN("Setting %s Mode", FHSSconfig->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
@@ -85,6 +89,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     FHSSconfigDualBand = &domainsDualBand[0];
     sync_channel_DualBand = (FHSSconfigDualBand->freq_count / 2) + 1;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
+    secondaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
 
     DBGLN("Setting Dual Band %s Mode", FHSSconfigDualBand->domain);
     DBGLN("Number of FHSS frequencies = %u", FHSSconfigDualBand->freq_count);
