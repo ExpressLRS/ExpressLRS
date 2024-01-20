@@ -12,6 +12,8 @@ extern const char *wifi_ap_ssid;
 extern const char *wifi_ap_password;
 extern const char *wifi_ap_address;
 
+extern uint32_t flash_discriminator;
+
 enum BuzzerMode {
     buzzerQuiet,
     buzzerOne,
@@ -65,7 +67,6 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
-extern uint32_t flash_discriminator;
 
 #include "EspFlashStream.h"
 extern bool options_HasStringInFlash(EspFlashStream &strmFlash);

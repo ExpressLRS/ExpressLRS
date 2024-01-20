@@ -17,9 +17,8 @@
 // It should be incremented when the OTA packet structure is modified.
 #define OTA_VERSION_ID      3
 
-extern uint8_t BindingUID[6];
+extern const uint8_t BindingUID[6];
 extern uint8_t UID[6];
-extern uint8_t MasterUID[6];
 
 typedef enum : uint8_t
 {
@@ -147,9 +146,6 @@ typedef struct expresslrs_mod_settings_s
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
-
-// The config mode only allows a maximum of 2 actions per button
-#define MAX_BUTTON_ACTIONS  2
 
 // Limited to 16 possible ACTIONs by config storage currently
 typedef enum : uint8_t {

@@ -113,9 +113,8 @@ bool connectionHasModelMatch;
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
-uint8_t MasterUID[6];                       // The definitive user UID
 uint8_t UID[6];                             // The currently running UID
-uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
+const uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)
 {
@@ -165,25 +164,17 @@ void initUID()
 {
     // default until first sync packet calculates it
     ExpressLRS_currTlmDenom = 1;
-    if (firmwareOptions.hasUID)
-    {
-        memcpy(MasterUID, firmwareOptions.uid, sizeof(MasterUID));
-    }
-    else
-    {
-    #ifdef PLATFORM_ESP32
-        esp_err_t WiFiErr = esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
-    #elif PLATFORM_STM32
-        MasterUID[0] = (uint8_t)HAL_GetUIDw0();
-        MasterUID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
-        MasterUID[2] = (uint8_t)HAL_GetUIDw1();
-        MasterUID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
-        MasterUID[4] = (uint8_t)HAL_GetUIDw2();
-        MasterUID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
-    #endif
-    }
-    memcpy(UID, MasterUID, sizeof(UID));
-    OtaUpdateCrcInitFromUid();
+    // Generate a default UID that can be used if clean install
+#ifdef PLATFORM_ESP32
+    esp_err_t WiFiErr = esp_read_mac(UID, ESP_MAC_WIFI_STA);
+#elif PLATFORM_STM32
+    UID[0] = (uint8_t)HAL_GetUIDw0();
+    UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
+    UID[2] = (uint8_t)HAL_GetUIDw1();
+    UID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
+    UID[4] = (uint8_t)HAL_GetUIDw2();
+    UID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+#endif
 }
 
 bool ICACHE_RAM_ATTR isDualRadio()

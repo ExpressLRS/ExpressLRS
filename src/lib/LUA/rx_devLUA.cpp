@@ -6,9 +6,7 @@
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern void reconfigureSerial();
-
-extern bool InLoanBindingMode;
-extern bool returnModelFromLoan;
+extern bool BindingModeRequest;
 
 static char modelString[] = "000";
 #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -131,21 +129,11 @@ static struct luaItem_command luaSetFailsafe = {
 
 //---------------------------- Output Mapping -----------------------------
 
-//---------------------------- Model Loan Out -----------------------------
-
-static struct luaItem_command luaLoanModel = {
-    {"Loan Model", CRSF_COMMAND},
+static struct luaItem_command luaBindMode = {
+    {"Enter Bind Mode", CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
-
-static struct luaItem_command luaReturnModel = {
-    {"Return Model", CRSF_COMMAND},
-    lcsIdle, // step
-    STR_EMPTYSPACE
-};
-
-//---------------------------- Model Loan Out -----------------------------
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
@@ -374,20 +362,7 @@ static void registerLuaParameters()
   luadevGeneratePowerOpts(&luaTlmPower);
   registerLUAParameter(&luaTlmPower, &luaparamSetPower);
 #endif
-  registerLUAParameter(&luaLoanModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
-    if (arg == 6) {
-      deferExecution(200, [](){ InLoanBindingMode = true; });
-    }
-    sendLuaCommandResponse(&luaLoanModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
-  });
-  registerLUAParameter(&luaReturnModel, [](struct luaPropertiesCommon* item, uint8_t arg){
-    // Do it when polling for status i.e. going back to idle, because we're going to lose connection to the TX
-    if (arg == 6) {
-      deferExecution(200, []() { returnModelFromLoan = true; });
-    }
-    sendLuaCommandResponse(&luaReturnModel, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Sending..." : "");
-  });
+
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
@@ -400,6 +375,14 @@ static void registerLuaParameters()
     registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
   }
 #endif
+
+  registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+    // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
+    if (arg == lcsQuery) {
+      deferExecution(200, [](){ BindingModeRequest = true; });
+    }
+    sendLuaCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
+  });
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);

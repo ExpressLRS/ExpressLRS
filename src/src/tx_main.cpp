@@ -939,7 +939,8 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
+  const uint8_t * const uid = config.GetUID();
+  memcpy(&MSPDataPackage[1], &uid[2], 4);
   BindingSendCount = 0;
   MspSender.ResetState();
   MspSender.SetDataToTransmit(MSPDataPackage, 5);
@@ -991,7 +992,7 @@ void ExitBindingMode()
   MspSender.ResetState();
 
   // Reset UID to defined values
-  memcpy(UID, MasterUID, UID_LEN);
+  memcpy(UID, config.GetUID(), UID_LEN);
   OtaUpdateCrcInitFromUid();
 
   InBindingMode = false;

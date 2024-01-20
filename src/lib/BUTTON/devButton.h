@@ -23,7 +23,8 @@ typedef void (*ButtonAction_fn)();
     } action_t;
 
     void registerButtonFunction(action_e action, ButtonAction_fn function);
-
+    size_t button_GetActionCnt();
 #else
     inline void registerButtonFunction(uint8_t action, ButtonAction_fn function) {}
+    inline size_t button_GetActionCnt() { return 0; }
 #endif

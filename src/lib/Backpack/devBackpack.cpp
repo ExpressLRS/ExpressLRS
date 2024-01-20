@@ -131,12 +131,9 @@ void BackpackBinding()
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_ELRS_BIND;
-    packet.addByte(MasterUID[0]);
-    packet.addByte(MasterUID[1]);
-    packet.addByte(MasterUID[2]);
-    packet.addByte(MasterUID[3]);
-    packet.addByte(MasterUID[4]);
-    packet.addByte(MasterUID[5]);
+    const uint8_t * const uid = config.GetUID();
+    for (unsigned b=0; b<UID_LEN; ++b)
+        packet.addByte(uid[b]);
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
@@ -199,7 +196,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         // Backpack telem is off
         return;
     }
-    
+
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
@@ -211,7 +208,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         ERRLN("CRSF frame exceeds max length");
         return;
     }
-    
+
     for (uint8_t i = 0; i < size; ++i)
     {
       packet.addByte(data[i]);

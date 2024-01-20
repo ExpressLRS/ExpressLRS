@@ -249,12 +249,37 @@ static void HandleReset(AsyncWebServerRequest *request)
   rebootTime = millis() + 100;
 }
 
+/**
+ * @brief: Copy uid to config if changed, and always remove it from the json
+*/
+static void JsonUidToConfig(JsonVariant &json)
+{
+  JsonArray juid = json["uid"].as<JsonArray>();
+  size_t juidLen = constrain(juid.size(), 0, UID_LEN);
+  uint8_t newUid[UID_LEN] = { 0 };
+
+  // Copy only as many bytes as were included, right-justified
+  // This supports 6-digit UID as well as 4-digit (OTA bound) UID
+  copyArray(juid, &newUid[UID_LEN-juidLen], juidLen);
+
+  if (memcmp(newUid, config.GetUID(), UID_LEN) != 0)
+  {
+    config.SetUID(newUid);
+    config.Commit();
+  }
+
+  json.remove("uid");
+}
+
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
     request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
     return;
   }
+
+  JsonUidToConfig(json);
+
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
   request->send(200);
@@ -287,7 +312,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   {
     const tx_button_color_t *buttonColor = config.GetButtonActions(button);
     json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
-    for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+    for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
     {
       json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
       json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor->val.actions[pos].count;
@@ -326,7 +351,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   }
 #endif
   JsonArray uid = json["config"].createNestedArray("uid");
-  copyArray(UID, sizeof(UID), uid);
+  copyArray(config.GetUID(), UID_LEN, uid);
   if (!exportMode)
   {
     json["config"]["ssid"] = station_ssid;
@@ -360,15 +385,15 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["reg_domain"] = getRegulatoryDomain();
 
     #if defined(TARGET_RX)
-    if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
+    if (config.GetIsBound())
+      json["config"]["uidtype"] = "Bound";
     else
-    #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
-    #if defined(TARGET_RX)
-    else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
-    else json["config"]["uidtype"] = "Not set";
+      json["config"]["uidtype"] = "Not Bound";
     #else
-    else json["config"]["uidtype"] = "Not set (using MAC address)";
+`   if (firmwareOptions.hasUID)
+      json["config"]["uidtype"] = "Bind Phrase";
+    else
+      json["config"]["uidtype"] = "Hardware";
     #endif
     json["config"]["has-highpower"] = (MaxPower != HighPower);
   }
@@ -386,7 +411,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     for (size_t button=0 ; button<array.size() ; button++)
     {
       tx_button_color_t action;
-      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+      for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
       {
         action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
         action.val.actions[pos].count = array[button]["action"][pos]["count"];
@@ -1224,9 +1249,11 @@ static int timeout()
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
+    DBGLN("past WIFI interval=%d prevent=%d con=%d", firmwareOptions.wifi_auto_on_interval, webserverPreventAutoStart, connectionState);
     return (60000 - firmwareOptions.wifi_auto_on_interval);
   }
   #endif
+  DBGLN("NEVER WIFI interval=%d prevent=%d con=%d", firmwareOptions.wifi_auto_on_interval, webserverPreventAutoStart, connectionState);
   return DURATION_NEVER;
 }
 

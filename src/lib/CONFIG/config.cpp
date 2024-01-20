@@ -705,12 +705,16 @@ void RxConfig::Load()
 
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)
+    {
+        CheckUpdateFlashedUid(false);
         return;
+    }
 
     // Can't upgrade from version <4, or when flashing a previous version, just use defaults.
     if (version < 4 || version > RX_CONFIG_VERSION)
     {
         SetDefaults(true);
+        CheckUpdateFlashedUid(true);
         return;
     }
 
@@ -720,8 +724,25 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7();
+    UpgradeEepromV8();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
+    Commit();
+}
+
+void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
+{
+    // No binding phrase flashed, nothing to do
+    if (!firmwareOptions.hasUID)
+        return;
+    // If already copied binding info, do not replace
+    if (!skipDescrimCheck && m_config.flash_discriminator == flash_discriminator)
+        return;
+
+    // Save the new UID along with this discriminator to prevent resetting every boot
+    SetUID(firmwareOptions.uid);
+    m_config.flash_discriminator = flash_discriminator;
+
     Commit();
 }
 
@@ -742,7 +763,8 @@ void RxConfig::UpgradeEepromV4()
 
     if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
     {
-        m_config.isBound = v4Config.isBound;
+        //BRY!!
+        //m_config.isBound = v4Config.isBound;
         m_config.modelId = v4Config.modelId;
         memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
         #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -778,8 +800,9 @@ void RxConfig::UpgradeEepromV5()
     if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
     {
         memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
-        m_config.vbatScale = v5Config.vbatScale;
-        m_config.isBound = v5Config.isBound;
+        m_config.vbat.scale = v5Config.vbatScale;
+        //BRY!!
+        //m_config.isBound = v5Config.isBound;
         m_config.power = v5Config.power;
         m_config.antennaMode = v5Config.antennaMode;
         m_config.forceTlmOff = v5Config.forceTlmOff;
@@ -813,8 +836,9 @@ void RxConfig::UpgradeEepromV6()
     if ((v6Config.version & ~CONFIG_MAGIC_MASK) == 6)
     {
         memcpy(m_config.uid, v6Config.uid, sizeof(v6Config.uid));
-        m_config.vbatScale = v6Config.vbatScale;
-        m_config.isBound = v6Config.isBound;
+        m_config.vbat.scale = v6Config.vbatScale;
+        //BRY!!
+        //m_config.isBound = v6Config.isBound;
         m_config.power = v6Config.power;
         m_config.antennaMode = v6Config.antennaMode;
         m_config.forceTlmOff = v6Config.forceTlmOff;
@@ -830,8 +854,6 @@ void RxConfig::UpgradeEepromV6()
     }
 }
 
-// ========================================================
-// V7 Upgrade
 static void PwmConfigV7(rx_config_pwm_t * const current)
 {
     if (current->val.mode > somOnOff)
@@ -855,7 +877,45 @@ void RxConfig::UpgradeEepromV7()
     #endif
 }
 
-// ========================================================
+void RxConfig::UpgradeEepromV8()
+{
+    rx8_config_t v8Config;
+    m_eeprom->Get(0, v8Config);
+    if ((v8Config.version & ~CONFIG_MAGIC_MASK) == 8)
+    {
+        // Convert to traditional binding
+        // On loan? Now you own
+        if (v8Config.onLoan)
+        {
+            memcpy(m_config.uid, v8Config.loanUID, UID_LEN);
+        }
+        // Compiled in UID? Bind to that
+        else if (firmwareOptions.hasUID)
+        {
+            memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
+            m_config.flash_discriminator = flash_discriminator;
+        }
+        else if (v8Config.isBound)
+        {
+            // keep binding
+        }
+        else
+        {
+            // No bind
+            memset(m_config.uid, 0, UID_LEN);
+        }
+    }
+}
+
+bool RxConfig::GetIsBound() const
+{
+    // Return true if any of the last 4 UID bytes is non-zero
+    // i.e. not bound is an all zero UID
+    for (unsigned b=2; b<UID_LEN; ++b)
+        if (m_config.uid[b] != 0)
+            return true;
+    return false;
+}
 
 void
 RxConfig::Commit()
@@ -875,41 +935,11 @@ RxConfig::Commit()
 
 // Setters
 void
-RxConfig::SetIsBound(bool isBound)
-{
-    if (m_config.isBound != isBound)
-    {
-        m_config.isBound = isBound;
-        m_modified = true;
-    }
-}
-
-void
 RxConfig::SetUID(uint8_t* uid)
 {
     for (uint8_t i = 0; i < UID_LEN; ++i)
     {
         m_config.uid[i] = uid[i];
-    }
-    m_modified = true;
-}
-
-void
-RxConfig::SetOnLoan(bool isLoaned)
-{
-    if (m_config.onLoan != isLoaned)
-    {
-        m_config.onLoan = isLoaned;
-        m_modified = true;
-    }
-}
-
-void
-RxConfig::SetOnLoanUID(uint8_t* uid)
-{
-    for (uint8_t i = 0; i < UID_LEN; ++i)
-    {
-        m_config.loanUID[i] = uid[i];
     }
     m_modified = true;
 }
@@ -976,7 +1006,7 @@ RxConfig::SetDefaults(bool commit)
     {
         uint8_t mode = som50Hz;
         // setup defaults for hardware defined I2C pins that are also IO pins
-        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
+        if (ch < (unsigned int)GPIO_PIN_PWM_OUTPUTS_COUNT)
         {
             if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
             {
@@ -1000,6 +1030,8 @@ RxConfig::SetDefaults(bool commit)
 
     if (commit)
     {
+        // Prevent rebinding to the flashed UID
+        m_config.flash_discriminator = flash_discriminator;
         m_modified = true;
         Commit();
     }

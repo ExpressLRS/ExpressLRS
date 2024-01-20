@@ -228,43 +228,36 @@ function init() {
 
 function updateUIDType(uidtype) {
   let bg = '';
-  let fg = '';
-  let text = uidtype;
   let desc = '';
-  if (!uidtype || uidtype === 'Not set') {
-    bg = '#D50000';  // default 'red' for 'Not set'
-    fg = 'white';
-    text = 'Not set';
+
+  if (!uidtype || uidtype === 'Hardware')
+  {
+    bg = '#D50000';  // red/white
+    uidtype = 'Hardware';
     desc = 'The default binding UID from the device address will be used';
   }
-  if (uidtype === 'Flashed') {
-    bg = '#1976D2'; // blue/white
-    fg = 'white';
-    desc = 'The binding UID was generated from a binding phrase set at flash time';
-  }
-  if (uidtype === 'Overridden') {
-    bg = '#689F38'; // green
-    fg = 'black';
-    desc = 'The binding UID has been generated from a bind-phrase previously entered into the "binding phrase" field above';
-  }
-  if (uidtype === 'Traditional') {
-    bg = '#D50000'; // red
-    fg = 'white';
-    desc = 'The binding UID has been set using traditional binding method i.e. button or 3-times power cycle and bound via the Lua script';
-  }
-  if (uidtype === 'Modified') {
+  else if (uidtype === 'Modified')
+  {
     bg = '#7c00d5'; // purple
-    fg = 'white';
     desc = 'The binding UID has been modified, but not yet saved';
   }
-  if (uidtype === 'On loan') {
+  else if (_('uid').value.endsWith('0,0,0,0'))
+  {
     bg = '#FFA000'; // amber
-    fg = 'black';
-    desc = 'The binding UID has been set using the model-loan feature';
+    desc = 'This receiver is unbound and will boot to binding mode';
   }
+  else
+  {
+    bg = '#1976D2'; // blue/white
+    if (uidtype == 'Bound')
+      desc = 'This receiver is bound and will boot waiting for connection';
+    else // 'Bind Phrase'
+      desc = 'This transmitter is flashed with binding phrase';
+  }
+
   _('uid-type').style.backgroundColor = bg;
-  _('uid-type').style.color = fg;
-  _('uid-type').textContent = text;
+  _('uid-type').style.color = 'white';
+  _('uid-type').textContent = uidtype;
   _('uid-text').textContent = desc;
 }
 
@@ -663,7 +656,7 @@ function submitOptions(e) {
           cancelText: 'Close'
         }).then((e) => {
           originalUID = _('uid').value;
-          originalUIDType = 'Flashed';
+          originalUIDType = 'Bound';
           _('phrase').value = '';
           updateUIDType(originalUIDType);
           if (e === 'confirm') {
@@ -973,7 +966,25 @@ md5 = function() {
   return calcMD5;
 }();
 
+function isValidUidByte(s) {
+  let f = parseFloat(s);
+  return !isNaN(f) && isFinite(s) && Number.isInteger(f) && f >= 0 && f < 256;
+}
+
 function uidBytesFromText(text) {
+  // If text is 4-6 numbers separated with [commas]/[spaces] use as a literal UID
+  // This is a strict parser to not just extract numbers from text, but only accept if text is only UID bytes
+  if (/^[0-9, ]+$/.test(text))
+  {
+    let asArray = text.split(',').filter(isValidUidByte).map(Number);
+    if (asArray.length >= 4 && asArray.length <= 6)
+    {
+      while (asArray.length < 6)
+        asArray.unshift(0);
+      return asArray;
+    }
+  }
+
   const bindingPhraseFull = `-DMY_BINDING_PHRASE="${text}"`;
   const bindingPhraseHashed = md5(bindingPhraseFull);
   return bindingPhraseHashed.subarray(0, 6);
@@ -988,7 +999,7 @@ function initBindingPhraseGen() {
       updateUIDType(originalUIDType);
     }
     else {
-      uid.value = uidBytesFromText(text);
+      uid.value = uidBytesFromText(text.trim());
       updateUIDType('Modified');
     }
   }

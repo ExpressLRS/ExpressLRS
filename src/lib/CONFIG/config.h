@@ -16,10 +16,13 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   8U
+#define RX_CONFIG_VERSION   9U
 #define UID_LEN             6
 
 #if defined(TARGET_TX)
+
+#define MAX_BUTTON_ACTIONS  2
+
 typedef enum {
     HT_OFF,
     HT_ON,
@@ -64,7 +67,7 @@ typedef struct {
 typedef union {
     struct {
         uint8_t color;                  // RRRGGGBB
-        button_action_t actions[2];
+        button_action_t actions[MAX_BUTTON_ACTIONS];
         uint8_t unused;
     } val;
     uint32_t raw;
@@ -121,6 +124,7 @@ public:
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     bool     GetBackpackTlmEnabled() const { return m_config.backpackTlmEnabled; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
+    size_t GetButtonMaxActionCnt() const { return MAX_BUTTON_ACTIONS; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
     uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }
@@ -195,10 +199,13 @@ typedef union {
 typedef struct {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
-    uint8_t     loanUID[UID_LEN];
-    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
-    uint8_t     isBound:1,
-                onLoan:1,
+    uint32_t    flash_discriminator;
+    struct {
+        uint16_t    scale;          // FUTURE: Override compiled vbat scale
+        int16_t     offset;         // FUTURE: Override comiled vbat offset
+    } vbat;
+    uint8_t     unused_isBound:1,
+                unused_onLoan:1,
                 power:4,
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
@@ -220,10 +227,8 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound() const { return firmwareOptions.hasUID || m_config.isBound; }
+    bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
-    bool GetOnLoan() const { return m_config.onLoan; }
-    const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
@@ -238,10 +243,7 @@ public:
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
 
     // Setters
-    void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
-    void SetOnLoan(bool loaned);
-    void SetOnLoanUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);
@@ -258,10 +260,12 @@ public:
     void SetFailsafeMode(eFailsafeMode failsafeMode);
 
 private:
+    void CheckUpdateFlashedUid(bool skipDescrimCheck);
     void UpgradeEepromV4();
     void UpgradeEepromV5();
     void UpgradeEepromV6();
     void UpgradeEepromV7();
+    void UpgradeEepromV8();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

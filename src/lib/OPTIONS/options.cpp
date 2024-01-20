@@ -24,6 +24,11 @@ const char *wifi_ap_ssid = "ExpressLRS RX";
 const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
+// Discriminator value used to determine if the device has been reflashed and therefore
+// the SPIFSS settings are obsolete and the flashed settings should be used in preference
+// If STM32, this contains part of the flashed UID used to determine if bind phrase flashed
+uint32_t flash_discriminator;
+
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
@@ -162,6 +167,8 @@ firmware_options_t firmwareOptions;
 bool options_init()
 {
     firmwareOptions = flashedOptions;
+    // Use the last 4 digits of the UID as the flash discriminator
+    flash_discriminator = (uint32_t *)&flashedOptions.uid[2];
     return true;
 }
 
@@ -183,10 +190,6 @@ char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
 uint32_t logo_image;
 
-// Discriminator value used to determine if the device has been reflashed and therefore
-// the SPIFSS settings are obsolete and the flashed settings should be used in preference
-uint32_t flash_discriminator;
-
 firmware_options_t firmwareOptions;
 
 // hardware_init prototype here as it is called by options_init()
@@ -202,11 +205,6 @@ void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
-    if (firmwareOptions.hasUID)
-    {
-        JsonArray uid = doc.createNestedArray("uid");
-        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
-    }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
         doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;

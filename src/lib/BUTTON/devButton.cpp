@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "button.h"
 #include "config.h"
+#include "helpers.h"
 #include "CRSF.h"
 
 #ifndef GPIO_BUTTON_INVERTED
@@ -29,9 +30,10 @@ static constexpr struct {
     bool pressType;
     uint8_t count;
     action_e action;
-} button_actions[2] = {
-    {true, 3, ACTION_START_WIFI},
-    {true, 7, ACTION_RESET_REBOOT}
+} button_actions[] = {
+    {true, 1, ACTION_BIND},
+    {true, 7, ACTION_START_WIFI},
+    {true, 14, ACTION_RESET_REBOOT}
 };
 #endif
 
@@ -42,13 +44,22 @@ void registerButtonFunction(action_e action, ButtonAction_fn function)
     actions[action] = function;
 }
 
+size_t button_GetActionCnt()
+{
+#if defined(TARGET_RX)
+    return ARRAY_SIZE(button_actions);
+#else
+    return config.GetButtonMaxActionCnt();
+#endif
+}
+
 static void handlePress(uint8_t button, bool longPress, uint8_t count)
 {
     DBGLN("handlePress(%u, %u, %u)", button, (uint8_t)longPress, count);
 #if defined(TARGET_TX)
     const button_action_t *button_actions = config.GetButtonActions(button)->val.actions;
 #endif
-    for (int i=0 ; i<MAX_BUTTON_ACTIONS ; i++)
+    for (unsigned i=0 ; i<button_GetActionCnt() ; i++)
     {
         if (button_actions[i].action != ACTION_NONE && button_actions[i].pressType == longPress && button_actions[i].count == count-1)
         {
