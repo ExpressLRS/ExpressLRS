@@ -51,6 +51,26 @@ const char *rate_string[] = {
     "100 Full",
     "50Hz"
 };
+#elif defined(RADIO_LR1121)
+static const char *rate_string[] = {
+    // Dual
+    "X150Hz",
+    "X100 Full",
+    // 900
+    "250Hz",
+    "200 Full",
+    "200Hz",
+    "100 Full",
+    "100Hz",
+    "50Hz",
+    // 2.4
+    "500Hz",
+    "333 Full",
+    "250Hz",
+    "150Hz",
+    "100 Full",
+    "50Hz"
+};
 #else
 static const char *rate_string[] = {
     "200Hz",
@@ -227,6 +247,9 @@ const char *Display::getValue(menu_item_t menu, uint8_t value_index)
     switch (menu)
     {
     case STATE_PACKET:
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly.  This is also untested on a display with a joystick.
+        value_index = (value_index + 4) % 14; // 14 = RATE_MAX
+#endif
         return rate_string[value_index];
     case STATE_SWITCH:
         if (OtaIsFullRes)

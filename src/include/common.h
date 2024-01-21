@@ -99,7 +99,8 @@ typedef enum : uint8_t
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
     RATE_DVDA_50HZ,
-} expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    RATE_LORA_200HZ_8CH,
+} expresslrs_RFrates_e;
 
 enum {
     RADIO_TYPE_SX127x_LORA,
@@ -219,7 +220,7 @@ enum eFailsafeMode : uint8_t
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 11
+#define RATE_MAX 14
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern LR1121Driver Radio;
