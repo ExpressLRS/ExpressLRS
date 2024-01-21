@@ -113,6 +113,14 @@ typedef enum : uint8_t
     TX_RADIO_MODE_SWITCH = 3
 } tx_radio_mode_e;
 
+typedef enum : uint8_t
+{
+    TX_NORMAL_MODE      = 0,
+    TX_AIRPORT_MODE     = 1,
+    TX_MAVLINK_MODE     = 2,
+    TX_PARAM_DL_MODE    = 3
+} tx_transmission_mode_e;
+
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
 
