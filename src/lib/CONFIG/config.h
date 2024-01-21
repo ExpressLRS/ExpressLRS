@@ -17,11 +17,11 @@
 
 #define TX_CONFIG_VERSION   7U
 #define RX_CONFIG_VERSION   9U
-#define UID_LEN             6
 
 #if defined(TARGET_TX)
 
-#define MAX_BUTTON_ACTIONS  2
+#define CONFIG_TX_BUTTON_ACTION_CNT 2
+#define CONFIG_TX_MODEL_CNT         64
 
 typedef enum {
     HT_OFF,
@@ -67,7 +67,7 @@ typedef struct {
 typedef union {
     struct {
         uint8_t color;                  // RRRGGGBB
-        button_action_t actions[MAX_BUTTON_ACTIONS];
+        button_action_t actions[CONFIG_TX_BUTTON_ACTION_CNT];
         uint8_t unused;
     } val;
     uint32_t raw;
@@ -80,7 +80,7 @@ typedef struct {
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
-    model_config_t  model_config[64];
+    model_config_t  model_config[CONFIG_TX_MODEL_CNT];
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
@@ -124,7 +124,6 @@ public:
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
     bool     GetBackpackTlmEnabled() const { return m_config.backpackTlmEnabled; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
-    size_t GetButtonMaxActionCnt() const { return MAX_BUTTON_ACTIONS; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
     uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }

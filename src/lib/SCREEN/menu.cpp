@@ -18,7 +18,6 @@ extern Thermal thermal;
 extern FiniteStateMachine state_machine;
 
 extern void EnterBindingMode();
-extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;

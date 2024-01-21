@@ -277,7 +277,6 @@ extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern void EnterBindingMode();
-extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;

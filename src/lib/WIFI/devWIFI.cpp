@@ -65,7 +65,6 @@ static char station_password[65];
 
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
-extern bool InBindingMode;
 
 static wl_status_t laststatus = WL_IDLE_STATUS;
 volatile WiFiMode_t wifiMode = WIFI_OFF;
@@ -85,9 +84,12 @@ static IPAddress ipAddress;
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
 #endif
 
+#if defined(PLATFORM_ESP8266)
+static bool scanComplete = false;
+#endif
+
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
-static bool scanComplete = false;
 static constexpr uint32_t STALE_WIFI_SCAN = 20000;
 static uint32_t lastScanTimeMS = 0;
 
@@ -254,6 +256,7 @@ static void HandleReset(AsyncWebServerRequest *request)
 */
 static void JsonUidToConfig(JsonVariant &json)
 {
+#if defined(TARGET_RX)
   JsonArray juid = json["uid"].as<JsonArray>();
   size_t juidLen = constrain(juid.size(), 0, UID_LEN);
   uint8_t newUid[UID_LEN] = { 0 };
@@ -269,6 +272,7 @@ static void JsonUidToConfig(JsonVariant &json)
   }
 
   json.remove("uid");
+#endif
 }
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
@@ -283,6 +287,24 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
   request->send(200);
+}
+
+static const char *GetConfigUidType(JsonDocument &json)
+{
+#if defined(TARGET_RX)
+  if (config.GetIsBound())
+    return "Bound";
+  return "Not Bound";
+#else
+  if (firmwareOptions.hasUID)
+  {
+    if (json["options"]["customised"] | false)
+      return "Overridden";
+    else
+      return "Flashed";
+  }
+  return "Not set (using MAC address)";
+#endif
 }
 
 static void GetConfiguration(AsyncWebServerRequest *request)
@@ -301,6 +323,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     deserializeJson(options, getOptions());
     json["options"] = options;
   }
+
+  JsonArray uid = json["config"].createNestedArray("uid");
+  copyArray(UID, UID_LEN, uid);
 
 #if defined(TARGET_TX)
   int button_count = 0;
@@ -334,7 +359,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["backpack"]["dvr-stop-delay"] = config.GetDvrStopDelay();
     json["config"]["backpack"]["dvr-aux-channel"] = config.GetDvrAux();
 
-    for (int model = 0 ; model < 64 ; model++)
+    for (int model = 0 ; model < CONFIG_TX_MODEL_CNT ; model++)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
@@ -349,9 +374,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       modelJson["tx-antenna"] = modelConfig.txAntenna;
     }
   }
-#endif
-  JsonArray uid = json["config"].createNestedArray("uid");
-  copyArray(config.GetUID(), UID_LEN, uid);
+#endif /* TARGET_TX */
+
   if (!exportMode)
   {
     json["config"]["ssid"] = station_ssid;
@@ -383,19 +407,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
     json["config"]["reg_domain"] = getRegulatoryDomain();
-
-    #if defined(TARGET_RX)
-    if (config.GetIsBound())
-      json["config"]["uidtype"] = "Bound";
-    else
-      json["config"]["uidtype"] = "Not Bound";
-    #else
-`   if (firmwareOptions.hasUID)
-      json["config"]["uidtype"] = "Bind Phrase";
-    else
-      json["config"]["uidtype"] = "Hardware";
-    #endif
     json["config"]["has-highpower"] = (MaxPower != HighPower);
+    json["config"]["uidtype"] = GetConfigUidType(json);
   }
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -1249,11 +1262,9 @@ static int timeout()
       return DURATION_IMMEDIATELY;
     }
     pastAutoInterval = true;
-    DBGLN("past WIFI interval=%d prevent=%d con=%d", firmwareOptions.wifi_auto_on_interval, webserverPreventAutoStart, connectionState);
     return (60000 - firmwareOptions.wifi_auto_on_interval);
   }
   #endif
-  DBGLN("NEVER WIFI interval=%d prevent=%d con=%d", firmwareOptions.wifi_auto_on_interval, webserverPreventAutoStart, connectionState);
   return DURATION_NEVER;
 }
 

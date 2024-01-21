@@ -168,7 +168,7 @@ bool options_init()
 {
     firmwareOptions = flashedOptions;
     // Use the last 4 digits of the UID as the flash discriminator
-    flash_discriminator = (uint32_t *)&flashedOptions.uid[2];
+    flash_discriminator = flashedOptions.uid[2] << 24 | flashedOptions.uid[3] << 16 | flashedOptions.uid[4] << 8 | flashedOptions.uid[5];
     return true;
 }
 

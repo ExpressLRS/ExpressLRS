@@ -49,7 +49,7 @@ size_t button_GetActionCnt()
 #if defined(TARGET_RX)
     return ARRAY_SIZE(button_actions);
 #else
-    return config.GetButtonMaxActionCnt();
+    return CONFIG_TX_BUTTON_ACTION_CNT;
 #endif
 }
 

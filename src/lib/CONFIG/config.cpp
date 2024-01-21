@@ -183,7 +183,7 @@ void TxConfig::Load()
             m_config.backpackTlmEnabled = value8;
     }
 
-    for(unsigned i=0; i<64; i++)
+    for(unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         char model[10] = "model";
         itoa(i, model+5, 10);
@@ -285,7 +285,7 @@ void TxConfig::UpgradeEepromV6ToV7()
     LAZY(dvrStopDelay);
     #undef LAZY
 
-    for (unsigned i=0; i<64; i++)
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
     }
@@ -635,7 +635,7 @@ TxConfig::SetDefaults(bool commit)
     };
     m_config.buttonColors[1].raw = default_actions2.raw;
 
-    for (unsigned i=0; i<64; i++)
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         SetModelId(i);
         #if defined(RADIO_SX127X)

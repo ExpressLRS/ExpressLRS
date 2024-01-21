@@ -212,9 +212,7 @@ static bool debugRcvrLinkstatsPending;
 static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
-
 bool BindingModeRequest = false;
-bool InBindingMode = false;
 
 void reset_into_bootloader(void);
 void EnterBindingMode();
@@ -317,11 +315,12 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     #endif
 }
 
-void SetRFLinkRate(uint8_t index) // Set speed of RF link
+void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
-    bool invertIQ = UID[5] & 0x01;
+    // Binding always uses invertIQ
+    bool invertIQ = bindMode || (UID[5] & 0x01);
 
     uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
@@ -778,7 +777,7 @@ void LostConnection(bool resumeRx)
             while(micros() - PFDloop.getIntEventTime() > 250); // time it just after the tock()
             hwTimer::stop();
         }
-        SetRFLinkRate(ExpressLRS_nextAirRateIndex); // also sets to initialFreq
+        SetRFLinkRate(ExpressLRS_nextAirRateIndex, false); // also sets to initialFreq
         // If not resumRx, Radio will be left in SX127x_OPMODE_STANDBY / SX1280_MODE_STDBY_XOSC
         if (resumeRx)
         {
@@ -1418,7 +1417,7 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     scanIndex = config.GetRateInitialIdx();
-    SetRFLinkRate(scanIndex);
+    SetRFLinkRate(scanIndex, false);
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
@@ -1451,7 +1450,7 @@ static void cycleRfMode(unsigned long now)
         RFmodeLastCycled = now;
         LastSyncPacket = now;           // reset this variable
         SendLinkStatstoFCForcedSends = 2;
-        SetRFLinkRate(scanIndex % RATE_MAX); // switch between rates
+        SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
         LQCalc.reset();
         LQCalcDVDA.reset();
         // Display the current air rate to the user as an indicator something is happening
@@ -1469,7 +1468,6 @@ static void updateBindingMode()
     // Exit binding mode if the config has been modigied, indicating UID has been set
     if (InBindingMode && config.IsModified())
     {
-        DBGLN("Config is modifed?!");
         ExitBindingMode();
     }
 
@@ -1719,8 +1717,6 @@ void setup()
         SerialLogger = new NullStream();
         #endif
 
-        initUID();
-
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
 
@@ -1893,15 +1889,13 @@ void EnterBindingMode()
         return;
     }
 
-    // Set UID to special binding values
-    memcpy(UID, BindingUID, UID_LEN);
-
+    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
     OtaCrcInitializer = 0;
     InBindingMode = true;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
     Radio.SetFrequencyReg(GetInitialFreq());
     if (geminiMode)
     {

@@ -72,6 +72,8 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform, devi
     with open('hardware/targets.json') as f:
         targets = json.load(f)
 
+    config = "radiomaster.tx_2400.tx16s"
+    #config = "generic.rx_2400.plain"
     if config is not None:
         config ='.'.join(map(lambda s: f'"{s}"', config.split('.')))
         config = jmespath.search(config, targets)
