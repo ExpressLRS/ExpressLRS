@@ -123,6 +123,14 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     }
 #endif
 
+    // 6.3.2 SetTcxoMode
+    uint8_t tcxobuf[4];
+    tcxobuf[0] = LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_3_3;
+    tcxobuf[1] = 0;
+    tcxobuf[2] = 0;
+    tcxobuf[3] = 33; // 1ms delay max wait (30.52us steps).  No idea if this is a good delay :|
+    hal.WriteCommand(LR11XX_SYSTEM_SET_TCXO_MODE_OC, tcxobuf, sizeof(tcxobuf), SX12XX_Radio_All);
+
     return true;
 }
 

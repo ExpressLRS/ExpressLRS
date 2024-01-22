@@ -279,3 +279,15 @@ typedef enum
     LR11XX_RADIO_RX_DUTY_CYCLE_MODE_RX  = 0x00,  //!< LoRa/GFSK: Uses Rx for listening to packets
     LR11XX_RADIO_RX_DUTY_CYCLE_MODE_CAD = 0x01,  //!< Only in LoRa: Uses CAD to listen for over-the-air activity
 } lr11xx_radio_rx_duty_cycle_mode_t;
+
+typedef enum
+{
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_1_6 = 0x00,  //!< TCXO Supply Voltage Programming Values
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_1_7 = 0x01,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_1_8 = 0x02,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_2_2 = 0x03,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_2_4 = 0x04,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_2_7 = 0x05,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_3_0 = 0x06,
+    LR11XX_RADIO_TCXO_SUPPLY_VOLTAGE_3_3 = 0x07,
+} lr11xx_radio_tcxo_mode_t;
