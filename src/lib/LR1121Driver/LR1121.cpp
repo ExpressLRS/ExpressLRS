@@ -181,19 +181,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
-    // SKY13588-460LF - Development boards
-    // uint8_t buf[8];
-    // buf[0] = 0b00000011; // RfswEnable
-    // buf[1] = 0; // RfSwStbyCfg
-    // buf[2] = 0b00000001; // RfSwRxCfg - DIO5 HIGH, DIO6 LOW
-    // buf[3] = 0b00000011; // RfSwTxCfg
-    // buf[4] = 0b00000010; // RfSwTxHPCfg
-    // buf[5] = 0; // RfSwTxHfCfg
-    // buf[6] = 0; // 
-    // buf[7] = 0; // 
-    // hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, buf, sizeof(buf), SX12XX_Radio_All);  
-
-    // 4.2.1 SetDioAsRfSwitch
     uint8_t switchbuf[8];
     switchbuf[0] = 0b00001111; // RfswEnable
     switchbuf[1] = 0b00000000; // RfSwStbyCfg
