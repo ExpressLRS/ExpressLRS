@@ -39,7 +39,7 @@ static uint8_t checkingIndex = 0;
 static uint8_t pitMode = 0;
 static uint8_t power = 0;
 static uint8_t channel = 0;
-static uint8_t mspState = GET_VTX_TABLE_SIZE;
+static uint8_t mspState = STOP_MSPVTX;
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
@@ -352,6 +352,14 @@ void disableMspVtx(void)
     mspState = STOP_MSPVTX;
 }
 
+static void initialize()
+{
+    if (OPT_HAS_VTX_SPI)
+    {
+        mspState = GET_VTX_TABLE_SIZE;
+    }
+}
+
 static int event(void)
 {
     if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
@@ -379,8 +387,8 @@ static int timeout(void)
 }
 
 device_t MSPVTx_device = {
-    .initialize = NULL,
-    .start = NULL,
+    .initialize = initialize,
+    .start = nullptr,
     .event = event,
     .timeout = timeout
 };
