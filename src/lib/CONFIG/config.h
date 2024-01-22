@@ -52,8 +52,7 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                linkMode:2,
-                _unused:1;
+                linkMode:3;
 } model_config_t;
 
 typedef struct {
