@@ -1030,7 +1030,7 @@ RxConfig::SetDefaults(bool commit)
 
     if (commit)
     {
-        // Prevent rebinding to the flashed UID
+        // Prevent rebinding to the flashed UID on first boot
         m_config.flash_discriminator = flash_discriminator;
         m_modified = true;
         Commit();

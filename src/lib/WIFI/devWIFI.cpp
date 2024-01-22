@@ -269,6 +269,8 @@ static void JsonUidToConfig(JsonVariant &json)
   {
     config.SetUID(newUid);
     config.Commit();
+    // Also copy it to the global UID in case the page is reloaded
+    memcpy(UID, newUid, UID_LEN);
   }
 
   json.remove("uid");

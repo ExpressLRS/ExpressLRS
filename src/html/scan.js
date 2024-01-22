@@ -253,15 +253,20 @@ function updateUIDType(uidtype) {
     bg = '#7c00d5'; // purple
     desc = 'The binding UID has been modified, but not yet saved';
   }
-  else if (_('uid').value.endsWith('0,0,0,0')) // RX
+  else // RX
   {
-    bg = '#FFA000'; // amber
-    desc = 'This receiver is unbound and will boot to binding mode';
-  }
-  else if (uidtype === 'Bound') // RX
-  {
-    bg = '#1976D2'; // blue/white
-    desc = 'This receiver is bound and will boot waiting for connection';
+    if (_('uid').value.endsWith('0,0,0,0'))
+    {
+      bg = '#FFA000'; // amber
+      uidtype = 'Not bound';
+      desc = 'This receiver is unbound and will boot to binding mode';
+    }
+    else
+    {
+      bg = '#1976D2'; // blue/white
+      uidtype = 'Bound';
+      desc = 'This receiver is bound and will boot waiting for connection';
+    }
   }
 
   _('uid-type').style.backgroundColor = bg;
