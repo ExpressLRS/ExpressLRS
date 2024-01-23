@@ -1381,6 +1381,8 @@ static void setupTarget()
 
 static void setupBindingFromConfig()
 {
+    // VolatileBind's only function is to prevent loading the stored UID into RAM
+    // which makes the RX boot into bind mode every time
     if (config.GetIsBound())
     {
         memcpy(UID, config.GetUID(), UID_LEN);
@@ -1487,7 +1489,7 @@ static void updateBindingMode()
     }
 
     // If the eeprom is indicating that we're not bound, enter binding
-    else if (!config.GetIsBound() && !InBindingMode)
+    else if (!UID_IS_BOUND(UID) && !InBindingMode)
     {
         DBGLN("RX has not been bound, enter binding mode...");
         EnterBindingMode();

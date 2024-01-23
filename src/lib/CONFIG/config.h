@@ -203,7 +203,7 @@ typedef struct {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
         int16_t     offset;         // FUTURE: Override comiled vbat offset
     } vbat;
-    uint8_t     unused_isBound:1,
+    uint8_t     volatileBind:1,     // 0=Persistent 1=Volatile
                 unused_onLoan:1,
                 power:4,
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
@@ -240,6 +240,7 @@ public:
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
+    bool GetVolatileBind() const { return m_config.volatileBind; }
 
     // Setters
     void SetUID(uint8_t* uid);
@@ -257,6 +258,7 @@ public:
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
+    void SetVolatileBind(bool value);
 
 private:
     void CheckUpdateFlashedUid(bool skipDescrimCheck);

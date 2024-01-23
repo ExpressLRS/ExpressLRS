@@ -909,12 +909,7 @@ void RxConfig::UpgradeEepromV8()
 
 bool RxConfig::GetIsBound() const
 {
-    // Return true if any of the last 4 UID bytes is non-zero
-    // i.e. not bound is an all zero UID
-    for (unsigned b=2; b<UID_LEN; ++b)
-        if (m_config.uid[b] != 0)
-            return true;
-    return false;
+    return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
 }
 
 void
@@ -1002,11 +997,11 @@ RxConfig::SetDefaults(bool commit)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
+    for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
         // setup defaults for hardware defined I2C pins that are also IO pins
-        if (ch < (unsigned int)GPIO_PIN_PWM_OUTPUTS_COUNT)
+        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
         {
             if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
             {
@@ -1119,4 +1114,14 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
         m_modified = true;
     }
 }
+
+void RxConfig::SetVolatileBind(bool value)
+{
+    if (m_config.volatileBind != value)
+    {
+        m_config.volatileBind = value;
+        m_modified = true;
+    }
+}
+
 #endif

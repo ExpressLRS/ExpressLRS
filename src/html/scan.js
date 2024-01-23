@@ -222,6 +222,11 @@ function init() {
       _('modelid').value = '255';
     }
   };
+  // Start on the model tab
+  mui.tabs.activate('pane-justified-3');
+@@else:
+  // Start on the options tab
+  mui.tabs.activate('pane-justified-1');
 @@end
   initOptions();
 }
@@ -252,6 +257,11 @@ function updateUIDType(uidtype) {
   {
     bg = '#7c00d5'; // purple
     desc = 'The binding UID has been modified, but not yet saved';
+  }
+  else if (uidtype === 'Volatile') // RX
+  {
+    bg = '#FFA000'; // amber
+    desc = 'The binding UID will be cleared on boot';
   }
   else // RX
   {
@@ -339,6 +349,11 @@ function updateConfig(data, options) {
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
   _('is-airport').onchange = _('serial-protocol').onchange;
+  _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
+  _('vbind').onchange = () => {
+    _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
+  }
+  _('vbind').onchange();
 @@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
@@ -520,6 +535,7 @@ _('firmware_file').addEventListener('change', (e) => {
   uploadFile();
 });
 
+@@if isTX:
 _('fileselect').addEventListener('change', (e) => {
   const files = e.target.files || e.dataTransfer.files;
   const reader = new FileReader();
@@ -549,6 +565,7 @@ _('fileselect').addEventListener('change', (e) => {
   }
   reader.readAsText(files[0]);
 }, false);
+@@end
 
 // =========================================================
 
@@ -620,9 +637,16 @@ if (_('config')) {
           "serial-protocol": +_('serial-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
-          "force-tlm": +_('force-tlm').checked
+          "force-tlm": +_('force-tlm').checked,
+          "vbind": +_('vbind').checked,
+          "uid": _('uid').value.split(',').map(Number),
         });
-      }));
+      }, () => {
+        originalUID = _('uid').value;
+        originalUIDType = 'Bound';
+        _('phrase').value = '';
+        updateUIDType(originalUIDType);
+    }));
 }
 
 function submitOptions(e) {
@@ -669,11 +693,13 @@ function submitOptions(e) {
           confirmText: 'Reboot',
           cancelText: 'Close'
         }).then((e) => {
+@@if isTX:
           originalUID = _('uid').value;
-          originalUIDType = 'Bound';
+          originalUIDType = 'Overridden';
           _('phrase').value = '';
           updateUIDType(originalUIDType);
-          if (e === 'confirm') {
+@@end
+        if (e === 'confirm') {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/reboot');
             xhr.setRequestHeader('Content-Type', 'application/json');

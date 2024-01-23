@@ -129,6 +129,13 @@ static struct luaItem_command luaSetFailsafe = {
 
 //---------------------------- Output Mapping -----------------------------
 
+static struct luaItem_selection luaVolatileBind = {
+    {"Bind Storage", CRSF_TEXT_SELECTION},
+    0, // value
+    "Persistent;Volatile",
+    STR_EMPTYSPACE
+};
+
 static struct luaItem_command luaBindMode = {
     {"Enter Bind Mode", CRSF_COMMAND},
     lcsIdle, // step
@@ -287,7 +294,7 @@ static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
     newStep = lcsExecuting;
     msg = "Setting failsafe";
 
-    for (unsigned ch=0; ch<(unsigned)GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;
       // The value must fit into the 10 bit range of the failsafe
@@ -376,6 +383,9 @@ static void registerLuaParameters()
   }
 #endif
 
+  registerLUAParameter(&luaVolatileBind, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetVolatileBind(arg);
+  });
   registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
@@ -430,6 +440,7 @@ static int event()
     itoa(config.GetModelId(), modelString, 10);
     setLuaStringValue(&luaModelNumber, modelString);
   }
+  setLuaTextSelectionValue(&luaVolatileBind, config.GetVolatileBind());
   return DURATION_IMMEDIATELY;
 }
 

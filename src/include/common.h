@@ -111,6 +111,8 @@ typedef enum : uint8_t
 #define DYNPOWER_SNR_THRESH_NONE -127
 #define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
 #define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
+// Bound is any of the last 4 bytes nonzero (unbound is all zeroes)
+#define UID_IS_BOUND(uid) (uid[2] != 0 && uid[3] != 0 && uid[4] != 0 && uid[5] != 0)
 
 typedef struct expresslrs_rf_pref_params_s
 {

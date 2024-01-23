@@ -251,40 +251,12 @@ static void HandleReset(AsyncWebServerRequest *request)
   rebootTime = millis() + 100;
 }
 
-/**
- * @brief: Copy uid to config if changed, and always remove it from the json
-*/
-static void JsonUidToConfig(JsonVariant &json)
-{
-#if defined(TARGET_RX)
-  JsonArray juid = json["uid"].as<JsonArray>();
-  size_t juidLen = constrain(juid.size(), 0, UID_LEN);
-  uint8_t newUid[UID_LEN] = { 0 };
-
-  // Copy only as many bytes as were included, right-justified
-  // This supports 6-digit UID as well as 4-digit (OTA bound) UID
-  copyArray(juid, &newUid[UID_LEN-juidLen], juidLen);
-
-  if (memcmp(newUid, config.GetUID(), UID_LEN) != 0)
-  {
-    config.SetUID(newUid);
-    config.Commit();
-    // Also copy it to the global UID in case the page is reloaded
-    memcpy(UID, newUid, UID_LEN);
-  }
-
-  json.remove("uid");
-#endif
-}
-
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
     request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
     return;
   }
-
-  JsonUidToConfig(json);
 
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
@@ -294,6 +266,8 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 static const char *GetConfigUidType(JsonDocument &json)
 {
 #if defined(TARGET_RX)
+  if (config.GetVolatileBind())
+    return "Volatile";
   if (config.GetIsBound())
     return "Bound";
   return "Not Bound";
@@ -387,8 +361,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
+    json["config"]["vbind"] = config.GetVolatileBind();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
       json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
@@ -502,31 +477,51 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
   request->send(200);
 }
 #else
+/**
+ * @brief: Copy uid to config if changed, and always remove it from the json
+*/
+static void JsonUidToConfig(JsonVariant &json)
+{
+  JsonArray juid = json["uid"].as<JsonArray>();
+  size_t juidLen = constrain(juid.size(), 0, UID_LEN);
+  uint8_t newUid[UID_LEN] = { 0 };
+
+  // Copy only as many bytes as were included, right-justified
+  // This supports 6-digit UID as well as 4-digit (OTA bound) UID
+  copyArray(juid, &newUid[UID_LEN-juidLen], juidLen);
+
+  if (memcmp(newUid, config.GetUID(), UID_LEN) != 0)
+  {
+    config.SetUID(newUid);
+    config.Commit();
+    // Also copy it to the global UID in case the page is reloaded
+    memcpy(UID, newUid, UID_LEN);
+  }
+}
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
   uint8_t protocol = json["serial-protocol"] | 0;
-  DBGLN("Setting serial protocol %u", protocol);
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
   uint8_t failsafe = json["sbus-failsafe"] | 0;
-  DBGLN("Setting SBUS failsafe mode %u", failsafe);
   config.SetFailsafeMode((eFailsafeMode)failsafe);
 
   long modelid = json["modelid"] | 255;
   if (modelid < 0 || modelid > 63) modelid = 255;
-  DBGLN("Setting model match id %u", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
 
   long forceTlm = json["force-tlm"] | 0;
-  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
   config.SetForceTlmOff(forceTlm != 0);
+
+  config.SetVolatileBind((json["vbind"] | 0) != 0);
+  JsonUidToConfig(json);
 
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
     uint32_t val = pwm[channel];
-    DBGLN("PWMch(%u)=%u", channel, val);
+    //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
   }
   #endif
