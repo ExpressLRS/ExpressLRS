@@ -137,9 +137,6 @@ typedef struct {
     v6_rx_config_pwm_t pwmChannels[16];
 } v6_rx_config_t;
 
-// V7 is the same as 6, just with extra values
-// V8 is just V7 except some dumdum made a whole config version to insert 10khz PWM in the middle
-
 typedef struct {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
@@ -157,4 +154,6 @@ typedef struct {
                 failsafeMode:2,
                 unused:2;
     v6_rx_config_pwm_t pwmChannels[16];
-} rx8_config_t;
+} v7_rx_config_t;
+
+// V8 is just V7 except PWM config inserted 10khz PWM in the middle

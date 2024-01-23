@@ -195,11 +195,12 @@ typedef union {
     uint32_t raw;
 } rx_config_pwm_t;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
+    uint8_t     unused_padding[2];
     uint32_t    flash_discriminator;
-    struct {
+    struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
         int16_t     offset;         // FUTURE: Override comiled vbat offset
     } vbat;
@@ -262,11 +263,11 @@ public:
 
 private:
     void CheckUpdateFlashedUid(bool skipDescrimCheck);
+    void UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid);
     void UpgradeEepromV4();
     void UpgradeEepromV5();
     void UpgradeEepromV6();
-    void UpgradeEepromV7();
-    void UpgradeEepromV8();
+    void UpgradeEepromV7V8();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

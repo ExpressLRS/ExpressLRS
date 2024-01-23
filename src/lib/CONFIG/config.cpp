@@ -723,8 +723,7 @@ void RxConfig::Load()
     UpgradeEepromV4();
     UpgradeEepromV5();
     UpgradeEepromV6();
-    UpgradeEepromV7();
-    UpgradeEepromV8();
+    UpgradeEepromV7V8();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -763,10 +762,8 @@ void RxConfig::UpgradeEepromV4()
 
     if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
     {
-        //BRY!!
-        //m_config.isBound = v4Config.isBound;
+        UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
         m_config.modelId = v4Config.modelId;
-        memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
         #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
@@ -797,12 +794,11 @@ void RxConfig::UpgradeEepromV5()
 {
     v5_rx_config_t v5Config;
     m_eeprom->Get(0, v5Config);
+
     if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
     {
-        memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
+        UpgradeUid(v5Config.onLoan ? v5Config.loanUID : nullptr, v5Config.isBound ? v5Config.uid : nullptr);
         m_config.vbat.scale = v5Config.vbatScale;
-        //BRY!!
-        //m_config.isBound = v5Config.isBound;
         m_config.power = v5Config.power;
         m_config.antennaMode = v5Config.antennaMode;
         m_config.forceTlmOff = v5Config.forceTlmOff;
@@ -820,6 +816,7 @@ void RxConfig::UpgradeEepromV5()
 
 // ========================================================
 // V6 Upgrade
+
 static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * const current)
 {
     current->val.failsafe = v6->val.failsafe;
@@ -833,12 +830,11 @@ void RxConfig::UpgradeEepromV6()
 {
     v6_rx_config_t v6Config;
     m_eeprom->Get(0, v6Config);
+
     if ((v6Config.version & ~CONFIG_MAGIC_MASK) == 6)
     {
-        memcpy(m_config.uid, v6Config.uid, sizeof(v6Config.uid));
+        UpgradeUid(v6Config.onLoan ? v6Config.loanUID : nullptr, v6Config.isBound ? v6Config.uid : nullptr);
         m_config.vbat.scale = v6Config.vbatScale;
-        //BRY!!
-        //m_config.isBound = v6Config.isBound;
         m_config.power = v6Config.power;
         m_config.antennaMode = v6Config.antennaMode;
         m_config.forceTlmOff = v6Config.forceTlmOff;
@@ -854,60 +850,66 @@ void RxConfig::UpgradeEepromV6()
     }
 }
 
-static void PwmConfigV7(rx_config_pwm_t * const current)
-{
-    if (current->val.mode > somOnOff)
-    {
-        current->val.mode += 1;
-    }
-}
+// ========================================================
+// V7/V8 Upgrade
 
-void RxConfig::UpgradeEepromV7()
+void RxConfig::UpgradeEepromV7V8()
 {
-    #if defined(GPIO_PIN_PWM_OUTPUTS)
-    uint32_t version;
-    m_eeprom->Get(0, version);
-    if ((version & ~CONFIG_MAGIC_MASK) == 7)
+    v7_rx_config_t v7Config;
+    m_eeprom->Get(0, v7Config);
+
+    bool isV8 = (v7Config.version & ~CONFIG_MAGIC_MASK) == 8;
+    if (isV8 || (v7Config.version & ~CONFIG_MAGIC_MASK) == 7)
     {
+        UpgradeUid(v7Config.onLoan ? v7Config.loanUID : nullptr, v7Config.isBound ? v7Config.uid : nullptr);
+
+        m_config.vbat.scale = v7Config.vbatScale;
+        m_config.power = v7Config.power;
+        m_config.antennaMode = v7Config.antennaMode;
+        m_config.forceTlmOff = v7Config.forceTlmOff;
+        m_config.rateInitialIdx = v7Config.rateInitialIdx;
+        m_config.modelId = v7Config.modelId;
+        m_config.serialProtocol = v7Config.serialProtocol;
+        m_config.failsafeMode = v7Config.failsafeMode;
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
-            PwmConfigV7(&m_config.pwmChannels[ch]);
+            m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
+            if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
+                m_config.pwmChannels[ch].val.mode += 1;
         }
+#endif
     }
-    #endif
 }
 
-void RxConfig::UpgradeEepromV8()
+void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
 {
-    rx8_config_t v8Config;
-    m_eeprom->Get(0, v8Config);
-    if ((v8Config.version & ~CONFIG_MAGIC_MASK) == 8)
+    // Convert to traditional binding
+    // On loan? Now you own
+    if (onLoanUid)
     {
-        // Convert to traditional binding
-        // On loan? Now you own
-        if (v8Config.onLoan)
-        {
-            memcpy(m_config.uid, v8Config.loanUID, UID_LEN);
-        }
-        // Compiled in UID? Bind to that
-        else if (firmwareOptions.hasUID)
-        {
-            memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
-            m_config.flash_discriminator = flash_discriminator;
-        }
-        else if (v8Config.isBound)
-        {
-            // keep binding
-        }
-        else
-        {
-            // No bind
-            memset(m_config.uid, 0, UID_LEN);
-        }
+        memcpy(m_config.uid, onLoanUid, UID_LEN);
+    }
+    // Compiled in UID? Bind to that
+    else if (firmwareOptions.hasUID)
+    {
+        memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
+        m_config.flash_discriminator = flash_discriminator;
+    }
+    else if (boundUid)
+    {
+        // keep binding
+        memcpy(m_config.uid, boundUid, UID_LEN);
+    }
+    else
+    {
+        // No bind
+        memset(m_config.uid, 0, UID_LEN);
     }
 }
 
-bool RxConfig::GetIsBound() const
+bool  RxConfig::GetIsBound() const
 {
     return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
 }
