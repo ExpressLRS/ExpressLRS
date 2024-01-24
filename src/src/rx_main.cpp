@@ -1467,7 +1467,7 @@ static void cycleRfMode(unsigned long now)
 
 static void updateBindingMode()
 {
-    // Exit binding mode if the config has been modigied, indicating UID has been set
+    // Exit binding mode if the config has been modified, indicating UID has been set
     if (InBindingMode && config.IsModified())
     {
         ExitBindingMode();
@@ -1505,6 +1505,7 @@ static void updateBindingMode()
     }
 }
 
+#if defined(HAS_BUTTON)
 static void EnterBindingModeSafely()
 {
     // Will not enter Binding mode if in the process of a passthrough update
@@ -1515,7 +1516,6 @@ static void EnterBindingModeSafely()
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     // Never enter wifi mode after requesting to enter binding mode
     webserverPreventAutoStart = true;
-#endif
 
     // If the radio and everything is shut down, better to reboot and boot to binding mode
     if (connectionState == wifiUpdate || connectionState == bleJoystick)
@@ -1523,13 +1523,10 @@ static void EnterBindingModeSafely()
         // Force 3-plug binding mode
         config.SetPowerOnCounter(3);
         config.Commit();
-#if defined(PLATFORM_STM32)
-        HAL_NVIC_SystemReset();
-#else
         ESP.restart();
-#endif
         // Unreachable
     }
+#endif
 
     // If connected, handle that in updateBindingMode()
     if (connectionState == connected)
@@ -1540,6 +1537,7 @@ static void EnterBindingModeSafely()
 
     EnterBindingMode();
 }
+#endif /* HAS_BUTTON */
 
 static void checkSendLinkStatsToFc(uint32_t now)
 {
@@ -1719,10 +1717,16 @@ void setup()
         SerialLogger = new NullStream();
         #endif
 
+        // External EEPROM needs I2C setup so it can load config
+        // but configurable I2C pins for PWM RX needs config loaded first
+#if (defined(TARGET_USE_EEPROM) && defined(USE_I2C))
+        setupTarget();
+#endif
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
-
+#if !(defined(TARGET_USE_EEPROM) && defined(USE_I2C))
         setupTarget();
+#endif
 
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
