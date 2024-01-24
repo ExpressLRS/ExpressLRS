@@ -69,7 +69,8 @@ extern String& getHardware();
 extern void saveOptions();
 
 #include "EspFlashStream.h"
-extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
+bool options_HasStringInFlash(EspFlashStream &strmFlash);
+void options_SetTrueDefaults();
 #else
 extern firmware_options_t firmwareOptions;
 extern const char device_name[];

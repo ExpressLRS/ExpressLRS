@@ -346,6 +346,19 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 }
 
 /**
+ * @brief: Put a blank options.json into SPIFFS to force all options to the coded defaults in options_LoadFromFlashOrFile()
+*/
+void options_SetTrueDefaults()
+{
+    DynamicJsonDocument doc(128);
+    doc["flash-discriminator"] = flash_discriminator;
+
+    File options = SPIFFS.open("/options.json", "w");
+    serializeJson(doc, options);
+    options.close();
+}
+
+/**
  * @brief:  Initializes product_name / device_name either from flash or static values
  * @return: true if the names came from flash, or false if the values are default
 */

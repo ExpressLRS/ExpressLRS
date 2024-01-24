@@ -1680,6 +1680,9 @@ void resetConfigAndReboot()
     yield();
     // Remove options.json and hardware.json
     SPIFFS.format();
+    SPIFFS.begin();
+    options_SetTrueDefaults();
+
     ESP.restart();
 #endif
 }
