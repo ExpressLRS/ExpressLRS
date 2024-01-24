@@ -26,7 +26,6 @@ const char *wifi_ap_address = "10.0.0.1";
 
 // Discriminator value used to determine if the device has been reflashed and therefore
 // the SPIFSS settings are obsolete and the flashed settings should be used in preference
-// If STM32, this contains part of the flashed UID used to determine if bind phrase flashed
 uint32_t flash_discriminator;
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
@@ -167,8 +166,11 @@ firmware_options_t firmwareOptions;
 bool options_init()
 {
     firmwareOptions = flashedOptions;
-    // Use the last 4 digits of the UID as the flash discriminator
-    flash_discriminator = flashedOptions.uid[2] << 24 | flashedOptions.uid[3] << 16 | flashedOptions.uid[4] << 8 | flashedOptions.uid[5];
+#if defined(TARGET_STM32) && defined(FLASH_DISCRIM)
+    // This is defined by the build_flags.py and used by STM32 (ESP gets it from json)
+    // It is always defined even though intellisense doesn't pick it up
+    flash_discriminator = FLASH_DISCRIM;
+#endif
     return true;
 }
 
