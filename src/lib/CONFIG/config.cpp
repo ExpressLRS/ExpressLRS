@@ -741,6 +741,8 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
     // Save the new UID along with this discriminator to prevent resetting every boot
     SetUID(firmwareOptions.uid);
     m_config.flash_discriminator = flash_discriminator;
+    // SetUID should set this but just in case that gets removed, flash_discriminator needs to be saved
+    m_modified = true;
 
     Commit();
 }

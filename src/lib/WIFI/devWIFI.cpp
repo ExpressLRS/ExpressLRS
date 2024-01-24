@@ -478,7 +478,7 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
 }
 #else
 /**
- * @brief: Copy uid to config if changed, and always remove it from the json
+ * @brief: Copy uid to config if changed
 */
 static void JsonUidToConfig(JsonVariant &json)
 {
