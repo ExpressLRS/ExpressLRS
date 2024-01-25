@@ -351,6 +351,8 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 void options_SetTrueDefaults()
 {
     DynamicJsonDocument doc(128);
+    // The Regulatory Domain is retained, as there is no sensible default
+    doc["domain"] = firmwareOptions.domain;
     doc["flash-discriminator"] = flash_discriminator;
 
     File options = SPIFFS.open("/options.json", "w");

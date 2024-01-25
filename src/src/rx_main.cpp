@@ -1680,6 +1680,7 @@ void resetConfigAndReboot()
     yield();
     // Remove options.json and hardware.json
     SPIFFS.format();
+    yield();
     SPIFFS.begin();
     options_SetTrueDefaults();
 
