@@ -32,6 +32,7 @@ public:
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power, bool isSubGHz = true);
+    void SetLowPowerDisableTXEN(bool disableTXEN);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
@@ -62,6 +63,7 @@ private:
     bool pwrForceUpdate;
     bool radio1isSubGHz;
     bool radio2isSubGHz;
+    bool lowPowerDisableTXEN;
     lr11xx_RadioOperatingModes_t fallBackMode;
 
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);

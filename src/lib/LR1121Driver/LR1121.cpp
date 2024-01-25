@@ -39,6 +39,7 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_STDBY_XOSC;
+    lowPowerDisableTXEN = false;
 }
 
 void LR1121Driver::End()
@@ -181,12 +182,12 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
-    uint8_t switchbuf[8];
+    uint8_t switchbuf[8] = {0};
     switchbuf[0] = 0b00001111; // RfswEnable
     switchbuf[1] = 0b00000000; // RfSwStbyCfg
     switchbuf[2] = 0b00000100; // RfSwRxCfg
-    switchbuf[3] = 0b00001000; // RfSwTxCfg
-    switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+    switchbuf[3] = lowPowerDisableTXEN ? 0 : 0b00001000; // RfSwTxCfg
+    switchbuf[4] = lowPowerDisableTXEN ? 0 : 0b00001000; // RfSwTxHPCfg
     switchbuf[5] = 0b00000010; // RfSwTxHfCfg
     switchbuf[6] = 0;          // 
     switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
@@ -230,6 +231,14 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
         wrbuf[11] = 0x00;
         hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber);
     }
+}
+
+/***
+ * @brief: Schedule an output power change after the next transmit
+ ***/
+void LR1121Driver::SetLowPowerDisableTXEN(bool disableTXEN)
+{
+    lowPowerDisableTXEN = disableTXEN;
 }
 
 /***
@@ -284,6 +293,14 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 
     if (pwrForceUpdate)
     {
+//         SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
+// // digitalWrite(19, HIGH);
+// // digitalWrite(19, LOW);
+//         SetDioAsRfSwitch();
+
+//         if (fallBackMode == LR1121_MODE_FS)
+//             SetMode(LR1121_MODE_FS, SX12XX_Radio_All);
+
         WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
         WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
         pwrForceUpdate = false;

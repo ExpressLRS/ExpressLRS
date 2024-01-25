@@ -21,6 +21,14 @@
 #define HighPower MaxPower
 #endif
 
+#ifdef USE_LOW_POWER_TXEN_DISABLE
+    #ifndef OPT_USE_LOW_POWER_TXEN_DISABLE
+        #define OPT_USE_LOW_POWER_TXEN_DISABLE false
+    #endif
+#else
+    #define OPT_USE_LOW_POWER_TXEN_DISABLE false
+#endif
+
 typedef enum
 {
     PWR_10mW = 0,

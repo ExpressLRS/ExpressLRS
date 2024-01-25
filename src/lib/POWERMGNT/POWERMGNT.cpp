@@ -276,6 +276,14 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     if (Power == CurrentPower)
         return;
 
+#if defined(RADIO_LR1121)
+    Radio.SetLowPowerDisableTXEN(OPT_USE_LOW_POWER_TXEN_DISABLE && (Power < PWR_250mW));
+#elif defined(RADIO_SX127X)
+    Radio.SetLowPowerDisableTXEN(OPT_USE_LOW_POWER_TXEN_DISABLE && (Power < PWR_100mW));
+#else
+    Radio.SetLowPowerDisableTXEN(false);
+#endif
+
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];

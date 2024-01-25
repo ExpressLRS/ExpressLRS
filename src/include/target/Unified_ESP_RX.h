@@ -70,6 +70,8 @@
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
 #define GPIO_PIN_RX_ENABLE_2 hardware_pin(HARDWARE_power_rxen_2)
 #define GPIO_PIN_TX_ENABLE_2 hardware_pin(HARDWARE_power_txen_2)
+#define USE_LOW_POWER_TXEN_DISABLE
+#define OPT_USE_LOW_POWER_TXEN_DISABLE hardware_pin(HARDWARE_low_power_txen_disabled)
 #define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
 #define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
