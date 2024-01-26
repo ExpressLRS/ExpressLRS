@@ -304,76 +304,19 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         // -17dBm (0xEF) to +14dBm (0x0E) by steps of 1dB if the low power PA is selected
         if (OPT_USE_RADIO_RFO_LP)
         {
-
-// The Low Power amp is currently completely untested!
-
-            if (power > 14)
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x07; // PaDutyCycle
-                Txbuf[0] = 14;
-            }
-            else if (power > 13)
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x05; // PaDutyCycle
-                Txbuf[0] = 14;
-            }
-            else
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x01; // PaDutyCycle
-                Txbuf[0] = power;
-            }
+            Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
+            Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+            Pabuf[2] = 0x07; // PaDutyCycle
         }
         // 900M high power RF Amp
         // Table 9-2: Optimized Settings for HP PA with Same Matching Network
         // -9dBm (0xF7) to +22dBm (0x16) by steps of 1dB if the high power PA is selected
         else
         {
-            if (power > LR1121_POWER_MAX_HP_PA) // Negaitve power setting.
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x01; // PaDutyCycle
-                Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (16 - power);
-            }
-            else if (power == 22) // +100mW
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x04; // PaDutyCycle
-                Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22;
-            }
-            else if (power > 19)
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x03; // PaDutyCycle
-                Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (21 - power);
-            }
-            else if (power > 16)
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x01; // PaDutyCycle
-                Pabuf[3] = 0x05; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (19 - power);
-            }
-            else
-            {
-                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
-                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
-                Pabuf[2] = 0x01; // PaDutyCycle
-                Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-                Txbuf[0] = 22 - (16 - power);
-            }
+            Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
+            Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+            Pabuf[2] = 0x04; // PaDutyCycle
+            Pabuf[3] = 0x07; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
         }
     }
     // 2.4G RF Amp
@@ -385,7 +328,6 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
         Pabuf[2] = 0x00; // PaDutyCycle
         Pabuf[3] = 0x00; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
-        Txbuf[0] = power;
     }
 
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), radioNumber);
