@@ -25,6 +25,7 @@ static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
+static const char linkModeOpts[] = "Normal;AirPort;MAVLink;ParamDL";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
@@ -96,6 +97,15 @@ static struct luaItem_selection luaSwitch = {
       {"Antenna Mode", CRSF_TEXT_SELECTION},
       0, // value
       antennamodeOpts,
+      STR_EMPTYSPACE
+  };
+#endif
+
+#if defined(GPIO_PIN_NSS_2)
+  static struct luaItem_selection luaLinkMode = {
+      {"Link Mode", CRSF_TEXT_SELECTION},
+      0, // value
+      linkModeOpts,
       STR_EMPTYSPACE
   };
 #endif
@@ -620,12 +630,15 @@ static void registerLuaParameters()
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
       });
     }
-      if (isDualRadio())
-      {
-        registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
-          config.SetAntennaMode(arg);
-        });
-      }
+    if (isDualRadio())
+    {
+      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetAntennaMode(arg);
+      });
+    }
+    registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetLinkMode(arg);
+      });
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -788,6 +801,7 @@ static int event()
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
   }
+  setLuaTextSelectionValue(&luaLinkMode, config.GetLinkMode());
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

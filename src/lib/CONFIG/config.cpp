@@ -431,6 +431,23 @@ TxConfig::SetAntennaMode(uint8_t txAntenna)
 }
 
 void
+TxConfig::SetLinkMode(uint8_t linkMode)
+{
+    if (GetLinkMode() != linkMode)
+    {
+        m_model->linkMode = linkMode;
+
+        if (linkMode == TX_AIRPORT_MODE ||
+            linkMode == TX_MAVLINK_MODE ||
+            linkMode == TX_PARAM_DL_MODE)
+        {
+            m_model->tlm = TLM_RATIO_1_2;
+        }
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetModelMatch(bool modelMatch)
 {
     if (GetModelMatch() != modelMatch)

@@ -36,7 +36,6 @@ FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 // TODO: Remove this! Manual define for mavlink mode on TX
-bool mavlinkTX = true;
 uint8_t mavBuffer[64];
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
@@ -853,7 +852,7 @@ static void UpdateConnectDisconnectStatus()
       CRSF::ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
-      if (firmwareOptions.is_airport || mavlinkTX)
+      if (firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE)
       {
         apInputBuffer.flush();
         apOutputBuffer.flush();
@@ -1052,7 +1051,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 
 static void HandleUARTout()
 {
-  if (firmwareOptions.is_airport || mavlinkTX)
+  if (firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE)
   {
     auto size = apOutputBuffer.size();
     if (size)
@@ -1071,34 +1070,11 @@ static void setupSerial()
    * Setup the logging/backpack serial port, and the USB serial port.
    * This is always done because we need a place to send data even if there is no backpack!
    */
-  bool portConflict = false;
-  int8_t rxPin = UNDEF_PIN;
-  int8_t txPin = UNDEF_PIN;
-
-  if (firmwareOptions.is_airport || mavlinkTX)
-  {
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-      // Airport enabled - set TxUSB port to pins 1 and 3
-      rxPin = 3;
-      txPin = 1;
-
-      if (GPIO_PIN_DEBUG_RX == rxPin && GPIO_PIN_DEBUG_TX == txPin)
-      {
-        // Avoid conflict between TxUSB and TxBackpack for UART0 (pins 1 and 3)
-        // TxUSB takes priority over TxBackpack
-        portConflict = true;
-      }
-    #else
-      // For STM targets, assume GPIO_PIN_DEBUG defines point to USB
-      rxPin = GPIO_PIN_DEBUG_RX;
-      txPin = GPIO_PIN_DEBUG_TX;
-    #endif
-  }
 
 // Setup TxBackpack
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
-  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN && !portConflict)
+  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   {
     serialPort = new HardwareSerial(2);
     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -1145,20 +1121,22 @@ static void setupSerial()
 
 // Setup TxUSB
 #if defined(PLATFORM_ESP32)
-  if (rxPin != UNDEF_PIN && txPin != UNDEF_PIN)
+  if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
   {
-    TxUSB = new HardwareSerial(1);
-    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, rxPin, txPin);
+    // The backpack is already assigned on UART0 (pins 3, 1)
+    // This is also USB on modules that use DIPs
+    // Set TxUSB to TxBackpack so that data goes to the same place
+    TxUSB = TxBackpack;
   }
   else
   {
-    TxUSB = new NullStream();
+    // The backpack is on a separate UART to UART0
+    // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
+    TxUSB = new HardwareSerial(1);
+    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, 3, 1);
   }
 #else
   TxUSB = new NullStream();
-  UNUSED(portConflict);
-  UNUSED(rxPin);
-  UNUSED(txPin);
 #endif
 }
 
@@ -1361,7 +1339,7 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if ((firmwareOptions.is_airport || mavlinkTX) && connectionState == connected)
+  if ((firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE) && connectionState == connected)
   {
     auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
     if (size > 0)
@@ -1376,7 +1354,7 @@ void loop()
 
   if (TxBackpack->available())
   {
-    if (mavlinkTX)
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
     {
       auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxBackpack->available());
       if (size > 0)
@@ -1422,12 +1400,15 @@ void loop()
   {
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
-        // raw mavlink data - forward to USB rather than handset
-        uint8_t count = CRSFinBuffer[1];
-        for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
+        if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
-          TxUSB->write(CRSFinBuffer[i]);
-          TxBackpack->write(CRSFinBuffer[i]);
+          // raw mavlink data - forward to USB rather than handset
+          uint8_t count = CRSFinBuffer[1];
+          for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
+          {
+            TxUSB->write(CRSFinBuffer[i]);
+            TxBackpack->write(CRSFinBuffer[i]);
+          }
         }
       }
       else
@@ -1472,19 +1453,22 @@ void loop()
     }
   }
 
-  // Use MspSender for MAVLINK uplink data
-  uint8_t *nextPayload = 0;
-  uint8_t nextPlayloadSize = 0;
-  uint16_t count = apInputBuffer.size();
-  if (count > 0 && !MspSender.IsActive())
+  if (config.GetLinkMode() == TX_MAVLINK_MODE)
   {
-      count = std::min(count, (uint16_t)60);
-      mavBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-      mavBuffer[1] = count;
-      // Following n bytes are just raw mavlink
-      apInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-      nextPayload = mavBuffer;
-      nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
-      MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+    // Use MspSender for MAVLINK uplink data
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
+    uint16_t count = apInputBuffer.size();
+    if (count > 0 && !MspSender.IsActive())
+    {
+        count = std::min(count, (uint16_t)60);
+        mavBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+        mavBuffer[1] = count;
+        // Following n bytes are just raw mavlink
+        apInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        nextPayload = mavBuffer;
+        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+    }
   }
 }
