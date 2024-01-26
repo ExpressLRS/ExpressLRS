@@ -293,13 +293,9 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 
     if (pwrForceUpdate)
     {
-//         SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All);
-// // digitalWrite(19, HIGH);
-// // digitalWrite(19, LOW);
-//         SetDioAsRfSwitch();
-
-//         if (fallBackMode == LR1121_MODE_FS)
-//             SetMode(LR1121_MODE_FS, SX12XX_Radio_All);
+        SetMode(LR1121_MODE_STDBY_RC, SX12XX_Radio_All); // Changes to Dio config can only be done in LR1121_MODE_STDBY_RC.
+        SetDioAsRfSwitch();
+        SetMode(fallBackMode, SX12XX_Radio_All); // Restore previous mode.
 
         WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
         WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
