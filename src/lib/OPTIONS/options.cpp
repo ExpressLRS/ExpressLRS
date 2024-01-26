@@ -166,9 +166,9 @@ firmware_options_t firmwareOptions;
 bool options_init()
 {
     firmwareOptions = flashedOptions;
-#if defined(TARGET_STM32) && defined(FLASH_DISCRIM)
-    // This is defined by the build_flags.py and used by STM32 (ESP gets it from json)
-    // It is always defined even though intellisense doesn't pick it up
+#if defined(PLATFORM_STM32)
+    #include "flashdiscrim.h"
+    // This is created by the build_flags.py and used by STM32 (ESP gets it from json)
     flash_discriminator = FLASH_DISCRIM;
 #endif
     return true;

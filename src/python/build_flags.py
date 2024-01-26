@@ -136,17 +136,16 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
-json_flags['flash-discriminator'] = randint(1,2**32-1)
-json_flags['wifi-on-interval'] = -1
-
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
-build_flags.append("-DFLASH_DISCRIM=" + str(json_flags['flash-discriminator']))
 condense_flags()
+
+json_flags['flash-discriminator'] = randint(1,2**32-1)
+json_flags['wifi-on-interval'] = -1
 
 if '-DRADIO_SX127X=1' in build_flags:
     # disallow setting 2400s for 900
@@ -205,3 +204,7 @@ time.sleep(.5)
 stm = env.get('PIOPLATFORM', '') in ['ststm32']
 if stm:
     env['UPLOAD_PROTOCOL'] = 'custom'
+    # -DFLASH_DISCRIM=xxxx can't be passed on the command line or it will every file to
+    # always be rebuilt, so put it in a header that options.cpp can include
+    print(f"#define FLASH_DISCRIM {json_flags['flash-discriminator']}",
+          file=open("include/flashdiscrim.h", "w"))
