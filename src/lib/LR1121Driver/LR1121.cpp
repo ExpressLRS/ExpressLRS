@@ -334,7 +334,15 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         // -9dBm (0xF7) to +22dBm (0x16) by steps of 1dB if the high power PA is selected
         else
         {
-            if (power >= 22) // +100mW
+            if (power > LR1121_POWER_MAX_HP_PA) // Negaitve power setting.
+            {
+                Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
+                Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
+                Pabuf[2] = 0x01; // PaDutyCycle
+                Pabuf[3] = 0x03; // PaHPSel - In order to reach +22dBm output power, PaHPSel must be set to 7. PaHPSel has no impact on either the low power PA or the high frequency PA.
+                Txbuf[0] = 22 - (16 - power);
+            }
+            else if (power == 22) // +100mW
             {
                 Pabuf[0] = LR11XX_RADIO_PA_SEL_HP; // PaSel - 0x01: Selects the high power PA
                 Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VBAT; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
