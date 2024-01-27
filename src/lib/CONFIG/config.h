@@ -215,7 +215,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
                 unused:2;
-    rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
+    rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
 } rx_config_t;
 
 class RxConfig
