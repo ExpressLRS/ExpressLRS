@@ -353,7 +353,7 @@ bool CRSFController::ProcessPacket()
     {
         elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
 
-        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == SUBCOMMAND_CRSF && SerialInBuffer[6] == COMMAND_MODEL_SELECT_ID)
+        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == CRSF_COMMAND_SUBCMD_RX && SerialInBuffer[6] == CRSF_COMMAND_MODEL_SELECT_ID)
         {
             modelId = SerialInBuffer[7];
             #if defined(PLATFORM_ESP32)
