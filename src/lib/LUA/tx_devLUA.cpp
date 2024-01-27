@@ -276,7 +276,6 @@ extern void VtxTriggerSend();
 extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
-extern void EnterBindingMode();
 extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;
@@ -428,7 +427,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     if ((void *)item == (void *)&luaBind)
     {
       msg = "Binding...";
-      EnterBindingMode();
+      EnterBindingModeSafely();
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {

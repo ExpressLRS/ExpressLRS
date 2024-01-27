@@ -214,10 +214,6 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 
 bool BindingModeRequest = false;
 
-void reset_into_bootloader(void);
-void EnterBindingMode();
-void ExitBindingMode();
-void OnELRSBindMSP(uint8_t* packet);
 extern void setWifiUpdateMode();
 
 uint8_t getLq()
@@ -855,6 +851,22 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 }
 
+void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
+{
+    UID[0] = 0;
+    UID[1] = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        UID[i + 2] = newUid4[i];
+    }
+
+    DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+
+    // Set new UID in eeprom
+    // EEPROM commit will happen on the main thread in ExitBindingMode()
+    config.SetUID(UID);
+}
+
 static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPktPtr)
 {
     uint8_t packageIndex;
@@ -1465,6 +1477,68 @@ static void cycleRfMode(unsigned long now)
     } // if time to switch RF mode
 }
 
+static void EnterBindingMode()
+{
+    if (InBindingMode)
+    {
+        DBGLN("Already in binding mode");
+        return;
+    }
+
+    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
+    OtaCrcInitializer = 0;
+    InBindingMode = true;
+
+    // Start attempting to bind
+    // Lock the RF rate and freq while binding
+    SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
+    Radio.SetFrequencyReg(GetInitialFreq());
+    if (geminiMode)
+    {
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    }
+    // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
+    Radio.RXnb();
+
+    DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+    devicesTriggerEvent();
+}
+
+static void ExitBindingMode()
+{
+    if (!InBindingMode)
+    {
+        DBGLN("Not in binding mode");
+        return;
+    }
+
+    MspReceiver.ResetState();
+
+    // Prevent any new packets from coming in
+    Radio.SetTxIdleMode();
+    // Write the values to eeprom
+    config.Commit();
+
+    OtaUpdateCrcInitFromUid();
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
+
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    webserverPreventAutoStart = true;
+    #endif
+
+    // Force RF cycling to start at the beginning immediately
+    scanIndex = RATE_MAX;
+    RFmodeLastCycled = 0;
+    LockRFmode = false;
+    LostConnection(false);
+
+    // Do this last as LostConnection() will wait for a tock that never comes
+    // if we're in binding mode
+    InBindingMode = false;
+    DBGLN("Exiting binding mode");
+    devicesTriggerEvent();
+}
+
 static void updateBindingMode()
 {
     // Exit binding mode if the config has been modified, indicating UID has been set
@@ -1505,8 +1579,7 @@ static void updateBindingMode()
     }
 }
 
-#if defined(HAS_BUTTON)
-static void EnterBindingModeSafely()
+void EnterBindingModeSafely()
 {
     // Will not enter Binding mode if in the process of a passthrough update
     // or currently binding
@@ -1537,7 +1610,6 @@ static void EnterBindingModeSafely()
 
     EnterBindingMode();
 }
-#endif /* HAS_BUTTON */
 
 static void checkSendLinkStatsToFc(uint32_t now)
 {
@@ -1889,82 +1961,4 @@ void reset_into_bootloader(void)
     delay(100);
     connectionState = serialUpdate;
 #endif
-}
-
-void EnterBindingMode()
-{
-    if (InBindingMode)
-    {
-        DBGLN("Already in binding mode");
-        return;
-    }
-
-    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-    OtaCrcInitializer = 0;
-    InBindingMode = true;
-
-    // Start attempting to bind
-    // Lock the RF rate and freq while binding
-    SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
-    Radio.SetFrequencyReg(GetInitialFreq());
-    if (geminiMode)
-    {
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
-    }
-    // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
-    Radio.RXnb();
-
-    DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    devicesTriggerEvent();
-}
-
-void ExitBindingMode()
-{
-    if (!InBindingMode)
-    {
-        DBGLN("Not in binding mode");
-        return;
-    }
-
-    MspReceiver.ResetState();
-
-    // Prevent any new packets from coming in
-    Radio.SetTxIdleMode();
-    // Write the values to eeprom
-    config.Commit();
-
-    OtaUpdateCrcInitFromUid();
-    FHSSrandomiseFHSSsequence(uidMacSeedGet());
-
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
-    webserverPreventAutoStart = true;
-    #endif
-
-    // Force RF cycling to start at the beginning immediately
-    scanIndex = RATE_MAX;
-    RFmodeLastCycled = 0;
-    LockRFmode = false;
-    LostConnection(false);
-
-    // Do this last as LostConnection() will wait for a tock that never comes
-    // if we're in binding mode
-    InBindingMode = false;
-    DBGLN("Exiting binding mode");
-    devicesTriggerEvent();
-}
-
-void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
-{
-    UID[0] = 0;
-    UID[1] = 0;
-    for (int i = 0; i < 4; i++)
-    {
-        UID[i + 2] = newUid4[i];
-    }
-
-    DBGLN("New UID = %d, %d, %d, %d, %d, %d", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
-
-    // Set new UID in eeprom
-    // EEPROM commit will happen on the main thread in ExitBindingMode()
-    config.SetUID(UID);
 }
