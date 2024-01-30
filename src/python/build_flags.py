@@ -136,6 +136,9 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
+json_flags['flash-discriminator'] = randint(1,2**32-1)
+json_flags['wifi-on-interval'] = -1
+
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
@@ -143,9 +146,6 @@ build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
-
-json_flags['flash-discriminator'] = randint(1,2**32-1)
-json_flags['wifi-on-interval'] = -1
 
 if '-DRADIO_SX127X=1' in build_flags:
     # disallow setting 2400s for 900
