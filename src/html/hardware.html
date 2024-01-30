@@ -1,6 +1,6 @@
 @@require(PLATFORM, VERSION, isTX, sx127x)
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
 	<title>Welcome to your ExpressLRS System</title>
@@ -69,16 +69,14 @@ td img.icon-pwm {
 			You can <a download href="/hardware.json">download</a> the configuration or <a href="/reset?hardware">reset</a> to pre-configured defaults and reboot.
 		</div>
 		<div class="mui-panel">
-			<form id="notused" action="" method="POST" enctype="multipart/form-data">
-				<fieldset>
-					<input type="hidden" id="MAX_FILE_SIZE" name="MAX_FILE_SIZE" value="10000" />
-					<div>
-						<label for="fileselect">Load target configuration (remember to press "Save Target Configuration" below):</label>
-						<input type="file" id="fileselect" name="fileselect[]" />
-						<div id="filedrag">or drop files here</div>
-					</div>
-				</fieldset>
-			</form>
+			<label>Upload target configuration (remember to press "Save Target Configuration" below):</label>
+			<button class="mui-btn mui-btn--small mui-btn--primary upload">
+				<label>
+					Upload
+					<input type="file" id="fileselect" name="fileselect[]" />
+				</label>
+			</button>
+			<div id="filedrag">or drop files here</div>
 		</div>
 		<div class="mui-panel">
 			<form id='upload_hardware' method='POST' action="/hardware">
@@ -174,7 +172,8 @@ td img.icon-pwm {
 							<option value='3'>via ESP DACWRITE</option>
 						</select>
 					</td><td>How the power level is set</td></tr>
-					<tr><td></td><td>Level Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td><td>Comma-separated list of values that set the power output</td></tr>
+					<tr><td></td><td>Power Value(s)</td><td><input size='40' id='power_values' name='power_values' type='text' class='array'/></td><td>Comma-separated list of values that set the power output (if using a DAC these are the DAC values)</td></tr>
+					<tr><td></td><td>Secondary Power Value(s)</td><td><input size='40' id='power_values2' name='power_values2' type='text' class='array'/></td><td>Comma-separated list of values that set the power output (if using a DAC then these set the Semtech power output)</td></tr>
 
 					<tr><td colspan='2'><b>Radio Power Detection</td></tr>
 					<tr><td></td><td>PDET pin<img class="icon-analog"/></td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>
@@ -287,6 +286,8 @@ td img.icon-pwm {
 					<tr><td></td><td>SPI MOSI pin<img class="icon-output"/></td><td><input size='3' id='vtx_mosi' name='vtx_mosi' type='text'/></td><td>MOSI pin on RTC6705 VTx (leave undefined if sharing Radio SPI bus)</td></tr>
 					<tr><td></td><td>25mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_25mW' name='vtx_amp_vpd_25mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 25mW</td></tr>
 					<tr><td></td><td>100mW VPD interpolation values</td><td><input size='40' id='vtx_amp_vpd_100mW' name='vtx_amp_vpd_100mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 100mW</td></tr>
+					<tr><td></td><td>25mW PWM interpolation values</td><td><input size='40' id='vtx_amp_pwm_25mW' name='vtx_amp_pwm_25mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 25mW</td></tr>
+					<tr><td></td><td>100mW PWM interpolation values</td><td><input size='40' id='vtx_amp_pwm_100mW' name='vtx_amp_pwm_100mW' type='text' class='array'/></td><td>4 values for 5650, 5750, 5850, 5950 frequencies at 100mW</td></tr>
 
 					<tr><td colspan='2'><b>I2C</td></tr>
 					<tr><td></td><td>SCL pin<img class="icon-output"/></td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td><td>I2C clock pin used to communicate with I2C devices</td></tr>

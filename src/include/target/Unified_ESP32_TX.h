@@ -88,6 +88,7 @@
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
+#define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
 
 // Input
 #define HAS_FIVE_WAY_BUTTON
@@ -113,7 +114,7 @@
 #define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_red_green)
 
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
@@ -201,6 +202,8 @@ GPIO_PIN_RF_AMP_PWM
 GPIO_PIN_RF_AMP_VPD
 GPIO_PIN_RF_AMP_VREF
 GPIO_PIN_SPI_VTX_NSS
-VPD_VALUES_100MW
 VPD_VALUES_25MW
+VPD_VALUES_100MW
+PWM_VALUES_25MW
+PWM_VALUES_100MW
 */

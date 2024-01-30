@@ -62,6 +62,7 @@ private:
     bool modeSupportsFei;
     uint8_t pwrCurrent;
     uint8_t pwrPending;
+    SX1280_RadioOperatingModes_t fallBackMode;
 
     void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);

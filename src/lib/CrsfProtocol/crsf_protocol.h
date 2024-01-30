@@ -5,10 +5,6 @@
 #include "crc.h"
 #include "options.h"
 
-#if TARGET_TX && PLATFORM_STM32
-#define CRSF_TX_MODULE_STM32 1
-#endif
-
 #if TARGET_TX
 #define CRSF_TX_MODULE 1
 #elif TARGET_RX || defined(UNIT_TEST)
@@ -96,11 +92,12 @@ typedef enum
 } crsf_frame_type_e;
 
 typedef enum {
-    SUBCOMMAND_CRSF = 0x10
+    CRSF_COMMAND_SUBCMD_RX = 0x10
 } crsf_command_e;
 
 typedef enum {
-    COMMAND_MODEL_SELECT_ID = 0x05
+    CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05
 } crsf_subcommand_e;
 
 enum {
@@ -187,6 +184,7 @@ typedef struct crsf_ext_header_s
     // Extended fields
     uint8_t dest_addr;
     uint8_t orig_addr;
+    uint8_t payload[0];
 } PACKED crsf_ext_header_t;
 
 /**

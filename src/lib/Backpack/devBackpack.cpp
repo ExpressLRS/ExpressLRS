@@ -40,10 +40,11 @@ void startPassthrough()
     uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
-    {
-        // if we have a single S.PORT pin for RX then we assume the standard UART pins for passthrough
-        CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);
-    }
+        #if defined(PLATFORM_ESP32_S3)
+            CRSF::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43，If PLATFORM_ESP32_S3 macro is defined, pins are configured as 44 and 43
+        #else
+            CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1，Otherwise continue to use default pin configuration 3 and 1
+        #endif
     else
     {
         CRSF::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
@@ -189,6 +190,34 @@ static void AuxStateToMSPOut()
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 #endif // USE_TX_BACKPACK
+}
+
+void crsfTelemToMSPOut(uint8_t *data)
+{
+    if (config.GetBackpackTlmEnabled() == 0)
+    {
+        // Backpack telem is off
+        return;
+    }
+    
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_CRSF_TLM;
+
+    uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
+    if (size > CRSF_MAX_PACKET_LEN)
+    {
+        ERRLN("CRSF frame exceeds max length");
+        return;
+    }
+    
+    for (uint8_t i = 0; i < size; ++i)
+    {
+      packet.addByte(data[i]);
+    }
+
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
 static void initialize()

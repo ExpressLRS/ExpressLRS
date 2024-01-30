@@ -47,6 +47,7 @@ typedef enum {
 
     HARDWARE_power_control,
     HARDWARE_power_values,
+    HARDWARE_power_values2,
 
     // Input
     HARDWARE_joystick,
@@ -70,7 +71,7 @@ typedef enum {
     HARDWARE_led_green_red,
     HARDWARE_led_red,
     HARDWARE_led_red_invert,
-    HARDWARE_led_reg_green,
+    HARDWARE_led_red_green,
     HARDWARE_led_rgb,
     // GPIO_PIN_LED_WS2812_FAST // stm32
     HARDWARE_led_rgb_isgrb,
@@ -136,6 +137,8 @@ typedef enum {
     HARDWARE_vtx_sck,
     HARDWARE_vtx_amp_vpd_25mW,
     HARDWARE_vtx_amp_vpd_100mW,
+    HARDWARE_vtx_amp_pwm_25mW,
+    HARDWARE_vtx_amp_pwm_100mW,
 
     HARDWARE_LAST
 } nameType;

@@ -175,7 +175,10 @@ enum eServoOutputMode : uint8_t
     som400Hz,
     som10KHzDuty,
     somOnOff,   // Digital 0/1 mode
+    somDShot,   // DShot300
     somSerial,  // Serial TX or RX depending on pin
+    somSCL,     // I2C clock signal
+    somSDA,     // I2C data line
     somPwm,     // True PWM mode (NOT SUPPORTED)
 };
 
@@ -186,7 +189,8 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_SBUS,
     PROTOCOL_INVERTED_SBUS,
 	PROTOCOL_SUMD,
-    PROTOCOL_DJI_RS_PRO
+    PROTOCOL_DJI_RS_PRO,
+    PROTOCOL_HOTT_TLM
 };
 
 enum eFailsafeMode : uint8_t

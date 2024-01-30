@@ -22,6 +22,8 @@
 #-DRegulatory_Domain_IN_866
 #-DRegulatory_Domain_AU_433
 #-DRegulatory_Domain_EU_433
+#-DRegulatory_Domain_US_433
+#-DRegulatory_Domain_US_433_WIDE
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
@@ -40,10 +42,6 @@
 #-DFAN_MIN_RUNTIME=30
 
 ### COMPATIBILITY OPTIONS: ###
-
-# Invert the TX/RX half-duplex pin in the transmitter code. Handset external
-# modules are almost all inverted. ESP32/8286 targets only
--DUART_INVERTED
 
 # Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
 # If not defined, will default to 420000
@@ -84,6 +82,12 @@
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
 #-DDEBUG_LOG
+
+# For an ESP32S3 MCU, there are two options:
+# 1 - Pull-up on GPIO3, USB for JTAG (on MI_02), debug logging uses main UART.
+# 2 - Pull-down on GPIO3, Individual pins for JTAG (MTDI/MTMS/MTCK/MTDO), debug logging via USB for CDC UART (on MI_00)
+#-DESP32_S3_USB_JTAG_ENABLED
+
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
 #-DDEBUG_LOG_VERBOSE
 

@@ -15,8 +15,6 @@ public:
     void end();
     void reset();
 
-    void ICACHE_RAM_ATTR setNss(uint8_t radioNumber, bool state);
-
     uint8_t ICACHE_RAM_ATTR readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber);
     uint8_t ICACHE_RAM_ATTR readRegister(uint8_t reg, SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR readRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber);
