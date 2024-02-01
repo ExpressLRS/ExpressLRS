@@ -69,6 +69,7 @@ public:
     uint8_t ReceivedPackagesCount();
     bool AppendTelemetryPackage(uint8_t *package);
 private:
+    bool processInternalTelemetryPackage(uint8_t *package);
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
     telemetry_state_s telemetry_state;
