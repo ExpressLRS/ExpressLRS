@@ -88,13 +88,21 @@ static void rtc6705WriteRegister(uint32_t regData)
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
     }
 
-    #if defined(PLATFORM_ESP32)
-        vtxSPI->transferBits(regData, nullptr, 25);
-    #else
-        uint8_t buf[BUF_PACKET_SIZE];
-        memcpy(buf, (byte *)&regData, BUF_PACKET_SIZE);
-        vtxSPI->transfer(buf, BUF_PACKET_SIZE);
-    #endif
+    // On some ESP32 MCUs there's a silicon bug which affects all 8n+1 bit and 1 bit transfers where the
+    // last bit sent is corrupt.
+    // See: https://github.com/ExpressLRS/ExpressLRS/pull/2406#issuecomment-1722573356
+    //
+    // To reproduce, use an ESP32S3 and 25 bit transfers, change from channel A4 to A1, then A1 to A4 (ok),
+    // then A4 to A3, then A3 to A4 (fail)
+    //
+    // 12816, 9286833 appears on the scope when changing from A:1->A:4
+    // 12816, 26064049 appears on the scope when changing from A:3->A:4
+    //
+    // 9286833  = 0_1000_1101_1011_0100_1011_0001
+    // 26064049 = 1_1000_1101_1011_0100_1011_0001
+    //
+    // Since the RTC6705 just ignores the extra bits, we send 32 bits and the RTC6705 ignores the last 7 bits.
+    vtxSPI->transfer32(regData);
 
     if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
     {

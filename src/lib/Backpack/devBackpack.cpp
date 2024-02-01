@@ -11,7 +11,6 @@
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
 extern bool InBindingMode;
-extern Stream *TxBackpack;
 extern char backpackVersion[];
 extern bool headTrackingEnabled;
 
@@ -30,33 +29,55 @@ bool lastRecordingState = false;
 #include "CRSF.h"
 #include "hwTimer.h"
 
-void startPassthrough()
+[[noreturn]] void startPassthrough()
 {
-    // stop everyhting
+    // stop everything
     devicesStop();
     Radio.End();
     hwTimer::stop();
     controller->End();
 
+    Stream *uplink = &CRSFController::Port;
+
     uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
+    {
         #if defined(PLATFORM_ESP32_S3)
-            CRSFController::Port.begin(baud, SERIAL_8N1, 44, 43);  // 如果PLATFORM_ESP32_S3宏定义，则将引脚配置为44和43，If PLATFORM_ESP32_S3 macro is defined, pins are configured as 44 and 43
+        // if UART0 is connected to the backpack then use the USB for the uplink
+        if (GPIO_PIN_DEBUG_RX == 44 && GPIO_PIN_DEBUG_TX == 43)
+        {
+            uplink = &Serial;
+            Serial.setTxBufferSize(1024);
+            Serial.setRxBufferSize(16384);
+        }
+        else
+        {
+            CRSFController::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
+            CRSFController::Port.setTxBufferSize(1024);
+            CRSFController::Port.setRxBufferSize(16384);
+        }
         #else
-            CRSFController::Port.begin(baud, SERIAL_8N1, 3, 1);  // 否则继续使用默认引脚配置3和1，Otherwise continue to use default pin configuration 3 and 1
+        CRSFController::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
+        CRSFController::Port.setTxBufferSize(1024);
+        CRSFController::Port.setRxBufferSize(16384);
         #endif
+    }
     else
     {
         CRSFController::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSFController::Port.setTxBufferSize(1024);
+        CRSFController::Port.setRxBufferSize(16384);
     }
     disableLoopWDT();
 
-    HardwareSerial &backpack = *(HardwareSerial*)TxBackpack;
+    const auto backpack = (HardwareSerial*)TxBackpack;
     if (baud != BACKPACK_LOGGING_BAUD)
     {
-        backpack.begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+        backpack->begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
     }
+    backpack->setRxBufferSize(1024);
+    backpack->setTxBufferSize(16384);
 
     // reset ESP8285 into bootloader mode
     digitalWrite(GPIO_PIN_BACKPACK_BOOT, HIGH);
@@ -66,27 +87,29 @@ void startPassthrough()
     digitalWrite(GPIO_PIN_BACKPACK_EN, HIGH);
     delay(50);
 
-    CRSFController::Port.flush();
-    backpack.flush();
+    uplink->flush();
+    backpack->flush();
 
     uint8_t buf[64];
-    while (backpack.available())
-        backpack.readBytes(buf, sizeof(buf));
+    while (backpack->available())
+    {
+        backpack->readBytes(buf, sizeof(buf));
+    }
 
     // go hard!
     for (;;)
     {
-        int r = CRSFController::Port.available();
-        if (r > sizeof(buf))
-            r = sizeof(buf);
-        r = CRSFController::Port.readBytes(buf, r);
-        backpack.write(buf, r);
+        int available_bytes = uplink->available();
+        if (available_bytes > sizeof(buf))
+            available_bytes = sizeof(buf);
+        auto bytes_read = uplink->readBytes(buf, available_bytes);
+        backpack->write(buf, bytes_read);
 
-        r = backpack.available();
-        if (r > sizeof(buf))
-            r = sizeof(buf);
-        r = backpack.readBytes(buf, r);
-        CRSFController::Port.write(buf, r);
+        available_bytes = backpack->available();
+        if (available_bytes > sizeof(buf))
+            available_bytes = sizeof(buf);
+        bytes_read = backpack->readBytes(buf, available_bytes);
+        uplink->write(buf, bytes_read);
     }
 }
 #endif
@@ -101,6 +124,28 @@ void checkBackpackUpdate()
             startPassthrough();
         }
     }
+#if defined(PLATFORM_ESP32_S3)
+    // Start passthrough mode if an Espressif resync packet is detected on the USB port
+    static const uint8_t resync[] = {
+        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+    };
+    static int resync_pos = 0;
+    while(Serial.available())
+    {
+        int byte = Serial.read();
+        if (byte == resync[resync_pos])
+        {
+            resync_pos++;
+            if (resync_pos == sizeof(resync)) startPassthrough();
+        }
+        else
+        {
+            resync_pos = 0;
+        }
+    }
+#endif
 #endif
 }
 
@@ -157,10 +202,10 @@ static void AuxStateToMSPOut()
         return;
     }
 
-    uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
-    uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
+    const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
+    const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-    bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+    const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (recordingState == lastRecordingState)
     {
@@ -169,17 +214,7 @@ static void AuxStateToMSPOut()
     }
     lastRecordingState = recordingState;
 
-    uint16_t delay = 0;
-
-    if (recordingState)
-    {
-        delay = GetDvrDelaySeconds(config.GetDvrStartDelay());
-    }
-
-    if (!recordingState)
-    {
-        delay = GetDvrDelaySeconds(config.GetDvrStopDelay());
-    }
+    const uint16_t delay = GetDvrDelaySeconds(recordingState ? config.GetDvrStartDelay() : config.GetDvrStopDelay());
 
     mspPacket_t packet;
     packet.reset();
