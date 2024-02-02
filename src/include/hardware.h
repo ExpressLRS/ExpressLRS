@@ -137,6 +137,8 @@ typedef enum {
     HARDWARE_vtx_sck,
     HARDWARE_vtx_amp_vpd_25mW,
     HARDWARE_vtx_amp_vpd_100mW,
+    HARDWARE_vtx_amp_pwm_25mW,
+    HARDWARE_vtx_amp_pwm_100mW,
 
     HARDWARE_LAST
 } nameType;
