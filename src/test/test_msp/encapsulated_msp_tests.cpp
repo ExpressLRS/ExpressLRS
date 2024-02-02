@@ -28,7 +28,7 @@ void test_encapsulated_msp_send(void)
     packet.addByte(0x00);   // don't enable pitmode
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     uint8_t* data;
     uint8_t len;
@@ -79,7 +79,7 @@ void test_encapsulated_msp_send_too_long(void)
     packet.addByte(0x05);
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     uint8_t* data;
     uint8_t len;
