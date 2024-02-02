@@ -413,8 +413,7 @@ static inline uint8_t ICACHE_RAM_ATTR CRSF_to_SWITCH3b(uint16_t ch)
     if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
         || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
         return CRSF_to_N(ch, CHANNEL_BIN_COUNT);
-    else
-        return 7;
+    return 7;
 }
 
 // 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle
