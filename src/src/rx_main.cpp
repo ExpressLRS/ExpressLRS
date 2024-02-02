@@ -1546,7 +1546,6 @@ static void updateBindingMode(unsigned long now)
         config.Commit();
 
         DBGLN("Power on counter >=3, enter binding mode...");
-        config.SetIsBound(false);
         EnterBindingMode();
     }
 }
@@ -1922,6 +1921,7 @@ void EnterBindingMode()
     UID[5] = BindingUID[5];
 
     OtaCrcInitializer = 0;
+    config.SetIsBound(false);
     InBindingMode = true;
 
     // Start attempting to bind
