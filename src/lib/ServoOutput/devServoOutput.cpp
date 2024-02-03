@@ -92,7 +92,7 @@ static void servosFailsafe()
             // so all the servos go to their expected position
             servoWrite(ch, us);
         }
-        else if (chConfig->val.failsafeMode == PWMFAILSAFE_NO_PULSE) {
+        else if (chConfig->val.failsafeMode == PWMFAILSAFE_NO_PULSES) {
             servoWrite(ch, 0);
         }
         else if (chConfig->val.failsafeMode == PWMFAILSAFE_HOLD_POSITION) {

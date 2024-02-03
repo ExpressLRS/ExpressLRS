@@ -185,7 +185,7 @@ enum eServoOutputMode : uint8_t
 enum eServoOutputFailsafeMode : uint8_t
 {
     PWMFAILSAFE_SET_POSITION,  // user customizable pulse value
-    PWMFAILSAFE_NO_PULSE,      // stop pulsing
+    PWMFAILSAFE_NO_PULSES,     // stop pulsing
     PWMFAILSAFE_HOLD_POSITION, // continue to pulse last used value
 };
 
