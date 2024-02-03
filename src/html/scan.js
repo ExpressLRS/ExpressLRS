@@ -120,7 +120,7 @@ function updatePwmSettings(arPwm) {
           'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
           'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
     const failsafeModeSelect = enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode,
-        ['Set Position', 'No Pulses', 'Hold Position']); // match eServoOutputFailsafeMode
+        ['Set Position', 'No Pulses', 'Last Position']); // match eServoOutputFailsafeMode
     htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td>
             <td>${generateFeatureBadges(features)}</td>
             <td>${modeSelect}</td>

@@ -95,7 +95,7 @@ static void servosFailsafe()
         else if (chConfig->val.failsafeMode == PWMFAILSAFE_NO_PULSES) {
             servoWrite(ch, 0);
         }
-        else if (chConfig->val.failsafeMode == PWMFAILSAFE_HOLD_POSITION) {
+        else if (chConfig->val.failsafeMode == PWMFAILSAFE_LAST_POSITION) {
             // do nothing
         }
     }
