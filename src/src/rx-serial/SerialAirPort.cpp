@@ -9,7 +9,7 @@ FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
 
-uint32_t SerialAirPort::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialAirPort::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     return DURATION_IMMEDIATELY;
 }
