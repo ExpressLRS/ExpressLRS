@@ -74,7 +74,9 @@ def generateUID(phrase):
         int(item) if item.isdigit() else -1
         for item in phrase.split(',')
     ]
-    if len(uid) == 6 and all(ele >= 0 and ele < 256 for ele in uid):
+    if (4 <= len(uid) <= 6) and all(ele >= 0 and ele < 256 for ele in uid):
+        # Extend the UID to 6 bytes, as only 4 are needed to bind
+        uid = [0] * (6 - len(uid)) + uid
         uid = bytes(uid)
     else:
         uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
