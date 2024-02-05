@@ -1284,6 +1284,7 @@ void setup()
       CRSF::OnDisconnected = &UARTdisconnected;
     }
     CRSF::RecvModelUpdate = &ModelUpdateReq;
+    CRSF::OnBindingCommand = &EnterBindingModeSafely;
     DBGLN("ExpressLRS TX Module Booted...");
 
     eeprom.Begin(); // Init the eeprom

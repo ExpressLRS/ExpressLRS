@@ -46,6 +46,7 @@ public:
     static void (*RecvModelUpdate)();
     static void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg);
     static void (*RCdataCallback)();
+    static void (*OnBindingCommand)();
 
     // The model ID as received from the Transmitter
     static uint8_t modelId;

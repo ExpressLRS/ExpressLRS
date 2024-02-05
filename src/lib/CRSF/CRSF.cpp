@@ -49,6 +49,7 @@ void (*CRSF::OnConnected)() = nullptr;    // called when CRSF stream is regained
 void (*CRSF::RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
 void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
 void (*CRSF::RCdataCallback)() = nullptr; // called when there is new RC data
+void (*CRSF::OnBindingCommand)() = nullptr; // called when the CRSF bind command comes via serial
 
 /// UART Handling ///
 uint8_t CRSF::SerialInPacketLen = 0; // length of the CRSF packet as measured
@@ -373,15 +374,14 @@ bool CRSF::processInternalCrsfPackage(uint8_t *package)
     const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
 
     // Enter Binding Mode
-    if (connectionState == disconnected
-        && packetType == CRSF_FRAMETYPE_COMMAND
+    if (packetType == CRSF_FRAMETYPE_COMMAND
         && header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
         && header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER
         && header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER
         && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
         && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
-        EnterBindingModeSafely();
+        if (OnBindingCommand) OnBindingCommand();
         return true;
     }
 
