@@ -1278,10 +1278,10 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    CRSF::connected = &UARTconnected; // it will auto init when it detects UART connection
+    CRSF::OnConnected = &UARTconnected; // it will auto init when it detects UART connection
     if (!firmwareOptions.is_airport)
     {
-      CRSF::disconnected = &UARTdisconnected;
+      CRSF::OnDisconnected = &UARTdisconnected;
     }
     CRSF::RecvModelUpdate = &ModelUpdateReq;
     DBGLN("ExpressLRS TX Module Booted...");

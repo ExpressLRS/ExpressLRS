@@ -32,16 +32,16 @@ public:
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);
     static void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
-    static void SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr);
-    static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
+    static void SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
+    static void SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
 
 #ifdef CRSF_TX_MODULE
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static void (*disconnected)();
-    static void (*connected)();
+    static void (*OnDisconnected)();
+    static void (*OnConnected)();
 
     static void (*RecvModelUpdate)();
     static void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg);
@@ -128,6 +128,7 @@ private:
     static void ICACHE_RAM_ATTR adjustMaxPacketSize();
     static void duplex_set_RX();
     static void duplex_set_TX();
+    static bool processInternalCrsfPackage(uint8_t *package);
     static bool ProcessPacket();
     static void handleUARTout();
     static bool UARTwdt();

@@ -43,8 +43,8 @@ Stream *CRSF::PortSecondary;
 static const auto MSP_SERIAL_OUT_FIFO_SIZE = 256U;
 static FIFO<MSP_SERIAL_OUT_FIFO_SIZE> MspWriteFIFO;
 
-void (*CRSF::disconnected)() = nullptr; // called when CRSF stream is lost
-void (*CRSF::connected)() = nullptr;    // called when CRSF stream is regained
+void (*CRSF::OnDisconnected)() = nullptr; // called when CRSF stream is lost
+void (*CRSF::OnConnected)() = nullptr;    // called when CRSF stream is regained
 
 void (*CRSF::RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
 void (*CRSF::RecvModelUpdate)() = nullptr; // called when model id cahnges, ie command from Radio
@@ -367,7 +367,50 @@ void ICACHE_RAM_ATTR CRSF::RcPacketToChannelsData() // data is packed as 11 bits
     }
 }
 
-bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
+bool CRSF::processInternalCrsfPackage(uint8_t *package)
+{
+    const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
+    const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
+
+    // Enter Binding Mode
+    if (connectionState == disconnected
+        && packetType == CRSF_FRAMETYPE_COMMAND
+        && header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
+        && header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER
+        && header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER
+        && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
+        && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
+    {
+        EnterBindingModeSafely();
+        return true;
+    }
+
+    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+        (header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER || header->dest_addr == CRSF_ADDRESS_BROADCAST) &&
+        (header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER || header->orig_addr == CRSF_ADDRESS_ELRS_LUA))
+    {
+        elrsLUAmode = header->orig_addr == CRSF_ADDRESS_ELRS_LUA;
+
+        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX && header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
+        {
+            modelId = header->payload[2];
+            #if defined(PLATFORM_ESP32)
+            rtcModelId = modelId;
+            #endif
+            if (RecvModelUpdate) RecvModelUpdate();
+        }
+        else
+        {
+            if (RecvParameterUpdate) RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool CRSF::ProcessPacket()
 {
     bool packetReceived = false;
 
@@ -377,7 +420,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
     {
         CRSFstate = true;
         DBGLN("CRSF UART Connected");
-        if (connected) connected();
+        if (OnConnected) OnConnected();
     }
 
     const uint8_t packetType = CRSF::inBuffer.asRCPacket_t.header.type;
@@ -404,28 +447,7 @@ bool ICACHE_RAM_ATTR CRSF::ProcessPacket()
         packetReceived = true;
     }
 
-    // always execute this check since broadcast needs to be handled in all cases
-    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-        (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-        (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
-    {
-        elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
-
-        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == CRSF_COMMAND_SUBCMD_RX && SerialInBuffer[6] == CRSF_COMMAND_MODEL_SELECT_ID)
-        {
-            modelId = SerialInBuffer[7];
-            #if defined(PLATFORM_ESP32)
-            rtcModelId = modelId;
-            #endif
-            if (RecvModelUpdate) RecvModelUpdate();
-        }
-        else
-        {
-            if (RecvParameterUpdate) RecvParameterUpdate(packetType, SerialInBuffer[5], SerialInBuffer[6]);
-        }
-
-        packetReceived = true;
-    }
+    packetReceived |= processInternalCrsfPackage(SerialInBuffer);
 
     return packetReceived;
 }
@@ -869,7 +891,7 @@ bool CRSF::UARTwdt()
             if (CRSFstate == true)
             {
                 DBGLN("CRSF UART Disconnected");
-                if (disconnected) disconnected();
+                if (OnDisconnected) OnDisconnected();
                 CRSFstate = false;
             }
 
@@ -1032,7 +1054,7 @@ void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, 
     packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
-void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
+void CRSF::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
 {
     crsf_header_t *header = (crsf_header_t *)frame;
     header->device_addr = destAddr;
@@ -1043,7 +1065,7 @@ void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize,
     frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
 
-void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
+void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr)
 {
     crsf_ext_header_t *header = (crsf_ext_header_t *)frame;
     header->dest_addr = destAddr;
