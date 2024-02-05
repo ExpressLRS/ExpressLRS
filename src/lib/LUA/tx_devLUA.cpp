@@ -640,7 +640,7 @@ static void registerLuaParameters()
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
           msp.addByte(newModelMatch ? CRSFController::getModelID() : 0xff);
-          CRSF::AddMspMessage(&msp);
+          CRSF::AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER);
         }
         luadevUpdateModelID();
       });

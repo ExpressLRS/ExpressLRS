@@ -61,7 +61,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
 static void VtxConfigToMSPOut()
@@ -88,7 +88,7 @@ static void VtxConfigToMSPOut()
         }
     }
 
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     if (!controller->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {

@@ -14,7 +14,7 @@ public:
     static void GetMspMessage(uint8_t **data, uint8_t *len);
     static void UnlockMspMessage();
     static void AddMspMessage(uint8_t length, uint8_t *data);
-    static void AddMspMessage(mspPacket_t *packet);
+    static void AddMspMessage(mspPacket_t *packet, uint8_t destination);
     static void ResetMspQueue();
 
     static void GetDeviceInformation(uint8_t *frame, uint8_t fieldCount);

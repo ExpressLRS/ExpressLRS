@@ -140,7 +140,7 @@ void CRSF::UnlockMspMessage()
     }
 }
 
-void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
+void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet, uint8_t destination)
 {
     if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
     {
@@ -154,7 +154,7 @@ void ICACHE_RAM_ATTR CRSF::AddMspMessage(mspPacket_t* packet)
     outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
     outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
     outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
-    outBuffer[3] = CRSF_ADDRESS_FLIGHT_CONTROLLER;                              // destination
+    outBuffer[3] = destination;                                                 // destination
     outBuffer[4] = CRSF_ADDRESS_RADIO_TRANSMITTER;                              // origin
 
     // Encapsulated MSP payload

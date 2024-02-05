@@ -10,10 +10,16 @@
 extern SerialIO *serialIO;
 
 static volatile bool frameAvailable = false;
+static volatile bool frameMissed = false;
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
     frameAvailable = true;
+}
+
+void ICACHE_RAM_ATTR crsfRCFrameMissed()
+{
+    frameMissed = true;
 }
 
 static int start()
@@ -40,9 +46,10 @@ static int timeout()
     // only send frames if we have a model match
     if (connectionHasModelMatch)
     {
-        duration = serialIO->sendRCFrame(frameAvailable, ChannelData);
+        duration = serialIO->sendRCFrame(frameAvailable, frameMissed, ChannelData);
     }
     frameAvailable = false;
+    frameMissed = false;
     // still get telemetry and send link stats if theres no model match
     serialIO->processSerialInput();
     serialIO->sendQueuedData(serialIO->getMaxSerialWriteSize());
