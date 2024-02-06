@@ -409,6 +409,17 @@ bool luaHandleUpdateParameter()
       }
       break;
 
+#if defined(TARGET_RX)
+    // This is a bit of a hack, it just so happens that the parameterIndex and parameterArg parameters
+    // are in the same place as the bind command. This should be handled further up the receive chain
+    // but the call in Telemetry.ShouldCallEnterBind() only works if serial data is coming in so the
+    // whole stack needs a bit of a refactor to not have similar code duplicated all over
+    case CRSF_FRAMETYPE_COMMAND:
+      if (parameterIndex == CRSF_COMMAND_SUBCMD_RX && parameterArg == CRSF_COMMAND_SUBCMD_RX_BIND)
+        EnterBindingModeSafely();
+      break;
+#endif
+
     default:
       DBGLN("Unknown LUA %x", parameterType);
   }
