@@ -1,8 +1,9 @@
-#include "controller.h"
+#pragma once
+#include "handset.h"
 
 #include <driver/rmt.h>
 
-class PPMController : public Controller
+class PPMHandset final : public Handset
 {
 public:
     void Begin() override;

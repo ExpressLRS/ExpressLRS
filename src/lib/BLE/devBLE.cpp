@@ -4,7 +4,7 @@
 
 #include "common.h"
 #include "crsf_protocol.h"
-#include "controller.h"
+#include "handset.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 #include "logging.h"
@@ -62,7 +62,7 @@ void BluetoothJoystickBegin()
 
     POWERMGNT::setPower(MinPower);
     Radio.End();
-    controller->setRCDataCallback(BluetoothJoystickUpdateValues);
+    handset->setRCDataCallback(BluetoothJoystickUpdateValues);
 
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);

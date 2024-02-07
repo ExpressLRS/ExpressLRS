@@ -1,24 +1,18 @@
 #ifndef H_CRSF_CONTROLLER
 #define H_CRSF_CONTROLLER
 
-#include "controller.h"
+#include "handset.h"
 #include "crsf_protocol.h"
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
 #include "common.h"
-#include "msp.h"
 
 #ifdef PLATFORM_ESP32
-#include "driver/gpio.h"
 #include "driver/uart.h"
-#include "esp32-hal-uart.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include <cstdio>
 #endif
 
-class CRSFController : public Controller
+class CRSFHandset final : public Handset
 {
 
 public:
@@ -55,7 +49,7 @@ public:
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
 
 private:
-    inBuffer_U inBuffer;
+    inBuffer_U inBuffer = {};
 
     /// OpenTX mixer sync ///
     volatile uint32_t dataLastRecv = 0;

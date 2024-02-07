@@ -4,7 +4,7 @@
 #include "device.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "CRSFController.h"
+#include "CRSFHandset.h"
 #include "config.h"
 #include "logging.h"
 
@@ -35,9 +35,9 @@ bool lastRecordingState = false;
     devicesStop();
     Radio.End();
     hwTimer::stop();
-    controller->End();
+    handset->End();
 
-    Stream *uplink = &CRSFController::Port;
+    Stream *uplink = &CRSFHandset::Port;
 
     uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
@@ -53,21 +53,21 @@ bool lastRecordingState = false;
         }
         else
         {
-            CRSFController::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
-            CRSFController::Port.setTxBufferSize(1024);
-            CRSFController::Port.setRxBufferSize(16384);
+            CRSFHandset::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
+            CRSFHandset::Port.setTxBufferSize(1024);
+            CRSFHandset::Port.setRxBufferSize(16384);
         }
         #else
-        CRSFController::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
-        CRSFController::Port.setTxBufferSize(1024);
-        CRSFController::Port.setRxBufferSize(16384);
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
+        CRSFHandset::Port.setTxBufferSize(1024);
+        CRSFHandset::Port.setRxBufferSize(16384);
         #endif
     }
     else
     {
-        CRSFController::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-        CRSFController::Port.setTxBufferSize(1024);
-        CRSFController::Port.setRxBufferSize(16384);
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSFHandset::Port.setTxBufferSize(1024);
+        CRSFHandset::Port.setRxBufferSize(16384);
     }
     disableLoopWDT();
 
@@ -271,7 +271,7 @@ static void initialize()
         // Rely on event() to boot
     }
 #endif
-    controller->setRCDataCallback(AuxStateToMSPOut);
+    handset->setRCDataCallback(AuxStateToMSPOut);
 }
 
 static int start()

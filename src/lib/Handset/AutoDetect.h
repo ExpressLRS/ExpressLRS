@@ -1,8 +1,10 @@
-#include "controller.h"
+#pragma once
+
+#include "handset.h"
 
 #include <driver/rmt.h>
 
-class AutoDetect : public Controller
+class AutoDetect final : public Handset
 {
 public:
     void Begin() override;
@@ -11,9 +13,9 @@ public:
     void handleInput() override;
 
 private:
-    void migrateTo(Controller *that);
-    void startPPM();
-    void startCRSF();
+    void migrateTo(Handset *that) const;
+    void startPPM() const;
+    void startCRSF() const;
 
     int input_detect = 0;
     RingbufHandle_t rb = nullptr;

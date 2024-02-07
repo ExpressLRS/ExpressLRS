@@ -3,33 +3,33 @@
 #ifdef TARGET_TX
 
 #include "CRSF.h"
-#include "CRSFController.h"
+#include "CRSFHandset.h"
 #include "POWERMGNT.h"
-#include "devController.h"
+#include "devHandset.h"
 
 #if defined(PLATFORM_ESP32)
 #include "AutoDetect.h"
 #endif
 
-Controller *controller;
+Handset *handset;
 
 static void initialize()
 {
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
-        controller = new AutoDetect();
+        handset = new AutoDetect();
         return;
     }
 #endif
-    controller = new CRSFController();
+    handset = new CRSFHandset();
 }
 
 static int start()
 {
-    controller->Begin();
+    handset->Begin();
 #if defined(DEBUG_TX_FREERUN)
-    if (!controller->connect())
+    if (!handset->connect())
     {
         ERRLN("CRSF::connected has not been initialised");
     }
@@ -39,7 +39,7 @@ static int start()
 
 static int timeout()
 {
-    controller->handleInput();
+    handset->handleInput();
     return DURATION_IMMEDIATELY;
 }
 
@@ -50,7 +50,7 @@ static int event()
     return DURATION_IGNORE;
 }
 
-device_t Controller_device = {
+device_t Handset_device = {
     .initialize = initialize,
     .start = start,
     .event = event,

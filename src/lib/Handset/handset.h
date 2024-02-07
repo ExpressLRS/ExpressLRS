@@ -5,24 +5,24 @@
 /**
  * @brief Abstract class that is extended to provide an interface to a handset.
  *
- * There are three implementations of the Controller class
+ * There are three implementations of the Handset class
  *
- * - CRSFController - implements the CRSF protocol for communicating with the handset
- * - PPM Controller - PPM protocol, can be connected to the DSC/trainer port for simple non-CRSF handsets
+ * - CRSFHandset - implements the CRSF protocol for communicating with the handset
+ * - PPMHandset - PPM protocol, can be connected to the DSC/trainer port for simple non-CRSF handsets
  * - AutoDetect - this implementation uses an RMT channel to auto-detect a PPM or CRSF handset and swap the
- *   global controller variable to point to instance of the actual implementation. This allows a TX module
+ *   global `handset` variable to point to instance of the actual implementation. This allows a TX module
  *   to be moved between a CRSF capable handset and PPM only handset e.g. an EdgeTX radio and a surface radio.
  */
-class Controller
+class Handset
 {
 public:
     /**
-     * @brief Start the controller protocol
+     * @brief Start the handset protocol
      */
     virtual void Begin() = 0;
 
     /**
-     * @brief End the controller protocol
+     * @brief End the handset protocol
      */
     virtual void End() = 0;
 
@@ -87,7 +87,7 @@ public:
     uint32_t GetRCdataLastRecv() const { return RCdataLastRecv; }
 
 protected:
-    virtual ~Controller() = default;
+    virtual ~Handset() = default;
 
     bool controllerConnected = false;
     void (*RCdataCallback)() = nullptr;  // called when there is new RC data
@@ -101,5 +101,5 @@ protected:
 };
 
 #ifdef TARGET_TX
-extern Controller *controller;
+extern Handset *handset;
 #endif

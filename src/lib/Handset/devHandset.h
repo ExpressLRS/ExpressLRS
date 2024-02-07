@@ -2,4 +2,4 @@
 
 #include "device.h"
 
-extern device_t Controller_device;
+extern device_t Handset_device;

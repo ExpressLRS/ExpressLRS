@@ -3,19 +3,18 @@
 #if defined(PLATFORM_ESP32) && defined(TARGET_TX)
 
 #include "AutoDetect.h"
-#include "CRSFController.h"
-#include "PPMController.h"
-#include "devController.h"
+#include "CRSFHandset.h"
+#include "PPMHandset.h"
 #include "logging.h"
 
 #include <driver/rmt.h>
 
-const rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
-const auto RMT_TICKS_PER_US = 10;
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
+constexpr auto RMT_TICKS_PER_US = 10;
 
 void AutoDetect::Begin()
 {
-    auto divisor = 80 / RMT_TICKS_PER_US;
+    constexpr auto divisor = 80 / RMT_TICKS_PER_US;
 
     rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), PPM_RMT_CHANNEL);
     rmt_rx_config.clk_div = divisor;
@@ -39,7 +38,7 @@ bool AutoDetect::IsArmed()
     return false;
 }
 
-void AutoDetect::migrateTo(Controller *that)
+void AutoDetect::migrateTo(Handset *that) const
 {
     that->setRCDataCallback(RCdataCallback);
     that->registerParameterUpdateCallback(RecvParameterUpdate);
@@ -47,25 +46,25 @@ void AutoDetect::migrateTo(Controller *that)
     that->Begin();
     that->setPacketInterval(RequestedRCpacketInterval);
     delete this;
-    controller = that;
+    handset = that;
 }
 
-void AutoDetect::startPPM()
+void AutoDetect::startPPM() const
 {
-    migrateTo(new PPMController());
+    migrateTo(new PPMHandset());
 }
 
-void AutoDetect::startCRSF()
+void AutoDetect::startCRSF() const
 {
-    migrateTo(new CRSFController());
+    migrateTo(new CRSFHandset());
 }
 
 void AutoDetect::handleInput()
 {
     size_t length = 0;
-    auto now = millis();
+    const auto now = millis();
 
-    auto items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
+    const auto items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
     if (items)
     {
         vRingbufferReturnItem(rb, static_cast<void *>(items));

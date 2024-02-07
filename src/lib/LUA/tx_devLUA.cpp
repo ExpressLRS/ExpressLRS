@@ -2,7 +2,7 @@
 
 #include "rxtx_devLua.h"
 #include "CRSF.h"
-#include "CRSFController.h"
+#include "CRSFHandset.h"
 #include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
@@ -290,7 +290,7 @@ extern void setWifiUpdateMode();
 #endif
 
 static void luadevUpdateModelID() {
-  itoa(CRSFController::getModelID(), modelMatchUnit+6, 10);
+  itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -535,9 +535,9 @@ static void updateFolderName_VtxAdmin()
  ****/
 static void luadevUpdateBadGood()
 {
-  itoa(CRSFController::BadPktsCountResult, luaBadGoodString, 10);
+  itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
   strcat(luaBadGoodString, "/");
-  itoa(CRSFController::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+  itoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
 }
 
 /***
@@ -639,7 +639,7 @@ static void registerLuaParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? CRSFController::getModelID() : 0xff);
+          msp.addByte(newModelMatch ? CRSFHandset::getModelID() : 0xff);
           CRSF::AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER);
         }
         luadevUpdateModelID();
@@ -839,7 +839,7 @@ static int start()
   {
     return DURATION_NEVER;
   }
-  controller->registerParameterUpdateCallback(luaParamUpdateReq);
+  handset->registerParameterUpdateCallback(luaParamUpdateReq);
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);

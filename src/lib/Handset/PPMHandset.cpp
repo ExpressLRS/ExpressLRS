@@ -2,19 +2,19 @@
 
 #if defined(PLATFORM_ESP32) && defined(TARGET_TX)
 
-#include "PPMController.h"
+#include "PPMHandset.h"
 #include "common.h"
 #include "crsf_protocol.h"
 #include "logging.h"
 
 #include <driver/rmt.h>
 
-const rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
-const auto RMT_TICKS_PER_US = 10;
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
+constexpr auto RMT_TICKS_PER_US = 10;
 
-void PPMController::Begin()
+void PPMHandset::Begin()
 {
-    auto divisor = 80 / RMT_TICKS_PER_US;
+    constexpr auto divisor = 80 / RMT_TICKS_PER_US;
 
     rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), PPM_RMT_CHANNEL);
     rmt_rx_config.clk_div = divisor;
@@ -32,20 +32,20 @@ void PPMController::Begin()
     }
 }
 
-void PPMController::End()
+void PPMHandset::End()
 {
     rmt_driver_uninstall(PPM_RMT_CHANNEL);
 }
 
-bool PPMController::IsArmed()
+bool PPMHandset::IsArmed()
 {
     bool maybeArmed = numChannels < 5 || CRSF_to_BIT(ChannelData[4]);
     return maybeArmed && lastPPM;
 }
 
-void PPMController::handleInput()
+void PPMHandset::handleInput()
 {
-    auto now = millis();
+    const auto now = millis();
     size_t length = 0;
 
     auto *items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
@@ -55,8 +55,8 @@ void PPMController::handleInput()
         numChannels = length;
         for (int i = 0; i < length; i++)
         {
-            auto item = items[i];
-            auto ppm = (item.duration0 + item.duration1) / RMT_TICKS_PER_US;
+            const auto item = items[i];
+            const auto ppm = (item.duration0 + item.duration1) / RMT_TICKS_PER_US;
             ChannelData[i] = fmap(ppm, 988, 2012, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
         }
         vRingbufferReturnItem(rb, static_cast<void *>(items));
