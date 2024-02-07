@@ -39,35 +39,31 @@ bool AutoDetect::IsArmed()
     return false;
 }
 
+void AutoDetect::migrateTo(Controller *that)
+{
+    that->setRCDataCallback(RCdataCallback);
+    that->registerParameterUpdateCallback(RecvParameterUpdate);
+    that->registerCallbacks(connected, disconnected, RecvModelUpdate);
+    that->Begin();
+    that->setPacketInterval(RequestedRCpacketInterval);
+    delete this;
+    controller = that;
+}
+
 void AutoDetect::startPPM()
 {
-    Controller *ppm = new PPMController();
-    ppm->setRCDataCallback(RCdataCallback);
-    ppm->registerParameterUpdateCallback(RecvParameterUpdate);
-    ppm->registerCallbacks(connected, disconnected, RecvModelUpdate);
-    ppm->Begin();
-    ppm->setPacketInterval(RequestedRCpacketInterval);
-    delete this;
-    controller = ppm;
+    migrateTo(new PPMController());
 }
 
 void AutoDetect::startCRSF()
 {
-    Controller *crsf = new CRSFController();
-    crsf->setRCDataCallback(RCdataCallback);
-    crsf->registerParameterUpdateCallback(RecvParameterUpdate);
-    crsf->registerCallbacks(connected, disconnected, RecvModelUpdate);
-    crsf->Begin();
-    crsf->setPacketInterval(RequestedRCpacketInterval);
-    delete this;
-    controller = crsf;
+    migrateTo(new CRSFController());
 }
 
 void AutoDetect::handleInput()
 {
     size_t length = 0;
     auto now = millis();
-    static auto lastDetect = 0LU;
 
     auto items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
     if (items)

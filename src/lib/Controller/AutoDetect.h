@@ -11,9 +11,11 @@ public:
     void handleInput() override;
 
 private:
+    void migrateTo(Controller *that);
     void startPPM();
     void startCRSF();
 
     int input_detect = 0;
     RingbufHandle_t rb = nullptr;
+    uint32_t lastDetect = 0;
 };

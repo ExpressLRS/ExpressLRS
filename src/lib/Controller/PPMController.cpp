@@ -40,8 +40,7 @@ void PPMController::End()
 bool PPMController::IsArmed()
 {
     bool maybeArmed = numChannels < 5 || CRSF_to_BIT(ChannelData[4]);
-    auto now = millis();
-    return maybeArmed && lastPPM && now - lastPPM < 1000;
+    return maybeArmed && lastPPM;
 }
 
 void PPMController::handleInput()
@@ -66,6 +65,11 @@ void PPMController::handleInput()
     else if (lastPPM && now - 1000 > lastPPM)
     {
         DBGLN("PPM signal lost, disarming");
+        if (disconnected)
+        {
+            disconnected();
+        }
+        lastPPM = 0;
     }
 }
 
