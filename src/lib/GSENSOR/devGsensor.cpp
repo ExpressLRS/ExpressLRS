@@ -9,6 +9,7 @@
 #include "devGsensor.h"
 #include <functional>
 
+#include "handset.h"
 #include "gsensor.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -28,7 +29,6 @@ static unsigned int bumps = 0;
 static unsigned long lastBumpTime = 0;
 static unsigned long lastBumpCommand = 0;
 
-extern bool IsArmed();
 extern void SendRxLoanOverMSP();
 extern void EnterBindingMode();
 extern void deferExecution(uint32_t ms, std::function<void()> f);
@@ -72,7 +72,7 @@ static int timeout()
         float x, y, z;
         gsensor.getGSensorData(&x, &y, &z);
         // Single bump while holding the radio antenna up and NOT armed is Loan/Bind
-        if (!CRSF::IsArmed() && bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)
+        if (!handset->IsArmed() && bumps == 1 && fabs(x) < 0.5 && y < -0.8 && fabs(z) < 0.5)
         {
             lastBumpCommand = now;
             if (connectionState == connected)
@@ -98,7 +98,7 @@ static int timeout()
         //When system is idle, set power to minimum
         if(config.GetMotionMode() == 1)
         {
-            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !CRSF::IsArmed())
+            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !handset->IsArmed())
             {
                 POWERMGNT::setPower(MinPower);
             }
