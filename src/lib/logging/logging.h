@@ -59,10 +59,10 @@ void debugFreeInitLogger();
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM
     #define DBG(msg, ...)   debugPrintf(msg, ##__VA_ARGS__)
-    #define DBGLN(msg, ...) { \
+    #define DBGLN(msg, ...) do { \
       debugPrintf(msg, ##__VA_ARGS__); \
       LOGGING_UART.println(); \
-    }
+    } while(0)
   #else
     #define DBG(msg, ...)   debugPrintf(PSTR(msg), ##__VA_ARGS__)
     #define DBGLN(msg, ...) { \

@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "FIFO.h"
+#include "device.h"
 
 /**
  * @brief Abstract class that is to be extended by implementation classes for different serial protocols on the receiver side.

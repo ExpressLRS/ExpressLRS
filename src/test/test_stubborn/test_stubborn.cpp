@@ -1,10 +1,10 @@
 #include <cstdint>
+#include <iostream>
+#include <bitset>
 #include <telemetry_protocol.h>
 #include <stubborn_sender.h>
 #include <stubborn_receiver.h>
 #include <unity.h>
-#include <iostream>
-#include <bitset>
 #include "targets.h"
 #include "helpers.h"
 

@@ -1,9 +1,10 @@
 #include "targets.h"
+
 #include "common.h"
 #include "device.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "CRSF.h"
+#include "CRSFHandset.h"
 #include "config.h"
 #include "logging.h"
 
@@ -34,9 +35,9 @@ bool lastRecordingState = false;
     devicesStop();
     Radio.End();
     hwTimer::stop();
-    CRSF::End();
+    handset->End();
 
-    Stream *uplink = &CRSF::Port;
+    Stream *uplink = &CRSFHandset::Port;
 
     uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
     // get ready for passthrough
@@ -52,25 +53,25 @@ bool lastRecordingState = false;
         }
         else
         {
-            CRSF::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
-            CRSF::Port.setTxBufferSize(1024);
-            CRSF::Port.setRxBufferSize(16384);
+            CRSFHandset::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
+            CRSFHandset::Port.setTxBufferSize(1024);
+            CRSFHandset::Port.setRxBufferSize(16384);
         }
         #else
-        CRSF::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
-        CRSF::Port.setTxBufferSize(1024);
-        CRSF::Port.setRxBufferSize(16384);
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
+        CRSFHandset::Port.setTxBufferSize(1024);
+        CRSFHandset::Port.setRxBufferSize(16384);
         #endif
     }
     else
     {
-        CRSF::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-        CRSF::Port.setTxBufferSize(1024);
-        CRSF::Port.setRxBufferSize(16384);
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSFHandset::Port.setTxBufferSize(1024);
+        CRSFHandset::Port.setRxBufferSize(16384);
     }
     disableLoopWDT();
 
-    auto backpack = (HardwareSerial*)TxBackpack;
+    const auto backpack = (HardwareSerial*)TxBackpack;
     if (baud != BACKPACK_LOGGING_BAUD)
     {
         backpack->begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -201,10 +202,10 @@ static void AuxStateToMSPOut()
         return;
     }
 
-    uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
-    uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
+    const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
+    const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
 
-    bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+    const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
     if (recordingState == lastRecordingState)
     {
@@ -213,17 +214,7 @@ static void AuxStateToMSPOut()
     }
     lastRecordingState = recordingState;
 
-    uint16_t delay = 0;
-
-    if (recordingState)
-    {
-        delay = GetDvrDelaySeconds(config.GetDvrStartDelay());
-    }
-
-    if (!recordingState)
-    {
-        delay = GetDvrDelaySeconds(config.GetDvrStopDelay());
-    }
+    const uint16_t delay = GetDvrDelaySeconds(recordingState ? config.GetDvrStartDelay() : config.GetDvrStopDelay());
 
     mspPacket_t packet;
     packet.reset();
@@ -244,7 +235,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         // Backpack telem is off
         return;
     }
-    
+
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
@@ -256,7 +247,7 @@ void crsfTelemToMSPOut(uint8_t *data)
         ERRLN("CRSF frame exceeds max length");
         return;
     }
-    
+
     for (uint8_t i = 0; i < size; ++i)
     {
       packet.addByte(data[i]);
@@ -280,8 +271,7 @@ static void initialize()
         // Rely on event() to boot
     }
 #endif
-
-    CRSF::RCdataCallback = AuxStateToMSPOut;
+    handset->setRCDataCallback(AuxStateToMSPOut);
 }
 
 static int start()
