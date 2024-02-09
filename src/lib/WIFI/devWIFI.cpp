@@ -333,7 +333,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
-    json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
+    json["config"]["serial-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
@@ -468,7 +468,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   DBGLN("Setting serial protocol %u", protocol);
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
-  uint8_t failsafe = json["sbus-failsafe"] | 0;
+  uint8_t failsafe = json["serial-failsafe"] | 0;
   DBGLN("Setting SBUS failsafe mode %u", failsafe);
   config.SetFailsafeMode((eFailsafeMode)failsafe);
 
