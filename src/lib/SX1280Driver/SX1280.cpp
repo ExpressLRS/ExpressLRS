@@ -628,9 +628,6 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
                 hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
 
-                // leaving only the type in the first byte (crcHigh was cleared)
-                RXdataBuffer[0] &= 0b11;
-                RXdataBuffer_second[0] &= 0b11;
                 // if the second packet is same to the first, it's valid
                 if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
                 {
