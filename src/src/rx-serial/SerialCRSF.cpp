@@ -1,5 +1,5 @@
 #include "SerialCRSF.h"
-#include "CRSF.h"
+#include "common.h"
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
@@ -55,7 +55,7 @@ void SerialCRSF::queueLinkStatisticsPacket()
     _fifo.unlock();
 }
 
-uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;

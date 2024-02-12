@@ -60,10 +60,14 @@ uint32_t get_rpm();
 static void initialize()
 {
 #if defined(HAS_THERMAL)
+#if defined(PLATFORM_ESP32_S3)
+    thermal.init();
+#else
     if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
         thermal.init();
     }
+#endif
 #endif
     if (GPIO_PIN_FAN_EN != UNDEF_PIN)
     {
@@ -71,10 +75,12 @@ static void initialize()
     }
 }
 
-#if defined(HAS_THERMAL)
 static void timeoutThermal()
 {
+#if defined(HAS_THERMAL)
+#if !defined(PLATFORM_ESP32_S3)
     if(OPT_HAS_THERMAL_LM75A)
+#endif
     {
         thermal.handle();
 #ifdef HAS_SMART_FAN
@@ -90,8 +96,8 @@ static void timeoutThermal()
         }
 #endif
     }
-}
 #endif
+}
 
 #if defined(PLATFORM_ESP32)
 static void setFanSpeed()
@@ -258,12 +264,7 @@ static int event()
 
 static int timeout()
 {
-#if defined(HAS_THERMAL)
-    if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
-    {
-        timeoutThermal();
-    }
-#endif
+    timeoutThermal();
     timeoutFan();
     timeoutTacho();
     return THERMAL_DURATION;

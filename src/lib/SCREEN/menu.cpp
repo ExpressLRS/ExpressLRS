@@ -6,7 +6,7 @@
 #include "helpers.h"
 #include "logging.h"
 #include "POWERMGNT.h"
-#include "CRSF.h"
+#include "handset.h"
 #include "OTA.h"
 
 #ifdef HAS_THERMAL
@@ -79,7 +79,7 @@ static void displayIdleScreen(bool init)
     message_index_t disp_message;
     if (connectionState == noCrossfire || connectionState > FAILURE_STATES) {
         disp_message = MSG_ERROR;
-    } else if(CRSF::IsArmed()) {
+    } else if(handset->IsArmed()) {
         disp_message = MSG_ARMED;
     } else if(connectionState == connected) {
         if (connectionHasModelMatch) {

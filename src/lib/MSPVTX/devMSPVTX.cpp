@@ -4,6 +4,7 @@
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "CRSF.h"
+#include "msptypes.h"
 #include "hwTimer.h"
 
 /**

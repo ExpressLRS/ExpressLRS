@@ -182,6 +182,13 @@ enum eServoOutputMode : uint8_t
     somPwm,     // True PWM mode (NOT SUPPORTED)
 };
 
+enum eServoOutputFailsafeMode : uint8_t
+{
+    PWMFAILSAFE_SET_POSITION,  // user customizable pulse value
+    PWMFAILSAFE_NO_PULSES,     // stop pulsing
+    PWMFAILSAFE_LAST_POSITION, // continue to pulse last used value
+};
+
 enum eSerialProtocol : uint8_t
 {
     PROTOCOL_CRSF,
