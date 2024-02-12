@@ -25,8 +25,11 @@ const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
-#include "flashdiscrim.h"
+
+#if defined(TARGET_RX)
 // This is created by the build_flags.py and used by STM32 (ESP gets it from json)
+#include "flashdiscrim.h"
+#endif
 
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
