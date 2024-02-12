@@ -12,8 +12,6 @@ extern const char *wifi_ap_ssid;
 extern const char *wifi_ap_password;
 extern const char *wifi_ap_address;
 
-extern uint32_t flash_discriminator;
-
 enum BuzzerMode {
     buzzerQuiet,
     buzzerOne,
@@ -26,6 +24,8 @@ typedef struct _options {
     uint8_t     domain;         // depends on radio chip
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
+    uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
+                                        // the SPIFSS settings are obsolete and the flashed settings should be used in preference
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];

@@ -735,12 +735,14 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
     if (!firmwareOptions.hasUID)
         return;
     // If already copied binding info, do not replace
-    if (!skipDescrimCheck && m_config.flash_discriminator == flash_discriminator)
+    if (!skipDescrimCheck && m_config.flash_discriminator == firmwareOptions.flash_discriminator)
         return;
 
     // Save the new UID along with this discriminator to prevent resetting every boot
     SetUID(firmwareOptions.uid);
-    m_config.flash_discriminator = flash_discriminator;
+    m_config.flash_discriminator = firmwareOptions.flash_discriminator;
+    // Reset the power on counter because this is following a flash, may have taken a few boots to flash
+    m_config.powerOnCounter = 0;
     // SetUID should set this but just in case that gets removed, flash_discriminator needs to be saved
     m_modified = true;
 
@@ -897,7 +899,7 @@ void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
     else if (firmwareOptions.hasUID)
     {
         memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
-        m_config.flash_discriminator = flash_discriminator;
+        m_config.flash_discriminator = firmwareOptions.flash_discriminator;
     }
     else if (boundUid)
     {
@@ -1030,7 +1032,7 @@ RxConfig::SetDefaults(bool commit)
     if (commit)
     {
         // Prevent rebinding to the flashed UID on first boot
-        m_config.flash_discriminator = flash_discriminator;
+        m_config.flash_discriminator = firmwareOptions.flash_discriminator;
         m_modified = true;
         Commit();
     }

@@ -253,7 +253,7 @@ static void HandleReset(AsyncWebServerRequest *request)
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
+  if (firmwareOptions.flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
     request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
     return;
   }
