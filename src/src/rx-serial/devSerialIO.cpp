@@ -11,6 +11,7 @@
 extern SerialIO *serialIO;
 
 static volatile bool frameAvailable = false;
+static volatile bool frameMissed = false;
 static enum teamraceOutputInhibitState_e {
     troiPass = 0,               // Allow all packets through, normal operation
     troiDisableAwaitConfirm,    // Have received one packet with another model selected, awaiting confirm to Inhibit
@@ -21,6 +22,11 @@ static enum teamraceOutputInhibitState_e {
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
     frameAvailable = true;
+}
+
+void ICACHE_RAM_ATTR crsfRCFrameMissed()
+{
+    frameMissed = true;
 }
 
 static int start()
@@ -159,7 +165,8 @@ static int timeout()
 
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable();
-    uint32_t duration = serialIO->sendRCFrame(sendChannels, ChannelData);
+    uint32_t duration = serialIO->sendRCFrame(sendChannels, frameMissed, ChannelData);
+    frameMissed = false;
 
     // still get telemetry and send link stats if theres no model match
     serialIO->processSerialInput();

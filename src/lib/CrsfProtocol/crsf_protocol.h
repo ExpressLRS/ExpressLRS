@@ -291,9 +291,6 @@ union inBuffer_U
                                 // add other packet types here
 };
 
-
-typedef struct crsf_channels_s crsf_channels_t;
-
 //CRSF_FRAMETYPE_BATTERY_SENSOR
 typedef struct crsf_sensor_battery_s
 {

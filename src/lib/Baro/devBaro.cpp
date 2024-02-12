@@ -2,6 +2,7 @@
 
 #if defined(HAS_BARO)
 
+#include "CRSF.h"
 #include "logging.h"
 #include "telemetry.h"
 #include "baro_spl06.h"

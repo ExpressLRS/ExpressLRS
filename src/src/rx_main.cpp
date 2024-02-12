@@ -730,11 +730,25 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
     PFDloop.intEvent(micros()); // our internal osc just fired
 
-    if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends) && LQCalcDVDA.currentIsSet())
+    if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
     {
-        crsfRCFrameAvailable();
-        if (teamraceHasModelMatch)
-            servoNewChannelsAvailable();
+        if (LQCalcDVDA.currentIsSet())
+        {
+            crsfRCFrameAvailable();
+            if (teamraceHasModelMatch)
+                servoNewChannelsAvailable();
+        }
+        else
+        {
+            crsfRCFrameMissed();
+        }
+    }
+    else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
+    {
+        if (!LQCalc.currentIsSet())
+        {
+            crsfRCFrameMissed();
+        }
     }
 
     if (!didFHSS)
