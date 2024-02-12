@@ -44,7 +44,7 @@
 ### COMPATIBILITY OPTIONS: ###
 
 # Use a custom baud rate on the receiver for a KISS v1 FC (which runs at 400000) or any other oddball baud
-# Changing this will prevent flashing via_BetaflightPassthrough, which expects a 400000 baud RX
+# Changing this will prevent flashing via_BetaflightPassthrough, which expects a 420000 baud RX
 # If not defined, will default to 420000
 #-DRCVR_UART_BAUD=400000
 
