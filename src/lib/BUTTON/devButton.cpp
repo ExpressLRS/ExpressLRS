@@ -5,7 +5,7 @@
 #include "button.h"
 #include "config.h"
 #include "helpers.h"
-#include "CRSF.h"
+#include "handset.h"
 
 #ifndef GPIO_BUTTON_INVERTED
 #define GPIO_BUTTON_INVERTED false
@@ -104,7 +104,7 @@ static int timeout()
         return DURATION_NEVER;
     }
 #if defined(TARGET_TX)
-    if (CRSF::IsArmed())
+    if (handset->IsArmed())
         return MS_IN_USE;
 #else
     if (connectionState == connected)

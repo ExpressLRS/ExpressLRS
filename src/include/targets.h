@@ -65,6 +65,7 @@
 
 #ifndef HAS_THERMAL
 #define OPT_HAS_THERMAL false
+#define OPT_HAS_THERMAL_LM75A false
 #elif !defined(OPT_HAS_THERMAL)
 #define OPT_HAS_THERMAL true
 #endif

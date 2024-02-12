@@ -42,7 +42,16 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
 
 void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds)
 {
-    startWaveform8266(pwm_gpio[channel], microseconds, refreshInterval[channel] - microseconds);
+    int8_t pin = pwm_gpio[channel];
+    if (microseconds > 0) {
+        startWaveform8266(pin, microseconds, refreshInterval[channel] - microseconds);
+    }
+    else {
+        // startWaveform8266 does not handle 0 properly, there's still a 1.2 microsecond pulse
+        // so we have to explicitly stop the waveform generation
+        stopWaveform8266(pin);
+        digitalWrite(pin, LOW);
+    }
 }
 
 #endif
