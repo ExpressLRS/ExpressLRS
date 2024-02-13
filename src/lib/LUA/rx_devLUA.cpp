@@ -240,33 +240,38 @@ static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t a
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static uint8_t configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
+static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
 {
   for (int ch=0 ; ch<GPIO_PIN_PWM_OUTPUTS_COUNT ; ch++)
   {
     if (GPIO_PIN_PWM_OUTPUTS[ch] == sibling)
     {
-      // set sibling pin channel settings based on this pins settings
-      rx_config_pwm_t newPin3Config;
+      // Retain as much of the sibling's current config as possible
+      rx_config_pwm_t siblingPinConfig;
+      siblingPinConfig.raw = config.GetPwmChannel(ch)->raw;
+
+      // If the new mode is serial, the sibling is also forced to serial
       if (newMode == somSerial)
       {
-        newPin3Config.val.mode = somSerial;
+        siblingPinConfig.val.mode = somSerial;
       }
-      else
+      // If the new mode is not serial, and the sibling is serial, set the sibling to PWM (50Hz)
+      else if (siblingPinConfig.val.mode == somSerial)
       {
-        newPin3Config.val.mode = som50Hz;
+        siblingPinConfig.val.mode = som50Hz;
       }
-      config.SetPwmChannelRaw(ch, newPin3Config.raw);
+
+      config.SetPwmChannelRaw(ch, siblingPinConfig.raw);
       break;
     }
   }
+
   if (oldMode != newMode)
   {
     deferExecution(100, [](){
       reconfigureSerial();
     });
   }
-  return newMode;
 }
 
 static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t arg)
@@ -281,11 +286,11 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   // Check if pin == 1/3 and do other pin adjustment accordingly
   if (GPIO_PIN_PWM_OUTPUTS[ch] == 1)
   {
-    newPwmCh.val.mode = configureSerialPin(3, oldMode, newPwmCh.val.mode);
+    configureSerialPin(3, oldMode, newPwmCh.val.mode);
   }
   else if (GPIO_PIN_PWM_OUTPUTS[ch] == 3)
   {
-    newPwmCh.val.mode = configureSerialPin(1, oldMode, newPwmCh.val.mode);
+    configureSerialPin(1, oldMode, newPwmCh.val.mode);
   }
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
