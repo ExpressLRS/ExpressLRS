@@ -88,7 +88,19 @@ bool SX127xDriver::Begin()
   ConfigLoraDefaults();
   // Force the next power update, and use the defaults for RFO_HF or PA_BOOST
   pwrCurrent = PWRPENDING_NONE;
-  SetOutputPower(0);
+#if defined(TARGET_UNIFIED_RX) || defined(TARGET_UNIFIED_TX)
+  if (POWER_OUTPUT_VALUES2 == nullptr)
+#endif
+  {
+    if (OPT_USE_SX1276_RFO_HF)
+    {
+      SetOutputPower(SX127X_MAX_OUTPUT_POWER_RFO_HF);
+    }
+    else
+    {
+      SetOutputPower(SX127X_MAX_OUTPUT_POWER);
+    }
+  }
   CommitOutputPower();
 
   return true;
@@ -475,9 +487,6 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
       hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
       hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
 
-      // leaving only the type in the first byte (crcHigh was cleared)
-      RXdataBuffer[0] &= 0b11;
-      RXdataBuffer_second[0] &= 0b11;
       // if the second packet is same to the first, it's valid
       if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
       {
