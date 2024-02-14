@@ -28,12 +28,12 @@ static uint32_t endTX;
 // This define refers to the High Frequency output on the SX1276.  But has been reused/repruposed for the LR1121.
 // In ELRS V4 it should be changed to USE_RADIO_RFO_LP and refer to using the Low Power radio frequency output
 // of both the SX1276 and LR1121.
-#ifdef USE_RADIO_RFO_HF
-  #ifndef OPT_USE_RADIO_RFO_LP
-    #define OPT_USE_RADIO_RFO_LP true
+#ifdef USE_SX1276_RFO_HF
+  #ifndef OPT_USE_SX1276_RFO_HF
+    #define OPT_USE_SX1276_RFO_HF true
   #endif
 #else
-  #define OPT_USE_RADIO_RFO_LP false
+  #define OPT_USE_SX1276_RFO_HF false
 #endif
 
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
@@ -244,7 +244,7 @@ void LR1121Driver::SetOutputPower(int8_t power, bool isSubGHz)
 
     if (isSubGHz)
     {
-        if (OPT_USE_RADIO_RFO_LP)
+        if (OPT_USE_SX1276_RFO_HF)
         {
             pwrNew = constrain(power, LR1121_POWER_MIN_LP_PA, LR1121_POWER_MAX_LP_PA);
         }
@@ -305,7 +305,7 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         // 900M low power RF Amp
         // Table 9-1: Optimized Settings for LP PA with Same Matching Network
         // -17dBm (0xEF) to +14dBm (0x0E) by steps of 1dB if the low power PA is selected
-        if (OPT_USE_RADIO_RFO_LP)
+        if (OPT_USE_SX1276_RFO_HF)
         {
             Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
             Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
