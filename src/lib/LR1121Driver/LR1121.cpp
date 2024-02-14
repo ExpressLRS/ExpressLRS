@@ -25,7 +25,10 @@ static uint32_t endTX;
     #define OPT_USE_HARDWARE_DCDC false
 #endif
 
-#ifdef USE_RADIO_RFO_LP
+// This define refers to the High Frequency output on the SX1276.  But has been reused/repruposed for the LR1121.
+// In ELRS V4 it should be changed to USE_RADIO_RFO_LP and refer to using the Low Power radio frequency output
+// of both the SX1276 and LR1121.
+#ifdef USE_RADIO_RFO_HF
   #ifndef OPT_USE_RADIO_RFO_LP
     #define OPT_USE_RADIO_RFO_LP true
   #endif

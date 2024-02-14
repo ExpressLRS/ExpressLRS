@@ -7,12 +7,12 @@ SX127xDriver *SX127xDriver::instance = NULL;
 
 RFAMP_hal RFAMP;
 
-#ifdef USE_RADIO_RFO_LP
-  #ifndef OPT_USE_RADIO_RFO_LP
-    #define OPT_USE_RADIO_RFO_LP true
+#ifdef USE_RADIO_RFO_HF
+  #ifndef OPT_USE_RADIO_RFO_HF
+    #define OPT_USE_RADIO_RFO_HF true
   #endif
 #else
-  #define OPT_USE_RADIO_RFO_LP false
+  #define OPT_USE_RADIO_RFO_HF false
 #endif
 
 const uint8_t SX127x_AllowedSyncwords[105] =
@@ -226,7 +226,7 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
   uint8_t pwrNew;
   Power &= SX127X_PA_POWER_MASK;
 
-  if (OPT_USE_RADIO_RFO_LP)
+  if (OPT_USE_RADIO_RFO_HF)
   {
     pwrNew = SX127X_PA_SELECT_RFO | Power;
   }
