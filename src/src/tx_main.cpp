@@ -63,7 +63,6 @@ LQCALC<25> LQCalc;
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
-bool InBindingMode = false;
 uint8_t MSPDataPackage[5];
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
@@ -341,11 +340,12 @@ uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
   return rateIndex;
 }
 
-void SetRFLinkRate(uint8_t index) // Set speed of RF link (hz)
+void SetRFLinkRate(uint8_t index) // Set speed of RF link
 {
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
   expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
-  bool invertIQ = UID[5] & 0x01;
+  // Binding always uses invertIQ
+  bool invertIQ = InBindingMode || (UID[5] & 0x01);
   OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)config.GetSwitchMode();
 
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
@@ -888,12 +888,6 @@ static void SendRxWiFiOverMSP()
   MspSender.SetDataToTransmit(MSPDataPackage, 1);
 }
 
-void SendRxLoanOverMSP()
-{
-  MSPDataPackage[0] = MSP_ELRS_SET_RX_LOAN_MODE;
-  MspSender.SetDataToTransmit(MSPDataPackage, 1);
-}
-
 static void CheckReadyToSend()
 {
   if (RxWiFiReadyToSend)
@@ -941,18 +935,16 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 void SendUIDOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_BIND;
-  memcpy(&MSPDataPackage[1], &MasterUID[2], 4);
+  memcpy(&MSPDataPackage[1], &UID[2], 4);
   BindingSendCount = 0;
   MspSender.ResetState();
   MspSender.SetDataToTransmit(MSPDataPackage, 5);
 }
 
-void EnterBindingMode()
+static void EnterBindingMode()
 {
-  if (InBindingMode) {
-      // Don't enter binding if we're already binding
+  if (InBindingMode)
       return;
-  }
 
   // Disable the TX timer and wait for any TX to complete
   hwTimer::stop();
@@ -961,12 +953,10 @@ void EnterBindingMode()
   // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();
 
-  // Set UID to special binding values
-  memcpy(UID, BindingUID, UID_LEN);
-
+  // Binding uses a CRCInit=0, 50Hz, and InvertIQ
   OtaCrcInitializer = 0;
   OtaNonce = 0; // Lock the OtaNonce to prevent syncspam packets
-  InBindingMode = true;
+  InBindingMode = true; // Set binding mode before SetRFLinkRate() for correct IQ
 
   // Start attempting to bind
   // Lock the RF rate and freq while binding
@@ -982,26 +972,28 @@ void EnterBindingMode()
   DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 }
 
-void ExitBindingMode()
+static void ExitBindingMode()
 {
   if (!InBindingMode)
-  {
-    // Not in binding mode
     return;
-  }
 
   MspSender.ResetState();
 
-  // Reset UID to defined values
-  memcpy(UID, MasterUID, UID_LEN);
+  // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
-
-  InBindingMode = false;
+  InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
 
   SetRFLinkRate(config.GetRate()); //return to original rate
 
   DBGLN("Exiting binding mode");
 }
+
+void EnterBindingModeSafely()
+{
+  // TX can always enter binding mode safely as the function handles stopping the transmitter
+  EnterBindingMode();
+}
+
 
 void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
@@ -1227,6 +1219,33 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+static void setupBindingFromConfig()
+{
+  if (firmwareOptions.hasUID)
+  {
+      memcpy(UID, firmwareOptions.uid, UID_LEN);
+  }
+  else
+  {
+#ifdef PLATFORM_ESP32
+    esp_read_mac(UID, ESP_MAC_WIFI_STA);
+#elif PLATFORM_STM32
+    UID[0] = (uint8_t)HAL_GetUIDw0();
+    UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
+    UID[2] = (uint8_t)HAL_GetUIDw1();
+    UID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
+    UID[4] = (uint8_t)HAL_GetUIDw2();
+    UID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+#endif
+  }
+
+  DBGLN("UID=(%d, %d, %d, %d, %d, %d)",
+    UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+
+  OtaUpdateCrcInitFromUid();
+}
+
+
 static void cyclePower()
 {
   // Only change power if we are running normally
@@ -1248,7 +1267,6 @@ void setup()
 {
   if (setupHardwareFromOptions())
   {
-    initUID();
     setupTarget();
     // Register the devices with the framework
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
@@ -1256,12 +1274,13 @@ void setup()
     devicesInit();
     DBGLN("Initialised devices");
 
+    setupBindingFromConfig();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq);
+    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
 
     DBGLN("ExpressLRS TX Module Booted...");
 

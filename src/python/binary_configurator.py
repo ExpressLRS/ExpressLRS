@@ -74,7 +74,9 @@ def generateUID(phrase):
         int(item) if item.isdigit() else -1
         for item in phrase.split(',')
     ]
-    if len(uid) == 6 and all(ele >= 0 and ele < 256 for ele in uid):
+    if (4 <= len(uid) <= 6) and all(ele >= 0 and ele < 256 for ele in uid):
+        # Extend the UID to 6 bytes, as only 4 are needed to bind
+        uid = [0] * (6 - len(uid)) + uid
         uid = bytes(uid)
     else:
         uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
@@ -86,6 +88,9 @@ def patch_uid(mm, pos, args):
         mm[pos+1:pos + 7] = generateUID(args.phrase)
     pos += 7
     return pos
+
+def patch_flash_discriminator(mm, pos, args):
+    return write32(mm, pos, args.flash_discriminator)
 
 def patch_wifi(mm, pos, args):
     interval = None
@@ -206,6 +211,7 @@ def patch_firmware(options, mm, pos, args):
             mm[pos] = domain_number(args.domain)
         pos += 1
         pos = patch_uid(mm, pos, args)
+        pos = patch_flash_discriminator(mm, pos, args)
         if options.deviceType is DeviceType.TX:
             pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
@@ -323,6 +329,7 @@ def main():
     parser.add_argument('--fdir', action=readable_dir, default=None, help='If specified, then the firmware files are loaded from this directory')
     # Bind phrase
     parser.add_argument('--phrase', type=str, help='Your personal binding phrase')
+    parser.add_argument('--flash-discriminator', type=int, default=randint(1,2**32-1), dest='flash_discriminator', help='Force a fixed flash-descriminator instead of random')
     # WiFi Params
     parser.add_argument('--ssid', type=length_check(32, "ssid"), required=False, help='Home network SSID')
     parser.add_argument('--password', type=length_check(64, "password"), required=False, help='Home network password')
@@ -357,7 +364,7 @@ def main():
     parser.add_argument("--force", action='store_true', default=False, help="Force upload even if target does not match")
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
-    parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (onl for 2.4GHz firmware)")
+    parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (only for 2.4GHz firmware)")
     # Deprecated options, left for backward compatibility
     parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
     parser.add_argument('--no-uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')

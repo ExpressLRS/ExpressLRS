@@ -104,18 +104,17 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate)
     return (eRate == RATE_LORA_25HZ) ? RATE_MAX - 1 : 0;
 }
 
-uint8_t ExpressLRS_currTlmDenom;
-expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
-expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
-
+// Connection state information
+uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
+bool connectionHasModelMatch = false;
+bool InBindingMode = false;
+uint8_t ExpressLRS_currTlmDenom = 1;
 connectionState_e connectionState = disconnected;
-bool connectionHasModelMatch;
+expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams = nullptr;
+expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams = nullptr;
 
-uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
-
-uint8_t MasterUID[6];                       // The definitive user UID
-uint8_t UID[6];                             // The currently running UID
-uint8_t BindingUID[6] = {0, 1, 2, 3, 4, 5}; // Special binding UID values
+// Current state of channels, CRSF format
+uint32_t ChannelData[CRSF_NUM_CHANNELS];
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)
 {
@@ -154,36 +153,11 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
     return retVal;
 }
 
-uint32_t uidMacSeedGet(void)
+uint32_t uidMacSeedGet()
 {
     const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
                              ((uint32_t)UID[4] << 8) + (UID[5]^OTA_VERSION_ID);
     return macSeed;
-}
-
-void initUID()
-{
-    // default until first sync packet calculates it
-    ExpressLRS_currTlmDenom = 1;
-    if (firmwareOptions.hasUID)
-    {
-        memcpy(MasterUID, firmwareOptions.uid, sizeof(MasterUID));
-    }
-    else
-    {
-    #ifdef PLATFORM_ESP32
-        esp_err_t WiFiErr = esp_read_mac(MasterUID, ESP_MAC_WIFI_STA);
-    #elif PLATFORM_STM32
-        MasterUID[0] = (uint8_t)HAL_GetUIDw0();
-        MasterUID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
-        MasterUID[2] = (uint8_t)HAL_GetUIDw1();
-        MasterUID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
-        MasterUID[4] = (uint8_t)HAL_GetUIDw2();
-        MasterUID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
-    #endif
-    }
-    memcpy(UID, MasterUID, sizeof(UID));
-    OtaUpdateCrcInitFromUid();
 }
 
 bool ICACHE_RAM_ATTR isDualRadio()
