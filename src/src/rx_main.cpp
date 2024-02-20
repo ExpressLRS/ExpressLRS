@@ -1525,7 +1525,7 @@ static void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
-    Radio.SetFrequencyReg(GetInitialFreq());
+    Radio.SetFrequencyReg(FHSSgetInitialFreq());
     if (geminiMode)
     {
         Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
