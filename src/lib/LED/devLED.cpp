@@ -34,7 +34,6 @@
 #define GPIO_LED_BLUE_INVERTED 0
 #endif
 
-extern bool InBindingMode;
 #if defined(TARGET_RX)
 extern bool connectionHasModelMatch;
 #endif

@@ -10,7 +10,6 @@
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
-extern bool InBindingMode;
 extern char backpackVersion[];
 extern bool headTrackingEnabled;
 
@@ -177,12 +176,8 @@ void BackpackBinding()
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_ELRS_BIND;
-    packet.addByte(MasterUID[0]);
-    packet.addByte(MasterUID[1]);
-    packet.addByte(MasterUID[2]);
-    packet.addByte(MasterUID[3]);
-    packet.addByte(MasterUID[4]);
-    packet.addByte(MasterUID[5]);
+    for (unsigned b=0; b<UID_LEN; ++b)
+        packet.addByte(UID[b]);
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }

@@ -310,6 +310,48 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
     }
 }
 
+bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
+{
+    const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
+    const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
+
+    // Enter Binding Mode
+    if (packetType == CRSF_FRAMETYPE_COMMAND
+        && header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
+        && header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER
+        && header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER
+        && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
+        && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
+    {
+        if (OnBindingCommand) OnBindingCommand();
+        return true;
+    }
+
+    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
+        (header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER || header->dest_addr == CRSF_ADDRESS_BROADCAST) &&
+        (header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER || header->orig_addr == CRSF_ADDRESS_ELRS_LUA))
+    {
+        elrsLUAmode = header->orig_addr == CRSF_ADDRESS_ELRS_LUA;
+
+        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX && header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
+        {
+            modelId = header->payload[2];
+            #if defined(PLATFORM_ESP32)
+            rtcModelId = modelId;
+            #endif
+            if (RecvModelUpdate) RecvModelUpdate();
+        }
+        else
+        {
+            if (RecvParameterUpdate) RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 bool CRSFHandset::ProcessPacket()
 {
     bool packetReceived = false;
@@ -347,28 +389,7 @@ bool CRSFHandset::ProcessPacket()
         packetReceived = true;
     }
 
-    // always execute this check since broadcast needs to be handled in all cases
-    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-        (SerialInBuffer[3] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST) &&
-        (SerialInBuffer[4] == CRSF_ADDRESS_RADIO_TRANSMITTER || SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA))
-    {
-        elrsLUAmode = SerialInBuffer[4] == CRSF_ADDRESS_ELRS_LUA;
-
-        if (packetType == CRSF_FRAMETYPE_COMMAND && SerialInBuffer[5] == CRSF_COMMAND_SUBCMD_RX && SerialInBuffer[6] == CRSF_COMMAND_MODEL_SELECT_ID)
-        {
-            modelId = SerialInBuffer[7];
-            #if defined(PLATFORM_ESP32)
-            rtcModelId = modelId;
-            #endif
-            if (RecvModelUpdate) RecvModelUpdate();
-        }
-        else
-        {
-            if (RecvParameterUpdate) RecvParameterUpdate(packetType, SerialInBuffer[5], SerialInBuffer[6]);
-        }
-
-        packetReceived = true;
-    }
+    packetReceived |= processInternalCrsfPackage(SerialInBuffer);
 
     return packetReceived;
 }

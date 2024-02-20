@@ -89,7 +89,7 @@ void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, 
     packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
-void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t destAddr)
+void CRSF::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
 {
     auto *header = (crsf_header_t *)frame;
     header->device_addr = destAddr;
@@ -100,7 +100,7 @@ void CRSF::SetHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize,
     frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
 
-void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr)
+void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr)
 {
     auto *header = (crsf_ext_header_t *)frame;
     header->dest_addr = destAddr;
