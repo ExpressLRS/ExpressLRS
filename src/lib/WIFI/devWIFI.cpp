@@ -65,7 +65,6 @@ static char station_password[65];
 
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
-extern bool InBindingMode;
 
 static wl_status_t laststatus = WL_IDLE_STATUS;
 volatile WiFiMode_t wifiMode = WIFI_OFF;
@@ -85,9 +84,12 @@ static IPAddress ipAddress;
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
 #endif
 
+#if defined(PLATFORM_ESP8266)
+static bool scanComplete = false;
+#endif
+
 static AsyncWebServer server(80);
 static bool servicesStarted = false;
-static bool scanComplete = false;
 static constexpr uint32_t STALE_WIFI_SCAN = 20000;
 static uint32_t lastScanTimeMS = 0;
 
@@ -251,13 +253,34 @@ static void HandleReset(AsyncWebServerRequest *request)
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  if (flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
+  if (firmwareOptions.flash_discriminator != json["flash-discriminator"].as<uint32_t>()) {
     request->send(409, "text/plain", "Mismatched device identifier, refresh the page and try again.");
     return;
   }
+
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
   request->send(200);
+}
+
+static const char *GetConfigUidType(JsonDocument &json)
+{
+#if defined(TARGET_RX)
+  if (config.GetVolatileBind())
+    return "Volatile";
+  if (config.GetIsBound())
+    return "Bound";
+  return "Not Bound";
+#else
+  if (firmwareOptions.hasUID)
+  {
+    if (json["options"]["customised"] | false)
+      return "Overridden";
+    else
+      return "Flashed";
+  }
+  return "Not set (using MAC address)";
+#endif
 }
 
 static void GetConfiguration(AsyncWebServerRequest *request)
@@ -277,6 +300,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["options"] = options;
   }
 
+  JsonArray uid = json["config"].createNestedArray("uid");
+  copyArray(UID, UID_LEN, uid);
+
 #if defined(TARGET_TX)
   int button_count = 0;
   if (GPIO_PIN_BUTTON != UNDEF_PIN)
@@ -287,7 +313,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   {
     const tx_button_color_t *buttonColor = config.GetButtonActions(button);
     json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
-    for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+    for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
     {
       json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
       json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor->val.actions[pos].count;
@@ -309,7 +335,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["backpack"]["dvr-stop-delay"] = config.GetDvrStopDelay();
     json["config"]["backpack"]["dvr-aux-channel"] = config.GetDvrAux();
 
-    for (int model = 0 ; model < 64 ; model++)
+    for (int model = 0 ; model < CONFIG_TX_MODEL_CNT ; model++)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
@@ -324,9 +350,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       modelJson["tx-antenna"] = modelConfig.txAntenna;
     }
   }
-#endif
-  JsonArray uid = json["config"].createNestedArray("uid");
-  copyArray(UID, sizeof(UID), uid);
+#endif /* TARGET_TX */
+
   if (!exportMode)
   {
     json["config"]["ssid"] = station_ssid;
@@ -336,8 +361,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
+    json["config"]["vbind"] = config.GetVolatileBind();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (uint8_t ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
       json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
@@ -358,19 +384,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
     json["config"]["reg_domain"] = FHSSgetRegulatoryDomain();
-
-    #if defined(TARGET_RX)
-    if (config.GetOnLoan()) json["config"]["uidtype"] = "On loan";
-    else
-    #endif
-    if (firmwareOptions.hasUID) json["config"]["uidtype"] = (json["options"]["customised"] | false) ? "Overridden" : "Flashed";
-    #if defined(TARGET_RX)
-    else if (config.GetIsBound()) json["config"]["uidtype"] = "Traditional";
-    else json["config"]["uidtype"] = "Not set";
-    #else
-    else json["config"]["uidtype"] = "Not set (using MAC address)";
-    #endif
     json["config"]["has-highpower"] = (MaxPower != HighPower);
+    json["config"]["uidtype"] = GetConfigUidType(json);
   }
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -386,7 +401,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     for (size_t button=0 ; button<array.size() ; button++)
     {
       tx_button_color_t action;
-      for (int pos=0 ; pos<MAX_BUTTON_ACTIONS ; pos++)
+      for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
       {
         action.val.actions[pos].pressType = array[button]["action"][pos]["is-long-press"];
         action.val.actions[pos].count = array[button]["action"][pos]["count"];
@@ -462,31 +477,51 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
   request->send(200);
 }
 #else
+/**
+ * @brief: Copy uid to config if changed
+*/
+static void JsonUidToConfig(JsonVariant &json)
+{
+  JsonArray juid = json["uid"].as<JsonArray>();
+  size_t juidLen = constrain(juid.size(), 0, UID_LEN);
+  uint8_t newUid[UID_LEN] = { 0 };
+
+  // Copy only as many bytes as were included, right-justified
+  // This supports 6-digit UID as well as 4-digit (OTA bound) UID
+  copyArray(juid, &newUid[UID_LEN-juidLen], juidLen);
+
+  if (memcmp(newUid, config.GetUID(), UID_LEN) != 0)
+  {
+    config.SetUID(newUid);
+    config.Commit();
+    // Also copy it to the global UID in case the page is reloaded
+    memcpy(UID, newUid, UID_LEN);
+  }
+}
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
   uint8_t protocol = json["serial-protocol"] | 0;
-  DBGLN("Setting serial protocol %u", protocol);
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
   uint8_t failsafe = json["sbus-failsafe"] | 0;
-  DBGLN("Setting SBUS failsafe mode %u", failsafe);
   config.SetFailsafeMode((eFailsafeMode)failsafe);
 
   long modelid = json["modelid"] | 255;
   if (modelid < 0 || modelid > 63) modelid = 255;
-  DBGLN("Setting model match id %u", (uint8_t)modelid);
   config.SetModelId((uint8_t)modelid);
 
   long forceTlm = json["force-tlm"] | 0;
-  DBGLN("Setting force telemetry %u", (uint8_t)forceTlm);
   config.SetForceTlmOff(forceTlm != 0);
+
+  config.SetVolatileBind((json["vbind"] | 0) != 0);
+  JsonUidToConfig(json);
 
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
     uint32_t val = pwm[channel];
-    DBGLN("PWMch(%u)=%u", channel, val);
+    //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
   }
   #endif

@@ -18,10 +18,7 @@
 // Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
 // It should be incremented when the OTA packet structure is modified.
 #define OTA_VERSION_ID      3
-
-extern uint8_t BindingUID[6];
-extern uint8_t UID[6];
-extern uint8_t MasterUID[6];
+#define UID_LEN             6
 
 typedef enum : uint8_t
 {
@@ -72,9 +69,6 @@ typedef enum
     tim_locked = 2
 } RXtimerState_e;
 
-extern connectionState_e connectionState;
-extern bool connectionHasModelMatch;
-
 typedef enum
 {
     RF_DOWNLINK_INFO = 0,
@@ -121,6 +115,10 @@ typedef enum : uint8_t
 
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
+#define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
+#define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
+// Bound is any of the last 4 bytes nonzero (unbound is all zeroes)
+#define UID_IS_BOUND(uid) (uid[2] != 0 && uid[3] != 0 && uid[4] != 0 && uid[5] != 0)
 
 typedef struct expresslrs_rf_pref_params_s
 {
@@ -159,9 +157,6 @@ typedef struct expresslrs_mod_settings_s
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
-
-// The config mode only allows a maximum of 2 actions per button
-#define MAX_BUTTON_ACTIONS  2
 
 // Limited to 16 possible ACTIONs by config storage currently
 typedef enum : uint8_t {
@@ -219,6 +214,28 @@ enum eFailsafeMode : uint8_t
     FAILSAFE_SET_POSITION
 };
 
+enum eAuxChannels : uint8_t
+{
+    AUX1 = 4,
+    AUX2 = 5,
+    AUX3 = 6,
+    AUX4 = 7,
+    AUX5 = 8,
+    AUX6 = 9,
+    AUX7 = 10,
+    AUX8 = 11,
+    AUX9 = 12,
+    AUX10 = 13,
+    AUX11 = 14,
+    AUX12 = 15,
+    CRSF_NUM_CHANNELS = 16
+};
+
+//ELRS SPECIFIC OTA CRC
+//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
+#define ELRS_CRC_POLY 0x07 // 0x83
+#define ELRS_CRC14_POLY 0x2E57 // 0x372B
+
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 6
@@ -238,7 +255,7 @@ extern LR1121Driver Radio;
 
 extern SX1280Driver Radio;
 #endif
-
+#endif // UNIT_TEST
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
@@ -248,36 +265,15 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
 uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
+extern uint8_t UID[UID_LEN];
+extern bool connectionHasModelMatch;
+extern bool InBindingMode;
 extern uint8_t ExpressLRS_currTlmDenom;
+extern connectionState_e connectionState;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
-
-#define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
-#define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
-
-#endif // UNIT_TEST
-
-uint32_t uidMacSeedGet(void);
-void initUID();
-bool isDualRadio();
-
-#define CRSF_NUM_CHANNELS 16
-#define AUX1 4
-#define AUX2 5
-#define AUX3 6
-#define AUX4 7
-#define AUX5 8
-#define AUX6 9
-#define AUX7 10
-#define AUX8 11
-#define AUX9 12
-#define AUX10 13
-#define AUX11 14
-#define AUX12 15
-
-//ELRS SPECIFIC OTA CRC
-//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
-#define ELRS_CRC_POLY 0x07 // 0x83
-#define ELRS_CRC14_POLY 0x2E57 // 0x372B
-
 extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
+
+uint32_t uidMacSeedGet();
+bool isDualRadio();
+void EnterBindingModeSafely(); // defined in rx_main/tx_main
