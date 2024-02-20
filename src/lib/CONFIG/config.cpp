@@ -47,7 +47,7 @@ template<class T> static const uint32_t Model_to_U32(T const * const model)
 
 static uint8_t RateV6toV7(uint8_t rateV6)
 {
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
     if (rateV6 == 0)
     {
         // 200Hz stays same
@@ -638,7 +638,7 @@ TxConfig::SetDefaults(bool commit)
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         SetModelId(i);
-        #if defined(RADIO_SX127X)
+        #if defined(RADIO_SX127X) || defined(RADIO_LR1121)
             SetRate(enumRatetoIndex(RATE_LORA_200HZ));
         #elif defined(RADIO_SX128X)
             SetRate(enumRatetoIndex(RATE_LORA_250HZ));

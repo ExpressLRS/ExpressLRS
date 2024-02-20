@@ -383,7 +383,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #endif
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
-    json["config"]["reg_domain"] = getRegulatoryDomain();
+    json["config"]["reg_domain"] = FHSSgetRegulatoryDomain();
     json["config"]["has-highpower"] = (MaxPower != HighPower);
     json["config"]["uidtype"] = GetConfigUidType(json);
   }
@@ -538,7 +538,7 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
   json["version"] = VERSION;
   json["product_name"] = product_name;
   json["lua_name"] = device_name;
-  json["reg_domain"] = getRegulatoryDomain();
+  json["reg_domain"] = FHSSgetRegulatoryDomain();
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);

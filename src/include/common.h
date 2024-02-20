@@ -5,6 +5,8 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
@@ -91,10 +93,14 @@ typedef enum : uint8_t
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
     RATE_DVDA_50HZ,
-} expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
+    RATE_LORA_200HZ_8CH,
+} expresslrs_RFrates_e;
 
 enum {
     RADIO_TYPE_SX127x_LORA,
+    RADIO_TYPE_LR1121_LORA_900,
+    RADIO_TYPE_LR1121_LORA_2G4,
+    RADIO_TYPE_LR1121_LORA_DUAL,
     RADIO_TYPE_SX128x_LORA,
     RADIO_TYPE_SX128x_FLRC,
 };
@@ -138,10 +144,16 @@ typedef struct expresslrs_mod_settings_s
     uint8_t bw;
     uint8_t sf;
     uint8_t cr;
+    uint8_t PreambleLen;
+#if defined(RADIO_LR1121)
+    uint8_t bw2;
+    uint8_t sf2;
+    uint8_t cr2;
+    uint8_t PreambleLen2;
+#endif
     expresslrs_tlm_ratio_e TLMinterval;        // every X packets is a response TLM packet, should be a power of 2
     uint8_t FHSShopInterval;    // every X packets we hop to a new frequency. Max value of 16 since only 4 bits have been assigned in the sync package.
     int32_t interval;           // interval in us seconds that corresponds to that frequency
-    uint8_t PreambleLen;
     uint8_t PayloadLength;      // Number of OTA bytes to be sent.
     uint8_t numOfSends;         // Number of packets to send.
 } expresslrs_mod_settings_t;
@@ -230,6 +242,12 @@ enum eAuxChannels : uint8_t
 #define RATE_BINDING RATE_LORA_50HZ
 
 extern SX127xDriver Radio;
+
+#elif defined(RADIO_LR1121)
+#define RATE_MAX 14
+#define RATE_BINDING RATE_LORA_50HZ
+
+extern LR1121Driver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
