@@ -1232,8 +1232,8 @@ static void setupTarget()
     digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 
-  setupTargetCommon();
   setupSerial();
+  setupTargetCommon();
 }
 
 bool setupHardwareFromOptions()
