@@ -117,11 +117,6 @@ void WS281BsetLED(uint32_t color)
 }
 #endif
 
-#if defined(TARGET_RX)
-extern bool InBindingMode;
-extern bool connectionHasModelMatch;
-#endif
-
 typedef struct {
   uint8_t h, s, v;
 } blinkyColor_t;

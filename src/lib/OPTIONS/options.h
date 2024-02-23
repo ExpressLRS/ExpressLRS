@@ -24,6 +24,8 @@ typedef struct _options {
     uint8_t     domain;         // depends on radio chip
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
+    uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
+                                        // the SPIFSS settings are obsolete and the flashed settings should be used in preference
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
@@ -65,10 +67,10 @@ extern bool options_init();
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
-extern uint32_t flash_discriminator;
 
 #include "EspFlashStream.h"
-extern bool options_HasStringInFlash(EspFlashStream &strmFlash);
+bool options_HasStringInFlash(EspFlashStream &strmFlash);
+void options_SetTrueDefaults();
 #else
 extern firmware_options_t firmwareOptions;
 extern const char device_name[];

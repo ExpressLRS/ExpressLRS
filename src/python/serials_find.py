@@ -42,6 +42,7 @@ def serial_ports():
             ports = glob.glob('/dev/tty.usbmodem*')
             ports.extend(glob.glob('/dev/tty.SLAB*'))
             ports.extend(glob.glob('/dev/tty.usbserial*'))
+            ports.extend(glob.glob('/dev/tty.wchusbserial*'))
         else:
             raise Exception('Unsupported platform')
 
@@ -52,7 +53,7 @@ def serial_ports():
             result.append(port)
         except (OSError, serial.SerialException) as error:
             if "permission denied" in str(error).lower():
-                raise Exception("You don't have persmission to use serial port!")
+                raise Exception("You don't have permission to use serial port!")
             pass
     result.reverse()
     return result

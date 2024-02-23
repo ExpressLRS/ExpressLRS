@@ -80,6 +80,7 @@ private:
     void duplex_set_RX() const;
     void duplex_set_TX() const;
     void RcPacketToChannelsData();
+    bool processInternalCrsfPackage(uint8_t *package);
     bool ProcessPacket();
     bool UARTwdt();
     uint32_t autobaud();
