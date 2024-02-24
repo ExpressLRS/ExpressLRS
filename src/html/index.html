@@ -21,37 +21,38 @@
 		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
 
 			<ul class="mui-tabs__bar mui-tabs__bar--justified">
-				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
+@@if not isTX:
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Model</a></li>
+@@end
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
 				<li><a id="network-tab" data-mui-toggle="tab" data-mui-controls="pane-justified-4">WiFi</a></li>
 @@if isTX:
 				<li id="button-tab"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Buttons</a></li>
 @@end
-@@if not isTX:
-				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Model</a></li>
-@@end
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Update</a></li>
 			</ul>
 
-			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
+			<div class="mui-tabs__pane" id="pane-justified-1">
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
 					This form <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+@@if isTX:
 					Note: The Binding phrase is <b>not</b> remembered, it is a temporary field used to generate the binding UID.
-					<br/>
-					<br/>
+					<br/><br/>
 					<div class="mui-textfield">
 						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
 						<label for="phrase">Binding Phrase</label>
 					</div>
 					<form id='upload_options' method='POST' action="/options">
-						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
-						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
-						<input type="hidden" id='wifi-password' name='wifi-password'/>
 						<div class="mui-textfield">
 							<label for='uid'><span id="uid-text"></span></label>
 							<span class="badge" id="uid-type"></span>
 							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
 						</div>
+@@else:
+					<br/><br/>
+					<form id='upload_options' method='POST' action="/options">
+@@end
 @@if sx127x:
 						<div class="mui-select">
 							<select id='domain' name='domain'>
@@ -110,8 +111,12 @@
 						<div id="reset-options" style="display: none;">
 							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>
+						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
+						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
+						<input type="hidden" id='wifi-password' name='wifi-password'/>
 					</form>
 				</div>
+@@if isTX:
 				<div class="mui-panel">
 					<h2>Import/Export</h2>
 					<br/>
@@ -127,6 +132,7 @@
 						</button>
 					</div>
 				</div>
+@@end
 			</div>
 
 			<div class="mui-tabs__pane" id="pane-justified-2">
@@ -210,7 +216,27 @@
 						</form>
 					</div>
 					<form class="mui-form" action='/config' id='config' method='POST'>
-						<div id="serial-config" style="display: block;">
+						<h2>Binding Phrase</h2>
+						<div class="mui-checkbox">
+							<input id="vbind" name="vbind" type="checkbox" value="1"/>
+							<label for="vbind">Never store bind information across reboots (volatile binding)</label>
+						</div>
+						<div id="bindphrase">
+							Enter a new binding phrase to replace the current binding information.
+							This will persist across reboots, but <b>will be reset</b> if the firmware is flashed with a binding phrase.
+							Note: The Binding phrase is not remembered, it is a temporary field used to generate the binding UID.
+							<br/><br/>
+							<div class="mui-textfield">
+								<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
+								<label for="phrase">Binding Phrase</label>
+							</div>
+							<div class="mui-textfield">
+								<label for="uid"><span id="uid-text"></span></label>
+								<span class="badge" id="uid-type"></span>
+								<input size="40" id="uid" name="uid" type="text" class="array" readonly/>
+							</div>
+						</div>
+						<div id="serial-config">
 							<h2>Serial Protocol</h2>
 							Set the protocol used to communicate with the flight controller or other external devices.
 							<br/><br/>
@@ -267,7 +293,7 @@
 					</form>
 				</div>
 				<div class="mui-panel">
-					<a id="reset-model" href="#">Reset all model settings to defaults.</a>
+					<a id="reset-model" href="#">Reset all model settings to defaults (includes binding).</a>
 				</div>
 			</div>
 @@end

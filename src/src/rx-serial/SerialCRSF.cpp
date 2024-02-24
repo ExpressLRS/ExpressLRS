@@ -11,7 +11,6 @@ extern MSP2CROSSFIRE msp2crsf;
 
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
-extern void EnterBindingMode();
 extern void UpdateModelMatch(uint8_t model);
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
@@ -133,7 +132,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
         }
         if (telemetry.ShouldCallEnterBind())
         {
-            EnterBindingMode();
+            EnterBindingModeSafely();
         }
         if (telemetry.ShouldCallUpdateModelMatch())
         {

@@ -3,8 +3,13 @@
 #include "options.h"
 #include <string.h>
 
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
+
+#if defined(RADIO_LR1121)
+#include "LR1121Driver.h"
+#else
 #include "SX127xDriver.h"
+#endif
 
 const fhss_config_t domains[] = {
     {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20},
@@ -16,6 +21,13 @@ const fhss_config_t domains[] = {
     {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8},
     {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20},
 };
+
+#if defined(RADIO_LR1121)
+const fhss_config_t domainsDualBand[] = {
+    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
+};
+#endif
+
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 
@@ -32,18 +44,62 @@ const fhss_config_t domains[] = {
 
 // Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
 const fhss_config_t *FHSSconfig;
+const fhss_config_t *FHSSconfigDualBand;
 
 // Actual sequence of hops as indexes into the frequency list
-uint8_t FHSSsequence[256];
+uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
+uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];
+
 // Which entry in the sequence we currently are on
 uint8_t volatile FHSSptr;
+
 // Channel for sync packets and initial connection establishment
 uint_fast8_t sync_channel;
+uint_fast8_t sync_channel_DualBand;
+
 // Offset from the predefined frequency determined by AFC on Team900 (register units)
 int32_t FreqCorrection;
 int32_t FreqCorrection_2;
 
+// Frequency hop separation
 uint32_t freq_spread;
+uint32_t freq_spread_DualBand;
+
+// Variable for Dual Band radios
+bool FHSSusePrimaryFreqBand = true;
+bool FHSSuseDualBand = false;
+
+uint16_t primaryBandCount;
+uint16_t secondaryBandCount;
+
+void FHSSrandomiseFHSSsequence(const uint32_t seed)
+{
+    FHSSconfig = &domains[firmwareOptions.domain];
+    sync_channel = (FHSSconfig->freq_count / 2) + 1;
+    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
+    primaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfig->freq_count) * FHSSconfig->freq_count;
+
+    DBGLN("Setting %s Mode", FHSSconfig->domain);
+    DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
+    DBGLN("Sync channel = %u", sync_channel);
+
+    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
+
+#if defined(RADIO_LR1121)
+    FHSSconfigDualBand = &domainsDualBand[0];
+    sync_channel_DualBand = (FHSSconfigDualBand->freq_count / 2) + 1;
+    freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
+    secondaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
+
+    DBGLN("Setting Dual Band %s Mode", FHSSconfigDualBand->domain);
+    DBGLN("Number of FHSS frequencies = %u", FHSSconfigDualBand->freq_count);
+    DBGLN("Sync channel Dual Band = %u", sync_channel_DualBand);
+
+    FHSSusePrimaryFreqBand = false;
+    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    FHSSusePrimaryFreqBand = true;
+#endif
+}
 
 /**
 Requirements:
@@ -58,17 +114,8 @@ Approach:
   another random entry, excluding the sync channel.
 
 */
-void FHSSrandomiseFHSSsequence(const uint32_t seed)
+void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uint_fast8_t syncChannel, uint8_t *inSequence)
 {
-    FHSSconfig = &domains[firmwareOptions.domain];
-    DBGLN("Setting %s Mode", FHSSconfig->domain);
-    DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
-
-    sync_channel = (FHSSconfig->freq_count / 2) + 1;
-    DBGLN("Sync channel = %u", sync_channel);
-
-    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
-
     // reset the pointer (otherwise the tests fail)
     FHSSptr = 0;
     rngSeed(seed);
@@ -76,34 +123,34 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     // initialize the sequence array
     for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
-        if (i % FHSSconfig->freq_count == 0) {
-            FHSSsequence[i] = sync_channel;
-        } else if (i % FHSSconfig->freq_count == sync_channel) {
-            FHSSsequence[i] = 0;
+        if (i % freqCount == 0) {
+            inSequence[i] = syncChannel;
+        } else if (i % freqCount == syncChannel) {
+            inSequence[i] = 0;
         } else {
-            FHSSsequence[i] = i % FHSSconfig->freq_count;
+            inSequence[i] = i % freqCount;
         }
     }
 
-    for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
+    for (uint16_t i = 0; i < FHSSgetSequenceCount(); i++)
     {
         // if it's not the sync channel
-        if (i % FHSSconfig->freq_count != 0)
+        if (i % freqCount != 0)
         {
-            uint8_t offset = (i / FHSSconfig->freq_count) * FHSSconfig->freq_count; // offset to start of current block
-            uint8_t rand = rngN(FHSSconfig->freq_count-1)+1; // random number between 1 and FHSS_FREQ_CNT
+            uint8_t offset = (i / freqCount) * freqCount;   // offset to start of current block
+            uint8_t rand = rngN(freqCount - 1) + 1;         // random number between 1 and FHSS_FREQ_CNT
 
             // switch this entry and another random entry in the same block
-            uint8_t temp = FHSSsequence[i];
-            FHSSsequence[i] = FHSSsequence[offset+rand];
-            FHSSsequence[offset+rand] = temp;
+            uint8_t temp = inSequence[i];
+            inSequence[i] = inSequence[offset+rand];
+            inSequence[offset+rand] = temp;
         }
     }
 
     // output FHSS sequence
     for (uint16_t i=0; i < FHSSgetSequenceCount(); i++)
     {
-        DBG("%u ",FHSSsequence[i]);
+        DBG("%u ",inSequence[i]);
         if (i % 10 == 9)
             DBGCR;
     }

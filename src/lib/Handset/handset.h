@@ -42,11 +42,12 @@ public:
      * @param disconnectedCallback called when the protocol loses its connection to the handset
      * @param RecvModelUpdateCallback called when the handset sends a message to set the current model number
      */
-    void registerCallbacks(void (*connectedCallback)(), void (*disconnectedCallback)(), void (*RecvModelUpdateCallback)())
+    void registerCallbacks(void (*connectedCallback)(), void (*disconnectedCallback)(), void (*RecvModelUpdateCallback)(), void (*bindingCommandCallback)())
     {
         connected = connectedCallback;
         disconnected = disconnectedCallback;
         RecvModelUpdate = RecvModelUpdateCallback;
+        OnBindingCommand = bindingCommandCallback;
     }
 
     /**
@@ -95,6 +96,7 @@ protected:
     void (*connected)() = nullptr;       // called when RC packet stream is regained
     void (*RecvModelUpdate)() = nullptr; // called when model id changes, ie command from Radio
     void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
+    void (*OnBindingCommand)() = nullptr; // Called when a binding command is received
 
     volatile uint32_t RCdataLastRecv = 0;
     int32_t RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'

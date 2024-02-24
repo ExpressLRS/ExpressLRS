@@ -7,7 +7,7 @@
 void test_fhss_first(void)
 {
     FHSSrandomiseFHSSsequence(0x01020304L);
-    TEST_ASSERT_EQUAL(GetInitialFreq(), FHSSconfig->freq_start + freq_spread * sync_channel / FREQ_SPREAD_SCALE);
+    TEST_ASSERT_EQUAL(FHSSgetInitialFreq(), FHSSconfig->freq_start + freq_spread * sync_channel / FREQ_SPREAD_SCALE);
 }
 
 void test_fhss_assignment(void)
@@ -15,7 +15,7 @@ void test_fhss_assignment(void)
     FHSSrandomiseFHSSsequence(0x01020304L);
 
     const uint32_t numFhss = FHSSgetChannelCount();
-    uint32_t initFreq = GetInitialFreq();
+    uint32_t initFreq = FHSSgetInitialFreq();
 
     uint32_t freq = initFreq;
     for (unsigned int i = 0; i < 512; i++) {
