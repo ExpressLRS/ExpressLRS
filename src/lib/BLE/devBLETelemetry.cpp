@@ -272,9 +272,10 @@ int BluetoothTelemetryUpdateValues(const uint8_t *data)
           {
             memcpy(_crsf_buffer, data, CRSF_FRAME_SIZE(size));
             xSemaphoreGive( _mutex );
+            devicesTriggerEvent(); // trigger event to send the telemetry
           }
         }
-        return DURATION_IMMEDIATELY;
+        return DURATION_IMMEDIATELY; // this value will be ignored becuase called from main here
     }
 
     if ( (_mutex != nullptr) && (xSemaphoreTake( _mutex, ( TickType_t ) 10 ) == pdTRUE) )
