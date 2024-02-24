@@ -89,9 +89,9 @@ static const char *switch_mode[] = {
 };
 
 static const char *switch_mode_full[] = {
-    "9ch",
+    "8+1ch",
     "16ch /2",
-    "13ch Mix"
+    "12+1 Mix"
 };
 
 static const char *antenna_mode[] = {
