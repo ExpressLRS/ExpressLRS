@@ -1745,7 +1745,7 @@ static void updateSwitchMode()
 
 static void CheckConfigChangePending()
 {
-    if (config.IsModified() && !InBindingMode && connectionState != wifiUpdate)
+    if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
         config.Commit();
