@@ -128,7 +128,7 @@ static void disableIdleTimer() {
 // waveform smoothly on next low->high transition.  For immediate change, stopWaveform()
 // first, then it will immediately begin.
 void startWaveform8266(uint8_t pin, uint32_t timeHighUS, uint32_t timeLowUS) {
-   if ((pin > 16) || isFlashInterfacePin(pin) || (timeHighUS == 0)) {
+   if ((pin > 16) || isFlashInterfacePin(pin)) {
     return;
   }
   Waveform *wave = &wvfState.waveform[pin];
