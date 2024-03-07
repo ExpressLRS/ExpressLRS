@@ -3,6 +3,7 @@ rem --  Change ExpressLRS parameters
 rem --  License https://www.gnu.org/licenses/gpl-3.0.en.html
 
 rem --  basic script for radios running ErskTx R223A6 or later, based roughly on ELRS.lua
+"changed"
 
 rem -- Original author: spinorkit
 
