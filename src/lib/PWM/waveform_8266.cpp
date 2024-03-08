@@ -93,7 +93,7 @@ static WVFState wvfState;
 #pragma GCC optimize ("Os")
 
 // Interrupt on/off control
-static IRAM_ATTR void timer1Interrupt();
+static void timer1Interrupt();
 static bool timerRunning = false;
 
 static __attribute__((noinline)) void initTimer() {
@@ -218,8 +218,9 @@ static IRAM_ATTR void timer1Interrupt() {
   // Flag if the core is at 160 MHz, for use by adjust()
   bool turbo = (*(uint32_t*)0x3FF00014) & 1 ? true : false;
 
-  uint32_t nextEventCycle = GetCycleCountIRQ() + microsecondsToClockCycles(MAXIRQUS);
-  uint32_t timeoutCycle = GetCycleCountIRQ() + microsecondsToClockCycles(14);
+  uint32_t now = GetCycleCountIRQ();
+  uint32_t nextEventCycle = now + microsecondsToClockCycles(MAXIRQUS);
+  uint32_t timeoutCycle = now + microsecondsToClockCycles(14);
 
   if (wvfState.waveformToEnable || wvfState.waveformToDisable) {
     // Handle enable/disable requests from main app
@@ -248,7 +249,6 @@ static IRAM_ATTR void timer1Interrupt() {
         }
 
         Waveform *wave = &wvfState.waveform[i];
-        uint32_t now = GetCycleCountIRQ();
 
         // Check for toggles
         int32_t cyclesToGo = wave->nextServiceCycle - now;
@@ -301,14 +301,14 @@ static IRAM_ATTR void timer1Interrupt() {
       }
 
       // Exit the loop if we've hit the fixed runtime limit or the next event is known to be after that timeout would occur
-      uint32_t now = GetCycleCountIRQ();
+      now = GetCycleCountIRQ();
       int32_t cycleDeltaNextEvent = nextEventCycle - now;
       int32_t cyclesLeftTimeout = timeoutCycle - now;
-      done = (cycleDeltaNextEvent > MINIRQTIME) || (cyclesLeftTimeout < 0);
+      done = (cycleDeltaNextEvent > cyclesLeftTimeout) || (cyclesLeftTimeout < 0);
     } while (!done);
   } // if (wvfState.waveformEnabled)
 
-  int32_t nextEventCycles = nextEventCycle - GetCycleCountIRQ();
+  int32_t nextEventCycles = nextEventCycle - now;
 
   if (nextEventCycles < MINIRQTIME) {
     nextEventCycles = MINIRQTIME;
