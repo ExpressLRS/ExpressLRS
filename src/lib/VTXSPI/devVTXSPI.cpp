@@ -341,6 +341,8 @@ static void initialize()
     #if defined(TARGET_UNIFIED_RX)
     VpdSetPointArray25mW = VPD_VALUES_25MW;
     VpdSetPointArray100mW = VPD_VALUES_100MW;
+    PwmArray25mW = PWM_VALUES_25MW;
+    PwmArray100mW = PWM_VALUES_100MW;
     #endif
 
     if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
