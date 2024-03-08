@@ -128,7 +128,7 @@ static void disableIdleTimer() {
 // waveform smoothly on next low->high transition.  For immediate change, stopWaveform()
 // first, then it will immediately begin.
 void startWaveform8266(uint8_t pin, uint32_t timeHighUS, uint32_t timeLowUS) {
-   if ((pin > 16) || isFlashInterfacePin(pin)) {
+   if ((pin > 16) || isFlashInterfacePin(pin) || (timeHighUS == 0)) {
     return;
   }
   Waveform *wave = &wvfState.waveform[pin];
@@ -257,20 +257,19 @@ static IRAM_ATTR void timer1Interrupt() {
           uint32_t desired = 0;
           uint32_t *timeToUpdate;
           wvfState.waveformState ^= mask;
-          if (wvfState.waveformState & mask && wave->nextHighLowUs != 0) {
+          if (wvfState.waveformState & mask) {
+            if (i == 16) {
+              GP16O = 1;
+            }
+            GPOS = mask;
+
+            if (wave->nextHighLowUs != 0) {
               // Copy over next full-cycle timings
               uint32_t next = wave->nextHighLowUs;
               wave->nextHighLowUs = 0; // indicate the change has taken place
               wave->timeHighCycles = wave->desiredHighCycles = microsecondsToClockCycles(next >> 16);
               wave->timeLowCycles = wave->desiredLowCycles = microsecondsToClockCycles(next & 0xffff);
               wave->lastEdge = 0;
-          }
-          if (wvfState.waveformState & mask) {
-            if (wave->timeHighCycles != 0) {
-              if (i == 16) {
-                GP16O = 1;
-              }
-              GPOS = mask;
             }
             if (wave->lastEdge) {
               desired = wave->desiredLowCycles;
@@ -278,12 +277,10 @@ static IRAM_ATTR void timer1Interrupt() {
             }
             nextEdgeCycles = wave->timeHighCycles;
           } else {
-            if (wave->timeLowCycles != 0) {
-              if (i == 16) {
-                GP16O = 0;
-              }
-              GPOC = mask;
+            if (i == 16) {
+              GP16O = 0;
             }
+            GPOC = mask;
             desired = wave->desiredHighCycles;
             timeToUpdate = &wave->timeHighCycles;
             nextEdgeCycles = wave->timeLowCycles;
