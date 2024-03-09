@@ -9,7 +9,11 @@
 
 #include <driver/rmt.h>
 
+#if defined(PLATFORM_ESP32_S3)
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_4;
+#else
 constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
+#endif
 constexpr auto RMT_TICKS_PER_US = 10;
 
 void AutoDetect::Begin()
