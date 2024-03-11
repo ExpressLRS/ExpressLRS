@@ -899,12 +899,6 @@ static void startWiFi(unsigned long now)
   WiFi.persistent(false);
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
-  #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(13);
-    WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-  #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_13dBm);
-  #endif
   strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
   strcpy(station_password, firmwareOptions.home_wifi_password);
   if (station_ssid[0] == 0) {
@@ -1116,6 +1110,12 @@ static void HandleWebUpdate()
         WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
         #endif
         changeTime = now;
+        #if defined(PLATFORM_ESP8266)
+        WiFi.setOutputPower(20.5);
+        WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+        #elif defined(PLATFORM_ESP32)
+        WiFi.setTxPower(WIFI_POWER_19_5dBm);
+        #endif
         WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         startServices();
@@ -1131,7 +1131,11 @@ static void HandleWebUpdate()
         WiFi.setHostname(wifi_hostname); // hostname must be set after the mode is set to STA
         #endif
         changeTime = now;
-        #if defined(PLATFORM_ESP32)
+        #if defined(PLATFORM_ESP8266)
+        WiFi.setOutputPower(20.5);
+        WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+        #elif defined(PLATFORM_ESP32)
+        WiFi.setTxPower(WIFI_POWER_19_5dBm);
         WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
         WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
         #endif
