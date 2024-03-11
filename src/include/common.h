@@ -43,9 +43,10 @@ typedef enum
     MODE_STATES,
     // States below here are special mode states
     noCrossfire,
+    bleJoystick,
+    NO_CONFIG_SAVE_STATES,
     wifiUpdate,
     serialUpdate,
-    bleJoystick,
     // Failure states go below here to display immediately
     FAILURE_STATES,
     radioFailed,

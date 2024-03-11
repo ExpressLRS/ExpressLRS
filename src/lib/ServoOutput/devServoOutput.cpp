@@ -9,6 +9,7 @@
 
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
+static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
 
 #if (defined(PLATFORM_ESP32))
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
@@ -62,8 +63,9 @@ static void servoWrite(uint8_t ch, uint16_t us)
     }
     else
 #endif
-    if (servoPins[ch] != UNDEF_PIN)
+    if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
     {
+        pwmChannelValues[ch] = us;
         if ((eServoOutputMode)chConfig->val.mode == somOnOff)
         {
             digitalWrite(servoPins[ch], us > 1500);
@@ -152,6 +154,7 @@ static void initialize()
 #endif
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
+        pwmChannelValues[ch] = UINT16_MAX;
         pwmChannels[ch] = -1;
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
@@ -166,7 +169,7 @@ static void initialize()
         }
 #endif
         // Mark servo pins that are being used for serial (or other purposes) as disconnected
-        eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+        auto mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
         if (mode >= somSerial)
         {
             pin = UNDEF_PIN;
