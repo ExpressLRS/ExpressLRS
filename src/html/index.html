@@ -142,12 +142,13 @@
 					If this happens you will need to recover via USB/Serial. You may also download the
 					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br/><br/>
-					<button id="upload_btn" class="mui-btn mui-btn--primary upload">
+					<button id="upload_btn" class="mui-btn mui-btn--primary upload" style="margin: 0 auto; display:block;">
 						<label>
-							Flash firmware file
+							Select firmware file
 							<input type="file" id="firmware_file" name="update" />
 						</label>
 					</button>
+					<div id="filedrag">or drop firmware file here</div>
 					<br/>
 					<h3 id="status"></h3>
 					<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>

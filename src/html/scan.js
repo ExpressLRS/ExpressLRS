@@ -16,6 +16,50 @@ function _(el) {
   return document.getElementById(el);
 }
 
+function initFiledrag() {
+  const fileselect = _('firmware_file');
+  const filedrag = _('filedrag');
+
+  fileselect.addEventListener('change', fileSelectHandler, false);
+
+  const xhr = new XMLHttpRequest();
+  if (xhr.upload) {
+    filedrag.addEventListener('dragover', fileDragHover, false);
+    filedrag.addEventListener('dragleave', fileDragHover, false);
+    filedrag.addEventListener('drop', fileSelectHandler, false);
+    filedrag.style.display = 'block';
+  }
+}
+
+function fileDragHover(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  if (e.target === _('filedrag')) e.target.className = (e.type === 'dragover' ? 'hover' : '');
+}
+
+function fileSelectHandler(e) {
+  fileDragHover(e);
+  const files = e.target.files || e.dataTransfer.files;
+  for (const f of files) {
+    _('upload_btn').disabled = true
+    try {
+      const formdata = new FormData();
+      formdata.append('upload', f, f.name);
+      const ajax = new XMLHttpRequest();
+      ajax.upload.addEventListener('progress', progressHandler, false);
+      ajax.addEventListener('load', completeHandler, false);
+      ajax.addEventListener('error', errorHandler, false);
+      ajax.addEventListener('abort', abortHandler, false);
+      ajax.open('POST', '/update');
+      ajax.setRequestHeader('X-FileSize', f.size);
+      ajax.send(formdata);
+    }
+    catch (e) {
+      _('upload_btn').disabled = false
+    }
+  }
+}
+
 function getPwmFormData() {
   let ch = 0;
   let inField;
@@ -251,6 +295,7 @@ function init() {
   // Start on the options tab
   mui.tabs.activate('pane-justified-1');
 @@end
+  initFiledrag();
   initOptions();
 }
 
