@@ -44,12 +44,16 @@ static int timeout()
 
     uint32_t duration = 10; // 10ms callback (i.e. when no theres no model match)
     // only send frames if we have a model match
-    if (connectionHasModelMatch)
-    {
-        duration = serialIO->sendRCFrame(frameAvailable, frameMissed, ChannelData);
-    }
+    noInterrupts();
+    bool available = frameAvailable;
+    bool missed = frameMissed;
     frameAvailable = false;
     frameMissed = false;
+    interrupts();
+    if (connectionHasModelMatch)
+    {
+        duration = serialIO->sendRCFrame(available, missed, ChannelData);
+    }
     // still get telemetry and send link stats if theres no model match
     serialIO->processSerialInput();
     serialIO->sendQueuedData(serialIO->getMaxSerialWriteSize());
