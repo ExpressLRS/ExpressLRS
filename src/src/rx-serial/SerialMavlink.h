@@ -8,7 +8,7 @@ extern FIFO<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 
 class SerialMavlink : public SerialIO {
 public:
-    explicit SerialMavlink(Stream &out, Stream &in) : SerialIO(&out, &in) {lastSentFlowCtrl = 0;}
+    explicit SerialMavlink(Stream &out, Stream &in);
     virtual ~SerialMavlink() {}
 
     void queueLinkStatisticsPacket() override {}
@@ -21,5 +21,11 @@ public:
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
-    uint32_t lastSentFlowCtrl;
+    const uint8_t this_system_id;
+    const uint8_t this_component_id;
+
+    const uint8_t target_system_id;
+    const uint8_t target_component_id;
+
+    uint32_t lastSentFlowCtrl = 0;
 };
