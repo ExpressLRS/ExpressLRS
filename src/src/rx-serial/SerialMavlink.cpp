@@ -13,33 +13,49 @@
 FIFO<AP_MAX_BUF_LEN> mavlinkInputBuffer;
 FIFO<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
 
+SerialMavlink::SerialMavlink(Stream &out, Stream &in):
+    SerialIO(&out, &in),
+    // 255 is typically used by the GCS, for RC override to work in ArduPilot `SYSID_MYGCS` must be set to this value (255 is the default)
+    this_system_id(255),
+    // Strictly this is not a valid source component ID
+    this_component_id(MAV_COMPONENT::MAV_COMP_ID_ALL),
+    // Assume vehicle system ID is 1, ArduPilot's `SYSID_THISMAV` parameter. (1 is the default)
+    target_system_id(1),
+    // Send to AutoPilot component
+    target_component_id(MAV_COMPONENT::MAV_COMP_ID_AUTOPILOT1)
+{
+}
+
 uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 {
     if (!frameAvailable) {
         return DURATION_IMMEDIATELY;
     }
-    
+
+    const mavlink_rc_channels_override_t rc_override {
+        chan1_raw: CRSF_to_US(channelData[0]),
+        chan2_raw: CRSF_to_US(channelData[1]),
+        chan3_raw: CRSF_to_US(channelData[2]),
+        chan4_raw: CRSF_to_US(channelData[3]),
+        chan5_raw: CRSF_to_US(channelData[4]),
+        chan6_raw: CRSF_to_US(channelData[5]),
+        chan7_raw: CRSF_to_US(channelData[6]),
+        chan8_raw: CRSF_to_US(channelData[7]),
+        target_system: target_system_id,
+        target_component: target_component_id,
+        chan9_raw: CRSF_to_US(channelData[8]),
+        chan10_raw: CRSF_to_US(channelData[9]),
+        chan11_raw: CRSF_to_US(channelData[10]),
+        chan12_raw: CRSF_to_US(channelData[11]),
+        chan13_raw: CRSF_to_US(channelData[12]),
+        chan14_raw: CRSF_to_US(channelData[13]),
+        chan15_raw: CRSF_to_US(channelData[14]),
+        chan16_raw: CRSF_to_US(channelData[15]),
+    };
+
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     mavlink_message_t msg;
-    mavlink_msg_rc_channels_override_pack(255, 0, &msg, 1, 1, 
-        CRSF_to_US(channelData[0]),
-        CRSF_to_US(channelData[1]),
-        CRSF_to_US(channelData[2]),
-        CRSF_to_US(channelData[3]),
-        CRSF_to_US(channelData[4]),
-        CRSF_to_US(channelData[5]),
-        CRSF_to_US(channelData[6]),
-        CRSF_to_US(channelData[7]),
-        CRSF_to_US(channelData[8]),
-        CRSF_to_US(channelData[9]),
-        CRSF_to_US(channelData[10]),
-        CRSF_to_US(channelData[11]),
-        CRSF_to_US(channelData[12]),
-        CRSF_to_US(channelData[13]),
-        CRSF_to_US(channelData[14]),
-        CRSF_to_US(channelData[15]),
-        __UINT16_MAX__,
-        __UINT16_MAX__);
+    mavlink_msg_rc_channels_override_encode(this_system_id, this_component_id, &msg, &rc_override);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
     _outputPort->write(buf, len);
     
@@ -61,49 +77,30 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
-    // Software-based flow control for mavlink
-    uint16_t percentageFull = (mavlinkInputBuffer.size() * 100) / AP_MAX_BUF_LEN;
 
-    uint32_t now = millis();
-
-    if (now > lastSentFlowCtrl + 10 || percentageFull > 50)
+    // Send radio messages at 100Hz
+    const uint32_t now = millis();
+    if ((now - lastSentFlowCtrl) > 10)
     {
-        lastSentFlowCtrl = now;
-        
-        uint8_t rssi = ((uint8_t)((float)CRSF::LinkStatistics.uplink_Link_quality * 2.55));
-        uint8_t remrssi = CRSF::LinkStatistics.uplink_RSSI_1;
-        uint8_t txbuf = 0;
-        uint8_t noise = CRSF::LinkStatistics.uplink_SNR;
-        uint8_t remnoise = 0;
-        uint16_t rxerrors = 0;
-        uint16_t fixed = 0;
+        lastSentFlowCtrl = now; 
 
-        // Scale the actual buf percentage to a more agressive value
-        // Rates borrowed and adjusted from mLRS
-        if (percentageFull > 60)
-        {
-            txbuf = 0;      // ArduPilot:  0-19  -> +60 ms,    PX4:  0-24  -> *0.8
-        }
-        else if (percentageFull > 50)
-        {
-            txbuf = 30;     // ArduPilot: 20-49  -> +20 ms,    PX4: 25-34  -> *0.975
-        }
-        else if (percentageFull < 5)
-        {
-            txbuf = 100;    // ArduPilot: 96-100 -> -40 ms,    PX4: 51-100 -> *1.025
-        }
-        else if (percentageFull < 10)
-        {
-            txbuf = 91;     // ArduPilot: 91-95  -> -20 ms,    PX4: 51-100 -> *1.025
-        }
-        else
-        {
-            txbuf = 50;     // ArduPilot: 50-90  -> no change, PX4: 35-50  -> no change
-        }
+        // Software-based flow control for mavlink
+        uint8_t percentage_remaining = ((AP_MAX_BUF_LEN - mavlinkInputBuffer.size()) * 100) / AP_MAX_BUF_LEN;
+
+        // Populate radio status packet
+        const mavlink_radio_status_t radio_status {
+            rxerrors: 0,
+            fixed: 0,
+            rssi: (uint8_t)((float)CRSF::LinkStatistics.uplink_Link_quality * 2.55),
+            remrssi: CRSF::LinkStatistics.uplink_RSSI_1,
+            txbuf: percentage_remaining,
+            noise: (uint8_t)CRSF::LinkStatistics.uplink_SNR,
+            remnoise: 0,
+        };
 
         uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN];
         mavlink_message_t msg;
-        mavlink_msg_radio_status_pack(255, 0, &msg, rssi, remrssi, txbuf, noise, remnoise, rxerrors, fixed);
+        mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
         uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
         _outputPort->write(buf, len);
     }
