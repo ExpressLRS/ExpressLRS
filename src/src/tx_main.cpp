@@ -1367,6 +1367,10 @@ void setup()
       connectionState = noCrossfire;
     }
   }
+  else
+  {
+      TxBackpack = new NullStream();
+  }
 
 #if defined(HAS_BUTTON)
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
