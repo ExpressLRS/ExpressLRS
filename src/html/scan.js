@@ -61,8 +61,9 @@ function generateFeatureBadges(features) {
   else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
   
   // Serial2
-  if (!!(features & 32) || !!(features & 64)) 
-    str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
+  if ((features & 96) === 96) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
+  else if (!!(features & 32)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">RX2</span>`;
+  else if (!!(features & 64)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">TX2</span>`;
 
   return str;
 }

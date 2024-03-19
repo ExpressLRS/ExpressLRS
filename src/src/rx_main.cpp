@@ -53,7 +53,7 @@
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #if defined(RADIO_LR1121)
-#define PACKET_TO_TOCK_SLACK 280 // Desired buffer time between Packet ISR and Tock ISR. Increase slack due to the LR1121s slow processing time.  Mainly required for 500Hz mode.
+#define PACKET_TO_TOCK_SLACK 240 // Desired buffer time between Packet ISR and Tock ISR. Increase slack due to the LR1121s slow processing time.  Mainly required for 500Hz mode.
 #else
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 #endif
@@ -390,15 +390,17 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
+        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
         }
         else
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+            // Write radio1 first. This optimises the SPI traffic order.
+            uint32_t freqRadio2 = FHSSgetNextFreq();
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
         }
     }
     else
@@ -434,7 +436,14 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
-    ls->SNR = SnrMean.mean();
+    if (SnrMean.getCount())
+    {
+        ls->SNR = SnrMean.mean();
+    }
+    else
+    {
+        ls->SNR = SnrMean.previousMean();
+    }
 #endif
 }
 
@@ -446,10 +455,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment();
-#endif
 
     // ESP requires word aligned buffer
     WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
@@ -611,7 +616,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             hwTimer::phaseShift(Offset >> 2);
         }
 
-        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::FreqOffset, uplinkLQ);
+        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::getFreqOffset(), uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
 
@@ -741,7 +746,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (tlmSent && Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
     {
-        Radio.TXdoneCallback();
+        // Since we were meant to send telemetry, but didn't, defer TXdoneCallback() to when the IRQ is normally triggered.
+        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
+            Radio.TXdoneCallback();
+        });
     }
 
     PFDloop.intEvent(micros()); // our internal osc just fired
@@ -1138,10 +1146,9 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment();
-#else
     Radio.RXnb();
+#if defined(Regulatory_Domain_EU_CE_2400)
+    SetClearChannelAssessmentTime();
 #endif
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
@@ -1170,7 +1177,7 @@ void MspReceiveComplete()
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
-        deferExecution(500, []() {
+        deferExecutionMillis(500, []() {
             setWifiUpdateMode();
         });
 #endif
@@ -1370,11 +1377,15 @@ static void setupSerial()
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(DEBUG_ENABLED)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
     SerialLogger = &USBSerial;
 #else
     SerialLogger = &Serial;
+#endif
+#else
+    SerialLogger = new NullStream();
 #endif
 }
 
@@ -1495,15 +1506,14 @@ static void setupConfigAndPocCheck()
         config.Commit();
     }
 
-    if (config.GetPowerOnCounter() < 3)
-    {
-        // We haven't reached our binding mode power cycles
-        // and we've been powered on for 2s, reset the power on counter.
-        // config.Commit() is done in the loop with CheckConfigChangePending().
-        deferExecution(2000, []() {
+    // Set a deferred function to clear the power on counter if the RX has been running for more than 2s
+    deferExecutionMillis(2000, []() {
+        if (connectionState != connected && config.GetPowerOnCounter() != 0)
+        {
             config.SetPowerOnCounter(0);
-        });
-    }
+            config.Commit();
+        }
+    });
 }
 
 static void setupTarget()
@@ -1548,7 +1558,7 @@ static void setupRadio()
 #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
 #endif
-    bool init_success = Radio.Begin();
+    bool init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
     POWERMGNT::init();
     if (!init_success)
     {
@@ -1601,8 +1611,8 @@ static void cycleRfMode(unsigned long now)
         LastSyncPacket = now;           // reset this variable
         SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
-        LQCalc.reset();
-        LQCalcDVDA.reset();
+        LQCalc.reset100();
+        LQCalcDVDA.reset100();
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
@@ -1683,17 +1693,13 @@ static void updateBindingMode()
         ExitBindingMode();
     }
 
-    // If the power on counter is >=3, clear counter and enter binding
+    // If the power on counter is >=3, enter binding, the counter will be reset after 2s
     else if (config.GetPowerOnCounter() >= 3)
     {
-        config.SetPowerOnCounter(0);
-        config.Commit();
-
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // Never enter wifi if forced to binding mode
         webserverPreventAutoStart = true;
 #endif
-
         DBGLN("Power on counter >=3, enter binding mode...");
         EnterBindingMode();
     }
@@ -1902,6 +1908,10 @@ void setup()
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
+        // In the failure case we set the logging to the null logger so nothing crashes
+        // if it decides to log something
+        SerialLogger = new NullStream();
+
         // Register the WiFi with the framework
         static device_affinity_t wifi_device[] = {
             {&WIFI_device, 1}
@@ -1984,6 +1994,10 @@ void setup()
 #endif
 
     devicesStart();
+    
+    // setup() eats up some of this time, which can cause the first mode connection to fail.
+    // Resetting the time here give the first mode a better chance of connection.
+    RFmodeLastCycled = millis();
 }
 
 void loop()
@@ -2005,7 +2019,13 @@ void loop()
     #endif
 
     CheckConfigChangePending();
-    executeDeferredFunction(now);
+    executeDeferredFunction(micros());
+
+    // Clear the power-on-count
+    if ((connectionState == connected || connectionState == tentative) && config.GetPowerOnCounter() != 0)
+    {
+        config.SetPowerOnCounter(0);
+    }
 
     if (connectionState > MODE_STATES)
     {
@@ -2063,6 +2083,7 @@ void loop()
     DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
+    Radio.ignoreSecondIRQ = false;
 }
 
 struct bootloader {
