@@ -25,6 +25,9 @@ static const struct {
 } fields[] = {
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
+    {HARDWARE_serial1_rx, "serial1_rx", INT},
+    {HARDWARE_serial1_tx, "serial1_tx", INT},
+    {HARDWARE_serial1_protocol, "serial1_protocol", INT},
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},

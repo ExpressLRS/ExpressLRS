@@ -25,6 +25,7 @@
 #include "rx-serial/SerialHoTT_TLM.h"
 
 #include "rx-serial/devSerialIO.h"
+#include "rx-serial/devSerial1IO.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -61,6 +62,7 @@
 device_affinity_t ui_devices[] = {
   {&Serial_device, 1},
 #if defined(PLATFORM_ESP32)
+  {&Serial1_device, 1},         // secondary serial device
   {&SerialUpdate_device, 1},
 #endif
 #ifdef HAS_LED
@@ -126,8 +128,10 @@ uint32_t serialBaud;
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
+    #define SERIAL1_PROTOCOL_TX Serial1
 #endif
-SerialIO *serialIO;
+SerialIO *serialIO = nullptr;
+SerialIO *serial1IO = nullptr;
 
 /* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
@@ -140,6 +144,7 @@ SerialIO *serialIO;
     #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #else
     #define SERIAL_PROTOCOL_RX Serial
+    #define SERIAL1_PROTOCOL_RX Serial1
 #endif
 
 StubbornSender TelemetrySender;
@@ -742,19 +747,21 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
+            crsfRCFrameAvailableSerial1();
             if (teamraceHasModelMatch)
                 servoNewChannelsAvailable();
         }
         else
         {
             crsfRCFrameMissed();
-        }
+            crsfRCFrameMissedSerial1();        }
     }
     else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
         if (!LQCalc.currentIsSet())
         {
             crsfRCFrameMissed();
+            crsfRCFrameMissedSerial1();
         }
     }
 
@@ -872,11 +879,11 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
+            crsfRCFrameAvailableSerial1();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
             if (teamraceHasModelMatch)
-                servoNewChannelsAvailable();
-        }
+                servoNewChannelsAvailable();        }
         else if (!LQCalcDVDA.currentIsSet())
         {
             LQCalcDVDA.add();
@@ -1356,6 +1363,39 @@ static void setupSerial()
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+
+//
+// init secondary serial protocol
+//
+#if defined(PLATFORM_ESP32)
+    switch (SERIAL1_PROTOCOL)
+    {
+        case 0: // CSRF
+            Serial1.begin(firmwareOptions.uart_baud, SERIAL_8N1, GPIO_PIN_SERIAL1_RX, GPIO_PIN_SERIAL1_TX, false);
+            serial1IO = new SerialCRSF(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case 1: // Inverted CRSF
+            break;
+        case 2: // SBUS
+            Serial1.begin(100000, SERIAL_8N2, -1, GPIO_PIN_SERIAL1_TX, true);
+            serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case 3: // Inverted SBUS
+            Serial1.begin(100000, SERIAL_8N2, -1, GPIO_PIN_SERIAL1_TX, false);
+            serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case 4: // SUMD
+            Serial1.begin(115200, SERIAL_8N1, -1, GPIO_PIN_SERIAL1_TX, false);
+            serial1IO = new SerialSUMD(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case 5: // DJI RS  PRO
+            break;
+        case 6: // HoTT Telemetry
+                Serial1.begin(19200, SERIAL_8N2, -1, GPIO_PIN_SERIAL1_TX, false);
+                serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+    }
+#endif
 #if defined(PLATFORM_ESP32_S3)
     USBSerial.begin(460800);
     SerialLogger = &USBSerial;
@@ -1373,9 +1413,20 @@ static void serialShutdown()
 #endif
     SERIAL_PROTOCOL_TX.end();
 #else
-    Serial.end();
+    if(serialIO != nullptr)
+    {
+        Serial.end();
+        delete serialIO;
+        serialIO = nullptr;
+    }
+
+    if(serial1IO != nullptr)
+    {
+        Serial1.end();
+        delete serial1IO;
+        serial1IO = nullptr;
+    }
 #endif
-    delete serialIO;
 }
 
 void reconfigureSerial()

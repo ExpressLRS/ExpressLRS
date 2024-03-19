@@ -86,6 +86,20 @@ td img.icon-pwm {
 					<tr><td width="30"></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td><td>Pin used to receive CRSF signal from the handset</td></tr>
 					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='serial_tx' name='serial_tx' type='text'/></td><td>Pin used to transmit CRSF telemetry to the handset (may be the same as the RX PIN)</td></tr>
 
+					<tr><td colspan='2'><b>Secondary Serial Pins</td></tr>
+					<tr><td width="30"></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='serial1_rx' name='serial1_rx' type='text'/></td><td>Secondary serial RX - ESP32 targets only</td></tr>
+					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='serial1_tx' name='serial1_tx' type='text'/></td><td>Secondary serial TX - ESP32 targets only</td></tr>
+					<tr><td></td><td>Secondary Serial protocol</td><td>
+						<select id='serial1_protocol' name='serial1_protocol'>
+							<option value='-1'>None</option>
+							<option value='0'>CRSF</option>
+							<option value='2'>SBUS</option>
+							<option value='3'>SBUS Inverted</option>
+							<option value='4'>SUMD</option>
+							<option value='6'>HoTT Telemetry</option>
+						</select>
+					</td><td>Secondary serial protocol</td></tr>					
+
 					<tr><td colspan='2'><b>Radio Chip Pins & Options</td></tr>
 					<tr><td></td><td>BUSY pin<img class="icon-input"/></td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td><td>GPIO Input connected to SX128x busy pin</td></tr>
 					<tr><td></td><td>DIO0 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td><td>Unused on SX128x, Interrupt pin for SX127x</td></tr>
