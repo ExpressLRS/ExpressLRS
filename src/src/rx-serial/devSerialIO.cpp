@@ -163,10 +163,14 @@ static int timeout()
      * Commiting this anyway though to work out a better resolution
     */
 
+    noInterrupts();
+    bool missed = frameMissed;
+    frameMissed = false;
+    interrupts();
+
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable();
-    uint32_t duration = serialIO->sendRCFrame(sendChannels, frameMissed, ChannelData);
-    frameMissed = false;
+    uint32_t duration = serialIO->sendRCFrame(sendChannels, missed, ChannelData);
 
     // still get telemetry and send link stats if theres no model match
     serialIO->processSerialInput();

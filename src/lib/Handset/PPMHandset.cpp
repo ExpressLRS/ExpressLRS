@@ -9,7 +9,6 @@
 
 #include <driver/rmt.h>
 
-constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
 constexpr auto RMT_TICKS_PER_US = 10;
 
 void PPMHandset::Begin()
