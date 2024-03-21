@@ -28,7 +28,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #include "LR1121Driver.h"
 LR1121Driver DMA_ATTR Radio;
 
-expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {    
+expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0,  RADIO_TYPE_LR1121_LORA_900,  RATE_LORA_200HZ,     LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_7,     8, LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_7,     8, TLM_RATIO_1_64,  4,  5000, OTA4_PACKET_SIZE, 1},
     {1,  RADIO_TYPE_LR1121_LORA_900,  RATE_LORA_100HZ_8CH, LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8,     8, LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8,     8, TLM_RATIO_1_32,  4, 10000, OTA8_PACKET_SIZE, 1},
     {2,  RADIO_TYPE_LR1121_LORA_900,  RATE_LORA_100HZ,     LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF7, LR11XX_RADIO_LORA_CR_4_7,     8, LR11XX_RADIO_LORA_BW_500, LR11XX_RADIO_LORA_SF7, LR11XX_RADIO_LORA_CR_4_7,     8, TLM_RATIO_1_32,  4, 10000, OTA4_PACKET_SIZE, 1},
@@ -145,6 +145,7 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate)
 // Connection state information
 uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
 bool connectionHasModelMatch = false;
+bool teamraceHasModelMatch = true; // true if isTx or teamrace disabled or (enabled and channel in correct postion)
 bool InBindingMode = false;
 uint8_t ExpressLRS_currTlmDenom = 1;
 connectionState_e connectionState = disconnected;
