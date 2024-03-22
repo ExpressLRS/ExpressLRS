@@ -328,7 +328,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 #endif
 
     hwTimer::updateInterval(interval);
-    
+
     FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
@@ -381,7 +381,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
+        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -749,7 +749,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         else
         {
             crsfRCFrameMissed();
-            crsfRCFrameMissedSerial1();        }
+            crsfRCFrameMissedSerial1();
+        }
     }
     else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
@@ -878,7 +879,8 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
             if (teamraceHasModelMatch)
-                servoNewChannelsAvailable();        }
+                servoNewChannelsAvailable();
+        }
         else if (!LQCalcDVDA.currentIsSet())
         {
             LQCalcDVDA.add();
@@ -1212,7 +1214,7 @@ void MspReceiveComplete()
 static void setupSerial()
 {
     bool sbusSerialOutput = false;
-	bool sumdSerialOutput = false;
+    bool sumdSerialOutput = false;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     bool hottTlmSerial = false;
@@ -1242,7 +1244,7 @@ static void setupSerial()
         sbusSerialOutput = true;
         serialBaud = 100000;
     }
-	else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
+    else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
