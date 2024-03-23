@@ -216,11 +216,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 
     // SerialIO outputs (1 option)
     // ;[Serial RX] | [Serial TX]
-    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == U0RXD_GPIO_NUM)
     {
         pModeString = serial_RX;
     }
-    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
+    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == U0TXD_GPIO_NUM)
     {
         pModeString = serial_TX;
     }
