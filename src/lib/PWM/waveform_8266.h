@@ -1,7 +1,7 @@
 #pragma once
 
-void startWaveform8266(uint8_t pin, uint32_t timeHighUS, uint32_t timeLowUS);
-void stopWaveform8266(uint8_t pin);
+void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS);
+void stopWaveform8266(uint8_t gpio);
 
 #define startWaveform DO_NOT_USE
 #define startWaveformClockCycles DO_NOT_USE
