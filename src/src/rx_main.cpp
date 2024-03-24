@@ -664,7 +664,7 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
     {
-        if(config.GetAntennaMode() == 2)
+        if (config.GetAntennaMode() == 2)
         {
             // 0 and 1 is use for gpio_antenna_select
             // 2 is diversity
@@ -909,18 +909,22 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     uint8_t packageIndex;
     uint8_t const * payload;
     uint8_t dataLen;
+    bool telemetryConfirmValue;
     if (OtaIsFullRes)
     {
         packageIndex = otaPktPtr->full.msp_ul.packageIndex;
         payload = otaPktPtr->full.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+        telemetryConfirmValue = otaPktPtr->full.msp_ul.telemetryStatus;
     }
     else
     {
         packageIndex = otaPktPtr->std.msp_ul.packageIndex;
         payload = otaPktPtr->std.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+        telemetryConfirmValue = otaPktPtr->std.msp_ul.telemetryStatus;        
     }
+    TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // Always examine MSP packets for bind information if in bind mode
     // [1] is the package index, first packet of the MSP
@@ -1066,6 +1070,11 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         ProcessRfPacket_MSP(otaPktPtr);
         break;
     case PACKET_TYPE_SYNC: //sync packet from master
+        if (OtaIsFullRes) 
+        {
+            bool telemetryConfirmValue = otaPktPtr->full.sync.telemetryStatus;
+            TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
+        }
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
