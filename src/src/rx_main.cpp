@@ -564,19 +564,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // against Max below is for some reason 10 bytes more code
         telemetryBurstCount = 1;
     }
-	/* May not be needed since MSP messages are acked by StubbornReceiver
-	else if (NextTelemetryType == ELRS_TELEMETRY_TYPE_ENCRYPTION)
-	{
-		// Ray TODO TX may be expecting link stats in the telemetry packet
-		otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_ENCRYPTION;
-		if (OtaIsFullRes)
-		{
-		    otaPkt.full.tlm_dl.containsLinkStats = 0;
-		}
-		NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
-		encryptionStateSend = ENCRYPTION_STATE_FULL;
-	}
-	*/
     else
     {
         if (telemetryBurstCount < telemetryBurstMax)
@@ -1259,12 +1246,10 @@ void MspReceiveComplete()
         break;
 #ifdef USE_ENCRYPTION
 	case MSP_ELRS_INIT_ENCRYPT:
-    DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
+       DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
 
-	  encryption_params = (encryption_params_t *) &MspData[1];
+	    encryption_params = (encryption_params_t *) &MspData[1];
 		CryptoSetKeys(encryption_params);
-		// encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
-		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION;
 		encryptionStateSend = ENCRYPTION_STATE_FULL;
 		break;
 #endif
@@ -1911,10 +1896,6 @@ void setup()
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
             hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
-#ifdef USE_ENCRYPTION
-			// cryptoHandshake();
-#endif
-
         }
     }
 
@@ -1979,7 +1960,6 @@ void loop()
 
     if ((connectionState == tentative) && (abs(LPF_OffsetDx.value()) <= 10) && (LPF_Offset.value() < 100) && (LQCalc.getLQRaw() > minLqForChaos())) //detects when we are connected
     {
-		// Do encryption handshake here?
         GotConnection(now);
     }
 

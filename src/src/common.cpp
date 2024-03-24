@@ -11,8 +11,6 @@
 #else
 #include <avr/pgmspace.h>
 #endif
-// ChaCha cipher;
-// encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
 #endif
 
 #if defined(RADIO_SX127X)
@@ -209,7 +207,6 @@ bool ICACHE_RAM_ATTR isDualRadio()
 extern ChaCha cipher;
 extern uint8_t encryptionCounter[8];
 
-// encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
 void ICACHE_RAM_ATTR EncryptMsg(uint8_t *output, uint8_t *input)
 {
   size_t packetSize;
@@ -244,34 +241,6 @@ bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
   {
       packetSize = OTA4_PACKET_SIZE;
   }
-
-  // Ray TODO remove this - it is for debugging only
-  // uint8_t resetCounter[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  // cipher.setCounter(resetCounter, 8);
-  // cipher.setCounter(encryptionCounter, 8);
-
-  /*
-  // Process packaged unencrypted until encrtpyed ones start.
-  // This does seem to be needed
-  if (!encryptionStarted)
-  {
-    otaPktPtr = (OTA_Packet_s *) input;
-    // ValidatePacketCrcStd() changes a byte in the CRC, overwriting it's input.
-    // We will need to save std.crcHigh and reset it after checking.
-    if (packetSize == OTA4_PACKET_SIZE)
-    {
-      oldCrcHigh = otaPktPtr->std.crcHigh;
-    }
-    if ( OtaValidatePacketCrc(otaPktPtr) )
-    {
-      if (packetSize == OTA4_PACKET_SIZE)
-      {
-        otaPktPtr->std.crcHigh = oldCrcHigh;
-      }
-      return(true);
-    }
-  }
-  */
 
 
   do

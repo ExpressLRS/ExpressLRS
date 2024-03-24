@@ -36,8 +36,6 @@ uint8_t encryptionCounter[8];
 encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
 encryption_params_t nonce_key;
 uint8_t MSPDataPackage[ELRS_MSP_BUFFER];
-// Todo remove - used for random()
-// #include <stdlib.h>
 #else
 uint8_t MSPDataPackage[5];
 #endif
@@ -287,11 +285,10 @@ bool InitCrypto()
 {
 
   encryption_params_t *enc_params;
-	uint8_t rounds = 12;
-	size_t counterSize = 8;
+  uint8_t rounds = 12;
+  size_t counterSize = 8;
   size_t keySize = 16;
 
-  // uint8_t nonce[]          = {101, 102, 103, 104, 105, 106, 107, 108};
   uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
 
   memcpy(encryptionCounter, counter, counterSize);
@@ -320,7 +317,6 @@ bool InitCrypto()
   memcpy( enc_params->nonce, nonce_key.nonce, cipher.ivSize() );
   memcpy( enc_params->key, nonce_key.key, keySize ); 
 
-  // Ray TODO turn this encryption back on
   cipher.encrypt(enc_params->key, enc_params->key, keySize);
   free(master_key);
 
@@ -423,12 +419,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
         break;
-	  // Shouldn't be needed because MSP is auto-acked by StubbornSender
-	  /*
-      case ELRS_TELEMETRY_TYPE_ENCRYPTION:
-	    encryptionStateSend = ENCRYPTION_STATE_FULL;
-		break;
-	  */
     }
   }
   return true;
@@ -1607,7 +1597,6 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
-    // Ray TODO process encryption ack here?
     CRSF::sendTelemetryToTX(CRSFinBuffer);
     crsfTelemToMSPOut(CRSFinBuffer);
     TelemetryReceiver.Unlock();
