@@ -350,8 +350,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
 #ifdef USE_ENCRYPTION
-   // Ray TODO do not encrypt telemetry yet.
-  // decrypt_msg(Radio.RXdataBuffer, Radio.RXdataBuffer);
+    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+    {
+        DecryptMsg( Radio.RXdataBuffer );
+    }
 #endif
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
@@ -752,6 +754,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     EncryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
   }
 #endif
+
   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 }
 

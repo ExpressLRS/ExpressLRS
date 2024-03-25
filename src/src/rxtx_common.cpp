@@ -12,9 +12,6 @@
 static uint32_t startDeferredTime = 0;
 static uint32_t deferredTimeout = 0;
 static std::function<void()> deferredFunction = nullptr;
-#ifdef USE_ENCRYPTION
-// encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
-#endif
 
 boolean i2c_enabled = false;
 

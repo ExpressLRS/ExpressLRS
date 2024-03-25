@@ -444,10 +444,6 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 bool CryptoSetKeys(encryption_params_t *params)
 {
-    /*
-    size_t nonceSize = 8;
-    size_t ivSize = 8;
-    */
     uint8_t rounds = 12;
     size_t counterSize = 8;
     size_t keySize = 16;
@@ -610,13 +606,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         transmittingRadio = SX12XX_Radio_NONE;
     }
 
+
 #ifdef USE_ENCRYPTION
-  // Ray TODO do not encrypt telemetry data yet.
-  /*
-  if (encryptionStateSend == ENCRYPTION_STATE_FULL) {
-      EnDecryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt);
-  }
-  */
+    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+    {
+      EncryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
+    }
 #endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
@@ -1108,8 +1103,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
 #ifdef USE_ENCRYPTION
     if (encryptionStateSend == ENCRYPTION_STATE_FULL)
-	  {
-		// memcpy(decrypted, Radio.RXdataBuffer, sizeof(otaPkt.full);
+    {
 	    DecryptMsg( Radio.RXdataBuffer );
     }
 #endif
@@ -1246,7 +1240,7 @@ void MspReceiveComplete()
         break;
 #ifdef USE_ENCRYPTION
 	case MSP_ELRS_INIT_ENCRYPT:
-       DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
+        DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
 
 	    encryption_params = (encryption_params_t *) &MspData[1];
 		CryptoSetKeys(encryption_params);
