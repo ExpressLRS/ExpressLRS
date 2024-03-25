@@ -1114,6 +1114,15 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
     }
 }
 
+void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
+{
+    if (m_config.serial1Protocol != serialProtocol)
+    {
+        m_config.serial1Protocol = serialProtocol;
+        m_modified = true;
+    }
+}
+
 void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
 {
     if (m_config.teamraceChannel != teamraceChannel)
