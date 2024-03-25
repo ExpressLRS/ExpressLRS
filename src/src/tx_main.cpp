@@ -289,7 +289,7 @@ bool InitCrypto()
   size_t counterSize = 8;
   size_t keySize = 16;
 
-  uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+  uint8_t counter[] = {109, 110, 111, 112, 113, 114, 115, 116};
 
   memcpy(encryptionCounter, counter, counterSize);
   cipher.clear();
@@ -350,10 +350,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
 #ifdef USE_ENCRYPTION
-    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
-    {
-        DecryptMsg( Radio.RXdataBuffer );
-    }
+  if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+  {
+    DecryptMsg( Radio.RXdataBuffer );
+  }
 #endif
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
@@ -398,8 +398,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
-    // Ray TODO process encryption ack in a OtaFullRes telemetry packet
-    //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
     TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
   }
   // Std res mode
@@ -1608,16 +1606,16 @@ void loop()
   static bool mspTransferActive = false;
 
 #ifdef USE_ENCRYPTION
-  // if ( (connectionState == connected) && (!mspTransferActive) )
   if ( (connectionState == connected) && (!MspSender.IsActive()) )
   { 
     if (encryptionStateSend == ENCRYPTION_STATE_NONE)
-	  {
+	{
       InitCrypto();
-	    encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
+      encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
     }
 	  else if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED )
 	  {
+        // MspSender.IsActive() will be true until our proposal msg is ack'ed
         encryptionStateSend = ENCRYPTION_STATE_FULL;
 	  }
   }

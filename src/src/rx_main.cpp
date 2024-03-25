@@ -497,24 +497,6 @@ bool CryptoSetKeys(encryption_params_t *params)
     return true;
 }
 
-/* Not used currently
-void ICACHE_RAM_ATTR CryptoHandshake() {
-	if(encryptionStateSend == ENCRYPTION_STATE_NONE) {
-		Radio.RXnb();
-		return;
-	}
-
-    if (encryptionStateSend == ENCRYPTION_STATE_PROPOSED) {
-		// Accept the proposal, setup keys, set encryptionState, and retransmit accept packet
-        // CryptoAcceptProposal();
-		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION
-		encryptionStateSend = ENCRYPTION_STATE_PROPOSED;
-        // Do key setup
-		// NextTelemetryType = ELRS_TELEMETRY_TYPE_ENCRYPTION
-    }
-}
-*/
-
 #endif
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
