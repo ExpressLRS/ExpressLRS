@@ -1374,6 +1374,7 @@ static void setupSerial()
 #endif
 }
 
+#if defined(PLATFORM_ESP32)
 static void serial1Shutdown()
 {
     if(serial1IO != nullptr)
@@ -1386,7 +1387,6 @@ static void serial1Shutdown()
 
 static void setupSerial1()
 {
-#if defined(PLATFORM_ESP32)
     //
     // init secondary serial and protocol
     //
@@ -1442,7 +1442,6 @@ static void setupSerial1()
             serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
-#endif
 }
 
 void reconfigureSerial1()
@@ -1450,7 +1449,10 @@ void reconfigureSerial1()
     serial1Shutdown();
     setupSerial1();
 }
-
+#else
+    void setupSerial1() {};
+    void reconfigureSerial1() {}; 
+#endif
 
 static void serialShutdown()
 {

@@ -30,7 +30,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     crsf_channels_s PackedRCdataOut;
 
     if (config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO ||
-        config.GetSerial1Protocol() == PROTOCOL_DJI_RS_PRO)
+        config.GetSerial1Protocol() == PROTOCOL_SERIAL1_DJI_RS_PRO)
     {
         PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
         PackedRCdataOut.ch1 = fmap(channelData[1], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
