@@ -39,7 +39,6 @@
 #define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)
 #define GPIO_PIN_SERIAL1_RX hardware_pin(HARDWARE_serial1_rx)
 #define GPIO_PIN_SERIAL1_TX hardware_pin(HARDWARE_serial1_tx)
-#define SERIAL1_PROTOCOL hardware_pin(HARDWARE_serial1_protocol)
 
 // Radio
 #define GPIO_PIN_BUSY hardware_pin(HARDWARE_radio_busy)
