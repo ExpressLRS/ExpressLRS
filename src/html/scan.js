@@ -113,7 +113,18 @@ function updatePwmSettings(arPwm) {
       }
       modes.push(undefined);  // true PWM
     }
-    modes.push(undefined);  // true PWM
+  
+    if (features & 32) {
+      modes.push('SERIAL1 RX');
+    } else {
+      modes.push(undefined);
+    }
+    if (features & 64) {
+      modes.push('SERIAL1 TX');
+    } else {
+      modes.push(undefined);
+    }
+
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
@@ -375,9 +386,23 @@ function updateConfig(data, options) {
       _('sbus-config').style.display = 'none';
     }
   }
+
+  _('serial1-protocol').onchange = () => {
+    const proto = Number(_('serial1-protocol').value);
+    if (_('is-airport').checked) {
+      _('rcvr-uart-baud').disabled = false;
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('serial1-config').style.display = 'none';
+      _('sbus-config').style.display = 'none';
+      return;
+    }
+  }
+
   updatePwmSettings(data.pwm);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
+  _('serial1-protocol').value = data['serial1-protocol'];
+  _('serial1-protocol').onchange();
   _('is-airport').onchange = _('serial-protocol').onchange;
   _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
   _('vbind').onchange = () => {
@@ -686,6 +711,7 @@ if (_('config')) {
         return JSON.stringify({
           "pwm": getPwmFormData(),
           "serial-protocol": +_('serial-protocol').value,
+          "serial1-protocol": +_('serial1-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,

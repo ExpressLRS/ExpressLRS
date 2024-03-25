@@ -360,6 +360,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
@@ -378,6 +379,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
       #if defined(PLATFORM_ESP32)
       if (pin != 0) features |= 16; // DShot supported
+      if (GPIO_PIN_SERIAL1_RX == UNDEF_PIN)  features |= 32;  // Serial1RX supported
+      if (GPIO_PIN_SERIAL1_TX == UNDEF_PIN)  features |= 64;  // Serial1TX supported
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
@@ -504,6 +507,9 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 {
   uint8_t protocol = json["serial-protocol"] | 0;
   config.SetSerialProtocol((eSerialProtocol)protocol);
+
+  uint8_t protocol1 = json["serial1-protocol"] | 0;
+  config.SetSerial1Protocol((eSerial1Protocol)protocol1);
 
   uint8_t failsafe = json["sbus-failsafe"] | 0;
   config.SetFailsafeMode((eFailsafeMode)failsafe);
