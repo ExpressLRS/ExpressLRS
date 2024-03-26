@@ -11,18 +11,18 @@ extern bool BindingModeRequest;
 
 static char modelString[] = "000";
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial1 RX;Serial1 TX";
+static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 #endif
 
 static struct luaItem_selection luaSerialProtocol = {
-    {"Protocol 1", CRSF_TEXT_SELECTION},
+    {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaSerial1Protocol = {
-    {"Protocol 2", CRSF_TEXT_SELECTION},
+    {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
     "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
@@ -231,7 +231,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     // secondary Serial pins (2 options)
     // ;[SERIAL1 RX] ;[SERIAL1_TX]
     // allow any pin to be either SERIAL1 RX or SERIAL1 TX
-    strcat(pwmModes, ";Serial1 RX;Serial1 TX");
+    strcat(pwmModes, ";Serial2 RX;Serial2 TX");
 #else
     strcat(pwmModes, ";;");
 #endif

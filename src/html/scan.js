@@ -115,12 +115,12 @@ function updatePwmSettings(arPwm) {
     }
   
     if (features & 32) {
-      modes.push('Serial1 RX');
+      modes.push('Serial2 RX');
     } else {
       modes.push(undefined);
     }
     if (features & 64) {
-      modes.push('Serial1 TX');
+      modes.push('Serial2 TX');
     } else {
       modes.push(undefined);
     }
