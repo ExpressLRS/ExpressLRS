@@ -5,6 +5,7 @@
 #define MSP_SET_RX_CONFIG   45
 #define MSP_VTX_CONFIG      88   //out message         Get vtx settings - betaflight
 #define MSP_SET_VTX_CONFIG  89   //in message          Set vtx settings - betaflight
+#define MSP_SET_NAME        11   //in message          Set craft name - betaflight
 
 #define MSP_VTXTABLE_BAND               137 //out message         vtxTable band/channel data
 #define MSP_SET_VTXTABLE_BAND           227 //in message          set vtxTable band/channel data (one band at a time)
@@ -33,7 +34,7 @@
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_HEADER_CRC_LEN     4
-#define ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE   4
+#define ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE   17
 #define ENCAPSULATED_MSP_MAX_FRAME_LEN      (ENCAPSULATED_MSP_HEADER_CRC_LEN + ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
 
 // ELRS backpack protocol opcodes
