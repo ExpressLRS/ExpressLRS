@@ -1359,6 +1359,10 @@ void loop()
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
     crsf.sendLinkStatisticsToTX();
+
+    // debug_print_statistics
+
+    
     TLMpacketReported = now;
   }
 

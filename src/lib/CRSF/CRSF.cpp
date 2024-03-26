@@ -222,6 +222,28 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 #endif
 }
 
+void CRSF::printDebugLinkStats()
+{
+    // Wonder if I can "for i in crsfPayloadLinkStatistics"
+    char debug_hdr[] = "\nLinkStats: "
+    debugPrintf(&debug_hdr);
+
+    // Print UPLink stats
+    debugPrintf(LinkStatistics.uplink_RSSI_1);
+    debugPrintf(LinkStatistics.uplink_RSSI_2);
+    debugPrintf(LinkStatistics.uplink_Link_quality);
+    debugPrintf(LinkStatistics.uplink_SNR);
+    debugPrintf(LinkStatistics.active_antenna);
+    debugPrintf(LinkStatistics.rf_Mode);
+    debugPrintf(LinkStatistics.uplink_TX_Power);
+
+    // Print DOWNLink stats
+    debugPrintf(LinkStatistics.downlink_Link_quality);
+
+    char debug_ftr[] = "\n"
+    debugPrintf(&debug_ftr);
+}
+
 /**
  * Build a an extended type packet and queue it in the SerialOutFIFO
  * This is just a regular packet with 2 extra bytes with the sub src and target

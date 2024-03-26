@@ -60,9 +60,11 @@ public:
     static void SetExtendedHeaderAndCrc(uint8_t *frame, uint8_t frameType, uint8_t frameSize, uint8_t senderAddr, uint8_t destAddr);
     static uint32_t VersionStrToU32(const char *verStr);
 
+
     #ifdef CRSF_TX_MODULE
     static bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); } // AUX1
     static void ICACHE_RAM_ATTR sendLinkStatisticsToTX();
+    static void printDebugLinkStats();
     static void ICACHE_RAM_ATTR sendTelemetryToTX(uint8_t *data);
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
