@@ -225,23 +225,20 @@ void ICACHE_RAM_ATTR CRSF::sendLinkStatisticsToTX()
 void CRSF::printDebugLinkStats()
 {
     // Wonder if I can "for i in crsfPayloadLinkStatistics"
-    char debug_hdr[] = "\nLinkStats: "
-    debugPrintf(&debug_hdr);
+    uint16_t debug_link_stats_hdr = 0xAA55;
+    debugPrintf(&debug_link_stats_hdr);
 
     // Print UPLink stats
-    debugPrintf(LinkStatistics.uplink_RSSI_1);
-    debugPrintf(LinkStatistics.uplink_RSSI_2);
-    debugPrintf(LinkStatistics.uplink_Link_quality);
-    debugPrintf(LinkStatistics.uplink_SNR);
-    debugPrintf(LinkStatistics.active_antenna);
-    debugPrintf(LinkStatistics.rf_Mode);
-    debugPrintf(LinkStatistics.uplink_TX_Power);
+    debugPrintf(&LinkStatistics.uplink_RSSI_1);
+    debugPrintf(&LinkStatistics.uplink_RSSI_2);
+    debugPrintf(&LinkStatistics.uplink_Link_quality);
+    debugPrintf(&LinkStatistics.uplink_SNR);
+    debugPrintf(&LinkStatistics.active_antenna);
+    debugPrintf(&LinkStatistics.rf_Mode);
+    debugPrintf(&LinkStatistics.uplink_TX_Power);
 
     // Print DOWNLink stats
-    debugPrintf(LinkStatistics.downlink_Link_quality);
-
-    char debug_ftr[] = "\n"
-    debugPrintf(&debug_ftr);
+    debugPrintf(&LinkStatistics.downlink_Link_quality);
 }
 
 /**
