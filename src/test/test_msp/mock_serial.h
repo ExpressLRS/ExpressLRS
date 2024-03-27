@@ -21,7 +21,7 @@ public:
     { 
         buf += (char)c; return 1; 
     }
-    size_t write(uint8_t *c, int l)
+    size_t write(const uint8_t *c, size_t l)
     {
         for (int i=0; i<l ; buf += *c, i++, c++);
         return l;
@@ -29,6 +29,5 @@ public:
 
 private:
     std::string &buf;
-    unsigned int length;
     unsigned int position;
 };

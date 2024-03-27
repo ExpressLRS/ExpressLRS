@@ -140,6 +140,9 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
+json_flags['flash-discriminator'] = randint(1,2**32-1)
+json_flags['wifi-on-interval'] = -1
+
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
@@ -148,13 +151,11 @@ build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-json_flags['flash-discriminator'] = randint(1,2**32-1)
-
-if '-DRADIO_SX127X=1' in build_flags:
+if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
         fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
-        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X')
+        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X/RADIO_LR1121')
 
     # require a domain be set for 900
     if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
@@ -207,3 +208,7 @@ time.sleep(.5)
 stm = env.get('PIOPLATFORM', '') in ['ststm32']
 if stm:
     env['UPLOAD_PROTOCOL'] = 'custom'
+    # -DFLASH_DISCRIM=xxxx can't be passed on the command line or it will every file to
+    # always be rebuilt, so put it in a header that options.cpp can include
+    print(f"#define FLASH_DISCRIM {json_flags['flash-discriminator']}",
+          file=open("include/flashdiscrim.h", "w"))

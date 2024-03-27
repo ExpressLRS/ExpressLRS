@@ -129,7 +129,7 @@ void TFTDisplay::init()
         pinMode(GPIO_PIN_TFT_BL, OUTPUT);
     }
     bus = new Arduino_ESP32SPI(GPIO_PIN_TFT_DC, GPIO_PIN_TFT_CS, GPIO_PIN_TFT_SCLK, GPIO_PIN_TFT_MOSI, GFX_NOT_DEFINED, HSPI);
-    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, OPT_OLED_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
 
     gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);

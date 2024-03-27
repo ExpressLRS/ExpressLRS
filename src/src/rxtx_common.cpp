@@ -22,7 +22,7 @@ static void setupWire()
     int gpio_sda = GPIO_PIN_SDA;
 
 #if defined(TARGET_RX) && defined(GPIO_PIN_PWM_OUTPUTS)
-    for (uint8_t ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+    for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
         auto pwm = config.GetPwmChannel(ch);

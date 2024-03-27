@@ -9,6 +9,7 @@
 
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
+static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
 
 #if (defined(PLATFORM_ESP32))
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
@@ -62,8 +63,9 @@ static void servoWrite(uint8_t ch, uint16_t us)
     }
     else
 #endif
-    if (servoPins[ch] != UNDEF_PIN)
+    if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
     {
+        pwmChannelValues[ch] = us;
         if ((eServoOutputMode)chConfig->val.mode == somOnOff)
         {
             digitalWrite(servoPins[ch], us > 1500);
@@ -82,14 +84,22 @@ static void servoWrite(uint8_t ch, uint16_t us)
 static void servosFailsafe()
 {
     constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
-    for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+    for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
-        uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
-        // Always write the failsafe position even if the servo has never been started,
-        // so all the servos go to their expected position
-        servoWrite(ch, us);
+        if (chConfig->val.failsafeMode == PWMFAILSAFE_SET_POSITION) {
+            // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
+            uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
+            // Always write the failsafe position even if the servo has never been started,
+            // so all the servos go to their expected position
+            servoWrite(ch, us);
+        }
+        else if (chConfig->val.failsafeMode == PWMFAILSAFE_NO_PULSES) {
+            servoWrite(ch, 0);
+        }
+        else if (chConfig->val.failsafeMode == PWMFAILSAFE_LAST_POSITION) {
+            // do nothing
+        }
     }
 }
 
@@ -100,7 +110,7 @@ static void servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (unsigned ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+        for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
@@ -139,9 +149,12 @@ static void initialize()
         return;
     }
 
+#if defined(PLATFORM_ESP32)
     uint8_t rmtCH = 0;
+#endif
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
+        pwmChannelValues[ch] = UINT16_MAX;
         pwmChannels[ch] = -1;
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
@@ -156,7 +169,7 @@ static void initialize()
         }
 #endif
         // Mark servo pins that are being used for serial (or other purposes) as disconnected
-        eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+        auto mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
         if (mode >= somSerial)
         {
             pin = UNDEF_PIN;
@@ -197,7 +210,7 @@ static void initialize()
 
 static int start()
 {
-    for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
@@ -228,7 +241,7 @@ static int event()
     }
     else if (connectionState == wifiUpdate)
     {
-        for (unsigned ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
             if (pwmChannels[ch] != -1)
             {
