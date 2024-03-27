@@ -14,14 +14,16 @@ RC commands are also encrypted.
 
 ## FAQ
 How do the performance and features compare?  
-Performance and features of ELRS are identical for the same version number, because PrivacyLRS is the exact same code as ELRS, just with the packets encrypted.
-The encryption is much, much faster than the radio link, so there is no measurable delay.
+  Performance and features of ELRS are identical for the same version number, because PrivacyLRS is the exact same code as ELRS, just with the packets encrypted.
+  The encryption is much, much faster than the radio link, so there is no measurable delay.
+
 How do I use PrivacyLRS?  
-Download the [zip file](https://github.com/sensei-hacker/PrivacyLRS/archive/refs/heads/secure_01.zip) of the secure branch.
-Unzip it, then flash using ELRS Configurator by choosing "Local" as shown in this screenshot:
-(https://raw.githubusercontent.com/sensei-hacker/PrivacyLRS/secure_01/privacylrs/screenshot_choose_local.png)
+  Download the [zip file](https://github.com/sensei-hacker/PrivacyLRS/archive/refs/heads/secure_01.zip) of the secure branch.
+  Unzip it, then flash using ELRS Configurator by choosing "Local" as shown in this screenshot:
+  (https://raw.githubusercontent.com/sensei-hacker/PrivacyLRS/secure_01/privacylrs/screenshot_choose_local.png)
+
 Is this a fork because somebody got mad?  
-The maintainer of PrivacyLRS has nothing but love for ExpressLRS and the ELRS maintainers. I simply wanted a version that protects my privacy.
+  The maintainer of PrivacyLRS has nothing but love for ExpressLRS and the ELRS maintainers. I simply wanted a version that protects my privacy.
 
 ## Status of the project and testing
 PrivacyLRS is currently in beta - testers needed. What needs testing is weird corner cases that could possibly break the
