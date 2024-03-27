@@ -59,6 +59,11 @@ function generateFeatureBadges(features) {
   if ((features & 12) === 12) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">I2C</span>`;
   else if (!!(features & 4)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`;
   else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
+  
+  // Serial2
+  if (!!(features & 32) || !!(features & 64)) 
+    str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
+
   return str;
 }
 
@@ -202,7 +207,7 @@ function updatePwmSettings(arPwm) {
   
   modeSelectionInit = false;
 
-  // put some contraints on pinRx/Tx mode selects
+  // put some constraints on pinRx/Tx mode selects
   if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
     const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
     const pinTxMode = _(`pwm_${pinTxIndex}_mode`);
