@@ -122,3 +122,4 @@
 
 # Use an ELRS TX and RX as a transparent UART over the air
 #-DUSE_AIRPORT_AT_BAUD=9600
+

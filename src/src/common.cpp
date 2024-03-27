@@ -1,6 +1,18 @@
 #include "common.h"
 #include "OTA.h"
 
+#ifdef USE_ENCRYPTION
+#include <encryption.h>
+#include <Crypto.h>
+#include <ChaCha.h>
+#include <string.h>
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+#endif
+
 #if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
@@ -203,3 +215,103 @@ bool ICACHE_RAM_ATTR isDualRadio()
 {
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }
+
+#ifdef USE_ENCRYPTION
+extern ChaCha cipher;
+extern uint8_t encryptionCounter[8];
+
+void ICACHE_RAM_ATTR EncryptMsg(uint8_t *output, uint8_t *input)
+{
+  size_t packetSize;
+
+  if (OtaIsFullRes)
+  {
+      packetSize = OTA8_PACKET_SIZE;
+  }
+  else
+  {
+      packetSize = OTA4_PACKET_SIZE;
+  }
+  cipher.encrypt(output, input, packetSize);
+}
+
+bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
+{
+
+  uint8_t decrypted[OTA8_PACKET_SIZE];
+  size_t packetSize;
+  bool success = false;
+  int resync = 32;
+  static bool encryptionStarted = false;
+  OTA_Packet_s *otaPktPtr;
+  uint8_t oldCrcHigh;
+
+  if (OtaIsFullRes)
+  {
+      packetSize = OTA8_PACKET_SIZE;
+  }
+  else
+  {
+      packetSize = OTA4_PACKET_SIZE;
+  }
+
+
+  do
+  {
+    EncryptMsg(decrypted, input);
+
+    // ValidatePacketCrcStd() changes a byte in the CRC, overwriting it's input.
+    // We will need to save and reset otaPktPtr->std.crcHigh immediately after checking
+    if (packetSize == OTA4_PACKET_SIZE)
+    {
+      otaPktPtr = (OTA_Packet_s *) decrypted;
+      oldCrcHigh = otaPktPtr->std.crcHigh;
+    }
+
+    success = OtaValidatePacketCrc(otaPktPtr);
+    if (packetSize == OTA4_PACKET_SIZE)
+    {
+      otaPktPtr->std.crcHigh = oldCrcHigh;
+    }
+    encryptionStarted = encryptionStarted || success;
+  } while ( resync-- > 0 && !success );
+
+  if (success)
+  {
+   memcpy(input, decrypted, packetSize);
+   cipher.getCounter(encryptionCounter, 8);
+  } else if (!encryptionStarted)
+  {
+    cipher.setCounter(encryptionCounter, 8);
+  }
+  return(success);
+}
+
+/// in: valid chars are 0-9 + A-F + a-f
+/// out_len_max==0: convert until the end of input string, out_len_max>0 only convert this many numbers
+/// returns actual out size
+int hexStr2Arr(unsigned char* out, const char* in, size_t out_len_max)
+{
+    if (!out_len_max)
+        out_len_max = INT_MAX;
+
+    int in_len = strnlen(in, out_len_max * 2);
+    if (in_len % 2 != 0)
+        // return -1; // error, in str len should be even
+        in_len--;
+
+    // calc actual out len
+    const int out_len = out_len_max < (in_len / 2) ? out_len_max : (in_len / 2);
+
+    for (int i = 0; i < out_len; i++) {
+        char ch0 = in[2 * i];
+        char ch1 = in[2 * i + 1];
+        uint8_t nib0 = ( (ch0 & 0xF) + (ch0 >> 6) ) | ((ch0 >> 3) & 0x8);
+        uint8_t nib1 = ( (ch1 & 0xF) + (ch1 >> 6) ) | ((ch1 >> 3) & 0x8);
+        out[i] = (nib0 << 4) | nib1;
+    }
+    return out_len;
+}
+
+#endif
+

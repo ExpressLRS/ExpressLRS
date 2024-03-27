@@ -1,28 +1,49 @@
-![Banner](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/banner.png?raw=true)
 
 <center>
 
-[![Release](https://img.shields.io/github/v/release/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/ExpressLRS/ExpressLRS/build.yml?logo=github&style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/actions)
-[![License](https://img.shields.io/github/license/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/blob/master/LICENSE)
-[![Stars](https://img.shields.io/github/stars/ExpressLRS/ExpressLRS?style=flat-square)](https://github.com/ExpressLRS/ExpressLRS/stargazers)
-[![Chat](https://img.shields.io/discord/596350022191415318?color=%235865F2&logo=discord&logoColor=%23FFFFFF&style=flat-square)](https://discord.gg/expresslrs)
+# PrivacyLRS
+PrivacyLRS is a privacy-protecting fork of the excellent [ExpressLRS (ELRS)](https://www.expresslrs.org/) long-range RC system.
+PrivacyLRS is for those who want to use telemetry, but not broadcast that telemetry (including GPS location) for 
+other people to read.
 
-</center>
+With *standard* ELRS, it is inconvenient for others to read your telemetry link - they would need to work for it a little bit.
+PrivacyLRS uses strong encryption to make it *impossible* for other people to read your telemetry and get your location
+that way, among other information.
 
-## Support ExpressLRS
-You can support ExpressLRS by contributing code, testing new features, sharing your ideas, or helping others get started. We are exceptionally grateful for those who donate their time to our passion.
+RC commands are also encrypted.
 
-If you don't have time to lend a hand in that way but still want to have an impact, consider donating. Donations are used for infrastructure costs and to buy test equipment needed to further the project and make it securely accessible. ExpressLRS accepts donations through Open Collective, which provides recognition of donors and transparency on how that support is utilized.
+## FAQ
+### How do the performance and features compare?  
+  Performance and features of ELRS are identical for the same version number, because PrivacyLRS is the exact same code as ELRS, just with the packets encrypted.
+  The encryption is much, much faster than the radio link, so there is no measurable delay.
 
-[![Open Collective backers](https://img.shields.io/opencollective/backers/expresslrs?label=Open%20Collective%20backers&style=flat-square)](https://opencollective.com/expresslrs)
+### How do I use PrivacyLRS?  
+  Download the [zip file](https://github.com/sensei-hacker/PrivacyLRS/archive/refs/heads/secure_01.zip) of the secure branch.
+  Unzip it, then flash using ELRS Configurator by choosing "Local" as shown in this screenshot:
+  (https://raw.githubusercontent.com/sensei-hacker/PrivacyLRS/secure_01/privacylrs/screenshot_choose_local.png)
 
-We appreciate all forms of contribution and hope you will join us on Discord!
+### Is this a fork because somebody got mad?  
+  The maintainer of PrivacyLRS has nothing but love for ExpressLRS and the ELRS maintainers. I simply wanted a version that protects my privacy.
 
-## Website
-For general information on the project please refer to our guides on the [website](https://www.expresslrs.org/), and our [FAQ](https://www.expresslrs.org/2.0/faq/)
+## Status of the project and testing
+PrivacyLRS is currently in beta - testers needed. What needs testing is weird corner cases that could possibly break the
+link, by making the encryption get out of sync.  Performance (range, refresh rate, etc) is exactly the same as standard ELRS,
+so there is no point in testing that. Though you are welcome to if you wish.
+\* If standard ELRS has latency of 6.522ms at a certain packet rate, PrivacyLRS will have latency of around 6.525ms - the
+the difference probably being too small to measure.
+If you choose to test PrivacyLRS, be sure to set up your failsafe carefully. Bugs could cause the link to fail.
 
-## About
+## Differences between ELRS and PrivacyLRS
+The ELRS documentation makes clear that the binding phrase is *not* a security feature in standard ELRS.
+In standard ELRS, the binding phrase is to prevent *accidental* conflicts between two aircraft.
+This is different in PrivacyLRS. In PrivacyLRS, the bind phrase is used as a small part of the security.
+For this reason, it is recommended to make your bind phrase four words long - four words that other people are unlikely
+to guess.
+PrivacyLRS uses strong cryptographic keys which are radnomly generated, but the bind phrase also plays small part in
+security.
+
+
+## About ExpressLRS
 
 ExpressLRS is an open source Radio Link for Radio Control applications. Designed to be the best FPV Racing link, it is based on the fantastic Semtech **SX127x**/**SX1280** LoRa hardware combined with an Espressif or STM32 Processor. Using LoRa modulation as well as reduced packet size it achieves best in class range and latency. It achieves this using a highly optimized over-the-air packet structure, giving simultaneous range and latency advantages. It supports both 900 MHz and 2.4 GHz links, each with their own benefits. 900 MHz supports a maximum of 200 Hz packet rate, with higher penetration. 2.4 GHz supports a blistering fast 1000 Hz on [EdgeTX](http://edgetx.org/). With over 60 different hardware targets and 13 hardware manufacturers, the choice of hardware is ever growing, with different hardware suited to different requirements.
 
@@ -31,33 +52,4 @@ To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, 
 
 https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/
 
-## Community
-We have both a [Discord Server](https://discord.gg/expresslrs) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
 
-## Features
-
-ExpressLRS has the following features:
-
-- 1000 Hz Packet Rate 
-- Telemetry (Betaflight Lua Compatibility)
-- Wifi Updates
-- Bluetooth Sim Joystick
-- Oled & TFT Displays
-- 2.4 GHz or 900 MHz RC Link
-- Ceramic Antenna - allows for easier installation into micros
-- VTX and VRX Frequency adjustments from the Lua
-- Bind Phrases - no need for button binding
-
-with many more features on the way!
-
-## Supported Hardware
-
-ExpressLRS currently supports hardware from the following manufacturers: AxisFlying, BETAFPV, Flywoo, FrSky, HappyModel, HiYounger, HGLRC, ImmersionRC, iFlight, JHEMCU, Jumper, Matek, NamimnoRC, QuadKopters and SIYI.
-
-For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Receiver Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
-
-## Developers
-
-If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/expresslrs) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to submit a Pull Request to the GitHub Repository. 
-
-![](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/community.png?raw=true)

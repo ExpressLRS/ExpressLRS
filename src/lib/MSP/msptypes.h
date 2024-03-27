@@ -31,6 +31,8 @@
 #define MSP_ELRS_POWER_CALI_GET             0x20
 #define MSP_ELRS_POWER_CALI_SET             0x21
 
+#define MSP_ELRS_INIT_ENCRYPT               0x55
+
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_HEADER_CRC_LEN     4
 #define ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE   4

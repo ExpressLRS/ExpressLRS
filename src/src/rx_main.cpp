@@ -43,6 +43,23 @@
 #include <SPIFFS.h>
 #endif
 
+
+#ifdef USE_ENCRYPTION
+#include <encryption.h>
+#include <Crypto.h>
+#include <ChaCha.h>
+#include <string.h>
+
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+ChaCha cipher(12);
+encryptionState_e encryptionStateSend = ENCRYPTION_STATE_NONE;
+uint8_t encryptionCounter[8];
+#endif
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -429,6 +446,66 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 #endif
 }
 
+
+#ifdef USE_ENCRYPTION
+
+bool CryptoSetKeys(encryption_params_t *params)
+{
+    uint8_t rounds = 12;
+    size_t counterSize = 8;
+    size_t keySize = 16;
+
+    uint8_t counter[]     = {109, 110, 111, 112, 113, 114, 115, 116};
+
+
+    // Decrypt the session key, which is encrypted with the master key
+    unsigned char *master_key = (unsigned char *) calloc( keySize + 1, sizeof(char) );
+    hexStr2Arr( master_key, stringify_expanded(USE_ENCRYPTION), keySize );
+    DBGLN("encrypted session key = %d, %d, %d, %d", params->key[0], params->key[1], params->key[2], params->key[3]);
+    DBGLN("master_key = %d, %d, %d, %d", master_key[0], master_key[1], master_key[2], master_key[3]);
+
+    cipher.clear();
+    if ( !cipher.setKey(master_key, keySize) )
+    {
+        return false;
+    }
+    if ( !cipher.setIV(params->nonce, cipher.ivSize()) )
+    {
+        return false;
+    }
+    if (!cipher.setCounter(counter, counterSize))
+    {
+        return false;
+    }
+    cipher.setNumRounds(rounds);
+    cipher.decrypt(params->key, params->key, keySize);
+    free(master_key);
+
+
+    DBGLN("New key = dec: %d, %d, %d hex:  %x, %x, %x", params->key[0], params->key[1], params->key[2], params->key[3],
+    params->key[4], params->key[5], params->key[6]);
+
+    // Further packets are encrypted with the session key
+    memcpy(encryptionCounter, counter, counterSize);
+    cipher.clear();
+    if ( !cipher.setKey(params->key, keySize) )
+    {
+        return false;
+    }
+    if ( !cipher.setIV(params->nonce, cipher.ivSize()) )
+    {
+        return false;
+    }
+    if (!cipher.setCounter(counter, counterSize))
+    {
+        return false;
+    }
+    cipher.setNumRounds(rounds);
+    return true;
+}
+
+#endif
+
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
@@ -517,6 +594,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
+
+
+#ifdef USE_ENCRYPTION
+    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+    {
+      EncryptMsg( (uint8_t*)&otaPkt, (uint8_t*)&otaPkt );
+    }
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
@@ -1040,6 +1125,13 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     }
     uint32_t const beginProcessing = micros();
 
+#ifdef USE_ENCRYPTION
+    if (encryptionStateSend == ENCRYPTION_STATE_FULL)
+    {
+	    DecryptMsg( Radio.RXdataBuffer );
+    }
+#endif
+
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
@@ -1071,6 +1163,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_TLM:
+	    // Possibly handle encryption handshake here
         if (firmwareOptions.is_airport)
         {
             OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
@@ -1151,6 +1244,9 @@ void SendMSPFrameToFC(uint8_t *mspData)
  **/
 void MspReceiveComplete()
 {
+#ifdef USE_ENCRYPTION
+	encryption_params_t *encryption_params;
+#endif
     switch (MspData[0])
     {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
@@ -1162,6 +1258,17 @@ void MspReceiveComplete()
         });
 #endif
         break;
+
+#ifdef USE_ENCRYPTION
+	case MSP_ELRS_INIT_ENCRYPT:
+        DBGLN("MspData = %d, %d, %d, %d, %d, %d", MspData[1], MspData[2], MspData[3], MspData[4], MspData[5], MspData[6]);
+
+	    encryption_params = (encryption_params_t *) &MspData[1];
+		CryptoSetKeys(encryption_params);
+		encryptionStateSend = ENCRYPTION_STATE_FULL;
+		break;
+#endif
+
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
