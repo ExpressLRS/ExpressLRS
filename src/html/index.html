@@ -1,4 +1,4 @@
-@@require(PLATFORM, VERSION, isTX, sx127x)
+@@require(PLATFORM, VERSION, isTX, hasSubGHz)
 <!DOCTYPE HTML>
 <html lang="en">
 
@@ -53,7 +53,7 @@
 					<br/><br/>
 					<form id='upload_options' method='POST' action="/options">
 @@end
-@@if sx127x:
+@@if hasSubGHz:
 						<div class="mui-select">
 							<select id='domain' name='domain'>
 								<option value='0'>AU915</option>
