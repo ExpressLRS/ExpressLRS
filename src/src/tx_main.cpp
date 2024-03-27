@@ -83,8 +83,6 @@ LQCALC<25> LQCalc;
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
-bool InBindingMode = false;
-
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
