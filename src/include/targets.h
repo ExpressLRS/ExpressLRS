@@ -289,5 +289,11 @@ extern bool pwmSerialDefined;
 #endif
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#if !defined(U0RXD_GPIO_NUM)
+#define U0RXD_GPIO_NUM (3)
+#endif
+#if !defined(U0TXD_GPIO_NUM)
+#define U0TXD_GPIO_NUM (1)
+#endif
 #include "hardware.h"
 #endif

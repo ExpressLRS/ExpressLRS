@@ -21,8 +21,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
-#define U0TXD_GPIO_NUM  (1)
-#define U0RXD_GPIO_NUM  (3)
 #endif
 #include <DNSServer.h>
 

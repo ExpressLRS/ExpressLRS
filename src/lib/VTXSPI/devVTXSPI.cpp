@@ -153,7 +153,7 @@ static void RfAmpVrefOff()
 
 static void setPWM()
 {
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
 #elif defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)

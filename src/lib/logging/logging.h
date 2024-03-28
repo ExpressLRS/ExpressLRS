@@ -21,6 +21,10 @@
   #endif
 #endif
 
+#if defined(TARGET_RX) && (defined(DEBUG_RCVR_LINKSTATS) || defined(DEBUG_RX_SCOREBOARD) || defined(DEBUG_RCVR_SIGNAL_STATS)) || defined(DEBUG_LOG)
+#define DEBUG_ENABLED
+#endif
+
 #if defined(TARGET_TX)
 extern Stream *TxBackpack;
 #if defined(PLATFORM_ESP32_S3)

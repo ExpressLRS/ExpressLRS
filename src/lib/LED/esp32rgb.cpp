@@ -21,6 +21,9 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 #define SAMPLE_RATE (800000)
 #define MCLK 160000000
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+#define SAMPLE_RATE (800000)
+#define MCLK 160000000
 #elif defined(CONFIG_IDF_TARGET_ESP32)
 #define SAMPLE_RATE (360000)
 #define MCLK 48000000
@@ -87,6 +90,8 @@ void ESP32S3LedDriver::ClearTo(RgbColor color, uint16_t first, uint16_t last)
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
 static const int bitorder[] = {0x40, 0x80, 0x10, 0x20, 0x04, 0x08, 0x01, 0x02};
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
 static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 #elif defined(CONFIG_IDF_TARGET_ESP32)
 static const int bitorder[] = {0x40, 0x80, 0x10, 0x20, 0x04, 0x08, 0x01, 0x02};
