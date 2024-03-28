@@ -6,17 +6,25 @@
 
 extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern void reconfigureSerial();
+extern void reconfigureSerial1();
 extern bool BindingModeRequest;
 
 static char modelString[] = "000";
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA";
+static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 #endif
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaSerial1Protocol = {
+    {"Protocol2", CRSF_TEXT_SELECTION},
+    0, // value
+    "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
 };
 
@@ -173,7 +181,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     // DShot output (1 option)
     // ;DShot
     // ESP8266 enum skips this, so it is never present
-    if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)   // DShot doesn't work with GPIO0, exclude it
     {
         strcat(pwmModes, ";DShot");
     }
@@ -214,6 +222,19 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     {
         strcat(pwmModes, ";I2C SCL;I2C SDA");
     }
+    else
+        strcat(pwmModes, ";;");
+    
+    strcat(pwmModes, ";");
+
+#if defined(PLATFORM_ESP32)
+    // secondary Serial pins (2 options)
+    // ;[SERIAL1 RX] ;[SERIAL1_TX]
+    // allow any pin to be either SERIAL1 RX or SERIAL1 TX
+    strcat(pwmModes, ";Serial2 RX;Serial2 TX");
+#else
+    strcat(pwmModes, ";;");
+#endif
 
     // trim off trailing semicolons (assumes pwmModes has at least 1 non-semicolon)
     for (auto lastPos = strlen(pwmModes)-1; pwmModes[lastPos] == ';'; lastPos--)
@@ -366,7 +387,20 @@ static void registerLuaParameters()
     }
   });
 
-  if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+  registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetSerial1Protocol((eSerial1Protocol)arg);
+    if (config.IsModified()) {
+      deferExecution(100, [](){
+        reconfigureSerial1();
+      });
+    }
+  });
+
+  eSerialProtocol prot0 = config.GetSerialProtocol();
+  eSerial1Protocol prot1 = config.GetSerial1Protocol();
+
+  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
+      prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO)
   {
     registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
       config.SetFailsafeMode((eFailsafeMode)arg);
@@ -434,6 +468,7 @@ static void registerLuaParameters()
 static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+  setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
   setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
