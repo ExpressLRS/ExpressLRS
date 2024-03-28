@@ -441,6 +441,16 @@ TxConfig::SetModelMatch(bool modelMatch)
 }
 
 void
+TxConfig::SetBLETelemetry(bool bleTelemetry)
+{
+    if (GetBLETelemetry() != bleTelemetry)
+    {
+        m_model->bleTelemetry = bleTelemetry;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetVtxBand(uint8_t vtxBand)
 {
     if (m_config.vtxBand != vtxBand)
