@@ -78,7 +78,7 @@ void SX1280Driver::End()
     PayloadLength = 8; // Dummy default value which is overwritten during setup.
 }
 
-bool SX1280Driver::Begin()
+bool SX1280Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 {
     hal.init();
     hal.IsrCallback_1 = &SX1280Driver::IsrCallback_1;

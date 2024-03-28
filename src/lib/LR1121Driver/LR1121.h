@@ -23,7 +23,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     LR1121Driver();
-    bool Begin();
+    bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     void SetTxIdleMode() { SetMode(LR1121_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,

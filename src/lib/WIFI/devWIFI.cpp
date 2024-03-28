@@ -845,7 +845,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     request->client()->close();
 
     Radio.TXdoneCallback = [](){};
-    Radio.Begin();
+    Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
 
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());

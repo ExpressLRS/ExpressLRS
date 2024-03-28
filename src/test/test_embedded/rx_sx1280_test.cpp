@@ -25,7 +25,7 @@ void setup()
     Serial.begin(115200);
     Serial.println("Begin SX1280 testing...");
 
-    Radio.Begin();
+    Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
     Radio.Config(SX1280_LORA_BW_0800, SX1280_LORA_SF6, SX1280_LORA_CR_4_7, 2420000000, 12, 8);
     Radio.TXdoneCallback = &TXdoneCallback;
     //Radio.TXnb(testdata, sizeof(testdata));
