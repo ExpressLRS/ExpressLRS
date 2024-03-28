@@ -33,11 +33,12 @@ def build_html(mainfile, var, out, env, isTX=False):
         extensions=[CoreExtension("@@")]
     )
     template = engine.get_template(mainfile)
+    has_sub_ghz = '-DRADIO_SX127X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
     data = template.render({
             'VERSION': get_version(env),
             'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
             'isTX': isTX,
-            'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
+            'hasSubGHz': has_sub_ghz
         })
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data)
