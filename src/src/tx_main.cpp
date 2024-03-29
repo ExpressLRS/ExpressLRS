@@ -1362,6 +1362,8 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+  
+  Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
 

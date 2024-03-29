@@ -18,6 +18,7 @@ public:
 
     ///////////Radio Variables////////
     uint32_t timeout;
+    bool ignoreSecondIRQ;
 
     ///////////////////////////////////
 

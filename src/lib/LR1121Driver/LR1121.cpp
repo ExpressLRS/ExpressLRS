@@ -42,6 +42,7 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_STDBY_XOSC;
+    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::End()
@@ -722,6 +723,9 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
+    if (instance->ignoreSecondIRQ)
+        return;
+
     instance->processingPacketRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
@@ -729,12 +733,14 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->TXnbISR();
         instance->ClearIrqStatus(SX12XX_Radio_All);
+        instance->ignoreSecondIRQ = true;  
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
             instance->ClearIrqStatus(SX12XX_Radio_All);
+            instance->ignoreSecondIRQ = true;  
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
