@@ -93,7 +93,7 @@ static WVFState wvfState;
 #pragma GCC optimize ("Os")
 
 // Interrupt on/off control
-static IRAM_ATTR void timer1Interrupt();
+static void timer1Interrupt();
 static bool timerRunning = false;
 
 static __attribute__((noinline)) void initTimer() {
@@ -127,13 +127,13 @@ static void disableIdleTimer() {
 // Start up a waveform on a pin, or change the current one.  Will change to the new
 // waveform smoothly on next low->high transition.  For immediate change, stopWaveform()
 // first, then it will immediately begin.
-void startWaveform8266(uint8_t pin, uint32_t timeHighUS, uint32_t timeLowUS) {
-   if ((pin > 16) || isFlashInterfacePin(pin)) {
+void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
+   if ((gpio > 16) || isFlashInterfacePin(gpio)) {
     return;
   }
-  Waveform *wave = &wvfState.waveform[pin];
+  Waveform *wave = &wvfState.waveform[gpio];
 
-  uint32_t mask = 1<<pin;
+  uint32_t mask = 1<<gpio;
   MEMBARRIER();
   if (wvfState.waveformEnabled & mask) {
     wave->nextHighLowUs = (timeHighUS << 16) | timeLowUS;
@@ -157,14 +157,14 @@ void startWaveform8266(uint8_t pin, uint32_t timeHighUS, uint32_t timeLowUS) {
 }
 
 // Stops a waveform on a pin
-void stopWaveform8266(uint8_t pin) {
+void stopWaveform8266(uint8_t gpio) {
   // Can't possibly need to stop anything if there is no timer active
   if (!timerRunning) {
     return;
   }
   // If user sends in a pin >16 but <32, this will always point to a 0 bit
   // If they send >=32, then the shift will result in 0 and it will also return false
-  uint32_t mask = 1<<pin;
+  uint32_t mask = 1<< gpio;
   if (wvfState.waveformEnabled & mask) {
     wvfState.waveformToDisable = mask;
     forceTimerInterrupt();
@@ -212,14 +212,15 @@ static inline IRAM_ATTR uint32_t earliest(uint32_t a, uint32_t b) {
 #endif
 
 // When the time to the next edge is greater than this, RTI and set another IRQ to minimize CPU usage
-#define MINIRQTIME microsecondsToClockCycles(4)
+#define MINIRQTIME microsecondsToClockCycles(10)
 
 static IRAM_ATTR void timer1Interrupt() {
   // Flag if the core is at 160 MHz, for use by adjust()
   bool turbo = (*(uint32_t*)0x3FF00014) & 1 ? true : false;
 
-  uint32_t nextEventCycle = GetCycleCountIRQ() + microsecondsToClockCycles(MAXIRQUS);
-  uint32_t timeoutCycle = GetCycleCountIRQ() + microsecondsToClockCycles(14);
+  uint32_t now = GetCycleCountIRQ();
+  uint32_t nextEventCycle = now + microsecondsToClockCycles(MAXIRQUS);
+  uint32_t timeoutCycle = now + microsecondsToClockCycles(14);
 
   if (wvfState.waveformToEnable || wvfState.waveformToDisable) {
     // Handle enable/disable requests from main app
@@ -239,16 +240,15 @@ static IRAM_ATTR void timer1Interrupt() {
     do {
       nextEventCycle = GetCycleCountIRQ() + microsecondsToClockCycles(MAXIRQUS);
 
-      for (auto i = wvfState.startPin; i <= wvfState.endPin; i++) {
-        uint32_t mask = 1<<i;
+      for (auto gpio = wvfState.startPin; gpio <= wvfState.endPin; gpio++) {
+        uint32_t mask = 1<< gpio;
 
         // If it's not on, ignore!
         if (!(wvfState.waveformEnabled & mask)) {
           continue;
         }
 
-        Waveform *wave = &wvfState.waveform[i];
-        uint32_t now = GetCycleCountIRQ();
+        Waveform *wave = &wvfState.waveform[gpio];
 
         // Check for toggles
         int32_t cyclesToGo = wave->nextServiceCycle - now;
@@ -257,20 +257,19 @@ static IRAM_ATTR void timer1Interrupt() {
           uint32_t desired = 0;
           uint32_t *timeToUpdate;
           wvfState.waveformState ^= mask;
-          if (wvfState.waveformState & mask && wave->nextHighLowUs != 0) {
+          if (wvfState.waveformState & mask) {
+            if (gpio == 16) { // Special handling for GPIO16
+              GP16O = 1;
+            }
+            GPOS = mask;
+
+            if (wave->nextHighLowUs != 0) {
               // Copy over next full-cycle timings
               uint32_t next = wave->nextHighLowUs;
               wave->nextHighLowUs = 0; // indicate the change has taken place
               wave->timeHighCycles = wave->desiredHighCycles = microsecondsToClockCycles(next >> 16);
               wave->timeLowCycles = wave->desiredLowCycles = microsecondsToClockCycles(next & 0xffff);
               wave->lastEdge = 0;
-          }
-          if (wvfState.waveformState & mask) {
-            if (wave->timeHighCycles != 0) {
-              if (i == 16) {
-                GP16O = 1;
-              }
-              GPOS = mask;
             }
             if (wave->lastEdge) {
               desired = wave->desiredLowCycles;
@@ -278,12 +277,10 @@ static IRAM_ATTR void timer1Interrupt() {
             }
             nextEdgeCycles = wave->timeHighCycles;
           } else {
-            if (wave->timeLowCycles != 0) {
-              if (i == 16) {
-                GP16O = 0;
-              }
-              GPOC = mask;
+            if (gpio == 16) { // Special handling for GPIO16
+              GP16O = 0;
             }
+            GPOC = mask;
             desired = wave->desiredHighCycles;
             timeToUpdate = &wave->timeHighCycles;
             nextEdgeCycles = wave->timeLowCycles;
@@ -304,14 +301,14 @@ static IRAM_ATTR void timer1Interrupt() {
       }
 
       // Exit the loop if we've hit the fixed runtime limit or the next event is known to be after that timeout would occur
-      uint32_t now = GetCycleCountIRQ();
+      now = GetCycleCountIRQ();
       int32_t cycleDeltaNextEvent = nextEventCycle - now;
       int32_t cyclesLeftTimeout = timeoutCycle - now;
-      done = (cycleDeltaNextEvent > MINIRQTIME) || (cyclesLeftTimeout < 0);
+      done = (cycleDeltaNextEvent > cyclesLeftTimeout) || (cyclesLeftTimeout < 0);
     } while (!done);
   } // if (wvfState.waveformEnabled)
 
-  int32_t nextEventCycles = nextEventCycle - GetCycleCountIRQ();
+  int32_t nextEventCycles = nextEventCycle - now;
 
   if (nextEventCycles < MINIRQTIME) {
     nextEventCycles = MINIRQTIME;

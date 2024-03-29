@@ -268,6 +268,7 @@ uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
 extern uint8_t UID[UID_LEN];
 extern bool connectionHasModelMatch;
+extern bool teamraceHasModelMatch;
 extern bool InBindingMode;
 extern uint8_t ExpressLRS_currTlmDenom;
 extern connectionState_e connectionState;

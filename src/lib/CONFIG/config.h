@@ -217,6 +217,9 @@ typedef struct __attribute__((packed)) {
                 failsafeMode:2,
                 unused:2;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
+    uint8_t     teamraceChannel:4,
+                teamracePosition:3,
+                teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
 } rx_config_t;
 
 class RxConfig
@@ -241,6 +244,8 @@ public:
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+    uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
+    uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
     bool GetVolatileBind() const { return m_config.volatileBind; }
 
@@ -259,6 +264,8 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+    void SetTeamraceChannel(uint8_t teamraceChannel);
+    void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
     void SetVolatileBind(bool value);
 

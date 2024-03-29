@@ -398,6 +398,21 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
     return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000 + 1);
 }
 
+static inline uint8_t ICACHE_RAM_ATTR CRSF_to_SWITCH3b(uint16_t ch)
+{
+    // AUX2-7 are Low Resolution, "7pos" 6+center (3-bit)
+    // The output is mapped evenly across 6 output values (0-5)
+    // with a special value 7 indicating the middle so it works
+    // with switches with a middle position as well as 6-position
+    const uint16_t CHANNEL_BIN_COUNT = 6;
+    const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN) / CHANNEL_BIN_COUNT;
+    // If channel is within 1/4 a BIN of being in the middle use special value 7
+    if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
+        || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
+        return CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+    return 7;
+}
+
 // 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle
 // The calculation is a bit non-linear all the way to the endpoints due to where
 // Ardupilot defines its modes

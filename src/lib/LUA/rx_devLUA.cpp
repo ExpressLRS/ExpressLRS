@@ -55,6 +55,24 @@ static struct luaItem_selection luaDiversityMode = {
 };
 #endif
 
+static struct luaItem_folder luaTeamraceFolder = {
+    {"Team Race", CRSF_FOLDER},
+};
+
+static struct luaItem_selection luaTeamraceChannel = {
+    {"Channel", CRSF_TEXT_SELECTION},
+    0, // value
+    "AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12",
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_selection luaTeamracePosition = {
+    {"Position", CRSF_TEXT_SELECTION},
+    0, // value
+    "Disabled;1/Low;2;3;Mid;4;5;6/High",
+    STR_EMPTYSPACE
+};
+
 //----------------------------Info-----------------------------------
 
 static struct luaItem_string luaModelNumber = {
@@ -375,6 +393,15 @@ static void registerLuaParameters()
   registerLUAParameter(&luaTlmPower, &luaparamSetPower);
 #endif
 
+  // Teamrace
+  registerLUAParameter(&luaTeamraceFolder);
+  registerLUAParameter(&luaTeamraceChannel, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetTeamraceChannel(arg + AUX2);
+  }, luaTeamraceFolder.common.id);
+  registerLUAParameter(&luaTeamracePosition, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetTeamracePosition(arg);
+  }, luaTeamraceFolder.common.id);
+
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
@@ -425,6 +452,10 @@ static int event()
   uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
   setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
 #endif
+
+  // Teamrace
+  setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
+  setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)

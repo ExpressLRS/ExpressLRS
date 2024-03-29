@@ -433,7 +433,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
     uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
 
-    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0))
+    if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0) || !teamraceHasModelMatch)
     {
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
@@ -742,7 +742,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
-            servoNewChannelsAvailable();
+            if (teamraceHasModelMatch)
+                servoNewChannelsAvailable();
         }
         else
         {
@@ -871,7 +872,10 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
-            servoNewChannelsAvailable();
+            // teamrace is only checked for servos because the teamrace model select logic only runs
+            // when new frames are available, and will decide later if the frame will be forwarded
+            if (teamraceHasModelMatch)
+                servoNewChannelsAvailable();
         }
         else if (!LQCalcDVDA.currentIsSet())
         {
@@ -1193,7 +1197,8 @@ void MspReceiveComplete()
             break;
         }
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
+        if (connectionHasModelMatch && teamraceHasModelMatch &&
+            (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
             serialIO->queueMSPFrameTransmission(MspData);
         }
@@ -1653,7 +1658,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
             getRFlinkInfo();
         }
 
-        if ((connectionState != disconnected && connectionHasModelMatch) ||
+        if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
             serialIO->queueLinkStatisticsPacket();
