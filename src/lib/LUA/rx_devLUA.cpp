@@ -229,9 +229,21 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 
 #if defined(PLATFORM_ESP32)
     // secondary Serial pins (2 options)
-    // ;[SERIAL1 RX] ;[SERIAL1_TX]
-    // allow any pin to be either SERIAL1 RX or SERIAL1 TX
-    strcat(pwmModes, ";Serial2 RX;Serial2 TX");
+    // ;[SERIAL2 RX] ;[SERIAL2_TX]
+    // If the target defines Serial2 RX/TX then those pins MUST be used,
+    // otherwise allow any pin to be either RX or TX
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SERIAL1_RX)
+    {
+        strcat(pwmModes, ";SERIAL2 RX;");
+    }
+    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == GPIO_PIN_SERIAL1_TX)
+    {
+        strcat(pwmModes, ";;SERIAL2 TX");
+    }
+    else if (GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN)
+    {
+      strcat(pwmModes, ";Serial2 RX;Serial2 TX");
+    }
 #else
     strcat(pwmModes, ";;");
 #endif
