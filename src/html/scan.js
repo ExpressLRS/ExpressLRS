@@ -156,7 +156,7 @@ function updatePwmSettings(arPwm) {
             if (other != index) {
               document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
                 if (opt.value == value) {
-                    opt.disabled = enable;
+                    opt.disabled = true;
                 }
               });
             }
