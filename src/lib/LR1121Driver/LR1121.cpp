@@ -131,8 +131,6 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     CalImagebuf[0] = ((minimumFrequency / 1000000 ) - 1) / 4;       // Freq1 = floor( (fmin_mhz - 1)/4)
     CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
     hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
-    DBGLN("CalibImage minimum frequency: %d", CalImagebuf[0]);
-    DBGLN("CalibImage maximum frequency: %d", CalImagebuf[1]);
 
     return true;
 }
