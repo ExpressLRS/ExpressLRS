@@ -979,7 +979,7 @@ static void EnterBindingMode()
 
 #if defined(RADIO_LR1121)
   FHSSuseDualBand = true;
-  expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(9); // 2.4GHz 50Hz
+  expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(RATE_DUALBAND_BINDING); // 2.4GHz 50Hz
   Radio.Config(dualBandBindingModParams->bw2, dualBandBindingModParams->sf2, dualBandBindingModParams->cr2, FHSSgetInitialGeminiFreq(),
                dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval, SX12XX_Radio_2);
 #endif
