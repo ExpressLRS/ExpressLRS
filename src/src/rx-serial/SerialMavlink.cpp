@@ -10,8 +10,8 @@
 #define MAV_FTP_OPCODE_OPENFILERO 4
 
 // Variables / constants for Mavlink //
-FIFO<AP_MAX_BUF_LEN> mavlinkInputBuffer;
-FIFO<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
+FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
+FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 
 SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     SerialIO(&out, &in),
@@ -64,7 +64,7 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
 
 int SerialMavlink::getMaxSerialReadSize()
 {
-    return AP_MAX_BUF_LEN - mavlinkInputBuffer.size();
+    return MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size();
 }
 
 void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
@@ -85,7 +85,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         lastSentFlowCtrl = now; 
 
         // Software-based flow control for mavlink
-        uint8_t percentage_remaining = ((AP_MAX_BUF_LEN - mavlinkInputBuffer.size()) * 100) / AP_MAX_BUF_LEN;
+        uint8_t percentage_remaining = ((MAV_INPUT_BUF_LEN - mavlinkInputBuffer.size()) * 100) / MAV_INPUT_BUF_LEN;
 
         // Populate radio status packet
         const mavlink_radio_status_t radio_status {

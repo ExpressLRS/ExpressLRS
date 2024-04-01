@@ -1037,16 +1037,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_TLM:
-        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
-        {
-            bool telemetryConfirmValue = OtaUnpackAirportData(otaPktPtr, &mavlinkOutputBuffer);
-            TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
-        }
-        else
-        {
-            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        }
-        
+        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
         break;
     default:
         break;
