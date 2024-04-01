@@ -53,7 +53,7 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
         chan16_raw: CRSF_to_US(channelData[15]),
     };
 
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+    uint8_t buf[MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
     mavlink_message_t msg;
     mavlink_msg_rc_channels_override_encode(this_system_id, this_component_id, &msg, &rc_override);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
@@ -98,7 +98,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
             remnoise: 0,
         };
 
-        uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN];
+        uint8_t buf[MAVLINK_MSG_ID_RADIO_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
         mavlink_message_t msg;
         mavlink_msg_radio_status_encode(this_system_id, this_component_id, &msg, &radio_status);
         uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
@@ -134,8 +134,8 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
             {
                 // If it is, we want to deliberately hack the ftp url, so that the request fails
                 // Borrowed and modified from mLRS
-                uint8_t buf[MAVLINK_MSG_ID_FILE_TRANSFER_PROTOCOL_LEN];
-                uint16_t len = mavlink_msg_file_transfer_protocol_get_payload(&msg, buf);
+                uint8_t buf[MAVLINK_MSG_ID_FILE_TRANSFER_PROTOCOL_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
+                mavlink_msg_file_transfer_protocol_get_payload(&msg, buf);
 
                 uint8_t target_component = buf[0];
                 uint8_t opcode = buf[3];
@@ -156,7 +156,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
             }
             else
             {
-                uint8_t buf[MAVLINK_MAX_PAYLOAD_LEN];
+                uint8_t buf[MAVLINK_MAX_PACKET_LEN];
                 uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
                 _outputPort->write(buf, len);
             }
