@@ -129,38 +129,10 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         {
             // Message decoded successfully
 
-            // Check if its the ftp file request
-            if (msg.msgid == MAVLINK_MSG_ID_FILE_TRANSFER_PROTOCOL)
-            {
-                // If it is, we want to deliberately hack the ftp url, so that the request fails
-                // Borrowed and modified from mLRS
-                uint8_t buf[MAVLINK_MSG_ID_FILE_TRANSFER_PROTOCOL_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES];
-                mavlink_msg_file_transfer_protocol_get_payload(&msg, buf);
-
-                uint8_t target_component = buf[0];
-                uint8_t opcode = buf[3];
-                char* url = (char*)(buf + 12);
-
-                if (((target_component == MAV_COMP_ID_AUTOPILOT1) || (target_component == MAV_COMP_ID_ALL)) &&
-                    (opcode == MAV_FTP_OPCODE_OPENFILERO))
-                {
-                    if (!strncmp(url, "@PARAM/param.pck", 16))
-                    {
-                        url[1] = url[7] = url[13] = 'x'; // now fake it to "@xARAM/xaram.xck"
-                        mavlink_message_t msg2;
-                        mavlink_msg_file_transfer_protocol_pack(msg.sysid, msg.compid, &msg2, 0, 0, target_component, (uint8_t*)url);
-                        uint16_t len = mavlink_msg_to_send_buffer(buf, &msg2);
-                        _outputPort->write(buf, len);
-                    }
-                }
-            }
-            else
-            {
-                uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-                uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-                _outputPort->write(buf, len);
-            }
-            
+            // Forward message to the UART
+            uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+            uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+            _outputPort->write(buf, len);
         }
     }
 }
