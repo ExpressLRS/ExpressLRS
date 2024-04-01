@@ -75,7 +75,6 @@ function updatePwmSettings(arPwm) {
   }
   var pinRxIndex = undefined;
   var pinTxIndex = undefined;
-  var pinTx2Index = undefined;
   var pinModes = []
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
   const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
@@ -127,7 +126,6 @@ function updatePwmSettings(arPwm) {
     }
     if (features & 64) {
       modes.push('Serial2 TX');
-      pinTx2Index = index;
     } else {
       modes.push(undefined);
     }
@@ -188,6 +186,11 @@ function updatePwmSettings(arPwm) {
       updateOthers(pinMode.value, true); // disable others
       updateOthers(pinModes[index], false); // enable others
       pinModes[index] = pinMode.value;
+      
+      // show Serial2 protocol selection only if Serial2 TX is assigned
+      _('serial1-config').style.display = 'none';
+      if (pinMode.value == 14) // Serial2 TX
+        _('serial1-config').style.display = 'block';
     }
     pinMode.onchange();
 
@@ -247,22 +250,6 @@ function updatePwmSettings(arPwm) {
     pinRxMode.onchange();
     if(pinRxMode.value != 9) pinTxMode.value = pinTx;
   }
-
-
-  // put some constraints on Serial 1 pin Rx/Tx mode selects
-  if (pinTx2Index !== undefined) {
-    const pinTx2Mode = _(`pwm_${pinTx2Index}_mode`);
-
-    pinTx2Mode.onchange = () => {
-      if (pinTx2Mode.value == 14) { // Serial2 TX
-        _('serial1-config').style.display = 'block';
-      } else {
-        _('serial1-config').style.display = 'none';
-      }
-    }
-    pinTx2Mode.onchange();
-  }
-
 }
 @@end
 
@@ -413,7 +400,6 @@ function updateConfig(data, options) {
   }
 
   _('serial1-protocol').onchange = () => {
-    const proto = Number(_('serial1-protocol').value);
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
@@ -434,6 +420,15 @@ function updateConfig(data, options) {
     _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
   }
   _('vbind').onchange();
+
+  // set initial visibility status of Serial2 protocol selection
+  _('serial1-config').style.display = 'none';
+  data.pwm.forEach((item,index) => {
+    const _pinMode = _(`pwm_${index}_mode`)
+    if (_pinMode.value == 14) // Serial2 TX
+      _('serial1-config').style.display = 'block';
+  });
+
 @@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
