@@ -110,6 +110,7 @@ void SerialHoTT_TLM::pollDevice(uint8_t id)
 {
     // send data request to device
     _outputPort->write(START_OF_CMD_B);
+    delay(1);
     _outputPort->write(id);
 }
 
