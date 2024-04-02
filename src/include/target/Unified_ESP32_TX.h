@@ -52,9 +52,10 @@
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
 #define GPIO_PIN_NSS_2 hardware_pin(HARDWARE_radio_nss_2)
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
+#define GPIO_PIN_RST_2 hardware_pin(HARDWARE_radio_rst_2)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
-#define USE_SX1280_DCDC
-#define OPT_USE_SX1280_DCDC hardware_flag(HARDWARE_radio_dcdc)
+#define USE_HARDWARE_DCDC
+#define OPT_USE_HARDWARE_DCDC hardware_flag(HARDWARE_radio_dcdc)
 #define USE_SX1276_RFO_HF
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
 
@@ -88,6 +89,7 @@
 #define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
+#define POWER_OUTPUT_VALUES_DUAL hardware_i16_array(HARDWARE_power_values_dual)
 
 // Input
 #define HAS_FIVE_WAY_BUTTON
@@ -113,7 +115,7 @@
 #define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_reg_green)
+#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_red_green)
 
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
 // #define GPIO_PIN_LED_WS2812_FAST // stm32
@@ -201,6 +203,8 @@ GPIO_PIN_RF_AMP_PWM
 GPIO_PIN_RF_AMP_VPD
 GPIO_PIN_RF_AMP_VREF
 GPIO_PIN_SPI_VTX_NSS
-VPD_VALUES_100MW
 VPD_VALUES_25MW
+VPD_VALUES_100MW
+PWM_VALUES_25MW
+PWM_VALUES_100MW
 */

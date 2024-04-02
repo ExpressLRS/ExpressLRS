@@ -17,6 +17,8 @@ extern WiFiMode_t wifiMode;
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
+    elrs_switch,
+    elrs_antenna,
     elrs_power,
     elrs_ratio,
     elrs_motion,
@@ -127,11 +129,10 @@ void TFTDisplay::init()
         pinMode(GPIO_PIN_TFT_BL, OUTPUT);
     }
     bus = new Arduino_ESP32SPI(GPIO_PIN_TFT_DC, GPIO_PIN_TFT_CS, GPIO_PIN_TFT_SCLK, GPIO_PIN_TFT_MOSI, GFX_NOT_DEFINED, HSPI);
-    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, OPT_OLED_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
 
     gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
-    displaySplashScreen();
 }
 
 void TFTDisplay::doScreenBackLight(screen_backlight_t state)
@@ -169,7 +170,12 @@ void TFTDisplay::displaySplashScreen()
 {
     gfx->fillScreen(WHITE);
 
-    gfx->draw16bitRGBBitmap(0, 0, vendor_logo, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y);
+    size_t sz = INIT_PAGE_LOGO_X * INIT_PAGE_LOGO_Y;
+    uint16_t image[sz];
+    if (spi_flash_read(logo_image, image, sz * 2) == ESP_OK)
+    {
+        gfx->draw16bitRGBBitmap(0, 0, image, INIT_PAGE_LOGO_X, INIT_PAGE_LOGO_Y);
+    }
 
     gfx->fillRect(SCREEN_FONT_GAP, INIT_PAGE_FONT_START_Y - INIT_PAGE_FONT_PADDING,
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, BLACK);

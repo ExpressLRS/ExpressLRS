@@ -1,6 +1,5 @@
 #include "targets.h"
 #include "options.h"
-#include "helpers.h"
 
 #include "logging.h"
 
@@ -26,6 +25,12 @@ const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
+
+#if defined(TARGET_RX)
+// This is created by the build_flags.py and used by STM32 (ESP gets it from json)
+#include "flashdiscrim.h"
+#endif
+
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
@@ -47,6 +52,10 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .domain = 4,
     #elif defined(Regulatory_Domain_EU_433)
     .domain = 5,
+    #elif defined(Regulatory_Domain_US_433)
+    .domain = 6,
+    #elif defined(Regulatory_Domain_US_433_WIDE)
+    .domain = 7,
     #else
     #error No regulatory domain defined, please define one in user_defines.txt
     #endif
@@ -57,6 +66,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .hasUID = false,
     .uid = {},
+#endif
+#if defined(FLASH_DISCRIM)
+    .flash_discriminator = FLASH_DISCRIM,
+#else
+    .flash_discriminator = 0,
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
@@ -82,6 +96,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 100000,
 #elif defined(USE_SUMD_PROTOCOL)
     .uart_baud = 115200,
+#elif defined(USE_HOTT_TLM_PROTOCOL)
+    .uart_baud = 19200,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -111,11 +127,7 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .fan_min_runtime = 30,
 #endif
-#if defined(UART_INVERTED) // Only on ESP32
-    .uart_inverted = true,
-#else
-    .uart_inverted = false,
-#endif
+    ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
     .unlock_higher_power = true,
 #else
@@ -180,10 +192,7 @@ bool options_init()
 
 char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
-
-// Discriminator value used to determine if the device has been reflashed and therefore
-// the SPIFSS settings are obsolete and the flashed settings should be used in preference
-uint32_t flash_discriminator;
+uint32_t logo_image;
 
 firmware_options_t firmwareOptions;
 
@@ -200,12 +209,10 @@ void saveOptions(Stream &stream, bool customised)
 {
     DynamicJsonDocument doc(1024);
 
-    if (firmwareOptions.hasUID)
+    if (firmwareOptions.wifi_auto_on_interval != -1)
     {
-        JsonArray uid = doc.createNestedArray("uid");
-        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+        doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
     }
-    doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
     if (firmwareOptions.home_wifi_ssid[0])
     {
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
@@ -214,7 +221,6 @@ void saveOptions(Stream &stream, bool customised)
     #if defined(TARGET_UNIFIED_TX)
     doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
-    doc["uart-inverted"] = firmwareOptions.uart_inverted;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
     doc["airport-uart-baud"] = firmwareOptions.uart_baud;
     #else
@@ -224,7 +230,7 @@ void saveOptions(Stream &stream, bool customised)
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
     doc["customised"] = customised;
-    doc["flash-discriminator"] = flash_discriminator;
+    doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
     serializeJson(doc, stream);
 }
@@ -309,14 +315,13 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
-    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
+    int32_t wifiInterval = doc["wifi-on-interval"] | 60;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
     #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
-    firmwareOptions.uart_inverted = doc["uart-inverted"] | true;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
     #if defined(USE_AIRPORT_AT_BAUD)
     firmwareOptions.uart_baud = doc["airport-uart-baud"] | USE_AIRPORT_AT_BAUD;
@@ -336,10 +341,25 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
-    flash_discriminator = doc["flash-discriminator"] | 0U;
+    firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;
 
     builtinOptions.clear();
     saveOptions(builtinOptions, doc["customised"] | false);
+}
+
+/**
+ * @brief: Put a blank options.json into SPIFFS to force all options to the coded defaults in options_LoadFromFlashOrFile()
+*/
+void options_SetTrueDefaults()
+{
+    DynamicJsonDocument doc(128);
+    // The Regulatory Domain is retained, as there is no sensible default
+    doc["domain"] = firmwareOptions.domain;
+    doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
+
+    File options = SPIFFS.open("/options.json", "w");
+    serializeJson(doc, options);
+    options.close();
 }
 
 /**
@@ -400,6 +420,12 @@ bool options_init()
     options_LoadFromFlashOrFile(strmFlash);
     // hardware.json
     bool hasHardware = hardware_init(strmFlash);
+    // flash location of logo image in RGB565 format
+    logo_image = baseAddr + ESP.getSketchSize() +
+        ELRSOPTS_PRODUCTNAME_SIZE +
+        ELRSOPTS_DEVICENAME_SIZE +
+        ELRSOPTS_OPTIONS_SIZE +
+        ELRSOPTS_HARDWARE_SIZE;
 
     debugFreeInitLogger();
 

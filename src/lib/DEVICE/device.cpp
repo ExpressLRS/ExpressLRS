@@ -9,6 +9,8 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
@@ -47,7 +49,7 @@ void devicesRegister(device_affinity_t *devices, uint8_t count)
         taskSemaphore = xSemaphoreCreateBinary();
         completeSemaphore = xSemaphoreCreateBinary();
         disableCore0WDT();
-        xTaskCreatePinnedToCore(deviceTask, "deviceTask", 3000, NULL, 0, &xDeviceTask, 0);
+        xTaskCreatePinnedToCore(deviceTask, "deviceTask", 32768, NULL, 0, &xDeviceTask, 0);
     #endif
 }
 
@@ -113,14 +115,16 @@ void devicesTriggerEvent()
     #endif
 }
 
-int devicesUpdate(unsigned long now)
+static int _devicesUpdate(unsigned long now)
 {
-    int32_t core = CURRENT_CORE;
+    const int32_t core = CURRENT_CORE;
+    const int32_t coreMulti = (core == -1) ? 0 : core;
 
-    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != connectionHasModelMatch;
-    eventFired[core==-1?0:core] = false;
-    lastConnectionState[core==-1?0:core] = connectionState;
-    lastModelMatch[core==-1?0:core] = connectionHasModelMatch;
+    bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
+    bool handleEvents = eventFired[coreMulti] || lastConnectionState[coreMulti] != connectionState || lastModelMatch[coreMulti] != newModelMatch;
+    eventFired[coreMulti] = false;
+    lastConnectionState[coreMulti] = connectionState;
+    lastModelMatch[coreMulti] = newModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
@@ -156,6 +160,11 @@ int devicesUpdate(unsigned long now)
     return smallest_delay;
 }
 
+void devicesUpdate(unsigned long now)
+{
+    _devicesUpdate(now);
+}
+
 #if defined(PLATFORM_ESP32)
 static void deviceTask(void *pvArgs)
 {
@@ -167,7 +176,7 @@ static void deviceTask(void *pvArgs)
     xSemaphoreGive(completeSemaphore);
     for (;;)
     {
-        int delay = devicesUpdate(millis());
+        int delay = _devicesUpdate(millis());
         // sleep the core until the desired time or it's awakened by an event
         xSemaphoreTake(taskSemaphore, delay == DURATION_NEVER ? portMAX_DELAY : pdMS_TO_TICKS(delay));
     }

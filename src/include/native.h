@@ -34,7 +34,7 @@ public:
 
     // Print methods
     virtual size_t write(uint8_t c) = 0;
-    virtual size_t write(uint8_t *s, int l) = 0;
+    virtual size_t write(const uint8_t *s, size_t l) = 0;
 
     int print(const char *s) {return 0;}
     int print(uint8_t s) {return 0;}
@@ -59,7 +59,7 @@ public:
 
     // Print methods
     size_t write(uint8_t c) {return 1;}
-    size_t write(uint8_t *s, int l) {return l;}
+    size_t write(const uint8_t *s, size_t l) {return l;}
 
     int print(const char *s) {return 0;}
     int print(uint8_t s) {return 0;}

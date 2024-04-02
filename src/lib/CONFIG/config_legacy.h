@@ -136,3 +136,24 @@ typedef struct {
     uint8_t     modelId;
     v6_rx_config_pwm_t pwmChannels[16];
 } v6_rx_config_t;
+
+typedef struct {
+    uint32_t    version;
+    uint8_t     uid[UID_LEN];
+    uint8_t     loanUID[UID_LEN];
+    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
+    uint8_t     isBound:1,
+                onLoan:1,
+                power:4,
+                antennaMode:2;      // 0=0, 1=1, 2=Diversity
+    uint8_t     powerOnCounter:3,
+                forceTlmOff:1,
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
+    uint8_t     modelId;
+    uint8_t     serialProtocol:4,
+                failsafeMode:2,
+                unused:2;
+    v6_rx_config_pwm_t pwmChannels[16];
+} v7_rx_config_t;
+
+// V8 is just V7 except PWM config inserted 10khz PWM in the middle

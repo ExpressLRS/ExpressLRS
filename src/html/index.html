@@ -1,6 +1,6 @@
-@@require(PLATFORM, VERSION, isTX, sx127x)
+@@require(PLATFORM, VERSION, isTX, hasSubGHz)
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
 	<title>Welcome to your ExpressLRS System</title>
@@ -21,38 +21,39 @@
 		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
 
 			<ul class="mui-tabs__bar mui-tabs__bar--justified">
-				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
-				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-4">WiFi</a></li>
-@@if isTX:
-				<li id="button-tab"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Buttons</a></li>
-@@end
 @@if not isTX:
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Model</a></li>
+@@end
+				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Options</a></li>
+				<li><a id="network-tab" data-mui-toggle="tab" data-mui-controls="pane-justified-4">WiFi</a></li>
+@@if isTX:
+				<li id="button-tab"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Buttons</a></li>
 @@end
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Update</a></li>
 			</ul>
 
-			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
+			<div class="mui-tabs__pane" id="pane-justified-1">
 				<div class="mui-panel">
 					<h2>Runtime Options</h2>
 					This form <b>overrides</b> the options provided when the firmware was flashed. These changes will persist across reboots, but <b>will be reset</b> when the firmware is reflashed.
+@@if isTX:
 					Note: The Binding phrase is <b>not</b> remembered, it is a temporary field used to generate the binding UID.
-					<br/>
-					<br/>
+					<br/><br/>
 					<div class="mui-textfield">
 						<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
 						<label for="phrase">Binding Phrase</label>
 					</div>
 					<form id='upload_options' method='POST' action="/options">
-						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
-						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
-						<input type="hidden" id='wifi-password' name='wifi-password'/>
-						<span class="badge" id="uid-type"></span>&nbsp;<span id="uid-text"></span>
-						<br/>
 						<div class="mui-textfield">
+							<label for='uid'><span id="uid-text"></span></label>
+							<span class="badge" id="uid-type"></span>
 							<input size='40' id='uid' name='uid' type='text' class='array' readonly/>
 						</div>
-@@if sx127x:
+@@else:
+					<br/><br/>
+					<form id='upload_options' method='POST' action="/options">
+@@end
+@@if hasSubGHz:
 						<div class="mui-select">
 							<select id='domain' name='domain'>
 								<option value='0'>AU915</option>
@@ -61,69 +62,77 @@
 								<option value='3'>IN866</option>
 								<option value='4'>AU433</option>
 								<option value='5'>EU433</option>
+								<option value='6'>US433</option>
+								<option value='7'>US433-Wide</option>
 							</select>
-							<label>Regulatory domain</label>
+							<label for="domain">Regulatory domain</label>
 						</div>
 @@end
 						<div class="mui-textfield">
-							<input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text'/>
-							<label>WiFi "auto on" interval (s)</label>
+							<input size='3' id='wifi-on-interval' name='wifi-on-interval' type='text' placeholder="Disabled"/>
+							<label for="wifi-on-interval">WiFi "auto on" interval in seconds (leave blank to disable)</label>
 						</div>
 @@if isTX:
 						<div class="mui-textfield">
 							<input size='5' id='tlm-interval' name='tlm-interval' type='text'/>
-							<label>TLM report interval (ms)</label>
-						</div>
-						<div class="mui-checkbox">
-							<label><input id='uart-inverted' name='uart-inverted' type='checkbox'/>UART inverted</label>
+							<label for="tlm-interval">TLM report interval (ms)</label>
 						</div>
 						<div class="mui-textfield">
 							<input size='3' id='fan-runtime' name='fan-runtime' type='text'/>
-							<label>Fan runtime (s)</label>
+							<label for="fan-runtime">Fan runtime (s)</label>
 						</div>
 						<div id="has-highpower" class="mui-checkbox" style="display: none;">
-							<label><input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>Unlock higher power</label>
+							<input id='unlock-higher-power' name='unlock-higher-power' type='checkbox'/>
+							<label for="unlock-higher-power">Unlock higher power</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
+							<input id='is-airport' name='is-airport' type='checkbox'/>
+							<label for="is-airport">Use as AirPort Serial device</label>
 						</div>
 						<div class="mui-textfield">
 							<input size='7' id='airport-uart-baud' name='airport-uart-baud' type='text'/>
-							<label>AirPort UART baud</label>
+							<label for="airport-uart-baud">AirPort UART baud</label>
 						</div>
 @@else:
 						<div id="baud-config" class="mui-textfield"  style="display: block;">
 							<input size='7' id='rcvr-uart-baud' name='rcvr-uart-baud' type='text'/>
-							<label>UART baud</label>
+							<label for="rcvr-uart-baud">UART baud</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>Lock on first connection</label>
+							<input id='lock-on-first-connection' name='lock-on-first-connection' type='checkbox'/>
+							<label for="lock-on-first-connection">Lock on first connection</label>
 						</div>
 						<div class="mui-checkbox">
-							<label><input id='is-airport' name='is-airport' type='checkbox'/>Use as AirPort Serial device</label>
+							<input id='is-airport' name='is-airport' type='checkbox'/>
+							<label for="is-airport">Use as AirPort Serial device</label>
 						</div>
 @@end
 						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save</button>
 						<div id="reset-options" style="display: none;">
 							<a class="mui-btn mui-btn--small mui-btn--danger">Reset runtime options to defaults</a>
 						</div>
+						<input type="hidden" id="flash-discriminator" name="flash-discriminator"/>
+						<input type="hidden" id="wifi-ssid" name="wifi-ssid"/>
+						<input type="hidden" id='wifi-password' name='wifi-password'/>
 					</form>
 				</div>
+@@if isTX:
 				<div class="mui-panel">
 					<h2>Import/Export</h2>
 					<br/>
 					<div>
-						<a href="/config?export" download="models.json" target="_blank" class="mui-btn mui-btn--small mui-btn--dark">Download model configuration file</a>
+						<a href="/config?export" download="models.json" target="_blank" class="mui-btn mui-btn--small mui-btn--dark">Save model configuration file</a>
 					</div>
 					<div>
-						<form action="" method="POST" enctype="multipart/form-data">
-							<div>
-								<label for="fileselect">Select a model configuration file to upload</label>
+						<button class="mui-btn mui-btn--small mui-btn--primary upload">
+							<label>
+								Upload model configuration file
 								<input type="file" id="fileselect" name="fileselect[]" />
-							</div>
-						</form>
+							</label>
+						</button>
 					</div>
 				</div>
+@@end
 			</div>
 
 			<div class="mui-tabs__pane" id="pane-justified-2">
@@ -133,15 +142,16 @@
 					If this happens you will need to recover via USB/Serial. You may also download the
 					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br/><br/>
-					<form id='upload_form' method='POST' enctype='multipart/form-data'>
-						<div class="group">
-							<input id='firmware_file' type='file' name='update'>
-							<button id='upload_btn' type='submit' class="mui-btn mui-btn--primary">Update</button>
-						</div>
-						<br/>
-						<h3 id="status"></h3>
-						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
-					</form>
+					<button id="upload_btn" class="mui-btn mui-btn--primary upload" style="margin: 0 auto; display:block;">
+						<label>
+							Select firmware file
+							<input type="file" id="firmware_file" name="update[]" />
+						</label>
+					</button>
+					<div id="filedrag">or drop firmware file here</div>
+					<br/>
+					<h3 id="status"></h3>
+					<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
 				</div>
 			</div>
 
@@ -157,11 +167,11 @@
 						</table>
 						<div id="button1-color-div" style="display: none;">
 							<input id='button1-color' name='button1-color' type='color'/>
-							<label>User button 1 color</label>
+							<label for="button1-color">User button 1 color</label>
 						</div>
 						<div id ="button2-color-div" style="display: none;">
 							<input id='button2-color' name='button2-color' type='color'/>
-							<label>User button 2 color</label>
+							<label for="button2-color">User button 2 color</label>
 						</div>
 						<button id="submit-actions" class="mui-btn mui-btn--primary">Save</button>
 					</form>
@@ -176,28 +186,60 @@
 						Set PWM output mode and failsafe positions.
 						<ul>
 							<li><b>Output:</b> Receiver output pin</li>
-							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off or Serial (for MCU pins 1 and 3 only) mode</li>
+							<li><b>Features:</b> If an output is capable of supporting another function, that is indicated here</li>
+							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off, DShot, Serial, or I2C (some options are pin dependant)</li>
 							<ul>
-								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>below and <b>UART baud</b> on the <b>Options</b> tab</li>
+								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
 							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
 							<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
-							<li><b>Failsafe:</b> Absolute position to set the servo on failsafe</li>
-							<ul>
-								<li>Does not use "Invert" flag</li>
-								<li>Value will be halved if "750us" flag is set</li>
-								<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
-							</ul>
+							<li><b>Failsafe</b>
+								<ul>
+									<li>"Set Position" sets the servo to an absolute "Failsafe Pos"
+										<ul>
+											<li>Does not use "Invert" flag</li>
+											<li>Value will be halved if "750us" flag is set</li>
+											<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
+										</ul>
+									</li>
+									<li>"No Pulses" stops sending pulses
+										<ul>
+											<li>Unpowers servos</li>
+											<li>May disarm ESCs</li>
+										</ul>
+									</li>
+									<li>"Last Position" continues sending last received channel position</li>
+								</ul>
+							</li>
 						</ul>
-						<br/><br/>
 						<form action="/pwm" id="pwm" method="POST">
 						</form>
 					</div>
 					<form class="mui-form" action='/config' id='config' method='POST'>
-						<div id="serial-config" style="display: block;">
+						<h2>Binding Phrase</h2>
+						<div class="mui-checkbox">
+							<input id="vbind" name="vbind" type="checkbox" value="1"/>
+							<label for="vbind">Never store bind information across reboots (volatile binding)</label>
+						</div>
+						<div id="bindphrase">
+							Enter a new binding phrase to replace the current binding information.
+							This will persist across reboots, but <b>will be reset</b> if the firmware is flashed with a binding phrase.
+							Note: The Binding phrase is not remembered, it is a temporary field used to generate the binding UID.
+							<br/><br/>
+							<div class="mui-textfield">
+								<input type="text" id="phrase" name="phrase" placeholder="Binding Phrase" />
+								<label for="phrase">Binding Phrase</label>
+							</div>
+							<div class="mui-textfield">
+								<label for="uid"><span id="uid-text"></span></label>
+								<span class="badge" id="uid-type"></span>
+								<input size="40" id="uid" name="uid" type="text" class="array" readonly/>
+							</div>
+						</div>
+						<div id="serial-config">
 							<h2>Serial Protocol</h2>
-							Set the protocol used to communicate with the flight controller.
+							Set the protocol used to communicate with the flight controller or other external devices.
 							<br/><br/>
 							<div class="mui-select">
 								<select id='serial-protocol' name='serial-protocol'>
@@ -207,8 +249,9 @@
 									<option value='3'>Inverted SBUS</option>
 									<option value='4'>SUMD</option>
 									<option value='5'>DJI RS Pro</option>
+									<option value='6'>HoTT Telemetry</option>
 								</select>
-								<label>Serial Protocol</label>
+								<label for='serial-protocol'>Serial Protocol</label>
 							</div>
 						</div>
 						<div id="sbus-config" style="display: none;">
@@ -224,7 +267,7 @@
 									<option value='0'>No Pulses</option>
 									<option value='1'>Last Position</option>
 								</select>
-								<label>SBUS Failsafe</label>
+								<label for="sbus-failsafe">SBUS Failsafe</label>
 							</div>
 						</div>
 
@@ -233,23 +276,25 @@
 						in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
 						<br/><br/>
 						<div class="mui-checkbox">
-							<label><input id='model-match' name='model-match' type='checkbox'/> Enable Model Match</label>
+							<input id='model-match' name='model-match' type='checkbox'/>
+							<label for="model-match">Enable Model Match</label>
 						</div>
 						<div class="mui-textfield">
 							<input id='modelid' type='text' name='modelid' value="255" required/>
-							<label>Model ID</label>
+							<label for="modelid">Model ID</label>
 						</div>
 						<h2>Force telemetry off</h2>
 						When running multiple receivers simultaneously from the same TX (to increase the number of PWM servo outputs), there can be at most one receiver with telemetry enabled.<br>Enable this option to ignore the "Telem Ratio" setting on the TX and never send telemetry from this receiver.
 						<br/><br/>
 						<div class="mui-checkbox">
-							<label><input id='force-tlm' name='force-tlm' type='checkbox' value="1"/> Force telemetry OFF on this receiver</label>
+							<input id='force-tlm' name='force-tlm' type='checkbox' value="1"/>
+							<label for="force-tlm">Force telemetry OFF on this receiver</label>
 						</div>
 						<button type='submit' class="mui-btn mui-btn--small mui-btn--primary">Save</button>
 					</form>
 				</div>
 				<div class="mui-panel">
-					<a id="reset-model" href="#">Reset all model settings to defaults.</a>
+					<a id="reset-model" href="#">Reset all model settings to defaults (includes binding).</a>
 				</div>
 			</div>
 @@end
@@ -285,11 +330,11 @@
 							<div class="autocomplete mui-textfield" style="position:relative;">
 								<div id="loader" style="position:absolute;right:0;width: 28px;height: 28px;" class="loader"></div>
 								<input id="network" type="text" name="network" placeholder="SSID"/>
-								<label>WiFi SSID</label>
+								<label for="network">WiFi SSID</label>
 							</div>
 							<div class="mui-textfield">
 								<input size='64' id='password' name='password' type='password'/>
-								<label>WiFi password</label>
+								<label for="password">WiFi password</label>
 							</div>
 						</div>
 						<button type="submit" class="mui-btn mui-btn--primary">Confirm</button>

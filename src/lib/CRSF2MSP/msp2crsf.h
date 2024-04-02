@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "FIFO_GENERIC.h"
+#include "FIFO.h"
 #include "crsfmsp_common.h"
 #include "crsf_protocol.h"
 #include "crc.h"
@@ -28,7 +28,7 @@ private:
 
 public:
     MSP2CROSSFIRE();
-    FIFO_GENERIC<MSP_FRAME_MAX_LEN> FIFOout;
+    FIFO<MSP_FRAME_MAX_LEN> FIFOout;
     void parse(const uint8_t *data, uint32_t frameLen, uint8_t src = CRSF_ADDRESS_CRSF_RECEIVER, uint8_t dest = CRSF_ADDRESS_FLIGHT_CONTROLLER);
     bool validate(const uint8_t *data, uint32_t expectLen);
 };

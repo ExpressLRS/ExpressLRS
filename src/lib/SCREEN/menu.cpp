@@ -6,7 +6,7 @@
 #include "helpers.h"
 #include "logging.h"
 #include "POWERMGNT.h"
-#include "CRSF.h"
+#include "handset.h"
 #include "OTA.h"
 
 #ifdef HAS_THERMAL
@@ -17,8 +17,6 @@ extern Thermal thermal;
 
 extern FiniteStateMachine state_machine;
 
-extern void EnterBindingMode();
-extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
@@ -79,7 +77,7 @@ static void displayIdleScreen(bool init)
     message_index_t disp_message;
     if (connectionState == noCrossfire || connectionState > FAILURE_STATES) {
         disp_message = MSG_ERROR;
-    } else if(CRSF::IsArmed()) {
+    } else if(handset->IsArmed()) {
         disp_message = MSG_ARMED;
     } else if(connectionState == connected) {
         if (connectionHasModelMatch) {
@@ -140,6 +138,16 @@ static void setupValueIndex(bool init)
         values_min = 0;
         values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
         values_index = config.GetRate();
+        break;
+    case STATE_SWITCH:
+        values_min = 0;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_index = config.GetSwitchMode();
+        break;
+    case STATE_ANTENNA:
+        values_min = 0;
+        values_max = display->getValueCount((menu_item_t)state_machine.getParentState())-1;
+        values_index = config.GetAntennaMode();
         break;
     case STATE_TELEMETRY:
         values_min = 0;
@@ -223,11 +231,28 @@ static void saveValueIndex(bool init)
                 deferExecution(100, [actualRate, newSwitchMode](){
                     config.SetRate(actualRate);
                     config.SetSwitchMode(newSwitchMode);
+                    OtaUpdateSerializers((OtaSwitchMode_e)newSwitchMode, ExpressLRS_currAirRate_Modparams->PayloadLength);
                     SetSyncSpam();
                 });
             }
             break;
         }
+        case STATE_SWITCH: {
+            // Only allow changing switch mode when disconnected since we need to guarantee
+            // the pack and unpack functions are matched
+            if (connectionState == disconnected)
+            {
+                deferExecution(100, [val](){
+                    config.SetSwitchMode(val);
+                    OtaUpdateSerializers((OtaSwitchMode_e)val, ExpressLRS_currAirRate_Modparams->PayloadLength);
+                    SetSyncSpam();
+                });
+            }
+            break;
+        }
+        case STATE_ANTENNA:
+            config.SetAntennaMode(values_index);
+            break;
         case STATE_TELEMETRY:
             deferExecution(100, [val](){
                 config.SetTlm(val);
@@ -409,7 +434,7 @@ static void executeBind(bool init)
 {
     if (init)
     {
-        EnterBindingMode();
+        EnterBindingModeSafely();
         display->displayBindStatus();
         return;
     }
@@ -575,6 +600,8 @@ fsm_state_event_t const wifi_menu_events[] = {MENU_EVENTS(wifi_menu_fsm)};
 
 fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_PACKET, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_SWITCH, nullptr, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
+    {STATE_ANTENNA, [](){return isDualRadio();}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_POWER, nullptr, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
     {STATE_TELEMETRY, [](){return !firmwareOptions.is_airport;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
 #ifdef HAS_GSENSOR

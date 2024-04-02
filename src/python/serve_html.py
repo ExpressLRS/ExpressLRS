@@ -7,7 +7,7 @@ A simple http server for testing/debugging the web-UI
 open http://localhost:8080/
 add the following query params for TX and/or 900Mhz testing
     isTX
-    sx127x
+    hasSubGHz
 """
 
 from external.bottle import route, run, response, request
@@ -17,11 +17,11 @@ from external.wheezy.template.loader import FileLoader
 
 net_counter = 0
 isTX = False
-sx127x = False
+hasSubGHz = False
 
 config = {
         "options": {
-            'uid': [1,2,3,4,5,6],
+            "uid": [1,2,3,4,5,6],   # this is the 'flashed' UID and may be empty if using traditional binding on an RX.
             "tlm-interval": 240,
             "fan-runtime": 30,
             "no-sync-on-arm": False,
@@ -32,35 +32,42 @@ config = {
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
             "domain": 1,
-            "wifi-on-interval": 60,
+            # "wifi-on-interval": 60,
             "wifi-password": "w1f1-pAssw0rd",
             "wifi-ssid": "network-ssid"
         },
         "config": {
+            "uid": [1,2,3,4,5,6],   # this is the 'running' UID
             "uidtype": "On loan",
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
             "pwm":[
                 {
-                    "config": 512,
-                    "pin": 0
+                    # 10fs 4ch 1inv 4mode 1narrow
+                    "config": 0 + 0<<10 + 0<14 + 0<<15 + 0<<19,
+                    "pin": 0,
+                    "features": 12
                 },
                 {
                     "config": 1536,
-                    "pin": 4
+                    "pin": 4,
+                    "features": 12 + 16
                 },
                 {
                     "config": 2048,
-                    "pin": 5
+                    "pin": 5,
+                    "features": 12 + 16
                 },
                 {
                     "config": 3584,
-                    "pin": 1
+                    "pin": 1,
+                    "features": 1 + 16
                 },
                 {
                     "config": 4608,
-                    "pin": 3
+                    "pin": 3,
+                    "features": 2 + 16
                 }
             ],
             "serial-protocol": 3,
@@ -104,7 +111,7 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, sx127x
+    global isTX, hasSubGHz
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -114,16 +121,16 @@ def apply_template(mainfile):
             'VERSION': 'testing (xxxxxx)',
             'PLATFORM': '',
             'isTX': isTX,
-            'sx127x': sx127x
+            'hasSubGHz': hasSubGHz
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, sx127x
+    global net_counter, isTX, hasSubGHz
     net_counter = 0
     isTX = 'isTX' in request.query
-    sx127x = 'sx127x' in request.query
+    hasSubGHz = 'hasSubGHz' in request.query
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 
@@ -162,7 +169,11 @@ def update_config():
     if 'button-actions' in request.json:
         config['config']['button-actions'] = request.json['button-actions']
     if 'pwm' in request.json:
-        config['config']['pwm'] = request.json['pwm']
+        i=0
+        for x in request.json['pwm']:
+            print(x)
+            config['config']['pwm'][i]['config'] = x
+            i = i + 1
     if 'protocol' in request.json:
         config['config']['serial-protocol'] = request.json['protocol']
     if 'modelid' in request.json:
@@ -170,6 +181,11 @@ def update_config():
     if 'forcetlm' in request.json:
         config['config']['force-tlm'] = request.json['forcetlm']
     return "Config Updated"
+
+@route('/options.json', method='POST')
+def update_options():
+    config['options'] = request.json
+    return "Options Updated"
 
 @route('/import', method='POST')
 def import_config():
@@ -188,6 +204,7 @@ def mode():
     net_counter = net_counter + 1
     if (net_counter > 3):
         return '["Test Network 1", "Test Network 2", "Test Network 3", "Test Network 4", "Test Network 5"]'
+    response.status = 204
     return '[]'
 
 if __name__ == '__main__':

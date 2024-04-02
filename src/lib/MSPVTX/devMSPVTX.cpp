@@ -4,6 +4,7 @@
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "CRSF.h"
+#include "msptypes.h"
 #include "hwTimer.h"
 
 /**
@@ -17,6 +18,7 @@
 #define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
 #define MSP_VTX_PAYLOAD_OFFSET  11
+#define MSP_VTX_TIMEOUT_NO_CONNECTION 5000
 
 typedef enum
 {
@@ -26,6 +28,7 @@ typedef enum
   SET_RCE_PIT_MODE,
   SEND_EEPROM_WRITE,
   MONITORING,
+  STOP_MSPVTX,
   MSP_STATE_MAX
 } mspVtxState_e;
 
@@ -37,7 +40,7 @@ static uint8_t checkingIndex = 0;
 static uint8_t pitMode = 0;
 static uint8_t power = 0;
 static uint8_t channel = 0;
-static uint8_t mspState = GET_VTX_TABLE_SIZE;
+static uint8_t mspState = STOP_MSPVTX;
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
@@ -217,7 +220,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                 power = 1;
             }
 
-            if (power >= NUM_POWER_LEVELS)
+            if (power > NUM_POWER_LEVELS)
             {
                 power = 3; // 25 mW
             }
@@ -347,7 +350,15 @@ static void mspVtxStateUpdate(void)
 
 void disableMspVtx(void)
 {
-    mspState = MSP_STATE_MAX;
+    mspState = STOP_MSPVTX;
+}
+
+static void initialize()
+{
+    if (OPT_HAS_VTX_SPI)
+    {
+        mspState = GET_VTX_TABLE_SIZE;
+    }
 }
 
 static int event(void)
@@ -361,6 +372,11 @@ static int event(void)
 
 static int timeout(void)
 {
+    if (mspState == STOP_MSPVTX || (mspState != MONITORING && millis() > MSP_VTX_TIMEOUT_NO_CONNECTION))
+    {
+        return DURATION_NEVER;
+    }
+
     if (hwTimer::running && !hwTimer::isTick)
     {
         // Only run code during rx free time or when disconnected.
@@ -372,8 +388,8 @@ static int timeout(void)
 }
 
 device_t MSPVTx_device = {
-    .initialize = NULL,
-    .start = NULL,
+    .initialize = initialize,
+    .start = nullptr,
     .event = event,
     .timeout = timeout
 };

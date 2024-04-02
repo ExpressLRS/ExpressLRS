@@ -47,7 +47,7 @@ template<class T> static const uint32_t Model_to_U32(T const * const model)
 
 static uint8_t RateV6toV7(uint8_t rateV6)
 {
-#if defined(RADIO_SX127X)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
     if (rateV6 == 0)
     {
         // 200Hz stays same
@@ -179,9 +179,11 @@ void TxConfig::Load()
         // backpackdisable was actually added after 7, but if not found will default to 0 (enabled)
         if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
             m_config.backpackDisable = value8;
+        if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
+            m_config.backpackTlmEnabled = value8;
     }
 
-    for(unsigned i=0; i<64; i++)
+    for(unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         char model[10] = "model";
         itoa(i, model+5, 10);
@@ -283,7 +285,7 @@ void TxConfig::UpgradeEepromV6ToV7()
     LAZY(dvrStopDelay);
     #undef LAZY
 
-    for (unsigned i=0; i<64; i++)
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
     }
@@ -337,6 +339,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
+        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmEnabled);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -557,6 +560,16 @@ TxConfig::SetBackpackDisable(bool backpackDisable)
 }
 
 void
+TxConfig::SetBackpackTlmEnabled(bool enabled)
+{
+    if (m_config.backpackTlmEnabled != enabled)
+    {
+        m_config.backpackTlmEnabled = enabled;
+        m_modified |= MAIN_CHANGED;
+    }
+}
+
+void
 TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 {
     if (m_config.buttonColors[button].raw != action->raw) {
@@ -622,10 +635,10 @@ TxConfig::SetDefaults(bool commit)
     };
     m_config.buttonColors[1].raw = default_actions2.raw;
 
-    for (unsigned i=0; i<64; i++)
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         SetModelId(i);
-        #if defined(RADIO_SX127X)
+        #if defined(RADIO_SX127X) || defined(RADIO_LR1121)
             SetRate(enumRatetoIndex(RATE_LORA_200HZ));
         #elif defined(RADIO_SX128X)
             SetRate(enumRatetoIndex(RATE_LORA_250HZ));
@@ -692,12 +705,16 @@ void RxConfig::Load()
 
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)
+    {
+        CheckUpdateFlashedUid(false);
         return;
+    }
 
     // Can't upgrade from version <4, or when flashing a previous version, just use defaults.
     if (version < 4 || version > RX_CONFIG_VERSION)
     {
         SetDefaults(true);
+        CheckUpdateFlashedUid(true);
         return;
     }
 
@@ -706,8 +723,29 @@ void RxConfig::Load()
     UpgradeEepromV4();
     UpgradeEepromV5();
     UpgradeEepromV6();
+    UpgradeEepromV7V8();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
+    Commit();
+}
+
+void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
+{
+    // No binding phrase flashed, nothing to do
+    if (!firmwareOptions.hasUID)
+        return;
+    // If already copied binding info, do not replace
+    if (!skipDescrimCheck && m_config.flash_discriminator == firmwareOptions.flash_discriminator)
+        return;
+
+    // Save the new UID along with this discriminator to prevent resetting every boot
+    SetUID(firmwareOptions.uid);
+    m_config.flash_discriminator = firmwareOptions.flash_discriminator;
+    // Reset the power on counter because this is following a flash, may have taken a few boots to flash
+    m_config.powerOnCounter = 0;
+    // SetUID should set this but just in case that gets removed, flash_discriminator needs to be saved
+    m_modified = true;
+
     Commit();
 }
 
@@ -728,15 +766,15 @@ void RxConfig::UpgradeEepromV4()
 
     if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
     {
-        m_config.isBound = v4Config.isBound;
+        UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
         m_config.modelId = v4Config.modelId;
-        memcpy(m_config.uid, v4Config.uid, sizeof(v4Config.uid));
-
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
             PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -760,26 +798,29 @@ void RxConfig::UpgradeEepromV5()
 {
     v5_rx_config_t v5Config;
     m_eeprom->Get(0, v5Config);
+
     if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
     {
-        memcpy(m_config.uid, v5Config.uid, sizeof(v5Config.uid));
-        m_config.vbatScale = v5Config.vbatScale;
-        m_config.isBound = v5Config.isBound;
+        UpgradeUid(v5Config.onLoan ? v5Config.loanUID : nullptr, v5Config.isBound ? v5Config.uid : nullptr);
+        m_config.vbat.scale = v5Config.vbatScale;
         m_config.power = v5Config.power;
         m_config.antennaMode = v5Config.antennaMode;
         m_config.forceTlmOff = v5Config.forceTlmOff;
         m_config.rateInitialIdx = v5Config.rateInitialIdx;
         m_config.modelId = v5Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
 // ========================================================
 // V6 Upgrade
+
 static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * const current)
 {
     current->val.failsafe = v6->val.failsafe;
@@ -793,25 +834,89 @@ void RxConfig::UpgradeEepromV6()
 {
     v6_rx_config_t v6Config;
     m_eeprom->Get(0, v6Config);
+
     if ((v6Config.version & ~CONFIG_MAGIC_MASK) == 6)
     {
-        memcpy(m_config.uid, v6Config.uid, sizeof(v6Config.uid));
-        m_config.vbatScale = v6Config.vbatScale;
-        m_config.isBound = v6Config.isBound;
+        UpgradeUid(v6Config.onLoan ? v6Config.loanUID : nullptr, v6Config.isBound ? v6Config.uid : nullptr);
+        m_config.vbat.scale = v6Config.vbatScale;
         m_config.power = v6Config.power;
         m_config.antennaMode = v6Config.antennaMode;
         m_config.forceTlmOff = v6Config.forceTlmOff;
         m_config.rateInitialIdx = v6Config.rateInitialIdx;
         m_config.modelId = v6Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
 // ========================================================
+// V7/V8 Upgrade
+
+void RxConfig::UpgradeEepromV7V8()
+{
+    v7_rx_config_t v7Config;
+    m_eeprom->Get(0, v7Config);
+
+    bool isV8 = (v7Config.version & ~CONFIG_MAGIC_MASK) == 8;
+    if (isV8 || (v7Config.version & ~CONFIG_MAGIC_MASK) == 7)
+    {
+        UpgradeUid(v7Config.onLoan ? v7Config.loanUID : nullptr, v7Config.isBound ? v7Config.uid : nullptr);
+
+        m_config.vbat.scale = v7Config.vbatScale;
+        m_config.power = v7Config.power;
+        m_config.antennaMode = v7Config.antennaMode;
+        m_config.forceTlmOff = v7Config.forceTlmOff;
+        m_config.rateInitialIdx = v7Config.rateInitialIdx;
+        m_config.modelId = v7Config.modelId;
+        m_config.serialProtocol = v7Config.serialProtocol;
+        m_config.failsafeMode = v7Config.failsafeMode;
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+        for (unsigned ch=0; ch<16; ++ch)
+        {
+            m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
+            if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
+                m_config.pwmChannels[ch].val.mode += 1;
+        }
+#endif
+    }
+}
+
+void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
+{
+    // Convert to traditional binding
+    // On loan? Now you own
+    if (onLoanUid)
+    {
+        memcpy(m_config.uid, onLoanUid, UID_LEN);
+    }
+    // Compiled in UID? Bind to that
+    else if (firmwareOptions.hasUID)
+    {
+        memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
+        m_config.flash_discriminator = firmwareOptions.flash_discriminator;
+    }
+    else if (boundUid)
+    {
+        // keep binding
+        memcpy(m_config.uid, boundUid, UID_LEN);
+    }
+    else
+    {
+        // No bind
+        memset(m_config.uid, 0, UID_LEN);
+    }
+}
+
+bool  RxConfig::GetIsBound() const
+{
+    return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
+}
 
 void
 RxConfig::Commit()
@@ -831,41 +936,11 @@ RxConfig::Commit()
 
 // Setters
 void
-RxConfig::SetIsBound(bool isBound)
-{
-    if (m_config.isBound != isBound)
-    {
-        m_config.isBound = isBound;
-        m_modified = true;
-    }
-}
-
-void
 RxConfig::SetUID(uint8_t* uid)
 {
     for (uint8_t i = 0; i < UID_LEN; ++i)
     {
         m_config.uid[i] = uid[i];
-    }
-    m_modified = true;
-}
-
-void
-RxConfig::SetOnLoan(bool isLoaned)
-{
-    if (m_config.onLoan != isLoaned)
-    {
-        m_config.onLoan = isLoaned;
-        m_modified = true;
-    }
-}
-
-void
-RxConfig::SetOnLoanUID(uint8_t* uid)
-{
-    for (uint8_t i = 0; i < UID_LEN; ++i)
-    {
-        m_config.loanUID[i] = uid[i];
     }
     m_modified = true;
 }
@@ -928,10 +1003,27 @@ RxConfig::SetDefaults(bool commit)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-    for (unsigned int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
-        SetPwmChannel(ch, 512, ch, false, 0, false);
+    for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
+    {
+        uint8_t mode = som50Hz;
+        // setup defaults for hardware defined I2C pins that are also IO pins
+        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
+        {
+            if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
+            {
+                mode = somSCL;
+            }
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SDA)
+            {
+                mode = somSDA;
+            }
+        }
+        SetPwmChannel(ch, 512, ch, false, mode, false);
+    }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
+
+    m_config.teamraceChannel = AUX7; // CH11
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
@@ -941,6 +1033,8 @@ RxConfig::SetDefaults(bool commit)
 
     if (commit)
     {
+        // Prevent rebinding to the flashed UID on first boot
+        m_config.flash_discriminator = firmwareOptions.flash_discriminator;
         m_modified = true;
         Commit();
     }
@@ -1020,6 +1114,24 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
     }
 }
 
+void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
+{
+    if (m_config.teamraceChannel != teamraceChannel)
+    {
+        m_config.teamraceChannel = teamraceChannel;
+        m_modified = true;
+    }
+}
+
+void RxConfig::SetTeamracePosition(uint8_t teamracePosition)
+{
+    if (m_config.teamracePosition != teamracePosition)
+    {
+        m_config.teamracePosition = teamracePosition;
+        m_modified = true;
+    }
+}
+
 void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
 {
     if (m_config.failsafeMode != failsafeMode)
@@ -1028,4 +1140,14 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
         m_modified = true;
     }
 }
+
+void RxConfig::SetVolatileBind(bool value)
+{
+    if (m_config.volatileBind != value)
+    {
+        m_config.volatileBind = value;
+        m_modified = true;
+    }
+}
+
 #endif

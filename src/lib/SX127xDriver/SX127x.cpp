@@ -346,7 +346,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
     timeoutSymbols = interval / symbolTimeUs;
     hal.writeRegisterBits(SX127X_REG_SYMB_TIMEOUT_MSB, timeoutSymbols >> 8, SX127X_REG_SYMB_TIMEOUT_MSB_MASK, SX12XX_Radio_All);  // set the timeout MSB
     hal.writeRegister(SX127X_REG_SYMB_TIMEOUT_LSB, timeoutSymbols & 0xFF, SX12XX_Radio_All);
-    DBGLN("SetRxTimeout(%u), symbolTime=%uus symbols=%u", interval, (uint32_t)symbolTimeUs, timeoutSymbols)
+    DBGLN("SetRxTimeout(%u), symbolTime=%uus symbols=%u", interval, (uint32_t)symbolTimeUs, timeoutSymbols);
   }
 }
 

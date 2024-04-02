@@ -1,4 +1,5 @@
 #include "targets.h"
+#include "logging.h"
 #include "POWERMGNT.h"
 
 uint8_t powerToCrsfPower(PowerLevels_e Power)
@@ -17,6 +18,23 @@ uint8_t powerToCrsfPower(PowerLevels_e Power)
     case PWR_2000mW: return 6;
     default:
         return 0;
+    }
+}
+
+PowerLevels_e crsfpowerToPower(uint8_t crsfpower)
+{
+    switch (crsfpower)
+    {
+    case 1: return PWR_10mW;
+    case 2: return PWR_25mW;
+    case 3: return PWR_100mW;
+    case 4: return PWR_500mW;
+    case 5: return PWR_1000mW;
+    case 6: return PWR_2000mW;
+    case 7: return PWR_250mW;
+    case 8: return PWR_50mW;
+    default:
+        return PWR_10mW;
     }
 }
 
@@ -62,6 +80,7 @@ int8_t POWERMGNT::CurrentSX1280Power = 0;
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 static const int16_t *powerValues;
+static const int16_t *powerValuesDual;
 #else
 #if defined(POWER_OUTPUT_VALUES)
 static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
@@ -208,6 +227,10 @@ void POWERMGNT::init()
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
     powerValues = POWER_OUTPUT_VALUES;
+    if (POWER_OUTPUT_VALUES_DUAL != nullptr)
+    {
+        powerValuesDual = POWER_OUTPUT_VALUES_DUAL;
+    }
 #endif
 #if defined(POWER_OUTPUT_DAC)
     TxDAC.init();
@@ -249,17 +272,10 @@ void POWERMGNT::setDefaultPower()
 
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
+    Power = constrain(Power, getMinPower(), getMaxPower());
     if (Power == CurrentPower)
         return;
 
-    if (Power < MinPower)
-    {
-        Power = MinPower;
-    }
-    else if (Power > getMaxPower())
-    {
-        Power = getMaxPower();
-    }
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
     int mV = isDomain868() ? powerValues868[Power - MinPower] :powerValues[Power - MinPower];
@@ -276,7 +292,11 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         {
             Radio.SetOutputPower(POWER_OUTPUT_VALUES2[Power - MinPower]);
         }
+        #if defined(PLATFORM_ESP32_S3)
+        ERRLN("ESP32-S3 does not have a DAC");
+        #else
         dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
+        #endif
     }
     else
     #endif
@@ -290,6 +310,14 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         Radio.SetOutputPower(CurrentSX1280Power);
     }
 #endif
+
+#if defined(RADIO_LR1121)
+    if (POWER_OUTPUT_VALUES_DUAL != nullptr)
+    {
+        Radio.SetOutputPower(powerValuesDual[Power - MinPower], false); // Set the high frequency power setting.
+    }
+#endif
+
     CurrentPower = Power;
     devicesTriggerEvent();
 }

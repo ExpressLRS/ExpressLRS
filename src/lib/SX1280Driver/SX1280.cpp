@@ -48,12 +48,12 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
-#ifdef USE_SX1280_DCDC
-    #ifndef OPT_USE_SX1280_DCDC
-        #define OPT_USE_SX1280_DCDC true
+#ifdef USE_HARDWARE_DCDC
+    #ifndef OPT_USE_HARDWARE_DCDC
+        #define OPT_USE_HARDWARE_DCDC true
     #endif
 #else
-    #define OPT_USE_SX1280_DCDC false
+    #define OPT_USE_HARDWARE_DCDC false
 #endif
 
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
@@ -135,8 +135,8 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     pwrCurrent = PWRPENDING_NONE;
     SetOutputPower(SX1280_POWER_MIN);
     CommitOutputPower();
-#if defined(USE_SX1280_DCDC)
-    if (OPT_USE_SX1280_DCDC)
+#if defined(USE_HARDWARE_DCDC)
+    if (OPT_USE_HARDWARE_DCDC)
     {
         hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX12XX_Radio_All);        // Enable DCDC converter instead of LDO
     }
