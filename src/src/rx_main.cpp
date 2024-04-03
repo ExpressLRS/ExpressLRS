@@ -251,11 +251,6 @@ static uint8_t minLqForChaos()
 
 void ICACHE_RAM_ATTR getRFlinkInfo()
 {
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
-    }
-
     int32_t rssiDBM = Radio.LastPacketRSSI;
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
@@ -272,7 +267,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
         CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
-        antenna = (rssiDBM > rssiDBM2)? 0 : 1; // report a better antenna for the reception
+        antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
     }
     else if (antenna == 0)
     {
@@ -1452,7 +1447,7 @@ static void setupRadio()
 #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
 #endif
-    bool init_success = Radio.Begin();
+    bool init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
     POWERMGNT::init();
     if (!init_success)
     {

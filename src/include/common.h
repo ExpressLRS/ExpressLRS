@@ -247,6 +247,7 @@ extern SX127xDriver Radio;
 #elif defined(RADIO_LR1121)
 #define RATE_MAX 14
 #define RATE_BINDING RATE_LORA_50HZ
+#define RATE_DUALBAND_BINDING 9 // 2.4GHz 50Hz
 
 extern LR1121Driver Radio;
 

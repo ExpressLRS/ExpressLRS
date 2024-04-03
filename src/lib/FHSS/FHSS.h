@@ -53,6 +53,16 @@ extern const fhss_config_t *FHSSconfigDualBand;
 void FHSSrandomiseFHSSsequence(uint32_t seed);
 void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
 
+static inline uint32_t FHSSgetMinimumFreq(void)
+{
+    return FHSSconfig->freq_start;
+}
+
+static inline uint32_t FHSSgetMaximumFreq(void)
+{
+    return FHSSconfig->freq_stop;
+}
+
 // The number of frequencies for this regulatory domain
 static inline uint32_t FHSSgetChannelCount(void)
 {
