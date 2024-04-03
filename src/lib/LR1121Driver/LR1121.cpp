@@ -51,7 +51,7 @@ void LR1121Driver::End()
     RemoveCallbacks();
 }
 
-bool LR1121Driver::Begin()
+bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 {
     hal.init();
     hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
@@ -125,6 +125,12 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
         hal.WriteCommand(LR11XX_SYSTEM_SET_REGMODE_OC, RegMode, sizeof(RegMode), SX12XX_Radio_All); // Enable DCDC converter instead of LDO
     }
 #endif
+
+    // 2.1.3.1 CalibImage
+    uint8_t CalImagebuf[2];
+    CalImagebuf[0] = ((minimumFrequency / 1000000 ) - 1) / 4;       // Freq1 = floor( (fmin_mhz - 1)/4)
+    CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
+    hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
 
     return true;
 }
