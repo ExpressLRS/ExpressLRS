@@ -9,6 +9,7 @@ let colorTimer = undefined;
 let colorUpdated  = false;
 let storedModelId = 255;
 let buttonActions = [];
+let modeSelectionInit = true;
 let originalUID = undefined;
 let originalUIDType = undefined;
 
@@ -156,6 +157,9 @@ function updatePwmSettings(arPwm) {
             if (other != index) {
               document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
                 if (opt.value == value) {
+                  if (modeSelectionInit)
+                    opt.disabled = true;
+                  else
                     opt.disabled = enable;
                 }
               });
@@ -184,6 +188,8 @@ function updatePwmSettings(arPwm) {
     };
     failsafeMode.onchange();
   });
+  
+  modeSelectionInit = false;
 
   // put some contraints on pinRx/Tx mode selects
   if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
@@ -271,7 +277,7 @@ function updateUIDType(uidtype) {
     bg = '#1976D2'; // blue/white
     desc = 'The binding UID was generated from a binding phrase set at flash time';
   }
-  if (uidtype === 'Overridden') // TX
+  else if (uidtype === 'Overridden') // TX
   {
     bg = '#689F38'; // green/black
     fg = 'black';
