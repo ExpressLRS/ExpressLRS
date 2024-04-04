@@ -462,11 +462,13 @@ void injectBackpackPanTiltRollData(uint32_t const now)
       enable |= !chan;
     }
   }
+
   if (enable != headTrackingEnabled)
   {
     headTrackingEnabled = enable;
     HTEnableFlagReadyToSend = true;
   }
+
   // If enabled and this packet is less that 1 second old then use it
   if (enable && now - lastPTRValidTimeMs < 1000)
   {
@@ -474,12 +476,7 @@ void injectBackpackPanTiltRollData(uint32_t const now)
     ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
     ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
   }
-  else
-  {
-    ChannelData[ptrStartChannel + 4] = CRSF_CHANNEL_VALUE_MID;
-    ChannelData[ptrStartChannel + 5] = CRSF_CHANNEL_VALUE_MID;
-    ChannelData[ptrStartChannel + 6] = CRSF_CHANNEL_VALUE_MID;
-  }
+  // else if not enabled or PTR is old, do not override ChannelData from handset
 #endif
 }
 

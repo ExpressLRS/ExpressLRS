@@ -4,9 +4,12 @@
 #include "FIFO.h"
 #include "telemetry.h"
 
+#define NOT_FOUND 0xff          // no device found indicator
 
 #define HOTT_POLL_RATE 150      // default HoTT bus poll rate [ms]
 #define HOTT_LEAD_OUT 10        // minimum gap between end of payload to next poll
+
+#define HOTT_CMD_DELAY 1        // 1 ms delay between CMD byte 1 and 2
 
 #define DISCOVERY_TIMEOUT 30000 // 30s device discovery time
 
@@ -69,48 +72,67 @@ void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
     }
 
     // device polling scheduler
-    if (now - lastPoll >= HOTT_POLL_RATE)
-    {
-        lastPoll = now;
-
-        // start up in device discovery mode, after timeout regular operation
-        pollNextDevice();
-    }
+    scheduleDevicePolling(now);
 
     // CRSF packet scheduler
     scheduleCRSFtelemetry(now);
 }
 
-void SerialHoTT_TLM::pollNextDevice()
+void SerialHoTT_TLM::scheduleDevicePolling(uint32_t now)
 {
-    // clear serial in buffer
-    hottInputBuffer.flush();
-
-    // work out next device to be polled all in discovery
-    // mode, only detected ones in non-discovery mode)
-    for (uint i = 0; i < LAST_DEVICE; i++)
+    // send CMD byte 1
+    if (now - lastPoll >= HOTT_POLL_RATE)
     {
-        if (nextDevice == LAST_DEVICE)
+        lastPoll = now;
+
+        // work out next device to be polled. All devices in discovery
+        // mode, only detected devices in non-discovery mode)  
+        nextDeviceID = NOT_FOUND;
+
+        for (uint i = FIRST_DEVICE; i < LAST_DEVICE; i++)
         {
-            nextDevice = FIRST_DEVICE;
+            if (nextDevice == LAST_DEVICE)
+            {
+                nextDevice = FIRST_DEVICE;
+            }
+
+            if (device[nextDevice].present || discoveryMode)
+            {
+                nextDeviceID = device[nextDevice].deviceID;
+
+                nextDevice++;
+                
+                break;
+            }
+
+            nextDevice++;
         }
 
-        if (device[nextDevice].present || discoveryMode)
+        // no device found, nothing to do
+        if (nextDeviceID == NOT_FOUND)
         {
-            pollDevice(device[nextDevice++].deviceID);
-
-            break;
+            return;
         }
 
-        nextDevice++;
+        // clear serial in buffer
+        hottInputBuffer.flush();
+
+        // write CMD byte 1
+        _outputPort->write(START_OF_CMD_B);
+
+        // ready to send CMD byte 2
+        sendCmdByte2 = true;
     }
-}
 
-void SerialHoTT_TLM::pollDevice(uint8_t id)
-{
-    // send data request to device
-    _outputPort->write(START_OF_CMD_B);
-    _outputPort->write(id);
+    // delay sending CMD byte 2 to accomodate for slow devices
+    if ((now - lastPoll >= HOTT_CMD_DELAY) && sendCmdByte2)
+    {
+        // write CMD byte 2
+        _outputPort->write(nextDeviceID);
+
+        // both CMD bytes written, prepare next cycle
+        sendCmdByte2 = false;
+    }
 }
 
 void SerialHoTT_TLM::processFrame()
@@ -174,7 +196,7 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
             sendCRSFvario(now);
         }
 
-    // HoTT GAM, EAM, ESC -> send batter packet
+    // HoTT GAM, EAM, ESC -> send battery packet
     if (device[GAM].present || device[EAM].present || device[ESC].present)
     {
         sendCRSFbattery(now);

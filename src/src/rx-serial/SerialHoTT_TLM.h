@@ -262,6 +262,7 @@ public:
         uint32_t now = millis();
 
         lastPoll = now;
+        sendCmdByte2 = false;
         discoveryTimerStart = now;
     }
 
@@ -276,11 +277,10 @@ public:
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
-
-    void pollNextDevice();
-    void pollDevice(uint8_t id);
     void processFrame();
     uint8_t calcFrameCRC(uint8_t *buf);
+
+    void scheduleDevicePolling(uint32_t now);
 
     void scheduleCRSFtelemetry(uint32_t now);
     void sendCRSFvario(uint32_t now);
@@ -324,8 +324,10 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
+    uint8_t nextDeviceID;
 
     uint32_t lastPoll;
+    bool sendCmdByte2;
     uint32_t discoveryTimerStart;
 
     uint32_t lastVarioSent = 0;
