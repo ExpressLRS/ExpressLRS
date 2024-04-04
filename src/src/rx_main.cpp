@@ -128,14 +128,19 @@ uint32_t serialBaud;
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
-    #define SERIAL1_PROTOCOL_TX Serial1
-#endif
-SerialIO *serialIO = nullptr;
-SerialIO *serial1IO = nullptr;
+    
+    #if defined(PLATFORM_ESP32)
+        #define SERIAL1_PROTOCOL_TX Serial1
 
-// SBUS driver needs to distinguish stream for SBUS/DJI protocol 
-const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
-const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+        // SBUS driver needs to distinguish stream for SBUS/DJI protocol 
+        const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+        const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+        
+        SerialIO *serial1IO = nullptr;
+    #endif
+#endif
+
+SerialIO *serialIO = nullptr;
 
 /* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
