@@ -133,6 +133,10 @@ uint32_t serialBaud;
 SerialIO *serialIO = nullptr;
 SerialIO *serial1IO = nullptr;
 
+// SBUS driver needs to distinguish stream for SBUS/DJI protocol 
+const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+
 /* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
     #define SERIAL_PROTOCOL_RX CrsfRxSerial
@@ -1421,11 +1425,11 @@ static void setupSerial1()
             break;
         case PROTOCOL_SERIAL1_SBUS:
         case PROTOCOL_SERIAL1_DJI_RS_PRO:
-            Serial1.begin(100000, SERIAL_8N2, UNDEF_PIN, serial1TXpin, true);
+            Serial1.begin(100000, SERIAL_8E2, UNDEF_PIN, serial1TXpin, true);
             serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
         case PROTOCOL_SERIAL1_INVERTED_SBUS:
-            Serial1.begin(100000, SERIAL_8N2, UNDEF_PIN, serial1TXpin, false);
+            Serial1.begin(100000, SERIAL_8E2, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
         case PROTOCOL_SERIAL1_SUMD:
