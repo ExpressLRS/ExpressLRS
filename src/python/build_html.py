@@ -50,8 +50,18 @@ def build_html(mainfile, var, out, env, isTX=False):
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
+    fd = os.open("html/compiled/" + mainfile, os.O_RDWR | os.O_CREAT)
+    with os.fdopen(fd, 'wb') as compiled:
+        compiled.write(data.encode('utf-8'))
+
 def build_common(env, mainfile, isTX):
     fd, path = tempfile.mkstemp()
+    
+    #Create a directory with fully compiled WEB content
+    if os.path.exists("html/compiled/"):
+        shutil.rmtree('html/compiled/')
+    os.mkdir('html/compiled')
+
     try:
         with os.fdopen(fd, 'w') as out:
             build_version(out, env)
