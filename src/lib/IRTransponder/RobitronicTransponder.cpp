@@ -1,79 +1,75 @@
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
+#include <Arduino.h>
+#include "logging.h"
 #include "RobitronicTransponder.h"
 
-void RobitronicTransponder::init(rmt_channel_t rmtChannel, gpio_num_t gpio, uint32_t id)
-{
-  this->rmtChannel = rmtChannel;
-  this->gpio = gpio;
-  this->id = id;
+#define NBITS   44
+#define BITRATE 115200
+#define BIT_PERIODS 16
+#define CARRIER_HZ 0
+#define CARRIER_DUTY 0
+//#define CARRIER_HZ 5000000
+//#define CARRIER_DUTY 50
 
-  initRMT();
-  generateBitStream();
-  encodeData();
+
+void RobitronicTransponder::init()
+{
+  transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY);
+
+    // generate unique transpoder ID (24Bit)
+    uint32_t transponderID = ((uint32_t)firmwareOptions.uid[0] << 16) +
+                             ((uint32_t)firmwareOptions.uid[1] << 8) +
+                             ((uint32_t)firmwareOptions.uid[2]);
+
+    DBGLN("Transponder, id: 0x%x", transponderID);
+
+    encoder->encode(transponderRMT, transponderID);
 }
 
 void RobitronicTransponder::startTransmission()
 {
-  if (rmt_wait_tx_done(rmtChannel, 0) == ESP_OK)
-  {
-    rmt_write_items(rmtChannel, rmtBits, NBITS, false);
-  }
+    transponderRMT->start();
 }
 
-void RobitronicTransponder::initRMT() {
-  rmt_config_t config;
-
-  config.channel = rmtChannel;
-  config.rmt_mode = RMT_MODE_TX;
-  config.gpio_num = gpio;
-  config.mem_block_num = 1;
-  config.clk_div = APB_CLK_FREQ/(BITRATE * 16);
-  config.tx_config.loop_en = false;
-  config.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
-  config.tx_config.idle_output_en = true;
-#if !defined(CARRIER)
-  config.tx_config.carrier_en = false;
-#else
-  config.tx_config.carrier_en = true;
-  config.tx_config.carrier_duty_percent = 50;
-  config.tx_config.carrier_freq_hz = 5000000;
-  config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
-#endif
-
-  rmt_config(&config);
-  rmt_driver_install(rmtChannel, 0, 0);
+void RobitronicEncoder::encode(TransponderRMT *transponderRMT, uint32_t id) {
+    generateBitStream(id);
+    bits_encoded = 0;
+    transponderRMT->encode(this);
 }
 
-void RobitronicTransponder::encodeData()
-{
-  for (int i = 0; i < NBITS; i++)
-  {
-    if (bitStream & ((uint64_t)1 << NBITS))
+bool RobitronicEncoder::encode_bit(rmt_item32_t *rmtItem) {
+
+ if (bitStream & ((uint64_t)1 << NBITS))
     {
       // encode logic 0 as 3/16 of bit time
-      rmtBits[i].duration0 = 3;
-      rmtBits[i].level0 = 1;
-      rmtBits[i].duration1 = 13;
-      rmtBits[i].level1 = 0;
+      rmtItem->duration0 = 3;
+      rmtItem->level0 = 1;
+      rmtItem->duration1 = 13;
+      rmtItem->level1 = 0;
     }
     else
     {
       // encode logic 1 as off for bit time
-      rmtBits[i].duration0 = 8;
-      rmtBits[i].level0 = 0;
-      rmtBits[i].duration1 = 8;
-      rmtBits[i].level1 = 0;
+      rmtItem->duration0 = 8;
+      rmtItem->level0 = 0;
+      rmtItem->duration1 = 8;
+      rmtItem->level1 = 0;
     }
 
     bitStream <<= 1;
-  }
+
+    bits_encoded ++;
+
+    bool done = bits_encoded == NBITS;
+
+    return done;
 }
 
 //
 // calculate CRC-8 with polynom 0x07 and init crc 0x00
 //
-uint8_t RobitronicTransponder::crc8(uint8_t *data, uint8_t nBytes) {
+uint8_t RobitronicEncoder::crc8(uint8_t *data, uint8_t nBytes) {
   uint8_t crc = 0x00; 
 
   for (uint8_t i = 0 ; i < nBytes;) {
@@ -93,7 +89,7 @@ uint8_t RobitronicTransponder::crc8(uint8_t *data, uint8_t nBytes) {
 // 
 // generate 44 bit sequence for given ID
 //
-void RobitronicTransponder::generateBitStream() {
+void RobitronicEncoder::generateBitStream(uint32_t id) {
   uint8_t byte;
   uint64_t mask;
 

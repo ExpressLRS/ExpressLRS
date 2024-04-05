@@ -1,36 +1,40 @@
 #pragma once
 
+#include "options.h"
+#include "common.h"
+
+#include "TransponderRMT.h"
+
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
-#include "driver/rmt.h"
-
-#define NBITS   44
-#define BITRATE 115200
-
-#undef CARRIER
-
-class RobitronicTransponder
-{
+class RobitronicEncoder : public EncoderRMT {
 public:
-  RobitronicTransponder() {};
+    virtual bool encode_bit(rmt_item32_t *rmtItem);
+    void encode(TransponderRMT *transponderRMT, uint32_t id);
+
+private:
+    uint64_t bitStream;
+    uint8_t bits_encoded;
+
+    uint8_t crc8(uint8_t *, uint8_t);
+    void generateBitStream(uint32_t id);
+};
+
+class RobitronicTransponder {
+public:
+  RobitronicTransponder(TransponderRMT *transponderRMT) {
+      this->transponderRMT = transponderRMT;
+      this->encoder = new RobitronicEncoder();
+  };
   ~RobitronicTransponder() {};
 
-  void init(rmt_channel_t, gpio_num_t, uint32_t);
+  void init();
   void startTransmission();
-  void deinit() { rmt_driver_uninstall(rmtChannel); };
+  void deinit() { transponderRMT->deinit(); };
 
 protected:
-  rmt_channel_t rmtChannel;
-  gpio_num_t gpio;
-  uint32_t id;
-  uint64_t bitStream;
-
-  rmt_item32_t rmtBits[NBITS];
-  
-  void initRMT();
-  void encodeData();
-  uint8_t crc8(uint8_t *, uint8_t);
-  void generateBitStream();
+    TransponderRMT *transponderRMT;
+    RobitronicEncoder *encoder;
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "devIRTransponder.h"
+#include "TransponderRMT.h"
 #include "RobitronicTransponder.h"
 #include "options.h"
 #include "config.h"
@@ -9,6 +10,7 @@
 static void *transponder = nullptr;
 static eIRProtocol lastIRProtocol = IRPROTOCOL_NONE;
 
+TransponderRMT transponderRMT;
 
 static void deinitProtocol(eIRProtocol IRprotocol) {
     if (transponder != nullptr) {
@@ -27,6 +29,11 @@ static void deinitProtocol(eIRProtocol IRprotocol) {
             return;
         }
     }
+}
+
+static void initialise()
+{
+    transponderRMT.configurePeripheral(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER);
 }
 
 static int start()
@@ -49,37 +56,32 @@ static int timeout()
         // init new protocol
         if (IRprotocol == IRPROTOCOL_ROBITRONIC)
         {
-            // generate unique transpoder ID (24Bit)
-            uint32_t transponderID = ((uint32_t)firmwareOptions.uid[0] << 16) + 
-                                     ((uint32_t)firmwareOptions.uid[1] << 8) + 
-                                     ((uint32_t)firmwareOptions.uid[2]);
-
-            // init robitronicTransponder
-            transponder = new RobitronicTransponder;
-            //robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, 0);    // for testing
-            ((RobitronicTransponder *)transponder)->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, 80175);    // for testing
-            //robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, transponderID);
+            RobitronicTransponder *t = new RobitronicTransponder(&transponderRMT);
+            transponder = t;
+            t->init();
         }
-    } else 
-        {   
-            // if no protocl is selected try it again in 100ms
-            if (IRprotocol == IRPROTOCOL_NONE)
-                return 100;
-
-            // run Robitronic protocol
-            if (IRprotocol == IRPROTOCOL_ROBITRONIC)
-            {
-                // transmit robitronicTransponder ID
-                ((RobitronicTransponder *)transponder)->startTransmission();
-
-                // random wait between 0,5mm and 4,5ms
-                return (rngN(5) + 1);
-            }
+    } else {
+        // if no protocl is selected try it again in 100ms
+        if (IRprotocol == IRPROTOCOL_NONE) {
+            return 100;
         }
+
+        // run Robitronic protocol
+        if (IRprotocol == IRPROTOCOL_ROBITRONIC)
+        {
+            // transmit robitronicTransponder ID
+            ((RobitronicTransponder *)transponder)->startTransmission();
+
+            // random wait between 0,5mm and 4,5ms
+            return (rngN(5) + 1);
+        }
+    }
+
+    return 1000;
 }
 
 device_t ir_transponder_device = {
-    .initialize = nullptr,
+    .initialize = initialise,
     .start = start,
     .event = nullptr,
     .timeout = timeout,
