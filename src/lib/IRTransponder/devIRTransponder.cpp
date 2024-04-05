@@ -12,11 +12,11 @@ static eIRProtocol lastIRProtocol = IRPROTOCOL_NONE;
 
 static void deinitProtocol(eIRProtocol IRprotocol) {
     if (transponder != nullptr) {
+        // nothing to do if no protocol is selected
         if (IRprotocol == IRPROTOCOL_NONE)
-        {
             return;
-        }
 
+        // deinit Robitronic protocol
         if (IRprotocol == IRPROTOCOL_ROBITRONIC)
         {
             ((RobitronicTransponder *)transponder)->deinit();
@@ -31,22 +31,6 @@ static void deinitProtocol(eIRProtocol IRprotocol) {
 
 static int start()
 {
-/*
-    // nothing to do if pin not defined
-    if (GPIO_IR_TRANSPONDER == UNDEF_PIN)
-        return DURATION_NEVER;
-
-    // generate unique transpoder ID (24Bit)
-    uint32_t transponderID = ((uint32_t)firmwareOptions.uid[0] << 16) + 
-                             ((uint32_t)firmwareOptions.uid[1] << 8) + 
-                             ((uint32_t)firmwareOptions.uid[2]);
-
-    // init robitronicTransponder
-    robitronicTransponder = new RobitronicTransponder;
-    //robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, 0);    // for testing
-    robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, 80175);    // for testing
-    //robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, transponderID);
-*/
     return DURATION_IMMEDIATELY;
 }
 
@@ -54,6 +38,7 @@ static int timeout()
 {
     eIRProtocol IRprotocol = config.GetIRProtocol();
 
+    // check if protocol has changed (LUA)
     if (IRprotocol != lastIRProtocol)
     {        
         // deinit the current protocol
@@ -76,12 +61,12 @@ static int timeout()
             //robitronicTransponder->init(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER, transponderID);
         }
     } else 
-        {
+        {   
+            // if no protocl is selected try it again in 100ms
             if (IRprotocol == IRPROTOCOL_NONE)
-            {
                 return 100;
-            }
 
+            // run Robitronic protocol
             if (IRprotocol == IRPROTOCOL_ROBITRONIC)
             {
                 // transmit robitronicTransponder ID
