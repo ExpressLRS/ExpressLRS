@@ -229,6 +229,12 @@ enum eFailsafeMode : uint8_t
     FAILSAFE_SET_POSITION
 };
 
+enum eIRProtocol : uint8_t
+{
+    IRPROTOCOL_NONE,
+    IRPROTOCOL_ROBITRONIC,
+};
+
 enum eAuxChannels : uint8_t
 {
     AUX1 = 4,

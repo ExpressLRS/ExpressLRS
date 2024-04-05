@@ -357,6 +357,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
     json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
+      json["config"]["IR-protocol"] = config.GetIRProtocol();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetVolatileBind();
@@ -509,6 +510,9 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   uint8_t failsafe = json["sbus-failsafe"] | 0;
   config.SetFailsafeMode((eFailsafeMode)failsafe);
+
+  uint8_t IRprotocol = json["IR-protocol"] | 0;
+  config.SetIRProtocol((eIRProtocol)IRprotocol);
 
   long modelid = json["modelid"] | 255;
   if (modelid < 0 || modelid > 63) modelid = 255;

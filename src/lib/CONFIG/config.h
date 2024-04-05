@@ -215,7 +215,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     modelId;
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
-                unused:2;
+                IRProtocol:2;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
@@ -250,6 +250,7 @@ public:
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
+    eIRProtocol GetIRProtocol() const { return (eIRProtocol)m_config.IRProtocol; }
     bool GetVolatileBind() const { return m_config.volatileBind; }
 
     // Setters
@@ -271,6 +272,7 @@ public:
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
+    void SetIRProtocol(eIRProtocol IRProtocol);   
     void SetVolatileBind(bool value);
 
 private:

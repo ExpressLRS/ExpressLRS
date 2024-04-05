@@ -9,14 +9,15 @@
 
 #undef CARRIER
 
-class Transponder
+class RobitronicTransponder
 {
 public:
-  Transponder() {};
-  ~Transponder() {};
+  RobitronicTransponder() {};
+  ~RobitronicTransponder() {};
 
   void init(rmt_channel_t, gpio_num_t, uint32_t);
   void startTransmission();
+  void deinit() { rmt_driver_uninstall(rmtChannel); };
 
 protected:
   rmt_channel_t rmtChannel;

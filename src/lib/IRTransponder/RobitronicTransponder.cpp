@@ -1,8 +1,8 @@
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
-#include "Transponder.h"
+#include "RobitronicTransponder.h"
 
-void Transponder::init(rmt_channel_t rmtChannel, gpio_num_t gpio, uint32_t id)
+void RobitronicTransponder::init(rmt_channel_t rmtChannel, gpio_num_t gpio, uint32_t id)
 {
   this->rmtChannel = rmtChannel;
   this->gpio = gpio;
@@ -13,7 +13,7 @@ void Transponder::init(rmt_channel_t rmtChannel, gpio_num_t gpio, uint32_t id)
   encodeData();
 }
 
-void Transponder::startTransmission()
+void RobitronicTransponder::startTransmission()
 {
   if (rmt_wait_tx_done(rmtChannel, 0) == ESP_OK)
   {
@@ -21,7 +21,7 @@ void Transponder::startTransmission()
   }
 }
 
-void Transponder::initRMT() {
+void RobitronicTransponder::initRMT() {
   rmt_config_t config;
 
   config.channel = rmtChannel;
@@ -45,7 +45,7 @@ void Transponder::initRMT() {
   rmt_driver_install(rmtChannel, 0, 0);
 }
 
-void Transponder::encodeData()
+void RobitronicTransponder::encodeData()
 {
   for (int i = 0; i < NBITS; i++)
   {
@@ -73,7 +73,7 @@ void Transponder::encodeData()
 //
 // calculate CRC-8 with polynom 0x07 and init crc 0x00
 //
-uint8_t Transponder::crc8(uint8_t *data, uint8_t nBytes) {
+uint8_t RobitronicTransponder::crc8(uint8_t *data, uint8_t nBytes) {
   uint8_t crc = 0x00; 
 
   for (uint8_t i = 0 ; i < nBytes;) {
@@ -93,7 +93,7 @@ uint8_t Transponder::crc8(uint8_t *data, uint8_t nBytes) {
 // 
 // generate 44 bit sequence for given ID
 //
-void Transponder::generateBitStream() {
+void RobitronicTransponder::generateBitStream() {
   uint8_t byte;
   uint64_t mask;
 

@@ -423,6 +423,7 @@ function updateConfig(data, options) {
     _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
   }
   _('vbind').onchange();
+_('IR-protocol').value = data['IR-protocol'];
 
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
@@ -740,6 +741,7 @@ if (_('config')) {
           "serial-protocol": +_('serial-protocol').value,
           "serial1-protocol": +_('serial1-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
+          "IR-protocol": +_('IR-protocol').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
           "vbind": +_('vbind').checked,

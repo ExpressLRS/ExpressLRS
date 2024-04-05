@@ -1152,6 +1152,15 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
     }
 }
 
+void RxConfig::SetIRProtocol(eIRProtocol IRProtocol)
+{
+    if (m_config.IRProtocol != IRProtocol)
+    {
+        m_config.IRProtocol = IRProtocol;
+        m_modified = true;
+    }
+}
+
 void RxConfig::SetVolatileBind(bool value)
 {
     if (m_config.volatileBind != value)
