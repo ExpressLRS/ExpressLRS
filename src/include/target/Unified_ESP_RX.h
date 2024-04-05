@@ -83,6 +83,9 @@
 #define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
 #define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
 
+// IR Transponder
+#define GPIO_IR_TRANSPONDER hardware_pin(HARDWARE_ir_transponder)
+
 // default value 0 means direct!
 // #define POWER_OUTPUT_ANALOG (hardware_int(HARDWARE_power_control)==1)   // frsky only
 // #define POWER_OUTPUT_DAC (hardware_int(HARDWARE_power_control)==2)  // stm32 only

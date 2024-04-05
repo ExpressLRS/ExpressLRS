@@ -36,6 +36,7 @@
 #include "devSerialUpdate.h"
 #include "devBaro.h"
 #include "devMSPVTX.h"
+#include "devIRTransponder.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
@@ -93,6 +94,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
+#endif
+#if defined(PLATFORM_ESP32)
+  {&ir_transponder_device, 1},
 #endif
 };
 
