@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
+
 #include "driver/rmt.h"
 
 #define NBITS   44
@@ -29,3 +31,5 @@ protected:
   uint8_t crc8(uint8_t *, uint8_t);
   void generateBitStream();
 };
+
+#endif

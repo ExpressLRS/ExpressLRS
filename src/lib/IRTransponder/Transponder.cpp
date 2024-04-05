@@ -1,3 +1,5 @@
+#if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
+
 #include "Transponder.h"
 
 void Transponder::init(rmt_channel_t rmtChannel, gpio_num_t gpio, uint32_t id)
@@ -128,3 +130,5 @@ void Transponder::generateBitStream() {
 
   // bitstream bit set now represents logic 0
 }
+
+#endif
