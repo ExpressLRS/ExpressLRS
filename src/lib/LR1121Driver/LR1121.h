@@ -51,7 +51,7 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0xff;
+    static const uint8_t PWRPENDING_NONE = 0x7f;
 
     // LR1121_RadioOperatingModes_t currOpmode;
     bool modeSupportsFei;
