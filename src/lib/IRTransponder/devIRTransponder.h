@@ -1,3 +1,9 @@
+//
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
+//
+
 #pragma once
 
 #include "common.h"

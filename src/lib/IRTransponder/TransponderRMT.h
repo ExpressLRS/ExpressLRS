@@ -1,5 +1,7 @@
 //
-// Created by Hydra on 05/04/2024.
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
 //
 
 #pragma once
@@ -32,7 +34,6 @@ private:
 
     uint8_t rmtItemCount;
     rmt_item32_t rmtItems[TRANSPONDER_RMT_SYMBOL_BUFFER_SIZE];
-
 };
 
 #endif

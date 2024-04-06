@@ -1,5 +1,7 @@
 //
-// Created by Hydra on 05/04/2024.
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
 //
 
 #if defined(PLATFORM_ESP32)
@@ -24,6 +26,7 @@ void TransponderRMT::encode(EncoderRMT *encoder) {
         }
     }
 
+    DBGLN("TransponderRMT::encode, rmtItemCount: %d", rmtItemCount);
 }
 
 void TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, uint8_t carrier_duty) {
@@ -50,7 +53,7 @@ void TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, u
         config.tx_config.carrier_en = true;
         config.tx_config.carrier_duty_percent = carrier_duty;
         config.tx_config.carrier_freq_hz = carrier_hz;
-        config.tx_config.carrier_level = RMT_CARRIER_LEVEL_LOW;
+        config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
     }
 
     rmt_config(&config);

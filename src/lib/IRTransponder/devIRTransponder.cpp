@@ -1,13 +1,20 @@
+//
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
+//
 #include "devIRTransponder.h"
+#include "Transponder.h"
 #include "TransponderRMT.h"
 #include "RobitronicTransponder.h"
+#include "ILapTransponder.h"
 #include "options.h"
 #include "config.h"
 #include "random.h"
 
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
-static void *transponder = nullptr;
+static TransponderSystem *transponder = nullptr;
 static eIRProtocol lastIRProtocol = IRPROTOCOL_NONE;
 
 TransponderRMT transponderRMT;
@@ -18,16 +25,8 @@ static void deinitProtocol(eIRProtocol IRprotocol) {
         if (IRprotocol == IRPROTOCOL_NONE)
             return;
 
-        // deinit Robitronic protocol
-        if (IRprotocol == IRPROTOCOL_ROBITRONIC)
-        {
-            ((RobitronicTransponder *)transponder)->deinit();
-
-            delete ((RobitronicTransponder *)transponder);
-        
-            transponder = nullptr;
-            return;
-        }
+        delete transponder;
+        transponder = nullptr;
     }
 }
 
@@ -54,27 +53,46 @@ static int timeout()
         lastIRProtocol = IRprotocol;
 
         // init new protocol
-        if (IRprotocol == IRPROTOCOL_ROBITRONIC)
+        switch (IRprotocol)
         {
-            RobitronicTransponder *t = new RobitronicTransponder(&transponderRMT);
-            transponder = t;
-            t->init();
+            case IRPROTOCOL_ROBITRONIC:
+                transponder = new RobitronicTransponder(&transponderRMT);
+                break;
+            case IRPROTOCOL_ILAP:
+                transponder = new ILapTransponder(&transponderRMT);
+                break;
+            default:
+                break;
         }
+
+        if (transponder) {
+            transponder->init();
+        }
+
     } else {
         // if no protocl is selected try it again in 100ms
         if (IRprotocol == IRPROTOCOL_NONE) {
             return 100;
         }
 
-        // run Robitronic protocol
-        if (IRprotocol == IRPROTOCOL_ROBITRONIC)
-        {
-            // transmit robitronicTransponder ID
-            ((RobitronicTransponder *)transponder)->startTransmission();
-
-            // random wait between 0,5mm and 4,5ms
-            return (rngN(5) + 1);
+        if (transponder) {
+            transponder->startTransmission();
         }
+
+        // TODO move this into the transponder API
+        switch (IRprotocol)
+        {
+            case IRPROTOCOL_ROBITRONIC:
+                // random wait between 0,5mm and 4,5ms
+                return (rngN(5) + 1);
+                break;
+            case IRPROTOCOL_ILAP:
+                return (10); // TODO
+                break;
+            default:
+                break;
+        }
+
     }
 
     return 1000;

@@ -1,3 +1,8 @@
+//
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
+//
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
 #include <Arduino.h>
@@ -5,13 +10,11 @@
 #include "RobitronicTransponder.h"
 
 #define NBITS   44
+#define BYTES   4
 #define BITRATE 115200
 #define BIT_PERIODS 16
 #define CARRIER_HZ 0
 #define CARRIER_DUTY 0
-//#define CARRIER_HZ 5000000
-//#define CARRIER_DUTY 50
-
 
 void RobitronicTransponder::init()
 {
@@ -22,7 +25,7 @@ void RobitronicTransponder::init()
                              ((uint32_t)firmwareOptions.uid[1] << 8) +
                              ((uint32_t)firmwareOptions.uid[2]);
 
-    DBGLN("Transponder, id: 0x%x", transponderID);
+    DBGLN("RobitronicTransponder::init, id: 0x%x", transponderID);
 
     encoder->encode(transponderRMT, transponderID);
 }
@@ -40,21 +43,24 @@ void RobitronicEncoder::encode(TransponderRMT *transponderRMT, uint32_t id) {
 
 bool RobitronicEncoder::encode_bit(rmt_item32_t *rmtItem) {
 
- if (bitStream & ((uint64_t)1 << NBITS))
+    uint8_t bit = (bitStream & ((uint64_t)1 << NBITS)) > 0 ? 1 : 0;
+    DBGVLN("RobitronicEncoder::encode_bit, index: %d, bit: %d", bits_encoded, bit);
+
+    if (bit)
     {
-      // encode logic 0 as 3/16 of bit time
-      rmtItem->duration0 = 3;
-      rmtItem->level0 = 1;
-      rmtItem->duration1 = 13;
-      rmtItem->level1 = 0;
+        // encode logic 0 as 3/16 of bit time
+        rmtItem->duration0 = 3;
+        rmtItem->level0 = 1;
+        rmtItem->duration1 = 13;
+        rmtItem->level1 = 0;
     }
     else
     {
-      // encode logic 1 as off for bit time
-      rmtItem->duration0 = 8;
-      rmtItem->level0 = 0;
-      rmtItem->duration1 = 8;
-      rmtItem->level1 = 0;
+        // encode logic 1 as off for bit time
+        rmtItem->duration0 = 8;
+        rmtItem->level0 = 0;
+        rmtItem->duration1 = 8;
+        rmtItem->level1 = 0;
     }
 
     bitStream <<= 1;
@@ -83,6 +89,8 @@ uint8_t RobitronicEncoder::crc8(uint8_t *data, uint8_t nBytes) {
     }
   }
 
+  DBGVLN("RobitronicEncoder::crc8, crc: %d", crc);
+
   return crc;
 }
 
@@ -98,7 +106,7 @@ void RobitronicEncoder::generateBitStream(uint32_t id) {
 
   bitStream = 0;
 
-  for (uint8_t i = 0; i < 4; i++) {
+  for (uint8_t i = 0; i < BYTES; i++) {
     // start bit
     bitStream |= 1; bitStream <<= 1;
 

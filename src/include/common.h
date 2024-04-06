@@ -233,6 +233,7 @@ enum eIRProtocol : uint8_t
 {
     IRPROTOCOL_NONE,
     IRPROTOCOL_ROBITRONIC,
+    IRPROTOCOL_ILAP,
 };
 
 enum eAuxChannels : uint8_t

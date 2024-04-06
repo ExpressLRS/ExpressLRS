@@ -1,8 +1,14 @@
+//
+// Authors: 
+// * Mickey (mha1, initial RMT implementation)
+// * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
+//
 #pragma once
 
 #include "options.h"
 #include "common.h"
 
+#include "Transponder.h"
 #include "TransponderRMT.h"
 
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
@@ -20,19 +26,19 @@ private:
     void generateBitStream(uint32_t id);
 };
 
-class RobitronicTransponder {
+class RobitronicTransponder : public TransponderSystem {
 public:
-  RobitronicTransponder(TransponderRMT *transponderRMT) {
-      this->transponderRMT = transponderRMT;
-      this->encoder = new RobitronicEncoder();
-  };
-  ~RobitronicTransponder() {};
+    RobitronicTransponder(TransponderRMT *transponderRMT) {
+        this->transponderRMT = transponderRMT;
+        this->encoder = new RobitronicEncoder();
+    };
+    ~RobitronicTransponder() { deinit(); };
 
-  void init();
-  void startTransmission();
-  void deinit() { transponderRMT->deinit(); };
+    virtual void init();
+    virtual void startTransmission();
 
 protected:
+    virtual void deinit() { transponderRMT->deinit(); };
     TransponderRMT *transponderRMT;
     RobitronicEncoder *encoder;
 };
