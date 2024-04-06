@@ -53,6 +53,12 @@ void ILapTransponder::init()
     encoder->encode(transponderRMT, data);
 }
 
+void ILapTransponder::deinit()
+{
+    DBGLN("ILapTransponder::deinit");
+    transponderRMT->deinit();
+}
+
 void ILapTransponder::startTransmission()
 {
     transponderRMT->start();

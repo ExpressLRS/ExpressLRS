@@ -30,6 +30,12 @@ void RobitronicTransponder::init()
     encoder->encode(transponderRMT, transponderID);
 }
 
+void RobitronicTransponder::deinit()
+{
+    DBGLN("RobitronicTransponder::deinit");
+    transponderRMT->deinit();
+}
+
 void RobitronicTransponder::startTransmission()
 {
     transponderRMT->start();

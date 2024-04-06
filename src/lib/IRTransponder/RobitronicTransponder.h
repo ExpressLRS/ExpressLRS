@@ -38,7 +38,7 @@ public:
     virtual void startTransmission();
 
 protected:
-    virtual void deinit() { transponderRMT->deinit(); };
+    virtual void deinit();
     TransponderRMT *transponderRMT;
     RobitronicEncoder *encoder;
 };
