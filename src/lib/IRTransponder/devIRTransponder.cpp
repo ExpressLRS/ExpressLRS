@@ -15,18 +15,36 @@
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
 static TransponderSystem *transponder = nullptr;
-static eIRProtocol lastIRProtocol = IRPROTOCOL_NONE;
+static eIRProtocol activeIRProtocol = IRPROTOCOL_NONE;
 
 TransponderRMT transponderRMT;
 
-static void deinitProtocol(eIRProtocol IRprotocol) {
-    if (transponder != nullptr) {
-        // nothing to do if no protocol is selected
-        if (IRprotocol == IRPROTOCOL_NONE)
-            return;
+static void deinitCurrentProtocol() {
+    if (transponder == nullptr) {
+        return;
+    }
 
-        delete transponder;
-        transponder = nullptr;
+    delete transponder;
+    transponder = nullptr;
+}
+
+static void activateProtocol(eIRProtocol irProtocol) {
+    activeIRProtocol = irProtocol;
+
+    switch (irProtocol)
+    {
+        case IRPROTOCOL_ROBITRONIC:
+            transponder = new RobitronicTransponder(&transponderRMT);
+            break;
+        case IRPROTOCOL_ILAP:
+            transponder = new ILapTransponder(&transponderRMT);
+            break;
+        default:
+            return;
+    }
+
+    if (transponder) {
+        transponder->init();
     }
 }
 
@@ -42,45 +60,28 @@ static int start()
 
 static int timeout()
 {
-    eIRProtocol IRprotocol = config.GetIRProtocol();
+    eIRProtocol irProtocol = config.GetIRProtocol();
 
-    // check if protocol has changed (LUA)
-    if (IRprotocol != lastIRProtocol)
+    bool protocolChanged = irProtocol != activeIRProtocol;
+    if (protocolChanged)
     {        
-        // deinit the current protocol
-        deinitProtocol(IRprotocol);
-        
-        lastIRProtocol = IRprotocol;
+        deinitCurrentProtocol();
+        activateProtocol(irProtocol);
 
-        // init new protocol
-        switch (IRprotocol)
-        {
-            case IRPROTOCOL_ROBITRONIC:
-                transponder = new RobitronicTransponder(&transponderRMT);
-                break;
-            case IRPROTOCOL_ILAP:
-                transponder = new ILapTransponder(&transponderRMT);
-                break;
-            default:
-                break;
+        return DURATION_IMMEDIATELY;
+    } else {
+        // if no protocol is active try again in after a short delay
+        if (activeIRProtocol == IRPROTOCOL_NONE || !transponder) {
+            return 500;
         }
 
-        if (transponder) {
+        if (!transponder->isInitialised()) {
             transponder->init();
         }
-
-    } else {
-        // if no protocl is selected try it again in 100ms
-        if (IRprotocol == IRPROTOCOL_NONE) {
-            return 100;
-        }
-
-        if (transponder) {
-            transponder->startTransmission();
-        }
+        transponder->startTransmission();
 
         // TODO move this into the transponder API
-        switch (IRprotocol)
+        switch (activeIRProtocol)
         {
             case IRPROTOCOL_ROBITRONIC:
                 // random wait between 0,5mm and 4,5ms

@@ -32,7 +32,8 @@ public:
     };
     ~ILapTransponder() { deinit(); };
 
-    virtual void init();
+    virtual bool init();
+    virtual bool isInitialised() { return transponderRMT->isInitialised(); };
     virtual void startTransmission();
 
 protected:

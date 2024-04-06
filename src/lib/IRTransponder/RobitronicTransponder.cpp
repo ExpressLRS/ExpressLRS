@@ -16,9 +16,11 @@
 #define CARRIER_HZ 0
 #define CARRIER_DUTY 0
 
-void RobitronicTransponder::init()
+bool RobitronicTransponder::init()
 {
-  transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY);
+    if (!transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY)) {
+        return false;
+    }
 
     // generate unique transpoder ID (24Bit)
     uint32_t transponderID = ((uint32_t)firmwareOptions.uid[0] << 16) +
@@ -28,6 +30,8 @@ void RobitronicTransponder::init()
     DBGLN("RobitronicTransponder::init, id: 0x%x", transponderID);
 
     encoder->encode(transponderRMT, transponderID);
+
+    return true;
 }
 
 void RobitronicTransponder::deinit()

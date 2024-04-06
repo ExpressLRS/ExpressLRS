@@ -18,10 +18,20 @@ public:
 
 #define TRANSPONDER_RMT_SYMBOL_BUFFER_SIZE 64
 
+enum eTransponderRMTState : uint8_t {
+    TRMT_STATE_UNINIT,
+    TRMT_STATE_RETRY_INIT,
+    TRMT_STATE_INIT,
+    TRMT_STATE_READY,
+};
+
 class TransponderRMT {
 public:
+    TransponderRMT() : state(TRMT_STATE_UNINIT) {};
+
     void configurePeripheral(rmt_channel_t channel, gpio_num_t gpio);
-    void init(uint32_t desired_resolution_hz, uint32_t carrier_hz, uint8_t carrier_duty);
+    bool init(uint32_t desired_resolution_hz, uint32_t carrier_hz, uint8_t carrier_duty);
+    bool isInitialised() { return state >= TRMT_STATE_INIT; };
 
     void encode(EncoderRMT *encoder);
     void start();
@@ -31,6 +41,7 @@ private:
     uint32_t resolutionHz;
     rmt_channel_t channel;
     gpio_num_t gpio;
+    eTransponderRMTState state;
 
     uint8_t rmtItemCount;
     rmt_item32_t rmtItems[TRANSPONDER_RMT_SYMBOL_BUFFER_SIZE];

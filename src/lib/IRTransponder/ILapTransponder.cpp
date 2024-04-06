@@ -42,15 +42,19 @@
 // actual RMT resolution should be used to set the carrier_hz and the bitrate
 
 
-void ILapTransponder::init()
+bool ILapTransponder::init()
 {
-    transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY);
+    if (!transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY)) {
+      return false;
+    };
 
     uint64_t data = 0xFF0FEDCBA987; // NOT A VALID TRANSPONDER CODE
 
     DBGLN("ILapTransponder::init, data: 0x%x", data);
 
     encoder->encode(transponderRMT, data);
+
+    return true;
 }
 
 void ILapTransponder::deinit()
