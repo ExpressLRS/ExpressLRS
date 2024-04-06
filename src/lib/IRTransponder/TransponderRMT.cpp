@@ -56,8 +56,18 @@ void TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, u
         config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
     }
 
-    rmt_config(&config);
-    rmt_driver_install(channel, 0, 0);
+    esp_err_t err;
+    err = rmt_config(&config);
+    if (err != ESP_OK) {
+        DBGLN("TransponderRMT::init, config failed for, channel: %d", channel);
+        return;
+    }
+    err = rmt_driver_install(channel, 0, 0);
+    if (err != ESP_OK) {
+        DBGLN("TransponderRMT::init, driver install failed for, channel: %d", channel);
+        return;
+    }
+
 
     DBGLN("TransponderRMT::init, channel: %d, desired_resolution_hz: %d, actual_resolution_hz: %d, divider: %d, carrier_hz: %d, carrier_duty: %d", channel, desired_resolution_hz, resolutionHz, divider, carrier_hz, carrier_duty);
 }
