@@ -38,31 +38,28 @@ bool TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, u
     rmtItemCount = 0;
     state = TRMT_STATE_RETRY_INIT;
 
-    rmt_config_t config;
-
     uint8_t divider = APB_CLK_FREQ / desired_resolution_hz;
     resolutionHz = APB_CLK_FREQ / divider;
 
-    config.channel = channel;
-    config.rmt_mode = RMT_MODE_TX;
-    config.gpio_num = gpio;
-    config.mem_block_num = 1;
-    config.clk_div = divider;
-    config.tx_config.loop_en = false;
-    config.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
-    config.tx_config.idle_output_en = true;
-
-    if (carrier_hz == 0) {
-        config.tx_config.carrier_en = false;
-    } else {
-        config.tx_config.carrier_en = true;
-        config.tx_config.carrier_duty_percent = carrier_duty;
-        config.tx_config.carrier_freq_hz = carrier_hz;
-        config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
-    }
+  	rmt_config_t rmt_transponder_config = {
+		.rmt_mode = RMT_MODE_TX,
+		.channel = channel,
+		.gpio_num = gpio,
+		.clk_div = divider,
+		.mem_block_num = 1,
+		.tx_config = {
+            .carrier_freq_hz = carrier_hz,
+            .carrier_level = RMT_CARRIER_LEVEL_HIGH,
+        	.idle_level = RMT_IDLE_LEVEL_LOW,
+            .carrier_duty_percent = carrier_duty,
+			.carrier_en = carrier_hz > 0,
+			.loop_en = false,
+			.idle_output_en = true,
+		},
+	};
 
     esp_err_t err;
-    err = rmt_config(&config);
+    err = rmt_config(&rmt_transponder_config);
     if (err != ESP_OK) {
         DBGLN("TransponderRMT::init, config failed for, channel: %d, error: %d", channel, err);
         return false;
