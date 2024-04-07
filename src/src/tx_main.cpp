@@ -248,7 +248,9 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
   }
   
+#if defined(Regulatory_Domain_EU_CE_2400)
   SetClearChannelAssessmentTime();
+#endif
 
   return true;
 }
