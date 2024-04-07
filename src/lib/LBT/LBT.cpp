@@ -14,6 +14,7 @@ static uint32_t rxStartTime;
 
 bool LBTEnabled = false;
 static bool LBTStarted = false;
+static uint32_t validRSSIdelayUs = 0;
 
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   SX1280_RadioLoRaSpreadingFactors_t SF,
@@ -101,20 +102,16 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
 
 void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 {
-  rxStartTime = micros();
-}
+  if (!LBTEnabled || LBTStarted)
+    return;
 
-void ICACHE_RAM_ATTR BeginClearChannelAssessment()
-{
-  if(!LBTStarted)
-  {
-    Radio.RXnb(SX1280_MODE_RX_CONT);
-    if (LBTEnabled)
-    {
-      rxStartTime = micros();
-      LBTStarted = true;
-    }
-  }
+  LBTStarted = true;
+  rxStartTime = micros();
+  validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
+  
+#if defined(TARGET_TX)
+  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);  
+#endif
 }
 
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
@@ -141,8 +138,6 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  uint32_t validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf,
-      ExpressLRS_currAirRate_Modparams->radio_type);
   uint32_t elapsed = micros() - rxStartTime;
   if(elapsed < validRSSIdelayUs)
   {
