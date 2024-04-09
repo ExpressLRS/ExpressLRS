@@ -542,10 +542,10 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
   json["reg_domain"] = FHSSgetRegulatoryDomain();
   json["git-commit"] = commit;
 #if defined(TARGET_TX)
-  json["is-tx"] = true;
+  json["radio-type"] = "TX";
 #endif
 #if defined(TARGET_RX)
-  json["is-rx"] = true;
+  json["radio-type"] = "RX";
 #endif
 #if defined(RADIO_SX127X)
   json["is-sx127x"] = true;
