@@ -8,6 +8,7 @@
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
 #include <Arduino.h>
+#include "config.h"
 #include "logging.h"
 #include "ILapTransponder.h"
 
@@ -48,7 +49,8 @@ bool ILapTransponder::init()
       return false;
     };
 
-    uint64_t data = 0xFF0FEDCBA987; // NOT A VALID TRANSPONDER CODE
+    //uint64_t data = 0xFF0FEDCBA987; // NOT A VALID TRANSPONDER CODE
+    uint64_t data = config.GetIRiLapCode();
 
     DBGLN("ILapTransponder::init, data: 0x%x", data);
 

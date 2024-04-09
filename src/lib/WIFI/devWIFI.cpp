@@ -4,6 +4,8 @@
 
 #include "deferred.h"
 
+#define ARDUINOJSON_USE_LONG_LONG 1
+
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #if defined(PLATFORM_ESP8266)
@@ -357,7 +359,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
     json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
-      json["config"]["IR-protocol"] = config.GetIRProtocol();
+    json["config"]["IR-protocol"] = config.GetIRProtocol();
+    json["config"]["IR-ilapcode-config"] = config.GetIRiLapCode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetVolatileBind();
@@ -513,6 +516,9 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   uint8_t IRprotocol = json["IR-protocol"] | 0;
   config.SetIRProtocol((eIRProtocol)IRprotocol);
+
+  uint64_t IRiLapCode = ((uint64_t)json["IR-ilapcode-config"]) | 0;
+  config.SetIRiLapCode(IRiLapCode);
 
   long modelid = json["modelid"] | 255;
   if (modelid < 0 || modelid > 63) modelid = 255;

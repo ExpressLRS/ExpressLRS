@@ -1161,6 +1161,15 @@ void RxConfig::SetIRProtocol(eIRProtocol IRProtocol)
     }
 }
 
+void RxConfig::SetIRiLapCode(uint64_t IRiLapCode)
+{
+    if (m_config.IRiLapCode != IRiLapCode)
+    {
+        m_config.IRiLapCode = IRiLapCode;
+        m_modified = true;
+    }
+}
+
 void RxConfig::SetVolatileBind(bool value)
 {
     if (m_config.volatileBind != value)

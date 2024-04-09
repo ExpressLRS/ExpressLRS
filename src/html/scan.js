@@ -423,7 +423,13 @@ function updateConfig(data, options) {
     _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
   }
   _('vbind').onchange();
-_('IR-protocol').value = data['IR-protocol'];
+  _('IR-protocol').value = data['IR-protocol'];
+  _('IR-protocol').onchange = () => {
+    _('IR-ilapcode-config').style.display = _('IR-protocol').value == 2 ? 'block' : 'none';
+  }
+  _('IR-protocol').onchange();
+  var iLapCode = data['IR-ilapcode-config'].toString(16).toUpperCase();
+  _('IR-ilapcode').value = '000000000000'.substring(0,12-iLapCode.length) + iLapCode;;
 
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
@@ -742,6 +748,7 @@ if (_('config')) {
           "serial1-protocol": +_('serial1-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "IR-protocol": +_('IR-protocol').value,
+          "IR-ilapcode-config": parseInt(_('IR-ilapcode').value, 16),
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
           "vbind": +_('vbind').checked,
