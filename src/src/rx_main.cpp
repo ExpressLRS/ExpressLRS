@@ -1392,15 +1392,14 @@ static void setupConfigAndPocCheck()
         config.Commit();
     }
 
-    if (config.GetPowerOnCounter() < 3)
-    {
-        // We haven't reached our binding mode power cycles
-        // and we've been powered on for 2s, reset the power on counter.
-        // config.Commit() is done in the loop with CheckConfigChangePending().
-        deferExecution(2000, []() {
+    // Set a deferred function to clear the power on counter if the RX has been running for more than 2s
+    deferExecution(2000, []() {
+        if (connectionState != connected && config.GetPowerOnCounter() != 0)
+        {
             config.SetPowerOnCounter(0);
-        });
-    }
+            config.Commit();
+        }
+    });
 }
 
 static void setupTarget()
@@ -1580,17 +1579,13 @@ static void updateBindingMode()
         ExitBindingMode();
     }
 
-    // If the power on counter is >=3, clear counter and enter binding
+    // If the power on counter is >=3, enter binding, the counter will be reset after 2s
     else if (config.GetPowerOnCounter() >= 3)
     {
-        config.SetPowerOnCounter(0);
-        config.Commit();
-
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // Never enter wifi if forced to binding mode
         webserverPreventAutoStart = true;
 #endif
-
         DBGLN("Power on counter >=3, enter binding mode...");
         EnterBindingMode();
     }
@@ -1902,6 +1897,12 @@ void loop()
 
     CheckConfigChangePending();
     executeDeferredFunction(now);
+
+    // Clear the power-on-count
+    if ((connectionState == connected || connectionState == tentative) && config.GetPowerOnCounter() != 0)
+    {
+        config.SetPowerOnCounter(0);
+    }
 
     if (connectionState > MODE_STATES)
     {
