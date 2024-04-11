@@ -414,7 +414,11 @@ function updateConfig(data, options) {
   _('serial-protocol').onchange();
   _('serial1-protocol').value = data['serial1-protocol'];
   _('serial1-protocol').onchange();
-  _('is-airport').onchange = _('serial-protocol').onchange;
+  _('is-airport').onchange = () => {
+    _('serial-protocol').onchange();
+    _('serial1-protocol').onchange();
+  } 
+  _('is-airport').onchange;
   _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
   _('vbind').onchange = () => {
     _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
