@@ -1024,6 +1024,7 @@ RxConfig::SetDefaults(bool commit)
 #endif
 
     m_config.teamraceChannel = AUX7; // CH11
+    m_config.IRiLapCode = 0xffffffffffff;
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
