@@ -540,6 +540,26 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
   json["product_name"] = product_name;
   json["lua_name"] = device_name;
   json["reg_domain"] = FHSSgetRegulatoryDomain();
+  json["git-commit"] = commit;
+#if defined(TARGET_TX)
+  json["module-type"] = "TX";
+#endif
+#if defined(TARGET_RX)
+  json["module-type"] = "RX";
+#endif
+#if defined(RADIO_SX128X)
+  json["radio-type"] = "SX128X";
+  json["has-sub-ghz"] = false;
+#endif
+#if defined(RADIO_SX127X)
+  json["radio-type"] = "SX127X";
+  json["has-sub-ghz"] = true;
+#endif
+#if defined(RADIO_LR1121)
+  json["radio-type"] = "LR1121";
+  json["has-sub-ghz"] = true;
+#endif
+
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);
