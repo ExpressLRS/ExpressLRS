@@ -10,6 +10,7 @@
 
 #include "driver/rmt.h"
 #include "common.h"
+#include "rmtallocator.h"
 
 class EncoderRMT {
 public:
@@ -27,9 +28,12 @@ enum eTransponderRMTState : uint8_t {
 
 class TransponderRMT {
 public:
-    TransponderRMT() : state(TRMT_STATE_UNINIT) {};
+    TransponderRMT() :
+        haveChannel(false),
+        state(TRMT_STATE_UNINIT)
+        {};
 
-    void configurePeripheral(rmt_channel_t channel, gpio_num_t gpio);
+    void configurePeripheral(gpio_num_t gpio);
     bool init(uint32_t desired_resolution_hz, uint32_t carrier_hz, uint8_t carrier_duty);
     bool isInitialised() { return state >= TRMT_STATE_INIT; };
 
@@ -39,7 +43,10 @@ public:
 
 private:
     uint32_t resolutionHz;
+
+    bool haveChannel;
     rmt_channel_t channel;
+
     gpio_num_t gpio;
     eTransponderRMTState state;
 

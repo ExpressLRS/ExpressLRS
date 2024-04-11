@@ -50,7 +50,7 @@ static void activateProtocol(eIRProtocol irProtocol) {
 
 static void initialise()
 {
-    transponderRMT.configurePeripheral(RMT_CHANNEL_0, (gpio_num_t)GPIO_IR_TRANSPONDER);
+    transponderRMT.configurePeripheral((gpio_num_t)GPIO_IR_TRANSPONDER);
 }
 
 static int start()

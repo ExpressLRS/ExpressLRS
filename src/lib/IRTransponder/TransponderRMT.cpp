@@ -10,9 +10,8 @@
 #include "logging.h"
 #include "TransponderRMT.h"
 
-void TransponderRMT::configurePeripheral(rmt_channel_t channel, gpio_num_t gpio) {
+void TransponderRMT::configurePeripheral(gpio_num_t gpio) {
     this->gpio = gpio;
-    this->channel = channel;
 }
 
 void TransponderRMT::encode(EncoderRMT *encoder) {
@@ -37,6 +36,14 @@ bool TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, u
 
     rmtItemCount = 0;
     state = TRMT_STATE_RETRY_INIT;
+
+    if (!haveChannel) {
+        haveChannel = rmtAllocator.allocateTX(channel);
+        if (!haveChannel) {
+            DBGLN("TransponderRMT::init, channel allocation failed");
+            return false;
+        }
+    }
 
     uint8_t divider = APB_CLK_FREQ / desired_resolution_hz;
     resolutionHz = APB_CLK_FREQ / divider;
@@ -86,6 +93,10 @@ bool TransponderRMT::init(uint32_t desired_resolution_hz, uint32_t carrier_hz, u
 void TransponderRMT::deinit() {
     DBGLN("TransponderRMT::deinit, channel: %d", channel);
     rmt_driver_uninstall(channel);
+    if (haveChannel) {
+        rmtAllocator.release(channel);
+        haveChannel = false;
+    }
     state = TRMT_STATE_UNINIT;
 }
 

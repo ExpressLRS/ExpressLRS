@@ -6,6 +6,7 @@
 #include "common.h"
 #include "crsf_protocol.h"
 #include "logging.h"
+#include "rmtallocator.h"
 
 #include <driver/rmt.h>
 
@@ -15,14 +16,18 @@ void PPMHandset::Begin()
 {
     constexpr auto divisor = 80 / RMT_TICKS_PER_US;
 
-    rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), PPM_RMT_CHANNEL);
+    // Note: There's no error handling on RMT allocation, nor is there error handling for the call to `rmt_driver_install` below.
+    //       If other code in the TX uses the RMT revisit this situation.
+    rmtAllocator.allocateRX(rmtChannel);
+
+    rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), rmtChannel);
     rmt_rx_config.clk_div = divisor;
     rmt_rx_config.rx_config.idle_threshold = min(65000, RMT_TICKS_PER_US * 4000); // greater than 4ms triggers end of frame
     rmt_config(&rmt_rx_config);
-    rmt_driver_install(PPM_RMT_CHANNEL, 1000, 0);
+    rmt_driver_install(rmtChannel, 1000, 0);
 
-    rmt_get_ringbuf_handle(PPM_RMT_CHANNEL, &rb);
-    rmt_rx_start(PPM_RMT_CHANNEL, true);
+    rmt_get_ringbuf_handle(rmtChannel, &rb);
+    rmt_rx_start(rmtChannel, true);
     lastPPM = 0;
 
     if (connected)
@@ -33,7 +38,8 @@ void PPMHandset::Begin()
 
 void PPMHandset::End()
 {
-    rmt_driver_uninstall(PPM_RMT_CHANNEL);
+    rmt_driver_uninstall(rmtChannel);
+    rmtAllocator.release(rmtChannel);
 }
 
 bool PPMHandset::IsArmed()

@@ -5,6 +5,7 @@
 // Author:  	derdoktor667
 //
 
+#include "rmtallocator.h"
 #include "DShotRMT.h"
 
 DShotRMT::DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel) : gpio_num(gpio), rmt_channel(rmtChannel) {
@@ -15,6 +16,7 @@ DShotRMT::DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel) : gpio_num(gpio), 
 DShotRMT::~DShotRMT() {
 	rmt_tx_stop(rmt_channel);
 	rmt_driver_uninstall(rmt_channel);
+    rmtAllocator.release(rmt_channel);
 }
 
 bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
