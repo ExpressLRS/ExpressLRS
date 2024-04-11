@@ -428,9 +428,9 @@ function updateConfig(data, options) {
     _('IR-ilapcode-config').style.display = _('IR-protocol').value == 2 ? 'block' : 'none';
   }
   _('IR-protocol').onchange();
-  var iLapCode = data['IR-ilapcode-config'].toString(16).toUpperCase();
-  _('IR-ilapcode').value = '000000000000'.substring(0,12-iLapCode.length) + iLapCode;;
-
+  var iLapCode = data['IR-ilapcode-config'].toString(16).toUpperCase().substring(0, 12).padStart(12, "0");
+  _('IR-ilapcode').value = iLapCode
+  
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
   data.pwm.forEach((item,index) => {
