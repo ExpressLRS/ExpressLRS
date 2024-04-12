@@ -212,8 +212,6 @@ function updatePwmSettings(arPwm) {
   
   modeSelectionInit = false;
 
-  modeSelectionInit = false;
-
   // put some constraints on pinRx/Tx mode selects
   if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
     const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
