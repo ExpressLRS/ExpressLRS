@@ -2,10 +2,6 @@
 
 #include "targets.h"
 
-#if defined(PLATFORM_ESP32)
-#include "driver/rmt.h"
-#endif
-
 /**
  * @brief Abstract class that is extended to provide an interface to a handset.
  *

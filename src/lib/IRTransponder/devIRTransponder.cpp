@@ -1,5 +1,5 @@
 //
-// Authors: 
+// Authors:
 // * Mickey (mha1, initial RMT implementation)
 // * Dominic Clifton (hydra, refactoring for multiple-transponder systems, iLap support)
 //
@@ -19,8 +19,10 @@ static eIRProtocol activeIRProtocol = IRPROTOCOL_NONE;
 
 TransponderRMT transponderRMT;
 
-static void deinitCurrentProtocol() {
-    if (transponder == nullptr) {
+static void deinitCurrentProtocol()
+{
+    if (transponder == nullptr)
+    {
         return;
     }
 
@@ -28,22 +30,24 @@ static void deinitCurrentProtocol() {
     transponder = nullptr;
 }
 
-static void activateProtocol(eIRProtocol irProtocol) {
+static void activateProtocol(eIRProtocol irProtocol)
+{
     activeIRProtocol = irProtocol;
 
     switch (irProtocol)
     {
-        case IRPROTOCOL_ROBITRONIC:
-            transponder = new RobitronicTransponder(&transponderRMT);
-            break;
-        case IRPROTOCOL_ILAP:
-            transponder = new ILapTransponder(&transponderRMT);
-            break;
-        default:
-            return;
+    case IRPROTOCOL_ROBITRONIC:
+        transponder = new RobitronicTransponder(&transponderRMT);
+        break;
+    case IRPROTOCOL_ILAP:
+        transponder = new ILapTransponder(&transponderRMT);
+        break;
+    default:
+        return;
     }
 
-    if (transponder) {
+    if (transponder)
+    {
         transponder->init();
     }
 }
@@ -64,18 +68,22 @@ static int timeout()
 
     bool protocolChanged = irProtocol != activeIRProtocol;
     if (protocolChanged)
-    {        
+    {
         deinitCurrentProtocol();
         activateProtocol(irProtocol);
 
         return DURATION_IMMEDIATELY;
-    } else {
+    }
+    else
+    {
         // if no protocol is active try again in after a short delay
-        if (activeIRProtocol == IRPROTOCOL_NONE || !transponder) {
+        if (activeIRProtocol == IRPROTOCOL_NONE || !transponder)
+        {
             return 500;
         }
 
-        if (!transponder->isInitialised()) {
+        if (!transponder->isInitialised())
+        {
             transponder->init();
         }
         transponder->startTransmission();
@@ -83,17 +91,16 @@ static int timeout()
         // TODO move this into the transponder API
         switch (activeIRProtocol)
         {
-            case IRPROTOCOL_ROBITRONIC:
-                // random wait between 0,5mm and 4,5ms
-                return (rngN(5) + 1);
-                break;
-            case IRPROTOCOL_ILAP:
-                return (10); // TODO
-                break;
-            default:
-                break;
+        case IRPROTOCOL_ROBITRONIC:
+            // random wait between 0.5ms and 4.5ms
+            return (rngN(5) + 1);
+            break;
+        case IRPROTOCOL_ILAP:
+            return (10); // TODO
+            break;
+        default:
+            break;
         }
-
     }
 
     return 1000;

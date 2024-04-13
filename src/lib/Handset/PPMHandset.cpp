@@ -8,8 +8,6 @@
 #include "logging.h"
 #include "rmtallocator.h"
 
-#include <driver/rmt.h>
-
 constexpr auto RMT_TICKS_PER_US = 10;
 
 void PPMHandset::Begin()

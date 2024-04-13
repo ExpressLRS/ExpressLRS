@@ -12,8 +12,8 @@
 #include "logging.h"
 #include "ILapTransponder.h"
 
-#define NBITS   ((1+8+1) * 6) // 60
-#define BYTES   6
+#define NBITS ((1 + 8 + 1) * 6) // 60
+#define BYTES 6
 #define BITRATE 38400
 #define BIT_PERIODS 12
 #define CARRIER_HZ 460800
@@ -42,14 +42,14 @@
 // thus, the code could be improved to calculate the bitrate based on the ACTUAL resolution of the RMT.
 // actual RMT resolution should be used to set the carrier_hz and the bitrate
 
-
 bool ILapTransponder::init()
 {
-    if (!transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY)) {
-      return false;
-    };
+    if (!transponderRMT->init(BITRATE * BIT_PERIODS, CARRIER_HZ, CARRIER_DUTY))
+    {
+        return false;
+    }
 
-    //uint64_t data = 0xFF0FEDCBA987; // NOT A VALID TRANSPONDER CODE
+    // uint64_t data = 0xFF0FEDCBA987; // NOT A VALID TRANSPONDER CODE
     uint64_t data = config.GetIRiLapCode();
 
     DBGLN("ILapTransponder::init, data: 0x%x", data);
@@ -70,13 +70,15 @@ void ILapTransponder::startTransmission()
     transponderRMT->start();
 }
 
-void ILapEncoder::encode(TransponderRMT *transponderRMT, uint64_t data) {
+void ILapEncoder::encode(TransponderRMT *transponderRMT, uint64_t data)
+{
     generateBitStream(data);
     bits_encoded = 0;
     transponderRMT->encode(this);
 }
 
-bool ILapEncoder::encode_bit(rmt_item32_t *rmtItem) {
+bool ILapEncoder::encode_bit(rmt_item32_t *rmtItem)
+{
 
     uint8_t bit = (bitStream & ((uint64_t)1 << NBITS)) > 0 ? 1 : 0;
     DBGVLN("ILapEncoder::encode_bit, index: %d, bit: %d", bits_encoded, bit);
@@ -98,47 +100,53 @@ bool ILapEncoder::encode_bit(rmt_item32_t *rmtItem) {
 
     bitStream <<= 1;
 
-    bits_encoded ++;
+    bits_encoded++;
 
     bool done = bits_encoded == NBITS;
 
     return done;
 }
 
-void ILapEncoder::generateBitStream(uint64_t data) {
-  uint8_t byte;
-  uint64_t mask;
+void ILapEncoder::generateBitStream(uint64_t data)
+{
+    uint8_t byte;
+    uint64_t mask;
 
-  bitStream = 0;
+    bitStream = 0;
 
-  for (uint8_t i = 0; i < BYTES; i++) {
-    // start bit
-    bitStream |= 1; bitStream <<= 1;
+    for (uint8_t i = 0; i < BYTES; i++)
+    {
+        // start bit
+        bitStream |= 1;
+        bitStream <<= 1;
 
-    byte = ((uint8_t *)&data)[ BYTES - i - 1];
-    DBGLN("ILapEncoder::generateBitStream, byte: 0x%x", byte);
+        byte = ((uint8_t *)&data)[BYTES - i - 1];
+        DBGLN("ILapEncoder::generateBitStream, byte: 0x%x", byte);
 
-    mask = 0x01; // start with LSB
+        mask = 0x01; // start with LSB
 
-    // 8 data bits, LSB first
-    for (uint8_t n = 0; n < 8; n++) {
-      uint8_t bit = 0;
-      if (!(byte & mask))
-        bit |= 1;
+        // 8 data bits, LSB first
+        for (uint8_t n = 0; n < 8; n++)
+        {
+            uint8_t bit = 0;
+            if (!(byte & mask))
+            {
+                bit |= 1;
+            }
 
-      DBGVLN("ILapEncoder::generateBitStream, byte_index: %d, bit_of_byte: %d, byte: %x, bit: %d", i, n, byte, bit);
+            DBGVLN("ILapEncoder::generateBitStream, byte_index: %d, bit_of_byte: %d, byte: %x, bit: %d", i, n, byte, bit);
 
-      bitStream |= bit;
-      bitStream <<= 1;
-      mask <<= 1;
+            bitStream |= bit;
+            bitStream <<= 1;
+            mask <<= 1;
+        }
+
+        // no parity bit
+
+        // stop bit
+        bitStream <<= 1;
     }
-
-    // no parity bit
-
-    //stop bit
-    bitStream <<= 1;
-  }
-  bitStream >>= 1;
+    bitStream >>= 1;
 }
 
 #endif

@@ -8,7 +8,6 @@
 
 #if defined(PLATFORM_ESP32)
 
-#include "driver/rmt.h"
 #include "common.h"
 #include "rmtallocator.h"
 
@@ -41,9 +40,9 @@ enum eTransponderRMTState : uint8_t {
 class TransponderRMT {
 public:
     TransponderRMT() :
-        haveChannel(false),
-        state(TRMT_STATE_UNINIT)
-        {};
+          haveChannel(false),
+          state(TRMT_STATE_UNINIT)
+              {};
 
     /**
      * @brief Configure the peripheral
