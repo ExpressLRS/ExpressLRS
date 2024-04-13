@@ -433,10 +433,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         return false; // don't bother sending tlm if disconnected or TLM is off
     }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment();
-#endif
-
     // ESP requires word aligned buffer
     WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
     alreadyTLMresp = true;
@@ -1120,10 +1116,9 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
 void ICACHE_RAM_ATTR TXdoneISR()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment();
-#else
     Radio.RXnb();
+#if defined(Regulatory_Domain_EU_CE_2400)
+    SetClearChannelAssessmentTime();
 #endif
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');

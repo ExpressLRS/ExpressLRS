@@ -247,6 +247,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
     }
   }
+  
+#if defined(Regulatory_Domain_EU_CE_2400)
+  SetClearChannelAssessmentTime();
+#endif
+
   return true;
 }
 
@@ -583,9 +588,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     // set the transceiver the correct fallback mode
     Radio.TXdoneCallback();
   }
+  else
 #endif
-
-  Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+  {
+    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+  }
 }
 
 void ICACHE_RAM_ATTR nonceAdvance()
@@ -607,12 +614,6 @@ void ICACHE_RAM_ATTR timerCallback()
   {
     nonceAdvance();
     return;
-  }
-
-  // No packet has been sent due to LBT.  Call TXdoneCallback to prepare for TLM.
-  if (Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
-  {
-		Radio.TXdoneCallback();
   }
 
   // Sync OpenTX to this point
@@ -656,11 +657,17 @@ void ICACHE_RAM_ATTR timerCallback()
     // Indicate no telemetry packet received to the DP system
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
   }
-  TelemetryRcvPhase = ttrpTransmitting;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-    BeginClearChannelAssessment(); // Get RSSI reading here, used also for next TX if in receiveMode.
+  // The last period was receiving tlm, but nothing was received.
+  // No need to enter rxmode again, lets just read the latest GetRssiInst().
+  if (!(TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet()))
+  {
+    SetClearChannelAssessmentTime(); // Get RSSI reading here, used also for next TX if in receiveMode.
+  }
 #endif
+
+  TelemetryRcvPhase = ttrpTransmitting;
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
@@ -842,7 +849,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
       // from RX enable to valid instant RSSI values are returned.
       // If rx was already started by TLM prepare above, this call will let RX
       // continue as normal.
-      BeginClearChannelAssessment();
+      SetClearChannelAssessmentTime();
     }
 #endif // non-CE
   }
@@ -1342,7 +1349,7 @@ void setup()
       ChangeRadioParams();
 
   #if defined(Regulatory_Domain_EU_CE_2400)
-      BeginClearChannelAssessment();
+      SetClearChannelAssessmentTime();
   #endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;

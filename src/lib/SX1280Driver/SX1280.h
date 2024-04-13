@@ -41,7 +41,7 @@ public:
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX);
+    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX, uint32_t incomingTimeout = 0);
 
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
@@ -64,7 +64,7 @@ private:
     uint8_t pwrPending;
     SX1280_RadioOperatingModes_t fallBackMode;
 
-    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
+    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
 
     // LoRa functions
