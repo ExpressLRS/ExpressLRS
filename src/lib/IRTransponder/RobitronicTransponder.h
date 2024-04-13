@@ -13,6 +13,9 @@
 
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
+/**
+ * @brief Encoder for a Robitronic RMT transponder
+ */
 class RobitronicEncoder : public EncoderRMT {
 public:
     virtual bool encode_bit(rmt_item32_t *rmtItem);
@@ -26,8 +29,15 @@ private:
     void generateBitStream(uint32_t id);
 };
 
+/**
+ * @brief Robitronic transponder system.
+ */
 class RobitronicTransponder : public TransponderSystem {
 public:
+    /**
+     * @brief Create an instance
+     * @param transponderRMT the RMT transponder implementation to use.
+     */
     RobitronicTransponder(TransponderRMT *transponderRMT) {
         this->transponderRMT = transponderRMT;
         this->encoder = new RobitronicEncoder();

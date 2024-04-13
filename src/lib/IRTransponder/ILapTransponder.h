@@ -12,6 +12,9 @@
 
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
+/**
+ * @brief Encoder for an ILap RMT transponder
+ */
 class ILapEncoder : public EncoderRMT {
 public:
     virtual bool encode_bit(rmt_item32_t *rmtItem);
@@ -24,8 +27,15 @@ private:
     void generateBitStream(uint64_t id);
 };
 
+/**
+ * @brief ILap transponder system.
+ */
 class ILapTransponder : public TransponderSystem {
 public:
+    /**
+     * @brief Create an instance
+     * @param transponderRMT the RMT transponder implementation to use.
+     */
     ILapTransponder(TransponderRMT *transponderRMT) {
         this->transponderRMT = transponderRMT;
         this->encoder = new ILapEncoder();
