@@ -61,6 +61,8 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
+#define DURATION_RETRY_OR_REINIT 1000
+
 static int timeout()
 {
     eIRProtocol irProtocol = config.GetIRProtocol();
@@ -91,7 +93,7 @@ static int timeout()
         return intervalMs;
     }
 
-    return 1000;
+    return DURATION_RETRY_OR_REINIT;
 }
 
 device_t ir_transponder_device = {
