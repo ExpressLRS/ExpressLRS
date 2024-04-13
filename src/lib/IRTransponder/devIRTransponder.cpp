@@ -61,7 +61,7 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
-#define DURATION_RETRY_OR_REINIT 1000
+#define DURATION_REINIT 500
 
 static int timeout()
 {
@@ -75,25 +75,21 @@ static int timeout()
 
         return DURATION_IMMEDIATELY;
     }
-    else
+
+    // if no protocol is active try again in after a short delay
+    if (activeIRProtocol == IRPROTOCOL_NONE || !transponder)
     {
-        // if no protocol is active try again in after a short delay
-        if (activeIRProtocol == IRPROTOCOL_NONE || !transponder)
-        {
-            return 500;
-        }
-
-        if (!transponder->isInitialised())
-        {
-            transponder->init();
-        }
-        uint32_t intervalMs;
-        transponder->startTransmission(intervalMs);
-
-        return intervalMs;
+        return DURATION_REINIT;
     }
 
-    return DURATION_RETRY_OR_REINIT;
+    if (!transponder->isInitialised())
+    {
+        transponder->init();
+    }
+    uint32_t intervalMs;
+    transponder->startTransmission(intervalMs);
+
+    return intervalMs;
 }
 
 device_t ir_transponder_device = {
