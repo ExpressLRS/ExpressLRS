@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include "logging.h"
+#include "random.h"
 #include "ILapTransponder.h"
 
 #define NBITS ((1 + 8 + 1) * 6) // 60
@@ -18,6 +19,8 @@
 #define BIT_PERIODS 12
 #define CARRIER_HZ 460800
 #define CARRIER_DUTY 50
+#define INTERVAL_JITTER_MS 11
+#define MINIMUM_INTERVAL_MS 4
 
 // iLap scope measurements
 // 1 pulse = 2.175us (@500ns/div)
@@ -65,9 +68,14 @@ void ILapTransponder::deinit()
     transponderRMT->deinit();
 }
 
-void ILapTransponder::startTransmission()
+void ILapTransponder::startTransmission(uint32_t &intervalMs)
 {
     transponderRMT->start();
+
+    // Original ILap transponders have an random interval between the START of one transmission and the START of the next of between 4.5ms and 15ms
+    // which gives a 4ms jitter difference, however the resolution here is one millisecond, and we need to account for the time it takes to do a transmission (~1.6mS)
+    // so the best we can do is from 4ms to 15ms
+    intervalMs = MINIMUM_INTERVAL_MS + rngN(INTERVAL_JITTER_MS + 1);
 }
 
 void ILapEncoder::encode(TransponderRMT *transponderRMT, uint64_t data)

@@ -7,6 +7,7 @@
 
 #include <Arduino.h>
 #include "logging.h"
+#include "random.h"
 #include "RobitronicTransponder.h"
 
 #define NBITS 44
@@ -15,6 +16,8 @@
 #define BIT_PERIODS 16
 #define CARRIER_HZ 0
 #define CARRIER_DUTY 0
+#define INTERVAL_JITTER_MS 4
+#define MINIMUM_INTERVAL_MS 1
 
 bool RobitronicTransponder::init()
 {
@@ -41,9 +44,14 @@ void RobitronicTransponder::deinit()
     transponderRMT->deinit();
 }
 
-void RobitronicTransponder::startTransmission()
+void RobitronicTransponder::startTransmission(uint32_t &intervalMs)
 {
     transponderRMT->start();
+
+    // Original robitronic transponders have an random interval between the END of one transmission and the START of the next of between 0.5ms and 4.5ms
+    // which gives a 4ms jitter difference, however the resolution here is one millisecond, and we need to account for the time it takes to do a transmission (~400uS)
+    // so the best we can do is from 1ms to 5ms
+    intervalMs = MINIMUM_INTERVAL_MS + rngN(INTERVAL_JITTER_MS + 1);
 }
 
 void RobitronicEncoder::encode(TransponderRMT *transponderRMT, uint32_t id)

@@ -10,7 +10,6 @@
 #include "ILapTransponder.h"
 #include "options.h"
 #include "config.h"
-#include "random.h"
 
 #if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
 
@@ -86,21 +85,10 @@ static int timeout()
         {
             transponder->init();
         }
-        transponder->startTransmission();
+        uint32_t intervalMs;
+        transponder->startTransmission(intervalMs);
 
-        // TODO move this into the transponder API
-        switch (activeIRProtocol)
-        {
-        case IRPROTOCOL_ROBITRONIC:
-            // random wait between 0.5ms and 4.5ms
-            return (rngN(5) + 1);
-            break;
-        case IRPROTOCOL_ILAP:
-            return (10); // TODO
-            break;
-        default:
-            break;
-        }
+        return intervalMs;
     }
 
     return 1000;

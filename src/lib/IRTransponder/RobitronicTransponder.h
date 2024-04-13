@@ -46,7 +46,7 @@ public:
 
     virtual bool init();
     virtual bool isInitialised() { return transponderRMT->isInitialised(); };
-    virtual void startTransmission();
+    virtual void startTransmission(uint32_t &intervalMs);
 
 protected:
     virtual void deinit();
