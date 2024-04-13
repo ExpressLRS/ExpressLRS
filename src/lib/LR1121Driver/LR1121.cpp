@@ -41,7 +41,8 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
-    fallBackMode = LR1121_MODE_STDBY_XOSC;
+    fallBackMode = LR1121_MODE_FS;
+    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::End()
@@ -100,14 +101,6 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     // 7.2.5 SetRxTxFallbackMode
     uint8_t FBbuf[1] = {LR11XX_RADIO_FALLBACK_FS};
     fallBackMode = LR1121_MODE_FS;
-#if defined(TARGET_TX)
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        FBbuf[0] = {LR11XX_RADIO_FALLBACK_STDBY_XOSC};
-        fallBackMode = LR1121_MODE_STDBY_XOSC;
-    }
-#endif
-    // 7.2.5 SetRxTxFallbackMode
     hal.WriteCommand(LR11XX_RADIO_SET_RX_TX_FALLBACK_MODE_OC, FBbuf, sizeof(FBbuf), SX12XX_Radio_All);
 
     // 7.2.12 SetRxBoosted
@@ -728,6 +721,9 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
+    if (instance->ignoreSecondIRQ)
+        return;
+
     instance->processingPacketRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
@@ -735,12 +731,13 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->TXnbISR();
         instance->ClearIrqStatus(SX12XX_Radio_All);
+        instance->ignoreSecondIRQ = true;  
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            instance->ClearIrqStatus(SX12XX_Radio_All);
+            instance->ignoreSecondIRQ = true;  
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else

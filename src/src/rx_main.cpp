@@ -52,7 +52,7 @@
 #define DIVERSITY_ANTENNA_INTERVAL 5
 #define DIVERSITY_ANTENNA_RSSI_TRIGGER 5
 #if defined(RADIO_LR1121)
-#define PACKET_TO_TOCK_SLACK 280 // Desired buffer time between Packet ISR and Tock ISR. Increase slack due to the LR1121s slow processing time.  Mainly required for 500Hz mode.
+#define PACKET_TO_TOCK_SLACK 240 // Desired buffer time between Packet ISR and Tock ISR. Increase slack due to the LR1121s slow processing time.  Mainly required for 500Hz mode.
 #else
 #define PACKET_TO_TOCK_SLACK 200 // Desired buffer time between Packet ISR and Tock ISR
 #endif
@@ -383,8 +383,10 @@ bool ICACHE_RAM_ATTR HandleFHSS()
         }
         else
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_2);
+            // Write radio1 first. This optimises the SPI traffic order.
+            uint32_t freqRadio2 = FHSSgetNextFreq();
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
         }
     }
     else
@@ -1955,6 +1957,7 @@ void loop()
     DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
+    Radio.ignoreSecondIRQ = false;
 }
 
 struct bootloader {

@@ -414,8 +414,18 @@ void ICACHE_RAM_ATTR HandleFHSS()
     // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
     if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
     {
-      Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-      Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        // Optimises the SPI traffic order.
+        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+        {
+            uint32_t freqRadio = FHSSgetNextFreq();
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1);
+        }
+        else
+        {
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+        }
     }
     else
     {
@@ -615,6 +625,8 @@ void ICACHE_RAM_ATTR timerCallback()
     nonceAdvance();
     return;
   }
+  
+  Radio.isFirstRxIrq = true;
 
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
@@ -1374,6 +1386,8 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+  
+  Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
 
