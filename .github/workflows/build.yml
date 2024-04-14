@@ -147,7 +147,9 @@ jobs:
           merge-multiple: true
 
       - name: Copy hardware files to firmware folder
-        run: cp -r src/hardware dist/firmware
+        run: |
+          cp -r src/hardware dist/firmware
+          jq 'del(.generic)' src/hardware/targets.json > dist/firmware/hardware/targets.json
 
       - name: Copy Lua to to firmware folder
         run: |
