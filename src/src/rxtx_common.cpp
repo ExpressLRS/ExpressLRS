@@ -88,9 +88,12 @@ void deferExecutionMicros(unsigned long us, std::function<void()> f)
             deferred[i].started = micros();
             deferred[i].timeout = us;
             deferred[i].function = f;
-            break;
+            return;
         }
     }
+
+    // Bail out, there are no slots available!
+    DBGLN("No more deferred function slots available!");
 }
 
 void executeDeferredFunction(unsigned long now)
