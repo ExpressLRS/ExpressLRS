@@ -265,7 +265,7 @@ public:
         : SerialIO(&out, &in)
     {
         // use UART0 default rx pin for half duplex if not defined otherwise
-        rxPin = GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN ? 3 : GPIO_PIN_RCSIGNAL_RX;
+        rxPin = GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN ? U0RXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_RX;
 
         uint32_t now = millis();
 
