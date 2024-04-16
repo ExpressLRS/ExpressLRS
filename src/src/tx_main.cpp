@@ -1381,9 +1381,6 @@ void setup()
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   }
-
-  pinMode(19, OUTPUT);
-  digitalWrite(19, LOW);
 }
 
 void loop()
