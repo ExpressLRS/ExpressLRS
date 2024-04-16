@@ -57,7 +57,7 @@ extern void setButtonColors(uint8_t b1, uint8_t b2);
 extern RxConfig config;
 #endif
 
-extern void deferExecution(uint32_t ms, std::function<void()> f);
+extern void deferExecution(unsigned long us, std::function<void()> f);
 extern unsigned long rebootTime;
 
 static char station_ssid[33];

@@ -9,8 +9,8 @@
 #include <Wire.h>
 #endif
 
-static uint32_t startDeferredTime = 0;
-static uint32_t deferredTimeout = 0;
+static unsigned long startDeferredTime = 0;
+static unsigned long deferredTimeout = 0;
 static std::function<void()> deferredFunction = nullptr;
 
 boolean i2c_enabled = false;
@@ -69,10 +69,10 @@ void setupTargetCommon()
     setupWire();
 }
 
-void deferExecution(uint32_t ms, std::function<void()> f)
+void deferExecution(unsigned long us, std::function<void()> f)
 {
-    startDeferredTime = millis();
-    deferredTimeout = ms;
+    startDeferredTime = micros();
+    deferredTimeout = us;
     deferredFunction = f;
 }
 

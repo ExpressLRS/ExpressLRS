@@ -4,7 +4,7 @@
 #include "helpers.h"
 #include "devServoOutput.h"
 
-extern void deferExecution(uint32_t ms, std::function<void()> f);
+extern void deferExecution(unsigned long us, std::function<void()> f);
 extern void reconfigureSerial();
 extern bool BindingModeRequest;
 
@@ -318,7 +318,7 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
 
   if (oldMode != newMode)
   {
-    deferExecution(100, [](){
+    deferExecution(100000, [](){
       reconfigureSerial();
     });
   }
@@ -415,7 +415,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
-      deferExecution(100, [](){
+      deferExecution(100000, [](){
         reconfigureSerial();
       });
     }
@@ -476,7 +476,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
-      deferExecution(200, [](){ BindingModeRequest = true; });
+      deferExecution(200000, [](){ BindingModeRequest = true; });
     }
     sendLuaCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
   });
