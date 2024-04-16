@@ -12,7 +12,6 @@
 #include "LQCALC.h"
 #include "OTA.h"
 #include "POWERMGNT.h"
+#include "deferred.h"
 
 void setupTargetCommon();
-void deferExecution(unsigned long us, std::function<void()> f);
-void executeDeferredFunction(unsigned long now);

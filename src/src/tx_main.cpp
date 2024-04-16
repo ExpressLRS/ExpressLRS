@@ -594,7 +594,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     // No packet will be sent due to LBT.
     // Defer TXdoneCallback() to prepare for TLM when the IRQ is normally triggered.
-    deferExecution(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
+    deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
         Radio.TXdoneCallback();
     });
   }

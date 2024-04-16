@@ -9,9 +9,19 @@
 #include <Wire.h>
 #endif
 
-static unsigned long startDeferredTime = 0;
-static unsigned long deferredTimeout = 0;
-static std::function<void()> deferredFunction = nullptr;
+static const int maxDeferredFunctions = 3;
+
+struct deferred_t {
+    unsigned long started;
+    unsigned long timeout;
+    std::function<void()> function;
+};
+
+static deferred_t deferred[maxDeferredFunctions] = {
+    {0, 0, nullptr},
+    {0, 0, nullptr},
+    {0, 0, nullptr},
+};
 
 boolean i2c_enabled = false;
 
@@ -69,19 +79,29 @@ void setupTargetCommon()
     setupWire();
 }
 
-void deferExecution(unsigned long us, std::function<void()> f)
+void deferExecutionMicros(unsigned long us, std::function<void()> f)
 {
-    startDeferredTime = micros();
-    deferredTimeout = us;
-    deferredFunction = f;
+    for (int i=0 ; i<maxDeferredFunctions ; i++)
+    {
+        if (deferred[i].function == nullptr)
+        {
+            deferred[i].started = micros();
+            deferred[i].timeout = us;
+            deferred[i].function = f;
+            break;
+        }
+    }
 }
 
 void executeDeferredFunction(unsigned long now)
 {
     // execute deferred function if its time has elapsed
-    if (deferredFunction != nullptr && (now - startDeferredTime) > deferredTimeout)
+    for (int i=0 ; i<maxDeferredFunctions ; i++)
     {
-        deferredFunction();
-        deferredFunction = nullptr;
+        if (deferred[i].function != nullptr && (now - deferred[i].started) > deferred[i].timeout)
+        {
+            deferred[i].function();
+            deferred[i].function = nullptr;
+        }
     }
 }

@@ -1156,7 +1156,7 @@ void MspReceiveComplete()
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
-        deferExecution(500000, []() {
+        deferExecutionMillis(500, []() {
             setWifiUpdateMode();
         });
 #endif
@@ -1397,7 +1397,7 @@ static void setupConfigAndPocCheck()
     }
 
     // Set a deferred function to clear the power on counter if the RX has been running for more than 2s
-    deferExecution(2000000, []() {
+    deferExecutionMillis(2000, []() {
         if (connectionState != connected && config.GetPowerOnCounter() != 0)
         {
             config.SetPowerOnCounter(0);
