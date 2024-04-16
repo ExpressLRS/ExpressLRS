@@ -10,6 +10,7 @@
 #define HOTT_LEAD_OUT 10        // minimum gap between end of payload to next poll
 
 #define HOTT_CMD_DELAY 1        // 1 ms delay between CMD byte 1 and 2
+#define HOTT_WAIT_TX_COMPLETE 2 // 2 ms wait for CMD bytes transmission complete
 
 #define DISCOVERY_TIMEOUT 30000 // 30s device discovery time
 
@@ -35,6 +36,27 @@ extern Telemetry telemetry;
 int SerialHoTT_TLM::getMaxSerialReadSize()
 {
     return HOTT_MAX_BUF_LEN - hottInputBuffer.size();
+}
+
+void SerialHoTT_TLM::setTXMode()
+{
+#if defined(PLATFORM_ESP32)
+    // assumes half duplex line is connected to Serial RX GPIO
+    pinMatrixInDetach(rxPin, false, false);                 // attach UART0 RX to static high level
+    pinMode(rxPin, OUTPUT);                                 // set GPIO to OUTPUT
+    digitalWrite(rxPin, 1);                                 // and set it to high level
+    pinMatrixOutAttach(rxPin, U0TXD_OUT_IDX, false, false); // attach GPIO to UART0 TX
+#endif
+}
+
+void SerialHoTT_TLM::setRXMode()
+{
+#if defined(PLATFORM_ESP32)
+    // assumes half duplex line is connected to Serial RX GPIO
+    pinMatrixOutDetach(rxPin, false, false);                // disconnect GPIO
+    pinMode(rxPin, INPUT_PULLUP);                           // set GPIO to input mode
+    pinMatrixInAttach(rxPin, U0RXD_IN_IDX, false);          // attach GPIO as input to UART0 RX
+#endif
 }
 
 void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
@@ -117,21 +139,27 @@ void SerialHoTT_TLM::scheduleDevicePolling(uint32_t now)
         // clear serial in buffer
         hottInputBuffer.flush();
 
-        // write CMD byte 1
+        // switch to half duplex TX mode and write CMD byte 1
+        setTXMode();
         _outputPort->write(START_OF_CMD_B);
-
-        // ready to send CMD byte 2
-        sendCmdByte2 = true;
+        cmdSendState = HOTT_CMD1SENT;
+        return;
     }
 
     // delay sending CMD byte 2 to accomodate for slow devices
-    if ((now - lastPoll >= HOTT_CMD_DELAY) && sendCmdByte2)
+    if ((now - lastPoll >= HOTT_CMD_DELAY) && cmdSendState == HOTT_CMD1SENT)
     {
-        // write CMD byte 2
         _outputPort->write(nextDeviceID);
+        cmdSendState = HOTT_CMD2SENT;
+        return;
+    }
 
-        // both CMD bytes written, prepare next cycle
-        sendCmdByte2 = false;
+    // wait for the last byte being sent out to switch to RX mode
+    if ((now - lastPoll >= HOTT_WAIT_TX_COMPLETE) && cmdSendState == HOTT_CMD2SENT)
+    {
+        // switch to half duplex listen mode
+        setRXMode();
+        cmdSendState = HOTT_RECEIVING;
     }
 }
 

@@ -252,6 +252,11 @@ typedef struct
     bool present;
 } hottDevice_t;
 
+enum {
+    HOTT_RECEIVING,
+    HOTT_CMD1SENT,
+    HOTT_CMD2SENT
+};
 
 class SerialHoTT_TLM : public SerialIO
 {
@@ -259,11 +264,15 @@ public:
     explicit SerialHoTT_TLM(Stream &out, Stream &in)
         : SerialIO(&out, &in)
     {
+        // use UART0 default rx pin for half duplex if not defined otherwise
+        rxPin = GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN ? 3 : GPIO_PIN_RCSIGNAL_RX;
+
         uint32_t now = millis();
 
         lastPoll = now;
-        sendCmdByte2 = false;
         discoveryTimerStart = now;
+
+        cmdSendState = HOTT_RECEIVING;
     }
 
     virtual ~SerialHoTT_TLM() {}
@@ -276,6 +285,9 @@ public:
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
+    void setTXMode();
+    void setRXMode();
+
     void processBytes(uint8_t *bytes, u_int16_t size) override;
     void processFrame();
     uint8_t calcFrameCRC(uint8_t *buf);
@@ -322,12 +334,14 @@ private:
 
     FIFO<HOTT_MAX_BUF_LEN> hottInputBuffer;
 
+    uint8_t rxPin;
+
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
     uint8_t nextDeviceID;
 
     uint32_t lastPoll;
-    bool sendCmdByte2;
+    uint8_t cmdSendState;
     uint32_t discoveryTimerStart;
 
     uint32_t lastVarioSent = 0;
