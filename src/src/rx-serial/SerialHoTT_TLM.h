@@ -1,3 +1,5 @@
+#if defined(TARGET_RX) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+
 #pragma once
 
 #include "SerialIO.h"
@@ -357,3 +359,5 @@ private:
     const int32_t MinScale = 1000000L;
     const int32_t DegScale = 10000000L;
 };
+
+#endif
