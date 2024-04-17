@@ -14,7 +14,7 @@ RC commands are also encrypted.
 
 ## FAQ
 ### How do the performance and features compare?  
-  Performance and features of ELRS are identical for the same version number, because PrivacyLRS is the exact same code as ELRS, just with the packets encrypted.
+  Performance and features of PrivacyLRS are identical for the same version number of ELRS, because PrivacyLRS is the exact same code as ELR - just with the packets encrypted.
   The encryption is much, much faster than the radio link, so there is no measurable delay.
 
 ### How do I use PrivacyLRS?  
