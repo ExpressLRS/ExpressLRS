@@ -3,7 +3,7 @@
 
 # PrivacyLRS
 PrivacyLRS is a privacy-protecting fork of the excellent [ExpressLRS (ELRS)](https://www.expresslrs.org/) long-range RC system.
-PrivacyLRS is for those who want to use telemetry, but not broadcast that telemetry (including GPS location) for 
+PrivacyLRS is for those who want to use telemetry, but not broadcast their GPS location and other telemetry for 
 other people to read.
 
 With *standard* ELRS, it is inconvenient for others to read your telemetry link - they would need to work for it a little bit.
@@ -37,9 +37,9 @@ If you choose to test PrivacyLRS, be sure to set up your failsafe carefully. Bug
 The ELRS documentation makes clear that the binding phrase is *not* a security feature in standard ELRS.
 In standard ELRS, the binding phrase is to prevent *accidental* conflicts between two aircraft.
 This is different in PrivacyLRS. In PrivacyLRS, the bind phrase is used as a small part of the security.
-For this reason, it is recommended to make your bind phrase four words long - four words that other people are unlikely
+For this reason, it is recommended to make your bind phrase three or four words long - four words that other people are unlikely
 to guess.
-PrivacyLRS uses strong cryptographic keys which are radnomly generated, but the bind phrase also plays small part in
+PrivacyLRS uses strong cryptographic keys which are randomly generated, but the bind phrase also plays small part in
 security.
 
 
