@@ -119,7 +119,7 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': '',
+            'PLATFORM': 'Unified_ESP8285',
             'isTX': isTX,
             'hasSubGHz': hasSubGHz
         })
