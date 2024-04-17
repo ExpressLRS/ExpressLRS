@@ -266,8 +266,8 @@ public:
     explicit SerialHoTT_TLM(Stream &out, Stream &in)
         : SerialIO(&out, &in)
     {
-        // use UART0 default rx pin for half duplex if not defined otherwise
-        rxPin = GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN ? U0RXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_RX;
+        // use UART0 default TX pin for half duplex if not defined otherwise
+        halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
 
         uint32_t now = millis();
 
@@ -336,7 +336,7 @@ private:
 
     FIFO<HOTT_MAX_BUF_LEN> hottInputBuffer;
 
-    uint8_t rxPin;
+    uint8_t halfDuplexPin;
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;

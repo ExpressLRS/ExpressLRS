@@ -41,21 +41,17 @@ int SerialHoTT_TLM::getMaxSerialReadSize()
 void SerialHoTT_TLM::setTXMode()
 {
 #if defined(PLATFORM_ESP32)
-    // assumes half duplex line is connected to Serial RX GPIO
-    pinMatrixInDetach(rxPin, false, false);                 // attach UART0 RX to static high level
-    pinMode(rxPin, OUTPUT);                                 // set GPIO to OUTPUT
-    digitalWrite(rxPin, HIGH);                              // and set it to high level
-    pinMatrixOutAttach(rxPin, U0TXD_OUT_IDX, false, false); // attach GPIO to UART0 TX
+    pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
+    digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
+    pinMatrixOutAttach(halfDuplexPin, U0TXD_OUT_IDX, false, false); // attach GPIO as output of UART0 TX
 #endif
 }
 
 void SerialHoTT_TLM::setRXMode()
 {
 #if defined(PLATFORM_ESP32)
-    // assumes half duplex line is connected to Serial RX GPIO
-    pinMatrixOutDetach(rxPin, false, false);                // disconnect GPIO
-    pinMode(rxPin, INPUT_PULLUP);                           // set GPIO to input mode
-    pinMatrixInAttach(rxPin, U0RXD_IN_IDX, false);          // attach GPIO as input to UART0 RX
+    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
+    pinMatrixInAttach(halfDuplexPin, U0RXD_IN_IDX, false);          // attach half duplex GPIO as input to UART0 RX
 #endif
 }
 
