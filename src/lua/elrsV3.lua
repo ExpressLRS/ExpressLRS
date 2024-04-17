@@ -858,20 +858,18 @@ local function setLCDvar()
     maxLineIndex = 14
     textYoffset = 10
     textSize = 22
-  elseif LCD_W == 128 then
-    COL1 = 0
-    COL2 = 70
-    maxLineIndex = 9
-    textYoffset = 3
-    textSize = 8
   else
     if LCD_W == 212 then
       COL2 = 110
     else
       COL2 = 70
     end
+    if LCD_H == 96 then
+      maxLineIndex = 9
+    else
+      maxLineIndex = 6
+    end
     COL1 = 0
-    maxLineIndex = 6
     textYoffset = 3
     textSize = 8
   end
