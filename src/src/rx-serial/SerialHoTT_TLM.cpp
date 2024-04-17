@@ -44,7 +44,7 @@ void SerialHoTT_TLM::setTXMode()
     // assumes half duplex line is connected to Serial RX GPIO
     pinMatrixInDetach(rxPin, false, false);                 // attach UART0 RX to static high level
     pinMode(rxPin, OUTPUT);                                 // set GPIO to OUTPUT
-    digitalWrite(rxPin, 1);                                 // and set it to high level
+    digitalWrite(rxPin, HIGH);                              // and set it to high level
     pinMatrixOutAttach(rxPin, U0TXD_OUT_IDX, false, false); // attach GPIO to UART0 TX
 #endif
 }
