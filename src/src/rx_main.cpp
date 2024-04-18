@@ -422,7 +422,14 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
-    ls->SNR = SnrMean.mean();
+    if (SnrMean.getCount())
+    {
+        ls->SNR = SnrMean.mean();
+    }
+    else
+    {
+        ls->SNR = SnrMean.previousMean();
+    }
 #endif
 }
 
