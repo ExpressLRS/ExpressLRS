@@ -1454,7 +1454,7 @@ static void setupSerial1()
             break;
         case PROTOCOL_SERIAL1_HOTT_TLM:
             Serial1.begin(19200, SERIAL_8N2, serial1RXpin, serial1TXpin, false);
-            serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
             break;
     }
 }
