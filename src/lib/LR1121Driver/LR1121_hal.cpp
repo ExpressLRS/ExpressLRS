@@ -125,7 +125,7 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
 
 void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[2] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
         (uint8_t)(command & 0x00FF)
     };
