@@ -11,7 +11,7 @@
 /////////////////////////
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
-#define WORD_PADDED(size) (((size)+3)/4)
+#define WORD_PADDED(size) (((size)+3) & ~3)
 
 #ifdef PLATFORM_STM32
 /* ICACHE_RAM_ATTR1 is always linked into RAM */
