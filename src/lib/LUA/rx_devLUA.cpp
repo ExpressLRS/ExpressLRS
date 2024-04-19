@@ -488,7 +488,7 @@ static void registerLuaParameters()
   registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSerial1Protocol((eSerial1Protocol)arg);
     if (config.IsModified()) {
-      deferExecution(100, [](){
+      deferExecutionMillis(100, [](){
         reconfigureSerial1();
       });
     }
