@@ -29,7 +29,6 @@ static int start()
 
 static int event()
 {
-
     static connectionState_e lastConnectionState = disconnected;
     
     if (serial1IO != nullptr) 
@@ -40,6 +39,19 @@ static int event()
     return DURATION_IGNORE;
 }
 
+static bool confirmFrameAvailable()
+{
+    if (!frameAvailable)
+        return false;
+    frameAvailable = false;
+
+    // ModelMatch failure always prevents passing the frame on
+    if (!connectionHasModelMatch)
+        return false;
+
+    return true;
+}
+
 static int timeout()
 {
     if (connectionState == serialUpdate || serial1IO == nullptr)
@@ -47,14 +59,15 @@ static int timeout()
         return DURATION_NEVER;  // stop callbacks when doing serial update or serial1 not used
     }
 
-    uint32_t duration = 10; // 10ms callback (i.e. when no theres no model match)
-    // only send frames if we have a model match
-    if (connectionHasModelMatch)
-    {
-        duration = serial1IO->sendRCFrame(frameAvailable, frameMissed, ChannelData);
-    }
-    frameAvailable = false;
+    noInterrupts();
+    bool missed = frameMissed;
     frameMissed = false;
+    interrupts();
+
+    // Verify there is new ChannelData and they should be sent on
+    bool sendChannels = confirmFrameAvailable();
+    uint32_t duration = serial1IO->sendRCFrame(sendChannels, missed, ChannelData);
+
     // still get telemetry and send link stats if theres no model match
     serial1IO->processSerialInput();
     serial1IO->sendQueuedData(serial1IO->getMaxSerialWriteSize());
