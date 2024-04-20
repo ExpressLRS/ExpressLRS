@@ -43,6 +43,9 @@ function submitHardwareSettings() {
   const formData = new FormData(_('upload_hardware'));
   xhr.send(JSON.stringify(Object.fromEntries(formData), function(k, v) {
     if (v === '') return undefined;
+    if(_(k) && _(k).classList.contains('json')) {
+      return JSON.parse(v);
+    }
     if (_(k) && _(k).type === 'checkbox') {
       return v === 'on';
     }
@@ -81,6 +84,8 @@ function updateHardwareSettings(data) {
     if (_(key)) {
       if (_(key).type === 'checkbox') {
         _(key).checked = value;
+      } else if(_(key).classList.contains("json")){
+        _(key).value = JSON.stringify(value);
       } else {
         if (Array.isArray(value)) _(key).value = value.toString();
         else _(key).value = value;

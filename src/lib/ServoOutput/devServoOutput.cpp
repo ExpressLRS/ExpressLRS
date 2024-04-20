@@ -103,6 +103,32 @@ static void servosFailsafe()
     }
 }
 
+static uint16_t scaler_cal(uint32_t *crsf_data, uint8_t chn)
+{
+    if (!crsf_data)
+    {
+        return 0;
+    }
+
+    mixer_channel_t **mixer_channels = (mixer_channel_t **)hardware_i16_array(HARDWARE_mixer_config);
+    if (!mixer_channels || !mixer_channels[chn])
+    {
+        return CRSF_to_US(crsf_data[chn]);
+    }
+
+    mixer_channel_t *mixer_channel_cfg = mixer_channels[chn];
+    int16_t ret = 0;
+    for (int i = 0; i < mixer_channel_cfg->scaler_cnt; ++i)
+    {
+        scaler_t &scaler = mixer_channel_cfg->scalers[i];
+        int16_t maped = CRSF_to_N(crsf_data[scaler.channel_idx], 1000);
+        ret += (maped + scaler.offset) * scaler.k;
+    }
+    ret = constrain(ret, 0, 1000);
+
+    return fmap(ret, 0, 1000, mixer_channel_cfg->min, mixer_channel_cfg->max);
+}
+
 static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
@@ -120,9 +146,8 @@ static void servosUpdate(unsigned long now)
             {
                 continue;
             }
-
-            uint16_t us = CRSF_to_US(crsfVal);
-            // Flip the output around the mid-value if inverted
+            uint16_t us = hardware_flag(HARDWARE_mixer_enable) ? scaler_cal(ChannelData, ch) : CRSF_to_US(crsfVal);
+            // Flip the output around the mid value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
             {

@@ -15,7 +15,8 @@ typedef enum {
     BOOL,
     FLOAT,
     ARRAY,
-    COUNT
+    COUNT,
+    MIXER_CONFIG
 } datatype_t;
 
 static const struct {
@@ -132,6 +133,8 @@ static const struct {
     {HARDWARE_vtx_amp_vpd_100mW, "vtx_amp_vpd_100mW", ARRAY},
     {HARDWARE_vtx_amp_pwm_25mW, "vtx_amp_pwm_25mW", ARRAY},
     {HARDWARE_vtx_amp_pwm_100mW, "vtx_amp_pwm_100mW", ARRAY},
+    {HARDWARE_mixer_enable, "mixer_enable", BOOL},
+    {HARDWARE_mixer_config, "mixer_cfg", MIXER_CONFIG}
 };
 
 typedef union {
@@ -179,8 +182,65 @@ static void hardware_ClearAllFields()
             case COUNT:
                 hardware[fields[i].position].int_value = 0;
                 break;
+            case MIXER_CONFIG:
+                hardware[fields[i].position].int_value = 0;
+                break;
         }
     }
+}
+
+static mixer_channel_t **init_mixer_cfg(JsonArray mixer_json)
+{
+    int pwm_chn_count = hardware_int(HARDWARE_pwm_outputs_count);
+    mixer_channel_t **mixer_channels;
+    if (pwm_chn_count != 0)
+    {
+        mixer_channels = new mixer_channel_t *[pwm_chn_count];
+    }
+    else
+    {
+        return nullptr;
+    }
+
+    for (int i = 0; i < pwm_chn_count; ++i)
+    {
+        mixer_channels[i] = nullptr;
+    }
+    for (JsonVariant value : mixer_json)
+    {
+        JsonObject obj = value.as<JsonObject>();
+
+        if (!obj.containsKey("channel_idx") || !obj.containsKey("scalers"))
+        {
+            continue;
+        }
+        JsonArray scalers_json = obj["scalers"].as<JsonArray>();
+        uint8_t chn = constrain((int8_t)obj["channel_idx"] - 1, 0, pwm_chn_count - 1); // convert 1-base pwm channel to 0-base pwm channel
+        mixer_channel_t *mixer_channel = new mixer_channel_t;
+        mixer_channel->channel_idx = chn;
+        mixer_channel->scaler_cnt = scalers_json.size();
+        mixer_channel->scalers = new scaler_t[scalers_json.size()];
+        mixer_channel->min = obj.containsKey("min") ? obj["min"] : 988; // default to us range 988~2012
+        mixer_channel->max = obj.containsKey("max") ? obj["max"] : 2012;
+
+        uint8_t scaler_cnt = 0;
+        for (JsonVariant scaler_ : scalers_json)
+        {
+            JsonObject scaler_obj = scaler_.as<JsonObject>();
+            if (!scaler_obj.containsKey("input_chn"))
+            {
+                continue;
+            }
+            mixer_channel->scalers[scaler_cnt].channel_idx = constrain((int8_t)scaler_obj["input_chn"] - 1, 0, pwm_chn_count - 1);
+            mixer_channel->scalers[scaler_cnt].k = scaler_obj.containsKey("k") ? scaler_obj["k"].as<float>() : 1;
+            mixer_channel->scalers[scaler_cnt].offset = scaler_obj.containsKey("offset") ? scaler_obj["offset"] : 0;
+            scaler_cnt++;
+        }
+
+        mixer_channels[chn] = mixer_channel;
+    }
+
+    return mixer_channels;
 }
 
 static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
@@ -208,6 +268,12 @@ static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
                     {
                         JsonArray array = doc[fields[i].name].as<JsonArray>();
                         hardware[fields[i].position].int_value = array.size();
+                    }
+                    break;
+                case MIXER_CONFIG:
+                    {
+                        mixer_channel_t **channels = init_mixer_cfg(doc[fields[i].name].as<JsonArray>());
+                        hardware[fields[i].position].array_value = (int16_t *)channels;
                     }
                     break;
             }
@@ -244,7 +310,6 @@ bool hardware_init(EspFlashStream &strmFlash)
         return false;
     }
     serializeJson(doc, builtinHardwareConfig);
-
     hardware_LoadFieldsFromDoc(doc);
 
     return true;

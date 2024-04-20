@@ -140,9 +140,27 @@ typedef enum {
     HARDWARE_vtx_amp_vpd_100mW,
     HARDWARE_vtx_amp_pwm_25mW,
     HARDWARE_vtx_amp_pwm_100mW,
+    
+    // Mixer CFG
+    HARDWARE_mixer_enable,
+    HARDWARE_mixer_config,
 
     HARDWARE_LAST
 } nameType;
+
+typedef struct {
+    uint8_t channel_idx;
+    float k;
+    int16_t offset;
+}scaler_t;
+
+typedef struct {
+    uint8_t channel_idx;
+    scaler_t *scalers;
+    uint8_t scaler_cnt;
+    int16_t min;
+    int16_t max;
+}mixer_channel_t;
 
 bool hardware_init();
 const int hardware_pin(nameType name);
