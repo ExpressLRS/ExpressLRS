@@ -92,7 +92,7 @@ config = {
                     ]
                 },
                 {
-                    "color" : 224,
+                    #"color" : 224, # No color for you button 2
                     "action": [
                         {
                             "is-long-press": False,

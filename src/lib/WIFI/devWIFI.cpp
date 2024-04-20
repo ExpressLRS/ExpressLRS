@@ -312,7 +312,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   for (int button=0 ; button<button_count ; button++)
   {
     const tx_button_color_t *buttonColor = config.GetButtonActions(button);
-    json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    if (hardware_int(button == 0 ? HARDWARE_button_led_index : HARDWARE_button2_led_index) != -1) {
+      json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    }
     for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
     {
       json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
