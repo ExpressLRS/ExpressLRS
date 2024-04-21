@@ -44,8 +44,10 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
       {
         case SX1280_LORA_SF5: return 100;
         case SX1280_LORA_SF6: return 141;
-        case SX1280_LORA_SF7: return 218;
-        case SX1280_LORA_SF8: return 218;
+        // case SX1280_LORA_SF7: return 218;
+        // case SX1280_LORA_SF8: return 218;
+        case SX1280_LORA_SF7: return 160;
+        case SX1280_LORA_SF8: return 240;
         default: return 218;
       }
   }
@@ -102,7 +104,8 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
 
 void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 {
-  if (!LBTEnabled || LBTStarted)
+//   if (!LBTEnabled || LBTStarted)
+  if (!LBTEnabled)
     return;
 
   LBTStarted = true;
@@ -138,33 +141,39 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  uint32_t elapsed = micros() - rxStartTime;
-  if(elapsed < validRSSIdelayUs)
-  {
-    delayMicroseconds(validRSSIdelayUs - elapsed);
-  }
+//   uint32_t elapsed = micros() - rxStartTime;
+//   if(elapsed < validRSSIdelayUs)
+//   {
+//     delayMicroseconds(validRSSIdelayUs - elapsed);
+//   }
 
   int8_t rssiInst = 0;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
 
-  if (radioNumber & SX12XX_Radio_1)
+  uint32_t elapsed = 0;
+  while (elapsed < validRSSIdelayUs)
   {
-    rssiInst = Radio.GetRssiInst(SX12XX_Radio_1);
-    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+    if (radioNumber & SX12XX_Radio_1)
     {
-      clearChannelsMask |= SX12XX_Radio_1;
+        rssiInst = Radio.GetRssiInst(SX12XX_Radio_1);
+        if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+        {
+        clearChannelsMask |= SX12XX_Radio_1;
+        }
     }
+
+    if (radioNumber & SX12XX_Radio_2)
+    {
+        rssiInst = Radio.GetRssiInst(SX12XX_Radio_2);
+        if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+        {
+        clearChannelsMask |= SX12XX_Radio_2;
+        }
+    }
+
+    elapsed = micros() - rxStartTime;
   }
 
-  if (radioNumber & SX12XX_Radio_2)
-  {
-    rssiInst = Radio.GetRssiInst(SX12XX_Radio_2);
-    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
-    {
-      clearChannelsMask |= SX12XX_Radio_2;
-    }
-  }
-  
   // Useful to debug if and how long the rssi wait is, and rssi threshold level
   // DBGLN("wait: %d, rssi: %d, %s", validRSSIdelayUs - elapsed, rssiInst, clearChannelsMask ? "clear" : "in use");
 
