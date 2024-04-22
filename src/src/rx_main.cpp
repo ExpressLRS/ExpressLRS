@@ -1798,6 +1798,10 @@ void setup()
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
     {
+        // In the failure case we set the logging to the null logger so nothing crashes
+        // if it decides to log something
+        SerialLogger = new NullStream();
+
         // Register the WiFi with the framework
         static device_affinity_t wifi_device[] = {
             {&WIFI_device, 1}
