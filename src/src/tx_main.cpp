@@ -1369,7 +1369,9 @@ void setup()
   }
   else
   {
-      TxBackpack = new NullStream();
+    // In the failure case we set the logging to the null logger so nothing crashes
+    // if it decides to log something
+    TxBackpack = new NullStream();
   }
 
 #if defined(HAS_BUTTON)
