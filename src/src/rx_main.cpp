@@ -732,7 +732,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     if (tlmSent && Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
     {
-        Radio.TXdoneCallback();
+        // Since we were meant to send telemetry, but didn't, defer TXdoneCallback() to when the IRQ is normally triggered.
+        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
+            Radio.TXdoneCallback();
+        });
     }
 
     PFDloop.intEvent(micros()); // our internal osc just fired
