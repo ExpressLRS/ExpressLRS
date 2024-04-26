@@ -9,6 +9,7 @@
 #define JOYSTICK_DEFAULT_UPDATE_INTERVAL 10000
 #define JOYSTICK_DEFAULT_CHANNEL_COUNT 8
 #define JOYSTICK_VERSION 1
+#define JOYSTICK_MAX_SEND_ERROR_COUNT 100
 
 /**
  * Class to send stick data via udp
@@ -64,6 +65,7 @@ private:
     static IPAddress remoteIP;
     static uint8_t channelCount;
     static bool active;
+    static uint8_t failedCount;
 };
 
 #endif
