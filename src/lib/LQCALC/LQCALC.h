@@ -6,6 +6,11 @@ template <uint8_t N>
 class LQCALC
 {
 public:
+    LQCALC(void)
+    {
+        reset100();
+    }
+
     /* Set the bit for the current period to true and update the running LQ */
     void add()
     {

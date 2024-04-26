@@ -353,9 +353,6 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
-    // Always start a new packet rate at 100% LQ
-    LQCalc.reset100();
-    LQCalcDVDA.reset100();
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
@@ -1507,8 +1504,8 @@ static void cycleRfMode(unsigned long now)
         LastSyncPacket = now;           // reset this variable
         SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
-        LQCalc.reset();
-        LQCalcDVDA.reset();
+        LQCalc.reset100();
+        LQCalcDVDA.reset100();
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
