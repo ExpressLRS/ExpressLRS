@@ -323,7 +323,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 #endif
 
     hwTimer::updateInterval(interval);
-    
+
     FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
@@ -353,6 +353,9 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
     MspReceiver.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
     TelemetrySender.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+    // Always start a new packet rate at 100% LQ
+    LQCalc.reset100();
+    LQCalcDVDA.reset100();
 
     // Wait for (11/10) 110% of time it takes to cycle through all freqs in FHSS table (in ms)
     cycleInterval = ((uint32_t)11U * FHSSgetChannelCount() * ModParams->FHSShopInterval * interval) / (10U * 1000U);
@@ -376,7 +379,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config. 
+        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);

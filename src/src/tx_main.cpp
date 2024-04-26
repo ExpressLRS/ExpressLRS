@@ -247,7 +247,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
     }
   }
-  
+
 #if defined(Regulatory_Domain_EU_CE_2400)
   SetClearChannelAssessmentTime();
 #endif
@@ -394,6 +394,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
   TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+  // Always start a new packet rate at 100% LQ
+  LQCalc.reset100();
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -625,7 +627,7 @@ void ICACHE_RAM_ATTR timerCallback()
     nonceAdvance();
     return;
   }
-  
+
   Radio.isFirstRxIrq = true;
 
   // Sync OpenTX to this point
@@ -1392,7 +1394,7 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-  
+
   Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
