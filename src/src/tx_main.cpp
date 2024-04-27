@@ -35,6 +35,9 @@ Stream *TxUSB;
 FIFO<AP_MAX_BUF_LEN> apInputBuffer;
 FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 
+#define UART_INPUT_BUF_LEN 1024
+FIFO<UART_INPUT_BUF_LEN> uartInputBuffer;
+
 // TODO: Remove this! Manual define for mavlink mode on TX
 uint8_t mavBuffer[64];
 
@@ -852,11 +855,9 @@ static void UpdateConnectDisconnectStatus()
       CRSF::ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
-      if (firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE)
-      {
-        apInputBuffer.flush();
-        apOutputBuffer.flush();
-      }
+      apInputBuffer.flush();
+      apOutputBuffer.flush();
+      uartInputBuffer.flush();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -1051,7 +1052,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 
 static void HandleUARTout()
 {
-  if (firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE)
+  if (firmwareOptions.is_airport)
   {
     auto size = apOutputBuffer.size();
     if (size)
@@ -1061,6 +1062,64 @@ static void HandleUARTout()
       apOutputBuffer.popBytes(buf, size);
       apOutputBuffer.unlock();
       TxUSB->write(buf, size);
+    }
+  }
+}
+
+static void HandleUARTin()
+{
+  // Read from the USB serial port
+  if (TxUSB->available())
+  {
+    auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+    if (size > 0)
+    {
+      uint8_t buf[size];
+      TxUSB->readBytes(buf, size);
+      uartInputBuffer.lock();
+      uartInputBuffer.pushBytes(buf, size);
+      uartInputBuffer.unlock();
+    }
+  }
+
+  // Double buffer into the Airport buffer if Airport is enabled
+  if (firmwareOptions.is_airport && uartInputBuffer.size() > 0)
+  {
+    auto size = std::min((uint16_t)(AP_MAX_BUF_LEN - apInputBuffer.size()), uartInputBuffer.size());
+    if (size > 0)
+    {
+      uint8_t buf[size];
+
+      uartInputBuffer.lock();
+      uartInputBuffer.popBytes(buf, size);
+      uartInputBuffer.unlock();
+
+      apInputBuffer.lock();
+      apInputBuffer.pushBytes(buf, size);
+      apInputBuffer.unlock();
+    }
+  }
+
+  // Read from the Backpack serial port
+  if (TxBackpack->available())
+  {
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxBackpack->available());
+      if (size > 0)
+      {
+        uint8_t buf[size];
+        TxBackpack->readBytes(buf, size);
+        uartInputBuffer.lock();
+        uartInputBuffer.pushBytes(buf, size);
+        uartInputBuffer.unlock();
+      }
+    }
+    else if (msp.processReceivedByte(TxBackpack->read()))
+    {
+      // Finished processing a complete packet
+      ProcessMSPPacket(millis(), msp.getReceivedPacket());
+      msp.markPacketReceived();
     }
   }
 }
@@ -1339,40 +1398,7 @@ void loop()
 
   executeDeferredFunction(now);
 
-  if ((firmwareOptions.is_airport || config.GetLinkMode() == TX_MAVLINK_MODE) && connectionState == connected)
-  {
-    auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
-    if (size > 0)
-    {
-      uint8_t buf[size];
-      TxUSB->readBytes(buf, size);
-      apInputBuffer.lock();
-      apInputBuffer.pushBytes(buf, size);
-      apInputBuffer.unlock();
-    }
-  }
-
-  if (TxBackpack->available())
-  {
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
-    {
-      auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxBackpack->available());
-      if (size > 0)
-      {
-        uint8_t buf[size];
-        TxBackpack->readBytes(buf, size);
-        apInputBuffer.lock();
-        apInputBuffer.pushBytes(buf, size);
-        apInputBuffer.unlock();
-      }
-    }
-    else if (msp.processReceivedByte(TxBackpack->read()))
-    {
-      // Finished processing a complete packet
-      ProcessMSPPacket(now, msp.getReceivedPacket());
-      msp.markPacketReceived();
-    }
-  }
+  HandleUARTin();
 
   if (connectionState > MODE_STATES)
   {
@@ -1407,7 +1433,10 @@ void loop()
           for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
           {
             TxUSB->write(CRSFinBuffer[i]);
-            TxBackpack->write(CRSFinBuffer[i]);
+            if (TxUSB != TxBackpack)
+            {
+              TxBackpack->write(CRSFinBuffer[i]);
+            }
           }
         }
       }
@@ -1458,14 +1487,16 @@ void loop()
     // Use MspSender for MAVLINK uplink data
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    uint16_t count = apInputBuffer.size();
+    uint16_t count = uartInputBuffer.size();
     if (count > 0 && !MspSender.IsActive())
     {
         count = std::min(count, (uint16_t)60);
         mavBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
         mavBuffer[1] = count;
         // Following n bytes are just raw mavlink
-        apInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        uartInputBuffer.lock();
+        uartInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        uartInputBuffer.unlock();
         nextPayload = mavBuffer;
         nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
         MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
