@@ -247,7 +247,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
     }
   }
-  
+
 #if defined(Regulatory_Domain_EU_CE_2400)
   SetClearChannelAssessmentTime();
 #endif
@@ -625,7 +625,7 @@ void ICACHE_RAM_ATTR timerCallback()
     nonceAdvance();
     return;
   }
-  
+
   Radio.isFirstRxIrq = true;
 
   // Sync OpenTX to this point
@@ -1392,7 +1392,7 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-  
+
   Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
