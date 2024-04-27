@@ -2,9 +2,12 @@
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 
+#define MAV_INPUT_BUF_LEN   1024
+#define MAV_OUTPUT_BUF_LEN  512
+
 // Variables / constants
-extern FIFO<AP_MAX_BUF_LEN> mavlinkInputBuffer;
-extern FIFO<AP_MAX_BUF_LEN> mavlinkOutputBuffer;
+extern FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
+extern FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 
 class SerialMavlink : public SerialIO {
 public:
