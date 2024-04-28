@@ -14,7 +14,8 @@ const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     static auto sendPackets = false;
-    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch);
+
+    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch && config.GetTeamraceFailSafe());
     if ((effectivelyFailsafed && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
     {
         return UNCONNECTED_CALLBACK_INTERVAL_MS;

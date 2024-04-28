@@ -73,6 +73,14 @@ static struct luaItem_selection luaTeamracePosition = {
     STR_EMPTYSPACE
 };
 
+static struct luaItem_selection luaTeamraceFailSafe = {
+    {"FailSafe on Switch", CRSF_TEXT_SELECTION},
+    0, // value
+    "Yes;No",
+    STR_EMPTYSPACE
+};
+
+
 //----------------------------Info-----------------------------------
 
 static struct luaItem_string luaModelNumber = {
@@ -402,6 +410,10 @@ static void registerLuaParameters()
     config.SetTeamracePosition(arg);
   }, luaTeamraceFolder.common.id);
 
+  registerLUAParameter(&luaTeamraceFailSafe, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetTeamraceFailSafe(arg);
+  }, luaTeamraceFolder.common.id);
+
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
@@ -456,6 +468,8 @@ static int event()
   // Teamrace
   setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
   setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
+
+  setLuaTextSelectionValue(&luaTeamraceFailSafe, config.GetTeamraceFailSafe() ? 0 : 1);
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)

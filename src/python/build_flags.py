@@ -134,7 +134,7 @@ def get_git_sha():
     return string_to_ascii(env.get('GIT_SHA'))
 
 def get_version():
-    return string_to_ascii(env.get('GIT_VERSION'))
+    return string_to_ascii(env.get('GIT_VERSION') + "WM")
 
 json_flags['flash-discriminator'] = randint(1,2**32-1)
 json_flags['wifi-on-interval'] = -1

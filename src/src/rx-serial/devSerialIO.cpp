@@ -170,6 +170,11 @@ static int timeout()
 
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable();
+
+    if (!config.GetTeamraceFailSafe()) {
+        sendChannels = true;
+    } 
+
     uint32_t duration = serialIO->sendRCFrame(sendChannels, missed, ChannelData);
 
     // still get telemetry and send link stats if theres no model match

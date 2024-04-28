@@ -1132,6 +1132,15 @@ void RxConfig::SetTeamracePosition(uint8_t teamracePosition)
     }
 }
 
+void RxConfig::SetTeamraceFailSafe(uint8_t teamraceFailSafe)
+{
+    if (m_config.teamraceFailSafe != teamraceFailSafe)
+    {
+        m_config.teamraceFailSafe = teamraceFailSafe;
+        m_modified = true;
+    }
+}
+
 void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
 {
     if (m_config.failsafeMode != failsafeMode)

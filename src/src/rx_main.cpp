@@ -737,7 +737,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
-            if (teamraceHasModelMatch)
+            if (teamraceHasModelMatch || !config.GetTeamraceFailSafe())
                 servoNewChannelsAvailable();
         }
         else
@@ -869,7 +869,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
             crsfRCFrameAvailable();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
-            if (teamraceHasModelMatch)
+            if (teamraceHasModelMatch  || !config.GetTeamraceFailSafe())
                 servoNewChannelsAvailable();
         }
         else if (!LQCalcDVDA.currentIsSet())
