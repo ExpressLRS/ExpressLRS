@@ -12,8 +12,8 @@
 
 #define NBITS 44
 #define BYTES 4
-#define BITRATE 115200
-#define BIT_PERIODS 16
+#define BITRATE 100000
+#define BIT_PERIODS 10
 #define CARRIER_HZ 0
 #define CARRIER_DUTY 0
 #define INTERVAL_JITTER_MS 4
@@ -63,25 +63,34 @@ void RobitronicEncoder::encode(TransponderRMT *transponderRMT, uint32_t id)
 
 bool RobitronicEncoder::encode_bit(rmt_item32_t *rmtItem)
 {
-
-    uint8_t bit = (bitStream & ((uint64_t)1 << NBITS)) > 0 ? 1 : 0;
+    uint8_t bit = (bitStream & ((uint64_t)1 << (NBITS-1))) > 0 ? 1 : 0;
     DBGVLN("RobitronicEncoder::encode_bit, index: %d, bit: %d", bits_encoded, bit);
 
-    if (bit)
-    {
-        // encode logic 0 as 3/16 of bit time
+    if((bits_encoded + 1) % 11 == 0) {
+        // encode stop bit as IR off for 1/2 bit time
         rmtItem->duration0 = 3;
-        rmtItem->level0 = 1;
-        rmtItem->duration1 = 13;
-        rmtItem->level1 = 0;
-    }
-    else
-    {
-        // encode logic 1 as off for bit time
-        rmtItem->duration0 = 8;
         rmtItem->level0 = 0;
-        rmtItem->duration1 = 8;
+        rmtItem->duration1 = 2;
         rmtItem->level1 = 0;
+    } 
+    else 
+    {
+        if (bit)
+        {
+            // encode logic 1 as off for bit time
+            rmtItem->duration0 = 5;
+            rmtItem->level0 = 0;
+            rmtItem->duration1 = 5;
+            rmtItem->level1 = 0;
+        }
+        else
+        {
+            // encode logic 0 as 2/10 of bit time
+            rmtItem->duration0 = 2;
+            rmtItem->level0 = 1;
+            rmtItem->duration1 = 8;
+            rmtItem->level1 = 0;
+        }
     }
 
     bitStream <<= 1;
@@ -123,7 +132,10 @@ uint8_t RobitronicEncoder::crc8(uint8_t *data, uint8_t nBytes)
 }
 
 /**
- * @brief generate 44 bit sequence for given ID
+ * @brief generate 44 bit sequence for given ID. The bit sequence will be encoded in encode_bit()
+ * for IR output (reverse logic)
+ * logic 0 -> 2us IR pulse followed by 8us silence
+ * logic 1 -> 10us silence
  */
 void RobitronicEncoder::generateBitStream(uint32_t id)
 {
@@ -137,17 +149,16 @@ void RobitronicEncoder::generateBitStream(uint32_t id)
 
     for (uint8_t i = 0; i < BYTES; i++)
     {
-        // start bit
-        bitStream |= 1;
+        // start bit (logic 0, IR pulse)
         bitStream <<= 1;
 
         byte = ((uint8_t *)&id)[i];
         mask = 0x80;
 
-        // 8 data bits, reverse logic as per IRDA spec
+        // 8 data bits (logic 0, IR pulse - logic 1, no IR pulse)
         for (uint8_t n = 0; n < 8; n++)
         {
-            if (!(byte & mask))
+            if (byte & mask)
             {
                 bitStream |= 1;
             }
@@ -156,19 +167,18 @@ void RobitronicEncoder::generateBitStream(uint32_t id)
             mask >>= 1;
         }
 
-        // count number of bits in byte for parity bit
-        if (__builtin_popcount(byte) % 2 == 0)
+        // count number of bits in byte for parity bit, odd = logic 1 (no IR  pulse)
+        if (__builtin_popcount(byte) % 2 != 0)
         {
             bitStream |= 1;
         }
         bitStream <<= 1;
 
-        // stop bit
+        // stop bit logic 1 (no IR pulse)
+        bitStream |= 1;
         bitStream <<= 1;
     }
     bitStream >>= 1;
-
-    // bitstream bit set now represents logic 0
 }
 
 #endif
