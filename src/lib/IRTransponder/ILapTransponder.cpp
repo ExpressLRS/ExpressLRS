@@ -88,7 +88,7 @@ void ILapEncoder::encode(TransponderRMT *transponderRMT, uint64_t data)
 bool ILapEncoder::encode_bit(rmt_item32_t *rmtItem)
 {
 
-    uint8_t bit = (bitStream & ((uint64_t)1 << NBITS)) > 0 ? 1 : 0;
+    uint8_t bit = (bitStream & ((uint64_t)1 << (NBITS - 1))) > 0 ? 1 : 0;
     DBGVLN("ILapEncoder::encode_bit, index: %d, bit: %d", bits_encoded, bit);
 
     if (bit)
