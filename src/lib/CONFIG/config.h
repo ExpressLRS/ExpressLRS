@@ -248,7 +248,7 @@ public:
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
 
-    bool GetTeamraceFailSafe() const {return m_config.teamraceFailSafe == 0; }
+    bool GetTeamraceUseFailSafe() const {return m_config.teamraceFailSafe == 0; }
 
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
     bool GetVolatileBind() const { return m_config.volatileBind; }

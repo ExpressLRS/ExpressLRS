@@ -74,7 +74,7 @@ static struct luaItem_selection luaTeamracePosition = {
 };
 
 static struct luaItem_selection luaTeamraceFailSafe = {
-    {"FailSafe on Switch", CRSF_TEXT_SELECTION},
+    {"Use FailSafe", CRSF_TEXT_SELECTION},
     0, // value
     "Yes;No",
     STR_EMPTYSPACE
@@ -469,7 +469,7 @@ static int event()
   setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
   setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
-  setLuaTextSelectionValue(&luaTeamraceFailSafe, config.GetTeamraceFailSafe() ? 0 : 1);
+  setLuaTextSelectionValue(&luaTeamraceFailSafe, config.GetTeamraceUseFailSafe() ? 0 : 1);
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)

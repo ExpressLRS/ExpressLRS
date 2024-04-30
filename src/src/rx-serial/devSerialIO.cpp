@@ -169,11 +169,8 @@ static int timeout()
     interrupts();
 
     // Verify there is new ChannelData and they should be sent on
-    bool sendChannels = confirmFrameAvailable();
-
-    if (!config.GetTeamraceFailSafe()) {
-        sendChannels = true;
-    } 
+    // and send ChannelData unconditionally if requested
+    bool sendChannels = confirmFrameAvailable() || !config.GetTeamraceUseFailSafe();
 
     uint32_t duration = serialIO->sendRCFrame(sendChannels, missed, ChannelData);
 

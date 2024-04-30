@@ -737,7 +737,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
-            if (teamraceHasModelMatch || !config.GetTeamraceFailSafe())
+            if (teamraceHasModelMatch || !config.GetTeamraceUseFailSafe())
                 servoNewChannelsAvailable();
         }
         else
@@ -869,7 +869,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
             crsfRCFrameAvailable();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
-            if (teamraceHasModelMatch  || !config.GetTeamraceFailSafe())
+            if (teamraceHasModelMatch  || !config.GetTeamraceUseFailSafe())
                 servoNewChannelsAvailable();
         }
         else if (!LQCalcDVDA.currentIsSet())
@@ -1192,7 +1192,7 @@ void MspReceiveComplete()
             break;
         }
         // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && teamraceHasModelMatch &&
+        if (connectionHasModelMatch && (teamraceHasModelMatch || !config.GetTeamraceUseFailSafe()) &&
             (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
         {
             serialIO->queueMSPFrameTransmission(MspData);
@@ -1653,7 +1653,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
             getRFlinkInfo();
         }
 
-        if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
+        if ((connectionState != disconnected && connectionHasModelMatch && (teamraceHasModelMatch || !config.GetTeamraceUseFailSafe())) ||
             SendLinkStatstoFCForcedSends)
         {
             serialIO->queueLinkStatisticsPacket();

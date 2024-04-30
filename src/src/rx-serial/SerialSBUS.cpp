@@ -15,7 +15,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
 {
     static auto sendPackets = false;
 
-    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch && config.GetTeamraceFailSafe());
+    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch && config.GetTeamraceUseFailSafe());
     if ((effectivelyFailsafed && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
     {
         return UNCONNECTED_CALLBACK_INTERVAL_MS;
