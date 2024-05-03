@@ -153,7 +153,15 @@ bool SPL06::detect()
     // Assumes Wire.begin() has already been called
     uint8_t chipid = 0;
 
+    // SPL06 can have two addresses based on the SDO pin.
+    // check primary address
     m_address = SPL06_I2C_ADDR;
+    readRegister(SPL06_CHIP_ID_REG, &chipid, sizeof(chipid));
+    if (chipid == SPL06_DEFAULT_CHIP_ID)
+        return true;
+
+    // check alternate address
+    m_address = SPL06_I2C_ADDR_ALT;
     readRegister(SPL06_CHIP_ID_REG, &chipid, sizeof(chipid));
     return chipid == SPL06_DEFAULT_CHIP_ID;
 }
