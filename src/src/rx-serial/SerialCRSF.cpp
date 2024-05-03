@@ -9,6 +9,8 @@
 extern MSP2CROSSFIRE msp2crsf;
 #endif
 
+const auto CRSF_CALLBACK_INTERVAL_MS = 1;
+
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
@@ -104,7 +106,8 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     _outputPort->write(outBuffer, sizeof(outBuffer));
     _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
     _outputPort->write(crc);
-    return DURATION_IMMEDIATELY;
+
+    return CRSF_CALLBACK_INTERVAL_MS;
 }
 
 void SerialCRSF::queueMSPFrameTransmission(uint8_t* data)
