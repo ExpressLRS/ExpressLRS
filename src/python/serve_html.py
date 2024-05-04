@@ -7,7 +7,7 @@ A simple http server for testing/debugging the web-UI
 open http://localhost:8080/
 add the following query params for TX and/or 900Mhz testing
     isTX
-    sx127x
+    hasSubGHz
 """
 
 from external.bottle import route, run, response, request
@@ -17,7 +17,7 @@ from external.wheezy.template.loader import FileLoader
 
 net_counter = 0
 isTX = False
-sx127x = False
+hasSubGHz = False
 
 config = {
         "options": {
@@ -92,7 +92,7 @@ config = {
                     ]
                 },
                 {
-                    "color" : 224,
+                    #"color" : 224, # No color for you button 2
                     "action": [
                         {
                             "is-long-press": False,
@@ -111,7 +111,7 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, sx127x
+    global isTX, hasSubGHz
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -119,18 +119,18 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': '',
+            'PLATFORM': 'Unified_ESP8285',
             'isTX': isTX,
-            'sx127x': sx127x
+            'hasSubGHz': hasSubGHz
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, sx127x
+    global net_counter, isTX, hasSubGHz
     net_counter = 0
     isTX = 'isTX' in request.query
-    sx127x = 'sx127x' in request.query
+    hasSubGHz = 'hasSubGHz' in request.query
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 

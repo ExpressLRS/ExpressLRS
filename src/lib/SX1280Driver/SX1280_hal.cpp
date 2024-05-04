@@ -259,9 +259,9 @@ bool ICACHE_RAM_ATTR SX1280Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
             {
                 if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
             }
-            else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX12XX_Radio_2)
+            else if (radioNumber == SX12XX_Radio_2)
             {
-                if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+                if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
             }
             else if (radioNumber == SX12XX_Radio_All)
             {

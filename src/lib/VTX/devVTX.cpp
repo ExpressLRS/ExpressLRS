@@ -8,6 +8,7 @@
 #include "logging.h"
 
 #include "devButton.h"
+#include "handset.h"
 
 #define PITMODE_OFF     0
 #define PITMODE_ON      1
@@ -60,7 +61,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
 static void VtxConfigToMSPOut()
@@ -87,9 +88,9 @@ static void VtxConfigToMSPOut()
         }
     }
 
-    CRSF::AddMspMessage(&packet);
+    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
-    if (!CRSF::IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
         MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
     }

@@ -36,7 +36,7 @@ def dequote(str):
     return str
 
 def process_json_flag(define):
-    parts = re.search("-D(.*)\s*=\s*(.*)$", define)
+    parts = re.search(r"-D(.*)\s*=\s*(.*)$", define)
     if parts and define.startswith("-D"):
         if parts.group(1) == "MY_BINDING_PHRASE":
             json_flags['uid'] = [x for x in hashlib.md5(define.encode()).digest()[0:6]]
@@ -45,19 +45,19 @@ def process_json_flag(define):
         if parts.group(1) == "HOME_WIFI_PASSWORD":
             json_flags['wifi-password'] = dequote(parts.group(2))
         if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['wifi-on-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "TLM_REPORT_INTERVAL_MS"  and not isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['tlm-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "FAN_MIN_RUNTIME"  and not isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['fan-runtime'] = int(dequote(parts.group(2)))
         if parts.group(1) == "RCVR_UART_BAUD" and isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
         if parts.group(1) == "USE_AIRPORT_AT_BAUD":
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['is-airport'] = True
             if isRX:
                 json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
@@ -81,15 +81,15 @@ def process_build_flag(define):
             parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
             define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
         if "HOME_WIFI_SSID=" in define:
-            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            parts = re.search(r"(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
                 define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
         if "HOME_WIFI_PASSWORD=" in define:
-            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            parts = re.search(r"(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
                 define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
         if "DEVICE_NAME=" in define:
-            parts = re.search("(.*)=\w*'?\"(.*)\"'?$", define)
+            parts = re.search(r"(.*)=\w*'?\"(.*)\"'?$", define)
             if parts and parts.group(2):
                 env['DEVICE_NAME'] = parts.group(2)
         if not define in build_flags:
@@ -118,7 +118,7 @@ def condense_flags():
     global build_flags
     for line in build_flags:
         # Some lines have multiple flags so this will split them and remove them all
-        for flag in re.findall("!-D\s*[^\s]+", line):
+        for flag in re.findall(r"!-D\s*[^\s]+", line):
             build_flags = [x.replace(flag,"") for x in build_flags] # remove the removal flag
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag if it matches the removal flag
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items
@@ -136,6 +136,9 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
+json_flags['flash-discriminator'] = randint(1,2**32-1)
+json_flags['wifi-on-interval'] = -1
+
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
@@ -144,13 +147,11 @@ build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-json_flags['flash-discriminator'] = randint(1,2**32-1)
-
-if '-DRADIO_SX127X=1' in build_flags:
+if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
         fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
-        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X')
+        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X/RADIO_LR1121')
 
     # require a domain be set for 900
     if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
@@ -203,3 +204,7 @@ time.sleep(.5)
 stm = env.get('PIOPLATFORM', '') in ['ststm32']
 if stm:
     env['UPLOAD_PROTOCOL'] = 'custom'
+    # -DFLASH_DISCRIM=xxxx can't be passed on the command line or it will every file to
+    # always be rebuilt, so put it in a header that options.cpp can include
+    print(f"#define FLASH_DISCRIM {json_flags['flash-discriminator']}",
+          file=open("include/flashdiscrim.h", "w"))

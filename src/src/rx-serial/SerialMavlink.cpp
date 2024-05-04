@@ -22,7 +22,7 @@ FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 {
 }
 
-uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     return DURATION_NEVER;
 }
@@ -59,7 +59,7 @@ SerialMavlink::SerialMavlink(Stream &out, Stream &in):
 {
 }
 
-uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable) {
         return DURATION_IMMEDIATELY;

@@ -12,7 +12,7 @@
     #endif
 #endif
 
-#define USE_SX1280_DCDC
+#define USE_HARDWARE_DCDC
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS                PA15

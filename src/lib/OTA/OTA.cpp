@@ -8,7 +8,8 @@
 
 #include "OTA.h"
 #include "common.h"
-#include <assert.h>
+#include "CRSF.h"
+#include <cassert>
 
 static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
 static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet stuct is invalid!");
@@ -142,21 +143,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
     if (bitclearedSwitchIndex == 6)
         value = CRSF_to_N(channelData[6 + 1 + 4], 16);
     else
-    {
-        // AUX2-7 are Low Resolution, "7pos" 6+center (3-bit)
-        // The output is mapped evenly across 6 output values (0-5)
-        // with a special value 7 indicating the middle so it works
-        // with switches with a middle position as well as 6-position
-        const uint16_t CHANNEL_BIN_COUNT = 6;
-        const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN) / CHANNEL_BIN_COUNT;
-        uint16_t ch = channelData[bitclearedSwitchIndex + 1 + 4];
-        // If channel is within 1/4 a BIN of being in the middle use special value 7
-        if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
-            || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
-            value = CRSF_to_N(ch, CHANNEL_BIN_COUNT);
-        else
-            value = 7;
-    } // If not 16-pos
+        value = CRSF_to_SWITCH3b(channelData[bitclearedSwitchIndex + 1 + 4]);
 
     ota4->rc.switches =
         TelemetryStatus << 6 |
@@ -491,6 +478,8 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcFull(OTA_Packet_s * const otaPktPtr)
 
 bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 {
+    uint8_t backupCrcHigh = otaPktPtr->std.crcHigh;
+
     uint16_t const inCRC = ((uint16_t)otaPktPtr->std.crcHigh << 8) + otaPktPtr->std.crcLow;
     // For smHybrid the CRC only has the packet type in byte 0
     // For smWide the FHSS slot is added to the CRC in byte 0 on PACKET_TYPE_RCDATAs
@@ -506,6 +495,9 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
     }
     uint16_t const calculatedCRC =
         ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer);
+
+    otaPktPtr->std.crcHigh = backupCrcHigh;
+    
     return inCRC == calculatedCRC;
 }
 

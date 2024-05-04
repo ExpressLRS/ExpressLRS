@@ -4,9 +4,13 @@
 #include "FIFO.h"
 #include "telemetry.h"
 
+#define NOT_FOUND 0xff          // no device found indicator
 
 #define HOTT_POLL_RATE 150      // default HoTT bus poll rate [ms]
 #define HOTT_LEAD_OUT 10        // minimum gap between end of payload to next poll
+
+#define HOTT_CMD_DELAY 1        // 1 ms delay between CMD byte 1 and 2
+#define HOTT_WAIT_TX_COMPLETE 2 // 2 ms wait for CMD bytes transmission complete
 
 #define DISCOVERY_TIMEOUT 30000 // 30s device discovery time
 
@@ -32,6 +36,23 @@ extern Telemetry telemetry;
 int SerialHoTT_TLM::getMaxSerialReadSize()
 {
     return HOTT_MAX_BUF_LEN - hottInputBuffer.size();
+}
+
+void SerialHoTT_TLM::setTXMode()
+{
+#if defined(PLATFORM_ESP32)
+    pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
+    digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
+    pinMatrixOutAttach(halfDuplexPin, U0TXD_OUT_IDX, false, false); // attach GPIO as output of UART0 TX
+#endif
+}
+
+void SerialHoTT_TLM::setRXMode()
+{
+#if defined(PLATFORM_ESP32)
+    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
+    pinMatrixInAttach(halfDuplexPin, U0RXD_IN_IDX, false);          // attach half duplex GPIO as input to UART0 RX
+#endif
 }
 
 void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
@@ -69,48 +90,73 @@ void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
     }
 
     // device polling scheduler
-    if (now - lastPoll >= HOTT_POLL_RATE)
-    {
-        lastPoll = now;
-
-        // start up in device discovery mode, after timeout regular operation
-        pollNextDevice();
-    }
+    scheduleDevicePolling(now);
 
     // CRSF packet scheduler
     scheduleCRSFtelemetry(now);
 }
 
-void SerialHoTT_TLM::pollNextDevice()
+void SerialHoTT_TLM::scheduleDevicePolling(uint32_t now)
 {
-    // clear serial in buffer
-    hottInputBuffer.flush();
-
-    // work out next device to be polled all in discovery
-    // mode, only detected ones in non-discovery mode)
-    for (uint i = 0; i < LAST_DEVICE; i++)
+    // send CMD byte 1
+    if (now - lastPoll >= HOTT_POLL_RATE)
     {
-        if (nextDevice == LAST_DEVICE)
+        lastPoll = now;
+
+        // work out next device to be polled. All devices in discovery
+        // mode, only detected devices in non-discovery mode)  
+        nextDeviceID = NOT_FOUND;
+
+        for (uint i = FIRST_DEVICE; i < LAST_DEVICE; i++)
         {
-            nextDevice = FIRST_DEVICE;
+            if (nextDevice == LAST_DEVICE)
+            {
+                nextDevice = FIRST_DEVICE;
+            }
+
+            if (device[nextDevice].present || discoveryMode)
+            {
+                nextDeviceID = device[nextDevice].deviceID;
+
+                nextDevice++;
+                
+                break;
+            }
+
+            nextDevice++;
         }
 
-        if (device[nextDevice].present || discoveryMode)
+        // no device found, nothing to do
+        if (nextDeviceID == NOT_FOUND)
         {
-            pollDevice(device[nextDevice++].deviceID);
-
-            break;
+            return;
         }
 
-        nextDevice++;
+        // clear serial in buffer
+        hottInputBuffer.flush();
+
+        // switch to half duplex TX mode and write CMD byte 1
+        setTXMode();
+        _outputPort->write(START_OF_CMD_B);
+        cmdSendState = HOTT_CMD1SENT;
+        return;
     }
-}
 
-void SerialHoTT_TLM::pollDevice(uint8_t id)
-{
-    // send data request to device
-    _outputPort->write(START_OF_CMD_B);
-    _outputPort->write(id);
+    // delay sending CMD byte 2 to accomodate for slow devices
+    if ((now - lastPoll >= HOTT_CMD_DELAY) && cmdSendState == HOTT_CMD1SENT)
+    {
+        _outputPort->write(nextDeviceID);
+        cmdSendState = HOTT_CMD2SENT;
+        return;
+    }
+
+    // wait for the last byte being sent out to switch to RX mode
+    if ((now - lastPoll >= HOTT_WAIT_TX_COMPLETE) && cmdSendState == HOTT_CMD2SENT)
+    {
+        // switch to half duplex listen mode
+        setRXMode();
+        cmdSendState = HOTT_RECEIVING;
+    }
 }
 
 void SerialHoTT_TLM::processFrame()
@@ -174,7 +220,7 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
             sendCRSFvario(now);
         }
 
-    // HoTT GAM, EAM, ESC -> send batter packet
+    // HoTT GAM, EAM, ESC -> send battery packet
     if (device[GAM].present || device[EAM].present || device[ESC].present)
     {
         sendCRSFbattery(now);

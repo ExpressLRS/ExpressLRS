@@ -9,6 +9,8 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
@@ -115,12 +117,14 @@ void devicesTriggerEvent()
 
 static int _devicesUpdate(unsigned long now)
 {
-    int32_t core = CURRENT_CORE;
+    const int32_t core = CURRENT_CORE;
+    const int32_t coreMulti = (core == -1) ? 0 : core;
 
-    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != connectionHasModelMatch;
-    eventFired[core==-1?0:core] = false;
-    lastConnectionState[core==-1?0:core] = connectionState;
-    lastModelMatch[core==-1?0:core] = connectionHasModelMatch;
+    bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
+    bool handleEvents = eventFired[coreMulti] || lastConnectionState[coreMulti] != connectionState || lastModelMatch[coreMulti] != newModelMatch;
+    eventFired[coreMulti] = false;
+    lastConnectionState[coreMulti] = connectionState;
+    lastModelMatch[coreMulti] = newModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {

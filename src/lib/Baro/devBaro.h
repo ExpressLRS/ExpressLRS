@@ -2,12 +2,11 @@
 
 #include "common.h"
 #include "device.h"
-#include "devCRSF.h"
 #if defined(USE_ANALOG_VBAT)
 #include "devAnalogVbat.h"
 #endif
 
-#if defined(TARGET_UNIFIED_RX) && defined(PLATFORM_ESP32)
+#if defined(TARGET_UNIFIED_RX)
     #define HAS_BARO
 #endif
 
@@ -19,6 +18,7 @@ enum eBaroReadState : uint8_t
     brsUninitialized,
     brsReadTemp,
     brsWaitingTemp,
+    brsReadPres,
     brsWaitingPress
 };
 

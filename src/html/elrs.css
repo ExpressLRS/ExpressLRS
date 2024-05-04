@@ -348,12 +348,23 @@ body, input, select, textarea {
   }
 
     /* Custom code for ExpressLRS PWM Output table */
+  .pwmpnl {
+	min-width: fit-content;
+  }
+  .pwmtbl table {
+	overflow-x: auto;
+  }
   .pwmtbl th {
 	text-align: center;
 	font-weight: bold;
   }
   .pwmtbl td {
 	text-align: center;
+  }
+  .pwmitm {
+	min-width: 6em;
+	white-space: nowrap;
+	width: fit-content;
   }
 
   /*==========================*/
