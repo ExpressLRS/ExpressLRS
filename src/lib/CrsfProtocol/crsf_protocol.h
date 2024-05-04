@@ -58,7 +58,7 @@
 #define CRSF_MSP_RESP_PAYLOAD_SIZE 58
 #define CRSF_MSP_MAX_PAYLOAD_SIZE (CRSF_MSP_REQ_PAYLOAD_SIZE > CRSF_MSP_RESP_PAYLOAD_SIZE ? CRSF_MSP_REQ_PAYLOAD_SIZE : CRSF_MSP_RESP_PAYLOAD_SIZE)
 
-typedef enum
+typedef enum : uint8_t
 {
     CRSF_FRAMETYPE_GPS = 0x02,
     CRSF_FRAMETYPE_VARIO = 0x07,
@@ -91,12 +91,13 @@ typedef enum
     CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,
 } crsf_frame_type_e;
 
-typedef enum {
-    SUBCOMMAND_CRSF = 0x10
+typedef enum : uint8_t {
+    CRSF_COMMAND_SUBCMD_RX = 0x10
 } crsf_command_e;
 
-typedef enum {
-    COMMAND_MODEL_SELECT_ID = 0x05
+typedef enum : uint8_t {
+    CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05
 } crsf_subcommand_e;
 
 enum {
@@ -116,7 +117,7 @@ enum {
     CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
 };
 
-typedef enum
+typedef enum : uint8_t
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
@@ -136,7 +137,7 @@ typedef enum
 
 //typedef struct crsf_addr_e asas;
 
-typedef enum
+typedef enum : uint8_t
 {
     CRSF_UINT8 = 0,
     CRSF_INT8 = 1,
@@ -168,7 +169,7 @@ typedef struct crsf_header_s
 {
     uint8_t device_addr; // from crsf_addr_e
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
-    uint8_t type;        // from crsf_frame_type_e
+    crsf_frame_type_e type;
 } PACKED crsf_header_t;
 
 #define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
@@ -179,10 +180,11 @@ typedef struct crsf_ext_header_s
     // Common header fields, see crsf_header_t
     uint8_t device_addr;
     uint8_t frame_size;
-    uint8_t type;
+    crsf_frame_type_e type;
     // Extended fields
-    uint8_t dest_addr;
-    uint8_t orig_addr;
+    crsf_addr_e dest_addr;
+    crsf_addr_e orig_addr;
+    uint8_t payload[0];
 } PACKED crsf_ext_header_t;
 
 /**
@@ -289,9 +291,6 @@ union inBuffer_U
                                 // add other packet types here
 };
 
-
-typedef struct crsf_channels_s crsf_channels_t;
-
 //CRSF_FRAMETYPE_BATTERY_SENSOR
 typedef struct crsf_sensor_battery_s
 {
@@ -397,6 +396,21 @@ static inline uint16_t ICACHE_RAM_ATTR CRSF_to_N(uint16_t val, uint16_t cnt)
     if (val >= CRSF_CHANNEL_VALUE_2000)
         return cnt - 1;
     return (val - CRSF_CHANNEL_VALUE_1000) * cnt / (CRSF_CHANNEL_VALUE_2000 - CRSF_CHANNEL_VALUE_1000 + 1);
+}
+
+static inline uint8_t ICACHE_RAM_ATTR CRSF_to_SWITCH3b(uint16_t ch)
+{
+    // AUX2-7 are Low Resolution, "7pos" 6+center (3-bit)
+    // The output is mapped evenly across 6 output values (0-5)
+    // with a special value 7 indicating the middle so it works
+    // with switches with a middle position as well as 6-position
+    const uint16_t CHANNEL_BIN_COUNT = 6;
+    const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN) / CHANNEL_BIN_COUNT;
+    // If channel is within 1/4 a BIN of being in the middle use special value 7
+    if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
+        || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))
+        return CRSF_to_N(ch, CHANNEL_BIN_COUNT);
+    return 7;
 }
 
 // 3b switches use 0-5 to represent 6 positions switches and "7" to represent middle

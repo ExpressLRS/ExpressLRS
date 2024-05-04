@@ -2,9 +2,12 @@
 
 #if defined(HAS_BARO)
 
+#include "CRSF.h"
 #include "logging.h"
 #include "telemetry.h"
 #include "baro_spl06.h"
+#include "baro_bmp280.h"
+//#include "baro_bmp085.h"
 
 #define BARO_STARTUP_INTERVAL       100
 
@@ -12,7 +15,7 @@
 extern Telemetry telemetry;
 
 /* Local statics */
-static SPL06 *baro;
+static BaroBase *baro;
 static eBaroReadState BaroReadState;
 
 extern bool i2c_enabled;
@@ -29,6 +32,19 @@ static bool Baro_Detect()
             baro = new SPL06();
             return true;
         }
+        if (BMP280::detect())
+        {
+            DBGLN("Detected baro: BMP280");
+            baro = new BMP280();
+            return true;
+        }
+        // Untested
+        // if (BMP085::detect())
+        // {
+        //     DBGLN("Detected baro: BMP085");
+        //     baro = new BMP085();
+        //     return true;
+        // }
         // DBGLN("No baro detected");
     } // I2C
 #endif
@@ -94,7 +110,7 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     crsfBaro.p.verticalspd = htobe16(verticalspd_smoothed);
     //DBGLN("diff=%d smooth=%d dT=%u", altitude_diff_cm, verticalspd_smoothed, dT_ms);
 
-    // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet 
+    // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet
     if (!telemetry.GetCrsfBaroSensorDetected())
     {
         CRSF::SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -133,10 +149,20 @@ static int timeout()
                 int32_t temp = baro->getTemperature();
                 if (temp == BaroBase::TEMPERATURE_INVALID)
                     return DURATION_IMMEDIATELY;
-                baro->startPressure();
-                BaroReadState = brsWaitingPress;
-                return baro->getPressureDuration();
             }
+            // fallthrough
+
+        case brsReadPres:
+            {
+                uint8_t pressDuration = baro->getPressureDuration();
+                BaroReadState = brsWaitingPress;
+                if (pressDuration != 0)
+                {
+                    baro->startPressure();
+                    return pressDuration;
+                }
+            }
+            // fallthrough
 
         case brsWaitingPress:
             {
@@ -148,9 +174,17 @@ static int timeout()
             // fallthrough
 
         case brsReadTemp:
-            BaroReadState = brsWaitingTemp;
-            baro->startTemperature();
-            return baro->getTemperatureDuration();
+            {
+                uint8_t tempDuration = baro->getTemperatureDuration();
+                if (tempDuration == 0)
+                {
+                    BaroReadState = brsReadPres;
+                    return DURATION_IMMEDIATELY;
+                }
+                BaroReadState = brsWaitingTemp;
+                baro->startTemperature();
+                return tempDuration;
+            }
     }
 }
 

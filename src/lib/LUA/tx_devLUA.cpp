@@ -2,6 +2,7 @@
 
 #include "rxtx_devLua.h"
 #include "CRSF.h"
+#include "CRSFHandset.h"
 #include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
@@ -286,8 +287,6 @@ extern void VtxTriggerSend();
 extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
-extern void EnterBindingMode();
-extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;
@@ -299,7 +298,7 @@ extern void setWifiUpdateMode();
 #endif
 
 static void luadevUpdateModelID() {
-  itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
+  itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -439,7 +438,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     if ((void *)item == (void *)&luaBind)
     {
       msg = "Binding...";
-      EnterBindingMode();
+      EnterBindingModeSafely();
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
@@ -544,9 +543,9 @@ static void updateFolderName_VtxAdmin()
  ****/
 static void luadevUpdateBadGood()
 {
-  itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
+  itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
   strcat(luaBadGoodString, "/");
-  itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+  itoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
 }
 
 /***
@@ -579,6 +578,9 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+    arg = (arg + 4) % RATE_MAX;
+#endif
     if (arg < RATE_MAX)
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
@@ -651,8 +653,8 @@ static void registerLuaParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
-          CRSF::AddMspMessage(&msp);
+          msp.addByte(newModelMatch ? CRSFHandset::getModelID() : 0xff);
+          CRSF::AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER);
         }
         luadevUpdateModelID();
       });
@@ -793,6 +795,9 @@ static int event()
     return DURATION_NEVER;
   }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+  currentRate = (currentRate + 4) % RATE_MAX;
+#endif
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
@@ -852,7 +857,7 @@ static int start()
   {
     return DURATION_NEVER;
   }
-  CRSF::RecvParameterUpdate = &luaParamUpdateReq;
+  handset->registerParameterUpdateCallback(luaParamUpdateReq);
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);

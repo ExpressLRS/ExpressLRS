@@ -2,8 +2,11 @@
 #define H_OTA
 
 #include <cstddef>
+
 #include "crc.h"
-#include "devCRSF.h"
+#include "CRSF.h"
+#include "crsf_protocol.h"
+#include "telemetry_protocol.h"
 #include "FIFO.h"
 
 #define OTA4_PACKET_SIZE     8U

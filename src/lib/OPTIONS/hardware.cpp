@@ -61,6 +61,7 @@ static const struct {
     {HARDWARE_power_control, "power_control", INT},
     {HARDWARE_power_values, "power_values", ARRAY},
     {HARDWARE_power_values2, "power_values2", ARRAY},
+    {HARDWARE_power_values_dual, "power_values_dual", ARRAY},
     {HARDWARE_joystick, "joystick", INT},
     {HARDWARE_joystick_values, "joystick_values", ARRAY},
     {HARDWARE_five_way1, "five_way1", INT},
@@ -129,6 +130,8 @@ static const struct {
     {HARDWARE_vtx_sck, "vtx_sck", INT},
     {HARDWARE_vtx_amp_vpd_25mW, "vtx_amp_vpd_25mW", ARRAY},
     {HARDWARE_vtx_amp_vpd_100mW, "vtx_amp_vpd_100mW", ARRAY},
+    {HARDWARE_vtx_amp_pwm_25mW, "vtx_amp_pwm_25mW", ARRAY},
+    {HARDWARE_vtx_amp_pwm_100mW, "vtx_amp_pwm_100mW", ARRAY},
 };
 
 typedef union {

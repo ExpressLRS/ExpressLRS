@@ -34,7 +34,6 @@
 #define GPIO_LED_BLUE_INVERTED 0
 #endif
 
-extern bool InBindingMode;
 #if defined(TARGET_RX)
 extern bool connectionHasModelMatch;
 #endif
@@ -206,13 +205,13 @@ static int event()
 
             if (GPIO_PIN_LED != UNDEF_PIN)
             {
-                if (connectionHasModelMatch)
+                if (!connectionHasModelMatch || !teamraceHasModelMatch)
                 {
-                    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
+                    return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
                 }
                 else
                 {
-                    return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
+                    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
                 }
             }
         #endif

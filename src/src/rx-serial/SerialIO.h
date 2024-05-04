@@ -2,6 +2,7 @@
 
 #include "targets.h"
 #include "FIFO.h"
+#include "device.h"
 
 /**
  * @brief Abstract class that is to be extended by implementation classes for different serial protocols on the receiver side.
@@ -60,10 +61,11 @@ public:
      *
      * @param frameAvailable indicates that a new OTA frame of data has been received
      * since the last call to this function
+     * @param frameMissed indicates that a frame was not received in the OTA window
      * @param channelData pointer to the 16 channels of data
      * @return number of milliseconds to delay before this method is called again
      */
-    virtual uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) = 0;
+    virtual uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) = 0;
 
     /**
      * @brief send any previously queued data to the serial port stream `_outputPort`
