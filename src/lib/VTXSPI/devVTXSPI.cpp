@@ -239,12 +239,14 @@ static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
         {
             if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
             {
-                newVpd = VpdSetPointArray[i] + ((VpdSetPointArray[i + 1]-VpdSetPointArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
+                newVpd = VpdSetPointArray[i] +
+                    ((VpdSetPointArray[i + 1]-VpdSetPointArray[i]) / (VpdFreqArray[i + 1] - VpdFreqArray[i])) *
+                    (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
             }
         }
     }
 
-    DBGLN("VTX: linearVpd, value: %d", newVpd);
+    DBGLN("VTX: linearlinearInterpVpdSetPointArray, value: %d", newVpd);
 
     return newVpd;
 }
@@ -267,10 +269,14 @@ static uint16_t LinearInterpSetPwm(const uint16_t PwmArray[])
         {
             if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
             {
-                newPwm = PwmArray[i] + ((PwmArray[i + 1]-PwmArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
+                newPwm = PwmArray[i] +
+                    ((PwmArray[i + 1] - PwmArray[i]) / (VpdFreqArray[i + 1] - VpdFreqArray[i])) *
+                    (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
             }
         }
     }
+
+    DBGLN("VTX: linearInterpSetPwm, value: %d", newPwm);
 
     return newPwm;
 }
@@ -372,12 +378,12 @@ void disableVTxSpi()
 
 static void initialize()
 {
-    #if defined(TARGET_UNIFIED_RX)
+#if defined(TARGET_UNIFIED_RX)
     VpdSetPointArray25mW = VPD_VALUES_25MW;
     VpdSetPointArray100mW = VPD_VALUES_100MW;
     PwmArray25mW = PWM_VALUES_25MW;
     PwmArray100mW = PWM_VALUES_100MW;
-    #endif
+#endif
 
     if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
     {
