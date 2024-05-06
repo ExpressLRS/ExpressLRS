@@ -618,10 +618,6 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
             hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
 
-            // leaving only the type in the first byte (crcHigh was cleared)
-            RXdataBuffer[0] &= 0b11;
-            RXdataBuffer_second[1] &= 0b11; // 1st index because the first byte returned is a status bytes, and not packet data. 
-
             // if the second packet is same to the first, it's valid
             if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
             {
