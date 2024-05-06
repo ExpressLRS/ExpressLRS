@@ -19,6 +19,6 @@ private:
     uint8_t length;
     uint8_t currentOffset;
     uint8_t currentPackage;
-    bool telemetryConfirm;
+    volatile bool telemetryConfirm;
     uint8_t maxPackageIndex;
 };
