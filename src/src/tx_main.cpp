@@ -826,13 +826,12 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
   }
 
   bool packetSuccessful = ProcessTLMpacket(status);
+#if defined(Regulatory_Domain_EU_CE_2400)
   if (packetSuccessful)
   {
-    TelemetryRcvPhase = ttrpTransmitting;
-#if defined(Regulatory_Domain_EU_CE_2400)
     SetClearChannelAssessmentTime();
-#endif
   }
+#endif
   busyTransmitting = false;
   return packetSuccessful;
 }
