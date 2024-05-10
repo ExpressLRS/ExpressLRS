@@ -13,6 +13,10 @@ static uint32_t rxStartTime;
 bool LBTEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 
+#if defined(TARGET_TX)
+  static bool LBTStarted = false;
+#endif
+
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   SX1280_RadioLoRaSpreadingFactors_t SF,
   uint8_t radio_type
@@ -101,6 +105,13 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 {
   if (!LBTEnabled)
     return;
+  
+#if defined(TARGET_TX)
+  if (LBTStarted)
+    return;
+
+  LBTStarted = true;
+#endif
 
   rxStartTime = micros();
   validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
@@ -113,6 +124,10 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
 {
   LBTSuccessCalc.inc(); // Increment count for every channel check
+
+#if defined(TARGET_TX)
+  LBTStarted = false;
+#endif
 
   if (!LBTEnabled)
   {
