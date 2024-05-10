@@ -248,10 +248,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     }
   }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-  SetClearChannelAssessmentTime();
-#endif
-
   return true;
 }
 
@@ -839,6 +835,13 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
   }
 
   bool packetSuccessful = ProcessTLMpacket(status);
+  if (packetSuccessful)
+  {
+    TelemetryRcvPhase = ttrpTransmitting;
+#if defined(Regulatory_Domain_EU_CE_2400)
+    SetClearChannelAssessmentTime();
+#endif
+  }
   busyTransmitting = false;
   return packetSuccessful;
 }
