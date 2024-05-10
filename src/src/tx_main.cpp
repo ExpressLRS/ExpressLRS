@@ -666,15 +666,6 @@ void ICACHE_RAM_ATTR timerCallback()
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
   }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-  // The last period was receiving tlm, but nothing was received.
-  // No need to enter rxmode again, lets just read the latest GetRssiInst().
-  if (!(TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet()))
-  {
-    SetClearChannelAssessmentTime(); // Get RSSI reading here, used also for next TX if in receiveMode.
-  }
-#endif
-
   TelemetryRcvPhase = ttrpTransmitting;
 
   // Do not send a stale channels packet to the RX if one has not been received from the handset
