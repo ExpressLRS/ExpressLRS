@@ -24,23 +24,10 @@
 #define REG_SET_MASK(reg, mask) WRITE_REG((reg), (READ_REG(reg)|(mask)))
 #define REG_CLR_MASK(reg, mask) WRITE_REG((reg), (READ_REG(reg)&(~(mask))))
 
-#define ESP32_OR_LATER   !(ESP8266)
-#define ESP32S2_OR_LATER !(ESP8266 || ESP32)
-#define ESP32S3_OR_LATER !(ESP8266 || ESP32 || ESP32S2)
-
 /**********************************************************
  * Per-SOC capabilities
  */
-#ifdef ESP32S2
-#define WITH_USB_OTG 1
-#endif // ESP32S2
-
-#ifdef ESP32C3
-#define WITH_USB_JTAG_SERIAL 1
-#define IS_RISCV 1
-#endif // ESP32C3
-
-#ifdef ESP32S3
-#define WITH_USB_JTAG_SERIAL 1
-#define WITH_USB_OTG 1
-#endif // ESP32S3
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#define HAS_SECURITY_INFO
+#define SECURITY_INFO_BYTES 20
+#endif
