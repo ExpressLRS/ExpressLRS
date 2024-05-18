@@ -1144,14 +1144,26 @@ static void setupSerial()
     Stream *serialPort = new NullStream();
   #endif
 #elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  HardwareSerial *serialPort = new HardwareSerial(2);
+  Stream *serialPort = new HardwareSerial(2);
   #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-    serialPort->setRx(GPIO_PIN_DEBUG_RX);
+    ((HardwareSerial*)serialPort)->setRx(GPIO_PIN_DEBUG_RX);
   #endif
   #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-    serialPort->setTx(GPIO_PIN_DEBUG_TX);
+    ((HardwareSerial*)serialPort)->setTx(GPIO_PIN_DEBUG_TX);
   #endif
-  serialPort->begin(BACKPACK_LOGGING_BAUD);
+  #if defined(TARGET_R9M_TX)
+    if(firmwareOptions.is_airport){
+      ((HardwareSerial*)serialPort)->begin(firmwareOptions.uart_baud);
+      TxUSB = serialPort;
+      serialPort = new NullStream();
+    }
+    else
+    {
+      ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD);
+    }
+  #else //TARGET_R9M_TX
+    ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD);
+  #endif
 #else
   Stream *serialPort = new NullStream();
 #endif
@@ -1172,6 +1184,11 @@ static void setupSerial()
   {
     TxUSB = new NullStream();
   }
+#elif defined(TARGET_R9M_TX)
+  UNUSED(portConflict);
+  UNUSED(rxPin);
+  UNUSED(txPin);
+
 #else
   TxUSB = new NullStream();
   UNUSED(portConflict);
@@ -1203,6 +1220,21 @@ static void setupTarget()
 #if defined(TARGET_TX_FM30_MINI)
   pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+#endif
+
+#if defined(TARGET_R9M_TX)
+  pinMode(GPIO_PIN_DIP1, INPUT_PULLUP);
+  pinMode(GPIO_PIN_DIP2, INPUT_PULLUP);
+  uint dip1State = digitalRead(GPIO_PIN_DIP1);
+  if(dip1State == 1)
+  {
+    firmwareOptions.is_airport = true;
+  }
+  else
+  {
+    firmwareOptions.is_airport = false;
+  }
+
 #endif
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
