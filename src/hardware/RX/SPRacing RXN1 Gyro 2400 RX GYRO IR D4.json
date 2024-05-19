@@ -1,0 +1,85 @@
+{
+    "//": "GPIO Matrix Indexes, 0 = GPIO0, *not* 0 = pin 0",
+
+    "//": "BUTTON",
+    "//": "GPIO0 Strapping - Default: Pull-up - Button pressed pulls-down",
+    "button": 0,
+
+    "//": "SERIAL",
+    "serial_tx": 1,
+    "serial_rx": 3,
+
+    "//": "RADIO (2x 2.4Ghz + 2x PA)",
+
+    "//": "No inductor fitted to the SX1280",
+    "radio_dcdc": false,
+
+    "//": "Radio SPI CLK/DATA pins are on same power domain",
+    "radio_miso": 4,
+    "radio_mosi": 32,
+    "radio_sck": 33,
+    "//": "NSS is active-low, SX1280 MISO is high-impedance when NSS is high.",
+    "radio_nss": 27,
+    "//": "NRESET is active-low with 50k pull-up in SX1280",
+    "radio_rst": 22,
+    "radio_busy": 36,
+    "radio_dio1": 37,
+
+    "power_min": 0,
+    "power_high": 0,
+    "power_max": 0,
+    "power_default": 0,
+    "power_control": 0,
+    "power_values": [13],
+
+    "//": "IR Transponder",
+    "//": "IR output must be OFF unless transmitting",
+    "ir_transponder": 21,
+
+    "//": "Gyro - Either ICM-42605/ICM-42688-P may be fitted",
+    "//": "VSPICS0",
+    "gyro_nss": 5,
+    "//": "VSPIQ",
+    "gyro_miso": 19,
+    "//": "VSPID",
+    "gyro_mosi": 23,
+    "//": "VSPICLK",
+    "gyro_sck": 18,
+    "//": "VSPICLK",
+    "gyro_int": 38,
+
+
+    "//": "PWM",
+    "//": "PWM outputs on remaining output pins",
+    "//": "PWM1 - GPIO25/DAC_1",
+    "//": "PWM2 - GPIO26/DAC_2",
+    "//": "PWM3 - GPIO10/U1TXD",
+    "//": "PWM4 - GPIO9/U1RXD",
+    "//": "PWM5 - GPIO3/U0RXD",
+    "//": "PWM6 - GPIO1/U0TXD",
+    "//": "JTAG/PWM",
+    "//": "PWM7 - GPIO14/MTMS",
+    "//": "PWM8 - GPIO13/MTCK",
+    "//": "PWM9 - GPIO12/MTDI Strapping - Default: Pull-down",
+    "//": "PWM10 - GPIO15/MTDO Strapping - Default: Pull-up",
+    "pwm_outputs":[25,26,10,9,1,3,14,13,12,15],
+
+    "//": "VBAT",
+    "//": "ADC1_CH3 - ADC input via 100k/10k 10:1 voltage divider",
+    "vbat": 39,
+    "vbat_atten": 4,
+    "vbat_offset": -3,
+    "vbat_scale": 905,
+    "//": "Analog IN",
+    "//": "A1 - GPIO34/ADC1_CH6",
+    "//": "A2 - GPIO35/ADC1_CH7",
+    "adc_a1": 34,
+    "adc_a2": 35,
+
+
+    "//": "LED",
+    "led_rgb": 2,
+    "led_rgb_isgrb": true,
+    "ledidx_rgb_status": [0],
+    "ledidx_rgb_boot": [0]
+}

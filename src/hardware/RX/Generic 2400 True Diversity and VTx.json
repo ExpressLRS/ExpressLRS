@@ -1,0 +1,48 @@
+{
+    "serial_rx": 3,
+    "serial_tx": 1,
+
+    "radio_miso": 33,
+    "radio_mosi": 32,
+    "radio_sck": 25,
+
+    "radio_busy": 36,
+    "radio_dio1": 37,
+    "radio_nss": 27,
+    "radio_rst": 26,
+
+    "radio_busy_2": 39,
+    "radio_dio1_2": 34,
+    "radio_nss_2": 13,
+    "radio_rst_2": 21,
+
+    "power_min": 0,
+    "power_high": 0,
+    "power_max": 0,
+    "power_default": 0,
+    "power_control": 0,
+    "power_values": [13],
+
+    "led_rgb": 22,
+    "led_rgb_isgrb": true,
+    "ledidx_rgb_status": [0],
+    "ledidx_rgb_vtx": [1],
+    "ledidx_rgb_boot": [0,1],
+
+    "vtx_nss": 19,
+    "vtx_miso": 23,
+    "vtx_mosi": 18,
+    "vtx_sck": 5,
+
+    "vtx_amp_pwm": 12,
+    "vtx_amp_vpd": 4,
+    "vtx_amp_vref": 2,
+
+    "vtx_amp_vpd_25mW": [600,600,600,600],
+    "vtx_amp_vpd_100mW": [1500,1500,1500,1500],
+
+    "vtx_amp_pwm_25mW": [3300,3300,3300,3300],
+    "vtx_amp_pwm_100mW": [3230,3230,3230,3230],
+
+    "button": 0
+}

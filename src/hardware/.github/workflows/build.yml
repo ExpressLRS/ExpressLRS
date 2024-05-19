@@ -1,0 +1,49 @@
+name: Build ExpressLRS
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Validate hardware target files
+      run: |
+        python .github/targets_validator.py
+
+    - name: Create hardware target zip
+      run: |
+        cp targets.json tmpfile
+        jq 'del(.generic)' tmpfile > targets.json
+        rm tmpfile
+        zip -r -9 hardware.zip *
+
+    - name: Update firmware artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: hardware.zip
+
+    - name: Upload hardware target zip to ExpressLRS artifactory
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+        AWS_REGION: "auto"
+      run: |
+        if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
+          echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
+          exit 0
+        fi
+
+        echo "Uploading hardware to artifactory"
+        aws s3 cp --endpoint-url $AWS_ENDPOINT_URL hardware.zip s3://expresslrs/ExpressLRS/hardware.zip

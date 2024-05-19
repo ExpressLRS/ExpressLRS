@@ -1,0 +1,22 @@
+name: Validate
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - master
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Validate hardware target files
+      run: |
+        python .github/targets_validator.py

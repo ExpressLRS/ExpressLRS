@@ -1,0 +1,18 @@
+{
+    "radio_dio1": 4,
+    "radio_miso": 12,
+    "radio_mosi": 13,
+    "radio_nss": 15,
+    "radio_sck": 14,
+    "power_min": 0,
+    "power_high": 0,
+    "power_max": 0,
+    "power_default": 0,
+    "power_control": 0,
+    "power_values": [13],
+    "led": 16,
+    "pwm_outputs": [0,1,3,9,10,5,2],
+    "vbat": 17,
+    "vbat_offset": 12,
+    "vbat_scale": 310
+}
