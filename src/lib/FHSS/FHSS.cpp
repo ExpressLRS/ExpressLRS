@@ -32,13 +32,13 @@ const fhss_config_t domainsDualBand[] = {
 #include "SX1280Driver.h"
 
 const fhss_config_t domains[] = {
-    {    
+    {
     #if defined(Regulatory_Domain_EU_CE_2400)
         "CE_LBT",
     #elif defined(Regulatory_Domain_ISM_2400)
-        "ISM2G4",
+        "KC2G4",
     #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80}
+    FREQ_HZ_TO_REG_VAL(2420400000), FREQ_HZ_TO_REG_VAL(2479400000), 60}
 };
 #endif
 
