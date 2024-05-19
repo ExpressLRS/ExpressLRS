@@ -1358,11 +1358,15 @@ static void setupSerial()
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-#if defined(PLATFORM_ESP32_S3)
+#if defined(DEBUG_ENABLED)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
     SerialLogger = &USBSerial;
 #else
     SerialLogger = &Serial;
+#endif
+#else
+    SerialLogger = new NullStream();
 #endif
 }
 
