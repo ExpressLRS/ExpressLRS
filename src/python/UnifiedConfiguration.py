@@ -121,6 +121,8 @@ def appendConfiguration(source, target, env):
         platform = 'esp32'
         if 'esp32-s3' in env.get('BOARD', ''):
             platform = 'esp32-s3'
+        elif 'esp32-c3' in env.get('BOARD', ''):
+            platform = 'esp32-c3'
     else:
         platform = 'esp8285'
 
