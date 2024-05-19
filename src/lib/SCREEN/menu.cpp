@@ -8,6 +8,7 @@
 #include "POWERMGNT.h"
 #include "handset.h"
 #include "OTA.h"
+#include "deferred.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -26,7 +27,6 @@ extern void setWifiUpdateMode();
 extern void SetSyncSpam();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
-extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 extern Display *display;
 
@@ -228,7 +228,7 @@ static void saveValueIndex(bool init)
             // If the switch mode is going to change, block the change while connected
             if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
             {
-                deferExecution(100, [actualRate, newSwitchMode](){
+                deferExecutionMillis(100, [actualRate, newSwitchMode](){
                     config.SetRate(actualRate);
                     config.SetSwitchMode(newSwitchMode);
                     OtaUpdateSerializers((OtaSwitchMode_e)newSwitchMode, ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -242,7 +242,7 @@ static void saveValueIndex(bool init)
             // the pack and unpack functions are matched
             if (connectionState == disconnected)
             {
-                deferExecution(100, [val](){
+                deferExecutionMillis(100, [val](){
                     config.SetSwitchMode(val);
                     OtaUpdateSerializers((OtaSwitchMode_e)val, ExpressLRS_currAirRate_Modparams->PayloadLength);
                     SetSyncSpam();
@@ -254,7 +254,7 @@ static void saveValueIndex(bool init)
             config.SetAntennaMode(values_index);
             break;
         case STATE_TELEMETRY:
-            deferExecution(100, [val](){
+            deferExecutionMillis(100, [val](){
                 config.SetTlm(val);
                 SetSyncSpam();
             });

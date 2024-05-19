@@ -1,6 +1,7 @@
 #pragma once
 
 #define SPL06_I2C_ADDR                          0x76
+#define SPL06_I2C_ADDR_ALT                      0x77
 #define SPL06_DEFAULT_CHIP_ID                   0x10
 
 #define SPL06_PRESSURE_START_REG                0x00

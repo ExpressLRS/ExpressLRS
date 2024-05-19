@@ -92,7 +92,7 @@ config = {
                     ]
                 },
                 {
-                    "color" : 224,
+                    #"color" : 224, # No color for you button 2
                     "action": [
                         {
                             "is-long-press": False,
@@ -119,7 +119,7 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': '',
+            'PLATFORM': 'Unified_ESP8285',
             'isTX': isTX,
             'hasSubGHz': hasSubGHz
         })
