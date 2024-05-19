@@ -29,11 +29,13 @@ _('start-cw').onclick = (e) => {
   _('start-cw').disabled = true;
   _('optionsRadios1').disabled = true;
   _('optionsRadios2').disabled = true;
+  _('optionssetSubGHz').disabled = true;
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.open('POST', '/cw', true);
   xmlhttp.onreadystatechange = function() {};
   const formdata = new FormData;
   formdata.append('radio', _('optionsRadios1').checked ? 1 : 2);
+  formdata.append('checkbox', _('optionssetSubGHz').checked ? 1 : 0);
   xmlhttp.send(formdata);
 };
 
