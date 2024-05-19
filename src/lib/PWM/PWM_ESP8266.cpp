@@ -46,7 +46,7 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
     if (microseconds == 0 || microseconds==refreshInterval[channel])
     {
         stopWaveform8266(pin);
-        digitalWrite(pin, microseconds == 0 ? HIGH : LOW);
+        digitalWrite(pin, microseconds == 0 ? LOW : HIGH);
         return;
     }
     startWaveform8266(pin, microseconds, refreshInterval[channel] - microseconds);

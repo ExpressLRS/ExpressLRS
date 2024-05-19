@@ -842,7 +842,9 @@ function updateButtons(data) {
     for (const [p, v] of Object.entries(_v['action'])) {
       appendRow(parseInt(b), parseInt(p), v);
     }
-    _(`button${parseInt(b)+1}-color-div`).style.display = 'block';
+    if (_v['color'] !== undefined) {
+      _(`button${parseInt(b)+1}-color-div`).style.display = 'block';
+    }
     _(`button${parseInt(b)+1}-color`).value = toRGB(_v['color']);
   }
   _('button1-color').oninput = changeCurrentColors;
