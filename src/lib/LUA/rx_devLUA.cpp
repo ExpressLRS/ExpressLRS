@@ -3,8 +3,8 @@
 #include "rxtx_devLua.h"
 #include "helpers.h"
 #include "devServoOutput.h"
+#include "deferred.h"
 
-extern void deferExecutionMillis(uint32_t ms, std::function<void()> f);
 extern void reconfigureSerial();
 extern void reconfigureSerial1();
 extern bool BindingModeRequest;
@@ -235,11 +235,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 
     // SerialIO outputs (1 option)
     // ;[Serial RX] | [Serial TX]
-    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 3)
+    if (GPIO_PIN_PWM_OUTPUTS[arg-1] == U0RXD_GPIO_NUM)
     {
         pModeString = serial_RX;
     }
-    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == 1)
+    else if (GPIO_PIN_PWM_OUTPUTS[arg-1] == U0TXD_GPIO_NUM)
     {
         pModeString = serial_TX;
     }
