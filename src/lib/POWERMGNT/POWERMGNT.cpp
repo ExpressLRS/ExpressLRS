@@ -292,7 +292,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         {
             Radio.SetOutputPower(POWER_OUTPUT_VALUES2[Power - MinPower]);
         }
-        #if defined(PLATFORM_ESP32_S3)
+        #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
         ERRLN("ESP32-S3 does not have a DAC");
         #else
         dacWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
