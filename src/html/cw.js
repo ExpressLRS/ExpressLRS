@@ -1,3 +1,4 @@
+@@require(chip)
 /* eslint-disable max-len, require-jsdoc */
 document.addEventListener('DOMContentLoaded', init, false);
 
@@ -10,26 +11,44 @@ var xtalNominal = 52000000;
 var warn_offset;
 var bad_offset;
 
+function updateParams(data) {
+  cwFreq = data.center;
+@@if chip == 'SX128X':
+  xtalNominal = 52000000;
+  warn_offset = 90000;
+  bad_offset = 180000;
+@@end
+@@if chip == 'SX127X':
+  xtalNominal = 32000000;
+  warn_offset = 100000;
+  bad_offset = 125000;
+@@end
+@@if chip == 'LR1121':
+  xtalNominal = 32000000;
+  warn_offset = 100000;
+  bad_offset = 125000;
+  if (!_('optionsSetSubGHz').checked) {
+    cwFreq = data.center2;
+  }
+@@end
+  _('frequency').textContent = (cwFreq / 1000000).toString();
+  _('start-cw').disabled = false;
+}
+
 function init() {
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
-      if (data.radios == 2) {
+      if (data.radios === 2) {
         _('radioOption').style.display = 'block';
       }
-      _('frequency').textContent = data.center / 1000000;
-      _('start-cw').disabled = false;
-      cwFreq = data.center;
-      if (cwFreq > 2000000000) {
-        xtalNominal = 52000000;
-        warn_offset = 90000;
-        bad_offset = 180000;
-      } else {
-        xtalNominal = 32000000;
-        warn_offset = 100000;
-        bad_offset = 125000;
+@@if chip == 'LR1121':
+      _('optionsSetSubGHz').onclick = () => {
+        updateParams(data);
       }
+@@end
+      updateParams(data);
     }
   };
   xmlhttp.open('GET', '/cw', true);
@@ -42,13 +61,15 @@ _('start-cw').onclick = (e) => {
   _('start-cw').disabled = true;
   _('optionsRadios1').disabled = true;
   _('optionsRadios2').disabled = true;
-  _('optionssetSubGHz').disabled = true;
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.open('POST', '/cw', true);
   xmlhttp.onreadystatechange = function() {};
   const formdata = new FormData;
   formdata.append('radio', _('optionsRadios1').checked ? 1 : 2);
-  formdata.append('checkbox', _('optionssetSubGHz').checked ? 1 : 0);
+@@if chip == 'LR1121':
+  formdata.append('subGHz', _('optionsSetSubGHz').checked ? 1 : 0);
+  _('optionsSetSubGHz').disabled = true;
+@@end
   xmlhttp.send(formdata);
 };
 

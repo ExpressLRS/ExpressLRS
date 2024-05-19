@@ -862,7 +862,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
 
     bool setSubGHz = false;
 #if defined(RADIO_LR1121)
-    setSubGHz = request->arg("checkbox").toInt() == 1;
+    setSubGHz = request->arg("subGHz").toInt() == 1;
 #endif
 
     AsyncWebServerResponse *response = request->beginResponse(204);
@@ -876,7 +876,9 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
-    Radio.startCWTest(setSubGHz ? 915000000 : 2440000000, radio);
+#if defined(RADIO_LR1121)
+    Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+#else
     Radio.startCWTest(FHSSconfig->freq_center, radio);
 #if defined(RADIO_SX127X)
     deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
@@ -884,7 +886,11 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
 #endif
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
-    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +"}");
+    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
+#if defined(RADIO_LR1121)
+            ", \"center2\": "+ FHSSconfigDualBand->freq_center +
+#endif
+            "}");
   }
 }
 
