@@ -717,7 +717,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
-    if (instance->ignoreSecondIRQ)
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN && instance->ignoreSecondIRQ)
         return;
 
     instance->processingPacketRadio = radioNumber;
