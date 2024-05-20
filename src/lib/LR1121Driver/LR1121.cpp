@@ -717,23 +717,27 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN && instance->ignoreSecondIRQ)
-        return;
+    SX12XX_Radio_Number_t irqClearRadio = radioNumber;
+//    if (instance->ignoreSecondIRQ)
+//    {
+//        instance->ClearIrqStatus(irqClearRadio);
+//        return;
+//    }
 
     instance->processingPacketRadio = radioNumber;
-
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
-        instance->ClearIrqStatus(SX12XX_Radio_All);
-        instance->ignoreSecondIRQ = true;  
+        instance->ignoreSecondIRQ = true;
+        irqClearRadio = SX12XX_Radio_All;
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            instance->ignoreSecondIRQ = true;  
+            instance->ignoreSecondIRQ = true;
+            irqClearRadio = SX12XX_Radio_All; // Packet received so clear all radios and dont spend extra time retrieving data.
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
@@ -741,6 +745,11 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
+        instance->isFirstRxIrq = false; // RX isr is already fired in this period. (reset to true in tock)
     }
+    else if (irqStatus == LR1121_IRQ_RADIO_NONE)
+    {
+        return;
+    }
+    instance->ClearIrqStatus(irqClearRadio);
 }
