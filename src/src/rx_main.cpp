@@ -1392,8 +1392,17 @@ static void setupConfigAndPocCheck()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
 
+#if defined(PLATFORM_ESP8266)
+    rst_info *resetInfo = ESP.getResetInfoPtr();
+    bool incrementCounter = resetInfo->reason == REASON_DEFAULT_RST;
+#elif defined(PLATFORM_ESP32)
+    bool incrementCounter = esp_reset_reason() == ESP_RST_POWERON;
+#else
+    bool incrementCounter = true;
+#endif
+
     // If bound, track number of plug/unplug cycles to go to binding mode in eeprom
-    if (config.GetIsBound() && config.GetPowerOnCounter() < 3)
+    if (incrementCounter && config.GetIsBound() && config.GetPowerOnCounter() < 3)
     {
         config.SetPowerOnCounter(config.GetPowerOnCounter() + 1);
         config.Commit();
