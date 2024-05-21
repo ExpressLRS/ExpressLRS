@@ -1391,7 +1391,10 @@ static void setupConfigAndPocCheck()
     eeprom.Begin();
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
+}
 
+static void powerOnStartupHandling()
+{
 #if defined(PLATFORM_ESP8266)
     rst_info *resetInfo = ESP.getResetInfoPtr();
     bool incrementCounter = resetInfo->reason == REASON_DEFAULT_RST;
@@ -1895,7 +1898,10 @@ void setup()
 #endif
 
     devicesStart();
-    
+
+    // Delayed to the end of setup as to avoid spurious power glitches
+    powerOnStartupHandling();
+
     // setup() eats up some of this time, which can cause the first mode connection to fail.
     // Resetting the time here give the first mode a better chance of connection.
     RFmodeLastCycled = millis();
