@@ -2,6 +2,8 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#include "deferred.h"
+
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #if defined(PLATFORM_ESP8266)
@@ -854,10 +856,14 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
-#ifdef RADIO_SX128X
 static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
     SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+
+    bool setSubGHz = false;
+#if defined(RADIO_LR1121)
+    setSubGHz = request->arg("subGHz").toInt() == 1;
+#endif
 
     AsyncWebServerResponse *response = request->beginResponse(204);
     response->addHeader("Connection", "close");
@@ -870,13 +876,23 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
-    Radio.startCWTest(2440000000, radio);
+#if defined(RADIO_LR1121)
+    Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+#else
+    Radio.startCWTest(FHSSconfig->freq_center, radio);
+#if defined(RADIO_SX127X)
+    deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
+#endif
+#endif
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
-    request->send(200, "application/json", String("{\"radios\": ") + radios + "}");
+    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
+#if defined(RADIO_LR1121)
+            ", \"center2\": "+ FHSSconfigDualBand->freq_center +
+#endif
+            "}");
   }
 }
-#endif
 
 static void initialize()
 {
@@ -1041,11 +1057,9 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
-  #ifdef RADIO_SX128X
   server.on("/cw.html", WebUpdateSendContent);
   server.on("/cw.js", WebUpdateSendContent);
   server.on("/cw", HandleContinuousWave);
-  #endif
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");

@@ -27,6 +27,7 @@ typedef struct {
     uint32_t    freq_start;
     uint32_t    freq_stop;
     uint32_t    freq_count;
+    uint32_t    freq_center;
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;

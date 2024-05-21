@@ -35,6 +35,9 @@ public:
     void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();
 
+    void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
+    void cwRepeat(SX12XX_Radio_Number_t radioNumber);
+
     void SetBandwidthCodingRate(SX127x_Bandwidth bw, SX127x_CodingRate cr);
     void SetCRCMode(bool on); //false for off
     void SetSyncWord(uint8_t syncWord);
