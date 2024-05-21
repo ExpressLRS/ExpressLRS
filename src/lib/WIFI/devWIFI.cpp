@@ -381,7 +381,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       if (pin != 0) features |= 16; // DShot supported on all pins but GPIO0 
       if (pin == GPIO_PIN_SERIAL1_RX) features |= 32;  // SERIAL1 RX supported (only on this pin)
       else if (pin == GPIO_PIN_SERIAL1_TX) features |= 64;  // SERIAL1 TX supported (only on this pin)
-      else if (GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) features |= 96; // Both Serial1 RX/TX supported (on any pin)
+      else if ((GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) && 
+               (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
