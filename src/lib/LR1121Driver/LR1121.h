@@ -23,7 +23,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     LR1121Driver();
-    bool Begin();
+    bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     void SetTxIdleMode() { SetMode(LR1121_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
@@ -51,7 +51,7 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0xff;
+    static const uint8_t PWRPENDING_NONE = 0x7f;
 
     // LR1121_RadioOperatingModes_t currOpmode;
     bool modeSupportsFei;

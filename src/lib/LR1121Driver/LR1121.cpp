@@ -41,7 +41,8 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
-    fallBackMode = LR1121_MODE_STDBY_XOSC;
+    fallBackMode = LR1121_MODE_FS;
+    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::End()
@@ -51,7 +52,7 @@ void LR1121Driver::End()
     RemoveCallbacks();
 }
 
-bool LR1121Driver::Begin()
+bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 {
     hal.init();
     hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
@@ -100,14 +101,6 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     // 7.2.5 SetRxTxFallbackMode
     uint8_t FBbuf[1] = {LR11XX_RADIO_FALLBACK_FS};
     fallBackMode = LR1121_MODE_FS;
-#if defined(TARGET_TX)
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        FBbuf[0] = {LR11XX_RADIO_FALLBACK_STDBY_XOSC};
-        fallBackMode = LR1121_MODE_STDBY_XOSC;
-    }
-#endif
-    // 7.2.5 SetRxTxFallbackMode
     hal.WriteCommand(LR11XX_RADIO_SET_RX_TX_FALLBACK_MODE_OC, FBbuf, sizeof(FBbuf), SX12XX_Radio_All);
 
     // 7.2.12 SetRxBoosted
@@ -126,15 +119,22 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     }
 #endif
 
+    // 2.1.3.1 CalibImage
+    uint8_t CalImagebuf[2];
+    CalImagebuf[0] = ((minimumFrequency / 1000000 ) - 1) / 4;       // Freq1 = floor( (fmin_mhz - 1)/4)
+    CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
+    hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
+
     return true;
 }
 
+// 12.2.1 SetTxCw
 void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
-    // SetFrequencyHz(freq, radioNumber);
-    // CommitOutputPower();
-    // hal.TXenable(radioNumber);
-    // hal.WriteCommand(0x0219, radioNumber);
+    // Set a basic Config that can be used for both 2.4G and SubGHz bands.
+    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, radioNumber);
+    CommitOutputPower();
+    hal.WriteCommand(LR11XX_RADIO_SET_TX_CW_OC, radioNumber);
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
@@ -619,10 +619,6 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
             hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
 
-            // leaving only the type in the first byte (crcHigh was cleared)
-            RXdataBuffer[0] &= 0b11;
-            RXdataBuffer_second[1] &= 0b11; // 1st index because the first byte returned is a status bytes, and not packet data. 
-
             // if the second packet is same to the first, it's valid
             if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
             {
@@ -722,6 +718,9 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
+    if (instance->ignoreSecondIRQ)
+        return;
+
     instance->processingPacketRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
@@ -729,12 +728,13 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->TXnbISR();
         instance->ClearIrqStatus(SX12XX_Radio_All);
+        instance->ignoreSecondIRQ = true;  
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            instance->ClearIrqStatus(SX12XX_Radio_All);
+            instance->ignoreSecondIRQ = true;  
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else

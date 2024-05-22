@@ -423,6 +423,7 @@ def main():
         if args.flash:
             args.target = config.get('firmware')
             args.accept = config.get('prior_target_name')
+            args.platform = config.get('platform')
             return binary_flash.upload(options, args)
         elif 'upload_methods' in config and 'stock' in config['upload_methods']:
             shutil.copy(args.file.name, 'firmware.elrs')

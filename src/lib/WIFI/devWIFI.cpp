@@ -2,6 +2,8 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#include "deferred.h"
+
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 #if defined(PLATFORM_ESP8266)
@@ -21,8 +23,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
-#define U0TXD_GPIO_NUM  (1)
-#define U0RXD_GPIO_NUM  (3)
 #endif
 #include <DNSServer.h>
 
@@ -57,7 +57,6 @@ extern void setButtonColors(uint8_t b1, uint8_t b2);
 extern RxConfig config;
 #endif
 
-extern void deferExecution(uint32_t ms, std::function<void()> f);
 extern unsigned long rebootTime;
 
 static char station_ssid[33];
@@ -75,6 +74,7 @@ static const byte DNS_PORT = 53;
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
+static IPAddress gatewayIpAddress(0, 0, 0, 0);
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
 #include "crsf2msp.h"
@@ -312,7 +312,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   for (int button=0 ; button<button_count ; button++)
   {
     const tx_button_color_t *buttonColor = config.GetButtonActions(button);
-    json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    if (hardware_int(button == 0 ? HARDWARE_button_led_index : HARDWARE_button2_led_index) != -1) {
+      json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+    }
     for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
     {
       json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
@@ -539,6 +541,26 @@ static void WebUpdateGetTarget(AsyncWebServerRequest *request)
   json["product_name"] = product_name;
   json["lua_name"] = device_name;
   json["reg_domain"] = FHSSgetRegulatoryDomain();
+  json["git-commit"] = commit;
+#if defined(TARGET_TX)
+  json["module-type"] = "TX";
+#endif
+#if defined(TARGET_RX)
+  json["module-type"] = "RX";
+#endif
+#if defined(RADIO_SX128X)
+  json["radio-type"] = "SX128X";
+  json["has-sub-ghz"] = false;
+#endif
+#if defined(RADIO_SX127X)
+  json["radio-type"] = "SX127X";
+  json["has-sub-ghz"] = true;
+#endif
+#if defined(RADIO_LR1121)
+  json["radio-type"] = "LR1121";
+  json["has-sub-ghz"] = true;
+#endif
+
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);
@@ -834,10 +856,14 @@ static void WebUpdateGetFirmware(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
-#ifdef RADIO_SX128X
 static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
     SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+
+    bool setSubGHz = false;
+#if defined(RADIO_LR1121)
+    setSubGHz = request->arg("subGHz").toInt() == 1;
+#endif
 
     AsyncWebServerResponse *response = request->beginResponse(204);
     response->addHeader("Connection", "close");
@@ -845,18 +871,28 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     request->client()->close();
 
     Radio.TXdoneCallback = [](){};
-    Radio.Begin();
+    Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
 
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
-    Radio.startCWTest(2440000000, radio);
+#if defined(RADIO_LR1121)
+    Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+#else
+    Radio.startCWTest(FHSSconfig->freq_center, radio);
+#if defined(RADIO_SX127X)
+    deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
+#endif
+#endif
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
-    request->send(200, "application/json", String("{\"radios\": ") + radios + "}");
+    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
+#if defined(RADIO_LR1121)
+            ", \"center2\": "+ FHSSconfigDualBand->freq_center +
+#endif
+            "}");
   }
 }
-#endif
 
 static void initialize()
 {
@@ -1021,11 +1057,9 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
-  #ifdef RADIO_SX128X
   server.on("/cw.html", WebUpdateSendContent);
   server.on("/cw.js", WebUpdateSendContent);
   server.on("/cw", HandleContinuousWave);
-  #endif
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Max-Age", "600");
@@ -1116,7 +1150,7 @@ static void HandleWebUpdate()
         #elif defined(PLATFORM_ESP32)
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
         #endif
-        WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
+        WiFi.softAPConfig(ipAddress, gatewayIpAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         startServices();
         break;

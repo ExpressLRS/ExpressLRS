@@ -180,7 +180,7 @@ static void setPWM()
         return;
     }
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     DBGLN("VTX: setPWM (pwm), value: %d", vtxSPIPWM * 1000 / 4096);
     PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
 #elif defined(PLATFORM_ESP32)

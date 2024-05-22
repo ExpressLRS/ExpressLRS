@@ -21,7 +21,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     }
     sendPackets = true;
 
-    if ((!frameAvailable && !frameMissed) || _outputPort->availableForWrite() < 25)
+    if ((!frameAvailable && !frameMissed && !effectivelyFailsafed) || _outputPort->availableForWrite() < 25)
     {
         return DURATION_IMMEDIATELY;
     }

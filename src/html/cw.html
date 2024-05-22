@@ -1,4 +1,4 @@
-@@require(PLATFORM, VERSION)
+@@require(PLATFORM, VERSION, chip)
 <!DOCTYPE HTML>
 <html>
 
@@ -19,10 +19,10 @@
 	<br>
 	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
 		<div class="mui-panel">
-			This page puts the SX1280 into a mode where it transmits a continuous wave with a center frequency of 2.440 GHz.
+			This page puts the Semtech LoRa chip into a mode where it transmits a continuous wave with a center frequency of <span id="frequency"></span> MHz.
 			<br>
 			You can then measure the actual continuous wave center frequency using a spectrum analyzer and enter the measured value below
-			and this will be used to calculate the accuracy of the 52MHz crystal used in the device and how far it differs from the ideal frequency.
+			and this will be used to calculate the accuracy of the crystal used in the device and how far it differs from the ideal frequency.
 			<form>
 				<div id="radioOption" class="mui-radio" style="display: none;">
 					<label>
@@ -41,6 +41,20 @@
 						Radio 2
 					</label>
 				</div>
+				<br>
+@@if chip == 'LR1121':
+				Basic support is available for the LR1121 and setting 915 MHz.
+				<br>
+				<div class="mui-checkbox">
+					<label>
+						<input type="checkbox"
+							name="setSubGHz"
+							id="optionsSetSubGHz">
+						Set 915 MHz
+					</label>
+				</div>
+@@end
+				<br>
 				<button id="start-cw" class="mui-btn mui-btn--primary" disabled>Start Continuous Wave</button>
 			</form>
 			<br>

@@ -125,7 +125,7 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
 
 void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[2] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
         (uint8_t)(command & 0x00FF)
     };
@@ -157,9 +157,9 @@ bool ICACHE_RAM_ATTR LR1121Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
         {
             if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
         }
-        else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX12XX_Radio_2)
+        else if (radioNumber == SX12XX_Radio_2)
         {
-            if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+            if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
         }
         else if (radioNumber == SX12XX_Radio_All)
         {

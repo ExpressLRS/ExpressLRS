@@ -349,7 +349,6 @@ body, input, select, textarea {
 
     /* Custom code for ExpressLRS PWM Output table */
   .pwmpnl {
-	overflow-x: auto;
 	min-width: fit-content;
   }
   .pwmtbl table {
@@ -365,6 +364,7 @@ body, input, select, textarea {
   .pwmitm {
 	min-width: 6em;
 	white-space: nowrap;
+	width: fit-content;
   }
 
   /*==========================*/

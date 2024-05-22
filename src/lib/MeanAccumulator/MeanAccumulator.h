@@ -14,13 +14,18 @@ public:
     {
         if (_count)
         {
-            IncrementType retVal = _accumulator / _count;
+            _previousMean = _accumulator / _count;
             reset();
 
-            return retVal;
+            return _previousMean;
         }
         return NoValueReturn;
     }
+
+    IncrementType previousMean()
+    {
+        return _previousMean;
+    }    
 
     void reset()
     {
@@ -36,4 +41,5 @@ public:
 private:
     StorageType _accumulator;
     StorageType _count;
+    IncrementType _previousMean;
 };

@@ -52,7 +52,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   lastSuccessfulPacketRadio = SX12XX_Radio_1;
 }
 
-bool SX127xDriver::Begin()
+bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 {
   hal.init();
   hal.IsrCallback_1 = &SX127xDriver::IsrCallback_1;
@@ -112,6 +112,50 @@ void SX127xDriver::End()
   hal.end();
   RFAMP.TXRXdisable();
   RemoveCallbacks();
+}
+
+void SX127xDriver::cwRepeat(SX12XX_Radio_Number_t radioNumber)
+{
+  uint8_t dummy[0] = {};
+
+  ClearIrqFlags(radioNumber);
+
+  hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
+  hal.writeRegister(SX127X_REG_FIFO, dummy, 0, radioNumber);
+
+  SetMode(SX127x_OPMODE_TX, radioNumber);
+}
+
+void SX127xDriver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
+{
+  SetPreambleLength(8);
+  SetSpreadingFactor(SX127x_SF_9);
+  SetBandwidthCodingRate(SX127x_BW_125_00_KHZ, SX127x_CR_4_5);
+  SetFrequencyHz(freq, SX12XX_Radio_All);
+  if (freq > 900000000)
+  {
+    hal.writeRegister(0x01, 0x80, radioNumber);
+    hal.writeRegister(0x44, 0x7B, radioNumber);
+    hal.writeRegister(0x3D, 0xA1, radioNumber);
+    hal.writeRegister(0x36, 0x01, radioNumber);
+    hal.writeRegister(0x1e, 0x08, radioNumber);
+    hal.writeRegister(0x45, 0xDF, radioNumber);
+    hal.writeRegister(0x46, 0x03, radioNumber);
+    hal.writeRegister(0x4D, 0x87, radioNumber);
+    hal.writeRegister(0x52, 0x60, radioNumber);
+  }
+  else
+  {
+    hal.writeRegister(0x01, 0x88, radioNumber);
+    hal.writeRegister(0x3D, 0xA1, radioNumber);
+    hal.writeRegister(0x36, 0x01, radioNumber);
+    hal.writeRegister(0x1e, 0x08, radioNumber);
+  }
+
+  RFAMP.TXenable(radioNumber);
+  hal.writeRegister(SX127X_REG_PA_CONFIG, pwrCurrent, radioNumber);
+
+  cwRepeat(radioNumber);
 }
 
 void SX127xDriver::ConfigLoraDefaults()

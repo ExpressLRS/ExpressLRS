@@ -18,6 +18,7 @@ from external.wheezy.template.loader import FileLoader
 net_counter = 0
 isTX = False
 hasSubGHz = False
+chip = 'LR1121'
 
 config = {
         "options": {
@@ -92,7 +93,7 @@ config = {
                     ]
                 },
                 {
-                    "color" : 224,
+                    #"color" : 224, # No color for you button 2
                     "action": [
                         {
                             "is-long-press": False,
@@ -111,7 +112,7 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, hasSubGHz
+    global isTX, hasSubGHz, chip
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -119,18 +120,21 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': '',
+            'PLATFORM': 'Unified_ESP8285',
             'isTX': isTX,
-            'hasSubGHz': hasSubGHz
+            'hasSubGHz': hasSubGHz,
+            'chip': chip
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, hasSubGHz
+    global net_counter, isTX, hasSubGHz, chip
     net_counter = 0
     isTX = 'isTX' in request.query
     hasSubGHz = 'hasSubGHz' in request.query
+    if 'chip' in request.query:
+        chip = request.query['chip']
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 
@@ -150,7 +154,7 @@ def mui():
     return apply_template('mui.js')
 
 @route('/hardware.html')
-def hradware_html():
+def hardware_html():
     response.content_type = 'text/html; charset=latin9'
     return apply_template('hardware.html')
 
@@ -158,6 +162,24 @@ def hradware_html():
 def hardware_js():
     response.content_type = 'text/javascript; charset=latin9'
     return apply_template('hardware.js')
+
+@route('/cw.html')
+def cw_html():
+    global chip
+    if 'chip' in request.query:
+        chip = request.query['chip']
+    response.content_type = 'text/html; charset=latin9'
+    return apply_template('cw.html')
+
+@route('/cw.js')
+def cw_js():
+    response.content_type = 'text/javascript; charset=latin9'
+    return apply_template('cw.js')
+
+@route('/cw')
+def cw():
+    response.content_type = 'application/json; charset=latin9'
+    return '{"radios": 2, "center": 915000000, "center2": 2440000000}'
 
 @route('/config')
 def options():
