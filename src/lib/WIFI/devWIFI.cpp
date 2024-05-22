@@ -286,7 +286,7 @@ static const char *GetConfigUidType(JsonDocument &json)
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
 #if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(32768);
+  DynamicJsonDocument json(16384);
 #else
   DynamicJsonDocument json(2048);
 #endif
