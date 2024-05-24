@@ -139,6 +139,7 @@ public:
     void SetSwitchMode(uint8_t switchMode);
     void SetAntennaMode(uint8_t txAntenna);
     void SetModelMatch(bool modelMatch);
+    void SetBLETelemetry(bool bleTelemetry);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetVtxBand(uint8_t vtxBand);
