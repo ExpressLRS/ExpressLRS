@@ -189,6 +189,24 @@ def cw():
     response.content_type = 'application/json; charset=latin9'
     return '{"radios": 2, "center": 915000000, "center2": 2440000000}'
 
+@route('/lr1121.html')
+def lr1121_html():
+    response.content_type = 'text/html; charset=latin9'
+    return apply_template('lr1121.html')
+
+@route('/lr1121.js')
+def lr1121_js():
+    response.content_type = 'text/javascript; charset=latin9'
+    return apply_template('lr1121.js')
+
+@route('/lr1121.json')
+def lr1121_json():
+    return {}
+
+@route('/lr1121', method="POST")
+def lr1121_upload():
+    return '{ "status": "ok", "msg": "All good!" }'
+
 @route('/config')
 def options():
     response.content_type = 'application/json; charset=latin9'

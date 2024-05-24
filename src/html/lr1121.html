@@ -1,0 +1,40 @@
+@@require(PLATFORM, VERSION)
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+	<title>Welcome to your ExpressLRS System</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="elrs.css" />
+</head>
+
+<body>
+	<header class="mui-appbar mui--z1 mui--text-center elrs-header">
+		@@include("logo-template.svg")
+		<h1><b>ExpressLRS</b></h1>
+		<span id="product_name"></span><br/>
+		<b>Firmware Rev. </b>@@{VERSION} <span id="reg_domain"></span>
+	</header>
+	<br>
+	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
+		<div class="mui-panel">
+			<label>Upload LR1121 firmware binary:</label>
+			<button id="upload_btn" class="mui-btn mui-btn--small mui-btn--primary upload">
+				<label>
+					Upload
+					<input type="file" id="firmware_file" name="update[]" />
+				</label>
+			</button>
+			<div id="filedrag">or drop files here</div>
+			<br/>
+			<h3 id="status"></h3>
+			<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
+		</div>
+		<div class="mui-panel">
+
+		</div>
+	</div>
+</body>
+<script src="lr1121.js"></script>
+</html>

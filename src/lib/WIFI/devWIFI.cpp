@@ -159,6 +159,10 @@ static struct {
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
   {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
   {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
+#if defined(RADIO_LR1121)
+  {"/lr1121.html", "text/html", (uint8_t *)LR1121_HTML, sizeof(LR1121_HTML)},
+  {"/lr1121.js", "text/javascript", (uint8_t *)LR1121_JS, sizeof(LR1121_JS)},
+#endif
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -796,6 +800,53 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+#if defined(RADIO_LR1121)
+static size_t expectedFilesize;
+
+static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
+    // Complete upload and set error flag
+    bool uploadError = false;
+    String msg;
+    if (!uploadError && totalSize == expectedFilesize) {
+        DBGLN("Update complete, rebooting");
+        msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
+        msg += "Please wait for a few seconds while the device reboots.\"}";
+        rebootTime = millis() + 200;
+    } else {
+        StreamString p = StreamString();
+        if (totalSize != expectedFilesize) {
+            p.println("Not enough data uploaded!");
+        } else {
+            // maybe there's some error code we can print?
+            p.println("Some other error happened.");
+        }
+        DBGLN("Failed to upload firmware: %s", p.c_str());
+        msg = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
+    }
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+}
+
+static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
+    if (index == 0) {
+#ifdef HAS_WIFI_JOYSTICK
+        WifiJoystick::StopJoystickService();
+#endif
+        expectedFilesize = request->header("X-FileSize").toInt();
+        DBGLN("Update: '%s' size %u", filename.c_str(), expectedFilesize);
+        totalSize = 0;
+        // Begin SPI upload to LR1121
+    }
+    if (len) {
+        DBGVLN("writing %d", len);
+        // Write len bytes to LR1121 from data
+        totalSize += len;
+    }
+}
+#endif
+
 #ifdef HAS_WIFI_JOYSTICK
 static void WebUdpControl(AsyncWebServerRequest *request)
 {
@@ -1094,6 +1145,13 @@ static void startServices()
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
+  #endif
+
+  #if defined(RADIO_LR1121)
+    server.on("/lr1121.html", WebUpdateSendContent);
+    server.on("/lr1121.js", WebUpdateSendContent);
+    server.on("/lr1121", HTTP_POST, WebUploadLR1121ResponseHandler, WebUploadLR1121DataHandler);
+    server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
   #endif
 
   addCaptivePortalHandlers();
