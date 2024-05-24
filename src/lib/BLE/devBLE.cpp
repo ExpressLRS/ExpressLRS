@@ -56,7 +56,7 @@ void BluetoothJoystickBegin()
     // bleGamepad is null if it hasn't been started yet
     if (bleGamepad != nullptr)
         return;
-
+    NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_PUBLIC);
     // construct the BLE immediately to prevent reentry from events/timeout
     bleGamepad = new ELRSGamepad();
 
