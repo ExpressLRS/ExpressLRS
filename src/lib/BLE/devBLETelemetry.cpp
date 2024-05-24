@@ -1,7 +1,7 @@
 #if defined(PLATFORM_ESP32)
 
 #include "CRSF.h"
-#include "Handset.h"
+#include "handset.h"
 #include "FHSS.h"
 #include "NimBLEDevice.h"
 #include "POWERMGNT.h"
