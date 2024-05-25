@@ -7,8 +7,8 @@ const char STR_LUA_PACKETRATES[] =
 #if defined(RADIO_SX127X)
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)";
 #elif defined(RADIO_LR1121)
-    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" // 2.4G
-    "50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm);200Hz Full(-111dBm);250Hz(-111dBm);" // 900M
+    "50Hz 2.4G;100Hz Full 2.4G;150Hz 2.4G;250Hz 2.4G;333Hz Full 2.4G;500Hz 2.4G;" // 2.4G
+    "50Hz Low Band;100Hz Low Band;100Hz Full Low Band;200Hz Low Band;200Hz Full Low Band;250Hz Low Band;" // 900M
     "X100Hz Full(-112dBm);X150Hz(-112dBm)"; // Dual
 #elif defined(RADIO_SX128X)
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"
