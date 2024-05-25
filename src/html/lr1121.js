@@ -15,12 +15,18 @@ function onReady() {
   loadData();
 }
 
+function dec2hex(i, len) {
+  return "0x" + (i+0x10000).toString(16).substr(-len).toUpperCase();
+}
+
 function loadData() {
   xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
     if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
-      // update LR1121 current info
+      _('radio_type').textContent = dec2hex(data['type'], 2)
+      _('radio_hardware').textContent = dec2hex(data['hardware'], 2)
+      _('radio_firmware').textContent = dec2hex(data['firmware'], 4)
     }
   };
   xmlhttp.open('GET', '/lr1121.json', true);

@@ -802,6 +802,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
 
 #if defined(RADIO_LR1121)
 static size_t expectedFilesize;
+extern LR1121Hal hal;
 
 static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     // Complete upload and set error flag
@@ -844,6 +845,25 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         // Write len bytes to LR1121 from data
         totalSize += len;
     }
+}
+
+static void GetLR1121Status(AsyncWebServerRequest *request) {
+    DynamicJsonDocument json(2048);
+    hal.end();
+    hal.init();
+    hal.reset();
+
+    uint8_t radio_version[4] = {0};
+    hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_1);
+    hal.ReadCommand(radio_version, sizeof(radio_version), SX12XX_Radio_1);
+
+    json["hardware"] = radio_version[0];
+    json["type"] = radio_version[1];
+    json["firmware"] = ( ( uint16_t )radio_version[3] << 8 ) + ( uint16_t )radio_version[2];
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(json, *response);
+    request->send(response);
 }
 #endif
 
@@ -1150,6 +1170,7 @@ static void startServices()
   #if defined(RADIO_LR1121)
     server.on("/lr1121.html", WebUpdateSendContent);
     server.on("/lr1121.js", WebUpdateSendContent);
+    server.on("/lr1121.json", HTTP_GET, GetLR1121Status);
     server.on("/lr1121", HTTP_POST, WebUploadLR1121ResponseHandler, WebUploadLR1121DataHandler);
     server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
   #endif
