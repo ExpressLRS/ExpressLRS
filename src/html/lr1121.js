@@ -24,9 +24,12 @@ function loadData() {
   xmlhttp.onreadystatechange = function() {
     if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
-      _('radio_type').textContent = dec2hex(data['type'], 2)
-      _('radio_hardware').textContent = dec2hex(data['hardware'], 2)
-      _('radio_firmware').textContent = dec2hex(data['firmware'], 4)
+      _('radio_type1').textContent = dec2hex(data['type'], 2)
+      _('radio_hardware1').textContent = dec2hex(data['hardware'], 2)
+      _('radio_firmware1').textContent = dec2hex(data['firmware'], 4)
+      if (data['type2']) _('radio_type2').textContent = dec2hex(data['type2'], 2)
+      if (data['hardware2']) _('radio_hardware2').textContent = dec2hex(data['hardware2'], 2)
+      if (data['firmware2']) _('radio_firmware2').textContent = dec2hex(data['firmware2'], 4)
     }
   };
   xmlhttp.open('GET', '/lr1121.json', true);

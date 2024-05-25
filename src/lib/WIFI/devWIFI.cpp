@@ -860,7 +860,15 @@ static void GetLR1121Status(AsyncWebServerRequest *request) {
     json["hardware"] = radio_version[0];
     json["type"] = radio_version[1];
     json["firmware"] = ( ( uint16_t )radio_version[3] << 8 ) + ( uint16_t )radio_version[2];
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_2);
+        hal.ReadCommand(radio_version, sizeof(radio_version), SX12XX_Radio_2);
 
+        json["hardware2"] = radio_version[0];
+        json["type2"] = radio_version[1];
+        json["firmware2"] = ( ( uint16_t )radio_version[3] << 8 ) + ( uint16_t )radio_version[2];
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json, *response);
     request->send(response);
