@@ -49,6 +49,26 @@
 #define LR1121_IRQ_RADIO_NONE 0
 // #define LR1121_IRQ_RADIO_ALL 0xFFFFFFFF
 
+/*!
+ * @brief Length in byte of the LR11XX version blob
+ */
+#define LR11XX_BL_VERSION_LENGTH ( 4 )
+
+/*!
+ * @brief Length in bytes of a PIN
+ */
+#define LR11XX_BL_PIN_LENGTH ( 4 )
+
+/*!
+ * @brief Length in bytes of a chip EUI
+ */
+#define LR11XX_BL_CHIP_EUI_LENGTH ( 8 )
+
+/*!
+ * @brief Length in bytes of a join EUI
+ */
+#define LR11XX_BL_JOIN_EUI_LENGTH ( 8 )
+
 typedef enum
 {
     LR1121_LORA_PACKET_VARIABLE_LENGTH = 0x00, //!< The packet is on variable size, header included
@@ -149,6 +169,18 @@ enum
     LR11XX_REGMEM_READ_BUFFER8_OC        = 0x010A,
     LR11XX_REGMEM_CLEAR_RXBUFFER_OC      = 0x010B,
     LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC = 0x010C,
+};
+
+enum
+{
+    LR11XX_BL_GET_STATUS_OC            = 0x0100,
+    LR11XX_BL_GET_VERSION_OC           = 0x0101,
+    LR11XX_BL_ERASE_FLASH_OC           = 0x8000,
+    LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC = 0x8003,
+    LR11XX_BL_REBOOT_OC                = 0x8005,
+    LR11XX_BL_GET_PIN_OC               = 0x800B,
+    LR11XX_BL_READ_CHIP_EUI_OC         = 0x800C,
+    LR11XX_BL_READ_JOIN_EUI_OC         = 0x800D,
 };
 
 typedef enum
