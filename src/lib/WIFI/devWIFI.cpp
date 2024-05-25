@@ -263,7 +263,7 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
   request->send(200);
 }
 
-static const char *GetConfigUidType(const JsonObject &json)
+static const char *GetConfigUidType(const JsonObject json)
 {
 #if defined(TARGET_RX)
   if (config.GetVolatileBind())
@@ -287,7 +287,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 {
   bool exportMode = request->hasArg("export");
   AsyncJsonResponse *response = new AsyncJsonResponse();
-  const JsonObject& json = response->getRoot();
+  JsonObject json = response->getRoot();
 
   if (!exportMode)
   {
@@ -337,7 +337,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
-      const JsonObject &modelJson = json["config"]["model"][strModel].to<JsonObject>();
+      JsonObject modelJson = json["config"]["model"][strModel].to<JsonObject>();
       modelJson["packet-rate"] = modelConfig.rate;
       modelJson["telemetry-ratio"] = modelConfig.tlm;
       modelJson["switch-mode"] = modelConfig.switchMode;
@@ -442,8 +442,8 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   {
     for(JsonPair kv : json["model"].as<JsonObject>())
     {
-      uint8_t model = String(kv.key().c_str()).toInt();
-      const JsonObject &modelJson = kv.value();
+      uint8_t model = atoi(kv.key().c_str());
+      JsonObject modelJson = kv.value();
 
       config.SetModelId(model);
       if (modelJson.containsKey("packet-rate")) config.SetRate(modelJson["packet-rate"]);
