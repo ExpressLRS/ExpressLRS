@@ -803,6 +803,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
 
 #if defined(RADIO_LR1121)
 static size_t expectedFilesize;
+static SX12XX_Radio_Number_t updatingRadio;
 extern LR1121Hal hal;
 static uint8_t packet[256];
 static size_t left_over;
@@ -829,20 +830,12 @@ static void writeLR1121Bytes(uint8_t *data, uint32_t sector_size) {
     DBGLN("flashing %x at %x", sector_size, totalSize);
 
     // Have to do this the OLD way, so we can pump out more than 64 bytes in one message
-    digitalWrite(GPIO_PIN_NSS, LOW);
+    digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, LOW);
     SPIEx.transferBytes(header, NULL, 6 + sector_size);
-    digitalWrite(GPIO_PIN_NSS, HIGH);
+    digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
 
-    while (true)
+    while (digitalRead(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_BUSY : GPIO_PIN_BUSY_2) == HIGH)
     {
-        if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-        {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) break;
-        }
-        else
-        {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) break;
-        }
         delay(1);
     }
     DBGLN("flashed");
@@ -865,17 +858,17 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
             (uint8_t)LR11XX_BL_REBOOT_OC,
             0
         };
-        SPIEx.write(SX12XX_Radio_1, reboot_cmd, 3);
-        while(!hal.WaitOnBusy(SX12XX_Radio_1));
+        SPIEx.write(updatingRadio, reboot_cmd, 3);
+        while(!hal.WaitOnBusy(updatingRadio));
 
         DBGLN("check not in BL mode");
         packet[0] = LR11XX_SYSTEM_GET_VERSION_OC >> 8;
         packet[1] = (uint8_t)LR11XX_SYSTEM_GET_VERSION_OC;
-        SPIEx.write(SX12XX_Radio_1, packet, 2);
-        hal.WaitOnBusy(SX12XX_Radio_1);
+        SPIEx.write(updatingRadio, packet, 2);
+        hal.WaitOnBusy(updatingRadio);
         memset(packet, 0, sizeof(packet));
-        SPIEx.read(SX12XX_Radio_1, packet, 5);
-        hal.WaitOnBusy(SX12XX_Radio_1);
+        SPIEx.read(updatingRadio, packet, 5);
+        hal.WaitOnBusy(updatingRadio);
         uploadError = (packet[2] != 3);
         DBGLN("hardware %x", packet[1]);
         DBGLN("type %x", packet[2]);
@@ -908,6 +901,7 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         WifiJoystick::StopJoystickService();
 #endif
         expectedFilesize = request->header("X-FileSize").toInt();
+        updatingRadio = request->header("X-Radio").toInt();
         DBGLN("Update: '%s' size %u", filename.c_str(), expectedFilesize);
         totalSize = 0;
         // Reboot to BL mode
@@ -917,11 +911,11 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         DBGLN("Enter BL mode");
         packet[0] = LR11XX_BL_GET_VERSION_OC >> 8;
         packet[1] = (uint8_t)LR11XX_BL_GET_VERSION_OC;
-        SPIEx.write(SX12XX_Radio_1, packet, 2);
-        hal.WaitOnBusy(SX12XX_Radio_1);
+        SPIEx.write(updatingRadio, packet, 2);
+        hal.WaitOnBusy(updatingRadio);
         memset(packet, 0, sizeof(packet));
-        SPIEx.read(SX12XX_Radio_1, packet, 5);
-        hal.WaitOnBusy(SX12XX_Radio_1);
+        SPIEx.read(updatingRadio, packet, 5);
+        hal.WaitOnBusy(updatingRadio);
         if (packet[2] != 0xDF) {
             AsyncWebServerResponse *response = request->beginResponse(200, "application/json", R"({"status": "error", "msg": "Not in bootloader mode"})");
             response->addHeader("Connection", "close");
@@ -934,8 +928,8 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         DBGLN("Erasing");
         packet[0] = LR11XX_BL_ERASE_FLASH_OC >> 8;
         packet[1] = (uint8_t)LR11XX_BL_ERASE_FLASH_OC;
-        SPIEx.write(SX12XX_Radio_1, packet, 2);
-        while(!hal.WaitOnBusy(SX12XX_Radio_1))
+        SPIEx.write(updatingRadio, packet, 2);
+        while(!hal.WaitOnBusy(updatingRadio))
         {
             DBGLN("Waiting...");
             delay(100);
@@ -945,8 +939,8 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         left_over = 0;
         SPIEx.setHwCs(false);
 
-        pinMode(GPIO_PIN_NSS, OUTPUT);
-        digitalWrite(GPIO_PIN_NSS, HIGH);
+        pinMode(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, OUTPUT);
+        digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
     }
     if (len) {
         DBGLN("writing %x", len);
@@ -969,10 +963,10 @@ static void ReadStatusForRadio(JsonObject json, SX12XX_Radio_Number_t radio)
 {
     packet[0] = LR11XX_BL_GET_VERSION_OC >> 8;
     packet[1] = (uint8_t)LR11XX_BL_GET_VERSION_OC;
-    SPIEx.write(SX12XX_Radio_1, packet, 2);
+    SPIEx.write(radio, packet, 2);
     hal.WaitOnBusy(radio);
     memset(packet, 0, sizeof(packet));
-    SPIEx.read(SX12XX_Radio_1, packet, 5);
+    SPIEx.read(radio, packet, 5);
     hal.WaitOnBusy(radio);
     json["hardware"] = packet[1];
     json["type"] = packet[2];
@@ -980,28 +974,28 @@ static void ReadStatusForRadio(JsonObject json, SX12XX_Radio_Number_t radio)
 
     packet[0] = LR11XX_BL_GET_PIN_OC >> 8;
     packet[1] = (uint8_t)LR11XX_BL_GET_PIN_OC;
-    SPIEx.write(SX12XX_Radio_1, packet, 2);
+    SPIEx.write(radio, packet, 2);
     hal.WaitOnBusy(radio);
     memset(packet, 0, sizeof(packet));
-    SPIEx.read(SX12XX_Radio_1, packet, 5);
+    SPIEx.read(radio, packet, 5);
     hal.WaitOnBusy(radio);
     copyArray(packet+1, 4, json["pin"].to<JsonArray>());
 
     packet[0] = LR11XX_BL_READ_CHIP_EUI_OC >> 8;
     packet[1] = (uint8_t)LR11XX_BL_READ_CHIP_EUI_OC;
-    SPIEx.write(SX12XX_Radio_1, packet, 2);
+    SPIEx.write(radio, packet, 2);
     hal.WaitOnBusy(radio);
     memset(packet, 0, sizeof(packet));
-    SPIEx.read(SX12XX_Radio_1, packet, 9);
+    SPIEx.read(radio, packet, 9);
     hal.WaitOnBusy(radio);
     copyArray(packet+1, 8, json["ceui"].to<JsonArray>());
 
     packet[0] = LR11XX_BL_READ_JOIN_EUI_OC >> 8;
     packet[1] = (uint8_t)LR11XX_BL_READ_JOIN_EUI_OC;
-    SPIEx.write(SX12XX_Radio_1, packet, 2);
+    SPIEx.write(radio, packet, 2);
     hal.WaitOnBusy(radio);
     memset(packet, 0, sizeof(packet));
-    SPIEx.read(SX12XX_Radio_1, packet, 9);
+    SPIEx.read(radio, packet, 9);
     hal.WaitOnBusy(radio);
     copyArray(packet+1, 8, json["jeui"].to<JsonArray>());
 }
@@ -1012,7 +1006,6 @@ static void GetLR1121Status(AsyncWebServerRequest *request)
     JsonObject json = response->getRoot();
     hal.end();
     hal.init();
-    spiEnableSSPins(SPIEx.bus(), SX12XX_Radio_1);
     hal.reset();
 
     ReadStatusForRadio(json["radio1"].to<JsonObject>(), SX12XX_Radio_1);

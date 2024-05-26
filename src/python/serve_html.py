@@ -201,7 +201,18 @@ def lr1121_js():
 
 @route('/lr1121.json')
 def lr1121_json():
-    return '{ "firmware": 259, "hardware": 6, "type": 34 }'
+    return {
+        "radio1": {
+            "hardware": 34,
+            "type": 3,
+            "firmware": 259
+        },
+        "radio2": {
+            "hardware": 34,
+            "type": 3,
+            "firmware": 257
+        }
+    }
 
 @route('/lr1121', method="POST")
 def lr1121_upload():

@@ -27,16 +27,11 @@ function loadData() {
       _('radio_type1').textContent = dec2hex(data['radio1']['type'], 2)
       _('radio_hardware1').textContent = dec2hex(data['radio1']['hardware'], 2)
       _('radio_firmware1').textContent = dec2hex(data['radio1']['firmware'], 4)
-      _('radio_pin1').textContent = data['radio1']['pin'].toString()
-      _('radio_ceui1').textContent = data['radio1']['ceui'].toString()
-      _('radio_jeui1').textContent = data['radio1']['jeui'].toString()
       if (data['radio2']) {
+        _('radios').style.display='block'
         _('radio_type2').textContent = dec2hex(data['radio2']['type'], 2)
         _('radio_hardware2').textContent = dec2hex(data['radio2']['hardware'], 2)
         _('radio_firmware2').textContent = dec2hex(data['radio2']['firmware'], 4)
-        _('radio_pin2').textContent = data['radio2']['pin'].toString()
-        _('radio_ceui2').textContent = data['radio2']['ceui'].toString()
-        _('radio_jeui2').textContent = data['radio2']['jeui'].toString()
       }
     }
   };
@@ -84,6 +79,7 @@ function uploadFile(file) {
     ajax.addEventListener('abort', abortHandler, false);
     ajax.open('POST', '/lr1121');
     ajax.setRequestHeader('X-FileSize', file.size);
+    ajax.setRequestHeader('X-Radio', document.querySelector("input[name=optionsRadio]:checked").value);
     ajax.send(formdata);
   }
   catch (e) {
