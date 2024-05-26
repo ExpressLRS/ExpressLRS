@@ -902,13 +902,15 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
 #endif
         expectedFilesize = request->header("X-FileSize").toInt();
         updatingRadio = request->header("X-Radio").toInt();
-        DBGLN("Update: '%s' size %u", filename.c_str(), expectedFilesize);
+        DBGLN("Update: '%s' size %u on radio %d", filename.c_str(), expectedFilesize, updatingRadio);
         totalSize = 0;
+
         // Reboot to BL mode
+        DBGLN("Reboot 1121 to bootloader mode");
         hal.reset(true);
 
         // Ensure we're in BL mode
-        DBGLN("Enter BL mode");
+        DBGLN("Ensure BL mode");
         packet[0] = LR11XX_BL_GET_VERSION_OC >> 8;
         packet[1] = (uint8_t)LR11XX_BL_GET_VERSION_OC;
         SPIEx.write(updatingRadio, packet, 2);
