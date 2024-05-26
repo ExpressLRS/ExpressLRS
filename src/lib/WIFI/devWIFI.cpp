@@ -849,6 +849,10 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     totalSize += left_over;
 
     SPIEx.setHwCs(true);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
+    }
 
     if (totalSize == expectedFilesize)
     {
@@ -907,7 +911,16 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
 
         // Reboot to BL mode
         DBGLN("Reboot 1121 to bootloader mode");
-        hal.reset(true);
+        uint8_t reboot_cmd[] = {
+            (uint8_t)(LR11XX_SYSTEM_REBOOT_OC >> 8),
+            (uint8_t)LR11XX_SYSTEM_REBOOT_OC,
+            3
+        };
+        SPIEx.write(updatingRadio, reboot_cmd, 3);
+        while(!hal.WaitOnBusy(updatingRadio)) {
+            DBGLN("Waiting...");
+            delay(10);
+        }
 
         // Ensure we're in BL mode
         DBGLN("Ensure BL mode");
