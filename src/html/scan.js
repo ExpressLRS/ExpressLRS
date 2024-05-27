@@ -188,7 +188,7 @@ function updatePwmSettings(arPwm) {
     };
     failsafeMode.onchange();
   });
-  
+
   modeSelectionInit = false;
 
   // put some contraints on pinRx/Tx mode selects
@@ -293,6 +293,11 @@ function updateUIDType(uidtype) {
     bg = '#FFA000'; // amber
     desc = 'The binding UID will be cleared on boot';
   }
+  else if (uidtype === 'Loaned') // RX
+  {
+    bg = '#FFA000'; // amber
+    desc = 'This receiver is on loan and can be returned using Lua or three-plug';
+  }
   else // RX
   {
     if (_('uid').value.endsWith('0,0,0,0'))
@@ -379,9 +384,9 @@ function updateConfig(data, options) {
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
   _('is-airport').onchange = _('serial-protocol').onchange;
-  _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
+  _('vbind').value = data.vbind;
   _('vbind').onchange = () => {
-    _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
+    _('bindphrase').style.display = _('vbind').value === '1' ? 'none' : 'block';
   }
   _('vbind').onchange();
 @@end
@@ -689,7 +694,7 @@ if (_('config')) {
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
-          "vbind": +_('vbind').checked,
+          "vbind": +_('vbind').value,
           "uid": _('uid').value.split(',').map(Number),
         });
       }, () => {

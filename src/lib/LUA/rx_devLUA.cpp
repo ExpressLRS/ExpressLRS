@@ -147,15 +147,15 @@ static struct luaItem_command luaSetFailsafe = {
 
 //---------------------------- Output Mapping -----------------------------
 
-static struct luaItem_selection luaVolatileBind = {
+static struct luaItem_selection luaBindStorage = {
     {"Bind Storage", CRSF_TEXT_SELECTION},
     0, // value
-    "Persistent;Volatile",
+    "Persistent;Volatile;Returnable",
     STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaBindMode = {
-    {"Enter Bind Mode", CRSF_COMMAND},
+    {STR_EMPTYSPACE, CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
@@ -185,7 +185,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         continue;
 
       eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-      
+
       if (mode == somSCL)
         sclAssigned = true;
 
@@ -247,9 +247,9 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         {
             pModeString = no2Options;
         }
-    } 
+    }
     else
-    {  
+    {
         // otherwise allow any pin to be either SCL or SDA but only once
         if (sclAssigned && !sdaAssigned)
         {
@@ -470,13 +470,13 @@ static void registerLuaParameters()
   }
 #endif
 
-  registerLUAParameter(&luaVolatileBind, [](struct luaPropertiesCommon* item, uint8_t arg) {
-    config.SetVolatileBind(arg);
+  registerLUAParameter(&luaBindStorage, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetBindStorage((rx_config_bindstorage_t)arg);
   });
   registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
-      deferExecutionMillis(200, [](){ BindingModeRequest = true; });
+      deferExecutionMillis(200, EnterBindingModeSafely);
     }
     sendLuaCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
   });
@@ -484,6 +484,14 @@ static void registerLuaParameters()
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(nullptr);
+}
+
+static void updateBindModeLabel()
+{
+  if (config.IsOnLoan())
+    luaBindMode.common.name = "Return Model";
+  else
+    luaBindMode.common.name = "Enter Bind Mode";
 }
 
 static int event()
@@ -531,7 +539,8 @@ static int event()
     itoa(config.GetModelId(), modelString, 10);
     setLuaStringValue(&luaModelNumber, modelString);
   }
-  setLuaTextSelectionValue(&luaVolatileBind, config.GetVolatileBind());
+  setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
+  updateBindModeLabel();
   return DURATION_IMMEDIATELY;
 }
 

@@ -183,6 +183,12 @@ extern TxConfig config;
 #if defined(TARGET_RX)
 constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
+typedef enum : uint8_t {
+    BINDSTORAGE_PERSISTENT = 0,
+    BINDSTORAGE_VOLATILE = 1,
+    BINDSTORAGE_RETURNABLE = 2,
+} rx_config_bindstorage_t;
+
 typedef union {
     struct {
         uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
@@ -205,8 +211,7 @@ typedef struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
         int16_t     offset;         // FUTURE: Override comiled vbat offset
     } vbat;
-    uint8_t     volatileBind:1,     // 0=Persistent 1=Volatile
-                unused_onLoan:1,
+    uint8_t     bindStorage:2,     // rx_config_bindstorage_t
                 power:4,
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
@@ -247,7 +252,8 @@ public:
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
-    bool GetVolatileBind() const { return m_config.volatileBind; }
+    rx_config_bindstorage_t GetBindStorage() const { return (rx_config_bindstorage_t)m_config.bindStorage; }
+    bool IsOnLoan() const;
 
     // Setters
     void SetUID(uint8_t* uid);
@@ -267,7 +273,8 @@ public:
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
-    void SetVolatileBind(bool value);
+    void SetBindStorage(rx_config_bindstorage_t value);
+    void ReturnLoan();
 
 private:
     void CheckUpdateFlashedUid(bool skipDescrimCheck);
