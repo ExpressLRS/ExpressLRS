@@ -74,7 +74,6 @@ static const byte DNS_PORT = 53;
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
-static IPAddress gatewayIpAddress(0, 0, 0, 0);
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
 #include "crsf2msp.h"
@@ -1146,7 +1145,7 @@ static void HandleWebUpdate()
         #elif defined(PLATFORM_ESP32)
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
         #endif
-        WiFi.softAPConfig(ipAddress, gatewayIpAddress, netMsk);
+        WiFi.softAPConfig(ipAddress, ipAddress, netMsk);
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         startServices();
         break;
