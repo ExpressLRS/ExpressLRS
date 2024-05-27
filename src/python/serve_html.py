@@ -112,6 +112,10 @@ config = {
 
 def apply_template(mainfile):
     global isTX, hasSubGHz
+    if(isTX):
+        platform = 'Unified_ESP32_2400_TX'
+    else:
+        platform = 'Unified_ESP8285_2400_RX'
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -119,7 +123,7 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': 'Unified_ESP8285',
+            'PLATFORM': platform,
             'isTX': isTX,
             'hasSubGHz': hasSubGHz
         })
