@@ -1006,6 +1006,26 @@ static void startMDNS()
   #endif
 }
 
+static void addCaptivePortalHandlers()
+{
+    // windows 11 captive portal workaround
+    server.on("/connecttest.txt", [](AsyncWebServerRequest *request) { request->redirect("http://logout.net"); });
+    // A 404 stops win 10 keep calling this repeatedly and panicking the esp32
+    server.on("/wpad.dat", [](AsyncWebServerRequest *request) { request->send(404); });
+
+    server.on("/generate_204", WebUpdateHandleRoot); // Android
+    server.on("/gen_204", WebUpdateHandleRoot); // Android
+    server.on("/library/test/success.html", WebUpdateHandleRoot); // apple call home
+    server.on("/hotspot-detect.html", WebUpdateHandleRoot); // apple call home
+    server.on("/connectivity-check.html", WebUpdateHandleRoot); // ubuntu
+    server.on("/check_network_status.txt", WebUpdateHandleRoot); // ubuntu
+    server.on("/ncsi.txt", WebUpdateHandleRoot); // windows call home
+    server.on("/canonical.html", WebUpdateHandleRoot); // firefox captive portal call home
+    server.on("/fwlink", WebUpdateHandleRoot);
+    server.on("/redirect", WebUpdateHandleRoot); // microsoft redirect
+    server.on("/success.txt", [](AsyncWebServerRequest *request) { request->send(200); }); // firefox captive portal call home
+}
+
 static void startServices()
 {
   if (servicesStarted) {
@@ -1028,23 +1048,6 @@ static void startServices()
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
   server.on("/firmware.bin", WebUpdateGetFirmware);
-
-  // windows 11 captive portal workaround
-  server.on("/connecttest.txt", [](AsyncWebServerRequest *request) { request->redirect("http://logout.net"); });
-  // A 404 stops win 10 keep calling this repeatedly and panicking the esp32
-  server.on("/wpad.dat", [](AsyncWebServerRequest *request) { request->send(404); });
-
-  server.on("/generate_204", WebUpdateHandleRoot); // handle Android phones doing shit to detect if there is 'real' internet and possibly dropping conn.
-  server.on("/gen_204", WebUpdateHandleRoot); // Android
-  server.on("/library/test/success.html", WebUpdateHandleRoot); // apple call home
-  server.on("/hotspot-detect.html", WebUpdateHandleRoot); // apple call home
-  server.on("/connectivity-check.html", WebUpdateHandleRoot); // ubuntu
-  server.on("/check_network_status.txt", WebUpdateHandleRoot); // ubuntu
-  server.on("/ncsi.txt", WebUpdateHandleRoot); // windows call home
-  server.on("/canonical.html", WebUpdateHandleRoot); // firefox captive portal call home
-  server.on("/fwlink", WebUpdateHandleRoot);
-  server.on("/redirect", WebUpdateHandleRoot); // microsoft redirect
-  server.on("/success.txt", [](AsyncWebServerRequest *request) { request->send(200); }); // firefox captive portal call home
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
@@ -1077,6 +1080,8 @@ static void startServices()
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
   #endif
+
+  addCaptivePortalHandlers();
 
   server.onNotFound(WebUpdateHandleNotFound);
 
