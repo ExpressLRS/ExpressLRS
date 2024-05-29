@@ -1609,7 +1609,13 @@ static void updateBindingMode()
         DBGLN("Connected request to enter binding mode...");
         BindingModeRequest = false;
         if (connectionState == connected)
+        {
             LostConnection(false);
+            // if the InitRate config item was changed by LostConnection
+            // save the config before entering bind, as the modified config
+            // will immediately boot it out of bind mode
+            config.Commit();
+        }
         EnterBindingMode();
     }
 }
@@ -1886,7 +1892,7 @@ void setup()
 #endif
 
     devicesStart();
-    
+
     // setup() eats up some of this time, which can cause the first mode connection to fail.
     // Resetting the time here give the first mode a better chance of connection.
     RFmodeLastCycled = millis();
