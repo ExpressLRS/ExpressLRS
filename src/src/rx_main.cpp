@@ -1632,11 +1632,11 @@ static void updateBindingMode()
                 connectionState = noCrossfire;
                 return;
             }
+            // if the InitRate config item was changed by LostConnection
+            // save the config before entering bind, as the modified config
+            // will immediately boot it out of bind mode
+            config.Commit();
         }
-        // if the InitRate config item was changed by LostConnection
-        // save the config before entering bind, as the modified config
-        // will immediately boot it out of bind mode
-        config.Commit();
         EnterBindingMode();
     }
 }
