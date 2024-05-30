@@ -44,7 +44,7 @@ void ICACHE_RAM_ATTR hwTimer::resume()
         // tock() should always be the first event to maintain consistency
         isTick = false;
 #if defined(TARGET_TX)
-        NextTimeout = HWtimerInterval;
+        NextTimeout = ESP.getCycleCount() + HWtimerInterval;
 #else
         // Fire the timer in 2us to get it started close to now
         NextTimeout = ESP.getCycleCount() + (2 * HWTIMER_TICKS_PER_US * HWTIMER_PRESCALER);
