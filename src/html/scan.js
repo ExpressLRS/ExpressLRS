@@ -1,4 +1,4 @@
-@@require(isTX)
+@@require(PLATFORM, isTX)
 
 /* eslint-disable comma-dangle */
 /* eslint-disable max-len */
