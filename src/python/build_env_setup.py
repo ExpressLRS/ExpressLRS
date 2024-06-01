@@ -109,12 +109,18 @@ elif platform in ['espressif32']:
         env.Replace(UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py")
         env.AddPreAction("upload", ETXinitPassthrough.init_passthrough)
     elif "_BETAFLIGHTPASSTHROUGH" in target_name:
+        if "ESP32S3" in target_name:
+            chip = "esp32-s3"
+        elif "ESP32C3" in target_name:
+            chip = "esp32-c3"
+        else:
+            chip = "esp32"
         env.Replace(
             UPLOADER="$PROJECT_DIR/python/external/esptool/esptool.py",
             UPLOAD_SPEED=420000,
             UPLOADERFLAGS=[
                 "--passthrough", "-b", "$UPLOAD_SPEED", "-p", "$UPLOAD_PORT",
-                "-c", "esp32", "--before", "no_reset", "--after", "hard_reset", "write_flash"
+                "-c", chip, "--before", "no_reset", "--after", "hard_reset", "write_flash"
             ]
         )
         env.AddPreAction("upload", BFinitPassthrough.init_passthrough)
