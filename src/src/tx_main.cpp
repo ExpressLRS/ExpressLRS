@@ -40,8 +40,7 @@ FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 #define UART_INPUT_BUF_LEN 1024
 FIFO<UART_INPUT_BUF_LEN> uartInputBuffer;
 
-// TODO: Remove this! Manual define for mavlink mode on TX
-uint8_t mavBuffer[64];
+uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -242,14 +241,14 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         break;
 
       case ELRS_TELEMETRY_TYPE_DATA:
+        if (firmwareOptions.is_airport)
+        {
+          OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+          return true;
+        }
         TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
-        break;
-
-      case ELRS_TELEMETRY_TYPE_RAW:
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        return true;
         break;
     }
   }
@@ -525,17 +524,35 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
       {
-        otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.full.msp_ul.payload,
-          sizeof(otaPkt.full.msp_ul.payload));
-        otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        {
+          otaPkt.full.mav_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.full.mav_ul.payload,
+            sizeof(otaPkt.full.mav_ul.payload));
+          otaPkt.full.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+        }
+        else
+        {
+          otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.full.msp_ul.payload,
+            sizeof(otaPkt.full.msp_ul.payload));
+        }
       }
       else
       {
-        otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.std.msp_ul.payload,
-          sizeof(otaPkt.std.msp_ul.payload));
-        otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        {
+          otaPkt.std.mav_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.std.mav_ul.payload,
+            sizeof(otaPkt.std.mav_ul.payload));
+          otaPkt.std.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+        }
+        else
+        {
+          otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.std.msp_ul.payload,
+            sizeof(otaPkt.std.msp_ul.payload));
+        }
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions
@@ -1545,14 +1562,14 @@ void loop()
     uint16_t count = uartInputBuffer.size();
     if (count > 0 && !MspSender.IsActive())
     {
-        count = std::min(count, (uint16_t)60);
-        mavBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-        mavBuffer[1] = count;
+        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
+        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+        mavlinkSSBuffer[1] = count;
         // Following n bytes are just raw mavlink
         uartInputBuffer.lock();
-        uartInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
         uartInputBuffer.unlock();
-        nextPayload = mavBuffer;
+        nextPayload = mavlinkSSBuffer;
         nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
         MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }

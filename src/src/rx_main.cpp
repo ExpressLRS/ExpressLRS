@@ -150,7 +150,7 @@ static uint8_t telemetryBurstMax;
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
 
-uint8_t mavBuffer[64];
+uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
 
 static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
@@ -507,7 +507,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else if (firmwareOptions.is_airport)
         {
-            OtaPackAirportData(&otaPkt, &apInputBuffer, false);
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
     }
 
@@ -920,17 +920,35 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     uint8_t dataLen;
     if (OtaIsFullRes)
     {
-        packageIndex = otaPktPtr->full.msp_ul.packageIndex;
-        payload = otaPktPtr->full.msp_ul.payload;
-        dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
-        TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            packageIndex = otaPktPtr->full.mav_ul.packageIndex;
+            payload = otaPktPtr->full.mav_ul.payload;
+            dataLen = sizeof(otaPktPtr->full.mav_ul.payload);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.mav_ul.tlmFlag);
+        }
+        else
+        {
+            packageIndex = otaPktPtr->full.msp_ul.packageIndex;
+            payload = otaPktPtr->full.msp_ul.payload;
+            dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+        }
     }
     else
     {
-        packageIndex = otaPktPtr->std.msp_ul.packageIndex;
-        payload = otaPktPtr->std.msp_ul.payload;
-        dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
-        TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            packageIndex = otaPktPtr->std.mav_ul.packageIndex;
+            payload = otaPktPtr->std.mav_ul.payload;
+            dataLen = sizeof(otaPktPtr->std.mav_ul.payload);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.mav_ul.tlmFlag);
+        }
+        else
+        {
+            packageIndex = otaPktPtr->std.msp_ul.packageIndex;
+            payload = otaPktPtr->std.msp_ul.payload;
+            dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+        }
     }
 
     // Always examine MSP packets for bind information if in bind mode
@@ -1082,7 +1100,10 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_TLM:
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        if (firmwareOptions.is_airport)
+        {
+            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
         break;
     default:
         break;
@@ -1410,8 +1431,6 @@ static void setupConfigAndPocCheck()
     eeprom.Begin();
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load();
-
-    config.SetSerialProtocol(PROTOCOL_MAVLINK); // TODO: Remove this line
 
     // If bound, track number of plug/unplug cycles to go to binding mode in eeprom
     if (config.GetIsBound() && config.GetPowerOnCounter() < 3)
@@ -1999,13 +2018,13 @@ void loop()
     uint16_t count = mavlinkInputBuffer.size();
     if (count > 0 && !TelemetrySender.IsActive())
     {
-        count = std::min(count, (uint16_t)60);
+        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
         // First 2 bytes conform to crsf_header_s format
-        mavBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
-        mavBuffer[1] = count;
+        mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
+        mavlinkSSBuffer[1] = count;
         // Following n bytes are just raw mavlink
-        mavlinkInputBuffer.popBytes(mavBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        nextPayload = mavBuffer;
+        mavlinkInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        nextPayload = mavlinkSSBuffer;
         nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }

@@ -26,7 +26,7 @@ static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
-static const char linkModeOpts[] = "Normal;AirPort;MAVLink;ParamDL";
+static const char linkModeOpts[] = "Normal;MAVLink";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
@@ -588,7 +588,12 @@ static void registerLuaParameters()
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
         (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
       // If the switch mode is going to change, block the change while connected
-      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+      bool isDisconnected = connectionState == disconnected;
+      // Don't allow the switch mode to change if the TX is in mavlink mode
+      // Wide switchmode is not compatible with mavlink, and the switchmode is
+      // auto configuredwhen entering mavlink mode
+      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
       {
         config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
@@ -623,7 +628,12 @@ static void registerLuaParameters()
       registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
         // Only allow changing switch mode when disconnected since we need to guarantee
         // the pack and unpack functions are matched
-        if (connectionState == disconnected)
+        bool isDisconnected = connectionState == disconnected;
+        // Don't allow the switch mode to change if the TX is in mavlink mode
+        // Wide switchmode is not compatible with mavlink, and the switchmode is
+        // auto configuredwhen entering mavlink mode
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        if (isDisconnected && !isMavlinkMode)
         {
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
