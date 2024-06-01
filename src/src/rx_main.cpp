@@ -41,6 +41,7 @@
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
+#include "esp_task_wdt.h"
 #endif
 
 ///LUA///
@@ -1896,7 +1897,11 @@ void setup()
     RFmodeLastCycled = millis();
 }
 
+#if defined(PLATFORM_ESP32_C3)
+void main_loop()
+#else
 void loop()
+#endif
 {
     unsigned long now = millis();
 
@@ -1981,6 +1986,21 @@ void loop()
     debugRcvrSignalStats(now);
     Radio.ignoreSecondIRQ = false;
 }
+
+#if defined(PLATFORM_ESP32_C3)
+[[noreturn]] void loop()
+{
+    // We have to do this dodgy hack because on the C3 the Arduino main loop calls
+    // a yield function (vTaskDelay) every 2 seconds, which causes us to lose connection!
+    extern bool loopTaskWDTEnabled;
+    for (;;) {
+        if (loopTaskWDTEnabled) {
+            esp_task_wdt_reset();
+        }
+        main_loop();
+    }
+}
+#endif
 
 struct bootloader {
     uint32_t key;
