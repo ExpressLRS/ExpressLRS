@@ -10,8 +10,10 @@
 */
 #pragma once
 #include <stdbool.h>
+#include "soc_support.h"
+#include "stub_flasher.h"
 
 /* Get security info command only on ESP32S2 and later */
-#if ESP32S2_OR_LATER
-esp_command_error handle_get_security_info(void);
-#endif // ESP32S2_OR_LATER
+#if defined(HAS_SECURITY_INFO)
+esp_command_error handle_get_security_info();
+#endif
