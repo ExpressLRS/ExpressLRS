@@ -440,7 +440,7 @@ TxConfig::SetLinkMode(uint8_t linkMode)
         if (linkMode == TX_MAVLINK_MODE)
         {
             m_model->tlm = TLM_RATIO_1_2;
-            m_model->switchMode = 1; // Force Hybrid / 16ch/2 switch modes for mavlink
+            m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
         }
         m_modified |= MODEL_CHANGED;
     }
