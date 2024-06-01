@@ -25,6 +25,7 @@
 #include "rx-serial/SerialHoTT_TLM.h"
 
 #include "rx-serial/devSerialIO.h"
+#include "rx-serial/devSerial1IO.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -62,6 +63,7 @@
 device_affinity_t ui_devices[] = {
   {&Serial_device, 1},
 #if defined(PLATFORM_ESP32)
+  {&Serial1_device, 1},         // secondary serial device
   {&SerialUpdate_device, 1},
 #endif
 #ifdef HAS_LED
@@ -127,8 +129,19 @@ uint32_t serialBaud;
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
+    
+    #if defined(PLATFORM_ESP32)
+        #define SERIAL1_PROTOCOL_TX Serial1
+
+        // SBUS driver needs to distinguish stream for SBUS/DJI protocol 
+        const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+        const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+        
+        SerialIO *serial1IO = nullptr;
+    #endif
 #endif
-SerialIO *serialIO;
+
+SerialIO *serialIO = nullptr;
 
 /* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
 #if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
@@ -141,6 +154,7 @@ SerialIO *serialIO;
     #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #else
     #define SERIAL_PROTOCOL_RX Serial
+    #define SERIAL1_PROTOCOL_RX Serial1
 #endif
 
 StubbornSender TelemetrySender;
@@ -746,12 +760,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
+            crsfRCFrameAvailableSerial1();
             if (teamraceHasModelMatch)
                 servoNewChannelsAvailable();
         }
         else
         {
             crsfRCFrameMissed();
+            crsfRCFrameMissedSerial1();
         }
     }
     else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
@@ -759,6 +775,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (!LQCalc.currentIsSet())
         {
             crsfRCFrameMissed();
+            crsfRCFrameMissedSerial1();
         }
     }
 
@@ -876,6 +893,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
+            crsfRCFrameAvailableSerial1();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
             if (teamraceHasModelMatch)
@@ -1213,7 +1231,7 @@ void MspReceiveComplete()
 static void setupSerial()
 {
     bool sbusSerialOutput = false;
-	bool sumdSerialOutput = false;
+    bool sumdSerialOutput = false;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     bool hottTlmSerial = false;
@@ -1243,7 +1261,7 @@ static void setupSerial()
         sbusSerialOutput = true;
         serialBaud = 100000;
     }
-	else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
+    else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
@@ -1359,6 +1377,7 @@ static void setupSerial()
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+
 #if defined(DEBUG_ENABLED)
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
@@ -1371,6 +1390,86 @@ static void setupSerial()
 #endif
 }
 
+#if defined(PLATFORM_ESP32)
+static void serial1Shutdown()
+{
+    if(serial1IO != nullptr)
+    {
+        Serial1.end();
+        delete serial1IO;
+        serial1IO = nullptr;
+    }
+}
+
+static void setupSerial1()
+{
+    //
+    // init secondary serial and protocol
+    //
+    int8_t serial1RXpin = GPIO_PIN_SERIAL1_RX;
+
+    if (serial1RXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial1RX)
+                serial1RXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
+    int8_t serial1TXpin = GPIO_PIN_SERIAL1_TX;
+
+    if (serial1TXpin == UNDEF_PIN)
+    {
+        for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+        {
+            if (config.GetPwmChannel(ch)->val.mode == somSerial1TX)
+                serial1TXpin = GPIO_PIN_PWM_OUTPUTS[ch];
+        }
+    }
+
+    switch(config.GetSerial1Protocol())
+    {
+        case PROTOCOL_SERIAL1_NONE:
+            break;
+        case PROTOCOL_SERIAL1_CRSF:
+            Serial1.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialCRSF(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_INVERTED_CRSF:
+            Serial1.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial1RXpin, serial1TXpin, true);
+            serial1IO = new SerialCRSF(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_SBUS:
+        case PROTOCOL_SERIAL1_DJI_RS_PRO:
+            Serial1.begin(100000, SERIAL_8E2, UNDEF_PIN, serial1TXpin, true);
+            serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_INVERTED_SBUS:
+            Serial1.begin(100000, SERIAL_8E2, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialSBUS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_SUMD:
+            Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialSUMD(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_HOTT_TLM:
+            Serial1.begin(19200, SERIAL_8N2, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
+            break;
+    }
+}
+
+void reconfigureSerial1()
+{
+    serial1Shutdown();
+    setupSerial1();
+}
+#else
+    void setupSerial1() {};
+    void reconfigureSerial1() {}; 
+#endif
+
 static void serialShutdown()
 {
     SerialLogger = new NullStream();
@@ -1380,9 +1479,13 @@ static void serialShutdown()
 #endif
     SERIAL_PROTOCOL_TX.end();
 #else
-    Serial.end();
+    if(serialIO != nullptr)
+    {
+        Serial.end();
+        delete serialIO;
+        serialIO = nullptr;
+    }
 #endif
-    delete serialIO;
 }
 
 void reconfigureSerial()
@@ -1864,6 +1967,7 @@ void setup()
         }
         #endif
         setupSerial();
+        setupSerial1();
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();

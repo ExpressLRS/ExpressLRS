@@ -2,7 +2,11 @@
 
 class SerialSBUS : public SerialIO {
 public:
-    explicit SerialSBUS(Stream &out, Stream &in) : SerialIO(&out, &in) {}
+    explicit SerialSBUS(Stream &out, Stream &in) : SerialIO(&out, &in)
+    {
+        streamOut = &out;
+    }
+
     ~SerialSBUS() override = default;
 
     void queueLinkStatisticsPacket() override {}
@@ -11,4 +15,6 @@ public:
 
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override {};
+
+    Stream *streamOut;
 };
