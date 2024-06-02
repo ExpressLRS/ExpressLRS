@@ -1,4 +1,4 @@
-@@require(isTX)
+@@require(PLATFORM, isTX)
 
 /* eslint-disable comma-dangle */
 /* eslint-disable max-len */
@@ -559,7 +559,11 @@ function completeHandler(event) {
     // This is basically a delayed display of the success dialog with a fake progress
     let percent = 0;
     const interval = setInterval(()=>{
+@@if (PLATFORM.find('8285')>=0):
+      percent = percent + 1;
+@@else:
       percent = percent + 2;
+@@end 
       _('progressBar').value = percent;
       _('status').innerHTML = percent + '% flashed... please wait';
       if (percent === 100) {
