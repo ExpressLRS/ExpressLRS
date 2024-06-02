@@ -263,7 +263,7 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
   request->send(200);
 }
 
-static const char *GetConfigUidType(JsonDocument &json)
+static const char *GetConfigUidType(const JsonObject json)
 {
 #if defined(TARGET_RX)
   if (config.GetVolatileBind())
@@ -285,22 +285,18 @@ static const char *GetConfigUidType(JsonDocument &json)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-#if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(32768);
-#else
-  DynamicJsonDocument json(2048);
-#endif
-
   bool exportMode = request->hasArg("export");
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  JsonObject json = response->getRoot();
 
   if (!exportMode)
   {
-    DynamicJsonDocument options(2048);
+    JsonDocument options;
     deserializeJson(options, getOptions());
     json["options"] = options;
   }
 
-  JsonArray uid = json["config"].createNestedArray("uid");
+  JsonArray uid = json["config"]["uid"].to<JsonArray>();
   copyArray(UID, UID_LEN, uid);
 
 #if defined(TARGET_TX)
@@ -341,7 +337,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
-      const JsonObject &modelJson = json["config"]["model"].createNestedObject(strModel);
+      JsonObject modelJson = json["config"]["model"][strModel].to<JsonObject>();
       modelJson["packet-rate"] = modelConfig.rate;
       modelJson["telemetry-ratio"] = modelConfig.tlm;
       modelJson["switch-mode"] = modelConfig.switchMode;
@@ -395,8 +391,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["uidtype"] = GetConfigUidType(json);
   }
 
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  serializeJson(json, *response);
+  response->setLength();
   request->send(response);
 }
 
@@ -450,10 +445,10 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   if (json.containsKey("model"))
   {
-    for(const auto& kv : json["model"].as<JsonObject>())
+    for(JsonPair kv : json["model"].as<JsonObject>())
     {
-      uint8_t model = String(kv.key().c_str()).toInt();
-      const JsonObject &modelJson = kv.value();
+      uint8_t model = atoi(kv.key().c_str());
+      JsonObject modelJson = kv.value();
 
       config.SetModelId(model);
       if (modelJson.containsKey("packet-rate")) config.SetRate(modelJson["packet-rate"]);
@@ -543,7 +538,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  DynamicJsonDocument json(2048);
+  JsonDocument json;
   json["target"] = &target_name[4];
   json["version"] = VERSION;
   json["product_name"] = product_name;

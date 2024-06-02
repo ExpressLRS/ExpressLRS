@@ -223,7 +223,7 @@ bool hardware_init(EspFlashStream &strmFlash)
     builtinHardwareConfig.clear();
 
     Stream *strmSrc;
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;
