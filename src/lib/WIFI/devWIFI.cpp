@@ -262,7 +262,7 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
   request->send(200);
 }
 
-static const char *GetConfigUidType(JsonDocument &json)
+static const char *GetConfigUidType(const JsonObject json)
 {
 #if defined(TARGET_RX)
   if (config.GetVolatileBind())
@@ -284,22 +284,18 @@ static const char *GetConfigUidType(JsonDocument &json)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-#if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(16384);
-#else
-  DynamicJsonDocument json(2048);
-#endif
-
   bool exportMode = request->hasArg("export");
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  JsonObject json = response->getRoot();
 
   if (!exportMode)
   {
-    DynamicJsonDocument options(2048);
+    JsonDocument options;
     deserializeJson(options, getOptions());
     json["options"] = options;
   }
 
-  JsonArray uid = json["config"].createNestedArray("uid");
+  JsonArray uid = json["config"]["uid"].to<JsonArray>();
   copyArray(UID, UID_LEN, uid);
 
 #if defined(TARGET_TX)
@@ -340,7 +336,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
-      const JsonObject &modelJson = json["config"]["model"].createNestedObject(strModel);
+      JsonObject modelJson = json["config"]["model"][strModel].to<JsonObject>();
       modelJson["packet-rate"] = modelConfig.rate;
       modelJson["telemetry-ratio"] = modelConfig.tlm;
       modelJson["switch-mode"] = modelConfig.switchMode;
@@ -359,6 +355,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
@@ -376,7 +373,11 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
       else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
       #if defined(PLATFORM_ESP32)
-      if (pin != 0) features |= 16; // DShot supported
+      if (pin != 0) features |= 16; // DShot supported on all pins but GPIO0 
+      if (pin == GPIO_PIN_SERIAL1_RX) features |= 32;  // SERIAL1 RX supported (only on this pin)
+      else if (pin == GPIO_PIN_SERIAL1_TX) features |= 64;  // SERIAL1 TX supported (only on this pin)
+      else if ((GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) && 
+               (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
@@ -389,8 +390,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["uidtype"] = GetConfigUidType(json);
   }
 
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  serializeJson(json, *response);
+  response->setLength();
   request->send(response);
 }
 
@@ -444,10 +444,10 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   if (json.containsKey("model"))
   {
-    for(const auto& kv : json["model"].as<JsonObject>())
+    for(JsonPair kv : json["model"].as<JsonObject>())
     {
-      uint8_t model = String(kv.key().c_str()).toInt();
-      const JsonObject &modelJson = kv.value();
+      uint8_t model = atoi(kv.key().c_str());
+      JsonObject modelJson = kv.value();
 
       config.SetModelId(model);
       if (modelJson.containsKey("packet-rate")) config.SetRate(modelJson["packet-rate"]);
@@ -504,6 +504,9 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   uint8_t protocol = json["serial-protocol"] | 0;
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
+  uint8_t protocol1 = json["serial1-protocol"] | 0;
+  config.SetSerial1Protocol((eSerial1Protocol)protocol1);
+
   uint8_t failsafe = json["sbus-failsafe"] | 0;
   config.SetFailsafeMode((eFailsafeMode)failsafe);
 
@@ -534,7 +537,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
 static void WebUpdateGetTarget(AsyncWebServerRequest *request)
 {
-  DynamicJsonDocument json(2048);
+  JsonDocument json;
   json["target"] = &target_name[4];
   json["version"] = VERSION;
   json["product_name"] = product_name;
