@@ -43,7 +43,7 @@ void SerialHoTT_TLM::setTXMode()
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
     digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
-    pinMatrixOutAttach(halfDuplexPin, U0TXD_OUT_IDX, false, false); // attach GPIO as output of UART0 TX
+    pinMatrixOutAttach(halfDuplexPin, UTXDoutIdx, false, false);    // attach GPIO as output of UART TX
 #endif
 }
 
@@ -51,7 +51,7 @@ void SerialHoTT_TLM::setRXMode()
 {
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
-    pinMatrixInAttach(halfDuplexPin, U0RXD_IN_IDX, false);          // attach half duplex GPIO as input to UART0 RX
+    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half duplex GPIO as input to UART RX
 #endif
 }
 

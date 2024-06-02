@@ -209,7 +209,7 @@ String& getOptions()
 
 void saveOptions(Stream &stream, bool customised)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
 
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
@@ -266,8 +266,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  */
 static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
-    DynamicJsonDocument flashDoc(1024);
-    DynamicJsonDocument spiffsDoc(1024);
+    JsonDocument flashDoc;
+    JsonDocument spiffsDoc;
     bool hasFlash = false;
     bool hasSpiffs = false;
 
@@ -295,7 +295,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         }
     }
 
-    DynamicJsonDocument &doc = flashDoc;
+    JsonDocument &doc = flashDoc;
     if (hasFlash && hasSpiffs)
     {
         if (flashDoc["flash-discriminator"] == spiffsDoc["flash-discriminator"])
@@ -354,7 +354,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 */
 void options_SetTrueDefaults()
 {
-    DynamicJsonDocument doc(128);
+    JsonDocument doc;
     // The Regulatory Domain is retained, as there is no sensible default
     doc["domain"] = firmwareOptions.domain;
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;

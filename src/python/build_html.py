@@ -34,11 +34,18 @@ def build_html(mainfile, var, out, env, isTX=False):
     )
     template = engine.get_template(mainfile)
     has_sub_ghz = '-DRADIO_SX127X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
+    if '-DRADIO_SX128X=1' in env['BUILD_FLAGS']:
+        chip = 'SX128X'
+    elif '-DRADIO_SX127X=1' in env['BUILD_FLAGS']:
+        chip = 'SX127X'
+    elif '-DRADIO_LR1121=1' in env['BUILD_FLAGS']:
+        chip = 'LR1121'
     data = template.render({
             'VERSION': get_version(env),
             'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
             'isTX': isTX,
-            'hasSubGHz': has_sub_ghz
+            'hasSubGHz': has_sub_ghz,
+            'chip': chip
         })
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data)

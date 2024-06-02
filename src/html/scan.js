@@ -59,6 +59,12 @@ function generateFeatureBadges(features) {
   if ((features & 12) === 12) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">I2C</span>`;
   else if (!!(features & 4)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`;
   else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
+  
+  // Serial2
+  if ((features & 96) === 96) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
+  else if (!!(features & 32)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">RX2</span>`;
+  else if (!!(features & 64)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">TX2</span>`;
+
   return str;
 }
 
@@ -113,7 +119,18 @@ function updatePwmSettings(arPwm) {
       }
       modes.push(undefined);  // true PWM
     }
-    modes.push(undefined);  // true PWM
+  
+    if (features & 32) {
+      modes.push('Serial2 RX');
+    } else {
+      modes.push(undefined);
+    }
+    if (features & 64) {
+      modes.push('Serial2 TX');
+    } else {
+      modes.push(undefined);
+    }
+
     const modeSelect = enumSelectGenerate(`pwm_${index}_mode`, mode, modes);
     const inputSelect = enumSelectGenerate(`pwm_${index}_ch`, ch,
         ['ch1', 'ch2', 'ch3', 'ch4',
@@ -170,6 +187,11 @@ function updatePwmSettings(arPwm) {
       updateOthers(pinMode.value, true); // disable others
       updateOthers(pinModes[index], false); // enable others
       pinModes[index] = pinMode.value;
+      
+      // show Serial2 protocol selection only if Serial2 TX is assigned
+      _('serial1-config').style.display = 'none';
+      if (pinMode.value == 14) // Serial2 TX
+        _('serial1-config').style.display = 'block';
     }
     pinMode.onchange();
 
@@ -191,7 +213,7 @@ function updatePwmSettings(arPwm) {
   
   modeSelectionInit = false;
 
-  // put some contraints on pinRx/Tx mode selects
+  // put some constraints on pinRx/Tx mode selects
   if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
     const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
     const pinTxMode = _(`pwm_${pinTxIndex}_mode`);
@@ -375,15 +397,41 @@ function updateConfig(data, options) {
       _('sbus-config').style.display = 'none';
     }
   }
+
+  _('serial1-protocol').onchange = () => {
+    if (_('is-airport').checked) {
+      _('rcvr-uart-baud').disabled = false;
+      _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
+      _('serial1-config').style.display = 'none';
+      _('sbus-config').style.display = 'none';
+      return;
+    }
+  }
+
   updatePwmSettings(data.pwm);
   _('serial-protocol').value = data['serial-protocol'];
   _('serial-protocol').onchange();
-  _('is-airport').onchange = _('serial-protocol').onchange;
+  _('serial1-protocol').value = data['serial1-protocol'];
+  _('serial1-protocol').onchange();
+  _('is-airport').onchange = () => {
+    _('serial-protocol').onchange();
+    _('serial1-protocol').onchange();
+  } 
+  _('is-airport').onchange;
   _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
   _('vbind').onchange = () => {
     _('bindphrase').style.display = _('vbind').checked ? 'none' : 'block';
   }
   _('vbind').onchange();
+
+  // set initial visibility status of Serial2 protocol selection
+  _('serial1-config').style.display = 'none';
+  data.pwm.forEach((item,index) => {
+    const _pinMode = _(`pwm_${index}_mode`)
+    if (_pinMode.value == 14) // Serial2 TX
+      _('serial1-config').style.display = 'block';
+  });
+
 @@end
 @@if isTX:
   if (data.hasOwnProperty['button-colors']) {
@@ -690,6 +738,7 @@ if (_('config')) {
         return JSON.stringify({
           "pwm": getPwmFormData(),
           "serial-protocol": +_('serial-protocol').value,
+          "serial1-protocol": +_('serial1-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
