@@ -426,11 +426,13 @@ function updateConfig(data, options) {
 
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
-  data.pwm.forEach((item,index) => {
+if(data.pwm) {
+  data.pwm.forEach((item,index) =>{
     const _pinMode = _(`pwm_${index}_mode`)
     if (_pinMode.value == 14) // Serial2 TX
       _('serial1-config').style.display = 'block';
   });
+}
 
 @@end
 @@if isTX:
@@ -514,7 +516,20 @@ function fileDragHover(e) {
 function fileSelectHandler(e) {
   fileDragHover(e);
   const files = e.target.files || e.dataTransfer.files;
-  uploadFile(files[0]);
+  @@if (PLATFORM.find('8285')>=0):
+  if(files[0].type === 'application/gzip') {
+    uploadFile(files[0]);
+  @@else:
+  if(files[0].type === 'application/octet-stream') {
+    uploadFile(files[0]);
+  @@end
+  } else {
+    cuteAlert({
+      type: 'error',
+      title: 'Incorrect File Format',
+      message: `The Firmware File you uploaded is not suitable for this hardware.`
+    });
+  }
 }
 
 function uploadFile(file) {
