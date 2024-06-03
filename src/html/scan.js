@@ -1,4 +1,4 @@
-@@require(PLATFORM, isTX)
+@@require(PLATFORM, isTX, is8285)
 
 /* eslint-disable comma-dangle */
 /* eslint-disable max-len */
@@ -262,14 +262,14 @@ function init() {
   // setup model match checkbox handler
   _('model-match').onclick = () => {
     if (_('model-match').checked) {
-      _('modelid').style.display = 'block';
+      _('modelNum').style.display = 'block';
       if (storedModelId === 255) {
         _('modelid').value = '';
       } else {
         _('modelid').value = storedModelId;
       }
     } else {
-      _('modelid').style.display = 'none';
+      _('modelNum').style.display = 'none';
       _('modelid').value = '255';
     }
   };
@@ -355,11 +355,11 @@ function updateConfig(data, options) {
   }
 @@if not isTX:
   if (data.hasOwnProperty('modelid') && data.modelid !== 255) {
-    _('modelid').style.display = 'block';
+    _('modelNum').style.display = 'block';
     _('model-match').checked = true;
     storedModelId = data.modelid;
   } else {
-    _('modelid').style.display = 'none';
+    _('modelNum').style.display = 'none';
     _('model-match').checked = false;
     storedModelId = 255;
   }
@@ -516,7 +516,7 @@ function fileDragHover(e) {
 function fileSelectHandler(e) {
   fileDragHover(e);
   const files = e.target.files || e.dataTransfer.files;
-  @@if (PLATFORM.find('8285')>=0):
+  @@if (is8285):
   if(files[0].type === 'application/gzip') {
     uploadFile(files[0]);
   @@else:
@@ -527,7 +527,7 @@ function fileSelectHandler(e) {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: `The Firmware File you uploaded is not suitable for this hardware.`
+      message: `The Firmware File you selected is not suitable for this hardware.`
     });
   }
 }
@@ -574,7 +574,7 @@ function completeHandler(event) {
     // This is basically a delayed display of the success dialog with a fake progress
     let percent = 0;
     const interval = setInterval(()=>{
-@@if (PLATFORM.find('8285')>=0):
+@@if (is8285):
       percent = percent + 1;
 @@else:
       percent = percent + 2;

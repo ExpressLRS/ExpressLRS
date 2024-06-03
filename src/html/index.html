@@ -1,4 +1,4 @@
-@@require(PLATFORM, VERSION, isTX, hasSubGHz)
+@@require(PLATFORM, VERSION, isTX, hasSubGHz, is8285)
 <!DOCTYPE HTML>
 <html lang="en">
 
@@ -139,11 +139,10 @@
 				<div class="mui-panel">
 					<h2>Firmware Update</h2>
 					Choose a file to update module firmware. Select the correct .bin file for @@{PLATFORM} otherwise a bad flash may occur.
-					If this happens you will need to recover via USB/Serial. You may also download the
-					<a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
+					If this happens you will need to recover via USB/Serial. You may also download the <a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br/><br/>
-@@if (PLATFORM.find('8285')>=0):
-					<div class="mui-panel" style="background-color: #fcecae;text-align:center;">Do NOT decompress/unzip/extract the firmware.bin.gz file, upload the file as it is.</div>
+@@if (is8285):
+					<div class="mui-panel" style="background-color: #fcecae;text-align:center;">Do NOT decompress/unzip/extract the firmware.bin.gz file. Upload the file as it is.</div>
 					<br/>
 @@end
 					<button id="upload_btn" class="mui-btn mui-btn--primary upload" style="margin: 0 auto; display:block;">
@@ -298,7 +297,7 @@
 							<input id='model-match' name='model-match' type='checkbox'/>
 							<label for="model-match">Enable Model Match</label>
 						</div>
-						<div class="mui-textfield">
+						<div class="mui-textfield" id="modelNum">
 							<input id='modelid' type='text' name='modelid' value="255" required/>
 							<label for="modelid">Model ID</label>
 						</div>
