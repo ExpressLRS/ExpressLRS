@@ -140,6 +140,9 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval, SX12XX_Radio_Number_t radioNumber)
 {
+    bool useFSK = true;
+    // bool useFSK = false;
+
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
     
@@ -162,23 +165,79 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
-    // 8.1.1 SetPacketType
-    uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
+    if (!useFSK)
+    {
+        // 8.1.1 SetPacketType
+        uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
+        hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
-    ConfigModParamsLoRa(bw, sf, cr, radioNumber);
+        ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
-#if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
-    lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_VARIABLE_LENGTH;
-#else
-    lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
-#endif
+    #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
+        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_VARIABLE_LENGTH;
+    #else
+        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
+    #endif
 
-    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
+    }
+    else
+    {
+        // 8.1.1 SetPacketType
+        uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_GFSK};
+        hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
+
+        // uint32_t Bitrate = 20000;   // Bitrate in bits/s
+
+        uint32_t Bitrate = (bw == 255 ? 300000 : (uint32_t)bw * 1000);   // Bitrate in bits/s
+        uint8_t BWF = sf; // 0x09;         // RX_BW_467000 (467kHz DSB)
+        uint32_t Fdev = (uint32_t)cr * 1000; // 100000;     // Fdev defines the frequency deviation (Hz)
+        ConfigModParamsFSK(Bitrate, BWF, Fdev, radioNumber);
+
+        SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
+    }
 
     SetFrequencyHz(regfreq, radioNumber);
 
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+}
+
+void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.5.1 SetModulationParams
+    uint8_t buf[10];
+    buf[0] = Bitrate >> 24;
+    buf[1] = Bitrate >> 16;
+    buf[2] = Bitrate >> 8;
+    buf[3] = Bitrate >> 0;
+    buf[4] = 0x00; // Pulse Shape - 0x00: No filter applied
+    buf[5] = BWF;
+    buf[6] = Fdev >> 24;
+    buf[7] = Fdev >> 16;
+    buf[8] = Fdev >> 8;
+    buf[9] = Fdev >> 0;
+    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
+}
+
+void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.5.2 SetPacketParams
+    uint8_t buf[9];
+    buf[0] = 0;                 // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[1] = PreambleLength;    // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[2] = 0x04;              // Pbl Detect - 0x04: Preamble detector length 8 bits
+    buf[3] = 64;                // SyncWordLen defines the length of the Syncword in bits. By default, the Syncword is set to 0x9723522556536564
+    buf[4] = 0x00;              // Addr Comp - 0x00: Address Filtering Disabled
+    buf[5] = 0x00;              // PacketType - 0x00: Packet length is known on both sides
+    buf[6] = PayloadLength;     // PayloadLen
+    buf[7] = 0x01;              // CrcType - 0x01: CRC_OFF (No CRC).
+    buf[8] = 0x01;              // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
+
+    // 8.5.3 SetGfskSyncWord
+    // uint8_t synbuf[8] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    // uint8_t synbuf[8] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA};
+    // hal.WriteCommand(LR11XX_RADIO_SET_GFSK_SYNC_WORD_OC, synbuf, sizeof(synbuf), radioNumber);
 }
 
 void LR1121Driver::SetDioAsRfSwitch()
@@ -636,7 +695,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
         #endif
     }
 
-    uint8_t status[4];
+    // uint8_t status[4];
+    uint8_t status[5];
     int8_t rssi[2];
     int8_t snr[2];
 
@@ -653,13 +713,15 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             hal.ReadCommand(status, sizeof(status), radio[i]);
             
             // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-            rssi[i] = -(int8_t)(status[1] / 2);
+            // rssi[i] = -(int8_t)(status[1] / 2);
+            rssi[i] = -(int8_t)(status[2] / 2);
 
             // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
             // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
             // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
 
-            snr[i] = (int8_t)status[2];
+            // snr[i] = (int8_t)status[2];
+            snr[i] = 0;
 
             // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
             (i == 0) ? LastPacketRSSI = rssi[i] : LastPacketRSSI2 = rssi[i];
