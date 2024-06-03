@@ -431,6 +431,22 @@ TxConfig::SetAntennaMode(uint8_t txAntenna)
 }
 
 void
+TxConfig::SetLinkMode(uint8_t linkMode)
+{
+    if (GetLinkMode() != linkMode)
+    {
+        m_model->linkMode = linkMode;
+
+        if (linkMode == TX_MAVLINK_MODE)
+        {
+            m_model->tlm = TLM_RATIO_1_2;
+            m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
+        }
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetModelMatch(bool modelMatch)
 {
     if (GetModelMatch() != modelMatch)
