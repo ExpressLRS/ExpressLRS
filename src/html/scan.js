@@ -527,7 +527,7 @@ function fileSelectHandler(e) {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: 'The Firmware File you selected is not suitable for this hardware.'
+      message: 'The firmware file you selected is not suitable for this hardware.'
     });
   }
 }
