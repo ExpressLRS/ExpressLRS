@@ -426,13 +426,11 @@ function updateConfig(data, options) {
 
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
-if(data.pwm) {
-  data.pwm.forEach((item,index) =>{
+  data.pwm?.forEach((item,index) => {
     const _pinMode = _(`pwm_${index}_mode`)
     if (_pinMode.value == 14) // Serial2 TX
       _('serial1-config').style.display = 'block';
   });
-}
 
 @@end
 @@if isTX:
