@@ -522,7 +522,7 @@ function fileSelectHandler(e) {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: 'The firmware file must be a .bin.gz file.'
+      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a .bin.gz file. <br />Do NOT decompress/unzip/extract the file!'
     });
   }
   @@else:
@@ -532,7 +532,7 @@ function fileSelectHandler(e) {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: 'The firmware file must be a .bin file.'
+      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a .bin file.'
     });
   }
   @@end
