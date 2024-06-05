@@ -247,7 +247,7 @@ function updatePwmSettings(arPwm) {
     }
     const pinTx = pinTxMode.value;
     pinRxMode.onchange();
-    if(pinRxMode.value != 9) pinTxMode.value = pinTx;
+    if (pinRxMode.value != 9) pinTxMode.value = pinTx;
   }
 }
 @@end
@@ -514,20 +514,28 @@ function fileDragHover(e) {
 function fileSelectHandler(e) {
   fileDragHover(e);
   const files = e.target.files || e.dataTransfer.files;
+  const fileExt = files[0].name.split('.').pop();
   @@if (is8285):
-  if(files[0].type === 'application/gzip') {
+  if (fileExt === 'gz') {
     uploadFile(files[0]);
-  @@else:
-  if(files[0].type === 'application/octet-stream') {
-    uploadFile(files[0]);
-  @@end
   } else {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: 'The firmware file you selected is not suitable for this hardware.'
+      message: 'The firmware file must be a .bin.gz file.'
     });
   }
+  @@else:
+  if (fileExt === 'bin') {
+    uploadFile(files[0]);
+  } else {
+    cuteAlert({
+      type: 'error',
+      title: 'Incorrect File Format',
+      message: 'The firmware file must be a .bin file.'
+    });
+  }
+  @@end
 }
 
 function uploadFile(file) {
@@ -880,7 +888,7 @@ function updateOptions(data) {
         if (Array.isArray(value)) _(key).value = value.toString();
         else _(key).value = value;
       }
-      if(_(key).onchange) _(key).onchange();
+      if (_(key).onchange) _(key).onchange();
     }
   }
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
