@@ -12,7 +12,7 @@
 #define HOTT_CMD_DELAY 1        // 1 ms delay between CMD byte 1 and 2
 #define HOTT_WAIT_TX_COMPLETE 2 // 2 ms wait for CMD bytes transmission complete
 
-#define DISCOVERY_TIMEOUT 30000 // 30s device discovery time
+#define DISCOVERY_TIMEOUT 40000 // 40s device discovery time
 
 #define VARIO_MIN_CRSFRATE 1000 // CRSF telemetry packets will be sent if
 #define GPS_MIN_CRSFRATE 5000   // min rate timers in [ms] have expired
