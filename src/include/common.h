@@ -89,12 +89,17 @@ typedef enum : uint8_t
     RATE_LORA_250HZ,
     RATE_LORA_333HZ_8CH,
     RATE_LORA_500HZ,
-    RATE_DVDA_250HZ,
-    RATE_DVDA_500HZ,
+    RATE_DVDA_250HZ, // FLRC
+    RATE_DVDA_500HZ, // FLRC
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
     RATE_DVDA_50HZ,
     RATE_LORA_200HZ_8CH,
+
+    RATE_FSK_2G4_DVDA_500HZ,
+    RATE_FSK_2G4_1000HZ,
+    RATE_FSK_900_1000HZ,
+    RATE_FSK_900_1000HZ_8CH,
 } expresslrs_RFrates_e;
 
 enum {
@@ -130,7 +135,6 @@ typedef enum : uint8_t
 typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
-    expresslrs_RFrates_e enum_rate;
     int16_t RXsensitivity;                // expected min RF sensitivity
     uint16_t TOA;                         // time on air in microseconds
     uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
