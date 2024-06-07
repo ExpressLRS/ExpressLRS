@@ -9,7 +9,7 @@ const char STR_LUA_PACKETRATES[] =
 #elif defined(RADIO_LR1121)
     "50Hz 2.4G;100Hz Full 2.4G;150Hz 2.4G;250Hz 2.4G;333Hz Full 2.4G;500Hz 2.4G;" // 2.4G
     "50Hz Low Band;100Hz Low Band;100Hz Full Low Band;200Hz Low Band;" // 900M
-    "DK500;K1000;DK500 Low;K1000 Low"; // FSK testing
+    "DK500;K1000;K1000 F Low;K1000 Low"; // FSK testing
 #elif defined(RADIO_SX128X)
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"
     "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)";
