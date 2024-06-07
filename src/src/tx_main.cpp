@@ -23,6 +23,9 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#include "USB.h"
+#define USBSerial Serial
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -1222,7 +1225,10 @@ static void setupSerial()
 #endif
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32_S3)
+  USBSerial.begin(firmwareOptions.uart_baud);
+  TxUSB = &USBSerial;
+#elif defined(PLATFORM_ESP32)
   if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
   {
     // The backpack is already assigned on UART0 (pins 3, 1)
@@ -1502,13 +1508,10 @@ void loop()
         {
           // raw mavlink data - forward to USB rather than handset
           uint8_t count = CRSFinBuffer[1];
-          for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
+          TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+          if (TxUSB != TxBackpack)
           {
-            TxUSB->write(CRSFinBuffer[i]);
-            if (TxUSB != TxBackpack)
-            {
-              TxBackpack->write(CRSFinBuffer[i]);
-            }
+            TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           }
         }
       }
