@@ -119,7 +119,7 @@ typedef enum : uint8_t
 #define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
 #define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
 // Bound is any of the last 4 bytes nonzero (unbound is all zeroes)
-#define UID_IS_BOUND(uid) (uid[2] != 0 && uid[3] != 0 && uid[4] != 0 && uid[5] != 0)
+#define UID_IS_BOUND(uid) (uid[2] != 0 || uid[3] != 0 || uid[4] != 0 || uid[5] != 0)
 
 typedef struct expresslrs_rf_pref_params_s
 {
@@ -175,19 +175,21 @@ typedef enum : uint8_t {
 
 enum eServoOutputMode : uint8_t
 {
-    som50Hz,    // Hz modes are "Servo PWM" where the signal is 988-2012us
-    som60Hz,    // and the mode sets the refresh interval
-    som100Hz,   // 50Hz must be mode=0 for default in config
-    som160Hz,
-    som333Hz,
-    som400Hz,
-    som10KHzDuty,
-    somOnOff,   // Digital 0/1 mode
-    somDShot,   // DShot300
-    somSerial,  // Serial TX or RX depending on pin
-    somSCL,     // I2C clock signal
-    somSDA,     // I2C data line
-    somPwm,     // True PWM mode (NOT SUPPORTED)
+    som50Hz = 0,    // 0:  50 Hz  | modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,        // 1:  60 Hz  | and the mode sets the refresh interval
+    som100Hz,       // 2:  100 Hz | must be mode=0 for default in config
+    som160Hz,       // 3:  160Hz
+    som333Hz,       // 4:  333Hz
+    som400Hz,       // 5:  400Hz
+    som10KHzDuty,   // 6:  10kHz duty
+    somOnOff,       // 7:  Digital 0/1 mode
+    somDShot,       // 8:  DShot300
+    somSerial,      // 9:  primary Serial
+    somSCL,         // 10: I2C clock signal
+    somSDA,         // 11: I2C data line
+    somPwm,         // 12: true PWM mode (NOT SUPPORTED)
+    somSerial1RX,   // 13: secondary Serial RX
+    somSerial1TX,   // 14: secondary Serial TX
 };
 
 enum eServoOutputFailsafeMode : uint8_t
@@ -206,6 +208,18 @@ enum eSerialProtocol : uint8_t
 	PROTOCOL_SUMD,
     PROTOCOL_DJI_RS_PRO,
     PROTOCOL_HOTT_TLM
+};
+
+enum eSerial1Protocol : uint8_t
+{
+    PROTOCOL_SERIAL1_NONE,
+    PROTOCOL_SERIAL1_CRSF,
+    PROTOCOL_SERIAL1_INVERTED_CRSF,
+    PROTOCOL_SERIAL1_SBUS,
+    PROTOCOL_SERIAL1_INVERTED_SBUS,
+	PROTOCOL_SERIAL1_SUMD,
+    PROTOCOL_SERIAL1_DJI_RS_PRO,
+    PROTOCOL_SERIAL1_HOTT_TLM
 };
 
 enum eFailsafeMode : uint8_t
