@@ -23,6 +23,9 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#include "USB.h"
+#define USBSerial Serial
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -1222,7 +1225,10 @@ static void setupSerial()
 #endif
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32_S3)
+  USBSerial.begin(firmwareOptions.uart_baud);
+  TxUSB = &USBSerial;
+#elif defined(PLATFORM_ESP32)
   if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
   {
     // The backpack is already assigned on UART0 (pins 3, 1)
