@@ -1502,13 +1502,10 @@ void loop()
         {
           // raw mavlink data - forward to USB rather than handset
           uint8_t count = CRSFinBuffer[1];
-          for (uint8_t i = CRSF_FRAME_NOT_COUNTED_BYTES; i < count + CRSF_FRAME_NOT_COUNTED_BYTES; ++i)
+          TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+          if (TxUSB != TxBackpack)
           {
-            TxUSB->write(CRSFinBuffer[i]);
-            if (TxUSB != TxBackpack)
-            {
-              TxBackpack->write(CRSFinBuffer[i]);
-            }
+            TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           }
         }
       }
