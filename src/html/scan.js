@@ -59,7 +59,7 @@ function generateFeatureBadges(features) {
   if ((features & 12) === 12) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">I2C</span>`;
   else if (!!(features & 4)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`;
   else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
-  
+
   // Serial2
   if ((features & 96) === 96) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
   else if (!!(features & 32)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">RX2</span>`;
@@ -119,7 +119,7 @@ function updatePwmSettings(arPwm) {
       }
       modes.push(undefined);  // true PWM
     }
-  
+
     if (features & 32) {
       modes.push('Serial2 RX');
     } else {
@@ -187,7 +187,7 @@ function updatePwmSettings(arPwm) {
       updateOthers(pinMode.value, true); // disable others
       updateOthers(pinModes[index], false); // enable others
       pinModes[index] = pinMode.value;
-      
+
       // show Serial2 protocol selection only if Serial2 TX is assigned
       _('serial1-config').style.display = 'none';
       if (pinMode.value == 14) // Serial2 TX
@@ -210,7 +210,7 @@ function updatePwmSettings(arPwm) {
     };
     failsafeMode.onchange();
   });
-  
+
   modeSelectionInit = false;
 
   // put some constraints on pinRx/Tx mode selects
@@ -416,7 +416,7 @@ function updateConfig(data, options) {
   _('is-airport').onchange = () => {
     _('serial-protocol').onchange();
     _('serial1-protocol').onchange();
-  } 
+  }
   _('is-airport').onchange;
   _('vbind').checked = data.hasOwnProperty('vbind') && data['vbind'];
   _('vbind').onchange = () => {
@@ -513,29 +513,25 @@ function fileDragHover(e) {
 
 function fileSelectHandler(e) {
   fileDragHover(e);
+  // ESP32 expects .bin, ESP8285 RX expect .bin.gz
   const files = e.target.files || e.dataTransfer.files;
   const fileExt = files[0].name.split('.').pop();
-  @@if (is8285):
-  if (fileExt === 'gz') {
+@@if (is8285 and not isTX):
+  const expectedFileExt = 'gz';
+  const expectedFileExtDesc = '.bin.gz file. <br />Do NOT decompress/unzip/extract the file!';
+@@else:
+  const expectedFileExt = 'bin';
+  const expectedFileExtDesc = '.bin file.';
+@@endif
+  if (fileExt === expectedFileExt) {
     uploadFile(files[0]);
   } else {
     cuteAlert({
       type: 'error',
       title: 'Incorrect File Format',
-      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a .bin.gz file. <br />Do NOT decompress/unzip/extract the file!'
+      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a ' + expectedFileExtDesc
     });
   }
-  @@else:
-  if (fileExt === 'bin') {
-    uploadFile(files[0]);
-  } else {
-    cuteAlert({
-      type: 'error',
-      title: 'Incorrect File Format',
-      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a .bin file.'
-    });
-  }
-  @@end
 }
 
 function uploadFile(file) {
@@ -584,7 +580,7 @@ function completeHandler(event) {
       percent = percent + 1;
 @@else:
       percent = percent + 2;
-@@end 
+@@end
       _('progressBar').value = percent;
       _('status').innerHTML = percent + '% flashed... please wait';
       if (percent === 100) {
