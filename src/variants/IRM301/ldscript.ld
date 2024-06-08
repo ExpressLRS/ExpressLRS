@@ -36,8 +36,9 @@ _Min_Stack_Size = 0x400 ;	/* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 16K
-  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 128K
+  BTRAM (xrw)     : ORIGIN = 0x20000000, LENGTH = 0x80
+  RAM    (xrw)    : ORIGIN = 0x20000080, LENGTH = 16K - 0x80  /* leave room for Flysky bootloader */
+  FLASH    (rx)   : ORIGIN = 0x8000000 + FLASH_APP_OFFSET,   LENGTH = 128K - FLASH_APP_OFFSET
 }
 
 /* Sections */
