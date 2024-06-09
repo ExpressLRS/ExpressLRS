@@ -403,7 +403,7 @@ void CRSFHandset::handleInput()
         return;
     }
 
-    while (CRSFHandset::Port.available())
+    if (CRSFHandset::Port.available())
     {
         if (!CRSFframeActive)
         {
@@ -420,7 +420,8 @@ void CRSFHandset::handleInput()
                 SerialInPacketPtr++;
             }
         }
-        else // frame is active so we do the processing
+
+        if (CRSFframeActive && CRSFHandset::Port.available()) // frame is active so we do the processing
         {
             // first if things have gone wrong //
             if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
@@ -452,9 +453,7 @@ void CRSFHandset::handleInput()
             }
 
             int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
-            #if defined(PLATFORM_ESP32)
-            auto count = (int)CRSFHandset::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
-            #else
+            #if defined(PLATFORM_STM32)
             int count = 0;
             auto avail = (int)CRSFHandset::Port.available();
             while (count < toRead && count < avail)
@@ -462,6 +461,8 @@ void CRSFHandset::handleInput()
                 SerialInBuffer[SerialInPacketPtr + count] = CRSFHandset::Port.read();
                 count++;
             }
+            #else
+            auto count = (int)CRSFHandset::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
             #endif
             SerialInPacketPtr += count;
 
