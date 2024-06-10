@@ -42,7 +42,6 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
-    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::End()
@@ -197,7 +196,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
     
     ClearIrqStatus(radioNumber);
-    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber)
@@ -777,9 +775,6 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
-    if (instance->ignoreSecondIRQ)
-        return;
-
     instance->processingPacketRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
@@ -787,13 +782,11 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->TXnbISR();
         instance->ClearIrqStatus(SX12XX_Radio_All);
-        instance->ignoreSecondIRQ = true;  
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            instance->ignoreSecondIRQ = true;  
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else

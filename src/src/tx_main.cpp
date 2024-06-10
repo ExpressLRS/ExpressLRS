@@ -623,7 +623,6 @@ void ICACHE_RAM_ATTR timerCallback()
   }
 
   Radio.isFirstRxIrq = true;
-  Radio.ignoreSecondIRQ = false;
 
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))

@@ -786,7 +786,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     didFHSS = false;
 
     Radio.isFirstRxIrq = true;
-    Radio.ignoreSecondIRQ = false;
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
 
