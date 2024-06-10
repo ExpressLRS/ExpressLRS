@@ -8,6 +8,7 @@
 #include "device.h"
 
 #if defined(PLATFORM_ESP32)
+#include <hal/uart_ll.h>
 #include <soc/soc.h>
 #include <soc/uart_reg.h>
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
@@ -29,7 +30,7 @@ HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 HardwareSerial CRSFHandset::Port = Serial;
 #endif
 
-static constexpr int HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest telemetry FIFO size in ETX with CRSF defined
+static constexpr uint32_t HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 /// Out FIFO to buffer messages///
 static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
@@ -44,6 +45,7 @@ uint32_t CRSFHandset::BadPktsCountResult = 0;
 uint8_t CRSFHandset::modelId = 0;
 bool CRSFHandset::ForwardDevicePings = false;
 bool CRSFHandset::elrsLUAmode = false;
+static bool transmitting = false;
 
 /// OpenTX mixer sync ///
 static const int32_t OpenTXsyncPacketInterval = 200; // in ms
@@ -214,7 +216,6 @@ void ICACHE_RAM_ATTR CRSFHandset::setPacketInterval(int32_t PacketInterval)
     OpenTXsyncWindow = 0;
     OpenTXsyncWindowSize = std::max((int32_t)1, (int32_t)(20000/RequestedRCpacketInterval));
     OpenTXsyncLastSent -= OpenTXsyncPacketInterval;
-    adjustMaxPacketSize();
 }
 
 void ICACHE_RAM_ATTR CRSFHandset::JustSentRFpacket()
@@ -403,99 +404,100 @@ void CRSFHandset::handleInput()
         return;
     }
 
-    if (CRSFHandset::Port.available())
+    if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX && transmitting)
     {
-        if (!CRSFframeActive)
+#if defined(PLATFORM_ESP32)
+        if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
         {
-            unsigned char const inChar = CRSFHandset::Port.read();
-            // stage 1 wait for sync byte //
-            if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
-                inChar == CRSF_SYNC_BYTE)
+            return;
+        }
+#elif defined(PLATFORM_ESP8266)
+        if (((USS(0) >> USTXC) & 0xff) > 0)
+        {
+            return;
+        }
+#else
+        if (Port.availableForWrite() != SERIAL_TX_BUFFER_SIZE - 1)
+        {
+            return;
+        }
+#endif
+        duplex_set_RX();
+        flush_port_input();
+        transmitting = false;
+    }
+
+    auto toRead = std::min(CRSFHandset::Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
+#if defined(PLATFORM_STM32)
+    while (toRead--)
+    {
+        SerialInBuffer[SerialInPacketPtr++] = CRSFHandset::Port.read();
+    }
+#else
+    SerialInPacketPtr += (int)CRSFHandset::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
+#endif
+
+    // discard bytes until we start with header byte
+    if (!CRSFframeActive)
+    {
+        for (int i=0 ; i<SerialInPacketPtr ; i++)
+        {
+            // If we find a header byte then move that and trailing bytes to the head of the buffer and let's go!
+            if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
             {
-                // we got sync, reset write pointer
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
+                memcpy(SerialInBuffer, SerialInBuffer+i, SerialInPacketPtr-i);
                 CRSFframeActive = true;
-                SerialInBuffer[SerialInPacketPtr] = inChar;
-                SerialInPacketPtr++;
+                SerialInPacketPtr -= i;
+                break;
             }
         }
-
-        if (CRSFframeActive && CRSFHandset::Port.available()) // frame is active so we do the processing
+        // If no header found then discard this entire buffer
+        if (!CRSFframeActive)
         {
-            // first if things have gone wrong //
-            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
-            {
-                // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
-                CRSFframeActive = false;
-                return;
-            }
+            SerialInPacketPtr = 0;
+        }
+    }
 
-            // special case where we save the expected pkt len to buffer //
-            if (SerialInPacketPtr == 1)
+    // We have a packet header and at least a length byte as well, so we see if we have a pull packet for processing
+    if (CRSFframeActive && SerialInPacketPtr>2)
+    {
+        // Sanity check: If the length byte is pushing over the max packet size skip this header byte and start scanning again
+        if ((SerialInBuffer[1] + 2) > CRSF_MAX_PACKET_LEN)
+        {
+            SerialInPacketPtr -= 1;
+            memcpy(SerialInBuffer, SerialInBuffer + 1, SerialInPacketPtr);
+            CRSFframeActive = false;
+        }
+        // If we have at least the number of bytes for a full packet then validate and process it
+        else if (SerialInPacketPtr >= (SerialInBuffer[1] + 2))
+        {
+            uint8_t CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInBuffer[1] - 1);
+
+            if (CalculatedCRC == SerialInBuffer[SerialInBuffer[1] + 2 - 1])
             {
-                unsigned char const inChar = CRSFHandset::Port.read();
-                if (inChar <= CRSF_MAX_PACKET_LEN)
+                GoodPktsCount++;
+                if (ProcessPacket())
                 {
-                    SerialInPacketLen = inChar;
-                    SerialInBuffer[SerialInPacketPtr] = inChar;
-                    SerialInPacketPtr++;
-                }
-                else
-                {
-                    SerialInPacketPtr = 0;
-                    SerialInPacketLen = 0;
-                    CRSFframeActive = false;
-                    return;
-                }
-            }
-
-            int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
-            #if defined(PLATFORM_STM32)
-            int count = 0;
-            auto avail = (int)CRSFHandset::Port.available();
-            while (count < toRead && count < avail)
-            {
-                SerialInBuffer[SerialInPacketPtr + count] = CRSFHandset::Port.read();
-                count++;
-            }
-            #else
-            auto count = (int)CRSFHandset::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
-            #endif
-            SerialInPacketPtr += count;
-
-            if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-            {
-                uint8_t CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
-
-                if (CalculatedCRC == SerialInBuffer[SerialInPacketPtr-1])
-                {
-                    GoodPktsCount++;
-                    if (ProcessPacket())
+                    handleOutput(SerialInBuffer[1] + 2);
+                    if (RCdataCallback)
                     {
-                        //delayMicroseconds(50);
-                        handleOutput();
-                        if (RCdataCallback) RCdataCallback();
+                        RCdataCallback();
                     }
                 }
-                else
-                {
-                    DBGLN("UART CRC failure");
-                    // cleanup input buffer
-                    flush_port_input();
-                    BadPktsCount++;
-                }
-                CRSFframeActive = false;
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
             }
+            else
+            {
+                DBGLN("UART CRC failure");
+                BadPktsCount++;
+            }
+            SerialInPacketPtr -= (SerialInBuffer[1] + 2);
+            memcpy(SerialInBuffer, SerialInBuffer + (SerialInBuffer[1] + 2), SerialInPacketPtr);
+            CRSFframeActive = false;
         }
     }
 }
 
-void CRSFHandset::handleOutput()
+void CRSFHandset::handleOutput(int receivedBytes)
 {
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
     // both static to split up larger packages
@@ -517,9 +519,16 @@ void CRSFHandset::handleOutput()
 
     // if partial package remaining, or data in the output FIFO that needs to be written
     if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
-        duplex_set_TX();
+        transmitting = true;
 
-        uint8_t periodBytesRemaining = maxPeriodBytes;
+        unsigned int periodBytesRemaining = HANDSET_TELEMETRY_FIFO_SIZE;
+        if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+        {
+            duplex_set_TX();
+            auto periodBytes = UARTrequestedBaud / 10 / (1000000/RequestedRCpacketInterval) * 90 / 100;
+            periodBytesRemaining = std::min((periodBytes - receivedBytes % periodBytes), HANDSET_TELEMETRY_FIFO_SIZE);
+        }
+
         while (periodBytesRemaining)
         {
             SerialOutFIFO.lock();
@@ -555,11 +564,6 @@ void CRSFHandset::handleOutput()
             if (SerialOutFIFO.size() == 0)
                 break;
         }
-        CRSFHandset::Port.flush();
-        duplex_set_RX();
-
-        // make sure there is no garbage on the UART left over
-        flush_port_input();
     }
 }
 
@@ -624,17 +628,6 @@ void CRSFHandset::duplex_set_TX() const
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     // writing to the port switches the mode
 #endif
-}
-
-void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
-{
-    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
-    // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxPeriodBytes = maxPeriodBytes < 10 ? 10 : maxPeriodBytes;
-    maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
-    DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
 #if defined(PLATFORM_ESP32_S3)
@@ -761,8 +754,6 @@ bool CRSFHandset::UARTwdt()
             if (UARTrequestedBaud != 0)
             {
                 DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
-
-                adjustMaxPacketSize();
 
                 SerialOutFIFO.flush();
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)

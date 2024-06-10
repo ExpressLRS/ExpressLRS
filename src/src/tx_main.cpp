@@ -320,24 +320,14 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
-  #if defined(RADIO_SX128X)
-    if (CRSFHandset::GetCurrentBaudRate() == 115200 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 150Hz if we are on 115k baud on external module
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 6666);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud (on internal module)
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 400000 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 333Hz if we are on 400k baud on external module
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 3003);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
-    }
-  #endif
+  if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+  {
+    rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
+  }
+  else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+  {
+    rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
+  }
   return rateIndex;
 }
 
