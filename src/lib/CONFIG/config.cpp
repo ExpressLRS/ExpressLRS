@@ -441,8 +441,9 @@ TxConfig::SetLinkMode(uint8_t linkMode)
         {
             m_model->tlm = TLM_RATIO_1_2;
             m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
+            m_config.backpackTlmEnabled = false; // Disable backpack telemetry since it'd be MSP mixed with MAVLink
         }
-        m_modified |= MODEL_CHANGED;
+        m_modified |= MODEL_CHANGED | MAIN_CHANGED;
     }
 }
 
