@@ -623,6 +623,7 @@ void ICACHE_RAM_ATTR timerCallback()
   }
 
   Radio.isFirstRxIrq = true;
+  Radio.ignoreSecondIRQ = false;
 
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
@@ -1385,8 +1386,6 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-
-  Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
 

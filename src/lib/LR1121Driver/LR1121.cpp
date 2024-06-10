@@ -195,6 +195,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetFrequencyHz(regfreq, radioNumber);
 
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+    
     ClearIrqStatus(radioNumber);
     ignoreSecondIRQ = false;
 }
@@ -589,9 +590,6 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
 
     SetMode(LR1121_MODE_TX, radioNumber);
 
-    ClearIrqStatus(radioNumber);
-    ignoreSecondIRQ = false;
-
 #ifdef DEBUG_LLCC68_OTA_TIMING
     beginTX = micros();
 #endif
@@ -624,9 +622,6 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode)
 {
     SetMode(LR1121_MODE_RX, SX12XX_Radio_All);
-
-    ClearIrqStatus(SX12XX_Radio_All);
-    ignoreSecondIRQ = false;
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
