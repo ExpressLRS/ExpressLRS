@@ -792,6 +792,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     didFHSS = false;
 
     Radio.isFirstRxIrq = true;
+    Radio.ignoreSecondIRQ = false;
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
 
@@ -2149,7 +2150,6 @@ void loop()
     DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
-    Radio.ignoreSecondIRQ = false;
 }
 
 #if defined(PLATFORM_ESP32_C3)
