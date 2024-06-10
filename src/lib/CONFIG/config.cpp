@@ -1053,7 +1053,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t pulsespan)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
@@ -1064,7 +1064,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
     newConfig.val.inputChannel = inputCh;
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
-    newConfig.val.narrow = narrow;
+    newConfig.val.pulsespan = pulsespan;
     if (pwm->raw == newConfig.raw)
         return;
 

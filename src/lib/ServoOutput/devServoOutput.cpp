@@ -76,7 +76,13 @@ static void servoWrite(uint8_t ch, uint16_t us)
         }
         else
         {
-            PWM.setMicroseconds(pwmChannels[ch], us / (chConfig->val.narrow + 1));
+            if (chConfig->val.pulsespan == PWMPULSESPAN_HALF || chConfig->val.narrow) {
+                us /= 2;
+            }
+            else if (chConfig->val.pulsespan == PWMPULSESPAN_STRETCHED) {
+                us = fmap(us, 1000, 2000, 500, 2500);
+            }
+            PWM.setMicroseconds(pwmChannels[ch], us);
         }
     }
 }

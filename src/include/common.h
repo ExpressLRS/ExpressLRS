@@ -199,6 +199,13 @@ enum eServoOutputFailsafeMode : uint8_t
     PWMFAILSAFE_LAST_POSITION, // continue to pulse last used value
 };
 
+enum eServoOutputPulseSpan : uint8_t
+{
+    PWMPULSESPAN_NORMAL,       // normal range for pulse width
+    PWMPULSESPAN_HALF,         // half the width, 750us center, 494-1006us range
+    PWMPULSESPAN_STRETCHED,    // 500us to 2500us for wide ranged servos
+};
+
 enum eSerialProtocol : uint8_t
 {
     PROTOCOL_CRSF,

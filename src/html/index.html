@@ -197,13 +197,19 @@
 							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
-							<li><b>750us:</b> Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
+							<li><b>Pulse Span:</b> (only affects servo pulses)
+								<ul>
+									<li>Normal: Pulse width 988us-2012us using normal CRSF limits</li>
+									<li>Half: Use half pulse width (494-1006us) with center 750us instead of 988-2012us</li>
+									<li>Stretched: Pulse width 476us-2524us using normal CRSF limits, for wide range servos</li>
+								</ul>
+							</li>
 							<li><b>Failsafe</b>
 								<ul>
 									<li>"Set Position" sets the servo to an absolute "Failsafe Pos"
 										<ul>
 											<li>Does not use "Invert" flag</li>
-											<li>Value will be halved if "750us" flag is set</li>
+											<li>Value will respect the "Pulse Span" attribute</li>
 											<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
 										</ul>
 									</li>
