@@ -522,10 +522,15 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
+    SX12XX_Radio_Number_t transmittingRadio = isDualRadio() ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+
+    if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
+    {
+        transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+    }
 #endif
 
     if (config.GetForceTlmOff())
