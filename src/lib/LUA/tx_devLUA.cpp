@@ -617,11 +617,7 @@ static void registerLuaParameters()
         registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
             // Only allow changing switch mode when disconnected since we need to guarantee
             // the pack and unpack functions are matched
-            bool isDisconnected = connectionState == disconnected;
-            // Don't allow the switch mode to change if the TX is in mavlink mode
-            // Wide switchmode is not compatible with mavlink, and the switchmode is
-            // auto configuredwhen entering mavlink mode
-            if (isDisconnected)
+            if (connectionState == disconnected)
             {
             config.SetSwitchMode(arg);
             OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -643,10 +639,15 @@ static void registerLuaParameters()
       });
     }
     registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if (connectionState == disconnected)
+      {
         config.SetLinkMode(arg);
         // TLM and Switch option are not displayed for Mavlink mode.
         // Clear and register all Lua Params again to update the Lua display.
         refreshLuaParameters = true;
+      }
+      else
+          setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
       });
     if (!firmwareOptions.is_airport)
     {
