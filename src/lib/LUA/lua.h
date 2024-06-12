@@ -146,6 +146,7 @@ extern void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg);
 extern bool luaHandleUpdateParameter();
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
+void resetRegisterLUAParameter(void);
 void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
 
 uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value);

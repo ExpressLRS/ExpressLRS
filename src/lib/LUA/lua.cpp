@@ -311,6 +311,13 @@ void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
   UpdateParamReq = true;
 }
 
+void resetRegisterLUAParameter(void)
+{
+    memcpy(paramDefinitions, 0, LUA_MAX_PARAMS);
+    memcpy(paramCallbacks, 0, LUA_MAX_PARAMS);
+    lastLuaField = 0;
+}
+
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   if (definition == nullptr)

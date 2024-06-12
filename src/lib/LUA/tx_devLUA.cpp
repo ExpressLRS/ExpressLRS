@@ -15,8 +15,8 @@
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
                                ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
 
+bool refreshLuaParameters = false;
 extern char backpackVersion[];
-
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
@@ -575,6 +575,8 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 static void registerLuaParameters()
 {
   if (HAS_RADIO) {
+    bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
 #if defined(RADIO_LR1121) // Janky fix to order menu correctly
     arg = (arg + 4) % RATE_MAX;
@@ -590,8 +592,7 @@ static void registerLuaParameters()
       // Don't allow the switch mode to change if the TX is in mavlink mode
       // Wide switchmode is not compatible with mavlink, and the switchmode is
       // auto configuredwhen entering mavlink mode
-      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
+      if (newSwitchMode == OtaSwitchModeCurrent || isDisconnected)
       {
         config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
@@ -604,42 +605,37 @@ static void registerLuaParameters()
         setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
     }
     });
-    registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-      expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
-      if (eRatio <= TLM_RATIO_DISARMED)
-      {
-        // Don't allow TLM ratio changes if using AIRPORT
-        if (!firmwareOptions.is_airport)
+    if (!firmwareOptions.is_airport && !isMavlinkMode)
+    {
+        registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
+        if (eRatio <= TLM_RATIO_DISARMED)
         {
           config.SetTlm(eRatio);
         }
-      }
-    });
+        });
+        registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
+            // Only allow changing switch mode when disconnected since we need to guarantee
+            // the pack and unpack functions are matched
+            bool isDisconnected = connectionState == disconnected;
+            // Don't allow the switch mode to change if the TX is in mavlink mode
+            // Wide switchmode is not compatible with mavlink, and the switchmode is
+            // auto configuredwhen entering mavlink mode
+            if (isDisconnected)
+            {
+            config.SetSwitchMode(arg);
+            OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
+            }
+            else
+            setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        });
+    }
     #if defined(TARGET_TX_FM30)
     registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
       digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
       devicesTriggerEvent();
     });
     #endif
-    if (!firmwareOptions.is_airport)
-    {
-      registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
-        // Only allow changing switch mode when disconnected since we need to guarantee
-        // the pack and unpack functions are matched
-        bool isDisconnected = connectionState == disconnected;
-        // Don't allow the switch mode to change if the TX is in mavlink mode
-        // Wide switchmode is not compatible with mavlink, and the switchmode is
-        // auto configuredwhen entering mavlink mode
-        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-        if (isDisconnected && !isMavlinkMode)
-        {
-          config.SetSwitchMode(arg);
-          OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
-        }
-        else
-          setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-      });
-    }
     if (isDualRadio())
     {
       registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -648,6 +644,9 @@ static void registerLuaParameters()
     }
     registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
         config.SetLinkMode(arg);
+        // TLM and Switch option are not displayed for Mavlink mode.
+        // Clear and register all Lua Params again to update the Lua display.
+        refreshLuaParameters = true;
       });
     if (!firmwareOptions.is_airport)
     {
@@ -802,6 +801,14 @@ static int event()
   {
     return DURATION_NEVER;
   }
+
+  if (refreshLuaParameters)
+  {
+    refreshLuaParameters = false;
+    resetRegisterLUAParameter();
+    registerLuaParameters();
+  }
+
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
 #if defined(RADIO_LR1121) // Janky fix to order menu correctly
   currentRate = (currentRate + 4) % RATE_MAX;
