@@ -20,16 +20,12 @@ enum teamraceOutputInhibitState_e {
     troiEnableAwaitConfirm,     // Have received one packet with this model selected, awaiting confirm to Pass
 };
 
-enum serialDevice_e
-{
-    SERIAL0,
-    SERIAL1
-};
-
 typedef struct devserial_ctx_s {
-  enum serialDevice_e serialDevice;     // identifies the context
-  bool frameAvailable = false;          
-  bool frameMissed = false;
+  SerialIO *io;
+  bool frameAvailable;          
+  bool frameMissed ;
+  connectionState_e lastConnectionState;
+  uint8_t lastTeamracePosition;
   teamraceOutputInhibitState_e teamraceOutputInhibitState;
 } devserial_ctx_t;
 
@@ -54,46 +50,26 @@ void ICACHE_RAM_ATTR crsfRCFrameMissed()
 #endif
 }
 
-static SerialIO* getSerialIO(devserial_ctx_t *ctx)
-{
-    if (ctx->serialDevice == SERIAL)
-    {
-        return serialIO;
-    }
-
-#if defined(PLATFORM_ESP32)
-    if (ctx->serialDevice == SERIAL1)
-    {
-        return serial1IO;
-    }
-#endif
-
-    return nullptr;
-}
-
 static int start()
 {
-    serial0.serialDevice = SERIAL0;
+    serial0.io = serialIO;
 #if defined(PLATFORM_ESP32)
-    serial1.serialDevice = SERIAL1;
+    serial1.io = serial1IO;
 #endif
 
     return DURATION_IMMEDIATELY;
 }
 
-
 static int event(devserial_ctx_t *ctx)
 {
-    static connectionState_e lastConnectionState = disconnected;
+    ctx->lastConnectionState = disconnected;
 
-    SerialIO *serial = getSerialIO(ctx);
-
-    if (serial != nullptr)
+    if (ctx->io != nullptr)
     {
-        serial->setFailsafe(connectionState == disconnected && lastConnectionState == connected);
+        ctx->io->setFailsafe(connectionState == disconnected && ctx->lastConnectionState == connected);
     }
 
-    lastConnectionState = connectionState;
+    ctx->lastConnectionState = connectionState;
 
     return DURATION_IGNORE;
 }
@@ -164,7 +140,6 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
     // troiDisableAwaitConfirm (keep sending channels until the teamracepos stabilizes)
     bool retVal = ctx->teamraceOutputInhibitState < troiInhibit;
 
-    static uint8_t lastTeamracePosition;
     uint8_t newTeamracePosition = teamraceChannelToConfigValue();
 
     switch (ctx->teamraceOutputInhibitState)
@@ -177,7 +152,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
 
         case troiDisableAwaitConfirm:
             // Must receive the same new position twice in a row for state to change
-            if (lastTeamracePosition == newTeamracePosition)
+            if (ctx->lastTeamracePosition == newTeamracePosition)
             {
                 if (newTeamracePosition != config.GetTeamracePosition())
                     ctx->teamraceOutputInhibitState = troiInhibit; // disable output
@@ -194,7 +169,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
 
         case troiEnableAwaitConfirm:
             // Must receive the same new position twice in a row for state to change
-            if (lastTeamracePosition == newTeamracePosition)
+            if (ctx->lastTeamracePosition == newTeamracePosition)
             {
                 if (newTeamracePosition == config.GetTeamracePosition())
                     ctx->teamraceOutputInhibitState = troiPass; // return to normal
@@ -204,7 +179,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
             break;
     }
 
-    lastTeamracePosition = newTeamracePosition;
+    ctx->lastTeamracePosition = newTeamracePosition;
     // troiPass or troiDisablePending indicate the model is selected still,
     // however returning true if troiDisablePending means this RX could send
     // telemetry and we do not want that
@@ -214,6 +189,11 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
 
 static int timeout(devserial_ctx_t *ctx)
 {
+    if (ctx->io == nullptr)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+
     if (connectionState == serialUpdate)
     {
         return DURATION_NEVER;  // stop callbacks when doing serial update
@@ -238,21 +218,14 @@ static int timeout(devserial_ctx_t *ctx)
     ctx->frameMissed = false;
     interrupts();
 
-    SerialIO *serial = getSerialIO(ctx);
-
-    if (serial == nullptr)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable(ctx);
 
-    uint32_t duration = serial->sendRCFrame(sendChannels, missed, ChannelData);
+    uint32_t duration = ctx->io->sendRCFrame(sendChannels, missed, ChannelData);
 
     // still get telemetry and send link stats if theres no model match
-    serial->processSerialInput();
-    serial->sendQueuedData(serial->getMaxSerialWriteSize());
+    ctx->io->processSerialInput();
+    ctx->io->sendQueuedData(ctx->io->getMaxSerialWriteSize());
     
     return duration;
 }
