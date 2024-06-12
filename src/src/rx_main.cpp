@@ -1588,7 +1588,7 @@ static void updateBindingMode()
     }
 
     // If the power on counter is >=3, enter binding, the counter will be reset after 2s
-    else if (config.GetPowerOnCounter() >= 3)
+    else if (!InBindingMode && config.GetPowerOnCounter() >= 3)
     {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // Never enter wifi if forced to binding mode

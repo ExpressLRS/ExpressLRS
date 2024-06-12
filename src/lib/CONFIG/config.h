@@ -233,7 +233,11 @@ public:
     // Getters
     bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
+#if defined(PLATFORM_ESP8266)
+    uint8_t  GetPowerOnCounter() const;
+#else
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
+#endif
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
