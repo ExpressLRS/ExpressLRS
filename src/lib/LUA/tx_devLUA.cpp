@@ -102,14 +102,12 @@ static struct luaItem_selection luaSwitch = {
   };
 #endif
 
-#if defined(GPIO_PIN_NSS_2)
-  static struct luaItem_selection luaLinkMode = {
-      {"Link Mode", CRSF_TEXT_SELECTION},
-      0, // value
-      linkModeOpts,
-      STR_EMPTYSPACE
-  };
-#endif
+static struct luaItem_selection luaLinkMode = {
+    {"Link Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    linkModeOpts,
+    STR_EMPTYSPACE
+};
 
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
