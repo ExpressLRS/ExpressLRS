@@ -138,7 +138,7 @@
 			<div class="mui-tabs__pane" id="pane-justified-2">
 				<div class="mui-panel">
 					<h2>Firmware Update</h2>
-					Choose a file to update module firmware. Select the correct .bin file for @@{PLATFORM} otherwise a bad flash may occur.
+					Select the correct <strong>firmware.bin@@{ ".gz" if (is8285 and not isTX) else "" }</strong> for @@{PLATFORM} otherwise a bad flash may occur.
 					If this happens you will need to recover via USB/Serial. You may also download the <a href="firmware.bin" title="Click to download firmware">currently running firmware</a>.
 					<br/><br/>
 @@if (is8285 and not isTX):
