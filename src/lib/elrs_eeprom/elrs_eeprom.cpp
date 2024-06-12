@@ -9,10 +9,18 @@
             #define TARGET_EEPROM_ADDR 0x51
             #warning "!! Using default EEPROM address (0x51) !!"
         #endif
+        #if !defined(TARGET_EEPROM_SIZE)
+            #define TARGET_EEPROM_SIZE kbits_2
+            #warning "!! Using default EEPROM size (kbits_2) !!"
+        #endif
+        #if !defined(TARGET_EEPROM_PAGE_SIZE)
+            #define TARGET_EEPROM_PAGE_SIZE 1
+            #warning "!! Using default EEPROM page size (1) !!"
+        #endif
 
         #include <Wire.h>
         #include <extEEPROM.h>
-        extEEPROM EEPROM(kbits_2, 1, 1, TARGET_EEPROM_ADDR);
+        extEEPROM EEPROM(TARGET_EEPROM_SIZE, 1, TARGET_EEPROM_PAGE_SIZE, TARGET_EEPROM_ADDR);
     #else
         #define STM32_USE_FLASH
         #include <utility/stm32_eeprom.h>

@@ -2,8 +2,11 @@
 
 // There is some special handling for this target
 #define TARGET_TX_FLYSKY_IRM301
-
-#define BACKPACK_LOGGING_BAUD 400000
+#define TARGET_USE_EEPROM       1
+#define TARGET_EEPROM_ADDR      0x50
+#define TARGET_EEPROM_SIZE      kbits_256
+#define TARGET_EEPROM_PAGE_SIZE 64
+#define BACKPACK_LOGGING_BAUD   400000
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
@@ -12,6 +15,8 @@
 #define GPIO_PIN_MISO           PB4
 #define GPIO_PIN_SCK            PB3
 #define GPIO_PIN_RST            PA0
+#define GPIO_PIN_SDA            PB14
+#define GPIO_PIN_SCL            PB13
 #define GPIO_PIN_RX_ENABLE      PB1
 #define GPIO_PIN_TX_ENABLE      PA4 
 #define GPIO_PIN_ANT_CTRL       PA6 // R Antenna SW
@@ -21,6 +26,7 @@
 #define GPIO_PIN_BUSY           PB6
 #define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 Ext Module connector IRM301 PA3
 #define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 Ext Module connector IRM301 PA2
+
 //#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1 Sport Ext Module connector IRM301
 //#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1 Sport Ext Module connector IRM301
 //#define GPIO_PIN_LED_RED        PB12 // Red LED (active low)
