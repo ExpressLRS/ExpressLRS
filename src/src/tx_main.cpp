@@ -1296,13 +1296,13 @@ static void setupTarget()
   digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
 #endif
 
-#if defined(TARGET_TX_FLYSKY_IRM301)
-  //Serial.setTx(PA2);
-  //Serial.setRx(PA3);
-  pinMode(GPIO_PIN_L_POWER,OUTPUT);
-  digitalWrite(GPIO_PIN_L_POWER, HIGH);
-  pinMode(GPIO_PIN_H_POWER,OUTPUT);
-  digitalWrite(GPIO_PIN_H_POWER, LOW);
+#if defined(GPIO_PIN_L_POWER)
+  pinMode(GPIO_PIN_L_POWER, OUTPUT);
+  digitalWrite(GPIO_PIN_L_POWER, LOW);
+#endif
+#if defined(GPIO_PIN_H_POWER)
+  pinMode(GPIO_PIN_H_POWER, OUTPUT);
+  digitalWrite(GPIO_PIN_H_POWER, HIGH);
 #endif
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)

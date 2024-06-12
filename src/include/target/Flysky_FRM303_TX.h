@@ -1,4 +1,4 @@
-#define DEVICE_NAME          "FLYSKY IRM301"
+#define DEVICE_NAME          "FLYSKY FRM303"
 
 // There is some special handling for this target
 #define TARGET_TX_FLYSKY
@@ -18,14 +18,20 @@
 #define GPIO_PIN_SDA            PB14
 #define GPIO_PIN_SCL            PB13
 #define GPIO_PIN_RX_ENABLE      PB1
-#define GPIO_PIN_TX_ENABLE      PA4 
-#define GPIO_PIN_ANT_CTRL       PA6 // R Antenna SW
-#define GPIO_PIN_ANT_CTRL_COMPL PA5 // L Antenna SW
-#define GPIO_PIN_H_POWER        PB8
-#define GPIO_PIN_L_POWER        PB7
+#define GPIO_PIN_TX_ENABLE      PA4
+#define GPIO_PIN_PA_ENABLE      PA5 
 #define GPIO_PIN_BUSY           PB6
-#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 to radio connector IRM301 PA3
-#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 to radio connector IRM301 PA2
+#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 Ext Module connector IRM303 PA3
+#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 Ext Module connector IRM303 PA2
+#define GPIO_PIN_LED_RED        PB7 // Red LED (active low)
+#define GPIO_LED_RED_INVERTED   1
+#define GPIO_PIN_LED_GREEN      PB8 // Green LED (active low)
+#define GPIO_LED_GREEN_INVERTED 1
+#define GPIO_PIN_LED_BLUE       PB9 // Blue LED (active low)
+#define GPIO_LED_BLUE_INVERTED  1
+#define GPIO_PIN_BUZZER         PB11
+//#define GPIO_PIN_FIVE_WAY_INPUT1 PA7 // Useless without LCD
+
 #define GPIO_PIN_DEBUG_RX       PA10 // UART1 Data Out IRM301
 #define GPIO_PIN_DEBUG_TX       PA9 // UART1 Data Out IRM301
 

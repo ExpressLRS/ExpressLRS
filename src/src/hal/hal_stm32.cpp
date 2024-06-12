@@ -1,5 +1,5 @@
 
-#if defined(PLATFORM_STM32) && !defined(TARGET_TX_FLYSKY_IRM301)
+#if defined(PLATFORM_STM32) && !defined(TARGET_TX_FLYSKY)
 
 #include <stm32_def.h>
 #include <string.h>
