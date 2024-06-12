@@ -75,7 +75,9 @@
 
 device_affinity_t ui_devices[] = {
   {&Serial0_device, 1},
+#if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
+#endif
 #if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif

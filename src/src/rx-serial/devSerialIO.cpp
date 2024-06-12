@@ -9,7 +9,9 @@
 #include "config.h"
 
 extern SerialIO *serialIO;
+#if defined(PLATFORM_ESP32)
 extern SerialIO *serial1IO;
+#endif
 
 enum teamraceOutputInhibitState_e {
     troiPass = 0,               // Allow all packets through, normal operation
@@ -32,18 +34,24 @@ typedef struct devserial_ctx_s {
 } devserial_ctx_t;
 
 static devserial_ctx_t serial0;
+#if defined(PLATFORM_ESP32)
 static devserial_ctx_t serial1;
+#endif
 
 void ICACHE_RAM_ATTR crsfRCFrameAvailable()
 {
     serial0.frameAvailable = true;
+#if defined(PLATFORM_ESP32)
     serial1.frameAvailable = true;
+#endif
 }
 
 void ICACHE_RAM_ATTR crsfRCFrameMissed()
 {
     serial0.frameMissed = true;
+#if defined(PLATFORM_ESP32)
     serial1.frameMissed = true;
+#endif
 }
 
 static SerialIO* getSerialIO(devserial_ctx_t *ctx)
@@ -52,11 +60,13 @@ static SerialIO* getSerialIO(devserial_ctx_t *ctx)
     {
         return serialIO;
     }
-    
+
+#if defined(PLATFORM_ESP32)
     if (ctx->serialDevice == SERIAL1)
     {
         return serial1IO;
     }
+#endif
 
     return nullptr;
 }
@@ -64,7 +74,9 @@ static SerialIO* getSerialIO(devserial_ctx_t *ctx)
 static int start()
 {
     serial0.serialDevice = SERIAL0;
+#if defined(PLATFORM_ESP32)
     serial1.serialDevice = SERIAL1;
+#endif
 
     return DURATION_IMMEDIATELY;
 }
@@ -91,11 +103,12 @@ static int event0()
     return event(&serial0);
 }
 
+#if defined(PLATFORM_ESP32)
 static int event1()
 {
     return event(&serial1);
 }
-
+#endif
 
 /***
  * @brief: Convert the current TeamraceChannel value to the appropriate config value for comparison
@@ -249,10 +262,12 @@ static int timeout0()
   return timeout(&serial0);
 }
 
+#if defined(PLATFORM_ESP32)
 static int timeout1()
 {
   return timeout(&serial1);
 }
+#endif
 
 device_t Serial0_device = {
     .initialize = nullptr,
@@ -261,11 +276,13 @@ device_t Serial0_device = {
     .timeout = timeout0
 };
 
+#if defined(PLATFORM_ESP32)
 device_t Serial1_device = {
     .initialize = nullptr,
     .start = start,
     .event = event1,
     .timeout = timeout1
 };
+#endif
 
 #endif
