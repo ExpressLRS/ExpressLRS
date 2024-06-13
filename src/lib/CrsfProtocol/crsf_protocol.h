@@ -307,6 +307,25 @@ typedef struct crsf_sensor_baro_vario_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_vario_t;
 
+// CRSF_FRAMETYPE_GPS
+typedef struct crsf_sensor_gps_s
+{
+    int32_t latitude; // degree / 10`000`000
+    int32_t longitude; // degree / 10`000`000
+    uint16_t groundspeed; // km/h / 10
+    uint16_t gps_heading; // degree / 100
+    uint16_t altitude; // meter ­1000m offset
+    uint8_t satellites_in_use; // counter
+} PACKED crsf_sensor_gps_t;
+
+// CRSF_FRAMETYPE_ATTITUDE
+typedef struct crsf_sensor_attitude_s
+{
+    int16_t pitch; // radians * 10000
+    int16_t roll; // radians * 10000
+    int16_t yaw; // radians * 10000
+} PACKED crsf_sensor_attitude_t;
+
 /*
  * 0x14 Link statistics
  * Payload:
