@@ -75,6 +75,7 @@ private:
 #endif
 
     void sendSyncPacketToTX();
+    void adjustMaxPacketSize();
     void duplex_set_RX() const;
     void duplex_set_TX() const;
     void RcPacketToChannelsData();
