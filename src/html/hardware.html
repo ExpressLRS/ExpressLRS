@@ -185,6 +185,10 @@ td img.icon-pwm {
 					<tr><td></td><td>PDET pin<img class="icon-analog"/></td><td><input size='3' id='power_pdet' name='power_pdet' type='text'/></td><td>Analog input (up to 1.1V) connected to 'power detect' pin on PA for adjustment of the power output</td></tr>
 					<tr><td></td><td>Intercept</td><td><input size='20' id='power_pdet_intercept' name='power_pdet_intercept' type='text'/></td><td>Intercept and Slope are used together to calculate the dBm from the measured mV on the PDET pin</td></tr>
 					<tr><td></td><td>Slope</td><td><input size='20' id='power_pdet_slope' name='power_pdet_slope' type='text'/></td><td>dBm = mV * slope + intercept, this is then used to adjust the actual output power accordingly</td></tr>
+
+					<tr><td colspan='2'><b>IR Transponder</td></tr>
+					<tr><td></td><td>IR Transponder pin<img class="icon-output"/></td><td><input size='3' id='ir_transponder' name='ir_transponder' type='text'/></td><td>IR Transponder pin</td></tr>
+
 @@if isTX:
 					<tr><td colspan='2'><b>Analog Joystick</td></tr>
 					<tr><td></td><td>ADC pin<img class="icon-analog"/></td><td><input size='3' id='joystick' name='joystick' type='text'/></td><td>Analog Input (3.3V max) use to read joystick direction using a resistor network</td></tr>

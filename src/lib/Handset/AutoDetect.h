@@ -20,4 +20,6 @@ private:
     int input_detect = 0;
     RingbufHandle_t rb = nullptr;
     uint32_t lastDetect = 0;
+
+    rmt_channel_t rmtChannel;
 };

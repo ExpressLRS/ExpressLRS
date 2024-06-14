@@ -1024,6 +1024,7 @@ RxConfig::SetDefaults(bool commit)
 #endif
 
     m_config.teamraceChannel = AUX7; // CH11
+    m_config.IRiLapCode = 0xffffffffffff;
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
@@ -1148,6 +1149,24 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
     if (m_config.failsafeMode != failsafeMode)
     {
         m_config.failsafeMode = failsafeMode;
+        m_modified = true;
+    }
+}
+
+void RxConfig::SetIRProtocol(eIRProtocol IRProtocol)
+{
+    if (m_config.IRProtocol != IRProtocol)
+    {
+        m_config.IRProtocol = IRProtocol;
+        m_modified = true;
+    }
+}
+
+void RxConfig::SetIRiLapCode(uint64_t IRiLapCode)
+{
+    if (m_config.IRiLapCode != IRiLapCode)
+    {
+        m_config.IRiLapCode = IRiLapCode;
         m_modified = true;
     }
 }

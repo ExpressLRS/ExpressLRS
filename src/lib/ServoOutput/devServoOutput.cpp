@@ -6,6 +6,7 @@
 #include "config.h"
 #include "logging.h"
 #include "rxtx_intf.h"
+#include "rmtallocator.h"
 
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
@@ -13,7 +14,6 @@ static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
 
 #if (defined(PLATFORM_ESP32))
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
-const uint8_t RMT_MAX_CHANNELS = 8;
 #endif
 
 // true when the RX has a new channels packet
@@ -149,9 +149,6 @@ static void initialize()
         return;
     }
 
-#if defined(PLATFORM_ESP32)
-    uint8_t rmtCH = 0;
-#endif
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         pwmChannelValues[ch] = UINT16_MAX;
@@ -173,14 +170,14 @@ static void initialize()
 #if defined(PLATFORM_ESP32)
         else if (mode == somDShot)
         {
-            if (rmtCH < RMT_MAX_CHANNELS)
-            {
-                auto gpio = (gpio_num_t)pin;
-                auto rmtChannel = (rmt_channel_t)rmtCH;
+            auto gpio = (gpio_num_t)pin;
+            rmt_channel_t rmtChannel;
+            if (rmtAllocator.allocateTX(rmtChannel)) {
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
-                rmtCH++;
+            } else {
+                DBGLN("Error initializing DShot: gpio: %u, ch: %d, insufficent RMT channels", gpio, ch);
             }
             pin = UNDEF_PIN;
         }
