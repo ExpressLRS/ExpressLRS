@@ -23,8 +23,10 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
 #define USBSerial Serial
+#endif
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
