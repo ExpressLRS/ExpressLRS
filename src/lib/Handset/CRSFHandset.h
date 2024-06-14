@@ -47,6 +47,7 @@ public:
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
+    static bool isHalfDuplex() { return halfDuplex; }
 
 private:
     inBuffer_U inBuffer = {};
@@ -61,6 +62,8 @@ private:
     /// UART Handling ///
     uint8_t SerialInPacketPtr = 0; // index where we are reading/writing
     bool CRSFframeActive = false;  // since we get a copy of the serial data use this flag to know when to ignore it
+    static bool halfDuplex;
+    bool transmitting = false;
     uint32_t GoodPktsCount = 0;
     uint32_t BadPktsCount = 0;
     uint32_t UARTwdtLastChecked = 0;
