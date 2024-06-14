@@ -326,6 +326,12 @@ typedef struct crsf_sensor_attitude_s
     int16_t yaw; // radians * 10000
 } PACKED crsf_sensor_attitude_t;
 
+// CRSF_FRAMETYPE_FLIGHT_MODE
+typedef struct crsf_sensor_flight_mode_s
+{
+    char flight_mode[16];
+} PACKED crsf_flight_mode_t;
+
 /*
  * 0x14 Link statistics
  * Payload:

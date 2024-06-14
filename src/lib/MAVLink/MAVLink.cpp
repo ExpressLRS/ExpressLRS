@@ -1,4 +1,5 @@
 #include "MAVLink.h"
+#include "ardupilot_protocol.h"
 
 void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset *handset)
 {
@@ -68,6 +69,17 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfatt);
+                break;
+            }
+            case MAVLINK_MSG_ID_HEARTBEAT: {
+                mavlink_heartbeat_t heartbeat;
+                mavlink_msg_heartbeat_decode(&msg, &heartbeat);
+                CRSF_MK_FRAME_T(crsf_flight_mode_t)
+                crsffm = {0};
+                ap_flight_mode_name4(crsffm.p.flight_mode, ap_vehicle_from_mavtype(heartbeat.type), heartbeat.custom_mode);
+                CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                handset->sendTelemetryToTX((uint8_t *)&crsffm);
+                break;
             }
             }
         }
