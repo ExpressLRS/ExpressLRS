@@ -1,5 +1,7 @@
 #include "MAVLink.h"
-#include "ardupilot_protocol.h"
+#if !defined(PLATFORM_STM32)
+    #include "ardupilot_protocol.h"
+#endif
 
 void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset *handset)
 {
