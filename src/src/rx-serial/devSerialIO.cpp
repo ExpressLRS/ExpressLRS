@@ -23,7 +23,7 @@ enum teamraceOutputInhibitState_e {
 };
 
 typedef struct devserial_ctx_s {
-  SerialIO *io;
+  SerialIO **io;
   bool frameAvailable;          
   bool frameMissed ;
   connectionState_e lastConnectionState;
@@ -54,9 +54,9 @@ void ICACHE_RAM_ATTR crsfRCFrameMissed()
 
 static int start()
 {
-    serial0.io = serialIO;
+    serial0.io = &serialIO;
 #if defined(PLATFORM_ESP32)
-    serial1.io = serial1IO;
+    serial1.io = &serial1IO;
 #endif
 
     return DURATION_IMMEDIATELY;
@@ -66,9 +66,9 @@ static int event(devserial_ctx_t *ctx)
 {
     ctx->lastConnectionState = disconnected;
 
-    if (ctx->io != nullptr)
+    if ((*(ctx->io)) != nullptr)
     {
-        ctx->io->setFailsafe(connectionState == disconnected && ctx->lastConnectionState == connected);
+        (*(ctx->io))->setFailsafe(connectionState == disconnected && ctx->lastConnectionState == connected);
     }
 
     ctx->lastConnectionState = connectionState;
@@ -223,11 +223,11 @@ static int timeout(devserial_ctx_t *ctx)
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable(ctx);
 
-    uint32_t duration = ctx->io->sendRCFrame(sendChannels, missed, ChannelData);
+    uint32_t duration = (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 
     // still get telemetry and send link stats if theres no model match
-    ctx->io->processSerialInput();
-    ctx->io->sendQueuedData(ctx->io->getMaxSerialWriteSize());
+    (*(ctx->io))->processSerialInput();
+    (*(ctx->io))->sendQueuedData((*(ctx->io))->getMaxSerialWriteSize());
     
     return duration;
 }

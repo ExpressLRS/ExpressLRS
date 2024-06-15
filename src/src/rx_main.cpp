@@ -1323,8 +1323,11 @@ static void setupSerial()
         serialIO = new SerialNOOP();
         return;
     }
-
-    if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF)
+    {
+        serialBaud = firmwareOptions.uart_baud;
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
     {
         sbusSerialOutput = true;
         serialBaud = 100000;
@@ -1568,10 +1571,13 @@ static void serialShutdown()
     if(serialIO != nullptr)
     {
         Serial.end();
+    }
+#endif
+    if(serialIO != nullptr)
+    {
         delete serialIO;
         serialIO = nullptr;
     }
-#endif
 }
 
 void reconfigureSerial()
