@@ -53,7 +53,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 mavlink_msg_global_position_int_decode(&msg, &global_pos);
                 CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t)
                 crsfbaro = {0};
-                crsfbaro.p.altitude = htobe16(global_pos.alt / 100 + 10000);
+                crsfbaro.p.altitude = htobe16(global_pos.relative_alt / 100 + 10000);
                 // force the top bit of altitude low to represent that it's in decimeters
                 crsfbaro.p.altitude &= 0x7FFF;
                 crsfbaro.p.verticalspd = htobe16(global_pos.vz);
