@@ -1102,11 +1102,7 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
-#else
-    m_config.serialProtocol = PROTOCOL_CRSF;
 #endif
-
-    m_config.serial1Protocol = PROTOCOL_SERIAL1_NONE;
 
     if (commit)
     {

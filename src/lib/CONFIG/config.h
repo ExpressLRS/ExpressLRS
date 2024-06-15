@@ -207,7 +207,9 @@ typedef union {
 typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
-    uint8_t     unused_padding[2];
+    uint8_t     unused_padding;
+    uint8_t     serial1Protocol:4,  // secondary serial protocol
+                serial1Protocol_unused:4;
     uint32_t    flash_discriminator;
     struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
@@ -227,8 +229,6 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
-    uint8_t     serial1Protocol:4,  // secondary serial protocol
-                serial1Protocol_unused:4;
 } rx_config_t;
 
 class RxConfig
