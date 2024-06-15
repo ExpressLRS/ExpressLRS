@@ -48,6 +48,7 @@ public:
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
     static bool isHalfDuplex() { return halfDuplex; }
+    int getMinPacketInterval() const override;
 
 private:
     inBuffer_U inBuffer = {};

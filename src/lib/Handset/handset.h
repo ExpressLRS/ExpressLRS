@@ -66,10 +66,18 @@ public:
      * @param PacketInterval in microseconds
      */
     virtual void setPacketInterval(int32_t PacketInterval) { RequestedRCpacketInterval = PacketInterval; }
+
     /**
      * @return the maximum number of bytes that the protocol can send to the handset in a single message
      */
     virtual uint8_t GetMaxPacketBytes() const { return 255; }
+
+    /**
+     * Depending on the baud-rate selected and the module type (full/half duplex) will determine the minimum
+     * supported packet interval.
+     * @return the minimum interval between packets supported by the current configuration.
+     */
+    virtual int getMinPacketInterval() const { return 1; }
 
     /**
      * @brief Called to indicate to the protocol that a packet has just been sent over-the-air

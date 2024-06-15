@@ -626,6 +626,23 @@ void CRSFHandset::duplex_set_TX() const
 #endif
 }
 
+int CRSFHandset::getMinPacketInterval() const
+{
+    if (CRSFHandset::isHalfDuplex() && CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
+    {
+        return 5000;
+    }
+    else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    {
+        return 4000;
+    }
+    else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    {
+        return 2000;
+    }
+    return 1;   // 1-million Hz!
+}
+
 void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
 {
     const int LUA_CHUNK_QUERY_SIZE = 26;

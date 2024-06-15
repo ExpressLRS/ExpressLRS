@@ -320,19 +320,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
-  if (CRSFHandset::isHalfDuplex() && CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
-  {
-    rateIndex = get_elrs_HandsetRate_max(rateIndex, 5000);
-  }
-  else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
-  {
-    rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
-  }
-  else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
-  {
-    rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
-  }
-  return rateIndex;
+  return rateIndex = get_elrs_HandsetRate_max(rateIndex, handset->getMinPacketInterval());
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
