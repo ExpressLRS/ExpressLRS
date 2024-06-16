@@ -189,10 +189,9 @@ typedef union {
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
-                 narrow:1,       // Narrow output mode (half pulse width). DEPRECATED, replaced with pulsespan
+                 stretched:1,    // Stretched pulse mode 500us to 2500us
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 pulsespan:2,    // normal, narrow, or stretched (eServoOutputPulseSpan)
-                 unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
@@ -262,7 +261,7 @@ public:
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
-    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t pulsespan);
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);

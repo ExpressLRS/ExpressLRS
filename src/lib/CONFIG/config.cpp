@@ -786,7 +786,7 @@ static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * c
     current->val.failsafe = v5->val.failsafe;
     current->val.inputChannel = v5->val.inputChannel;
     current->val.inverted = v5->val.inverted;
-    current->val.narrow = v5->val.narrow;
+    current->val.stretched = v5->val.narrow;
     current->val.mode = v5->val.mode;
     if (v5->val.mode > som400Hz)
     {
@@ -826,7 +826,7 @@ static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * c
     current->val.failsafe = v6->val.failsafe;
     current->val.inputChannel = v6->val.inputChannel;
     current->val.inverted = v6->val.inverted;
-    current->val.narrow = v6->val.narrow;
+    current->val.stretched = v6->val.narrow;
     current->val.mode = v6->val.mode;
 }
 
@@ -1053,7 +1053,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 
 #if defined(GPIO_PIN_PWM_OUTPUTS)
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t pulsespan)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
@@ -1064,7 +1064,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
     newConfig.val.inputChannel = inputCh;
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
-    newConfig.val.pulsespan = pulsespan;
+    newConfig.val.stretched = stretched;
     if (pwm->raw == newConfig.raw)
         return;
 

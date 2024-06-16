@@ -122,8 +122,8 @@ static void servosUpdate(unsigned long now)
             }
 
             uint16_t us;
-            if (chConfig->val.pulsespan == PWMPULSESPAN_STRETCHED) {
-                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
+            if (chConfig->val.stretched) {
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 476, 2524);
             }
             else {
                 us = CRSF_to_US(crsfVal);
@@ -134,11 +134,6 @@ static void servosUpdate(unsigned long now)
             {
                 us = 3000U - us;
             }
-
-            if (chConfig->val.pulsespan == PWMPULSESPAN_HALF) {
-                us /= 2;
-            }
-
             servoWrite(ch, us);
         } /* for each servo */
     }     /* if newChannelsAvailable */
