@@ -280,7 +280,9 @@ bool ICACHE_RAM_ATTR DecryptMsg(uint8_t *input)
   {
    memcpy(input, decrypted, packetSize);
    cipher.getCounter(encryptionCounter, 8);
-  } else if (!encryptionStarted)
+  // } else if (!encryptionStarted)
+  //  Do not increment counter for invalid packet.
+  } else
   {
     cipher.setCounter(encryptionCounter, 8);
   }
