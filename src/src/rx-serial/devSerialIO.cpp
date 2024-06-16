@@ -191,7 +191,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
 
 static int timeout(devserial_ctx_t *ctx)
 {
-    if (ctx->io == nullptr)
+    if (*(ctx->io) == nullptr)
     {
         return NO_SERIALIO;
     }
