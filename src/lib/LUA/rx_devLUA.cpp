@@ -420,7 +420,7 @@ static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t ar
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
 {
   luaCmdStep_e newStep;
   const char *msg;
@@ -474,6 +474,15 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 
 #endif // POWER_OUTPUT_VALUES
 
+static bool isProtocolTypeSBUS()
+{
+  eSerialProtocol prot0 = config.GetSerialProtocol();
+  eSerial1Protocol prot1 = config.GetSerial1Protocol();
+  
+  return (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
+          prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO);
+}
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -494,16 +503,12 @@ static void registerLuaParameters()
     }
   });
 
-  eSerialProtocol prot0 = config.GetSerialProtocol();
-  eSerial1Protocol prot1 = config.GetSerial1Protocol();
-
-  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
-      prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO)
-  {
-    registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+    if (isProtocolTypeSBUS())
+    { 
       config.SetFailsafeMode((eFailsafeMode)arg);
-    });
-  }
+    }
+  });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -543,7 +548,7 @@ static void registerLuaParameters()
     registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
     registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
     registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFailsafe);
   }
 #endif
 
@@ -575,7 +580,16 @@ static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
   setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
-  setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
+  
+  if (isProtocolTypeSBUS())
+  {
+    setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
+    LUA_FIELD_SHOW(luaFailsafeMode);
+  }
+  else
+  {
+    LUA_FIELD_HIDE(luaFailsafeMode);
+  }
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
