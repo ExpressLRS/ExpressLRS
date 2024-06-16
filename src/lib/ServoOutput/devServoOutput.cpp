@@ -76,12 +76,6 @@ static void servoWrite(uint8_t ch, uint16_t us)
         }
         else
         {
-            if (chConfig->val.pulsespan == PWMPULSESPAN_HALF || chConfig->val.narrow) {
-                us /= 2;
-            }
-            else if (chConfig->val.pulsespan == PWMPULSESPAN_STRETCHED) {
-                us = fmap(us, 1000, 2000, 500, 2500);
-            }
             PWM.setMicroseconds(pwmChannels[ch], us);
         }
     }
@@ -127,13 +121,24 @@ static void servosUpdate(unsigned long now)
                 continue;
             }
 
-            uint16_t us = CRSF_to_US(crsfVal);
+            uint16_t us;
+            if (chConfig->val.pulsespan == PWMPULSESPAN_STRETCHED) {
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
+            }
+            else {
+                us = CRSF_to_US(crsfVal);
+            }
             // Flip the output around the mid-value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
             {
                 us = 3000U - us;
             }
+
+            if (chConfig->val.pulsespan == PWMPULSESPAN_HALF) {
+                us /= 2;
+            }
+
             servoWrite(ch, us);
         } /* for each servo */
     }     /* if newChannelsAvailable */
