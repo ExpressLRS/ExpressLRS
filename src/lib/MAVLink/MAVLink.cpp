@@ -39,7 +39,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 // mm -> meters + 1000
                 crsfgps.p.altitude = htobe16(gps_int.alt / 1000 + 1000);
                 // cm/s -> km/h / 10
-                crsfgps.p.groundspeed = htobe16(gps_int.vel * 0.0036f * 10);
+                crsfgps.p.groundspeed = htobe16(gps_int.vel * 0.036f * 10);
                 crsfgps.p.latitude = htobe32(gps_int.lat);
                 crsfgps.p.longitude = htobe32(gps_int.lon);
                 crsfgps.p.gps_heading = htobe16(gps_int.cog);
