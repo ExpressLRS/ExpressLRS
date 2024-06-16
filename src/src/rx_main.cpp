@@ -507,27 +507,31 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-
-    if (transmittingRadio == SX12XX_Radio_NONE)
-    {
-        // No packet will be sent due to LBT.
-        // Defer TXdoneCallback() to prepare for TLM when the IRQ is normally triggered.
-        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
-            Radio.TXdoneCallback();
-        });
-    }
-#endif
-
+    SX12XX_Radio_Number_t transmittingRadio;
     if (config.GetForceTlmOff())
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
+    else if (geminiMode)
+    {
+        transmittingRadio = SX12XX_Radio_All;
+    }
+    else
+    {
+        transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+    }
+#if defined(Regulatory_Domain_EU_CE_2400)
+    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+
+    if (transmittingRadio == SX12XX_Radio_NONE)
+    {
+        // No packet will be sent due to LBT / Telem forced off.
+        // Defer TXdoneCallback() to prepare for TLM when the IRQ is normally triggered.
+        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, Radio.TXdoneCallback);
+    }
 
     return true;
 }
