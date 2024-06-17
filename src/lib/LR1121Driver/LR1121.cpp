@@ -647,9 +647,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     // processingRadio always passed the sanity check here
     gotRadio[processingRadioIdx] = true;
 
-    // if it's a dual radio, and if it's the first IRQ
-    // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
-    if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         bool isSecondRadioGotData = false;
 
@@ -792,6 +790,5 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
 }
