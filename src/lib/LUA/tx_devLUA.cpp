@@ -576,9 +576,6 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-    arg = (arg + 6) % RATE_MAX;
-#endif
     if (arg < RATE_MAX)
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
@@ -803,9 +800,6 @@ static int event()
     return DURATION_NEVER;
   }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-  currentRate = (currentRate + 6) % RATE_MAX;
-#endif
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());

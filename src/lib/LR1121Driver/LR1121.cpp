@@ -138,7 +138,8 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval, SX12XX_Radio_Number_t radioNumber)
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          bool setFSKModulation, SX12XX_Radio_Number_t radioNumber)
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
@@ -162,9 +163,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
-    // Not an ideal way of determining FSK modulation.
-    // However CR has a max of 7 and I doubt a FDev of 7kHz or less is practical.
-    useFSK = cr > LR11XX_RADIO_LORA_CR_LI_4_8;
+    useFSK = setFSKModulation;
     
     // 8.1.1 SetPacketType
     uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
@@ -172,7 +171,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     if (useFSK)
     {
-        uint32_t Bitrate = bw == 255 ? 300000 : (uint32_t)bw * 1000;
+        uint32_t Bitrate = bw == LR11XX_RADIO_GFSK_BITRATE_300k ? 300000 : (uint32_t)bw * 1000; // A little hack to get 300 into the uint8_t bw data type
         uint8_t BWF = sf;
         uint32_t Fdev = (uint32_t)cr * 1000;
         ConfigModParamsFSK(Bitrate, BWF, Fdev, radioNumber);
@@ -207,7 +206,7 @@ void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fd
     buf[1] = Bitrate >> 16;
     buf[2] = Bitrate >> 8;
     buf[3] = Bitrate >> 0;
-    buf[4] = 0x00; // Pulse Shape - 0x00: No filter applied
+    buf[4] = LR11XX_RADIO_GFSK_PULSE_SHAPE_OFF;             // Pulse Shape - 0x00: No filter applied
     buf[5] = BWF;
     buf[6] = Fdev >> 24;
     buf[7] = Fdev >> 16;
@@ -220,15 +219,15 @@ void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLen
 {
     // 8.5.2 SetPacketParams
     uint8_t buf[9];
-    buf[0] = 0;                 // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[1] = PreambleLength;    // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[2] = 0x04;              // Pbl Detect - 0x04: Preamble detector length 8 bits
-    buf[3] = 16;                // SyncWordLen defines the length of the Syncword in bits. By default, the Syncword is set to 0x9723522556536564
-    buf[4] = 0x00;              // Addr Comp - 0x00: Address Filtering Disabled
-    buf[5] = 0x00;              // PacketType - 0x00: Packet length is known on both sides
-    buf[6] = PayloadLength;     // PayloadLen
-    buf[7] = 0x01;              // CrcType - 0x01: CRC_OFF (No CRC).
-    buf[8] = 0x01;              // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
+    buf[0] = 0;                                             // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[1] = PreambleLength;                                // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[2] = LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS; // Pbl Detect - 0x04: Preamble detector length 8 bits
+    buf[3] = 16;                                            // SyncWordLen defines the length of the Syncword in bits. By default, the Syncword is set to 0x9723522556536564
+    buf[4] = LR11XX_RADIO_GFSK_ADDRESS_FILTERING_DISABLE;   // Addr Comp - 0x00: Address Filtering Disabled
+    buf[5] = LR11XX_RADIO_GFSK_PKT_FIX_LEN;                 // PacketType - 0x00: Packet length is known on both sides
+    buf[6] = PayloadLength;                                 // PayloadLen
+    buf[7] = LR11XX_RADIO_GFSK_CRC_OFF;                     // CrcType - 0x01: CRC_OFF (No CRC).
+    buf[8] = LR11XX_RADIO_GFSK_DC_FREE_WHITENING;           // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 
 // TODO add unique sync word
