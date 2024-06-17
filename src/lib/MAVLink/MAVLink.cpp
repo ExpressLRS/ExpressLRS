@@ -14,6 +14,11 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
         // convert mavlink messages to CRSF messages
         if (have_message)
         {
+            // Only parse heartbeats from the autopilot (not GCS)
+            if (msg.compid != MAV_COMP_ID_AUTOPILOT1)
+            {
+                continue;
+            }
             switch (msg.msgid)
             {
             case MAVLINK_MSG_ID_BATTERY_STATUS: {
