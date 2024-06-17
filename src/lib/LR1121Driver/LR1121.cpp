@@ -689,7 +689,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
         #endif
     }
 
-    uint8_t status[4];
+    uint8_t status[3];
     int8_t rssi[2];
     int8_t snr[2];
 
