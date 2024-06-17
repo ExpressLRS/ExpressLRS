@@ -761,14 +761,22 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
 {
+#ifndef UNIT_TEST
     if (digitalRead(GPIO_PIN_DIO1))
-        instance->IsrCallback(SX12XX_Radio_1);  
+#endif
+    {
+        instance->IsrCallback(SX12XX_Radio_1);
+    }
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 {
+#ifndef UNIT_TEST
     if (digitalRead(GPIO_PIN_DIO1_2))
+#endif
+    {
         instance->IsrCallback(SX12XX_Radio_2);
+    }
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
