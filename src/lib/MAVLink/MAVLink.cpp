@@ -84,6 +84,11 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 CRSF_MK_FRAME_T(crsf_flight_mode_t)
                 crsffm = {0};
                 ap_flight_mode_name4(crsffm.p.flight_mode, ap_vehicle_from_mavtype(heartbeat.type), heartbeat.custom_mode);
+                // if we have a good flight mode, and we're armed, suffix the flight mode with a * - see Ardupilot's AP_CRSF_Telem::calc_flight_mode()
+                if (strlen(crsffm.p.flight_mode) == 4 && (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED)) {
+                    crsffm.p.flight_mode[4] = '*';
+                    crsffm.p.flight_mode[5] = '\0';
+                }
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
                 break;
