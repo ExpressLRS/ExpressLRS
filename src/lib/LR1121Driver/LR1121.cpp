@@ -38,6 +38,7 @@ static uint32_t endTX;
 
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
+    useFSK = false;
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
@@ -163,7 +164,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     // Not an ideal way of determining FSK modulation.
     // However CR has a max of 7 and I doubt a FDev of 7kHz or less is practical.
-    bool useFSK = cr > LR11XX_RADIO_LORA_CR_LI_4_8;
+    useFSK = cr > LR11XX_RADIO_LORA_CR_LI_4_8;
     
     // 8.1.1 SetPacketType
     uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
@@ -230,6 +231,7 @@ void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLen
     buf[8] = 0x01;              // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 
+// TODO add unique sync word
     // 8.5.3 SetGfskSyncWord
     uint8_t synbuf[8] = {0x69, 0x69, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
     hal.WriteCommand(LR11XX_RADIO_SET_GFSK_SYNC_WORD_OC, synbuf, sizeof(synbuf), radioNumber);
@@ -690,8 +692,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
         #endif
     }
 
-    // uint8_t status[4];
-    uint8_t status[5];
+    uint8_t status[4];
     int8_t rssi[2];
     int8_t snr[2];
 
@@ -702,21 +703,19 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     {
         if (gotRadio[i])
         {
-            // 8.3.7 GetPacketStatus
+            // 8.3.7 GetPacketStatus (LoRa)
+            // 8.5.7 GetPacketStatus (FSK)
             memset(status, 0, sizeof(status));
-            // hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, radio[i]);
             hal.ReadCommand(status, sizeof(status), radio[i]);
             
             // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-            // rssi[i] = -(int8_t)(status[1] / 2);
-            rssi[i] = -(int8_t)(status[2] / 2);
+            rssi[i] = -(int8_t)(status[useFSK ? 2 : 1] / 2);
 
             // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
             // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
             // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
 
-            // snr[i] = (int8_t)status[2];
-            snr[i] = 0;
+            snr[i] = useFSK ? 0 : (int8_t)status[2];
 
             // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
             (i == 0) ? LastPacketRSSI = rssi[i] : LastPacketRSSI2 = rssi[i];

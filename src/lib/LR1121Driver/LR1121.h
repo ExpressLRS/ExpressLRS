@@ -54,6 +54,7 @@ private:
     static const uint8_t PWRPENDING_NONE = 0x7f;
 
     // LR1121_RadioOperatingModes_t currOpmode;
+    bool useFSK;
     bool modeSupportsFei;
     uint8_t pwrCurrentLF;
     uint8_t pwrPendingLF;
