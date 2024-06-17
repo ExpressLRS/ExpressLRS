@@ -98,6 +98,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 115200,
 #elif defined(USE_HOTT_TLM_PROTOCOL)
     .uart_baud = 19200,
+#elif defined(USE_MAVLINK_PROTOCOL)
+    .uart_baud = 460800,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
