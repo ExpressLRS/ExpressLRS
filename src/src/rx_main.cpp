@@ -172,6 +172,7 @@ int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
@@ -1060,7 +1061,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
-    bool doStartTimer = false;
+    doStartTimer = false;
     unsigned long now = millis();
 
     LastValidPacket = now;
@@ -1110,8 +1111,6 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 #if defined(DEBUG_RX_SCOREBOARD)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
-    if (doStartTimer)
-        hwTimer::resume(); // will throw an interrupt immediately
 
     return true;
 }
@@ -1126,6 +1125,13 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     if (ProcessRFPacket(status))
     {
         didFHSS = HandleFHSS();
+        
+        if (doStartTimer)
+        {
+            doStartTimer = false;
+            hwTimer::resume(); // will throw an interrupt immediately
+        }
+
         return true;
     }
     return false;
