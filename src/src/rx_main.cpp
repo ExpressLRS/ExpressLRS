@@ -2154,7 +2154,6 @@ void loop()
     DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
-    Radio.isFirstRxIrq = true; // HWtimerCallbackTock does not run when disconnected, so this is never reset while waiting for a connection.
 }
 
 #if defined(PLATFORM_ESP32_C3)
