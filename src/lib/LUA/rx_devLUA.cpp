@@ -528,7 +528,7 @@ static bool hasSerial0()
 #if defined(PLATFORM_ESP32)
 static bool hasSerial1()
 {
-  return hasSerialdefined(GPIO_PIN_SERIAL1_TX, somSerial1RX);
+  return hasSerialdefined(GPIO_PIN_SERIAL1_TX, somSerial1TX);
 }
 #endif
 
