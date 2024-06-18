@@ -513,11 +513,11 @@ static bool hasSerialdefined(int hardwarePin, eServoOutputMode mode)
       {
         return true;
       }
+    }
   }
 #endif
 
   return false;
-  }
 }
 
 static bool hasSerial0()
