@@ -508,7 +508,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   uint8_t protocol = json["serial-protocol"] | 0;
   config.SetSerialProtocol((eSerialProtocol)protocol);
 
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP32)
   uint8_t protocol1 = json["serial1-protocol"] | 0;
   config.SetSerial1Protocol((eSerial1Protocol)protocol1);
 #endif
