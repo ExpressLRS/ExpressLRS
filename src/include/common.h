@@ -214,7 +214,9 @@ enum eSerialProtocol : uint8_t
 	PROTOCOL_SUMD,
     PROTOCOL_DJI_RS_PRO,
     PROTOCOL_HOTT_TLM,
-    PROTOCOL_MAVLINK
+    PROTOCOL_MAVLINK,
+    PROTOCOL_SBUS_CH5_LAST,
+    PROTOCOL_INVERTED_SBUS_CH5_LAST
 };
 
 enum eSerial1Protocol : uint8_t

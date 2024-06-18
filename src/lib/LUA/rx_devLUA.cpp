@@ -497,7 +497,7 @@ static void registerLuaParameters()
   eSerialProtocol prot0 = config.GetSerialProtocol();
   eSerial1Protocol prot1 = config.GetSerial1Protocol();
 
-  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
+  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO || prot0 == PROTOCOL_SBUS_CH5_LAST || prot0 == PROTOCOL_INVERTED_SBUS_CH5_LAST ||
       prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO)
   {
     registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){

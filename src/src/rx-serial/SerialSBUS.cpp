@@ -56,6 +56,25 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         PackedRCdataOut.ch14 = fmap(channelData[15], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
         PackedRCdataOut.ch15 = channelData[4] < CRSF_CHANNEL_VALUE_MID ? 352 : 1696;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_SBUS_CH5_LAST || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS_CH5_LAST)
+    {
+        PackedRCdataOut.ch0 = channelData[0];
+        PackedRCdataOut.ch1 = channelData[1];
+        PackedRCdataOut.ch2 = channelData[2];
+        PackedRCdataOut.ch3 = channelData[3];
+        PackedRCdataOut.ch4 = channelData[5];
+        PackedRCdataOut.ch5 = channelData[6];
+        PackedRCdataOut.ch6 = channelData[7];
+        PackedRCdataOut.ch7 = channelData[8];
+        PackedRCdataOut.ch8 = channelData[9];
+        PackedRCdataOut.ch9 = channelData[10];
+        PackedRCdataOut.ch10 = channelData[11];
+        PackedRCdataOut.ch11 = channelData[12];
+        PackedRCdataOut.ch12 = channelData[13];
+        PackedRCdataOut.ch13 = channelData[14];
+        PackedRCdataOut.ch14 = channelData[15];
+        PackedRCdataOut.ch15 = channelData[4];
+    }
     else
     {
         PackedRCdataOut.ch0 = channelData[0];
