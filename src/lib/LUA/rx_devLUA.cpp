@@ -219,8 +219,8 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 
       if (mode == somSerial1TX)
         serial1txAssigned = true;
-    }
 #endif
+    }
 
     setLuaUint8Value(&luaMappingChannelOut, arg);
 
