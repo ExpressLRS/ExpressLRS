@@ -6,7 +6,9 @@
 #include "deferred.h"
 
 extern void reconfigureSerial();
+#if defined(PLATFORM_ESP32)
 extern void reconfigureSerial1();
+#endif
 extern bool BindingModeRequest;
 
 static char modelString[] = "000";
@@ -21,12 +23,14 @@ static struct luaItem_selection luaSerialProtocol = {
     STR_EMPTYSPACE
 };
 
+#if defined(PLATFORM_ESP32)
 static struct luaItem_selection luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
     "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
     STR_EMPTYSPACE
 };
+#endif
 
 static struct luaItem_selection luaFailsafeMode = {
     {"Failsafe Mode", CRSF_TEXT_SELECTION},
@@ -173,8 +177,10 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 {
     bool sclAssigned = false;
     bool sdaAssigned = false;
+#if defined(PLATFORM_ESP32)
     bool serial1rxAssigned = false;
     bool serial1txAssigned = false;
+#endif
 
     const char *no1Option    = ";";
     const char *no2Options   = ";;";
@@ -184,9 +190,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     const char *i2c_SCL      = ";I2C SCL;";
     const char *i2c_SDA      = ";;I2C SDA";
     const char *i2c_BOTH     = ";I2C SCL;I2C SDA";
+#if defined(PLATFORM_ESP32)
     const char *serial1_RX   = ";Serial2 RX;";
     const char *serial1_TX   = ";;Serial2 TX";
     const char *serial1_BOTH = ";Serial2 RX;Serial2 TX";
+#endif
 
     const char *pModeString;
 
@@ -205,12 +213,14 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
       if (mode == somSDA)
         sdaAssigned = true;
 
+#if defined(PLATFORM_ESP32)
       if (mode == somSerial1RX)
         serial1rxAssigned = true;
 
       if (mode == somSerial1TX)
         serial1txAssigned = true;
     }
+#endif
 
     setLuaUint8Value(&luaMappingChannelOut, arg);
 
@@ -477,10 +487,15 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 static bool isProtocolTypeSBUS()
 {
   eSerialProtocol prot0 = config.GetSerialProtocol();
+#if defined(PLATFORM_ESP32)
   eSerial1Protocol prot1 = config.GetSerial1Protocol();
+#endif
   
-  return (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
-          prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO);
+  return (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO
+#if defined(PLATFORM_ESP32)          
+          || prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO
+#endif
+        );
 }
 
 static bool hasSerialdefined(int hardwarePin, eServoOutputMode mode)
@@ -510,11 +525,12 @@ static bool hasSerial0()
   return hasSerialdefined(GPIO_PIN_RCSIGNAL_TX, somSerial);
 }
 
+#if defined(PLATFORM_ESP32)
 static bool hasSerial1()
 {
   return hasSerialdefined(GPIO_PIN_SERIAL1_TX, somSerial1RX);
 }
-
+#endif
 
 static void registerLuaParameters()
 {
@@ -527,6 +543,7 @@ static void registerLuaParameters()
     }
   });
 
+#if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSerial1Protocol((eSerial1Protocol)arg);
     if (config.IsModified()) {
@@ -535,6 +552,7 @@ static void registerLuaParameters()
       });
     }
   });
+#endif
 
   registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     if (isProtocolTypeSBUS())
@@ -621,6 +639,7 @@ static int event()
     LUA_FIELD_HIDE(luaSerialProtocol);
   }
 
+#if defined(PLATFORM_ESP32)
   if (hasSerial1())
   {
     setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
@@ -630,7 +649,8 @@ static int event()
   {
     LUA_FIELD_HIDE(luaSerial1Protocol);
   }
-  
+#endif
+
   if (isProtocolTypeSBUS())
   {
     setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
