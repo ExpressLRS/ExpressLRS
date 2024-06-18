@@ -498,7 +498,7 @@ static bool isProtocolTypeSBUS()
         );
 }
 
-static bool hasSerialdefined(int hardwarePin, eServoOutputMode mode)
+static bool hasSerialDefined(int hardwarePin, eServoOutputMode mode)
 {
   if (hardwarePin != UNDEF_PIN)
   {
@@ -522,13 +522,13 @@ static bool hasSerialdefined(int hardwarePin, eServoOutputMode mode)
 
 static bool hasSerial0()
 {
-  return hasSerialdefined(GPIO_PIN_RCSIGNAL_TX, somSerial);
+  return hasSerialDefined(GPIO_PIN_RCSIGNAL_TX, somSerial);
 }
 
 #if defined(PLATFORM_ESP32)
 static bool hasSerial1()
 {
-  return hasSerialdefined(GPIO_PIN_SERIAL1_TX, somSerial1TX);
+  return hasSerialDefined(GPIO_PIN_SERIAL1_TX, somSerial1TX);
 }
 #endif
 
