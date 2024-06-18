@@ -483,6 +483,39 @@ static bool isProtocolTypeSBUS()
           prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO);
 }
 
+static bool hasSerialdefined(int hardwarePin, eServoOutputMode mode)
+{
+  if (hardwarePin != UNDEF_PIN)
+  {
+    return true;
+  }
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+  {
+    for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
+    {
+      if (config.GetPwmChannel(ch)->val.mode == mode)
+      {
+        return true;
+      }
+  }
+#endif
+
+  return false;
+  }
+}
+
+static bool hasSerial0()
+{
+  return hasSerialdefined(GPIO_PIN_RCSIGNAL_TX, somSerial);
+}
+
+static bool hasSerial1()
+{
+  return hasSerialdefined(GPIO_PIN_SERIAL1_TX, somSerial1RX);
+}
+
+
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -578,8 +611,25 @@ static void updateBindModeLabel()
 
 static int event()
 {
-  setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
-  setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+  if (hasSerial0())
+  {
+    setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+    LUA_FIELD_SHOW(luaSerialProtocol);
+  }
+  else
+  {
+    LUA_FIELD_HIDE(luaSerialProtocol);
+  }
+
+  if (hasSerial1())
+  {
+    setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+    LUA_FIELD_SHOW(luaSerial1Protocol);
+  }
+  else
+  {
+    LUA_FIELD_HIDE(luaSerial1Protocol);
+  }
   
   if (isProtocolTypeSBUS())
   {
