@@ -132,14 +132,15 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
-    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, radioNumber);
+    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, 0, 0, radioNumber);
     CommitOutputPower();
     hal.WriteCommand(LR11XX_RADIO_SET_TX_CW_OC, radioNumber);
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
-                          bool setFSKModulation, SX12XX_Radio_Number_t radioNumber)
+                          bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
+                          SX12XX_Radio_Number_t radioNumber)
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
@@ -177,6 +178,8 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         ConfigModParamsFSK(Bitrate, BWF, Fdev, radioNumber);
 
         SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
+
+        SetFSKSyncWord(fskSyncWord1, fskSyncWord2, radioNumber);
     }
     else
     {
@@ -229,10 +232,13 @@ void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLen
     buf[7] = LR11XX_RADIO_GFSK_CRC_OFF;                     // CrcType - 0x01: CRC_OFF (No CRC).
     buf[8] = LR11XX_RADIO_GFSK_DC_FREE_WHITENING;           // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
+}
 
-// TODO add unique sync word
+void LR1121Driver::SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber)
+{
     // 8.5.3 SetGfskSyncWord
-    uint8_t synbuf[8] = {0x69, 0x69, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    // SyncWordLen is 16 bits as set in SetPacketParamsFSK().  Fill the rest with preamble bytes.
+    uint8_t synbuf[8] = {fskSyncWord1, fskSyncWord2, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
     hal.WriteCommand(LR11XX_RADIO_SET_GFSK_SYNC_WORD_OC, synbuf, sizeof(synbuf), radioNumber);
 }
 

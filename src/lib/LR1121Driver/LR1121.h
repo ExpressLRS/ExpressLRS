@@ -28,7 +28,7 @@ public:
     void SetTxIdleMode() { SetMode(LR1121_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval, bool setFSKModulation,
-                SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
+                uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetRxTimeoutUs(uint32_t interval);
@@ -69,11 +69,13 @@ private:
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
     // LoRa functions
-    void ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber);
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
-    void SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber);
     void SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,
                              uint8_t PayloadLength, uint8_t InvertIQ, SX12XX_Radio_Number_t radioNumber);
+    // FSK functions
+    void ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber);
+    void SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber);
+    void SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber);
 
     void SetDioIrqParams();
     void SetDioAsRfSwitch();
