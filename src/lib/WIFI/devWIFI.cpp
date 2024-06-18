@@ -357,7 +357,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+#if defined(PLATFORM_ESP32)
     json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
+#endif
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
