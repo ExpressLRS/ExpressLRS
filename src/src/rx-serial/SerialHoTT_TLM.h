@@ -1,3 +1,5 @@
+#if defined(TARGET_RX) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+
 #pragma once
 
 #include "SerialIO.h"
@@ -252,35 +254,67 @@ typedef struct
     bool present;
 } hottDevice_t;
 
+enum {
+    HOTT_RECEIVING,
+    HOTT_CMD1SENT,
+    HOTT_CMD2SENT
+};
 
 class SerialHoTT_TLM : public SerialIO
 {
 public:
-    explicit SerialHoTT_TLM(Stream &out, Stream &in)
+    explicit SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN)
         : SerialIO(&out, &in)
-    {
+    {       
+#if defined(PLATFORM_ESP32)
+        if (serial1TXpin == UNDEF_PIN)
+        {
+            // we are on UART0, use default TX pin for half duplex if not defined otherwise
+            UTXDoutIdx = U0TXD_OUT_IDX;
+            URXDinIdx = U0RXD_IN_IDX;
+            halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+        }
+        else
+        {   
+            // we are on UART1, use Serial1 TX assigned pin for half duplex
+            UTXDoutIdx = U1TXD_OUT_IDX;
+            URXDinIdx = U1RXD_IN_IDX;
+            halfDuplexPin = serial1TXpin;
+        } 
+#endif
+
         uint32_t now = millis();
 
         lastPoll = now;
         discoveryTimerStart = now;
+
+        cmdSendState = HOTT_RECEIVING;
     }
 
     virtual ~SerialHoTT_TLM() {}
 
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t *data) override {}
-    uint32_t sendRCFrame(bool frameAvailable, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
+    uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
 
     int getMaxSerialReadSize() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
-    void processBytes(uint8_t *bytes, u_int16_t size) override;
+#if defined(PLATFORM_ESP32)
+    int8_t halfDuplexPin;
+    uint8_t UTXDoutIdx;
+    uint8_t URXDinIdx;
+#endif
 
-    void pollNextDevice();
-    void pollDevice(uint8_t id);
+    void setTXMode();
+    void setRXMode();
+
+    void processBytes(uint8_t *bytes, u_int16_t size) override;
     void processFrame();
     uint8_t calcFrameCRC(uint8_t *buf);
+
+    void scheduleDevicePolling(uint32_t now);
 
     void scheduleCRSFtelemetry(uint32_t now);
     void sendCRSFvario(uint32_t now);
@@ -324,8 +358,10 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
+    uint8_t nextDeviceID;
 
     uint32_t lastPoll;
+    uint8_t cmdSendState;
     uint32_t discoveryTimerStart;
 
     uint32_t lastVarioSent = 0;
@@ -341,3 +377,5 @@ private:
     const int32_t MinScale = 1000000L;
     const int32_t DegScale = 10000000L;
 };
+
+#endif

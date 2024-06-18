@@ -8,6 +8,7 @@
 #include "TFT/tftdisplay.h"
 
 #include "devButton.h"
+#include "handset.h"
 
 FiniteStateMachine state_machine(entry_fsm);
 
@@ -70,7 +71,7 @@ static int handle(void)
 #endif
 
 #ifdef HAS_FIVE_WAY_BUTTON
-    if (!CRSF::IsArmed())
+    if (!handset->IsArmed())
     {
         int key;
         bool isLongPressed;

@@ -25,6 +25,12 @@ const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
+
+#if defined(TARGET_RX)
+// This is created by the build_flags.py and used by STM32 (ESP gets it from json)
+#include "flashdiscrim.h"
+#endif
+
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
@@ -61,6 +67,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .hasUID = false,
     .uid = {},
 #endif
+#if defined(FLASH_DISCRIM)
+    .flash_discriminator = FLASH_DISCRIM,
+#else
+    .flash_discriminator = 0,
+#endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
         .wifi_auto_on_interval = AUTO_WIFI_ON_INTERVAL * 1000,
@@ -87,6 +98,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 115200,
 #elif defined(USE_HOTT_TLM_PROTOCOL)
     .uart_baud = 19200,
+#elif defined(USE_MAVLINK_PROTOCOL)
+    .uart_baud = 460800,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -183,10 +196,6 @@ char product_name[ELRSOPTS_PRODUCTNAME_SIZE+1];
 char device_name[ELRSOPTS_DEVICENAME_SIZE+1];
 uint32_t logo_image;
 
-// Discriminator value used to determine if the device has been reflashed and therefore
-// the SPIFSS settings are obsolete and the flashed settings should be used in preference
-uint32_t flash_discriminator;
-
 firmware_options_t firmwareOptions;
 
 // hardware_init prototype here as it is called by options_init()
@@ -200,13 +209,8 @@ String& getOptions()
 
 void saveOptions(Stream &stream, bool customised)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
 
-    if (firmwareOptions.hasUID)
-    {
-        JsonArray uid = doc.createNestedArray("uid");
-        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
-    }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
         doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
@@ -228,7 +232,7 @@ void saveOptions(Stream &stream, bool customised)
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
     doc["customised"] = customised;
-    doc["flash-discriminator"] = flash_discriminator;
+    doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
     serializeJson(doc, stream);
 }
@@ -262,8 +266,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  */
 static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
-    DynamicJsonDocument flashDoc(1024);
-    DynamicJsonDocument spiffsDoc(1024);
+    JsonDocument flashDoc;
+    JsonDocument spiffsDoc;
     bool hasFlash = false;
     bool hasSpiffs = false;
 
@@ -291,7 +295,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         }
     }
 
-    DynamicJsonDocument &doc = flashDoc;
+    JsonDocument &doc = flashDoc;
     if (hasFlash && hasSpiffs)
     {
         if (flashDoc["flash-discriminator"] == spiffsDoc["flash-discriminator"])
@@ -313,7 +317,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
-    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
+    int32_t wifiInterval = doc["wifi-on-interval"] | 60;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
@@ -339,10 +343,25 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
-    flash_discriminator = doc["flash-discriminator"] | 0U;
+    firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;
 
     builtinOptions.clear();
     saveOptions(builtinOptions, doc["customised"] | false);
+}
+
+/**
+ * @brief: Put a blank options.json into SPIFFS to force all options to the coded defaults in options_LoadFromFlashOrFile()
+*/
+void options_SetTrueDefaults()
+{
+    JsonDocument doc;
+    // The Regulatory Domain is retained, as there is no sensible default
+    doc["domain"] = firmwareOptions.domain;
+    doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
+
+    File options = SPIFFS.open("/options.json", "w");
+    serializeJson(doc, options);
+    options.close();
 }
 
 /**

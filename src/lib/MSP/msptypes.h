@@ -24,12 +24,14 @@
 #define MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE  0x0C
 #define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE 0x0D
 #define MSP_ELRS_SET_RX_WIFI_MODE           0x0E
-#define MSP_ELRS_SET_RX_LOAN_MODE           0x0F
+//#define MSP_ELRS_SET_RX_LOAN_MODE           0x0F // REMOVED
 #define MSP_ELRS_GET_BACKPACK_VERSION       0x10
 #define MSP_ELRS_BACKPACK_CRSF_TLM          0x11
 
 #define MSP_ELRS_POWER_CALI_GET             0x20
 #define MSP_ELRS_POWER_CALI_SET             0x21
+
+#define MSP_ELRS_MAVLINK_TLM                0xFD
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_HEADER_CRC_LEN     4

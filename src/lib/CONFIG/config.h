@@ -16,10 +16,13 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   8U
-#define UID_LEN             6
+#define RX_CONFIG_VERSION   9U
 
 #if defined(TARGET_TX)
+
+#define CONFIG_TX_BUTTON_ACTION_CNT 2
+#define CONFIG_TX_MODEL_CNT         64
+
 typedef enum {
     HT_OFF,
     HT_ON,
@@ -52,7 +55,7 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                _unused:3;
+                linkMode:3;
 } model_config_t;
 
 typedef struct {
@@ -64,7 +67,7 @@ typedef struct {
 typedef union {
     struct {
         uint8_t color;                  // RRRGGGBB
-        button_action_t actions[2];
+        button_action_t actions[CONFIG_TX_BUTTON_ACTION_CNT];
         uint8_t unused;
     } val;
     uint32_t raw;
@@ -77,7 +80,7 @@ typedef struct {
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present
-    model_config_t  model_config[64];
+    model_config_t  model_config[CONFIG_TX_MODEL_CNT];
     uint8_t         fanMode;            // some value used by thermal?
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
@@ -106,6 +109,7 @@ public:
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
     uint8_t GetAntennaMode() const { return m_model->txAntenna; }
+    uint8_t GetLinkMode() const { return m_model->linkMode; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
@@ -133,6 +137,7 @@ public:
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
     void SetAntennaMode(uint8_t txAntenna);
+    void SetLinkMode(uint8_t linkMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -187,18 +192,23 @@ typedef union {
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
-                 unused:12;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
+                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
-    uint8_t     loanUID[UID_LEN];
-    uint16_t    vbatScale;          // FUTURE: Override compiled vbat scale
-    uint8_t     isBound:1,
-                onLoan:1,
+    uint8_t     unused_padding[2];
+    uint32_t    flash_discriminator;
+    struct __attribute__((packed)) {
+        uint16_t    scale;          // FUTURE: Override compiled vbat scale
+        int16_t     offset;         // FUTURE: Override comiled vbat offset
+    } vbat;
+    uint8_t     volatileBind:1,     // 0=Persistent 1=Volatile
+                unused_onLoan:1,
                 power:4,
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
@@ -208,7 +218,12 @@ typedef struct {
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
                 unused:2;
-    rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS];
+    rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
+    uint8_t     teamraceChannel:4,
+                teamracePosition:3,
+                teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    uint8_t     serial1Protocol:4,  // secondary serial protocol
+                serial1Protocol_unused:4;
 } rx_config_t;
 
 class RxConfig
@@ -220,10 +235,8 @@ public:
     void Commit();
 
     // Getters
-    bool     GetIsBound() const { return firmwareOptions.hasUID || m_config.isBound; }
+    bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
-    bool GetOnLoan() const { return m_config.onLoan; }
-    const uint8_t* GetOnLoanUID() const { return m_config.loanUID; }
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
@@ -235,13 +248,14 @@ public:
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+    eSerial1Protocol GetSerial1Protocol() const { return (eSerial1Protocol)m_config.serial1Protocol; }
+    uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
+    uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
+    bool GetVolatileBind() const { return m_config.volatileBind; }
 
     // Setters
-    void SetIsBound(bool isBound);
     void SetUID(uint8_t* uid);
-    void SetOnLoan(bool loaned);
-    void SetOnLoanUID(uint8_t* uid);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);
@@ -255,13 +269,19 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+    void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+    void SetTeamraceChannel(uint8_t teamraceChannel);
+    void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
+    void SetVolatileBind(bool value);
 
 private:
+    void CheckUpdateFlashedUid(bool skipDescrimCheck);
+    void UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid);
     void UpgradeEepromV4();
     void UpgradeEepromV5();
     void UpgradeEepromV6();
-    void UpgradeEepromV7();
+    void UpgradeEepromV7V8();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

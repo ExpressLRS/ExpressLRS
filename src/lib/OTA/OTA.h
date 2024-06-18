@@ -2,8 +2,11 @@
 #define H_OTA
 
 #include <cstddef>
+
 #include "crc.h"
-#include "devCRSF.h"
+#include "CRSF.h"
+#include "crsf_protocol.h"
+#include "telemetry_protocol.h"
 #include "FIFO.h"
 
 #define OTA4_PACKET_SIZE     8U
@@ -66,6 +69,13 @@ typedef struct {
             uint8_t packageIndex;
             uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
+        /** PACKET_TYPE_MAV **/
+        struct {
+            uint8_t packageIndex:5,
+                    tlmFlag:1,
+                    spare:2;
+            uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
+        } mav_ul;
         /** PACKET_TYPE_SYNC **/
         OTA_Sync_s sync;
         /** PACKET_TYPE_TLM **/
@@ -116,6 +126,13 @@ typedef struct {
                     packageIndex: 6;
             uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
+        /** PACKET_TYPE_MAV **/
+        struct {
+            uint8_t packetType: 2,
+                    packageIndex: 5,
+                    tlmFlag: 1;
+            uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
+        } mav_ul;
         /** PACKET_TYPE_SYNC **/
         struct {
             uint8_t packetType; // only low 2 bits

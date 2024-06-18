@@ -21,6 +21,10 @@
   #endif
 #endif
 
+#if defined(TARGET_RX) && (defined(DEBUG_RCVR_LINKSTATS) || defined(DEBUG_RX_SCOREBOARD) || defined(DEBUG_RCVR_SIGNAL_STATS)) || defined(DEBUG_LOG)
+#define DEBUG_ENABLED
+#endif
+
 #if defined(TARGET_TX)
 extern Stream *TxBackpack;
 #if defined(PLATFORM_ESP32_S3)
@@ -59,10 +63,10 @@ void debugFreeInitLogger();
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM
     #define DBG(msg, ...)   debugPrintf(msg, ##__VA_ARGS__)
-    #define DBGLN(msg, ...) { \
+    #define DBGLN(msg, ...) do { \
       debugPrintf(msg, ##__VA_ARGS__); \
       LOGGING_UART.println(); \
-    }
+    } while(0)
   #else
     #define DBG(msg, ...)   debugPrintf(PSTR(msg), ##__VA_ARGS__)
     #define DBGLN(msg, ...) { \

@@ -112,18 +112,19 @@ def appendConfiguration(source, target, env):
     frequency = ''
     if config is not None:
         moduletype = 'tx' if '.tx_' in config else 'rx'
-        frequency = '2400' if '_2400.' in config else '900'
+        frequency = '2400' if '_2400.' in config else '900' if '_900.' in config else 'dual'
     else:
         moduletype = 'tx' if '_TX_' in target_name else 'rx'
-        frequency = '2400' if '_2400_' in target_name else '900'
+        frequency = '2400' if '_2400_' in target_name else '900' if '_900_' in target_name else 'dual'
 
     if env.get('PIOPLATFORM', '') == 'espressif32':
         platform = 'esp32'
         if 'esp32-s3' in env.get('BOARD', ''):
             platform = 'esp32-s3'
+        elif 'esp32-c3' in env.get('BOARD', ''):
+            platform = 'esp32-c3'
     else:
         platform = 'esp8285'
-    print(platform)
 
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 

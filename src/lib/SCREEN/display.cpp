@@ -51,6 +51,27 @@ const char *rate_string[] = {
     "100 Full",
     "50Hz"
 };
+#elif defined(RADIO_LR1121)
+static const char *rate_string[] = {
+    // 900
+    "200Hz",
+    "100 Full",
+    "100Hz",
+    "50Hz",
+    // 2.4
+    "500Hz",
+    "333 Full",
+    "250Hz",
+    "150Hz",
+    "100 Full",
+    "50Hz",
+    // Dual
+    "X150Hz",
+    "X100 Full",
+    // 900
+    "250Hz",
+    "200 Full",
+};
 #else
 static const char *rate_string[] = {
     "200Hz",

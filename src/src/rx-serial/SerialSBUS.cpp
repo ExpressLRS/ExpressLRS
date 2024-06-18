@@ -8,23 +8,36 @@
 #define SBUS_FLAG_SIGNAL_LOSS       (1 << 2)
 #define SBUS_FLAG_FAILSAFE_ACTIVE   (1 << 3)
 
-extern RxConfig config;
-
+const auto UNCONNECTED_CALLBACK_INTERVAL_MS = 10;
 const auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
-uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
+uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     static auto sendPackets = false;
-    if ((failsafe && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
+    bool effectivelyFailsafed = failsafe || (!connectionHasModelMatch) || (!teamraceHasModelMatch);
+    if ((effectivelyFailsafed && config.GetFailsafeMode() == FAILSAFE_NO_PULSES) || (!sendPackets && connectionState != connected))
     {
-        return SBUS_CALLBACK_INTERVAL_MS;
+        return UNCONNECTED_CALLBACK_INTERVAL_MS;
     }
     sendPackets = true;
+
+    if ((!frameAvailable && !frameMissed && !effectivelyFailsafed) || _outputPort->availableForWrite() < 25)
+    {
+        return DURATION_IMMEDIATELY;
+    }
 
     // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
 
+#if defined(PLATFORM_ESP32)
+    extern Stream* serial_protocol_tx;
+    extern Stream* serial1_protocol_tx;
+    
+    if (((config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO) && streamOut == serial_protocol_tx)||
+        ((config.GetSerial1Protocol() == PROTOCOL_SERIAL1_DJI_RS_PRO) && streamOut == serial1_protocol_tx))
+#else
     if (config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+#endif
     {
         PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
         PackedRCdataOut.ch1 = fmap(channelData[1], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
@@ -64,8 +77,8 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, uint32_t *channelData)
     }
 
     uint8_t extraData = 0;
-    extraData |= failsafe ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
-    extraData |= frameAvailable ? 0 : SBUS_FLAG_SIGNAL_LOSS;
+    extraData |= effectivelyFailsafed ? SBUS_FLAG_FAILSAFE_ACTIVE : 0;
+    extraData |= frameMissed ? SBUS_FLAG_SIGNAL_LOSS : 0;
 
     _outputPort->write(0x0F);    // HEADER
     _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);

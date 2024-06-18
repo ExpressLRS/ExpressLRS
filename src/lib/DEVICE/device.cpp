@@ -9,10 +9,17 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 #else
 #error Invalid radio configuration!
+#endif
+
+#if defined(PLATFORM_ESP32)
+#include <soc/soc_caps.h>
+#define MULTICORE (SOC_CPU_CORES_NUM > 1)
 #endif
 
 ///////////////////////////////////////
@@ -28,7 +35,7 @@ static bool lastModelMatch[2] = {false, false};
 
 static unsigned long deviceTimeout[16] = {0};
 
-#if defined(PLATFORM_ESP32)
+#if MULTICORE
 static TaskHandle_t xDeviceTask = NULL;
 static SemaphoreHandle_t taskSemaphore;
 static SemaphoreHandle_t completeSemaphore;
@@ -43,7 +50,7 @@ void devicesRegister(device_affinity_t *devices, uint8_t count)
     uiDevices = devices;
     deviceCount = count;
 
-    #if defined(PLATFORM_ESP32)
+    #if MULTICORE
         taskSemaphore = xSemaphoreCreateBinary();
         completeSemaphore = xSemaphoreCreateBinary();
         disableCore0WDT();
@@ -62,7 +69,7 @@ void devicesInit()
             }
         }
     }
-    #if defined(PLATFORM_ESP32)
+    #if MULTICORE
     if (core == 1)
     {
         xSemaphoreGive(taskSemaphore);
@@ -87,7 +94,7 @@ void devicesStart()
             }
         }
     }
-    #if defined(PLATFORM_ESP32)
+    #if MULTICORE
     if (core == 1)
     {
         xSemaphoreGive(taskSemaphore);
@@ -98,7 +105,7 @@ void devicesStart()
 
 void devicesStop()
 {
-    #if defined(PLATFORM_ESP32)
+    #if MULTICORE
     vTaskDelete(xDeviceTask);
     #endif
 }
@@ -107,7 +114,7 @@ void devicesTriggerEvent()
 {
     eventFired[0] = true;
     eventFired[1] = true;
-    #if defined(PLATFORM_ESP32)
+    #if MULTICORE
     // Release teh semaphore so the tasks on core 0 run now
     xSemaphoreGive(taskSemaphore);
     #endif
@@ -115,12 +122,14 @@ void devicesTriggerEvent()
 
 static int _devicesUpdate(unsigned long now)
 {
-    int32_t core = CURRENT_CORE;
+    const int32_t core = CURRENT_CORE;
+    const int32_t coreMulti = (core == -1) ? 0 : core;
 
-    bool handleEvents = eventFired[core==-1?0:core] || lastConnectionState[core==-1?0:core] != connectionState || lastModelMatch[core==-1?0:core] != connectionHasModelMatch;
-    eventFired[core==-1?0:core] = false;
-    lastConnectionState[core==-1?0:core] = connectionState;
-    lastModelMatch[core==-1?0:core] = connectionHasModelMatch;
+    bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
+    bool handleEvents = eventFired[coreMulti] || lastConnectionState[coreMulti] != connectionState || lastModelMatch[coreMulti] != newModelMatch;
+    eventFired[coreMulti] = false;
+    lastConnectionState[coreMulti] = connectionState;
+    lastModelMatch[coreMulti] = newModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
@@ -161,7 +170,7 @@ void devicesUpdate(unsigned long now)
     _devicesUpdate(now);
 }
 
-#if defined(PLATFORM_ESP32)
+#if MULTICORE
 static void deviceTask(void *pvArgs)
 {
     xSemaphoreTake(taskSemaphore, portMAX_DELAY);

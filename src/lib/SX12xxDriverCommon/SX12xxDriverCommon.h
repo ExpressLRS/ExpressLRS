@@ -56,6 +56,7 @@ public:
     int8_t FuzzySNRThreshold;
 
     bool isFirstRxIrq = true;
+    bool ignoreSecondIRQ = false;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     typedef struct rxSignalStats_s

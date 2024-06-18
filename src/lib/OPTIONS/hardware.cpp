@@ -25,6 +25,8 @@ static const struct {
 } fields[] = {
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
+    {HARDWARE_serial1_rx, "serial1_rx", INT},
+    {HARDWARE_serial1_tx, "serial1_tx", INT},
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
@@ -61,6 +63,7 @@ static const struct {
     {HARDWARE_power_control, "power_control", INT},
     {HARDWARE_power_values, "power_values", ARRAY},
     {HARDWARE_power_values2, "power_values2", ARRAY},
+    {HARDWARE_power_values_dual, "power_values_dual", ARRAY},
     {HARDWARE_joystick, "joystick", INT},
     {HARDWARE_joystick_values, "joystick_values", ARRAY},
     {HARDWARE_five_way1, "five_way1", INT},
@@ -129,6 +132,8 @@ static const struct {
     {HARDWARE_vtx_sck, "vtx_sck", INT},
     {HARDWARE_vtx_amp_vpd_25mW, "vtx_amp_vpd_25mW", ARRAY},
     {HARDWARE_vtx_amp_vpd_100mW, "vtx_amp_vpd_100mW", ARRAY},
+    {HARDWARE_vtx_amp_pwm_25mW, "vtx_amp_pwm_25mW", ARRAY},
+    {HARDWARE_vtx_amp_pwm_100mW, "vtx_amp_pwm_100mW", ARRAY},
 };
 
 typedef union {
@@ -218,7 +223,7 @@ bool hardware_init(EspFlashStream &strmFlash)
     builtinHardwareConfig.clear();
 
     Stream *strmSrc;
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;

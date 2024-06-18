@@ -2,6 +2,7 @@
 
 #include "rxtx_devLua.h"
 #include "CRSF.h"
+#include "CRSFHandset.h"
 #include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
@@ -25,6 +26,7 @@ static const char folderNameSeparator[2] = {' ',':'};
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
+static const char linkModeOpts[] = "Normal;MAVLink";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
@@ -99,6 +101,13 @@ static struct luaItem_selection luaSwitch = {
       STR_EMPTYSPACE
   };
 #endif
+
+static struct luaItem_selection luaLinkMode = {
+    {"Link Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    linkModeOpts,
+    STR_EMPTYSPACE
+};
 
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
@@ -276,8 +285,6 @@ extern void VtxTriggerSend();
 extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
-extern void EnterBindingMode();
-extern bool InBindingMode;
 extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;
@@ -289,7 +296,7 @@ extern void setWifiUpdateMode();
 #endif
 
 static void luadevUpdateModelID() {
-  itoa(CRSF::getModelID(), modelMatchUnit+6, 10);
+  itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -429,7 +436,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     if ((void *)item == (void *)&luaBind)
     {
       msg = "Binding...";
-      EnterBindingMode();
+      EnterBindingModeSafely();
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
@@ -534,9 +541,9 @@ static void updateFolderName_VtxAdmin()
  ****/
 static void luadevUpdateBadGood()
 {
-  itoa(CRSF::BadPktsCountResult, luaBadGoodString, 10);
+  itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
   strcat(luaBadGoodString, "/");
-  itoa(CRSF::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+  itoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
 }
 
 /***
@@ -569,6 +576,9 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+    arg = (arg + 4) % RATE_MAX;
+#endif
     if (arg < RATE_MAX)
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
@@ -576,7 +586,12 @@ static void registerLuaParameters()
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
         (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
       // If the switch mode is going to change, block the change while connected
-      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+      bool isDisconnected = connectionState == disconnected;
+      // Don't allow the switch mode to change if the TX is in mavlink mode
+      // Wide switchmode is not compatible with mavlink, and the switchmode is
+      // auto configuredwhen entering mavlink mode
+      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
       {
         config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
@@ -611,7 +626,12 @@ static void registerLuaParameters()
       registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
         // Only allow changing switch mode when disconnected since we need to guarantee
         // the pack and unpack functions are matched
-        if (connectionState == disconnected)
+        bool isDisconnected = connectionState == disconnected;
+        // Don't allow the switch mode to change if the TX is in mavlink mode
+        // Wide switchmode is not compatible with mavlink, and the switchmode is
+        // auto configuredwhen entering mavlink mode
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        if (isDisconnected && !isMavlinkMode)
         {
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -620,12 +640,15 @@ static void registerLuaParameters()
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
       });
     }
-      if (isDualRadio())
-      {
-        registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
-          config.SetAntennaMode(arg);
-        });
-      }
+    if (isDualRadio())
+    {
+      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetAntennaMode(arg);
+      });
+    }
+    registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetLinkMode(arg);
+      });
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -638,8 +661,8 @@ static void registerLuaParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? CRSF::getModelID() : 0xff);
-          CRSF::AddMspMessage(&msp);
+          msp.addByte(newModelMatch ? CRSFHandset::getModelID() : 0xff);
+          CRSF::AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER);
         }
         luadevUpdateModelID();
       });
@@ -780,6 +803,9 @@ static int event()
     return DURATION_NEVER;
   }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+  currentRate = (currentRate + 4) % RATE_MAX;
+#endif
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
@@ -788,6 +814,7 @@ static int event()
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
   }
+  setLuaTextSelectionValue(&luaLinkMode, config.GetLinkMode());
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
@@ -838,7 +865,7 @@ static int start()
   {
     return DURATION_NEVER;
   }
-  CRSF::RecvParameterUpdate = &luaParamUpdateReq;
+  handset->registerParameterUpdateCallback(luaParamUpdateReq);
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);
