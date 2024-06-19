@@ -939,34 +939,30 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     uint8_t dataLen;
     if (OtaIsFullRes)
     {
+        packageIndex = otaPktPtr->full.msp_ul.packageIndex;
+        payload = otaPktPtr->full.msp_ul.payload;
+        dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            packageIndex = otaPktPtr->full.msp_ul.packageIndex;
-            payload = otaPktPtr->full.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
             TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
         }
         else
         {
-            packageIndex = otaPktPtr->full.msp_ul.packageIndex & 0b00011111;
-            payload = otaPktPtr->full.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+            packageIndex &= ELRS8_TELEMETRY_MAX_PACKAGES;
         }
     }
     else
     {
+        packageIndex = otaPktPtr->std.msp_ul.packageIndex;
+        payload = otaPktPtr->std.msp_ul.payload;
+        dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            packageIndex = otaPktPtr->std.msp_ul.packageIndex;
-            payload = otaPktPtr->std.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
             TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
         }
         else
         {
-            packageIndex = otaPktPtr->std.msp_ul.packageIndex & 0b00111111;
-            payload = otaPktPtr->std.msp_ul.payload;
-            dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+            packageIndex &= ELRS4_TELEMETRY_MAX_PACKAGES;
         }
     }
 
