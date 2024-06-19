@@ -234,7 +234,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
     //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
-    TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
+    TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & 0b00011111, telemPtr, dataLen);
   }
   // Std res mode
   else
@@ -251,7 +251,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
           OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
           return true;
         }
-        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
+        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex & 0b00111111,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
         break;
@@ -531,10 +531,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
-          otaPkt.full.mav_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.full.mav_ul.payload,
-            sizeof(otaPkt.full.mav_ul.payload));
-          otaPkt.full.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.full.msp_ul.payload,
+            sizeof(otaPkt.full.msp_ul.payload));
+          otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
         }
         else
         {
@@ -547,10 +547,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
-          otaPkt.std.mav_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.std.mav_ul.payload,
-            sizeof(otaPkt.std.mav_ul.payload));
-          otaPkt.std.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+            otaPkt.std.msp_ul.payload,
+            sizeof(otaPkt.std.msp_ul.payload));
+          otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
         }
         else
         {

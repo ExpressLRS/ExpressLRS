@@ -941,14 +941,14 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     {
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            packageIndex = otaPktPtr->full.mav_ul.packageIndex;
-            payload = otaPktPtr->full.mav_ul.payload;
-            dataLen = sizeof(otaPktPtr->full.mav_ul.payload);
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.mav_ul.tlmFlag);
+            packageIndex = otaPktPtr->full.msp_ul.packageIndex;
+            payload = otaPktPtr->full.msp_ul.payload;
+            dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
         }
         else
         {
-            packageIndex = otaPktPtr->full.msp_ul.packageIndex;
+            packageIndex = otaPktPtr->full.msp_ul.packageIndex & 0b00011111;
             payload = otaPktPtr->full.msp_ul.payload;
             dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
         }
@@ -957,14 +957,14 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     {
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            packageIndex = otaPktPtr->std.mav_ul.packageIndex;
-            payload = otaPktPtr->std.mav_ul.payload;
-            dataLen = sizeof(otaPktPtr->std.mav_ul.payload);
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.mav_ul.tlmFlag);
+            packageIndex = otaPktPtr->std.msp_ul.packageIndex;
+            payload = otaPktPtr->std.msp_ul.payload;
+            dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
         }
         else
         {
-            packageIndex = otaPktPtr->std.msp_ul.packageIndex;
+            packageIndex = otaPktPtr->std.msp_ul.packageIndex & 0b00111111;
             payload = otaPktPtr->std.msp_ul.payload;
             dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
         }
