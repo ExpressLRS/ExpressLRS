@@ -741,6 +741,7 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
+    UpgradeEepromV9();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -904,6 +905,49 @@ void RxConfig::UpgradeEepromV7V8()
     }
 }
 
+
+// ========================================================
+// V9 Upgrade
+
+void RxConfig::UpgradeEepromV9()
+{
+    v9_rx_config_t v9Config;
+    m_eeprom->Get(0, v9Config);
+
+    if ((v9Config.version & ~CONFIG_MAGIC_MASK) == 9)
+    {    
+        memcpy(m_config.uid, v9Config.uid, UID_LEN);
+        m_config.flash_discriminator = v9Config.flash_discriminator;
+
+        m_config.vbat.scale = v9Config.vbat.scale;
+        m_config.vbat.offset = v9Config.vbat.offset;
+
+        m_config.volatileBind = v9Config.volatileBind;
+        m_config.unused_onLoan = v9Config.unused_onLoan;
+        m_config.power = v9Config.power;
+        m_config.antennaMode = v9Config.antennaMode;
+        m_config.forceTlmOff = v9Config.forceTlmOff;
+        m_config.rateInitialIdx = v9Config.rateInitialIdx;
+        m_config.modelId = v9Config.modelId;
+        m_config.serialProtocol = v9Config.serialProtocol;
+        m_config.failsafeMode = v9Config.failsafeMode;
+        m_config.teamraceChannel = v9Config.teamraceChannel;
+        m_config.teamracePosition = v9Config.teamracePosition;
+        m_config.teamracePitMode = v9Config.teamracePitMode;
+        m_config.serial1Protocol = v9Config.serial1Protocol;
+
+#if defined(GPIO_PIN_PWM_OUTPUTS)
+        for (uint8_t ch=0; ch<16; ch++)
+        {
+            m_config.pwmChannels[ch].raw = v9Config.pwmChannels[ch].raw;
+        }
+#endif
+
+        // no need for SerialChannelMap, in defaults
+    }
+}
+
+
 void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
 {
     // Convert to traditional binding
@@ -1048,6 +1092,11 @@ RxConfig::SetDefaults(bool commit)
     m_config.serialProtocol = PROTOCOL_CRSF;
 #endif
 
+    for(u_int8_t i = 0; i < 16; i++)
+    {
+        m_config.serialChannelMap[i] = i;
+    }
+
     m_config.serial1Protocol = PROTOCOL_SERIAL1_NONE;
 
     if (commit)
@@ -1132,6 +1181,17 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
         m_modified = true;
     }
 }
+
+
+void RxConfig::SetSerialChannelMap(uint8_t ch, uint8_t map)
+{
+    if (ch < 16 && m_config.serialChannelMap[ch] != map)
+    {
+        m_config.serialChannelMap[ch] = map;
+        m_modified = true;
+    }
+}
+
 
 void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
 {

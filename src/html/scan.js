@@ -397,7 +397,24 @@ function updateConfig(data, options) {
       _('sbus-config').style.display = 'none';
     }
   }
+  
+  const htmlFields = [`<table class="serialmappnl mui-table"><tbody><tr><th class="fixed-column">Output</th><th>Input</th></tr>`];
+  data['serial-channel-map'].forEach((item, index) => {
 
+    const serMapInputSelect = enumSelectGenerate(`sermap_${index}_ch`, Number(item),
+      ['ch1', 'ch2', 'ch3', 'ch4',
+        'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
+        'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
+        'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);  
+    htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td><td>${serMapInputSelect}</td></tr>`);
+  });
+  htmlFields.push('</tbody></table>');
+  const grp = document.createElement('DIV');
+  grp.setAttribute('class', 'group');
+  grp.innerHTML = htmlFields.join('');
+
+  _('sermap').appendChild(grp);
+    
   _('serial1-protocol').onchange = () => {
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
@@ -751,10 +768,15 @@ _('connect').addEventListener('click', callback('Connect to Home Network', 'An e
 if (_('config')) {
   _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
+        serChanMap = []
+        for(let i = 0; i < 16; i++) {
+          serChanMap.push(+_(`sermap_${i}_ch`).value);
+        }
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({
           "pwm": getPwmFormData(),
           "serial-protocol": +_('serial-protocol').value,
+          "serial-channel-map": serChanMap,
           "serial1-protocol": +_('serial1-protocol').value,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,

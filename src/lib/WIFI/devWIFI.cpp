@@ -355,6 +355,10 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    for(u_int8_t i = 0; i < 16; i++)
+    {
+      json["config"]["serial-channel-map"][i] = config.GetSerialChannelMap(i);
+    }
     json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
@@ -529,6 +533,14 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     config.SetPwmChannelRaw(channel, val);
   }
   #endif
+
+  JsonArray serialChannelMap = json["serial-channel-map"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < serialChannelMap.size() ; channel++)
+  {
+    uint32_t val = serialChannelMap[channel];
+    //DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetSerialChannelMap(channel, val);
+  }
 
   config.Commit();
   request->send(200, "text/plain", "Configuration updated");

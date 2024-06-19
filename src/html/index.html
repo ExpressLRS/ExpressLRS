@@ -192,7 +192,7 @@
 							<li><b>Features:</b> If an output is capable of supporting another function, that is indicated here</li>
 							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off, DShot, Serial, or I2C (some options are pin dependant)</li>
 							<ul>
-								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
+								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>, <b>Serial Channel Mapping</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
 							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
@@ -257,6 +257,10 @@
 								</select>
 								<label for='serial-protocol'>Serial Protocol</label>
 							</div>
+							<h2>Serial Channel Mapping</h2>
+							Map order of channels in selected serial protocol.
+							<div class="mui-panel" id="sermap">
+							</div>								
 						</div>
 						<div id="serial1-config">
 							<div class="mui-select">
