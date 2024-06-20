@@ -172,10 +172,10 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     if (useFSK)
     {
-        uint32_t Bitrate = bw == LR11XX_RADIO_GFSK_BITRATE_300k ? 300000 : (uint32_t)bw * 1000; // A little hack to get 300 into the uint8_t bw data type
-        uint8_t BWF = sf;
-        uint32_t Fdev = (uint32_t)cr * 1000;
-        ConfigModParamsFSK(Bitrate, BWF, Fdev, radioNumber);
+        uint32_t bitrate = bw == LR11XX_RADIO_GFSK_BITRATE_300k ? 300000 : (uint32_t)bw * 1000; // A little hack to get 300 into the uint8_t bw data type
+        uint8_t bwf = sf;
+        uint32_t fdev = (uint32_t)cr * 1000;
+        ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
         SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
 
