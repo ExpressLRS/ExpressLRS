@@ -357,8 +357,8 @@ typedef enum
 
 typedef enum
 {
-    LR11XX_RADIO_GFSK_BITRATE_200k = 200,
-    LR11XX_RADIO_GFSK_BITRATE_300k = 255
+    LR11XX_RADIO_GFSK_BITRATE_200k = 20,
+    LR11XX_RADIO_GFSK_BITRATE_300k = 30
 } lr11xx_radio_gfsk_bitrate_t;
 
 typedef enum
