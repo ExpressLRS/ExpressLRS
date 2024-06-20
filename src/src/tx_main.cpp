@@ -520,8 +520,8 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
   uint8_t NonceFHSSresult = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-  // Sync spam
-  if (syncSpamCounter || (syncSpamCounterAfterRateChange && FHSSonSyncChannel()))
+  // Sync spam only happens on slot 1 and 2 and can't be disabled
+  if ((syncSpamCounter || (syncSpamCounterAfterRateChange && FHSSonSyncChannel())) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
