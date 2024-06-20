@@ -90,6 +90,9 @@ static void servosFailsafe()
         if (chConfig->val.failsafeMode == PWMFAILSAFE_SET_POSITION) {
             // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
             uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
+            if (chConfig->val.stretched) {
+                us = fmap(us, SERVO_FAILSAFE_MIN, 2012, 476, 2524);
+            }
             // Always write the failsafe position even if the servo has never been started,
             // so all the servos go to their expected position
             servoWrite(ch, us);
