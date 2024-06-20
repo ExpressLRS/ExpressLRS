@@ -23,6 +23,7 @@
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
+#include "rx-serial/SerialMavlink.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "rx-serial/devSerial1IO.h"
@@ -164,6 +165,8 @@ static uint8_t telemetryBurstMax;
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
 
+uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
+
 static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static bool telemBurstValid;
@@ -234,6 +237,7 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 bool BindingModeRequest = false;
 
 extern void setWifiUpdateMode();
+void reconfigureSerial();
 
 uint8_t getLq()
 {
@@ -462,7 +466,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || (!firmwareOptions.is_airport && !TelemetrySender.IsActive()))
+    bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
+    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued;
+
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -498,11 +505,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (firmwareOptions.is_airport)
-        {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
-        }
-        else
+        if (TelemetrySender.IsActive())
         {
             if (OtaIsFullRes)
             {
@@ -517,6 +520,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     otaPkt.std.tlm_dl.payload,
                     sizeof(otaPkt.std.tlm_dl.payload));
             }
+        }
+        else if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
     }
 
@@ -936,12 +943,28 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
         packageIndex = otaPktPtr->full.msp_ul.packageIndex;
         payload = otaPktPtr->full.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
+        }
+        else
+        {
+            packageIndex &= ELRS8_TELEMETRY_MAX_PACKAGES;
+        }
     }
     else
     {
         packageIndex = otaPktPtr->std.msp_ul.packageIndex;
         payload = otaPktPtr->std.msp_ul.payload;
         dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
+        }
+        else
+        {
+            packageIndex &= ELRS4_TELEMETRY_MAX_PACKAGES;
+        }
     }
 
     // Always examine MSP packets for bind information if in bind mode
@@ -1183,6 +1206,15 @@ void MspReceiveComplete()
         });
 #endif
         break;
+    case MSP_ELRS_MAVLINK_TLM: // 0xFD
+        if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
+        {
+            config.SetSerialProtocol(PROTOCOL_MAVLINK);
+            reconfigureSerial();
+        }
+        // raw mavlink data
+        mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
+        break;
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
@@ -1231,7 +1263,8 @@ void MspReceiveComplete()
 static void setupSerial()
 {
     bool sbusSerialOutput = false;
-    bool sumdSerialOutput = false;
+	bool sumdSerialOutput = false;
+    bool mavlinkSerialOutput = false;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     bool hottTlmSerial = false;
@@ -1265,6 +1298,11 @@ static void setupSerial()
     {
         sumdSerialOutput = true;
         serialBaud = 115200;
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        mavlinkSerialOutput = true;
+        serialBaud = 460800;
     }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
@@ -1366,6 +1404,10 @@ static void setupSerial()
     else if (sumdSerialOutput)
     {
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (mavlinkSerialOutput)
+    {
+        serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (hottTlmSerial)
@@ -2087,6 +2129,21 @@ void loop()
     {
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
+
+    uint16_t count = mavlinkInputBuffer.size();
+    if (count > 0 && !TelemetrySender.IsActive())
+    {
+        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
+        // First 2 bytes conform to crsf_header_s format
+        mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
+        mavlinkSSBuffer[1] = count;
+        // Following n bytes are just raw mavlink
+        mavlinkInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        nextPayload = mavlinkSSBuffer;
+        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+    }
+
     updateTelemetryBurst();
     updateBindingMode();
     updateSwitchMode();

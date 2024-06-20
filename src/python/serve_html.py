@@ -18,6 +18,7 @@ from external.wheezy.template.loader import FileLoader
 net_counter = 0
 isTX = False
 hasSubGHz = False
+is8285 = True
 chip = 'LR1121'
 
 config = {
@@ -112,11 +113,13 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, hasSubGHz
+    global isTX, hasSubGHz, chip, is8285
     if(isTX):
         platform = 'Unified_ESP32_2400_TX'
+        is8285 = False
     else:
         platform = 'Unified_ESP8285_2400_RX'
+        is8285 = True
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -127,13 +130,14 @@ def apply_template(mainfile):
             'PLATFORM': platform,
             'isTX': isTX,
             'hasSubGHz': hasSubGHz,
-            'chip': chip
+            'chip': chip,
+            'is8285': is8285
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, hasSubGHz, chip
+    global net_counter, isTX, hasSubGHz, chip, is8285
     net_counter = 0
     isTX = 'isTX' in request.query
     hasSubGHz = 'hasSubGHz' in request.query
