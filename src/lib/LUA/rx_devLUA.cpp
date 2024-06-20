@@ -32,8 +32,8 @@ static struct luaItem_selection luaSerial1Protocol = {
 };
 #endif
 
-static struct luaItem_selection luaFailsafeMode = {
-    {"Failsafe Mode", CRSF_TEXT_SELECTION},
+static struct luaItem_selection luaSBUSFailsafeMode = {
+    {"SBUS failsafe", CRSF_TEXT_SELECTION},
     0, // value
     "No Pulses;Last Pos",
     STR_EMPTYSPACE
@@ -484,54 +484,6 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 
 #endif // POWER_OUTPUT_VALUES
 
-static bool isProtocolTypeSBUS()
-{
-  eSerialProtocol prot0 = config.GetSerialProtocol();
-#if defined(PLATFORM_ESP32)
-  eSerial1Protocol prot1 = config.GetSerial1Protocol();
-#endif
-  
-  return (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO
-#if defined(PLATFORM_ESP32)          
-          || prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO
-#endif
-        );
-}
-
-static bool hasSerialDefined(int hardwarePin, eServoOutputMode mode)
-{
-  if (hardwarePin != UNDEF_PIN)
-  {
-    return true;
-  }
-
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-  {
-    for (uint8_t ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ch++)
-    {
-      if (config.GetPwmChannel(ch)->val.mode == mode)
-      {
-        return true;
-      }
-    }
-  }
-#endif
-
-  return false;
-}
-
-static bool hasSerial0()
-{
-  return hasSerialDefined(GPIO_PIN_RCSIGNAL_TX, somSerial);
-}
-
-#if defined(PLATFORM_ESP32)
-static bool hasSerial1()
-{
-  return hasSerialDefined(GPIO_PIN_SERIAL1_TX, somSerial1TX);
-}
-#endif
-
 static void registerLuaParameters()
 {
   registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -554,11 +506,8 @@ static void registerLuaParameters()
   });
 #endif
 
-  registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-    if (isProtocolTypeSBUS())
-    { 
-      config.SetFailsafeMode((eFailsafeMode)arg);
-    }
+  registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetFailsafeMode((eFailsafeMode)arg);
   });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
@@ -629,37 +578,12 @@ static void updateBindModeLabel()
 
 static int event()
 {
-  if (hasSerial0())
-  {
-    setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
-    LUA_FIELD_SHOW(luaSerialProtocol);
-  }
-  else
-  {
-    LUA_FIELD_HIDE(luaSerialProtocol);
-  }
-
+  setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 #if defined(PLATFORM_ESP32)
-  if (hasSerial1())
-  {
-    setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
-    LUA_FIELD_SHOW(luaSerial1Protocol);
-  }
-  else
-  {
-    LUA_FIELD_HIDE(luaSerial1Protocol);
-  }
+  setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
 #endif
-
-  if (isProtocolTypeSBUS())
-  {
-    setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
-    LUA_FIELD_SHOW(luaFailsafeMode);
-  }
-  else
-  {
-    LUA_FIELD_HIDE(luaFailsafeMode);
-  }
+  
+  setLuaTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
