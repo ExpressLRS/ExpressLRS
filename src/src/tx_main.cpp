@@ -235,7 +235,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
     //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
-    TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex, telemPtr, dataLen);
+    TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES, telemPtr, dataLen);
   }
   // Std res mode
   else
@@ -252,7 +252,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
           OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
           return true;
         }
-        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex,
+        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex & ELRS4_TELEMETRY_MAX_PACKAGES,
           otaPktPtr->std.tlm_dl.payload,
           sizeof(otaPktPtr->std.tlm_dl.payload));
         break;
@@ -537,35 +537,19 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
       {
+        otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+          otaPkt.full.msp_ul.payload,
+          sizeof(otaPkt.full.msp_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-        {
-          otaPkt.full.mav_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.full.mav_ul.payload,
-            sizeof(otaPkt.full.mav_ul.payload));
-          otaPkt.full.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
-        }
-        else
-        {
-          otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.full.msp_ul.payload,
-            sizeof(otaPkt.full.msp_ul.payload));
-        }
+          otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
       else
       {
+        otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
+          otaPkt.std.msp_ul.payload,
+          sizeof(otaPkt.std.msp_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-        {
-          otaPkt.std.mav_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.std.mav_ul.payload,
-            sizeof(otaPkt.std.mav_ul.payload));
-          otaPkt.std.mav_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
-        }
-        else
-        {
-          otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-            otaPkt.std.msp_ul.payload,
-            sizeof(otaPkt.std.msp_ul.payload));
-        }
+          otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions
