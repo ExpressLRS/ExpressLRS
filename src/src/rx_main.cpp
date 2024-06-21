@@ -1211,7 +1211,7 @@ void MspReceiveComplete()
         if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
         {
             config.SetSerialProtocol(PROTOCOL_MAVLINK);
-            deferExecutionMicros(100, reconfigureSerial);
+            reconfigureSerial();
         }
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
