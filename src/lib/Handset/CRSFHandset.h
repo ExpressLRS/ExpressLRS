@@ -4,7 +4,11 @@
 #include "handset.h"
 #include "crsf_protocol.h"
 #ifndef TARGET_NATIVE
+#ifdef USE_DMA_SERIAL
+#include "SerialPortDriver.h"
+#else
 #include "HardwareSerial.h"
+#endif
 #endif
 #include "common.h"
 
@@ -25,7 +29,11 @@ public:
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
+#ifdef USE_DMA_SERIAL
+    static SerialPort& Port;
+#else
     static HardwareSerial Port;
+#endif
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static uint8_t modelId;         // The model ID as received from the Transmitter

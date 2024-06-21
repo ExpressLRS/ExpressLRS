@@ -18,7 +18,11 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
 #elif defined(PLATFORM_STM32)
+#ifdef USE_DMA_SERIAL
+SerialPort& CRSFHandset::Port(getSerialPort(1));
+#else
 HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+#endif
 #if defined(STM32F3) || defined(STM32F3xx)
 #include "stm32f3xx_hal.h"
 #include "stm32f3xx_hal_gpio.h"
