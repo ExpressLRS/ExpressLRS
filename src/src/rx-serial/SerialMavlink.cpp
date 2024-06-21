@@ -5,6 +5,8 @@
 #include "common.h"
 #include "CRSF.h"
 
+#define MIN_PACKET_INTERVAL 4 // Only send RC at a max rate of 250Hz so the TX line is not saturated with RC override packets.
+
 // Variables / constants for Mavlink //
 FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
 FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
@@ -91,8 +93,8 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint3
     mavlink_msg_rc_channels_override_encode(this_system_id, this_component_id, &msg, &rc_override);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
     _outputPort->write(buf, len);
-    
-    return DURATION_IMMEDIATELY;
+
+    return MIN_PACKET_INTERVAL;
 }
 
 int SerialMavlink::getMaxSerialReadSize()
