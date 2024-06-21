@@ -406,6 +406,10 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
 
+  // InitialFreq has been set, so lets also reset the FHSS Idx and Nonce.
+  FHSSsetCurrIndex(0);
+  OtaNonce = 0;
+
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
   TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
