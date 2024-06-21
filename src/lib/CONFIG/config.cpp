@@ -1099,6 +1099,11 @@ RxConfig::SetDefaults(bool commit)
 
     m_config.serial1Protocol = PROTOCOL_SERIAL1_NONE;
 
+    for(u_int8_t i = 0; i < 16; i++)
+    {
+        m_config.serial1ChannelMap[i] = i;
+    }
+
     if (commit)
     {
         // Prevent rebinding to the flashed UID on first boot
@@ -1185,13 +1190,22 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
 
 void RxConfig::SetSerialChannelMap(uint8_t ch, uint8_t map)
 {
-    if (ch < 16 && m_config.serialChannelMap[ch] != map)
+    if (ch < 16 && map < 18 && m_config.serialChannelMap[ch] != map)
     {
         m_config.serialChannelMap[ch] = map;
         m_modified = true;
     }
 }
 
+
+void RxConfig::SetSerial1ChannelMap(uint8_t ch, uint8_t map)
+{
+    if (ch < 16 && map < 18 && m_config.serial1ChannelMap[ch] != map)
+    {
+        m_config.serial1ChannelMap[ch] = map;
+        m_modified = true;
+    }
+}
 
 void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
 {

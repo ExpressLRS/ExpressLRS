@@ -398,16 +398,17 @@ function updateConfig(data, options) {
     }
   }
   
-  const htmlFields = [`<table class="serialmappnl mui-table"><tbody><tr><th class="fixed-column">Output</th><th>Input</th></tr>`];
-  data['serial-channel-map'].forEach((item, index) => {
-
-    const serMapInputSelect = enumSelectGenerate(`sermap_${index}_ch`, Number(item),
-      ['ch1', 'ch2', 'ch3', 'ch4',
-        'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
-        'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
-        'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);  
-    htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td><td>${serMapInputSelect}</td></tr>`);
-  });
+  const htmlFields = [`<table class="serialmappnl mui-table"><tbody><tr><th class="fixed-column">Output</th><th>Input for Serial</th><th>Input for Serial 2</th></tr>`];
+  //data['serial-channel-map'].forEach((item, index) => {
+  for(let index=0; index<16; index++){
+    const serOptions = ['ch1', 'ch2', 'ch3', 'ch4',
+      'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
+      'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
+      'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)', 'LQ', 'RSSIdBm'];
+    const serMapInputSelect = enumSelectGenerate(`sermap_${index}_ch`, Number(data['serial-channel-map'][index]), serOptions);  
+    const ser1MapInputSelect = enumSelectGenerate(`ser1map_${index}_ch`, Number(data['serial1-channel-map'][index]), serOptions);
+    htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td><td>${serMapInputSelect}</td><td>${ser1MapInputSelect}</td></tr>`);
+  };
   htmlFields.push('</tbody></table>');
   const grp = document.createElement('DIV');
   grp.setAttribute('class', 'group');
@@ -768,9 +769,13 @@ _('connect').addEventListener('click', callback('Connect to Home Network', 'An e
 if (_('config')) {
   _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
-        serChanMap = []
+        let serChanMap = []
         for(let i = 0; i < 16; i++) {
           serChanMap.push(+_(`sermap_${i}_ch`).value);
+        }
+        let ser1ChanMap = []
+        for(let i = 0; i < 16; i++) {
+          ser1ChanMap.push(+_(`ser1map_${i}_ch`).value);
         }
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({
@@ -778,6 +783,7 @@ if (_('config')) {
           "serial-protocol": +_('serial-protocol').value,
           "serial-channel-map": serChanMap,
           "serial1-protocol": +_('serial1-protocol').value,
+          "serial1-channel-map": ser1ChanMap,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
