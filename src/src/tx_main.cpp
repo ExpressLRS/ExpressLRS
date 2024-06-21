@@ -57,9 +57,10 @@ char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
+#define syncSpamAmountAfterRateChange 10
 volatile uint8_t syncSpamCounter = 0;
+volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
@@ -308,6 +309,14 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
   if (syncSpamCounter)
     --syncSpamCounter;
+
+  if (syncSpamCounterAfterRateChange && Index == ExpressLRS_currAirRate_Modparams->index)
+  {
+    --syncSpamCounterAfterRateChange;
+    if (connectionState == connected) // We are connected again after a rate change.  No need to keep spaming sync.
+      syncSpamCounterAfterRateChange = 0;
+  }
+
   SyncPacketLastSent = millis();
 
   expresslrs_tlm_ratio_e newTlmRatio = UpdateTlmRatioEffective();
@@ -396,6 +405,10 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
+
+  // InitialFreq has been set, so lets also reset the FHSS Idx and Nonce.
+  FHSSsetCurrIndex(0);
+  OtaNonce = 0;
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -505,10 +518,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     (isTlmDisarmed && handset->IsArmed() && (ExpressLRS_currTlmDenom == 1));
 
   uint8_t NonceFHSSresult = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
 
   // Sync spam only happens on slot 1 and 2 and can't be disabled
-  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
+  if ((syncSpamCounter || (syncSpamCounterAfterRateChange && FHSSonSyncChannel())) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
@@ -752,6 +764,7 @@ void ModelUpdateReq()
   if (config.SetModelId(CRSFHandset::getModelID()))
   {
     syncSpamCounter = syncSpamAmount;
+    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
     ModelUpdatePending = true;
   }
 
@@ -908,6 +921,7 @@ void SetSyncSpam()
   if (config.IsModified())
   {
     syncSpamCounter = syncSpamAmount;
+    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
   }
 }
 
