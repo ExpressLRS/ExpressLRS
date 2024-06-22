@@ -142,7 +142,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
-    DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
     
     bool isSubGHz = regfreq < 1000000000;
@@ -172,17 +171,20 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     if (useFSK)
     {
+    // DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
         uint8_t bwf = sf;
         uint32_t fdev = (uint32_t)cr * 1000;
         ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
-        SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
+        SetPacketParamsFSK(PreambleLength, 14, radioNumber);
+        // SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
 
         SetFSKSyncWord(fskSyncWord1, fskSyncWord2, radioNumber);
     }
     else
     {
+    // DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
     #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
@@ -545,6 +547,16 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
     TXdoneCallback();
 }
 
+static uint8_t hammingEncode[16]  = {0x00, 0x71, 0x62, 0x13, 0x54, 0x25, 0x36, 0x47, 0x38, 0x49, 0x5A, 0x2B, 0x6C, 0x1D, 0x0E, 0x7F};
+static uint8_t hammingDecode[128] = {0x00, 0x00, 0x00, 0x03, 0x00, 0x05, 0x0E, 0x07, 0x00, 0x09, 0x0E, 0x0B, 0x0E, 0x0D, 0x0E, 0x0E,
+                                     0x00, 0x03, 0x03, 0x03, 0x04, 0x0D, 0x06, 0x03, 0x08, 0x0D, 0x0A, 0x03, 0x0D, 0x0D, 0x0E, 0x0D,
+                                     0x00, 0x05, 0x02, 0x0B, 0x05, 0x05, 0x06, 0x05, 0x08, 0x0B, 0x0B, 0x0B, 0x0C, 0x05, 0x0E, 0x0B,
+                                     0x08, 0x01, 0x06, 0x03, 0x06, 0x05, 0x06, 0x06, 0x08, 0x08, 0x08, 0x0B, 0x08, 0x0D, 0x06, 0x0F,
+                                     0x00, 0x09, 0x02, 0x07, 0x04, 0x07, 0x07, 0x07, 0x09, 0x09, 0x0A, 0x09, 0x0C, 0x09, 0x0E, 0x07,
+                                     0x04, 0x01, 0x0A, 0x03, 0x04, 0x04, 0x04, 0x07, 0x0A, 0x09, 0x0A, 0x0A, 0x04, 0x0D, 0x0A, 0x0F,
+                                     0x02, 0x01, 0x02, 0x02, 0x0C, 0x05, 0x02, 0x07, 0x0C, 0x09, 0x02, 0x0B, 0x0C, 0x0C, 0x0C, 0x0F,
+                                     0x01, 0x01, 0x02, 0x01, 0x04, 0x01, 0x06, 0x0F, 0x08, 0x01, 0x0A, 0x0F, 0x0C, 0x0F, 0x0F, 0x0F};
+
 void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
@@ -590,8 +602,27 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         }
     }
 
+// ~~~~~~~~~~~ Hamming ~~~~~~~~~~ 
+    uint8_t encodedBuffer[16] = {0};
+    for (uint8_t i = 0; i < size; i++)
+    {
+        encodedBuffer[i * 2 + 0] = hammingEncode[data[i] & 0x0F];  // LSB nibble
+        encodedBuffer[i * 2 + 1] = hammingEncode[data[i] >> 4];    // MSB nibble
+    }
+// ~~~~~~~~ Interleaving ~~~~~~~~ 
+    uint8_t interleaveBuffer[14] = {0};
+    for (uint8_t i = 0; i < 7; i++)
+    {
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            interleaveBuffer[i * 2 + 0] |= ((encodedBuffer[j + 0] >> i) & 0x01) << j; 
+            interleaveBuffer[i * 2 + 1] |= ((encodedBuffer[j + 8] >> i) & 0x01) << j; 
+        }
+    }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
     // 3.7.4 WriteBuffer8
-    hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, interleaveBuffer, 14, radioNumber);
 
     SetMode(LR1121_MODE_TX, radioNumber);
 
@@ -619,7 +650,28 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radioNumber);
     hal.ReadCommand(payloadbuf, sizeof(payloadbuf), radioNumber);
 
-    memcpy(RXdataBuffer, payloadbuf + 1, PayloadLengthRX);
+// ~~~~~~~~ Interleaving ~~~~~~~~ 
+    uint8_t encodedBuffer[16] = {0};
+    uint8_t interleaveBuffer[14] = {0};
+    memcpy(interleaveBuffer, payloadbuf + 1, PayloadLengthRX);
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        for (uint8_t j = 0; j < 7; j++)
+        {
+            encodedBuffer[i + 0] |= ((interleaveBuffer[j * 2 + 0] >> i) & 0x01) << j; 
+            encodedBuffer[i + 8] |= ((interleaveBuffer[j * 2 + 1] >> i) & 0x01) << j; 
+        }
+    }
+// ~~~~~~~~~~~ Hamming ~~~~~~~~~~
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        RXdataBuffer[i] =  hammingDecode[encodedBuffer[i * 2 + 0]];         // LSB nibble
+        RXdataBuffer[i] |= hammingDecode[encodedBuffer[i * 2 + 1]] << 4;    // MSB nibble
+    }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+    // memcpy(RXdataBuffer, payloadbuf + 1, PayloadLengthRX);
 
     return RXdoneCallback(SX12XX_RX_OK);
 }
@@ -678,8 +730,28 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
             hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
 
+// ~~~~~~~~ Interleaving ~~~~~~~~ 
+    uint8_t encodedBuffer[16] = {0};
+    uint8_t interleaveBuffer[14] = {0};
+    memcpy(interleaveBuffer, RXdataBuffer_second + 1, PayloadLengthRX);
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        for (uint8_t j = 0; j < 7; j++)
+        {
+            encodedBuffer[i + 0] |= ((interleaveBuffer[j * 2 + 0] >> i) & 0x01) << j; 
+            encodedBuffer[i + 8] |= ((interleaveBuffer[j * 2 + 1] >> i) & 0x01) << j; 
+        }
+    }
+// ~~~~~~~~~~~ Hamming ~~~~~~~~~~
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        RXdataBuffer_second[i] =  hammingDecode[encodedBuffer[i * 2 + 0]];         // LSB nibble
+        RXdataBuffer_second[i] |= hammingDecode[encodedBuffer[i * 2 + 1]] << 4;    // MSB nibble
+    }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
             // if the second packet is same to the first, it's valid
-            if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
+            if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
             {
                 isSecondRadioGotData = true;
             }
