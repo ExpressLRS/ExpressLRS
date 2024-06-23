@@ -1514,8 +1514,8 @@ void loop()
           uint8_t count = CRSFinBuffer[1];
           // Convert to CRSF telemetry where we can
           convert_mavlink_to_crsf_telem(CRSFinBuffer, count, handset);
-          // If we have a backpack 
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+          // If we have a backpack
           if (TxUSB != TxBackpack)
           {
             TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
