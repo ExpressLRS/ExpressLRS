@@ -3,14 +3,8 @@
 
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
 
-//#if defined(TARGET_RX)
-//    #error "devThermal not supported on RX"
-//#endif
-
-#include "targets.h"
-#include "logging.h"
-
 #include "config.h"
+#include "logging.h"
 
 #if defined(TARGET_RX)
 extern RxConfig config;
