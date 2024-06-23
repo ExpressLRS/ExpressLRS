@@ -307,6 +307,12 @@ typedef struct crsf_sensor_baro_vario_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_vario_t;
 
+// CRSF_FRAMETYPE_VARIO
+typedef struct crsf_sensor_vario_s
+{
+    int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
+} PACKED crsf_sensor_vario_t;
+
 // CRSF_FRAMETYPE_GPS
 typedef struct crsf_sensor_gps_s
 {
