@@ -652,7 +652,7 @@ void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
     // to the handset and not be broken across time-slots as there can be issues with spurious glitches on the s.port pin
     // which switching direction. It also appears that the absolute minimum packet size should be 15 bytes as this will fit
     // the LinkStatistics and OpenTX sync packets.
-    maxPeriodBytes = std::min((int)UARTrequestedBaud / 10 / (1000000/RequestedRCpacketInterval) * 87 / 100, HANDSET_TELEMETRY_FIFO_SIZE);
+    maxPeriodBytes = std::min((int)(UARTrequestedBaud / 10 / (1000000/RequestedRCpacketInterval) * 87 / 100), HANDSET_TELEMETRY_FIFO_SIZE);
     // Maximum number of bytes we can send in a single window, half the period bytes, upto one full CRSF packet.
     maxPacketBytes = std::min(maxPeriodBytes - max(maxPeriodBytes / 2, LUA_CHUNK_QUERY_SIZE), CRSF_MAX_PACKET_LEN);
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
