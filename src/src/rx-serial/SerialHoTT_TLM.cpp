@@ -3,6 +3,7 @@
 #include "SerialHoTT_TLM.h"
 #include "FIFO.h"
 #include "telemetry.h"
+#include "common.h"
 
 #define NOT_FOUND 0xff          // no device found indicator
 
@@ -73,6 +74,12 @@ void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
 void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t now = millis();
+
+    if(connectionState != connected)
+    {
+        // suspend device discovery timer until receiver is connected
+        discoveryTimerStart = now;      
+    }
 
     // device discovery timer
     if (discoveryMode && (now - discoveryTimerStart >= DISCOVERY_TIMEOUT))
