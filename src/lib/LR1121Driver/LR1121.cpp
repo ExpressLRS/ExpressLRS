@@ -303,7 +303,10 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     if (pwrForceUpdate)
     {
         WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
-        WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        {
+            WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        }
         pwrForceUpdate = false;
     }
 }
@@ -349,10 +352,7 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
     }
 
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), radioNumber);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
     hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
-    }
 }
 
 void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
