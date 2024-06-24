@@ -3,9 +3,9 @@
 #include "rxtx_devLua.h"
 #include "CRSF.h"
 #include "CRSFHandset.h"
-#include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
+#include "helpers.h"
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
 
@@ -14,6 +14,22 @@
                                ";AUX5" LUASYM_ARROW_UP ";AUX5" LUASYM_ARROW_DN ";AUX6" LUASYM_ARROW_UP ";AUX6" LUASYM_ARROW_DN \
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
                                ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
+
+#if defined(RADIO_SX127X)
+#define STR_LUA_PACKETRATES \
+    "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
+#elif defined(RADIO_LR1121)
+#define STR_LUA_PACKETRATES \
+    "50Hz 2.4G;100Hz Full 2.4G;150Hz 2.4G;250Hz 2.4G;333Hz Full 2.4G;500Hz 2.4G;" \
+    "50Hz Low Band;100Hz Low Band;100Hz Full Low Band;200Hz Low Band;200Hz Full Low Band;250Hz Low Band;" \
+    "X100Hz Full(-112dBm);X150Hz(-112dBm)"
+#elif defined(RADIO_SX128X)
+#define STR_LUA_PACKETRATES \
+    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)"
+#else
+#error Invalid radio configuration!
+#endif
 
 extern char backpackVersion[];
 
@@ -32,13 +48,14 @@ static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
+static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-    STR_LUA_PACKETRATES,
+    luastrPacketRates,
     STR_EMPTYSPACE
 };
 
@@ -559,6 +576,39 @@ void luadevUpdateFolderNames()
   luadevUpdateBackpackOpts();
 }
 
+static void recalculatePacketRateOptions(int minInterval)
+{
+    const char *allRates = STR_LUA_PACKETRATES;
+    const char *pos = allRates;
+    luastrPacketRates[0] = 0;
+    for (int i=0 ; i < RATE_MAX ; i++)
+    {
+        uint8_t rate = i;
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+        rate = (rate + 4) % RATE_MAX;
+#endif
+        rate = RATE_MAX - 1 - rate;
+        bool rateAllowed = get_elrs_airRateConfig(rate)->interval >= minInterval;
+        const char *semi = strchrnul(pos, ';');
+        if (rateAllowed)
+        {
+            strncat(luastrPacketRates, pos, semi - pos);
+        }
+        pos = semi;
+        if (*semi == ';')
+        {
+            strcat(luastrPacketRates, ";");
+            pos = semi+1;
+        }
+    }
+
+    // trim off trailing semicolons (assumes luastrPacketRates has at least 1 non-semicolon)
+    for (auto lastPos = strlen(luastrPacketRates)-1; luastrPacketRates[lastPos] == ';'; lastPos--)
+    {
+        luastrPacketRates[lastPos] = '\0';
+    }
+}
+
 uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
 {
   // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
@@ -800,6 +850,7 @@ static int event()
     return DURATION_NEVER;
   }
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+  recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());

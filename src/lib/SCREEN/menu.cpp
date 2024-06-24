@@ -208,12 +208,26 @@ static void incrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + 1) % values_count + values_min;
+    if (state_machine.getParentState() == STATE_PACKET)
+    {
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval())
+        {
+            values_index = (values_index - values_min + 1) % values_count + values_min;
+        }
+    }
 }
 
 static void decrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
+    if (state_machine.getParentState() == STATE_PACKET)
+    {
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval())
+        {
+            values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
+        }
+    }
 }
 
 static void saveValueIndex(bool init)
