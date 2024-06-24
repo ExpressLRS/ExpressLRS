@@ -431,6 +431,23 @@ TxConfig::SetAntennaMode(uint8_t txAntenna)
 }
 
 void
+TxConfig::SetLinkMode(uint8_t linkMode)
+{
+    if (GetLinkMode() != linkMode)
+    {
+        m_model->linkMode = linkMode;
+
+        if (linkMode == TX_MAVLINK_MODE)
+        {
+            m_model->tlm = TLM_RATIO_1_2;
+            m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
+            m_config.backpackTlmEnabled = false; // Disable backpack telemetry since it'd be MSP mixed with MAVLink
+        }
+        m_modified |= MODEL_CHANGED | MAIN_CHANGED;
+    }
+}
+
+void
 TxConfig::SetModelMatch(bool modelMatch)
 {
     if (GetModelMatch() != modelMatch)
@@ -689,6 +706,10 @@ TxConfig::SetModelId(uint8_t modelId)
 
 #if defined(TARGET_RX)
 
+#if defined(PLATFORM_ESP8266)
+#include "flash_hal.h"
+#endif
+
 RxConfig::RxConfig()
 {
 }
@@ -918,9 +939,38 @@ bool  RxConfig::GetIsBound() const
     return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
 }
 
+#if defined(PLATFORM_ESP8266)
+#define EMPTY_SECTOR ((FS_start - 0x1000 - 0x40200000) / SPI_FLASH_SEC_SIZE) // empty sector before FS area start
+static bool erase_power_on_count = false;
+static int realPowerOnCounter = -1;
+uint8_t
+RxConfig::GetPowerOnCounter() const
+{
+    if (realPowerOnCounter == -1) {
+        byte zeros[16];
+        ESP.flashRead(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE, zeros, sizeof(zeros));
+        realPowerOnCounter = sizeof(zeros);
+        for (int i=0 ; i<sizeof(zeros) ; i++) {
+            if (zeros[i] != 0) {
+                realPowerOnCounter = i;
+                break;
+            }
+        }
+    }
+    return realPowerOnCounter;
+}
+#endif
+
 void
 RxConfig::Commit()
 {
+#if defined(PLATFORM_ESP8266)
+    if (erase_power_on_count)
+    {
+        ESP.flashEraseSector(EMPTY_SECTOR);
+        erase_power_on_count = false;
+    }
+#endif
     if (!m_modified)
     {
         // No changes
@@ -948,11 +998,25 @@ RxConfig::SetUID(uint8_t* uid)
 void
 RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 {
+#if defined(PLATFORM_ESP8266)
+    realPowerOnCounter = powerOnCounter;
+    if (powerOnCounter == 0)
+    {
+        erase_power_on_count = true;
+        m_modified = true;
+    }
+    else
+    {
+        byte zeros[16] = {0};
+        ESP.flashWrite(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE, zeros, std::min((size_t)powerOnCounter, sizeof(zeros)));
+    }
+#else
     if (m_config.powerOnCounter != powerOnCounter)
     {
         m_config.powerOnCounter = powerOnCounter;
         m_modified = true;
     }
+#endif
 }
 
 void

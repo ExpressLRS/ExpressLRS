@@ -42,3 +42,16 @@ class NullStream : public Stream
         return size;
     }
 };
+
+#if defined(PLATFORM_STM32)
+inline const char *strchrnul(const char *pos, const char find)
+{
+    const char *semi = strchr(pos, find);
+    if (semi == nullptr)
+    {
+        semi = pos + strlen(pos);
+    }
+    return semi;
+}
+#endif
+

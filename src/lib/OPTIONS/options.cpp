@@ -72,6 +72,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .flash_discriminator = 0,
 #endif
+#if defined(FAN_MIN_RUNTIME)
+    .fan_min_runtime = FAN_MIN_RUNTIME,
+#else
+    .fan_min_runtime = 30,
+#endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
         .wifi_auto_on_interval = AUTO_WIFI_ON_INTERVAL * 1000,
@@ -98,6 +103,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 115200,
 #elif defined(USE_HOTT_TLM_PROTOCOL)
     .uart_baud = 19200,
+#elif defined(USE_MAVLINK_PROTOCOL)
+    .uart_baud = 460800,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -121,11 +128,6 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
     .tlm_report_interval = 240U,
-#endif
-#if defined(FAN_MIN_RUNTIME)
-    .fan_min_runtime = FAN_MIN_RUNTIME,
-#else
-    .fan_min_runtime = 30,
 #endif
     ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
