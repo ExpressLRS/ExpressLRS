@@ -552,7 +552,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
-        transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+        transmittingRadio = rssiDBM > rssiDBM2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
 #endif
 
