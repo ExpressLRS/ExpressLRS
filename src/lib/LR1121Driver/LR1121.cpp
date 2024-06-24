@@ -178,21 +178,37 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetFrequencyHz(regfreq, radioNumber);
 
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+    CommitOutputPower();
+    
+    ClearIrqStatus(SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
-    uint8_t switchbuf[8];
-    switchbuf[0] = 0b00001111; // RfswEnable
-    switchbuf[1] = 0b00000000; // RfSwStbyCfg
-    switchbuf[2] = 0b00000100; // RfSwRxCfg
-    switchbuf[3] = 0b00001000; // RfSwTxCfg
-    switchbuf[4] = 0b00001000; // RfSwTxHPCfg
-    switchbuf[5] = 0b00000010; // RfSwTxHfCfg
-    switchbuf[6] = 0;          // 
-    switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
-    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);  
+    // SKY13588-460LF - Development boards
+    uint8_t buf[8];
+    buf[0] = 0b00000011; // RfswEnable
+    buf[1] = 0;          // RfSwStbyCfg
+    buf[2] = 0b00000001; // RfSwRxCfg - DIO5 HIGH, DIO6 LOW
+    buf[3] = 0b00000011; // RfSwTxCfg
+    buf[4] = 0b00000010; // RfSwTxHPCfg
+    buf[5] = 0;          // RfSwTxHfCfg
+    buf[6] = 0;          // 
+    buf[7] = 0;          // 
+    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, buf, sizeof(buf), SX12XX_Radio_All);  
+
+    // 4.2.1 SetDioAsRfSwitch
+    // uint8_t switchbuf[8];
+    // switchbuf[0] = 0b00001111; // RfswEnable
+    // switchbuf[1] = 0b00000000; // RfSwStbyCfg
+    // switchbuf[2] = 0b00000100; // RfSwRxCfg
+    // switchbuf[3] = 0b00001000; // RfSwTxCfg
+    // switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+    // switchbuf[5] = 0b00000010; // RfSwTxHfCfg
+    // switchbuf[6] = 0;          // 
+    // switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    // hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);  
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
@@ -418,7 +434,7 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     buf[1] = PreambleLength; // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
     buf[2] = HeaderType; // HeaderType defines if the header is explicit or implicit
     buf[3] = PayloadLength; // PayloadLen defines the size of the payload
-    buf[4] = LR11XX_RADIO_LORA_CRC_OFF;
+    buf[4] = LR11XX_RADIO_LORA_CRC_ON;
     buf[5] = InvertIQ;
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 }
@@ -731,16 +747,26 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
-        if (instance->RXnbISR(radioNumber))
+        if (irqStatus & LR1121_IRQ_CRC_ERR)
         {
-            instance->ignoreSecondIRQ = true;  
+            digitalWrite(21, HIGH);
+            digitalWrite(21, LOW);
         }
-#if defined(DEBUG_RCVR_SIGNAL_STATS)
-        else
-        {
-            instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
-        }
-#endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
-    }
+        
+        uint8_t status[4];
+        hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, radioNumber);
+        hal.ReadCommand(status, sizeof(status), radioNumber);
+
+//         if (instance->RXnbISR(radioNumber))
+//         {
+//             instance->ignoreSecondIRQ = true;  
+//         }
+// #if defined(DEBUG_RCVR_SIGNAL_STATS)
+//         else
+//         {
+//             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
+//         }
+// #endif
+//         instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
+    }    
 }

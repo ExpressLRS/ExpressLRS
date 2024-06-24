@@ -379,20 +379,20 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            // Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            // Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
         }
         else
         {
             // Write radio1 first. This optimises the SPI traffic order.
             uint32_t freqRadio2 = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
+            // Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+            // Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
         }
     }
     else
     {
-        Radio.SetFrequencyReg(FHSSgetNextFreq());
+        // Radio.SetFrequencyReg(FHSSgetNextFreq());
     }
 
 #if defined(RADIO_SX127X)
@@ -1814,6 +1814,8 @@ void resetConfigAndReboot()
 
 void setup()
 {
+    pinMode(21, OUTPUT);
+    digitalWrite(21, LOW);
     #if defined(TARGET_UNIFIED_RX)
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
@@ -1958,7 +1960,7 @@ void loop()
         LastSyncPacket = now;
     }
 
-    cycleRfMode(now);
+    // cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR
     if ((connectionState == connected) && ((int32_t)ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs < (int32_t)(now - localLastValidPacket))) // check if we lost conn.

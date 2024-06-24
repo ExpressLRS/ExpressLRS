@@ -414,18 +414,18 @@ void ICACHE_RAM_ATTR HandleFHSS()
         if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
         {
             uint32_t freqRadio = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
-            Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1);
+            // Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            // Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1);
         }
         else
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            // Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            // Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
         }
     }
     else
     {
-      Radio.SetFrequencyReg(FHSSgetNextFreq());
+    //   Radio.SetFrequencyReg(FHSSgetNextFreq());
     }
   }
 }
@@ -1378,6 +1378,8 @@ void setup()
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   }
+
+  UARTconnected();
 }
 
 void loop()
