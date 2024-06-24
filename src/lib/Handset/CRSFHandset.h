@@ -23,7 +23,7 @@ public:
 #ifdef CRSF_TX_MODULE
     bool IsArmed() override { return CRSF_to_BIT(ChannelData[4]); } // AUX1
     void handleInput() override;
-    void handleOutput();
+    void handleOutput(int receivedBytes);
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
@@ -47,6 +47,8 @@ public:
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
+    static bool isHalfDuplex() { return halfDuplex; }
+    int getMinPacketInterval() const override;
 
 private:
     inBuffer_U inBuffer = {};
@@ -59,9 +61,10 @@ private:
     uint32_t OpenTXsyncLastSent = 0;
 
     /// UART Handling ///
-    uint8_t SerialInPacketLen = 0; // length of the CRSF packet as measured
     uint8_t SerialInPacketPtr = 0; // index where we are reading/writing
     bool CRSFframeActive = false;  // since we get a copy of the serial data use this flag to know when to ignore it
+    static bool halfDuplex;
+    bool transmitting = false;
     uint32_t GoodPktsCount = 0;
     uint32_t BadPktsCount = 0;
     uint32_t UARTwdtLastChecked = 0;
