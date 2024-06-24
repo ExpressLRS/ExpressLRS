@@ -26,6 +26,7 @@ typedef struct _options {
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
     uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
                                         // the SPIFSS settings are obsolete and the flashed settings should be used in preference
+    uint32_t    fan_min_runtime;
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
@@ -40,7 +41,6 @@ typedef struct _options {
 #endif
 #if defined(TARGET_TX) || defined(UNIT_TEST)
     uint32_t    tlm_report_interval;
-    uint32_t    fan_min_runtime;
     bool        _unused1:1;
     bool        unlock_higher_power:1;
     bool        is_airport:1;
