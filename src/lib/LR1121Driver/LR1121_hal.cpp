@@ -148,30 +148,30 @@ void ICACHE_RAM_ATTR LR1121Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12X
 
 bool ICACHE_RAM_ATTR LR1121Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
 {
-    constexpr uint32_t wtimeoutUS = 1000U;
+    constexpr uint32_t wtimeoutUS = 150U;
     uint32_t startTime = 0;
 
     while (true)
     {
-        if (radioNumber == SX12XX_Radio_1)
-        {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-        }
-        else if (radioNumber == SX12XX_Radio_2)
-        {
-            if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-        }
-        else if (radioNumber == SX12XX_Radio_All)
-        {
-            if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
-            {
-                if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
-            }
-            else
-            {
-                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
-            }
-        }
+        // if (radioNumber == SX12XX_Radio_1)
+        // {
+        //     if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+        // }
+        // else if (radioNumber == SX12XX_Radio_2)
+        // {
+        //     if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+        // }
+        // else if (radioNumber == SX12XX_Radio_All)
+        // {
+        //     if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
+        //     {
+        //         if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+        //     }
+        //     else
+        //     {
+        //         if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+        //     }
+        // }
         // Use this time to call micros().
         uint32_t now = micros();
         if (startTime == 0) startTime = now;
