@@ -59,7 +59,7 @@ SerialPort::SerialPort(const USARTDef* def)
   usartDef = def;
 }
 
-void SerialPort::init(const SerialPortParams* params)
+void SerialPort::init(const SerialPortParams* params, bool invert)
 {
   // Enable USART clock
   if (usartDef->usart == USART1)
@@ -97,7 +97,7 @@ void SerialPort::init(const SerialPortParams* params)
   gpioInitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   gpioInitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   gpioInitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  gpioInitStruct.Pull = LL_GPIO_PULL_UP;
+  gpioInitStruct.Pull = invert ? LL_GPIO_PULL_DOWN : LL_GPIO_PULL_UP;
   gpioInitStruct.Alternate = usartDef->alternate;
   LL_GPIO_Init(usartDef->gpioPort, &gpioInitStruct);
 
@@ -107,16 +107,23 @@ void SerialPort::init(const SerialPortParams* params)
     .DataWidth = params->wordLength == WordLength_9 ? LL_USART_DATAWIDTH_9B : LL_USART_DATAWIDTH_8B,
     .StopBits = params->stopBits == StopBits_Two ? LL_USART_STOPBITS_2 : (params->stopBits == StopBits_OneAndHalf ? LL_USART_STOPBITS_1_5 : LL_USART_STOPBITS_1),
     .Parity = params->parity == Parity_Odd ? LL_USART_PARITY_ODD : (params->parity == Parity_Even ? LL_USART_PARITY_EVEN : LL_USART_PARITY_NONE),
-    .TransferDirection = LL_USART_DIRECTION_TX_RX,
+    .TransferDirection = halfDuplexMode ? LL_USART_DIRECTION_RX : LL_USART_DIRECTION_TX_RX,  // default for RX mode for half duplex
     .HardwareFlowControl = LL_USART_HWCONTROL_NONE,
     .OverSampling = LL_USART_OVERSAMPLING_8
   };
   LL_USART_DeInit(usartDef->usart);
   LL_USART_Init(usartDef->usart, &usartInit);
-
-  LL_USART_DisableDMADeactOnRxErr(usartDef->usart);
-  LL_USART_DisableHalfDuplex(usartDef->usart);
-  LL_USART_DisableRxTimeout(usartDef->usart);
+  
+  if (halfDuplexMode)
+  {
+    LL_USART_EnableHalfDuplex(usartDef->usart);
+  }
+  
+  if (invert)
+  {
+    LL_USART_SetRXPinLevel(usartDef->usart, LL_USART_RXPIN_LEVEL_INVERTED);
+    LL_USART_SetTXPinLevel(usartDef->usart, LL_USART_TXPIN_LEVEL_INVERTED);
+  }
   
   // Enable USART
   LL_USART_Enable(usartDef->usart);
@@ -186,6 +193,11 @@ int SerialPort::peek()
   }
 }
 
+void SerialPort::flush()
+{
+  while (LL_DMA_IsEnabledIT_TC(usartDef->txDMA, usartDef->txDMAChannel));
+}
+
 void SerialPort::end()
 {
   LL_DMA_DisableChannel(usartDef->rxDMA, usartDef->rxDMAChannel);
@@ -197,18 +209,34 @@ void SerialPort::end()
 
 void SerialPort::begin(int baud)
 {
+  begin(baud, false);
+}
+
+void SerialPort::begin(int baud, bool invert)
+{
   SerialPortParams params = {
     .baud = (uint32_t) baud,
     .parity = Parity_None,
     .wordLength = WordLength_8,
     .stopBits = StopBits_One,
   };
-  init(&params);
+  init(&params, invert);
+}
+
+void SerialPort::setHalfDuplex()
+{
+  halfDuplexMode = true;
 }
 
 void SerialPort::enableHalfDuplexRx()
 {
-
+  if (halfDuplexMode)
+  {
+    // In half-duplex mode we have to wait for all TX characters to
+    // be transmitted before we can receive data.
+    flush();
+    LL_USART_SetTransferDirection(usartDef->usart, LL_USART_DIRECTION_RX);
+  }
 }
 
 int SerialPort::availableForWrite()
@@ -234,7 +262,7 @@ size_t SerialPort::write(uint8_t byte)
 }
 
 size_t SerialPort::write(const uint8_t* data, size_t len)
-{
+{ 
   size_t count = 0;
   while (len > 0)
   {
@@ -285,6 +313,11 @@ void SerialPort::activateTxDMA()
 
   if (size > 0)
   {
+    if (halfDuplexMode)
+    {
+      LL_USART_SetTransferDirection(usartDef->usart, LL_USART_DIRECTION_TX);
+    }
+
     // Init DMA
     LL_DMA_InitTypeDef dmaInit = {
       .PeriphOrM2MSrcAddress = LL_USART_DMA_GetRegAddr(usartDef->usart, LL_USART_DMA_REG_DATA_TRANSMIT),

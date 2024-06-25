@@ -8,6 +8,9 @@
 #define TARGET_EEPROM_PAGE_SIZE 64
 #define BACKPACK_LOGGING_BAUD   400000
 
+#define SERIAL_USE_DMA
+#define SERIAL_INSTANCE         1
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_DIO1           PB10

@@ -75,13 +75,15 @@ class SerialPort: public Stream
   public:
 
   SerialPort(const USARTDef* def);
-  void init(const SerialPortParams* params);
+  void init(const SerialPortParams* params, bool invert);
   int available();
   int read();
   int peek();
-  void flush() {};
+  void flush();
   void end();
   void begin(int baud);
+  void begin(int baud, bool invert);
+  void setHalfDuplex(void);
   void enableHalfDuplexRx();
   int availableForWrite();
 
@@ -112,6 +114,7 @@ class SerialPort: public Stream
   uint16_t txHead = 0;
   uint16_t txTail = 0;
   uint16_t txDMAWriteSize = 0;
+  bool halfDuplexMode = false;
 
 };
 

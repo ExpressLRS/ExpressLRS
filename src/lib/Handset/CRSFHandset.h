@@ -4,7 +4,7 @@
 #include "handset.h"
 #include "crsf_protocol.h"
 #ifndef TARGET_NATIVE
-#ifdef USE_DMA_SERIAL
+#ifdef SERIAL_USE_DMA
 #include "SerialPortDriver.h"
 #else
 #include "HardwareSerial.h"
@@ -29,7 +29,7 @@ public:
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
-#ifdef USE_DMA_SERIAL
+#ifdef SERIAL_USE_DMA
     static SerialPort& Port;
 #else
     static HardwareSerial Port;

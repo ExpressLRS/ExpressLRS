@@ -8,6 +8,11 @@
 #define TARGET_EEPROM_PAGE_SIZE 64
 #define BACKPACK_LOGGING_BAUD   400000
 
+#define SERIAL_USE_DMA
+#define SERIAL_INSTANCE         0
+#define SERIAL_HALF_DUPLEX
+#define SERIAL_INVERT_SIGNAL
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_DIO1           PB10
@@ -21,24 +26,24 @@
 #define GPIO_PIN_TX_ENABLE      PA4
 #define GPIO_PIN_PA_ENABLE      PA5 
 #define GPIO_PIN_BUSY           PB6
-#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 Ext Module connector IRM303 PA3
-#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 Ext Module connector IRM303 PA2
-#define GPIO_PIN_LED_RED        PB7 // Red LED (active low)
+#define GPIO_PIN_RCSIGNAL_RX    PA10 // UART1 Ext Module connector FRM303 PA10
+#define GPIO_PIN_RCSIGNAL_TX    PA9  // UART1 Ext Module connector FRM303 PA9
+#define GPIO_PIN_LED_RED        PB7  // Red LED (active low)
 #define GPIO_LED_RED_INVERTED   1
-#define GPIO_PIN_LED_GREEN      PB8 // Green LED (active low)
+#define GPIO_PIN_LED_GREEN      PB8  // Green LED (active low)
 #define GPIO_LED_GREEN_INVERTED 1
-#define GPIO_PIN_LED_BLUE       PB9 // Blue LED (active low)
+#define GPIO_PIN_LED_BLUE       PB9  // Blue LED (active low)
 #define GPIO_LED_BLUE_INVERTED  1
 #define GPIO_PIN_BUZZER         PB11
 //#define GPIO_PIN_FIVE_WAY_INPUT1 PA7 // Useless without LCD
 
-#define GPIO_PIN_DEBUG_RX       PA10 // UART1 Data Out IRM301
-#define GPIO_PIN_DEBUG_TX       PA9 // UART1 Data Out IRM301
+#define GPIO_PIN_DEBUG_RX       PA3  // UART2 Data Out FRM303
+#define GPIO_PIN_DEBUG_TX       PA2  // UART2 Data Out FRM303
 
 // Power output
 #define MinPower                PWR_10mW
-#define HighPower               PWR_100mW
-#define MaxPower                PWR_250mW
+#define HighPower               PWR_2000mW
+#define MaxPower                PWR_2000mW
 #define POWER_OUTPUT_VALUES     {-15,-11,-7,-1,6}
 
 #define Regulatory_Domain_ISM_2400 1

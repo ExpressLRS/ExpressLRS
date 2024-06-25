@@ -18,8 +18,8 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
 #elif defined(PLATFORM_STM32)
-#ifdef USE_DMA_SERIAL
-SerialPort& CRSFHandset::Port(getSerialPort(1));
+#ifdef SERIAL_USE_DMA
+SerialPort& CRSFHandset::Port(getSerialPort(SERIAL_INSTANCE));
 #else
 HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #endif
@@ -109,11 +109,15 @@ void CRSFHandset::Begin()
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
-    #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX) || defined(SERIAL_HALF_DUPLEX)
     CRSFHandset::Port.setHalfDuplex();
     #endif
 
+#if defined(SERIAL_USE_DMA) && defined(SERIAL_INVERT_SIGNAL)
+    CRSFHandset::Port.begin(UARTrequestedBaud, true);
+#else
     CRSFHandset::Port.begin(UARTrequestedBaud);
+#endif
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -590,7 +594,7 @@ void CRSFHandset::duplex_set_RX() const
     //USC0(UART0) |= BIT(UCLBE);
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX) || defined(SERIAL_HALF_DUPLEX)
     CRSFHandset::Port.enableHalfDuplexRx();
 #endif
 }
@@ -805,7 +809,11 @@ bool CRSFHandset::UARTwdt()
                 USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
                 USART2->CR1 |= USART_CR1_UE;
 #else
+#if defined(SERIAL_USE_DMA) &&  defined(SERIAL_INVERT_SIGNAL)
+                CRSFHandset::Port.begin(UARTrequestedBaud, true);
+#else
                 CRSFHandset::Port.begin(UARTrequestedBaud);
+#endif
 #endif
                 if (halfDuplex)
                 {
