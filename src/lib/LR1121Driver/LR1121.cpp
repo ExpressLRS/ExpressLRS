@@ -587,6 +587,97 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode)
 {
     SetMode(LR1121_MODE_RX, SX12XX_Radio_All);
+
+    uint8_t wbuf[8] = {0};
+
+// write_reg , 0xf15018 , 0xa
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0x50;
+    wbuf[3] = 0x18;
+    wbuf[7] = 0xa;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+    
+// write_reg , 0xf03018 , 0x3
+    wbuf[1] = 0xf0;
+    wbuf[2] = 0x30;
+    wbuf[3] = 0x18;
+    wbuf[7] = 0x3;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+    
+// write_reg , 0xf1501c , 0xa
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0x50;
+    wbuf[3] = 0x1c;
+    wbuf[7] = 0xa;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf0301c , 0x3
+    wbuf[1] = 0xf0;
+    wbuf[2] = 0x30;
+    wbuf[3] = 0x1c;
+    wbuf[7] = 0x3;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf15020 , 0xa
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0x50;
+    wbuf[3] = 0x20;
+    wbuf[7] = 0xa;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf03020 , 0x3
+    wbuf[1] = 0xf0;
+    wbuf[2] = 0x30;
+    wbuf[3] = 0x20;
+    wbuf[7] = 0x3;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf15024 , 0xa
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0x50;
+    wbuf[3] = 0x24;
+    wbuf[7] = 0xa;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf03024 , 0x3
+    wbuf[1] = 0xf0;
+    wbuf[2] = 0x30;
+    wbuf[3] = 0x24;
+    wbuf[7] = 0x3;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf15004 , 0xa
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0x50;
+    wbuf[3] = 0x04;
+    wbuf[7] = 0xa;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf03004 , 0x2
+    wbuf[1] = 0xf0;
+    wbuf[2] = 0x30;
+    wbuf[3] = 0x04;
+    wbuf[7] = 0x2;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
+// write_reg , 0xf1f010 , 0x14
+    wbuf[1] = 0xf1;
+    wbuf[2] = 0xf0;
+    wbuf[3] = 0x10;
+    wbuf[7] = 0x14;
+    hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_OC, wbuf, sizeof(wbuf), SX12XX_Radio_1);
+    delayMicroseconds(500);
+
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
