@@ -3,20 +3,6 @@
 
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 const char STR_EMPTYSPACE[] = { 0 };
-const char STR_LUA_PACKETRATES[] =
-#if defined(RADIO_SX127X)
-    "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)";
-#elif defined(RADIO_LR1121)
-    // This hot mess needs to be ordered correctly in V4!!!
-    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;"
-    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;"
-    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band";
-#elif defined(RADIO_SX128X)
-    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);"
-    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)";
-#else
-    #error Invalid radio configuration!
-#endif
 
 void luadevGeneratePowerOpts(luaItem_selection *luaPower)
 {
