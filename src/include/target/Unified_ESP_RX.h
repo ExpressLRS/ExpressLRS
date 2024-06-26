@@ -147,3 +147,5 @@
 #define PWM_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_pwm_25mW)
 #define PWM_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_pwm_100mW)
 #endif
+
+#define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)

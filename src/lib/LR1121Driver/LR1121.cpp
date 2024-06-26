@@ -288,7 +288,10 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     if (pwrForceUpdate)
     {
         WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
-        WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        {
+            WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        }
         pwrForceUpdate = false;
     }
 }
@@ -406,8 +409,11 @@ void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12X
     if (radioNumber & SX12XX_Radio_1 && radio1isSubGHz)
         CorrectRegisterForSF6(sf, SX12XX_Radio_1);
 
-    if (radioNumber & SX12XX_Radio_2 && radio2isSubGHz)
-        CorrectRegisterForSF6(sf, SX12XX_Radio_2);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        if (radioNumber & SX12XX_Radio_2 && radio2isSubGHz)
+            CorrectRegisterForSF6(sf, SX12XX_Radio_2);
+    }
 }
 
 void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,

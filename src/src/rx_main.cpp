@@ -37,6 +37,7 @@
 #include "devSerialUpdate.h"
 #include "devBaro.h"
 #include "devMSPVTX.h"
+#include "devThermal.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
@@ -94,6 +95,9 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
+#endif
+#if defined(HAS_THERMAL) || defined(HAS_FAN)
+  {&Thermal_device, 0},
 #endif
 };
 
@@ -190,6 +194,7 @@ int32_t PfdPrevRawOffset;
 RXtimerState_e RXtimerState;
 uint32_t GotConnectionMillis = 0;
 const uint32_t ConsiderConnGoodMillis = 1000; // minimum time before we can consider a connection to be 'good'
+bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
@@ -529,18 +534,36 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     OtaGeneratePacketCrc(&otaPkt);
 
-    SX12XX_Radio_Number_t transmittingRadio = geminiMode ? SX12XX_Radio_All : Radio.GetLastSuccessfulPacketRadio();
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-#endif
-
+    SX12XX_Radio_Number_t transmittingRadio;
     if (config.GetForceTlmOff())
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
+    else if (isDualRadio())
+    {
+        transmittingRadio = SX12XX_Radio_All;
+    }
+    else
+    {
+        transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+    }
+#if defined(Regulatory_Domain_EU_CE_2400)
+    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+    
+    if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
+    {
+        transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
+    }
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+
+    if (transmittingRadio == SX12XX_Radio_NONE)
+    {
+        // No packet will be sent due to LBT / Telem forced off.
+        // Defer TXdoneCallback() to prepare for TLM when the IRQ is normally triggered.
+        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, Radio.TXdoneCallback);
+    }
 
     return true;
 }
@@ -752,14 +775,6 @@ static void ICACHE_RAM_ATTR updateDiversity()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
-    if (tlmSent && Radio.GetLastTransmitRadio() == SX12XX_Radio_NONE)
-    {
-        // Since we were meant to send telemetry, but didn't, defer TXdoneCallback() to when the IRQ is normally triggered.
-        deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
-            Radio.TXdoneCallback();
-        });
-    }
-
     PFDloop.intEvent(micros()); // our internal osc just fired
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends > 1 && !(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
@@ -1097,7 +1112,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
 
-    bool doStartTimer = false;
+    doStartTimer = false;
     unsigned long now = millis();
 
     LastValidPacket = now;
@@ -1147,8 +1162,6 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 #if defined(DEBUG_RX_SCOREBOARD)
     if (otaPktPtr->std.type != PACKET_TYPE_SYNC) DBGW(connectionHasModelMatch ? 'R' : 'r');
 #endif
-    if (doStartTimer)
-        hwTimer::resume(); // will throw an interrupt immediately
 
     return true;
 }
@@ -1163,6 +1176,13 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     if (ProcessRFPacket(status))
     {
         didFHSS = HandleFHSS();
+        
+        if (doStartTimer)
+        {
+            doStartTimer = false;
+            hwTimer::resume(); // will throw an interrupt immediately
+        }
+
         return true;
     }
     return false;
@@ -1737,7 +1757,7 @@ static void updateBindingMode()
     }
 
     // If the power on counter is >=3, enter binding, the counter will be reset after 2s
-    else if (config.GetPowerOnCounter() >= 3)
+    else if (!InBindingMode && config.GetPowerOnCounter() >= 3)
     {
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // Never enter wifi if forced to binding mode

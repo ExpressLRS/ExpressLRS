@@ -8,6 +8,7 @@
 #include "device.h"
 
 #if defined(PLATFORM_ESP32)
+#include <hal/uart_ll.h>
 #include <soc/soc.h>
 #include <soc/uart_reg.h>
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
@@ -44,6 +45,7 @@ uint32_t CRSFHandset::BadPktsCountResult = 0;
 uint8_t CRSFHandset::modelId = 0;
 bool CRSFHandset::ForwardDevicePings = false;
 bool CRSFHandset::elrsLUAmode = false;
+bool CRSFHandset::halfDuplex = false;
 
 /// OpenTX mixer sync ///
 static const int32_t OpenTXsyncPacketInterval = 200; // in ms
@@ -63,16 +65,18 @@ void CRSFHandset::Begin()
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
+    halfDuplex = (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX);
+
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
-    if (GPIO_PIN_RCSIGNAL_RX != GPIO_PIN_RCSIGNAL_TX)
-    {
-        UARTinverted = false; // on a full UART we will start uninverted checking first
-    }
+    UARTinverted = halfDuplex; // on a full UART we will start uninverted checking first
     CRSFHandset::Port.begin(UARTrequestedBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 500);
-    CRSFHandset::duplex_set_RX();
+    if (halfDuplex)
+    {
+        duplex_set_RX();
+    }
     portENABLE_INTERRUPTS();
     flush_port_input();
     if (esp_reset_reason() != ESP_RST_POWERON)
@@ -86,9 +90,9 @@ void CRSFHandset::Begin()
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
-
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART");
+    halfDuplex = true;
 
     CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
     CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -403,98 +407,106 @@ void CRSFHandset::handleInput()
         return;
     }
 
-    while (CRSFHandset::Port.available())
+    if (transmitting)
     {
-        if (!CRSFframeActive)
+        // if currently transmitting in half-duplex mode then check if the TX buffers are empty.
+        // If there is still data in the transmit buffers then exit, and we'll check next go round.
+#if defined(PLATFORM_STM32)
+        if (Port.availableForWrite() != SERIAL_TX_BUFFER_SIZE - 1)
         {
-            unsigned char const inChar = CRSFHandset::Port.read();
-            // stage 1 wait for sync byte //
-            if (inChar == CRSF_ADDRESS_CRSF_TRANSMITTER ||
-                inChar == CRSF_SYNC_BYTE)
+            return;
+        }
+        Port.flush();
+#elif defined(PLATFORM_ESP32)
+        if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
+        {
+            return;
+        }
+#elif defined(PLATFORM_ESP8266)
+        if (((USS(0) >> USTXC) & 0xff) > 0)
+        {
+            return;
+        }
+#endif
+        // All done transmitting; go back to receive mode
+        transmitting = false;
+        duplex_set_RX();
+        flush_port_input();
+    }
+
+    auto toRead = std::min(CRSFHandset::Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
+    SerialInPacketPtr += (int)CRSFHandset::Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
+
+    // discard bytes until we start with header byte
+    if (!CRSFframeActive)
+    {
+        for (int i=0 ; i<SerialInPacketPtr ; i++)
+        {
+            // If we find a header byte then move that and trailing bytes to the head of the buffer and let's go!
+            if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
             {
-                // we got sync, reset write pointer
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
+                SerialInPacketPtr -= i;
+                memmove(SerialInBuffer, SerialInBuffer + i, SerialInPacketPtr);
                 CRSFframeActive = true;
-                SerialInBuffer[SerialInPacketPtr] = inChar;
-                SerialInPacketPtr++;
+                break;
             }
         }
-        else // frame is active so we do the processing
+        // If no header found then discard this entire buffer
+        if (!CRSFframeActive)
         {
-            // first if things have gone wrong //
-            if (SerialInPacketPtr > CRSF_MAX_PACKET_LEN - 1)
-            {
-                // we reached the maximum allowable packet length, so start again because shit fucked up hey.
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
-                CRSFframeActive = false;
-                return;
-            }
+            SerialInPacketPtr = 0;
+        }
+    }
 
-            // special case where we save the expected pkt len to buffer //
-            if (SerialInPacketPtr == 1)
+    // We have a packet header and at least a length byte as well, so we see if we have a pull packet for processing
+    if (CRSFframeActive && SerialInPacketPtr>2)
+    {
+        // Sanity check: If the length byte is pushing over the max packet size skip this header byte and start scanning again
+        if ((SerialInBuffer[1] + 2) > CRSF_MAX_PACKET_LEN)
+        {
+            for (int i=0 ; i<SerialInPacketPtr ; i++)
             {
-                unsigned char const inChar = CRSFHandset::Port.read();
-                if (inChar <= CRSF_MAX_PACKET_LEN)
+                if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
                 {
-                    SerialInPacketLen = inChar;
-                    SerialInBuffer[SerialInPacketPtr] = inChar;
-                    SerialInPacketPtr++;
-                }
-                else
-                {
-                    SerialInPacketPtr = 0;
-                    SerialInPacketLen = 0;
-                    CRSFframeActive = false;
+                    SerialInPacketPtr -= i;
+                    memmove(SerialInBuffer, SerialInBuffer + i, SerialInPacketPtr);
+                    CRSFframeActive = true;
                     return;
                 }
             }
+            SerialInPacketPtr = 0;
+            CRSFframeActive = false;
+        }
+        // If we have at least the number of bytes for a full packet then validate and process it
+        else if (SerialInPacketPtr >= (SerialInBuffer[1] + 2))
+        {
+            uint8_t CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInBuffer[1] - 1);
 
-            int toRead = (SerialInPacketLen + 2) - SerialInPacketPtr;
-            #if defined(PLATFORM_ESP32)
-            auto count = (int)CRSFHandset::Port.read(&SerialInBuffer[SerialInPacketPtr], toRead);
-            #else
-            int count = 0;
-            auto avail = (int)CRSFHandset::Port.available();
-            while (count < toRead && count < avail)
+            if (CalculatedCRC == SerialInBuffer[SerialInBuffer[1] + 2 - 1])
             {
-                SerialInBuffer[SerialInPacketPtr + count] = CRSFHandset::Port.read();
-                count++;
-            }
-            #endif
-            SerialInPacketPtr += count;
-
-            if (SerialInPacketPtr >= (SerialInPacketLen + 2)) // plus 2 because the packlen is referenced from the start of the 'type' flag, IE there are an extra 2 bytes.
-            {
-                uint8_t CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInPacketPtr - 3);
-
-                if (CalculatedCRC == SerialInBuffer[SerialInPacketPtr-1])
+                GoodPktsCount++;
+                if (ProcessPacket())
                 {
-                    GoodPktsCount++;
-                    if (ProcessPacket())
+                    handleOutput(SerialInBuffer[1] + 2);
+                    if (RCdataCallback)
                     {
-                        //delayMicroseconds(50);
-                        handleOutput();
-                        if (RCdataCallback) RCdataCallback();
+                        RCdataCallback();
                     }
                 }
-                else
-                {
-                    DBGLN("UART CRC failure");
-                    // cleanup input buffer
-                    flush_port_input();
-                    BadPktsCount++;
-                }
-                CRSFframeActive = false;
-                SerialInPacketPtr = 0;
-                SerialInPacketLen = 0;
             }
+            else
+            {
+                DBGLN("UART CRC failure");
+                BadPktsCount++;
+            }
+            SerialInPacketPtr -= (SerialInBuffer[1] + 2);
+            memmove(SerialInBuffer, SerialInBuffer + (SerialInBuffer[1] + 2), SerialInPacketPtr);
+            CRSFframeActive = false;
         }
     }
 }
 
-void CRSFHandset::handleOutput()
+void CRSFHandset::handleOutput(int receivedBytes)
 {
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
     // both static to split up larger packages
@@ -516,70 +528,62 @@ void CRSFHandset::handleOutput()
 
     // if partial package remaining, or data in the output FIFO that needs to be written
     if (packageLengthRemaining > 0 || SerialOutFIFO.size() > 0) {
-        duplex_set_TX();
+        uint8_t periodBytesRemaining = HANDSET_TELEMETRY_FIFO_SIZE;
+        if (halfDuplex)
+        {
+            periodBytesRemaining = std::min((maxPeriodBytes - receivedBytes % maxPeriodBytes), (int)maxPacketBytes);
+            periodBytesRemaining = std::max(periodBytesRemaining, (uint8_t)10);
+            if (!transmitting)
+            {
+                transmitting = true;
+                duplex_set_TX();
+            }
+        }
 
-        uint8_t periodBytesRemaining = maxPeriodBytes;
-        while (periodBytesRemaining)
+        do
         {
             SerialOutFIFO.lock();
             // no package is in transit so get new data from the fifo
-            if (packageLengthRemaining == 0) {
+            if (packageLengthRemaining == 0)
+            {
                 packageLengthRemaining = SerialOutFIFO.pop();
                 SerialOutFIFO.popBytes(CRSFoutBuffer, packageLengthRemaining);
                 sendingOffset = 0;
             }
             SerialOutFIFO.unlock();
 
-            // if the package is long we need to split it up so it fits in the sending interval
-            uint8_t writeLength;
-            if (packageLengthRemaining > periodBytesRemaining) {
-                if (periodBytesRemaining < maxPeriodBytes) {  // only start to send a split packet as the first packet
-                    break;
-                }
-                writeLength = periodBytesRemaining;
-            } else {
-                writeLength = packageLengthRemaining;
-            }
+            // if the package is long we need to split it, so it fits in the sending interval
+            uint8_t writeLength = std::min(packageLengthRemaining, periodBytesRemaining);
 
             // write the packet out, if it's a large package the offset holds the starting position
             CRSFHandset::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
             if (CRSFHandset::PortSecondary)
+            {
                 CRSFHandset::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+            }
 
             sendingOffset += writeLength;
             packageLengthRemaining -= writeLength;
             periodBytesRemaining -= writeLength;
-
-            // No bytes left to send, exit
-            if (SerialOutFIFO.size() == 0)
-                break;
-        }
-        CRSFHandset::Port.flush();
-        duplex_set_RX();
-
-        // make sure there is no garbage on the UART left over
-        flush_port_input();
+        } while(periodBytesRemaining != 0 && SerialOutFIFO.size() != 0);
     }
 }
 
 void CRSFHandset::duplex_set_RX() const
 {
 #if defined(PLATFORM_ESP32)
-    if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
+    if (UARTinverted)
     {
-        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_MODE_INPUT));
-        if (UARTinverted)
-        {
-            gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
-            gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-            gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-        }
-        else
-        {
-            gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
-            gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-            gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
-        }
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, true);
+        gpio_pulldown_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pullup_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+    }
+    else
+    {
+        gpio_matrix_in((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
+        gpio_pullup_en((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
+        gpio_pulldown_dis((gpio_num_t)GPIO_PIN_RCSIGNAL_RX);
     }
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
@@ -594,26 +598,23 @@ void CRSFHandset::duplex_set_RX() const
 void CRSFHandset::duplex_set_TX() const
 {
 #if defined(PLATFORM_ESP32)
-    if (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
+    ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
+    if (UARTinverted)
     {
-        ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_FLOATING));
-        ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)GPIO_PIN_RCSIGNAL_RX, GPIO_FLOATING));
-        if (UARTinverted)
-        {
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
-            ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-            constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
-            gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-            gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
-        }
-        else
-        {
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
-            ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
-            constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
-            gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
-            gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
-        }
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 0));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_LOW = 0x30; // routes 0 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_LOW, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, true, false);
+    }
+    else
+    {
+        ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, 1));
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, GPIO_MODE_OUTPUT));
+        constexpr uint8_t MATRIX_DETACH_IN_HIGH = 0x38; // routes 1 to matrix slot
+        gpio_matrix_in(MATRIX_DETACH_IN_HIGH, U0RXD_IN_IDX, false); // Disconnect RX from all pads
+        gpio_matrix_out((gpio_num_t)GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
     }
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
@@ -625,14 +626,35 @@ void CRSFHandset::duplex_set_TX() const
 #endif
 }
 
+int CRSFHandset::getMinPacketInterval() const
+{
+    if (CRSFHandset::isHalfDuplex() && CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
+    {
+        return 5000;
+    }
+    else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    {
+        return 4000;
+    }
+    else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    {
+        return 2000;
+    }
+    return 1;   // 1-million Hz!
+}
+
 void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
 {
-    // baud / 10bits-per-byte / 2 windows (1RX, 1TX) / rate * 0.80 (leeway)
-    maxPeriodBytes = UARTrequestedBaud / 10 / 2 / (1000000/RequestedRCpacketInterval) * 80 / 100;
-    maxPeriodBytes = maxPeriodBytes > HANDSET_TELEMETRY_FIFO_SIZE ? HANDSET_TELEMETRY_FIFO_SIZE : maxPeriodBytes;
-    // we need a minimum of 10 bytes otherwise our LUA will not make progress and at 8 we'd get a divide by 0!
-    maxPeriodBytes = maxPeriodBytes < 10 ? 10 : maxPeriodBytes;
-    maxPacketBytes = maxPeriodBytes > CRSF_MAX_PACKET_LEN ? CRSF_MAX_PACKET_LEN : maxPeriodBytes;
+    const int LUA_CHUNK_QUERY_SIZE = 26;
+    // The number of bytes that fit into a CRSF window : baud / 10bits-per-byte / rate(Hz) * 87% (for some leeway)
+    // 87% was arrived at by measuring the time taken for a chunk query packet and the processing times and switching times
+    // involved from RX -> TX and vice-versa. The maxPacketBytes is used as the Lua chunk size so each chunk can be returned
+    // to the handset and not be broken across time-slots as there can be issues with spurious glitches on the s.port pin
+    // which switching direction. It also appears that the absolute minimum packet size should be 15 bytes as this will fit
+    // the LinkStatistics and OpenTX sync packets.
+    maxPeriodBytes = std::min((int)(UARTrequestedBaud / 10 / (1000000/RequestedRCpacketInterval) * 87 / 100), HANDSET_TELEMETRY_FIFO_SIZE);
+    // Maximum number of bytes we can send in a single window, half the period bytes, upto one full CRSF packet.
+    maxPacketBytes = std::min(maxPeriodBytes - max(maxPeriodBytes / 2, LUA_CHUNK_QUERY_SIZE), CRSF_MAX_PACKET_LEN);
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
@@ -782,7 +804,10 @@ bool CRSFHandset::UARTwdt()
 #else
                 CRSFHandset::Port.begin(UARTrequestedBaud);
 #endif
-                duplex_set_RX();
+                if (halfDuplex)
+                {
+                    duplex_set_RX();
+                }
                 // cleanup input buffer
                 flush_port_input();
             }

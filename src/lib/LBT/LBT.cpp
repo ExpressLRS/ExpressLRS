@@ -112,6 +112,9 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
 {
+  if (radioNumber == SX12XX_Radio_NONE)
+    return SX12XX_Radio_NONE;
+
   LBTSuccessCalc.inc(); // Increment count for every channel check
 
   if (!LBTEnabled)
@@ -161,7 +164,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
       clearChannelsMask |= SX12XX_Radio_2;
     }
   }
-  
+
   // Useful to debug if and how long the rssi wait is, and rssi threshold rssiCutOff
   // DBGLN("wait: %d, cutoff: %d, rssi: %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask ? "clear" : "in use");
 

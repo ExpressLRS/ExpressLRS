@@ -23,6 +23,8 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#include "MAVLink.h"
+
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
 #define USBSerial Serial
@@ -57,9 +59,10 @@ char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAResidualTimeMS 500 // we spam some more after rate change to help link get up to speed
 #define syncSpamAmount 3
+#define syncSpamAmountAfterRateChange 10
 volatile uint8_t syncSpamCounter = 0;
+volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
@@ -308,6 +311,14 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
   if (syncSpamCounter)
     --syncSpamCounter;
+
+  if (syncSpamCounterAfterRateChange && Index == ExpressLRS_currAirRate_Modparams->index)
+  {
+    --syncSpamCounterAfterRateChange;
+    if (connectionState == connected) // We are connected again after a rate change.  No need to keep spaming sync.
+      syncSpamCounterAfterRateChange = 0;
+  }
+
   SyncPacketLastSent = millis();
 
   expresslrs_tlm_ratio_e newTlmRatio = UpdateTlmRatioEffective();
@@ -330,25 +341,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
 uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
 {
-  #if defined(RADIO_SX128X)
-    if (CRSFHandset::GetCurrentBaudRate() == 115200 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 150Hz if we are on 115k baud on external module
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 6666);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud (on internal module)
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 4000);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 400000 && GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX) // Packet rate limited to 333Hz if we are on 400k baud on external module
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 3003);
-    }
-    else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
-    {
-      rateIndex = get_elrs_HandsetRate_max(rateIndex, 2000);
-    }
-  #endif
-  return rateIndex;
+  return rateIndex = get_elrs_HandsetRate_max(rateIndex, handset->getMinPacketInterval());
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
@@ -396,6 +389,10 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
   }
+
+  // InitialFreq has been set, so lets also reset the FHSS Idx and Nonce.
+  FHSSsetCurrIndex(0);
+  OtaNonce = 0;
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
   MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
@@ -505,10 +502,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     (isTlmDisarmed && handset->IsArmed() && (ExpressLRS_currTlmDenom == 1));
 
   uint8_t NonceFHSSresult = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  bool WithinSyncSpamResidualWindow = now - rfModeLastChangedMS < syncSpamAResidualTimeMS;
 
   // Sync spam only happens on slot 1 and 2 and can't be disabled
-  if ((syncSpamCounter || WithinSyncSpamResidualWindow) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
+  if ((syncSpamCounter || (syncSpamCounterAfterRateChange && FHSSonSyncChannel())) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
@@ -597,9 +593,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     // No packet will be sent due to LBT.
     // Defer TXdoneCallback() to prepare for TLM when the IRQ is normally triggered.
-    deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, []() {
-        Radio.TXdoneCallback();
-    });
+    deferExecutionMicros(ExpressLRS_currAirRate_RFperfParams->TOA, Radio.TXdoneCallback);
   }
   else
 #endif
@@ -752,6 +746,7 @@ void ModelUpdateReq()
   if (config.SetModelId(CRSFHandset::getModelID()))
   {
     syncSpamCounter = syncSpamAmount;
+    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
     ModelUpdatePending = true;
   }
 
@@ -908,6 +903,7 @@ void SetSyncSpam()
   if (config.IsModified())
   {
     syncSpamCounter = syncSpamAmount;
+    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
   }
 }
 
@@ -1494,7 +1490,10 @@ void loop()
         {
           // raw mavlink data - forward to USB rather than handset
           uint8_t count = CRSFinBuffer[1];
+          // Convert to CRSF telemetry where we can
+          convert_mavlink_to_crsf_telem(CRSFinBuffer, count, handset);
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+          // If we have a backpack
           if (TxUSB != TxBackpack)
           {
             TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);

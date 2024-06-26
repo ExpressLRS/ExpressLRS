@@ -3,6 +3,7 @@
 #include "SerialHoTT_TLM.h"
 #include "FIFO.h"
 #include "telemetry.h"
+#include "common.h"
 
 #define NOT_FOUND 0xff          // no device found indicator
 
@@ -21,15 +22,6 @@
                                 // to HoTT bus speed if only a HoTT Vario is connected and
                                 // values change every HoTT bus poll cycle.
 
-typedef struct crsf_sensor_gps_s
-{
-    int32_t latitude;     // degree / 10,000,000 big endian
-    int32_t longitude;    // degree / 10,000,000 big endian
-    uint16_t groundspeed; // km/h / 10 big endian
-    uint16_t heading;     // GPS heading, degree/100 big endian
-    uint16_t altitude;    // meters, +1000m big endian
-    uint8_t satellites;   // satellites
-} PACKED crsf_sensor_gps_t;
 
 extern Telemetry telemetry;
 
@@ -82,6 +74,12 @@ void SerialHoTT_TLM::processBytes(uint8_t *bytes, u_int16_t size)
 void SerialHoTT_TLM::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t now = millis();
+
+    if(connectionState != connected)
+    {
+        // suspend device discovery timer until receiver is connected
+        discoveryTimerStart = now;      
+    }
 
     // device discovery timer
     if (discoveryMode && (now - discoveryTimerStart >= DISCOVERY_TIMEOUT))
@@ -264,9 +262,9 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     crsfGPS.p.latitude = htobe32(getHoTTlatitude());
     crsfGPS.p.longitude = htobe32(getHoTTlongitude());
     crsfGPS.p.groundspeed = htobe16(getHoTTgroundspeed() * 10); // Hott 1 = 1 km/h, ELRS 1 = 0.1km/h
-    crsfGPS.p.heading = htobe16(getHoTTheading() * 100);
+    crsfGPS.p.gps_heading = htobe16(getHoTTheading() * 100);
     crsfGPS.p.altitude = htobe16(getHoTTMSLaltitude() + 1000); // HoTT 1 = 1m, CRSF: 0m = 1000
-    crsfGPS.p.satellites = getHoTTsatellites();
+    crsfGPS.p.satellites_in_use = getHoTTsatellites();
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
