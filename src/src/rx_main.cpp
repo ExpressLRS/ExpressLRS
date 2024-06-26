@@ -547,13 +547,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
     }
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-    
+
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
+
+#if defined(Regulatory_Domain_EU_CE_2400)
+    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
