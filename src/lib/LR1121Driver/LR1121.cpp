@@ -232,6 +232,23 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
         wrbuf[10] = 0x00;
         wrbuf[11] = 0x00;
         hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber);
+
+        // Address
+        wrbuf[0] = 0x00; // MSB
+        wrbuf[1] = 0xf2;
+        wrbuf[2] = 0x04;
+        wrbuf[3] = 0x48;
+        // Mask
+        wrbuf[4] = 0x00; // MSB
+        wrbuf[5] = 0b00001000; // bit19=1
+        wrbuf[6] = 0x00;
+        wrbuf[7] = 0x00; 
+        // Data
+        wrbuf[8] = 0x00; // MSB
+        wrbuf[9] = 0b00001000; // bit19=1
+        wrbuf[10] = 0x00;
+        wrbuf[11] = 0x00;
+        hal.WriteCommand(LR11XX_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber);
     }
 }
 
