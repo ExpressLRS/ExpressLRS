@@ -195,7 +195,9 @@ int SerialPort::peek()
 
 void SerialPort::flush()
 {
+  // Wait for DMA transfer complete, and USART transfer complete
   while (LL_DMA_IsEnabledIT_TC(usartDef->txDMA, usartDef->txDMAChannel));
+  while (!LL_USART_IsActiveFlag_TC(usartDef->usart));
 }
 
 void SerialPort::end()
