@@ -24,11 +24,15 @@ public:
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
+    const uint8_t RCPacketInterval = 4;
+    uint32_t lastSentRCPacket = 0;
+
     const uint8_t this_system_id;
     const uint8_t this_component_id;
 
     const uint8_t target_system_id;
     const uint8_t target_component_id;
 
+    const uint8_t flowCtrlInterval = 10;
     uint32_t lastSentFlowCtrl = 0;
 };
