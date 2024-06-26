@@ -349,7 +349,10 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
     if (pwrForceUpdate)
     {
         WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
-        WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        {
+            WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+        }
         pwrForceUpdate = false;
     }
 }

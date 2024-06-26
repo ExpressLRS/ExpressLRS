@@ -23,6 +23,8 @@
 #include "devPDET.h"
 #include "devBackpack.h"
 
+#include "MAVLink.h"
+
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
 #define USBSerial Serial
@@ -1493,7 +1495,10 @@ void loop()
         {
           // raw mavlink data - forward to USB rather than handset
           uint8_t count = CRSFinBuffer[1];
+          // Convert to CRSF telemetry where we can
+          convert_mavlink_to_crsf_telem(CRSFinBuffer, count, handset);
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+          // If we have a backpack
           if (TxUSB != TxBackpack)
           {
             TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
