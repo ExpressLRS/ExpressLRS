@@ -36,7 +36,7 @@ _Min_Stack_Size = 0x400 ;	/* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  BTRAM (xrw)     : ORIGIN = 0x20000000, LENGTH = 0x80
+  BLRAM (xrw)     : ORIGIN = 0x20000000, LENGTH = 0x80
   RAM    (xrw)    : ORIGIN = 0x20000080, LENGTH = 16K - 0x80  /* leave room for Flysky bootloader */
   FLASH    (rx)   : ORIGIN = 0x8000000 + FLASH_APP_OFFSET,   LENGTH = 128K - FLASH_APP_OFFSET
 }
@@ -50,6 +50,37 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
+  } >FLASH
+
+  /* Firmware info sections */
+  .firmware_signature 0x8006F80:
+  {
+    KEEP(*(.firmware_signature))
+  } >FLASH
+
+  .firmware_length 0x8006F88:
+  {
+    KEEP(*(.firmware_length))
+  } >FLASH
+
+  .firmware_versionH 0x8006F8C:
+  {
+    KEEP(*(.firmware_versionH))
+  } >FLASH
+
+  .firmware_versionL 0x8006F90:
+  {
+    KEEP(*(.firmware_versionL))
+  } >FLASH
+
+  .rf_library_version 0x8006F94:
+  {
+    KEEP(*(.rf_library_version))
+  } >FLASH
+
+  .firmware_reserved 0x8006F98:
+  {
+    KEEP(*(.firmware_reserved))
   } >FLASH
 
   /* The program code and other data into "FLASH" Rom type memory */
@@ -68,7 +99,7 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
-
+  
   /* Constant data into "FLASH" Rom type memory */
   .rodata :
   {

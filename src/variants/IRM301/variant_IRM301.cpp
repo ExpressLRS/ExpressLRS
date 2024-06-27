@@ -111,7 +111,6 @@ WEAK void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
@@ -137,12 +136,6 @@ WEAK void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  //PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
-  //PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
-  //if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  //{
-  //  Error_Handler();
-  //}
 }
 
 #ifdef __cplusplus
