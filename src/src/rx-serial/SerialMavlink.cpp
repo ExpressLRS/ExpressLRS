@@ -65,6 +65,15 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint3
         return DURATION_IMMEDIATELY;
     }
 
+    // Limit RC to a max rate of 250Hz so the TX line is not saturated with RC override packets.
+    const uint32_t now = micros();
+    if ((now - lastSentRCPacket) > RCPacketInterval)
+    {
+        return DURATION_IMMEDIATELY;
+    }
+    
+    lastSentRCPacket = now; 
+
     const mavlink_rc_channels_override_t rc_override {
         chan1_raw: CRSF_to_US(channelData[0]),
         chan2_raw: CRSF_to_US(channelData[1]),
@@ -91,7 +100,7 @@ uint32_t SerialMavlink::sendRCFrame(bool frameAvailable, bool frameMissed, uint3
     mavlink_msg_rc_channels_override_encode(this_system_id, this_component_id, &msg, &rc_override);
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
     _outputPort->write(buf, len);
-    
+
     return DURATION_IMMEDIATELY;
 }
 
@@ -110,10 +119,9 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
-
     // Send radio messages at 100Hz
     const uint32_t now = millis();
-    if ((now - lastSentFlowCtrl) > 10)
+    if ((now - lastSentFlowCtrl) > flowCtrlInterval)
     {
         lastSentFlowCtrl = now; 
 
