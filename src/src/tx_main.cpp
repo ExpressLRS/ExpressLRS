@@ -365,7 +365,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
   hwTimer::updateInterval(interval);
 
-  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
+  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
@@ -373,13 +373,18 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
+#if defined(RADIO_LR1121)
+               , (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4), (uint8_t)UID[5], (uint8_t)UID[4]
+#endif
                );
 
 #if defined(RADIO_LR1121)
   if (FHSSuseDualBand)
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval, SX12XX_Radio_2);
+                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval,
+                (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
+                (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
   }
 #endif
 
@@ -991,7 +996,9 @@ static void EnterBindingMode()
   FHSSuseDualBand = true;
   expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(RATE_DUALBAND_BINDING); // 2.4GHz 50Hz
   Radio.Config(dualBandBindingModParams->bw2, dualBandBindingModParams->sf2, dualBandBindingModParams->cr2, FHSSgetInitialGeminiFreq(),
-               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval, SX12XX_Radio_2);
+               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval,
+               (dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
+               (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
 #endif
 
   Radio.SetFrequencyReg(FHSSgetInitialFreq());
@@ -1426,8 +1433,6 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
-
-  Radio.ignoreSecondIRQ = false;
 
   HandleUARTout(); // Only used for non-CRSF output
 

@@ -38,11 +38,11 @@ static uint32_t endTX;
 
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
+    useFSK = false;
     instance = this;
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
-    ignoreSecondIRQ = false;
 }
 
 void LR1121Driver::End()
@@ -132,13 +132,15 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
-    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, radioNumber);
+    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, false, 0, 0, radioNumber);
     CommitOutputPower();
     hal.WriteCommand(LR11XX_RADIO_SET_TX_CW_OC, radioNumber);
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval, SX12XX_Radio_Number_t radioNumber)
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
+                          SX12XX_Radio_Number_t radioNumber)
 {
     DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
@@ -162,23 +164,82 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
+    useFSK = setFSKModulation;
+    
     // 8.1.1 SetPacketType
-    uint8_t buf[1] = {LR11XX_RADIO_PKT_TYPE_LORA};
+    uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
-    ConfigModParamsLoRa(bw, sf, cr, radioNumber);
+    if (useFSK)
+    {
+        uint32_t bitrate = (uint32_t)bw * 10000;
+        uint8_t bwf = sf;
+        uint32_t fdev = (uint32_t)cr * 1000;
+        ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
-#if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
-    lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_VARIABLE_LENGTH;
-#else
-    lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
-#endif
+        SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
 
-    SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
+        SetFSKSyncWord(fskSyncWord1, fskSyncWord2, radioNumber);
+    }
+    else
+    {
+        ConfigModParamsLoRa(bw, sf, cr, radioNumber);
+
+    #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
+        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_VARIABLE_LENGTH;
+    #else
+        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
+    #endif
+
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
+    }
 
     SetFrequencyHz(regfreq, radioNumber);
 
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+    
+    ClearIrqStatus(radioNumber);
+}
+
+void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.5.1 SetModulationParams
+    uint8_t buf[10];
+    buf[0] = Bitrate >> 24;
+    buf[1] = Bitrate >> 16;
+    buf[2] = Bitrate >> 8;
+    buf[3] = Bitrate >> 0;
+    buf[4] = LR11XX_RADIO_GFSK_PULSE_SHAPE_OFF;             // Pulse Shape - 0x00: No filter applied
+    buf[5] = BWF;
+    buf[6] = Fdev >> 24;
+    buf[7] = Fdev >> 16;
+    buf[8] = Fdev >> 8;
+    buf[9] = Fdev >> 0;
+    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
+}
+
+void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.5.2 SetPacketParams
+    uint8_t buf[9];
+    buf[0] = 0;                                             // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[1] = PreambleLength;                                // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
+    buf[2] = LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS; // Pbl Detect - 0x04: Preamble detector length 8 bits
+    buf[3] = 16;                                            // SyncWordLen defines the length of the Syncword in bits. By default, the Syncword is set to 0x9723522556536564
+    buf[4] = LR11XX_RADIO_GFSK_ADDRESS_FILTERING_DISABLE;   // Addr Comp - 0x00: Address Filtering Disabled
+    buf[5] = LR11XX_RADIO_GFSK_PKT_FIX_LEN;                 // PacketType - 0x00: Packet length is known on both sides
+    buf[6] = PayloadLength;                                 // PayloadLen
+    buf[7] = LR11XX_RADIO_GFSK_CRC_OFF;                     // CrcType - 0x01: CRC_OFF (No CRC).
+    buf[8] = LR11XX_RADIO_GFSK_DC_FREE_WHITENING;           // DcFree - 0x01: SX127x/SX126x/LR11xx compatible whitening enable. 0x03: SX128x compatible whitening enable
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
+}
+
+void LR1121Driver::SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.5.3 SetGfskSyncWord
+    // SyncWordLen is 16 bits as set in SetPacketParamsFSK().  Fill the rest with preamble bytes.
+    uint8_t synbuf[8] = {fskSyncWord1, fskSyncWord2, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    hal.WriteCommand(LR11XX_RADIO_SET_GFSK_SYNC_WORD_OC, synbuf, sizeof(synbuf), radioNumber);
 }
 
 void LR1121Driver::SetDioAsRfSwitch()
@@ -598,9 +659,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     // processingRadio always passed the sanity check here
     gotRadio[processingRadioIdx] = true;
 
-    // if it's a dual radio, and if it's the first IRQ
-    // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
-    if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         bool isSecondRadioGotData = false;
 
@@ -642,7 +701,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
         #endif
     }
 
-    uint8_t status[4];
+    uint8_t status[3];
     int8_t rssi[2];
     int8_t snr[2];
 
@@ -653,19 +712,19 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     {
         if (gotRadio[i])
         {
-            // 8.3.7 GetPacketStatus
+            // 8.3.7 GetPacketStatus (LoRa)
+            // 8.5.7 GetPacketStatus (FSK)
             memset(status, 0, sizeof(status));
-            // hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, radio[i]);
             hal.ReadCommand(status, sizeof(status), radio[i]);
             
             // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-            rssi[i] = -(int8_t)(status[1] / 2);
+            rssi[i] = -(int8_t)(status[useFSK ? 2 : 1] / 2);
 
             // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
             // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
             // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
 
-            snr[i] = (int8_t)status[2];
+            snr[i] = useFSK ? 0 : (int8_t)status[2];
 
             // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
             (i == 0) ? LastPacketRSSI = rssi[i] : LastPacketRSSI2 = rssi[i];
@@ -714,19 +773,22 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
 {
-    instance->IsrCallback(SX12XX_Radio_1);  
+    if (digitalRead(GPIO_PIN_DIO1))
+    {
+        instance->IsrCallback(SX12XX_Radio_1);
+    }
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 {
-    instance->IsrCallback(SX12XX_Radio_2);
+    if (digitalRead(GPIO_PIN_DIO1_2))
+    {
+        instance->IsrCallback(SX12XX_Radio_2);
+    }
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
-    if (instance->ignoreSecondIRQ)
-        return;
-
     instance->processingPacketRadio = radioNumber;
 
     uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
@@ -734,13 +796,11 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->TXnbISR();
         instance->ClearIrqStatus(SX12XX_Radio_All);
-        instance->ignoreSecondIRQ = true;  
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
         if (instance->RXnbISR(radioNumber))
         {
-            instance->ignoreSecondIRQ = true;  
         }
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
         else
@@ -748,6 +808,5 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
 }
