@@ -38,6 +38,7 @@
 #define MinPower                PWR_10mW
 #define HighPower               PWR_100mW
 #define MaxPower                PWR_100mW
-#define POWER_OUTPUT_VALUES     {2,6,9,12} // PA gain is 8dbm
+#define DefaultPower            PWR_100mW
+#define POWER_OUTPUT_VALUES     {2,6,9,13} // PA gain is 8dbm
 
 #define Regulatory_Domain_ISM_2400 1
