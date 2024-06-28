@@ -11,6 +11,8 @@
 #define SERIAL_USE_DMA
 #define SERIAL_INSTANCE         1
 
+#define FLYSKY_USBD_PID         0xf004
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_DIO1           PB10

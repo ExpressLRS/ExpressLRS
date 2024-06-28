@@ -31,7 +31,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define USBD_VID                     0x284e
-#define USBD_PID                     0xf004//0xf003//0x8e80//0x8035
+#define USBD_PID                     FLYSKY_USBD_PID
 
 #define USBD_LANGID_STRING            0x409
 #define USBD_MANUFACTURER_STRING      "FlySky"

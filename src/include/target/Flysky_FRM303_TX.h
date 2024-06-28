@@ -13,6 +13,8 @@
 #define SERIAL_HALF_DUPLEX
 #define SERIAL_INVERT_SIGNAL
 
+#define FLYSKY_USBD_PID         0xf003
+
 // GPIO pin definitions
 #define GPIO_PIN_NSS            PA15
 #define GPIO_PIN_DIO1           PB10
