@@ -20,7 +20,7 @@ RC commands are also encrypted.
 ### How do I use PrivacyLRS?  
   Download the [zip file](https://github.com/sensei-hacker/PrivacyLRS/archive/refs/heads/secure_01.zip) of the secure branch.
   Unzip it, then flash using ELRS Configurator by choosing "Local" as shown in this screenshot:
-  (https://raw.githubusercontent.com/sensei-hacker/PrivacyLRS/secure_01/privacylrs/screenshot_choose_local.png)
+  (https://raw.githubusercontent.com/sensei-hacker/PrivacyLRS/secure_01/src/privacylrs/screenshot_choose_local.png)
 
 ### Is this a fork because somebody got mad?  
   The maintainer of PrivacyLRS has nothing but love for ExpressLRS and the ELRS maintainers. I simply wanted a version that protects my privacy.
