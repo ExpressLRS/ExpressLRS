@@ -4,10 +4,10 @@
     "cpu": "cortex-m0",
     "extra_flags": "-DSTM32F0 -DSTM32F0xx -DSTM32F072xB",
     "f_cpu": "48000000L",
-    "ldscript": "variants/IRM301/ldscript.ld",
+    "ldscript": "variants/Flysky/ldscript.ld",
     "mcu": "stm32f072cbt6",
     "variants_dir": "variants",
-    "variant": "IRM301"
+    "variant": "Flysky"
   },
   "debug": {
     "default_tools": [
@@ -24,7 +24,7 @@
     "libopencm3",
     "stm32cube"
   ],
-  "name": "IRM301",
+  "name": "Flysky",
   "upload": {
     "maximum_ram_size": 16384,
     "maximum_size": 131072,
@@ -38,6 +38,6 @@
       "dfu"
     ]
   },
-  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f072c8.html",
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f072cb.html",
   "vendor": "ST"
 }

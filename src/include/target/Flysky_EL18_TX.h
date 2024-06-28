@@ -1,4 +1,4 @@
-#define DEVICE_NAME          "FLYSKY IRM301"
+#define DEVICE_NAME          "FLYSKY EL18"
 
 // There is some special handling for this target
 #define TARGET_TX_FLYSKY
@@ -24,15 +24,15 @@
 #define GPIO_PIN_SCL            PB13
 #define GPIO_PIN_RX_ENABLE      PB1
 #define GPIO_PIN_TX_ENABLE      PA4 
-#define GPIO_PIN_ANT_CTRL       PA6 // R Antenna SW
-#define GPIO_PIN_ANT_CTRL_COMPL PA5 // L Antenna SW
+#define GPIO_PIN_ANT_CTRL       PA6  // R Antenna SW
+#define GPIO_PIN_ANT_CTRL_COMPL PA5  // L Antenna SW
 #define GPIO_PIN_H_POWER        PB8
 #define GPIO_PIN_L_POWER        PB7
 #define GPIO_PIN_BUSY           PB6
-#define GPIO_PIN_RCSIGNAL_RX    PA3 // UART2 to radio connector IRM301 PA3
-#define GPIO_PIN_RCSIGNAL_TX    PA2 // UART2 to radio connector IRM301 PA2
-#define GPIO_PIN_DEBUG_RX       PA10 // UART1 Data Out IRM301
-#define GPIO_PIN_DEBUG_TX       PA9 // UART1 Data Out IRM301
+#define GPIO_PIN_RCSIGNAL_RX    PA3  // UART2 to radio connector EL18 IRM301 PA3
+#define GPIO_PIN_RCSIGNAL_TX    PA2  // UART2 to radio connector EL18 IRM301 PA2
+#define GPIO_PIN_DEBUG_RX       PA10 // UART1 Data Out EL18 IRM301
+#define GPIO_PIN_DEBUG_TX       PA9  // UART1 Data Out EL18 IRM301
 
 // Power output
 #define MinPower                PWR_10mW
