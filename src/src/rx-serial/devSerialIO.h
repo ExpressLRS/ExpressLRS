@@ -2,6 +2,9 @@
 
 #include "device.h"
 
-extern device_t Serial_device;
+extern device_t Serial0_device;
+#if defined(PLATFORM_ESP32)
+extern device_t Serial1_device;
+#endif
 extern void crsfRCFrameAvailable();
 extern void crsfRCFrameMissed();
