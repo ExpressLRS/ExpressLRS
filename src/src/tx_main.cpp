@@ -1218,6 +1218,11 @@ static void setupSerial()
     // Set TxUSB to TxBackpack so that data goes to the same place
     TxUSB = TxBackpack;
   }
+  else if (GPIO_PIN_RCSIGNAL_RX == 3 && GPIO_PIN_RCSIGNAL_TX == 1)
+  {
+    // This is an internal module, or an external module configured with a relay.  Do not setup TxUSB.
+    TxUSB = new NullStream();
+  }
   else
   {
     // The backpack is on a separate UART to UART0
