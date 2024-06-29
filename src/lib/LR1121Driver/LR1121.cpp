@@ -125,6 +125,25 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
     hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
 
+    if (maximumFrequency < 600000000)
+    {
+        // 7.2.15 SetRssiCalibration
+        // Below 600MHz 0 12 12 14 0 1 3 4 4 3 6 6 6 6 6 6 6 6
+        uint8_t rssiCalbuf[11];
+        rssiCalbuf[0] = 12 | 12 << 4;
+        rssiCalbuf[1] = 14 | 0 << 4;
+        rssiCalbuf[2] = 1 | 3 << 4;
+        rssiCalbuf[3] = 4 | 4 << 4; 
+        rssiCalbuf[4] = 3 | 6 << 4; 
+        rssiCalbuf[5] = 6 | 6 << 4; 
+        rssiCalbuf[6] = 6 | 6 << 4; 
+        rssiCalbuf[7] = 6 | 6 << 4;
+        rssiCalbuf[8] = 6;
+        rssiCalbuf[9] = 0;
+        rssiCalbuf[10] = 0;
+        hal.WriteCommand(LR11XX_RADIO_SET_RSSI_CALIBRATION_OC, rssiCalbuf, sizeof(rssiCalbuf), SX12XX_Radio_All);
+    }
+
     return true;
 }
 
