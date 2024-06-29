@@ -24,6 +24,7 @@
 #include "devBackpack.h"
 
 #include "MAVLink.h"
+#include "common/mavlink.h"
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -48,6 +49,8 @@ FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 FIFO<UART_INPUT_BUF_LEN> uartInputBuffer;
 
 uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
+
+FIFO<2048U> mavlink_uplink_queue;
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
@@ -1558,18 +1561,39 @@ void loop()
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
     uint16_t count = uartInputBuffer.size();
-    if (count > 0 && !MspSender.IsActive())
+    if (count > 0)
     {
+      mavlink_message_t msg;
+      mavlink_status_t status;
+      uartInputBuffer.lock();
+      for(int i=0; i<count;i++){
+        if(mavlink_parse_char(MAVLINK_COMM_0,uartInputBuffer.pop(),&msg,&status)){
+          uint8_t buf[280];
+          uint16_t len = mavlink_msg_to_send_buffer(buf,&msg);
+          if (mavlink_uplink_queue.available(len)){
+            mavlink_uplink_queue.lock();
+            mavlink_uplink_queue.pushBytes(buf,len);
+            mavlink_uplink_queue.unlock();
+          }
+        }
+      }
+      uartInputBuffer.unlock();
+      count=mavlink_uplink_queue.size();
+      if ( count > 0 &&!MspSender.IsActive()){
+        
         count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
         mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
         mavlinkSSBuffer[1] = count;
         // Following n bytes are just raw mavlink
-        uartInputBuffer.lock();
-        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        uartInputBuffer.unlock();
+        mavlink_uplink_queue.lock();
+        mavlink_uplink_queue.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        mavlink_uplink_queue.unlock();
+        
         nextPayload = mavlinkSSBuffer;
         nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+
         MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+      }
     }
   }
 }

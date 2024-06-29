@@ -3,6 +3,7 @@
 #include "FIFO.h"
 #include "logging.h"
 #include "helpers.h"
+#include "common/mavlink.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "device.h"
@@ -55,6 +56,8 @@ static const int32_t OpenTXsyncOffsetSafeMargin = 1000; // 100us
 static const int32_t TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSFHandset::UARTcurrentBaudIdx = 6;   // only used for baud-cycling, initialized to the end so the next one we try is the first in the list
 uint32_t CRSFHandset::UARTrequestedBaud = 5250000;
+
+extern FIFO<2048U> mavlink_uplink_queue;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 static const int UARTwdtInterval = 1000;
@@ -377,6 +380,24 @@ bool CRSFHandset::ProcessPacket()
         RCdataLastRecv = micros();
         RcPacketToChannelsData();
         packetReceived = true;
+    }
+    else if(packetType==CRSF_FRAMETYPE_MAVLINK_RAW) {
+        uint8_t size=SerialInBuffer[3];
+        mavlink_message_t msg;
+        mavlink_status_t status;
+        for(uint8_t i=0; i<size;i++)
+        {
+            if(mavlink_parse_char(MAVLINK_COMM_1,SerialInBuffer[4+i],&msg,&status))
+            {
+                uint8_t buf[280];
+                uint16_t len = mavlink_msg_to_send_buffer(buf,&msg);
+                if (mavlink_uplink_queue.available(len)){
+                    mavlink_uplink_queue.lock();
+                    mavlink_uplink_queue.pushBytes(buf,len);
+                    mavlink_uplink_queue.unlock();
+                }
+            }
+        }
     }
     // check for all extended frames that are a broadcast or a message to the FC
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
