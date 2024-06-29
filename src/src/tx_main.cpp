@@ -1578,22 +1578,22 @@ void loop()
         }
       }
       uartInputBuffer.unlock();
-      count=mavlink_uplink_queue.size();
-      if ( count > 0 &&!MspSender.IsActive()){
-        
-        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
-        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-        mavlinkSSBuffer[1] = count;
-        // Following n bytes are just raw mavlink
-        mavlink_uplink_queue.lock();
-        mavlink_uplink_queue.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        mavlink_uplink_queue.unlock();
-        
-        nextPayload = mavlinkSSBuffer;
-        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+    }
+    count=mavlink_uplink_queue.size();
+    if ( count > 0 &&!MspSender.IsActive()){
+      
+      count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
+      mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+      mavlinkSSBuffer[1] = count;
+      // Following n bytes are just raw mavlink
+      mavlink_uplink_queue.lock();
+      mavlink_uplink_queue.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+      mavlink_uplink_queue.unlock();
+      
+      nextPayload = mavlinkSSBuffer;
+      nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
 
-        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
-      }
+      MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
   }
 }
