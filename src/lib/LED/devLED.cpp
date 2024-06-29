@@ -167,7 +167,12 @@ static void setPowerLEDs()
     }
 }
 
-static int event()
+static int start(void)
+{
+    return DURATION_IMMEDIATELY;
+}
+
+static int event(bool timeout_expired)
 {
     #if defined(TARGET_RX)
         if (InBindingMode && GPIO_PIN_LED != UNDEF_PIN)
@@ -308,7 +313,7 @@ static int event()
 
 device_t LED_device = {
     .initialize = initialize,
-    .start = event,
+    .start = start,
     .event = event,
     .timeout = timeout
 };

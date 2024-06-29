@@ -1251,7 +1251,7 @@ static int start()
   return firmwareOptions.wifi_auto_on_interval;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {

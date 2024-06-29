@@ -171,7 +171,7 @@ static int start()
     return DURATION_NEVER;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {

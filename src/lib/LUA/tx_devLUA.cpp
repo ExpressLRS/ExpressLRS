@@ -295,7 +295,7 @@ static struct luaItem_string luaBackpackVersion = {
 //---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
-static int event();
+static int event(bool timeout_expired);
 
 extern TxConfig config;
 extern void VtxTriggerSend();
@@ -846,7 +846,7 @@ static void registerLuaParameters()
   registerLUAParameter(NULL);
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
   if (connectionState > FAILURE_STATES)
   {
@@ -922,7 +922,7 @@ static int start()
   setLuaStringValue(&luaInfo, luaBadGoodString);
   luaRegisterDevicePingCallback(&luadevUpdateBadGood);
 
-  event();
+  event(false);
   return DURATION_IMMEDIATELY;
 }
 

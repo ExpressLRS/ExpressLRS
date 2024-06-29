@@ -35,7 +35,7 @@
 #define READ_BIT                                0x00
 #define WRITE_BIT                               0x01
 
-#define RTC6705_BOOT_DELAY                      350
+#define RTC6705_BOOT_DELAY_MS                   350
 #define RTC6705_PLL_SETTLE_TIME_MS              500 // ms - after changing frequency turn amps back on after this time for clean switching
 #define VTX_POWER_INTERVAL_MS                   20
 
@@ -47,16 +47,27 @@ pwm_channel_t rfAmpPwmChannel = -1;
 
 uint16_t vtxSPIFrequency = 6000;
 static uint16_t vtxSPIFrequencyCurrent = 6000;
+
 uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
+
 uint8_t vtxSPIPitmode = 1;
 static uint8_t vtxSPIPitmodeCurrent = 1;
+
+bool vtxPowerAmpEnableCurrent = false;
+bool vtxPowerAmpEnable = false;
+
 static uint8_t RfAmpVrefState = 0;
+
 static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t vtxPreviousSPIPWM = 0;
+
 static uint16_t vtxMinPWM = MIN_PWM;
 static uint16_t vtxMaxPWM = MAX_PWM;
+
 static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
+
 
 static bool stopVtxMonitoring = false;
 
@@ -78,11 +89,14 @@ uint16_t VpdFreqArray[] = {5650, 5750, 5850, 5950};
 uint8_t VpdSetPointCount =  ARRAY_SIZE(VpdFreqArray);
 
 static SPIClass *vtxSPI;
+static bool vtxSPIIsShared = false;
 
 static void rtc6705WriteRegister(uint32_t regData)
 {
+    DBGLN("VTX: Register: %d", regData);
+
     // When sharing the SPI Bus control of the NSS pin is done by us
-    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    if (vtxSPIIsShared)
     {
         vtxSPI->setBitOrder(LSBFIRST);
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, LOW);
@@ -104,7 +118,7 @@ static void rtc6705WriteRegister(uint32_t regData)
     // Since the RTC6705 just ignores the extra bits, we send 32 bits and the RTC6705 ignores the last 7 bits.
     vtxSPI->transfer32(regData);
 
-    if (GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK)
+    if (vtxSPIIsShared)
     {
         digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
         vtxSPI->setBitOrder(MSBFIRST);
@@ -119,6 +133,8 @@ static void rtc6705ResetSynthRegA()
 
 static void rtc6705SetFrequency(uint32_t freq)
 {
+    DBGLN("VTX: Set frequency: %d", freq);
+
     rtc6705ResetSynthRegA();
 
     VTxOutputMinimum(); // Set power to zero for clear channel switching
@@ -133,44 +149,63 @@ static void rtc6705SetFrequency(uint32_t freq)
 
 static void rtc6705PowerAmpOn()
 {
+    DBGLN("VTX: internal PA On");
     uint32_t regData = PRE_DRIVER_AND_PA_CONTROL_REGISTER | (WRITE_BIT << 4) | (POWER_AMP_ON << 5);
     rtc6705WriteRegister(regData);
 }
 
 static void RfAmpVrefOn()
 {
-    if (!RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+    if (!RfAmpVrefState) {
+        DBGLN("VTX: external PA on");
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, HIGH);
+    }
 
     RfAmpVrefState = 1;
 }
 
 static void RfAmpVrefOff()
 {
-    if (RfAmpVrefState) digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    if (RfAmpVrefState) {
+        DBGLN("VTX: external PA off");
+        digitalWrite(GPIO_PIN_RF_AMP_VREF, LOW);
+    }
 
     RfAmpVrefState = 0;
 }
 
 static void setPWM()
 {
+    if (vtxSPIPWM == vtxPreviousSPIPWM) {
+        return;
+    }
+
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+    DBGLN("VTX: setPWM (pwm), value: %d", vtxSPIPWM * 1000 / 4096);
     PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
 #elif defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
     {
+        DBGLN("VTX: setPWM (dac), value: %d", vtxSPIPWM >> 4);
         dacWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM >> 4);
     }
     else
     {
+        DBGLN("VTX: setPWM (pwm), value: %d", vtxSPIPWM * 1000 / 4096);
         PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
     }
 #else
+    DBGLN("VTX: setPWM (analog), value: %d", vtxSPIPWM);
     analogWrite(GPIO_PIN_RF_AMP_PWM, vtxSPIPWM);
 #endif
+
+    vtxPreviousSPIPWM = vtxSPIPWM;
 }
 
 void VTxOutputMinimum()
 {
+    DBGLN("VTX: minimum output power");
+
     RfAmpVrefOff();
 
     vtxSPIPWM = vtxMaxPWM;
@@ -207,10 +242,14 @@ static uint16_t LinearInterpVpdSetPointArray(const uint16_t VpdSetPointArray[])
         {
             if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
             {
-                newVpd = VpdSetPointArray[i] + ((VpdSetPointArray[i + 1]-VpdSetPointArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
+                newVpd = VpdSetPointArray[i] +
+                    ((VpdSetPointArray[i + 1]-VpdSetPointArray[i]) / (VpdFreqArray[i + 1] - VpdFreqArray[i])) *
+                    (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
             }
         }
     }
+
+    DBGLN("VTX: linearlinearInterpVpdSetPointArray, value: %d", newVpd);
 
     return newVpd;
 }
@@ -233,10 +272,14 @@ static uint16_t LinearInterpSetPwm(const uint16_t PwmArray[])
         {
             if (vtxSPIFrequencyCurrent < VpdFreqArray[i + 1])
             {
-                newPwm = PwmArray[i] + ((PwmArray[i + 1]-PwmArray[i])/(VpdFreqArray[i + 1]-VpdFreqArray[i])) * (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
+                newPwm = PwmArray[i] +
+                    ((PwmArray[i + 1] - PwmArray[i]) / (VpdFreqArray[i + 1] - VpdFreqArray[i])) *
+                    (vtxSPIFrequencyCurrent - VpdFreqArray[i]);
             }
         }
     }
+
+    DBGLN("VTX: linearInterpSetPwm, value: %d", newPwm);
 
     return newPwm;
 }
@@ -268,7 +311,7 @@ static void SetVpdSetPoint()
     }
 
     setPWM();
-    DBGLN("Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
+    DBGLN("VTX: new VPD setpoint: %d, power: %d, initial PWM: %d", VpdSetPoint, vtxSPIPowerIdx, vtxSPIPWM);
 }
 
 static void checkOutputPower()
@@ -294,7 +337,7 @@ static void checkOutputPower()
             VTxOutputDecrease();
         }
 
-        //DBGLN("VTX VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
+        DBGLN("VTX: VPD setpoint: %d, raw: %d, filtered: %d, PWM: %d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
     }
 }
 
@@ -338,17 +381,21 @@ void disableVTxSpi()
 
 static void initialize()
 {
-    #if defined(TARGET_UNIFIED_RX)
+#if defined(TARGET_UNIFIED_RX)
     VpdSetPointArray25mW = VPD_VALUES_25MW;
     VpdSetPointArray100mW = VPD_VALUES_100MW;
     PwmArray25mW = PWM_VALUES_25MW;
     PwmArray100mW = PWM_VALUES_100MW;
-    #endif
+#endif
 
     if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
     {
-        if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
+        vtxSPIIsShared = GPIO_PIN_SPI_VTX_SCK == UNDEF_PIN || GPIO_PIN_SPI_VTX_SCK == GPIO_PIN_SCK;
+
+        if (!vtxSPIIsShared)
         {
+            DBGLN("VTX: Using dedicated SPI");
+
             vtxSPI = new SPIClass(HSPI);
             vtxSPI->begin(GPIO_PIN_SPI_VTX_SCK, GPIO_PIN_SPI_VTX_MISO, GPIO_PIN_SPI_VTX_MOSI, GPIO_PIN_SPI_VTX_NSS);
             vtxSPI->setHwCs(true);
@@ -356,6 +403,8 @@ static void initialize()
         }
         else
         {
+            DBGLN("VTX: Using shared SPI");
+
             vtxSPI = &SPI;
             pinMode(GPIO_PIN_SPI_VTX_NSS, OUTPUT);
             digitalWrite(GPIO_PIN_SPI_VTX_NSS, HIGH);
@@ -366,6 +415,7 @@ static void initialize()
 
         #if defined(PLATFORM_ESP32_S3)
             rfAmpPwmChannel = PWM.allocate(GPIO_PIN_RF_AMP_PWM, 10000);
+            DBGLN("VTX: Using PWM, channel: %d", rfAmpPwmChannel);
         #elif defined(PLATFORM_ESP32)
             // If using a DAC pin then adjust min/max and initial value
             if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
@@ -373,19 +423,23 @@ static void initialize()
                 vtxMinPWM = MIN_DAC;
                 vtxMaxPWM = MAX_DAC;
                 vtxSPIPWM = vtxMaxPWM;
+                DBGLN("VTX: Using DAC");
             }
             else
             {
                 rfAmpPwmChannel = PWM.allocate(GPIO_PIN_RF_AMP_PWM, 10000);
+                DBGLN("VTX: Using PWM, channel: %d", rfAmpPwmChannel);
             }
         #else
+            DBGLN("VTX: Using analog");
             pinMode(GPIO_PIN_RF_AMP_PWM, OUTPUT);
             analogWriteFreq(10000); // 10kHz
             analogWriteResolution(12); // 0 - 4095
         #endif
-        setPWM();
 
-        delay(RTC6705_BOOT_DELAY);
+        DBGLN("VTX: PWM, min: %d, max: %d, spipwm: %d", vtxMinPWM, vtxMaxPWM, vtxSPIPWM);
+
+        setPWM();
     }
 }
 
@@ -404,21 +458,33 @@ static int start()
     return RTC6705_PLL_SETTLE_TIME_MS;
 #endif
 
-    rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
+    vtxSPIFrequency = 5999; // Boot with VTx set away from standard frequencies.
+    vtxPowerAmpEnable = true;
 
-    rtc6705PowerAmpOn();
-
-    return VTX_POWER_INTERVAL_MS;
+    return RTC6705_BOOT_DELAY_MS;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
     {
         return DURATION_NEVER;
     }
 
-    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx || vtxSPIPitmodeCurrent != vtxSPIPitmode)
+    if (!timeout_expired) {
+        // An event occurred while waiting for existing timeout to elapse (e.g. RTC6705_BOOT_DELAY_MS, RTC6705_PLL_SETTLE_TIME_MS)
+        // We will have to handle the potentially updated values (frequency, power, pitmode, pa, etc) during timeout when it eventually gets called.
+        
+        // We don't want to update/override the previously-set timeout value.
+        return DURATION_IGNORE;
+    }
+
+    if (
+        vtxSPIFrequencyCurrent != vtxSPIFrequency ||
+        vtxSPIPowerIdxCurrent != vtxSPIPowerIdx ||
+        vtxSPIPitmodeCurrent != vtxSPIPitmode ||
+        vtxPowerAmpEnableCurrent != vtxPowerAmpEnable
+    )
     {
         return DURATION_IMMEDIATELY;
     }
@@ -443,26 +509,42 @@ static int timeout()
     return gatherOutputCalibrationData();
 #endif
 
+    uint32_t now = millis();
+    DBGLN("VTX: timeout, now: %d", now);
+
     if (vtxSPIFrequencyCurrent != vtxSPIFrequency)
     {
+        DBGLN("VTX: Changing frequency, old: %d, new: %d", vtxSPIFrequencyCurrent, vtxSPIFrequency);
+
         rtc6705SetFrequency(vtxSPIFrequency);
         vtxSPIFrequencyCurrent = vtxSPIFrequency;
-
-        DBGLN("Set VTX frequency: %d", vtxSPIFrequency);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }
 
+    // Note: it's important that the PA is handled after the frequency.
+    if (vtxPowerAmpEnableCurrent != vtxPowerAmpEnable)
+    {
+        DBGLN("VTX: Changing internal PA, old: %d, new: %d", vtxPowerAmpEnableCurrent, vtxPowerAmpEnable);
+        if (vtxPowerAmpEnable)
+        {
+            rtc6705PowerAmpOn();
+        }
+        vtxPowerAmpEnableCurrent = vtxPowerAmpEnable;
+
+        return VTX_POWER_INTERVAL_MS;
+    }
+
     if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
-        DBGLN("Set VTX power: %d", vtxSPIPowerIdx);
+        DBGLN("VTX: set power: %d", vtxSPIPowerIdx);
         SetVpdSetPoint();
         vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
     }
 
     if (vtxSPIPitmodeCurrent != vtxSPIPitmode)
     {
-        DBGLN("Set PIT mode: %d", vtxSPIPitmode);
+        DBGLN("VTX: PIT mode: %d", vtxSPIPitmode);
         vtxSPIPitmodeCurrent = vtxSPIPitmode;
     }
 

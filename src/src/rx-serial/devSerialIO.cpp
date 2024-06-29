@@ -34,7 +34,7 @@ static int start()
     return DURATION_IMMEDIATELY;
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
     static connectionState_e lastConnectionState = disconnected;
     serialIO->setFailsafe(connectionState == disconnected && lastConnectionState == connected);

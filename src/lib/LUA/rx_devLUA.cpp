@@ -563,7 +563,7 @@ static void registerLuaParameters()
   registerLUAParameter(nullptr);
 }
 
-static int event()
+static int event(bool timeout_expired)
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
   setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
@@ -625,7 +625,7 @@ static int timeout()
 static int start()
 {
   registerLuaParameters();
-  event();
+  event(false);
   return DURATION_IMMEDIATELY;
 }
 
