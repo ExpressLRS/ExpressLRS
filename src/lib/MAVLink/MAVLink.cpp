@@ -85,7 +85,6 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 handset->sendTelemetryToTX((uint8_t *)&crsfatt);
                 break;
             }
-            default:
             case MAVLINK_MSG_ID_HEARTBEAT: {
                 mavlink_heartbeat_t heartbeat;
                 mavlink_msg_heartbeat_decode(&msg, &heartbeat);
