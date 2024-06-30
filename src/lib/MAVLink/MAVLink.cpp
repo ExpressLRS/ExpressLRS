@@ -97,12 +97,12 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                     crsffm.p.flight_mode[4] = '*';
                     crsffm.p.flight_mode[5] = '\0';
                 }
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_MAVLINK_RAW, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
                 break;
             }
             }
-           if(true){ //TODO: Replace with option to support mavlink over CRSF 
+            if(true){ //TODO: Replace with option to support mavlink over CRSF 
                 CRSF_MK_FRAME_T(crsf_mavlink_raw_t)
                 crsfmav = {0};
                 uint8_t buffer[282];
