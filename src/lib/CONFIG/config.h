@@ -55,7 +55,7 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                _unused:3;
+                linkMode:3;
 } model_config_t;
 
 typedef struct {
@@ -109,6 +109,7 @@ public:
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
     uint8_t GetAntennaMode() const { return m_model->txAntenna; }
+    uint8_t GetLinkMode() const { return m_model->linkMode; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
@@ -136,6 +137,7 @@ public:
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
     void SetAntennaMode(uint8_t txAntenna);
+    void SetLinkMode(uint8_t linkMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -240,7 +242,11 @@ public:
     // Getters
     bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
+#if defined(PLATFORM_ESP8266)
+    uint8_t  GetPowerOnCounter() const;
+#else
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
+#endif
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }

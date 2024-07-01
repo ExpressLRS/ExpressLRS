@@ -1,4 +1,4 @@
-@@require(PLATFORM, isTX)
+@@require(PLATFORM, isTX, is8285)
 
 /* eslint-disable comma-dangle */
 /* eslint-disable max-len */
@@ -59,7 +59,7 @@ function generateFeatureBadges(features) {
   if ((features & 12) === 12) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">I2C</span>`;
   else if (!!(features & 4)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SCL</span>`;
   else if (!!(features & 8)) str += `<span style="color: #696969; background-color: #fab4a8" class="badge">SDA</span>`;
-  
+
   // Serial2
   if ((features & 96) === 96) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">Serial2</span>`;
   else if (!!(features & 32)) str += `<span style="color: #696969; background-color: #36b5ff" class="badge">RX2</span>`;
@@ -119,7 +119,7 @@ function updatePwmSettings(arPwm) {
       }
       modes.push(undefined);  // true PWM
     }
-  
+
     if (features & 32) {
       modes.push('Serial2 RX');
     } else {
@@ -187,7 +187,7 @@ function updatePwmSettings(arPwm) {
       updateOthers(pinMode.value, true); // disable others
       updateOthers(pinModes[index], false); // enable others
       pinModes[index] = pinMode.value;
-      
+
       // show Serial2 protocol selection only if Serial2 TX is assigned
       _('serial1-config').style.display = 'none';
       if (pinMode.value == 14) // Serial2 TX
@@ -247,7 +247,7 @@ function updatePwmSettings(arPwm) {
     }
     const pinTx = pinTxMode.value;
     pinRxMode.onchange();
-    if(pinRxMode.value != 9) pinTxMode.value = pinTx;
+    if (pinRxMode.value != 9) pinTxMode.value = pinTx;
   }
 }
 @@end
@@ -262,14 +262,14 @@ function init() {
   // setup model match checkbox handler
   _('model-match').onclick = () => {
     if (_('model-match').checked) {
-      _('modelid').style.display = 'block';
+      _('modelNum').style.display = 'block';
       if (storedModelId === 255) {
         _('modelid').value = '';
       } else {
         _('modelid').value = storedModelId;
       }
     } else {
-      _('modelid').style.display = 'none';
+      _('modelNum').style.display = 'none';
       _('modelid').value = '255';
     }
   };
@@ -360,11 +360,11 @@ function updateConfig(data, options) {
   }
 @@if not isTX:
   if (data.hasOwnProperty('modelid') && data.modelid !== 255) {
-    _('modelid').style.display = 'block';
+    _('modelNum').style.display = 'block';
     _('model-match').checked = true;
     storedModelId = data.modelid;
   } else {
-    _('modelid').style.display = 'none';
+    _('modelNum').style.display = 'none';
     _('model-match').checked = false;
     storedModelId = 255;
   }
@@ -421,7 +421,7 @@ function updateConfig(data, options) {
   _('is-airport').onchange = () => {
     _('serial-protocol').onchange();
     _('serial1-protocol').onchange();
-  } 
+  }
   _('is-airport').onchange;
   _('vbind').value = data.vbind;
   _('vbind').onchange = () => {
@@ -431,7 +431,7 @@ function updateConfig(data, options) {
 
   // set initial visibility status of Serial2 protocol selection
   _('serial1-config').style.display = 'none';
-  data.pwm.forEach((item,index) => {
+  data.pwm?.forEach((item,index) => {
     const _pinMode = _(`pwm_${index}_mode`)
     if (_pinMode.value == 14) // Serial2 TX
       _('serial1-config').style.display = 'block';
@@ -518,8 +518,25 @@ function fileDragHover(e) {
 
 function fileSelectHandler(e) {
   fileDragHover(e);
+  // ESP32 expects .bin, ESP8285 RX expect .bin.gz
   const files = e.target.files || e.dataTransfer.files;
-  uploadFile(files[0]);
+  const fileExt = files[0].name.split('.').pop();
+@@if (is8285 and not isTX):
+  const expectedFileExt = 'gz';
+  const expectedFileExtDesc = '.bin.gz file. <br />Do NOT decompress/unzip/extract the file!';
+@@else:
+  const expectedFileExt = 'bin';
+  const expectedFileExtDesc = '.bin file.';
+@@endif
+  if (fileExt === expectedFileExt) {
+    uploadFile(files[0]);
+  } else {
+    cuteAlert({
+      type: 'error',
+      title: 'Incorrect File Format',
+      message: 'You selected the file &quot;' + files[0].name.toString() + '&quot;.<br />The firmware file must be a ' + expectedFileExtDesc
+    });
+  }
 }
 
 function uploadFile(file) {
@@ -564,11 +581,11 @@ function completeHandler(event) {
     // This is basically a delayed display of the success dialog with a fake progress
     let percent = 0;
     const interval = setInterval(()=>{
-@@if (PLATFORM.find('8285')>=0):
+@@if (is8285):
       percent = percent + 1;
 @@else:
       percent = percent + 2;
-@@end 
+@@end
       _('progressBar').value = percent;
       _('status').innerHTML = percent + '% flashed... please wait';
       if (percent === 100) {
@@ -872,7 +889,7 @@ function updateOptions(data) {
         if (Array.isArray(value)) _(key).value = value.toString();
         else _(key).value = value;
       }
-      if(_(key).onchange) _(key).onchange();
+      if (_(key).onchange) _(key).onchange();
     }
   }
   if (data['wifi-ssid']) _('homenet').textContent = data['wifi-ssid'];
