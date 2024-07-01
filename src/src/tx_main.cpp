@@ -1100,13 +1100,32 @@ static void HandleUARTin()
   if (TxUSB->available())
   {
     auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+    uint8_t buf[size];
     if (size > 0)
     {
-      uint8_t buf[size];
       TxUSB->readBytes(buf, size);
       uartInputBuffer.lock();
       uartInputBuffer.pushBytes(buf, size);
       uartInputBuffer.unlock();
+    }
+
+    if (connectionState == noCrossfire)
+    {
+      for (uint8_t i = 0; i < size; ++i)
+      {
+        uint8_t c = buf[i];
+
+        mavlink_message_t msg;
+        mavlink_status_t status;
+
+        // Try parse a mavlink message
+        if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+        {
+            // Message decoded successfully
+            config.SetLinkMode(TX_MAVLINK_MODE);
+            UARTconnected();
+        }
+      }
     }
   }
 
