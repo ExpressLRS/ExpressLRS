@@ -1098,52 +1098,50 @@ static void HandleUARTin()
 {
   // Read from the USB serial port
   if (TxUSB->available())
-  {
-    auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
-    uint8_t buf[size];
-    if (size > 0)
-    {
-      TxUSB->readBytes(buf, size);
-      uartInputBuffer.lock();
-      uartInputBuffer.pushBytes(buf, size);
-      uartInputBuffer.unlock();
-    }
-
-    if (connectionState == noCrossfire)
-    {
-      for (uint8_t i = 0; i < size; ++i)
+  {      
+      if (firmwareOptions.is_airport)
       {
-        uint8_t c = buf[i];
-
-        mavlink_message_t msg;
-        mavlink_status_t status;
-
-        // Try parse a mavlink message
-        if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+        auto size = std::min((uint16_t)(AP_MAX_BUF_LEN - apInputBuffer.size()), TxUSB->available());
+        if (size > 0)
         {
-            // Message decoded successfully
-            config.SetLinkMode(TX_MAVLINK_MODE);
-            UARTconnected();
+          uint8_t buf[size];
+          TxUSB->readBytes(buf, size);
+          apInputBuffer.lock();
+          apInputBuffer.pushBytes(buf, size);
+          apInputBuffer.unlock();
         }
       }
-    }
-  }
+      else
+      {
+        auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+        if (size > 0)
+        {
+          uint8_t buf[size];
+          uartInputBuffer.lock();
+          uartInputBuffer.pushBytes(buf, size);
+          uartInputBuffer.unlock();
 
-  // Double buffer into the Airport buffer if Airport is enabled
-  if (firmwareOptions.is_airport && uartInputBuffer.size() > 0)
-  {
-    auto size = std::min((uint16_t)(AP_MAX_BUF_LEN - apInputBuffer.size()), uartInputBuffer.size());
-    if (size > 0)
-    {
-      uint8_t buf[size];
+          // Lets check if the data is Mav and auto change LinkMode
+          if (connectionState == noCrossfire)
+          {
+            for (uint8_t i = 0; i < size; ++i)
+            {
+              uint8_t c = buf[i];
 
-      uartInputBuffer.lock();
-      uartInputBuffer.popBytes(buf, size);
-      uartInputBuffer.unlock();
+              mavlink_message_t msg;
+              mavlink_status_t status;
 
-      apInputBuffer.lock();
-      apInputBuffer.pushBytes(buf, size);
-      apInputBuffer.unlock();
+              // Try parse a mavlink message
+              if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+              {
+                  // Message decoded successfully
+                  config.SetLinkMode(TX_MAVLINK_MODE);
+                  UARTconnected();
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1160,6 +1158,13 @@ static void HandleUARTin()
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
+
+        // The tx is in Mavlink mode and receiving data from the Backpack (mavesp).
+        // Start the hwTimer because the user might be operating the module as a standalone unit without a handset.
+        if (connectionState == noCrossfire)
+        {
+          UARTconnected();
+        }
       }
     }
     else if (msp.processReceivedByte(TxBackpack->read()))
