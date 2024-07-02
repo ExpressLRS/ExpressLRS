@@ -157,3 +157,31 @@ typedef struct {
 } v7_rx_config_t;
 
 // V8 is just V7 except PWM config inserted 10khz PWM in the middle
+
+typedef struct __attribute__((packed)) {
+    uint32_t    version;
+    uint8_t     uid[UID_LEN];
+    uint8_t     unused_padding[2];
+    uint32_t    flash_discriminator;
+    struct __attribute__((packed)) {
+        uint16_t    scale;          // FUTURE: Override compiled vbat scale
+        int16_t     offset;         // FUTURE: Override comiled vbat offset
+    } vbat;
+    uint8_t     volatileBind:1,     // 0=Persistent 1=Volatile
+                unused_onLoan:1,
+                power:4,
+                antennaMode:2;      // 0=0, 1=1, 2=Diversity
+    uint8_t     powerOnCounter:3,
+                forceTlmOff:1,
+                rateInitialIdx:4;   // Rate to start rateCycling at on boot
+    uint8_t     modelId;
+    uint8_t     serialProtocol:4,
+                failsafeMode:2,
+                unused:2;
+    v6_rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
+    uint8_t     teamraceChannel:4,
+                teamracePosition:3,
+                teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    uint8_t     serial1Protocol:4,  // secondary serial protocol
+                serial1Protocol_unused:4;
+}v9_rx_config_t;
