@@ -47,6 +47,22 @@
 #include "esp_task_wdt.h"
 #endif
 
+//
+// Code encapsulated by the ARDUINO_CORE_INVERT_FIX #ifdef temporarily fixes EpressLRS issue #2609 which is caused 
+// by the Arduino core (see https://github.com/espressif/arduino-esp32/issues/9896) and fixed
+// by Espressif with Arduino core release 3.0.3 (see https://github.com/espressif/arduino-esp32/pull/9950)
+// 
+// With availability of Arduino core 3.0.3 and upgrading ExpressLRS to Arduino core 3.0.3 the temporary fix
+// should be deleted again
+//
+// ARDUINO_CORE_INVERT_FIX PT1
+#define ARDUINO_CORE_INVERT_FIX
+
+#if defined(PLATFORM_ESP32) && defined(ARDUINO_CORE_INVERT_FIX)
+#include "driver/uart.h"
+#endif
+// ARDUINO_CORE_INVERT_FIX PT1 end
+
 ///LUA///
 #define LUA_MAX_PARAMS 32
 ////
@@ -1410,6 +1426,15 @@ static void setupSerial()
     {
         config = SERIAL_8N2;
     }
+
+    // ARDUINO_CORE_INVERT_FIX PT2
+    #if defined(ARDUINO_CORE_INVERT_FIX)
+    if(invert == false)
+    {
+        uart_set_line_inverse(0, UART_SIGNAL_INV_DISABLE);
+    }
+    #endif
+    // ARDUINO_CORE_INVERT_FIX PT2 end
 
     Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
