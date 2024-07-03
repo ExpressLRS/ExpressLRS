@@ -108,6 +108,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
 
 bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
 {
+#if !defined(PLATFORM_STM32)
     for (uint8_t i = 0; i < bufferSize; ++i)
     {
         uint8_t c = buffer[i];
@@ -122,6 +123,6 @@ bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
             return true;
         }
     }
-    
+#endif
     return false;
 }
