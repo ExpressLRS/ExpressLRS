@@ -29,10 +29,7 @@ static int start()
 {
     handset->Begin();
 #if defined(DEBUG_TX_FREERUN)
-    if (!handset->connect())
-    {
-        ERRLN("CRSF::connected has not been initialised");
-    }
+    handset->forceConnection();
 #endif
     return DURATION_IMMEDIATELY;
 }
