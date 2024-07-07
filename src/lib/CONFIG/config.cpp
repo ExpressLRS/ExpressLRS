@@ -468,6 +468,16 @@ TxConfig::SetVtxBand(uint8_t vtxBand)
 }
 
 void
+TxConfig::SetBLETelemetry(bool bleTelemetry)
+{
+    if (GetBLETelemetry() != bleTelemetry)
+    {
+        m_model->bleTelemetry = bleTelemetry;
+        m_modified |= MODEL_CHANGED;
+    }
+}
+
+void
 TxConfig::SetVtxChannel(uint8_t vtxChannel)
 {
     if (m_config.vtxChannel != vtxChannel)

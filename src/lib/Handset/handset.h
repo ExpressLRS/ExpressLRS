@@ -95,6 +95,11 @@ public:
      */
     uint32_t GetRCdataLastRecv() const { return RCdataLastRecv; }
 
+    // Member function to check if the controller is connected
+    bool ControllerConnected() const {
+        return controllerConnected;
+    }
+
 protected:
     virtual ~Handset() = default;
 

@@ -55,7 +55,8 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                linkMode:3;
+                linkMode:3,
+                bleTelemetry:1;
 } model_config_t;
 
 typedef struct {
@@ -111,6 +112,7 @@ public:
     uint8_t GetAntennaMode() const { return m_model->txAntenna; }
     uint8_t GetLinkMode() const { return m_model->linkMode; }
     bool GetModelMatch() const { return m_model->modelMatch; }
+    bool GetBLETelemetry() const { return m_model->bleTelemetry; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
     uint8_t  GetVtxChannel() const { return m_config.vtxChannel; }
@@ -139,6 +141,7 @@ public:
     void SetAntennaMode(uint8_t txAntenna);
     void SetLinkMode(uint8_t linkMode);
     void SetModelMatch(bool modelMatch);
+    void SetBLETelemetry(bool bleTelemetry);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetVtxBand(uint8_t vtxBand);

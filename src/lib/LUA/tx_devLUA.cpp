@@ -133,6 +133,15 @@ static struct luaItem_selection luaModelMatch = {
     modelMatchUnit
 };
 
+#if defined(PLATFORM_ESP32)
+static struct luaItem_selection luaBLETelemetry = {
+    {"BleTelemetry", CRSF_TEXT_SELECTION},
+    0, // value
+    "Off;On",
+    STR_EMPTYSPACE
+};
+#endif
+
 static struct luaItem_command luaBind = {
     {"Bind", CRSF_COMMAND},
     lcsIdle, // step
@@ -715,6 +724,13 @@ static void registerLuaParameters()
       });
     }
 
+    #if defined(PLATFORM_ESP32)
+        registerLUAParameter(&luaBLETelemetry, [](struct luaPropertiesCommon *item, uint8_t arg) {
+          bool newBLETelemetry = arg;
+          config.SetBLETelemetry(newBLETelemetry);
+        });
+    #endif
+
     // POWER folder
     registerLUAParameter(&luaPowerFolder);
     luadevGeneratePowerOpts(&luaPower);
@@ -862,6 +878,9 @@ static int event()
   setLuaTextSelectionValue(&luaLinkMode, config.GetLinkMode());
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+  #if defined(PLATFORM_ESP32)
+    setLuaTextSelectionValue(&luaBLETelemetry, (uint8_t)config.GetBLETelemetry());
+  #endif
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
