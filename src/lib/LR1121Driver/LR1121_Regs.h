@@ -279,3 +279,89 @@ typedef enum
     LR11XX_RADIO_RX_DUTY_CYCLE_MODE_RX  = 0x00,  //!< LoRa/GFSK: Uses Rx for listening to packets
     LR11XX_RADIO_RX_DUTY_CYCLE_MODE_CAD = 0x01,  //!< Only in LoRa: Uses CAD to listen for over-the-air activity
 } lr11xx_radio_rx_duty_cycle_mode_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_CRC_OFF         = 0x01,  //!< CRC check deactivated
+    LR11XX_RADIO_GFSK_CRC_1_BYTE      = 0x00,
+    LR11XX_RADIO_GFSK_CRC_2_BYTES     = 0x02,
+    LR11XX_RADIO_GFSK_CRC_1_BYTE_INV  = 0x04,
+    LR11XX_RADIO_GFSK_CRC_2_BYTES_INV = 0x06,
+} lr11xx_radio_gfsk_crc_type_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_DC_FREE_OFF                   = 0x00,  //!< Whitening deactivated
+    LR11XX_RADIO_GFSK_DC_FREE_WHITENING             = 0x01,  //!< Whitening enabled
+    LR11XX_RADIO_GFSK_DC_FREE_WHITENING_SX128X_COMP = 0x03,  //!< Whitening enabled - SX128x compatibility
+} lr11xx_radio_gfsk_dc_free_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_PKT_FIX_LEN = 0x00,  //!< Payload length is not sent/read over the air
+    LR11XX_RADIO_GFSK_PKT_VAR_LEN = 0x01,  //!< Payload length is sent/read over the air
+    LR11XX_RADIO_GFSK_PKT_VAR_LEN_SX128X_COMP =
+        0x02,  //!< Payload length is sent/read over the air - SX128x compatibility
+} lr11xx_radio_gfsk_pkt_len_modes_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_ADDRESS_FILTERING_DISABLE      = 0x00,  //!< Filter deactivated
+    LR11XX_RADIO_GFSK_ADDRESS_FILTERING_NODE_ADDRESS = 0x01,  //!< Filter on Node Address
+    LR11XX_RADIO_GFSK_ADDRESS_FILTERING_NODE_AND_BROADCAST_ADDRESSES =
+        0x02,  //!< Filtering on Node and Broadcast addresses
+} lr11xx_radio_gfsk_address_filtering_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_OFF        = 0x00,
+    LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS  = 0x04,
+    LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_16BITS = 0x05,
+    LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_24BITS = 0x06,
+    LR11XX_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_32BITS = 0x07
+} lr11xx_radio_gfsk_preamble_detector_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_BW_4800   = 0x1F,  //!< Bandwidth 4.8 kHz DSB
+    LR11XX_RADIO_GFSK_BW_5800   = 0x17,  //!< Bandwidth 5.8 kHz DSB
+    LR11XX_RADIO_GFSK_BW_7300   = 0x0F,  //!< Bandwidth 7.3 kHz DSB
+    LR11XX_RADIO_GFSK_BW_9700   = 0x1E,  //!< Bandwidth 9.7 kHz DSB
+    LR11XX_RADIO_GFSK_BW_11700  = 0x16,  //!< Bandwidth 11.7 kHz DSB
+    LR11XX_RADIO_GFSK_BW_14600  = 0x0E,  //!< Bandwidth 14.6 kHz DSB
+    LR11XX_RADIO_GFSK_BW_19500  = 0x1D,  //!< Bandwidth 19.5 kHz DSB
+    LR11XX_RADIO_GFSK_BW_23400  = 0x15,  //!< Bandwidth 23.4 kHz DSB
+    LR11XX_RADIO_GFSK_BW_29300  = 0x0D,  //!< Bandwidth 29.3 kHz DSB
+    LR11XX_RADIO_GFSK_BW_39000  = 0x1C,  //!< Bandwidth 39.0 kHz DSB
+    LR11XX_RADIO_GFSK_BW_46900  = 0x14,  //!< Bandwidth 46.9 kHz DSB
+    LR11XX_RADIO_GFSK_BW_58600  = 0x0C,  //!< Bandwidth 58.6 kHz DSB
+    LR11XX_RADIO_GFSK_BW_78200  = 0x1B,  //!< Bandwidth 78.2 kHz DSB
+    LR11XX_RADIO_GFSK_BW_93800  = 0x13,  //!< Bandwidth 93.8 kHz DSB
+    LR11XX_RADIO_GFSK_BW_117300 = 0x0B,  //!< Bandwidth 117.3 kHz DSB
+    LR11XX_RADIO_GFSK_BW_156200 = 0x1A,  //!< Bandwidth 156.2 kHz DSB
+    LR11XX_RADIO_GFSK_BW_187200 = 0x12,  //!< Bandwidth 187.2 kHz DSB
+    LR11XX_RADIO_GFSK_BW_234300 = 0x0A,  //!< Bandwidth 232.3 kHz DSB
+    LR11XX_RADIO_GFSK_BW_312000 = 0x19,  //!< Bandwidth 312.0 kHz DSB
+    LR11XX_RADIO_GFSK_BW_373600 = 0x11,  //!< Bandwidth 373.6 kHz DSB
+    LR11XX_RADIO_GFSK_BW_467000 = 0x09   //!< Bandwidth 467.0 kHz DSB
+} lr11xx_radio_gfsk_bw_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_PULSE_SHAPE_OFF   = 0x00,  //!< No filter applied
+    LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_03 = 0x08,  //!< Gaussian BT 0.3
+    LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_05 = 0x09,  //!< Gaussian BT 0.5
+    LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_07 = 0x0A,  //!< Gaussian BT 0.7
+    LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_1  = 0x0B   //!< Gaussian BT 1.0
+} lr11xx_radio_gfsk_pulse_shape_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_BITRATE_200k = 20,
+    LR11XX_RADIO_GFSK_BITRATE_300k = 30
+} lr11xx_radio_gfsk_bitrate_t;
+
+typedef enum
+{
+    LR11XX_RADIO_GFSK_FDEV_100k = 100
+} lr11xx_radio_gfsk_fdev_t;
