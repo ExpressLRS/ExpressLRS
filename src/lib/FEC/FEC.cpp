@@ -2,9 +2,6 @@
 
 void FECEncode(uint8_t *incomingData, uint8_t *FECBuffer)
 {
-#if defined(TARGET_UNIFIED_RX)
-digitalWrite(19, HIGH);
-#endif
     // ~~~~~~~~ Hamming(7,4) ~~~~~~~~ 
     uint8_t encodedBuffer[8 * 2] = {0};
     for (uint8_t i = 0; i < 8; i++)
@@ -22,16 +19,10 @@ digitalWrite(19, HIGH);
             FECBuffer[i * 2 + 1] |= ((encodedBuffer[j + 8] >> i) & 0x01) << j; 
         }
     }
-#if defined(TARGET_UNIFIED_RX)
-digitalWrite(19, LOW);
-#endif
 }
 
 void FECDecode(uint8_t *incomingFECBuffer, uint8_t *outgoingData)
 {
-#if defined(TARGET_UNIFIED_RX)
-digitalWrite(19, HIGH);
-#endif
     // ~~~~~~~~ Interleaving ~~~~~~~~ 
     uint8_t encodedBuffer[16] = {0};
     for (uint8_t i = 0; i < 8; i++)
@@ -49,7 +40,4 @@ digitalWrite(19, HIGH);
         outgoingData[i] =  HammingTableDecode(encodedBuffer[i * 2 + 0]);         // LSB nibble
         outgoingData[i] |= HammingTableDecode(encodedBuffer[i * 2 + 1]) << 4;    // MSB nibble
     }
-#if defined(TARGET_UNIFIED_RX)
-digitalWrite(19, LOW);
-#endif
 }

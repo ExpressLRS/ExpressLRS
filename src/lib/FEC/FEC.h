@@ -4,7 +4,8 @@
 #include "hamming.h"
 
 /**
- * @brief The below functions may look flexible, but they are not!
+ * @brief Hamming(7,4)
+ * The below functions may look flexible, but they are not!
  * Only send it an 8B payload that will go into a 14B FECBuffer.
  * The encoding will be ok but interleaving expects 8B going into 14B.
  */
