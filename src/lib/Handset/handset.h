@@ -95,6 +95,13 @@ public:
      */
     uint32_t GetRCdataLastRecv() const { return RCdataLastRecv; }
 
+#if defined(DEBUG_TX_FREERUN)
+    /**
+     * @brief Can be used to force a connected callback for debugging
+     */
+    void forceConnection() { if (connected) connected(); }
+#endif
+
 protected:
     virtual ~Handset() = default;
 
