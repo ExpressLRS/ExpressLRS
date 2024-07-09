@@ -172,7 +172,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     if (useFSK)
     {
-    // DBGLN("Config FSK");
+        DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
         uint8_t bwf = sf;
         uint32_t fdev = (uint32_t)cr * 1000;
@@ -191,7 +191,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     }
     else
     {
-    // DBGLN("Config LoRa");
+        DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
     #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?

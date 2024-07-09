@@ -2,7 +2,7 @@
 
 void FECEncode(uint8_t *incomingData, uint8_t *FECBuffer)
 {
-    // ~~~~~~~~ Hamming(7,4) ~~~~~~~~ 
+    // Encode Hamming(7,4) 
     uint8_t encodedBuffer[8 * 2] = {0};
     for (uint8_t i = 0; i < 8; i++)
     {
@@ -10,7 +10,7 @@ void FECEncode(uint8_t *incomingData, uint8_t *FECBuffer)
         encodedBuffer[i * 2 + 1] = HammingTableEncode(incomingData[i] >> 4);    // MSB nibble
     }
 
-    // ~~~~~~~~ Interleaving ~~~~~~~~ 
+    // Interleaving
     for (uint8_t i = 0; i < (14 / 2); i++)
     {
         for (uint8_t j = 0; j < 8; j++)
@@ -23,7 +23,7 @@ void FECEncode(uint8_t *incomingData, uint8_t *FECBuffer)
 
 void FECDecode(uint8_t *incomingFECBuffer, uint8_t *outgoingData)
 {
-    // ~~~~~~~~ Interleaving ~~~~~~~~ 
+    // Interleaving
     uint8_t encodedBuffer[16] = {0};
     for (uint8_t i = 0; i < 8; i++)
     {
@@ -34,7 +34,7 @@ void FECDecode(uint8_t *incomingFECBuffer, uint8_t *outgoingData)
         }
     }
 
-    // ~~~~~~~~ Hamming(7,4) ~~~~~~~~ 
+    // Decode Hamming(7,4) 
     for (uint8_t i = 0; i < 8; i++)
     {
         outgoingData[i] =  HammingTableDecode(encodedBuffer[i * 2 + 0]);         // LSB nibble
