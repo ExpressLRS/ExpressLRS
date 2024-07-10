@@ -1724,6 +1724,10 @@ static void EnterBindingMode()
     // Binding uses a CRCInit=0, 50Hz, and InvertIQ
     OtaCrcInitializer = 0;
     InBindingMode = true;
+    // Any method of entering bind resets a loan
+    // Model can be reloaned immediately by binding now
+    config.ReturnLoan();
+    config.Commit();
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
@@ -1790,24 +1794,37 @@ static void updateBindingMode()
         // Never enter wifi if forced to binding mode
         webserverPreventAutoStart = true;
 #endif
-        DBGLN("Power on counter >=3, enter binding mode...");
+        DBGLN("Power on counter >=3, enter binding mode");
         EnterBindingMode();
     }
 
     // If the eeprom is indicating that we're not bound, enter binding
     else if (!UID_IS_BOUND(UID) && !InBindingMode)
     {
-        DBGLN("RX has not been bound, enter binding mode...");
+        DBGLN("RX has not been bound, enter binding mode");
         EnterBindingMode();
     }
 
     else if (BindingModeRequest)
     {
-        DBGLN("Connected request to enter binding mode...");
+        DBGLN("Connected request to enter binding mode");
         BindingModeRequest = false;
         if (connectionState == connected)
         {
             LostConnection(false);
+            // Skip entering bind mode if on loan. This comes from an OTA request
+            // and the model is assumed to be inaccessible, do not want the receiver
+            // sitting in a field ready to be bound to anyone within 10km
+            if (config.IsOnLoan())
+            {
+                DBGLN("Model was on loan, becoming inert");
+                config.ReturnLoan();
+                config.Commit(); // prevents CheckConfigChangePending() re-enabling radio
+                Radio.End();
+                // Enter a completely invalid state for a receiver, to prevent wifi or radio enabling
+                connectionState = noCrossfire;
+                return;
+            }
             // if the InitRate config item was changed by LostConnection
             // save the config before entering bind, as the modified config
             // will immediately boot it out of bind mode

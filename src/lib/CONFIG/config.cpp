@@ -934,9 +934,20 @@ void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
     }
 }
 
-bool  RxConfig::GetIsBound() const
+bool RxConfig::GetIsBound() const
 {
-    return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
+    if (m_config.bindStorage == BINDSTORAGE_VOLATILE)
+        return false;
+    return UID_IS_BOUND(m_config.uid);
+}
+
+bool RxConfig::IsOnLoan() const
+{
+    if (m_config.bindStorage != BINDSTORAGE_RETURNABLE)
+        return false;
+    if (!firmwareOptions.hasUID)
+        return false;
+    return GetIsBound() && memcmp(m_config.uid, firmwareOptions.uid, UID_LEN) != 0;
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -1216,11 +1227,28 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
     }
 }
 
-void RxConfig::SetVolatileBind(bool value)
+void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
 {
-    if (m_config.volatileBind != value)
+    if (m_config.bindStorage != value)
     {
-        m_config.volatileBind = value;
+        // If switching away from returnable, revert
+        ReturnLoan();
+        m_config.bindStorage = value;
+        m_modified = true;
+    }
+}
+
+void RxConfig::ReturnLoan()
+{
+    if (IsOnLoan())
+    {
+        // go back to flashed UID if there is one
+        // or unbind if there is not
+        if (firmwareOptions.hasUID)
+            memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
+        else
+            memset(m_config.uid, 0, UID_LEN);
+
         m_modified = true;
     }
 }

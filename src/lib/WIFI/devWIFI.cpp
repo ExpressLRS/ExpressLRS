@@ -265,8 +265,10 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 static const char *GetConfigUidType(const JsonObject json)
 {
 #if defined(TARGET_RX)
-  if (config.GetVolatileBind())
+  if (config.GetBindStorage() == BINDSTORAGE_VOLATILE)
     return "Volatile";
+  if (config.GetBindStorage() == BINDSTORAGE_RETURNABLE && config.IsOnLoan())
+    return "Loaned";
   if (config.GetIsBound())
     return "Bound";
   return "Not Bound";
@@ -359,7 +361,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
-    json["config"]["vbind"] = config.GetVolatileBind();
+    json["config"]["vbind"] = config.GetBindStorage();
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
@@ -517,7 +519,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   long forceTlm = json["force-tlm"] | 0;
   config.SetForceTlmOff(forceTlm != 0);
 
-  config.SetVolatileBind((json["vbind"] | 0) != 0);
+  config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
 
   #if defined(GPIO_PIN_PWM_OUTPUTS)
