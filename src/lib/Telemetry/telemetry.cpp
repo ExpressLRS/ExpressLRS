@@ -144,6 +144,7 @@ void Telemetry::ResetState()
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
+    currentQueueIndex = 0;
     receivedPackages = 0;
 
     uint8_t offset = 0;
@@ -318,25 +319,29 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 else // if no TCP client we just want to forward MSP over the link
             #endif
             {
-                // larger msp resonses are sent in two chunks so special handling is needed so both get sent
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
                 if (header->type == CRSF_FRAMETYPE_MSP_RESP)
                 {
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
                     mspVtxProcessPacket(package);
-#endif
-                    // there is already another response stored
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        // use other slot
-                        targetIndex = payloadTypesCount - 1;
-                    }
-
-                    // if both slots are taked do not overwrite other data since the first chunk would be lost
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        targetFound = false;
-                    }
                 }
+#endif
+                // This code is emulating a two slot FIFO with head dropping
+                if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
+                {
+                    // Sending the first slot, use the second
+                    targetIndex = payloadTypesCount - 1;
+                }
+                else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
+                {
+                    // Sending the second slot, use the first
+                    targetIndex = payloadTypesCount - 2;
+                }
+                else if (currentQueueIndex == payloadTypesCount - 2 && payloadTypes[currentQueueIndex].updated)
+                {
+                    // Previous frame saved to the first slot, use the second
+                    targetIndex = payloadTypesCount - 1;
+                }
+                currentQueueIndex = targetIndex;
             }
         }
         else

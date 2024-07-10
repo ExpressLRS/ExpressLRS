@@ -75,6 +75,7 @@ private:
     telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
     uint8_t currentPayloadIndex;
+    uint8_t currentQueueIndex;
     volatile crsf_telemetry_package_t *telemetryPackageHead;
     uint8_t receivedPackages;
     bool callBootloader;
