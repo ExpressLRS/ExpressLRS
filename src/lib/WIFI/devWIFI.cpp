@@ -357,7 +357,15 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    for(u_int8_t i = 0; i < 16; i++)
+    {
+      json["config"]["serial-channel-map"][i] = config.GetSerialChannelMap(i);
+    }
     json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
+    for(u_int8_t i = 0; i < 16; i++)
+    {
+      json["config"]["serial1-channel-map"][i] = config.GetSerial1ChannelMap(i);
+    }
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
@@ -531,6 +539,22 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     config.SetPwmChannelRaw(channel, val);
   }
   #endif
+
+  JsonArray serialChannelMap = json["serial-channel-map"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < serialChannelMap.size() ; channel++)
+  {
+    uint32_t val = serialChannelMap[channel];
+    //DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetSerialChannelMap(channel, val);
+  }
+  
+  JsonArray serial1ChannelMap = json["serial1-channel-map"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < serial1ChannelMap.size() ; channel++)
+  {
+    uint32_t val = serial1ChannelMap[channel];
+    //DBGLN("PWMch(%u)=%u", channel, val);
+    config.SetSerial1ChannelMap(channel, val);
+  }
 
   config.Commit();
   request->send(200, "text/plain", "Configuration updated");

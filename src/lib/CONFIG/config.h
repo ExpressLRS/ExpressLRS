@@ -16,7 +16,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   9U
+#define RX_CONFIG_VERSION   10U
 
 #if defined(TARGET_TX)
 
@@ -229,6 +229,8 @@ typedef struct __attribute__((packed)) {
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
     uint8_t     serial1Protocol:4,  // secondary serial protocol
                 serial1Protocol_unused:4;
+    uint8_t     serialChannelMap[PWM_MAX_CHANNELS]; // Map of serial channels output 
+    uint8_t     serial1ChannelMap[PWM_MAX_CHANNELS]; // Map of serial channels output 
 } rx_config_t;
 
 class RxConfig
@@ -257,7 +259,9 @@ public:
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+    uint8_t  GetSerialChannelMap(uint8_t ch) { return m_config.serialChannelMap[ch]; }
     eSerial1Protocol GetSerial1Protocol() const { return (eSerial1Protocol)m_config.serial1Protocol; }
+    uint8_t  GetSerial1ChannelMap(uint8_t ch) { return m_config.serial1ChannelMap[ch]; }
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
@@ -279,7 +283,9 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+    void SetSerialChannelMap(uint8_t ch, uint8_t map);
     void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+    void SetSerial1ChannelMap(uint8_t ch, uint8_t map);
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
@@ -293,7 +299,8 @@ private:
     void UpgradeEepromV5();
     void UpgradeEepromV6();
     void UpgradeEepromV7V8();
-
+    void UpgradeEepromV9();
+    
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
     bool        m_modified;

@@ -5,6 +5,7 @@
 #include "telemetry.h"
 #if defined(USE_MSP_WIFI)
 #include "msp2crsf.h"
+#include "config.h"
 
 extern MSP2CROSSFIRE msp2crsf;
 #endif
@@ -67,26 +68,26 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     };
 
     crsf_channels_s PackedRCdataOut;
-    PackedRCdataOut.ch0 = channelData[0];
-    PackedRCdataOut.ch1 = channelData[1];
-    PackedRCdataOut.ch2 = channelData[2];
-    PackedRCdataOut.ch3 = channelData[3];
-    PackedRCdataOut.ch4 = channelData[4];
-    PackedRCdataOut.ch5 = channelData[5];
-    PackedRCdataOut.ch6 = channelData[6];
-    PackedRCdataOut.ch7 = channelData[7];
-    PackedRCdataOut.ch8 = channelData[8];
-    PackedRCdataOut.ch9 = channelData[9];
-    PackedRCdataOut.ch10 = channelData[10];
-    PackedRCdataOut.ch11 = channelData[11];
-    PackedRCdataOut.ch12 = channelData[12];
-    PackedRCdataOut.ch13 = channelData[13];
+    PackedRCdataOut.ch0 = channelData[config.GetSerialChannelMap(0)];
+    PackedRCdataOut.ch1 = channelData[config.GetSerialChannelMap(1)];
+    PackedRCdataOut.ch2 = channelData[config.GetSerialChannelMap(2)];
+    PackedRCdataOut.ch3 = channelData[config.GetSerialChannelMap(3)];
+    PackedRCdataOut.ch4 = channelData[config.GetSerialChannelMap(4)];
+    PackedRCdataOut.ch5 = channelData[config.GetSerialChannelMap(5)];
+    PackedRCdataOut.ch6 = channelData[config.GetSerialChannelMap(6)];
+    PackedRCdataOut.ch7 = channelData[config.GetSerialChannelMap(7)];
+    PackedRCdataOut.ch8 = channelData[config.GetSerialChannelMap(8)];
+    PackedRCdataOut.ch9 = channelData[config.GetSerialChannelMap(9)];
+    PackedRCdataOut.ch10 = channelData[config.GetSerialChannelMap(10)];
+    PackedRCdataOut.ch11 = channelData[config.GetSerialChannelMap(11)];
+    PackedRCdataOut.ch12 = channelData[config.GetSerialChannelMap(12)];
+    PackedRCdataOut.ch13 = channelData[config.GetSerialChannelMap(13)];
 
     // In 16ch mode, do not output RSSI/LQ on channels
     if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
     {
-        PackedRCdataOut.ch14 = channelData[14];
-        PackedRCdataOut.ch15 = channelData[15];
+        PackedRCdataOut.ch14 = channelData[config.GetSerialChannelMap(14)];
+        PackedRCdataOut.ch15 = channelData[config.GetSerialChannelMap(15)];
     }
     else
     {

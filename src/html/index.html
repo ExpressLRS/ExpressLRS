@@ -192,7 +192,7 @@
 							<li><b>Features:</b> If an output is capable of supporting another function, that is indicated here</li>
 							<li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off, DShot, Serial, or I2C (some options are pin dependant)</li>
 							<ul>
-								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
+								<li>When enabling serial pins, be sure to select the <b>Serial Protocol</b>, <b>Serial Channel Mapping</b> below and <b>UART baud</b> on the <b>Options</b> tab</li>
 							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
@@ -293,7 +293,10 @@
 								<label for="sbus-failsafe">SBUS Failsafe</label>
 							</div>
 						</div>
-
+						<div id="sermap" style="display: none;">
+							<h2>Serial Channel Mapping</h2>
+							Map order of channels in selected serial protocol.								
+						</div>
 						<h2>Model Match</h2>
 						Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
 						in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.

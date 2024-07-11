@@ -13,6 +13,8 @@ let modeSelectionInit = true;
 let originalUID = undefined;
 let originalUIDType = undefined;
 
+const numChannels = 16;
+
 function _(el) {
   return document.getElementById(el);
 }
@@ -78,7 +80,7 @@ function updatePwmSettings(arPwm) {
   var pinTxIndex = undefined;
   var pinModes = []
   // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
+  const htmlFields = ['<table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
   arPwm.forEach((item, index) => {
     const failsafe = (item.config & 1023) + 988; // 10 bits
     const failsafeMode = (item.config >> 20) & 3; // 2 bits
@@ -139,7 +141,7 @@ function updatePwmSettings(arPwm) {
           'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)']);
     const failsafeModeSelect = enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode,
         ['Set Position', 'No Pulses', 'Last Position']); // match eServoOutputFailsafeMode
-    htmlFields.push(`<tr><td class="mui--text-center mui--text-title">${index + 1}</td>
+    htmlFields.push(`<div class="mui-panel"><tr><td class="mui--text-center mui--text-title">${index + 1}</td>
             <td>${generateFeatureBadges(features)}</td>
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
@@ -402,13 +404,49 @@ function updateConfig(data, options) {
       _('sbus-config').style.display = 'none';
     }
   }
+  
+  const htmlFields = [`<table class="serialmappnl mui-table"><tbody><tr>`];
+  for(j=0; j<2; j++){
+    htmlFields.push(`<th class="fixed-column">Output</th><th id="sermapth">Input for Serial</th><th id="ser1mapth">Input for Serial 2</th>`);
+  }
+  htmlFields.push(`</tr>`);
 
+  const serOptions = ['ch1', 'ch2', 'ch3', 'ch4',
+    'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
+    'ch9 (AUX5)', 'ch10 (AUX6)', 'ch11 (AUX7)', 'ch12 (AUX8)',
+    'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)', 'LQ', 'RSSIdBm'];
+
+  for(let index=0; index<numChannels/2; index++){
+    htmlFields.push(`<tr>`);
+    for(j=0; j<2; j++){
+      const serMapInputSelect = enumSelectGenerate(`sermap_${index+j*8}_ch`, Number(data['serial-channel-map'][index+j*8]), serOptions);  
+      const ser1MapInputSelect = enumSelectGenerate(`ser1map_${index+j*8}_ch`, Number(data['serial1-channel-map'][index+j*8]), serOptions);
+      htmlFields.push(`<td class="mui--text-center mui--text-title">${index + 1 +j*8}</td><td id="sermaptr_${index+j*8}">${serMapInputSelect}</td><td id="ser1maptr_${index+j*8}">${ser1MapInputSelect}</td>`);
+    }
+    htmlFields.push(`</tr>`);
+  }
+  htmlFields.push('</tbody></table></div>');
+  const grp = document.createElement('DIV');
+  grp.setAttribute('class', 'group');
+  grp.innerHTML = htmlFields.join('');
+  _('sermap').appendChild(grp);
+
+function manipulateSerColumn(serPort, visibility){
+  portStr = serPort == 1 ? "1" : "";
+  _(`ser${portStr}mapth`).style.display = visibility;
+  for(j=0; j<numChannels; j++){
+    _(`ser${portStr}maptr_${j}`).style.display = visibility;
+  }
+}
+
+    
   _('serial1-protocol').onchange = () => {
     if (_('is-airport').checked) {
       _('rcvr-uart-baud').disabled = false;
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
       _('serial1-config').style.display = 'none';
       _('sbus-config').style.display = 'none';
+
       return;
     }
   }
@@ -756,11 +794,21 @@ _('connect').addEventListener('click', callback('Connect to Home Network', 'An e
 if (_('config')) {
   _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
+        let serChanMap = []
+        for(let i = 0; i < 16; i++) {
+          serChanMap.push(+_(`sermap_${i}_ch`).value);
+        }
+        let ser1ChanMap = []
+        for(let i = 0; i < 16; i++) {
+          ser1ChanMap.push(+_(`ser1map_${i}_ch`).value);
+        }
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({
           "pwm": getPwmFormData(),
           "serial-protocol": +_('serial-protocol').value,
+          "serial-channel-map": serChanMap,
           "serial1-protocol": +_('serial1-protocol').value,
+          "serial1-channel-map": ser1ChanMap,
           "sbus-failsafe": +_('sbus-failsafe').value,
           "modelid": +_('modelid').value,
           "force-tlm": +_('force-tlm').checked,
