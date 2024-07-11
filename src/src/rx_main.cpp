@@ -24,6 +24,7 @@
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
 #include "rx-serial/SerialMavlink.h"
+#include "rx-serial/SerialTramp.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "rx-serial/devSerial1IO.h"
@@ -1264,16 +1265,22 @@ void MspReceiveComplete()
                 UpdateModelMatch(MspData[9]);
                 break;
             }
-            else if (OPT_HAS_VTX_SPI && MspData[7] == MSP_SET_VTX_CONFIG)
+            else if (MspData[7] == MSP_SET_VTX_CONFIG)
             {
-                vtxSPIFrequency = getFreqByIdx(MspData[8]);
-                if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                {
-                    vtxSPIPowerIdx = MspData[10];
-                    vtxSPIPitmode = MspData[11];
+                if (OPT_HAS_VTX_SPI) {
+                    vtxSPIFrequency = getFreqByIdx(MspData[8]);
+                    if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
+                    {
+                        vtxSPIPowerIdx = MspData[10];
+                        vtxSPIPitmode = MspData[11];
+                    }
+                    devicesTriggerEvent();
+                    break;
+                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
+#if defined(PLATFORM_ESP32)
+                    serial1IO->queueMSPFrameTransmission(MspData);
+#endif
                 }
-                devicesTriggerEvent();
-                break;
             }
             // FALLTHROUGH
         default:
@@ -1545,6 +1552,10 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_HOTT_TLM:
             Serial1.begin(19200, SERIAL_8N2, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialHoTT_TLM(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
+            break;
+        case PROTOCOL_SERIAL1_TRAMP:
+            Serial1.begin(9600, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialTramp(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
 }
