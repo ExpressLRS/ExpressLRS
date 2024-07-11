@@ -8,7 +8,7 @@
 #include "CRSF.h"
 #include "config.h"
 
-#define NO_SERIALIO 1000
+#define NO_SERIALIO_INTERVAL 1000
 
 extern SerialIO *serialIO;
 #if defined(PLATFORM_ESP32)
@@ -193,7 +193,7 @@ static int timeout(devserial_ctx_t *ctx)
 {
     if (*(ctx->io) == nullptr)
     {
-        return NO_SERIALIO;
+        return NO_SERIALIO_INTERVAL;
     }
 
     if (connectionState == serialUpdate)
