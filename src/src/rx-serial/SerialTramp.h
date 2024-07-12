@@ -1,5 +1,4 @@
 #include "SerialIO.h"
-#include "crc.h"
 
 #define TRAMP_FRAME_SIZE 16
 #define TRAMP_HEADER 0x0F
@@ -16,4 +15,6 @@ public:
     void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
+private:
+    void processBytes(uint8_t *bytes, uint16_t size) override {};
 };
