@@ -30,7 +30,8 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 
 // Up to us how we want to define these; official Tramp VTXes are 600mW max but other non-IRC VTXes
 // implementing Tramp might support more. This seems like a reasonable tradeoff.
-uint16_t powerLevelLUT[6] = { 0, 25, 200, 400, 600, 1000 };
+// In Lua, we have 1-8, so we'll define those here and leave 0=0.
+uint16_t powerLevelLUT[9] = { 0, 10, 25, 200, 400, 600, 1000, 1600, 3000 };
 
 void SerialTramp::queueMSPFrameTransmission(uint8_t* data)
 {
@@ -49,7 +50,10 @@ void SerialTramp::queueMSPFrameTransmission(uint8_t* data)
         // This is a frequency in MHz
         freq = data[8] + (data[9] << 8);
     }
-    freq = getFreqByIdx(data[8]);
+    else
+    {
+        freq = getFreqByIdx(data[8]);
+    }
     if (freq == 0) {
         return;
     }
