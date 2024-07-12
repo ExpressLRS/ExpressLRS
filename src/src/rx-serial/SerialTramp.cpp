@@ -19,7 +19,7 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
     uint32_t bytesWritten = 0;
     while (_fifo.size() > 0 && bytesWritten < maxBytesToSend) {
         _fifo.lock();
-        uint8_t frameSize = _fifo.pop();
+        uint8_t frameSize = _fifo.pop() - 1;
         uint8_t frame[frameSize];
         _fifo.popBytes(frame, frameSize);
         _fifo.unlock();
