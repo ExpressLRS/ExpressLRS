@@ -25,6 +25,7 @@
 #include "rx-serial/SerialHoTT_TLM.h"
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
+#include "rx-serial/SerialSmartAudio.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "rx-serial/devSerial1IO.h"
@@ -1276,9 +1277,10 @@ void MspReceiveComplete()
                     }
                     devicesTriggerEvent();
                     break;
-                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
 #if defined(PLATFORM_ESP32)
+                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
                     serial1IO->queueMSPFrameTransmission(MspData);
+                    break;
 #endif
                 }
             }
@@ -1556,6 +1558,10 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_TRAMP:
             Serial1.begin(9600, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialTramp(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
+            break;
+        case PROTOCOL_SERIAL1_SMARTAUDIO:
+            Serial1.begin(4800, SERIAL_8N2, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialSmartAudio(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
 }

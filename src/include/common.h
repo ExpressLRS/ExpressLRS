@@ -233,6 +233,7 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_DJI_RS_PRO,
     PROTOCOL_SERIAL1_HOTT_TLM,
     PROTOCOL_SERIAL1_TRAMP,
+    PROTOCOL_SERIAL1_SMARTAUDIO,
 };
 
 enum eFailsafeMode : uint8_t
