@@ -24,7 +24,7 @@ static struct luaItem_selection luaSerialProtocol = {
 static struct luaItem_selection luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-    "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp",
+    "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio",
     STR_EMPTYSPACE
 };
 
