@@ -35,23 +35,27 @@ void SerialSmartAudio::queueMSPFrameTransmission(uint8_t *data)
     }
 
     // We're gonna lie and queue the MSP frame by transforming it into a handful of SmartAudio frames
-    uint16_t freq;
+    uint16_t freq = 0;
     if (data[8] > VTXCOMMON_MSP_BANDCHAN_CHKVAL)
     {
         // This is a frequency in MHz
         freq = data[8] + (data[9] << 8);
     }
-    freq = getFreqByIdx(data[8]);
+    else
+    {
+        freq = getFreqByIdx(data[8]);
+    }
+    
     if (freq == 0)
     {
         return;
     }
 
     /* SmartAudio Quirks
-    * Page 2: "4800bps 1 Start bit and 2 Stop bit"
-    * Page 2: "The SmartAudio line need to be low before a frame is sent. If the host MCU can’t handle this it can be done by sending a 0x00 dummy byte in front of the actual frame."
-    * Page 4: "For all frames sent to the VTX the command byte needs to be shifted left by one bit and the LSB needs to be set"
-    */
+     * Page 2: "4800bps 1 Start bit and 2 Stop bit"
+     * Page 2: "The SmartAudio line need to be low before a frame is sent. If the host MCU can’t handle this it can be done by sending a 0x00 dummy byte in front of the actual frame."
+     * Page 4: "For all frames sent to the VTX the command byte needs to be shifted left by one bit and the LSB needs to be set"
+     */
 
     // We need to construct SmartAudio packets from the MSP_SET_VTX_CONFIG packet
     uint8_t tempFrame[SMARTAUDIO_MAX_FRAME_SIZE];
@@ -102,8 +106,8 @@ void SerialSmartAudio::queueMSPFrameTransmission(uint8_t *data)
         tempFrame[frameIndex++] = SMARTAUDIO_HEADER_DUMMY;
         tempFrame[frameIndex++] = SMARTAUDIO_HEADER_1;
         tempFrame[frameIndex++] = SMARTAUDIO_HEADER_2;
-        tempFrame[frameIndex++] = (0x05 << 1) | 0x01; // Command 0x05 is set power
-        tempFrame[frameIndex++] = 0x01;               // Length of the payload
+        tempFrame[frameIndex++] = (0x05 << 1) | 0x01;      // Command 0x05 is set power
+        tempFrame[frameIndex++] = 0x01;                    // Length of the payload
         tempFrame[frameIndex++] = (pitmode ? 0x01 : 0x04); // bit 3 seems to be "clear pitmode" contrary to the docs; see BF, OpenVTX, etc.
         crcValue = crc.calc(tempFrame, frameIndex);
         tempFrame[frameIndex++] = crcValue;
