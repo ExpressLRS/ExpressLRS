@@ -17,7 +17,7 @@ FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
     // These init values don't matter here for STM32, since we don't use them
     this_system_id(255),
     this_component_id(0),
-    target_system_id(1),
+    target_system_id(0),
     target_component_id(1)
 {
 }
@@ -53,7 +53,7 @@ SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     // Strictly this is not a valid source component ID
     this_component_id(MAV_COMPONENT::MAV_COMP_ID_ALL),
     // Assume vehicle system ID is 1, ArduPilot's `SYSID_THISMAV` parameter. (1 is the default)
-    target_system_id(1),
+    target_system_id(0),
     // Send to AutoPilot component
     target_component_id(MAV_COMPONENT::MAV_COMP_ID_AUTOPILOT1)
 {
@@ -102,6 +102,20 @@ int SerialMavlink::getMaxSerialReadSize()
 
 void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 {
+    if (!target_system_id)
+    {
+        mavlink_message_t msg;
+        mavlink_status_t status;
+        for (uint8_t i = 0; i < size; ++i)
+        {
+            uint8_t c = bytes[i];
+            if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+            {
+                target_system_id = msg.sysid;
+            }
+        }
+    }
+
     if (connectionState == connected)
     {
         mavlinkInputBuffer.atomicPushBytes(bytes, size);

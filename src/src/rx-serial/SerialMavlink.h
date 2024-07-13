@@ -27,7 +27,7 @@ private:
     const uint8_t this_system_id;
     const uint8_t this_component_id;
 
-    const uint8_t target_system_id;
+    uint8_t target_system_id;
     const uint8_t target_component_id;
 
     uint32_t lastSentFlowCtrl = 0;
