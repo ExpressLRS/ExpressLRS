@@ -23,7 +23,7 @@ void StubbornSender::ResetState()
     bytesLastPayload = 0;
     currentOffset = 0;
     currentPackage = 1;
-    waitUntilTelemetryConfirm = true;
+    telemetryConfirmExpectedValue = true;
     waitCount = 0;
     // 80 corresponds to UpdateTelemetryRate(ANY, 2, 1), which is what the TX uses in boost mode
     maxWaitCount = 80;
@@ -45,7 +45,7 @@ void StubbornSender::SetDataToTransmit(uint8_t* dataToTransmit, uint8_t lengthTo
     currentOffset = 0;
     currentPackage = 1;
     waitCount = 0;
-    senderState = (senderState == SENDER_IDLE) ? SENDING : RESYNC_THEN_SEND;
+    senderState = (senderState == SENDER_IDLE) ? SEND_PENDING : RESYNC_THEN_SEND;
 }
 
 /**
@@ -63,6 +63,10 @@ uint8_t StubbornSender::GetCurrentPayload(uint8_t *outData, uint8_t maxLen)
     case RESYNC_THEN_SEND:
         packageIndex = maxPackageIndex;
         break;
+    case SEND_PENDING:
+        // This package can now be acked
+        senderState = SENDING;
+        // fallthrough
     case SENDING:
         {
             bytesLastPayload = std::min((uint8_t)(length - currentOffset), maxLen);
@@ -90,12 +94,12 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
     switch (senderState)
     {
     case SENDING:
-        if (telemetryConfirmValue != waitUntilTelemetryConfirm)
+        if (telemetryConfirmValue != telemetryConfirmExpectedValue)
         {
             waitCount++;
             if (waitCount > maxWaitCount)
             {
-                waitUntilTelemetryConfirm = !telemetryConfirmValue;
+                telemetryConfirmExpectedValue = !telemetryConfirmValue;
                 nextSenderState = RESYNC;
             }
             break;
@@ -114,17 +118,17 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
         }
 
         currentPackage++;
-        waitUntilTelemetryConfirm = !waitUntilTelemetryConfirm;
+        telemetryConfirmExpectedValue = !telemetryConfirmExpectedValue;
         waitCount = 0;
         break;
 
     case RESYNC:
     case RESYNC_THEN_SEND:
     case WAIT_UNTIL_NEXT_CONFIRM:
-        if (telemetryConfirmValue == waitUntilTelemetryConfirm)
+        if (telemetryConfirmValue == telemetryConfirmExpectedValue)
         {
             nextSenderState = (senderState == RESYNC_THEN_SEND) ? SENDING : SENDER_IDLE;
-            waitUntilTelemetryConfirm = !telemetryConfirmValue;
+            telemetryConfirmExpectedValue = !telemetryConfirmValue;
         }
         // switch to resync if tx does not confirm value fast enough
         else if (senderState == WAIT_UNTIL_NEXT_CONFIRM)
@@ -132,12 +136,15 @@ void StubbornSender::ConfirmCurrentPayload(bool telemetryConfirmValue)
             waitCount++;
             if (waitCount > maxWaitCount)
             {
-                waitUntilTelemetryConfirm = !telemetryConfirmValue;
+                telemetryConfirmExpectedValue = !telemetryConfirmValue;
                 nextSenderState = RESYNC;
             }
         }
         break;
 
+    case SEND_PENDING:
+        // TelemetryConfirm acks are not accepted before sending
+        // fallthrough
     case SENDER_IDLE:
         break;
     }
