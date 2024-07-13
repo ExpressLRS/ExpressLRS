@@ -227,7 +227,7 @@ enum eSerialProtocol : uint8_t
 #if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
 {
-    PROTOCOL_SERIAL1_NONE,
+    PROTOCOL_SERIAL1_OFF,
     PROTOCOL_SERIAL1_CRSF,
     PROTOCOL_SERIAL1_INVERTED_CRSF,
     PROTOCOL_SERIAL1_SBUS,
