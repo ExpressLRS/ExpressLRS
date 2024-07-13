@@ -7,6 +7,7 @@
 python/__pycache__/
 *.pyc
 super_defines.txt
+_user_defines.txt
 include/WebContent.h
 include/flashdiscrim.h
 .DS_Store

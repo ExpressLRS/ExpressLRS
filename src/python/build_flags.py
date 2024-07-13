@@ -138,8 +138,12 @@ def get_version():
 json_flags['flash-discriminator'] = randint(1,2**32-1)
 json_flags['wifi-on-interval'] = -1
 
-process_flags("user_defines.txt")
-process_flags("super_defines.txt") # allow secret super_defines to override user_defines
+if os.path.isfile("_user_defines.txt"):
+    process_flags("_user_defines.txt") #allow secret _user_defines to superseed user_defines
+else:
+    process_flags("user_defines.txt")
+    process_flags("super_defines.txt") # allow secret super_defines to override user_defines
+
 version_to_env()
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
