@@ -51,6 +51,7 @@ public:
     int getMinPacketInterval() const override;
 
 private:
+    bool running = false;
     inBuffer_U inBuffer = {};
 
     /// OpenTX mixer sync ///

@@ -121,6 +121,7 @@ void CRSFHandset::Begin()
     CRSFHandset::Port.flush();
     flush_port_input();
 #endif
+    running = true;
 }
 
 void CRSFHandset::End()
@@ -135,6 +136,7 @@ void CRSFHandset::End()
         }
     }
     //CRSFHandset::Port.end(); // don't call serial.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
+    running = false;
     DBGLN("CRSF UART END");
 }
 
@@ -402,7 +404,7 @@ void CRSFHandset::handleInput()
 {
     uint8_t *SerialInBuffer = inBuffer.asUint8_t;
 
-    if (UARTwdt())
+    if (!running || UARTwdt())
     {
         return;
     }

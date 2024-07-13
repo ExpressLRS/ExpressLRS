@@ -34,6 +34,7 @@ void PPMHandset::Begin()
 void PPMHandset::End()
 {
     rmt_driver_uninstall(PPM_RMT_CHANNEL);
+    rb = nullptr;
 }
 
 bool PPMHandset::IsArmed()
@@ -46,6 +47,11 @@ void PPMHandset::handleInput()
 {
     const auto now = millis();
     size_t length = 0;
+
+    if (rb == nullptr)
+    {
+        return;
+    }
 
     auto *items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
     if (items)

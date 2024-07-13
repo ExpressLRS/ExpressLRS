@@ -48,7 +48,7 @@
 #include "config.h"
 
 #if defined(TARGET_TX)
-
+#include "handset.h"
 #include "wifiJoystick.h"
 
 extern TxConfig config;
@@ -731,6 +731,9 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   if (index == 0) {
     #ifdef HAS_WIFI_JOYSTICK
       WifiJoystick::StopJoystickService();
+    #endif
+    #if defined(TARGET_TX)
+      handset->End();
     #endif
 
     size_t filesize = request->header("X-FileSize").toInt();
