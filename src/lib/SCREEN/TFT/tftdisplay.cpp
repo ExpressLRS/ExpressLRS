@@ -382,4 +382,12 @@ void TFTDisplay::displaySending()
                         "SENDING...", BLACK, WHITE);
 }
 
+void TFTDisplay::displayLinkstats()
+{
+    gfx->fillScreen(WHITE);
+
+    displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
+                        "linkstats...", BLACK, WHITE);
+}
+
 #endif

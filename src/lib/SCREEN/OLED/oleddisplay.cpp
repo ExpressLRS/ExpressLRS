@@ -8,6 +8,7 @@
 #include "options.h"
 #include "logging.h"
 #include "common.h"
+#include "CRSF.h"
 
 #if defined(PLATFORM_ESP32)
 #include "WiFi.h"
@@ -16,6 +17,8 @@ extern WiFiMode_t wifiMode;
 
 // OLED specific header files.
 U8G2 *u8g2;
+
+extern CRSF crsf;
 
 #ifdef TARGET_TX_GHOST
 /**
@@ -392,6 +395,45 @@ void OLEDDisplay::displaySending()
     else
     {
         drawCentered(29, "SENDING...");
+    }
+    u8g2->sendBuffer();
+}
+
+void OLEDDisplay::displayLinkstats()
+{
+    u8g2->clearBuffer();
+    // u8g2->setFont(u8g2_font_t0_17_mr);
+    u8g2->setFont(u8g2_font_profont10_mr);
+    if (OPT_USE_OLED_SPI_SMALL)
+    {
+        drawCentered(15, "linkstats...");
+    }
+    else
+    {
+        u8g2->drawStr(0, 20, "LQ");
+        u8g2->drawStr(0, 30, "RSSI");
+        u8g2->drawStr(0, 40, "SNR");
+        u8g2->drawStr(0, 50, "Ant");
+
+        u8g2->drawStr(32, 10, "Uplink");
+        u8g2->setCursor(32, 20);
+        u8g2->print(crsf.LinkStatistics.uplink_Link_quality);
+        u8g2->setCursor(32, 30);
+        u8g2->print((int8_t)crsf.LinkStatistics.uplink_RSSI_1);
+        u8g2->print("/");
+        u8g2->print((int8_t)crsf.LinkStatistics.uplink_RSSI_2);
+        u8g2->setCursor(32, 40);
+        u8g2->print((int8_t)crsf.LinkStatistics.uplink_SNR);
+        u8g2->setCursor(32, 50);
+        u8g2->print((int8_t)crsf.LinkStatistics.active_antenna);
+
+        u8g2->drawStr(85, 10, "Downlink");
+        u8g2->setCursor(85, 20);
+        u8g2->print(crsf.LinkStatistics.downlink_Link_quality);
+        u8g2->setCursor(85, 30);
+        u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI);
+        u8g2->setCursor(85, 40);
+        u8g2->print((int8_t)crsf.LinkStatistics.downlink_SNR);
     }
     u8g2->sendBuffer();
 }

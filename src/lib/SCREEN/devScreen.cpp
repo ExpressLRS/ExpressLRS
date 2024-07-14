@@ -130,6 +130,13 @@ static int handle(void)
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
+    
+    if (state_machine.getCurrentState() == STATE_LINKSTATS)
+    {
+        display->displayLinkstats();
+        return 1;
+    }
+
     return SCREEN_DURATION;
 }
 

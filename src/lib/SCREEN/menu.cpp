@@ -354,7 +354,6 @@ static void executeBLE(bool init)
     }
 }
 
-
 static void exitBLE(bool init)
 {
 #ifdef PLATFORM_ESP32
@@ -458,6 +457,11 @@ static void executeBind(bool init)
     }
 }
 
+// Linkstats
+static void displayLinkstats(bool init)
+{
+    display->displayLinkstats();
+}
 
 //-------------------------------------------------------------------
 
@@ -631,6 +635,16 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_LAST}
 };
 
+// Linkstats FSM
+fsm_state_event_t const linkstats_confirm_events[] = {
+    {EVENT_TIMEOUT, ACTION_POPALL},
+    {EVENT_UP, ACTION_POPALL}
+};
+fsm_state_entry_t const linkstats_menu_fsm[] = {
+    {STATE_LINKSTATS, nullptr, displayLinkstats, 60000, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
+    {STATE_LAST}
+};
+
 // Entry FSM
 fsm_state_event_t const splash_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)}
@@ -638,10 +652,11 @@ fsm_state_event_t const splash_events[] = {
 fsm_state_event_t const idle_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)},
     {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
-    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)}
+    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
+    {EVENT_DOWN, PUSH(linkstats_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
-    {STATE_SPLASH, nullptr, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
+    {STATE_SPLASH, nullptr, displaySplashScreen, 1000, splash_events, ARRAY_SIZE(splash_events)},
     {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };
