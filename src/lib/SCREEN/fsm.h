@@ -5,8 +5,7 @@
 #define STATE_LAST -1
 
 #define EVENT_IMMEDIATE -1 // immediately do this after the entry-function
-#define EVENT_TIMEOUT   -2
-#define FSM_NO_TIMEOUT  0xFFFF
+#define EVENT_TIMEOUT -2
 
 #define ACTION_GOTO 0
 #define ACTION_NEXT 1
