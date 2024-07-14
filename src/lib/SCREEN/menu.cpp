@@ -637,11 +637,14 @@ fsm_state_entry_t const main_menu_fsm[] = {
 
 // Linkstats FSM
 fsm_state_event_t const linkstats_confirm_events[] = {
-    {EVENT_TIMEOUT, ACTION_POPALL},
-    {EVENT_UP, ACTION_POPALL}
+    {EVENT_TIMEOUT, GOTO(STATE_LINKSTATS)},
+    {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
+    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
+    {EVENT_UP, ACTION_POPALL},
+    {EVENT_DOWN, ACTION_POPALL}
 };
 fsm_state_entry_t const linkstats_menu_fsm[] = {
-    {STATE_LINKSTATS, nullptr, displayLinkstats, FSM_NO_TIMEOUT, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
+    {STATE_LINKSTATS, nullptr, displayLinkstats, 1000, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
     {STATE_LAST}
 };
 
@@ -653,6 +656,7 @@ fsm_state_event_t const idle_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)},
     {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
     {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
+    {EVENT_UP, PUSH(linkstats_menu_fsm)},
     {EVENT_DOWN, PUSH(linkstats_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
