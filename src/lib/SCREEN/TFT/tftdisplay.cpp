@@ -11,9 +11,12 @@
 #include "options.h"
 #include "logging.h"
 #include "common.h"
+#include "CRSF.h"
 
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
+
+extern CRSF crsf;
 
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
@@ -118,6 +121,16 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 //Sub Binding Definiton
 #define SUB_PAGE_BINDING_WORD_START_X   0
 #define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
+
+//LINKSTATS PAGE Definition
+#define LINKSTATS_COL_FIRST   0
+#define LINKSTATS_COL_SECOND  30
+#define LINKSTATS_COL_THIRD   100
+#define LINKSTATS_ROW_FIRST   10
+#define LINKSTATS_ROW_SECOND  25
+#define LINKSTATS_ROW_THIRD   40
+#define LINKSTATS_ROW_FOURTH  55
+#define LINKSTATS_ROW_FIFTH   70
 
 static Arduino_DataBus *bus;
 static Arduino_GFX *gfx;
@@ -384,10 +397,61 @@ void TFTDisplay::displaySending()
 
 void TFTDisplay::displayLinkstats()
 {
+    char buffer[5];
     gfx->fillScreen(WHITE);
+    gfx->setFont(&SCREEN_SMALL_FONT);
+    gfx->setTextColor(BLACK, WHITE);
+    
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
+    gfx->print("Uplink");
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
+    gfx->print("Downlink");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_SECOND);
+    gfx->print("LQ");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_THIRD);
+    gfx->print("RSSI");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FOURTH);
+    gfx->print("SNR");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FIFTH);
+    gfx->print("Ant");
 
-    displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
-                        "linkstats...", BLACK, WHITE);
+    // Uplink Linkstats
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
+    snprintf(buffer, sizeof(buffer), "%03d", crsf.LinkStatistics.uplink_Link_quality);
+    gfx->print(String(buffer));
+
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.uplink_RSSI_1);
+    gfx->print(String(buffer));
+    gfx->print("/");
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.uplink_RSSI_2);
+    gfx->print(String(buffer));
+
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
+    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.uplink_SNR);
+    gfx->print(String(buffer));
+
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
+    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.active_antenna);
+    gfx->print(String(buffer));
+
+    // Downlink Linkstats
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
+    snprintf(buffer, sizeof(buffer), "%03d", crsf.LinkStatistics.downlink_Link_quality);
+    gfx->print(String(buffer));
+
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.downlink_RSSI_1);
+    gfx->print(String(buffer));
+    if (isDualRadio())
+    {
+        gfx->print("/");
+        snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.downlink_RSSI_2);
+        gfx->print(String(buffer));
+    }
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
+    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.downlink_SNR);
+    gfx->print(String(buffer));
 }
 
 #endif
