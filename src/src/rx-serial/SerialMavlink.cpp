@@ -42,6 +42,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 
 #else // ESP-based targets
 
+#define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
