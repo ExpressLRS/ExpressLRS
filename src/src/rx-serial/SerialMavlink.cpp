@@ -49,11 +49,11 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 SerialMavlink::SerialMavlink(Stream &out, Stream &in):
     SerialIO(&out, &in),
     // 255 is typically used by the GCS, for RC override to work in ArduPilot `SYSID_MYGCS` must be set to this value (255 is the default)
-    this_system_id(DTX_SYSID),
+    this_system_id(TX_SYSID),
     // Strictly MAV_COMP_ID_ALL is not a valid source component ID, we are pretty much a telemetry radio now.
     this_component_id(MAV_COMPONENT::MAV_COMP_ID_TELEMETRY_RADIO),
     // Assume vehicle system ID is 1, ArduPilot's `SYSID_THISMAV` parameter. (1 is the default)
-    target_system_id(DRX_SYSID),
+    target_system_id(RX_SYSID),
     // Send to AutoPilot component
     target_component_id(MAV_COMPONENT::MAV_COMP_ID_AUTOPILOT1)
 {

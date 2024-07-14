@@ -3,7 +3,9 @@
 #include "FIFO.h"
 #include "logging.h"
 #include "helpers.h"
+#if defined(CRSF_MAVLINK)
 #include "common/mavlink.h"
+#endif 
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "device.h"
@@ -34,7 +36,11 @@ HardwareSerial CRSFHandset::Port = Serial;
 static constexpr int HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest telemetry FIFO size in ETX with CRSF defined
 
 /// Out FIFO to buffer messages///
+#if defined(CRSF_MAVLINK)
 static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 1024U;
+#else
+static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
+#endif
 static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
 
 Stream *CRSFHandset::PortSecondary;
@@ -56,9 +62,9 @@ static const int32_t OpenTXsyncOffsetSafeMargin = 1000; // 100us
 static const int32_t TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
 uint8_t CRSFHandset::UARTcurrentBaudIdx = 6;   // only used for baud-cycling, initialized to the end so the next one we try is the first in the list
 uint32_t CRSFHandset::UARTrequestedBaud = 5250000;
-
+#if defined(CRSF_MAVLINK)
 extern FIFO<2048U> mavlink_uplink_queue;
-
+#endif
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 static const int UARTwdtInterval = 1000;
 
@@ -381,7 +387,8 @@ bool CRSFHandset::ProcessPacket()
         RcPacketToChannelsData();
         packetReceived = true;
     }
-    else if(packetType==CRSF_FRAMETYPE_MAVLINK_RAW) {
+#if defined (CRSF_MAVLINK) 
+    else if(packetType==CRSF_FRAMETYPE_MAVLINK_RAW) {//check for mavlink tunnel frame comming from handset 
         uint8_t size=SerialInBuffer[3];
         mavlink_message_t msg;
         mavlink_status_t status;
@@ -399,6 +406,7 @@ bool CRSFHandset::ProcessPacket()
             }
         }
     }
+#endif
     // check for all extended frames that are a broadcast or a message to the FC
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
             (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))

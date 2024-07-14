@@ -124,6 +124,7 @@ typedef enum : uint8_t
 {
     TX_NORMAL_MODE      = 0,
     TX_MAVLINK_MODE     = 1,
+    TX_CRSF_MAVLINK_MODE = 2,
 } tx_transmission_mode_e;
 
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used

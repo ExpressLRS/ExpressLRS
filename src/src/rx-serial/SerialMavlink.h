@@ -4,12 +4,12 @@
 
 #define MAV_INPUT_BUF_LEN   1024
 #define MAV_OUTPUT_BUF_LEN  512
-#ifndef DRX_SYSID
-#define DRX_SYSID 1
+#ifndef RX_SYSID
+#define RX_SYSID 1
 #endif
 
-#ifndef DTX_SYSID
-#define DTX_SYSID 255
+#ifndef TX_SYSID
+#define TX_SYSID 255
 #endif
 
 

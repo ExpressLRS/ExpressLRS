@@ -3,6 +3,12 @@
     #include "ardupilot_protocol.h"
 #endif
 
+#if defined(CRSF_MAVLINK)
+#include <config.h>
+extern TxConfig config;
+#endif
+
+
 void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset *handset)
 {
 #if !defined(PLATFORM_STM32)
@@ -101,7 +107,8 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 break;
             }
             }
-            if(true){ //TODO: Replace with option to support mavlink over CRSF 
+#if defined(CRSF_MAVLINK)
+            if(config.GetLinkMode() == TX_CRSF_MAVLINK_MODE){ //TODO: Replace with option to support mavlink over CRSF 
                 CRSF_MK_FRAME_T(crsf_mavlink_raw_t)
                 crsfmav = {0};
                 uint8_t buffer[280];
@@ -117,6 +124,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                     handset->sendTelemetryToTX((uint8_t *)&crsfmav);
                 }
             }
+#endif
         }
     }
 #endif
