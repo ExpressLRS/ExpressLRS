@@ -891,6 +891,31 @@ local function setMock()
   deviceIsELRS_TX = true
 end
 
+local function checkCrsfModule()
+  -- Loop through the modules and look for one set to CRSF (5)
+  for modIdx = 0, 1 do
+    local mod = model.getModule(modIdx)
+    if mod and mod.Type == 5 then
+      -- CRSF found
+      checkCrsfModule = nil
+      return 0
+    end
+  end
+
+  -- No CRSF module found, save an error message for run()
+  lcd.clear()
+  local y = 2
+  lcd.drawText(2, y, "  No ExpressLRS", MIDSIZE)
+  y = y + (textSize * 2)
+  lcd.drawText(2, y, " Enable a CRSF Internal")
+  y = y + textSize
+  lcd.drawText(2, y, "   or External module in")
+  y = y + textSize
+  lcd.drawText(2, y, "      Model settings")
+
+  return 0
+end
+
 -- Init
 local function init()
   setLCDvar()
@@ -899,41 +924,10 @@ local function init()
   setMock = nil
 end
 
--- Check if an ELRS module enabled
--- Return 0 if none, 1 if internal, 2 if external, 3 if both
-local function moduleCheck()
-  local intMod = model.getModule(0)
-  local extMod = model.getModule(1)
-  local modTyp = 5
-  local rtnVal = 0
-
-  if intMod ~= nil then
-    if intMod.Type == modTyp then
-      rtnVal = rtnVal + 1
-    end
-  end
-
-  if extMod ~= nil then
-    if extMod.Type == modTyp then
-      rtnVal = rtnVal + 2
-    end
-  end
-
-  return rtnVal
-end
-
 -- Main
 local function run(event, touchState)
-  if event == nil then
-    error("Cannot be run as a model script!")
-    return 2
-  end
-
-  local modChk = moduleCheck()
-  if modChk == 0 then
-    error("Enable an ELRS RF module in model settings!")
-    return 2
-  end
+  if event == nil then return 2 end
+  if checkCrsfModule then return checkCrsfModule() end
 
   local forceRedraw = refreshNext()
 
