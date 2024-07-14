@@ -641,7 +641,7 @@ fsm_state_event_t const linkstats_confirm_events[] = {
     {EVENT_UP, ACTION_POPALL}
 };
 fsm_state_entry_t const linkstats_menu_fsm[] = {
-    {STATE_LINKSTATS, nullptr, displayLinkstats, 60000, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
+    {STATE_LINKSTATS, nullptr, displayLinkstats, FSM_NO_TIMEOUT, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
     {STATE_LAST}
 };
 

@@ -73,7 +73,7 @@ void FiniteStateMachine::handleEvent(uint32_t now, fsm_event_t event)
         return handleEvent(now, EVENT_IMMEDIATE);
     }
     // Event timeout has not occurred
-    if (event == EVENT_TIMEOUT && now - current_state_entered < current_fsm[current_index].timeout)
+    if (event == EVENT_TIMEOUT && (now - current_state_entered < current_fsm[current_index].timeout || current_fsm[current_index].timeout == FSM_NO_TIMEOUT))
     {
         return;
     }
