@@ -212,7 +212,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
   Radio.GetLastPacketStats();
   CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+  CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
+  CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
 
   // Full res mode
   if (OtaIsFullRes)

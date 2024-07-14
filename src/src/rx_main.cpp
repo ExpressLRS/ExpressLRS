@@ -334,7 +334,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    CRSF::LinkStatistics.downlink_RSSI = debug1;
+    CRSF::LinkStatistics.downlink_RSSI_1 = debug1;
     CRSF::LinkStatistics.downlink_Link_quality = debug2;
     CRSF::LinkStatistics.downlink_SNR = debug3;
     CRSF::LinkStatistics.uplink_RSSI_2 = debug4;

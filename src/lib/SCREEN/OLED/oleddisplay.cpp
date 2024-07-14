@@ -431,7 +431,12 @@ void OLEDDisplay::displayLinkstats()
         u8g2->setCursor(85, 20);
         u8g2->print(crsf.LinkStatistics.downlink_Link_quality);
         u8g2->setCursor(85, 30);
-        u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI);
+        u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI_1);
+        if (isDualRadio())
+        {
+            u8g2->print("/");
+            u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI_2);
+        }
         u8g2->setCursor(85, 40);
         u8g2->print((int8_t)crsf.LinkStatistics.downlink_SNR);
     }
