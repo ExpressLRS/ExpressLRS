@@ -1020,6 +1020,7 @@ function appendRow(b,p,v) {
       <option value='4' ${v['action']===4 ? 'selected' : ''}>Send VTX Settings</option>
       <option value='5' ${v['action']===5 ? 'selected' : ''}>Start WiFi</option>
       <option value='6' ${v['action']===6 ? 'selected' : ''}>Enter Binding Mode</option>
+      <option value='7' ${v['action']===7 ? 'selected' : ''}>Start BLE Joystick</option>
     </select>
     <label>Action</label>
   </div>

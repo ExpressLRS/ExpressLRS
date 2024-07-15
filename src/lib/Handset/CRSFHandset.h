@@ -62,7 +62,6 @@ private:
 
     /// UART Handling ///
     uint8_t SerialInPacketPtr = 0; // index where we are reading/writing
-    bool CRSFframeActive = false;  // since we get a copy of the serial data use this flag to know when to ignore it
     static bool halfDuplex;
     bool transmitting = false;
     uint32_t GoodPktsCount = 0;
@@ -84,6 +83,7 @@ private:
     void duplex_set_TX() const;
     void RcPacketToChannelsData();
     bool processInternalCrsfPackage(uint8_t *package);
+    void alignBufferToSync(uint8_t startIdx);
     bool ProcessPacket();
     bool UARTwdt();
     uint32_t autobaud();

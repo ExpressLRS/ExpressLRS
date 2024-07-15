@@ -694,8 +694,18 @@ static void registerLuaParameters()
       });
     }
     registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      // Only allow changing when disconnected since we need to guarantee
+      // the switch pack and unpack functions are matched on the tx and rx.
+      bool isDisconnected = connectionState == disconnected;
+      if (isDisconnected)
+      {
         config.SetLinkMode(arg);
-      });
+      }
+      else
+      {
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+      }
+    });
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {

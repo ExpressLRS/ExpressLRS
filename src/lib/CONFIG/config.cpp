@@ -1102,11 +1102,7 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
-#else
-    m_config.serialProtocol = PROTOCOL_CRSF;
 #endif
-
-    m_config.serial1Protocol = PROTOCOL_SERIAL1_NONE;
 
     if (commit)
     {
@@ -1191,6 +1187,7 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
     }
 }
 
+#if defined(PLATFORM_ESP32)
 void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
 {
     if (m_config.serial1Protocol != serialProtocol)
@@ -1199,6 +1196,7 @@ void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
         m_modified = true;
     }
 }
+#endif
 
 void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
 {
