@@ -16,8 +16,6 @@
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
 
-extern CRSF crsf;
-
 const uint16_t *main_menu_icons[] = {
     elrs_rate,
     elrs_switch,
@@ -417,40 +415,40 @@ void TFTDisplay::displayLinkstats()
 
     // Uplink Linkstats
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    snprintf(buffer, sizeof(buffer), "%03d", crsf.LinkStatistics.uplink_Link_quality);
+    snprintf(buffer, sizeof(buffer), "%03d", CRSF::LinkStatistics.uplink_Link_quality);
     gfx->print(String(buffer));
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.uplink_RSSI_1);
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
     gfx->print(String(buffer));
     gfx->print("/");
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.uplink_RSSI_2);
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
     gfx->print(String(buffer));
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.uplink_SNR);
+    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.uplink_SNR);
     gfx->print(String(buffer));
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.active_antenna);
+    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.active_antenna);
     gfx->print(String(buffer));
 
     // Downlink Linkstats
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    snprintf(buffer, sizeof(buffer), "%03d", crsf.LinkStatistics.downlink_Link_quality);
+    snprintf(buffer, sizeof(buffer), "%03d", CRSF::LinkStatistics.downlink_Link_quality);
     gfx->print(String(buffer));
 
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.downlink_RSSI_1);
+    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
     gfx->print(String(buffer));
     if (isDualRadio())
     {
         gfx->print("/");
-        snprintf(buffer, sizeof(buffer), "%03d", (int8_t)crsf.LinkStatistics.downlink_RSSI_2);
+        snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
         gfx->print(String(buffer));
     }
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-    snprintf(buffer, sizeof(buffer), "%02d", crsf.LinkStatistics.downlink_SNR);
+    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.downlink_SNR);
     gfx->print(String(buffer));
 }
 

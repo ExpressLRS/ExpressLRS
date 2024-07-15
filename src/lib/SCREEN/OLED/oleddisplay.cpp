@@ -18,8 +18,6 @@ extern WiFiMode_t wifiMode;
 // OLED specific header files.
 U8G2 *u8g2;
 
-extern CRSF crsf;
-
 #ifdef TARGET_TX_GHOST
 /**
  * helper function is used to draw xbmp on the OLED.
@@ -411,31 +409,31 @@ void OLEDDisplay::displayLinkstats()
 
     u8g2->drawStr(32, 10, "Uplink");
     u8g2->setCursor(32, 20);
-    u8g2->print(crsf.LinkStatistics.uplink_Link_quality);
+    u8g2->print(CRSF::LinkStatistics.uplink_Link_quality);
     u8g2->setCursor(32, 30);
-    u8g2->print((int8_t)crsf.LinkStatistics.uplink_RSSI_1);
+    u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
     u8g2->print("/");
-    u8g2->print((int8_t)crsf.LinkStatistics.uplink_RSSI_2);
+    u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
 
     u8g2->drawStr(85, 10, "Downlink");
     u8g2->setCursor(85, 20);
-    u8g2->print(crsf.LinkStatistics.downlink_Link_quality);
+    u8g2->print(CRSF::LinkStatistics.downlink_Link_quality);
     u8g2->setCursor(85, 30);
-    u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI_1);
+    u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
     if (isDualRadio())
     {
         u8g2->print("/");
-        u8g2->print((int8_t)crsf.LinkStatistics.downlink_RSSI_2);
+        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
     }
 
     if (!OPT_USE_OLED_SPI_SMALL)
     {
         u8g2->setCursor(32, 40);
-        u8g2->print((int8_t)crsf.LinkStatistics.uplink_SNR);
+        u8g2->print((int8_t)CRSF::LinkStatistics.uplink_SNR);
         u8g2->setCursor(85, 40);
-        u8g2->print((int8_t)crsf.LinkStatistics.downlink_SNR);
+        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_SNR);
         u8g2->setCursor(32, 50);
-        u8g2->print((int8_t)crsf.LinkStatistics.active_antenna);
+        u8g2->print((int8_t)CRSF::LinkStatistics.active_antenna);
     }
 
     u8g2->sendBuffer();
