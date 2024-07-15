@@ -1519,7 +1519,7 @@ static void setupSerial1()
 
     switch(config.GetSerial1Protocol())
     {
-        case PROTOCOL_SERIAL1_NONE:
+        case PROTOCOL_SERIAL1_OFF:
             break;
         case PROTOCOL_SERIAL1_CRSF:
             Serial1.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
