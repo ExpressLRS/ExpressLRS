@@ -908,7 +908,6 @@ static void initialize()
   #endif
   registerButtonFunction(ACTION_START_WIFI, [](){
     setWifiUpdateMode();
-    devicesTriggerEvent();
   });
 }
 

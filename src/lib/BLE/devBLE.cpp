@@ -76,7 +76,6 @@ static void initialize()
 {
   registerButtonFunction(ACTION_BLE_JOYSTICK, [](){
     connectionState = bleJoystick;
-    devicesTriggerEvent();
   });
 }
 
