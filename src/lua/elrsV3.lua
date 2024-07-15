@@ -897,21 +897,32 @@ local function checkCrsfModule()
     local mod = model.getModule(modIdx)
     if mod and mod.Type == 5 then
       -- CRSF found
-      checkCrsfModule = nil
+      checkModuleEnabled = nil
       return 0
     end
   end
 
   -- No CRSF module found, save an error message for run()
   lcd.clear()
-  local y = 2
+  local y = 0
   lcd.drawText(2, y, "  No ExpressLRS", MIDSIZE)
-  y = y + (textSize * 2)
-  lcd.drawText(2, y, " Enable a CRSF Internal")
-  y = y + textSize
-  lcd.drawText(2, y, "   or External module in")
-  y = y + textSize
-  lcd.drawText(2, y, "      Model settings")
+  y = y + (textSize * 2) - 2
+  local msgs = {
+    " Enable a CRSF Internal",
+    "   or External module in",
+    "       Model settings",
+    "  If module is internal",
+    " also set Internal RF to",
+    " CRSF in SYS->Hardware",
+  }
+  for i, msg in ipairs(msgs) do
+    lcd.drawText(2, y, msg)
+    y = y + textSize
+    if i == 3 then
+      lcd.drawLine(0, y, LCD_W, y, SOLID, INVERS)
+      y = y + 2
+    end
+  end
 
   return 0
 end
