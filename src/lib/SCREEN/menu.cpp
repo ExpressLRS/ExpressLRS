@@ -660,7 +660,7 @@ fsm_state_event_t const idle_events[] = {
     {EVENT_DOWN, PUSH(linkstats_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
-    {STATE_SPLASH, nullptr, displaySplashScreen, 1000, splash_events, ARRAY_SIZE(splash_events)},
+    {STATE_SPLASH, nullptr, displaySplashScreen, 3000, splash_events, ARRAY_SIZE(splash_events)},
     {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };
