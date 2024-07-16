@@ -144,7 +144,7 @@ void Telemetry::ResetState()
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
-    currentQueueIndex = 0;
+    twoslotLastQueueIndex = 0;
     receivedPackages = 0;
 
     uint8_t offset = 0;
@@ -336,12 +336,12 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                     // Sending the second slot, use the first
                     targetIndex = payloadTypesCount - 2;
                 }
-                else if (currentQueueIndex == payloadTypesCount - 2 && payloadTypes[currentQueueIndex].updated)
+                else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
                 {
                     // Previous frame saved to the first slot, use the second
                     targetIndex = payloadTypesCount - 1;
                 }
-                currentQueueIndex = targetIndex;
+                twoslotLastQueueIndex = targetIndex;
             }
         }
         else
