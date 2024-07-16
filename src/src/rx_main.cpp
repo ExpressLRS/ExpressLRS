@@ -1273,8 +1273,8 @@ void MspReceiveComplete()
                     }
                     devicesTriggerEvent();
                     break;
-                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
 #if defined(PLATFORM_ESP32)
+                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
                     serial1IO->queueMSPFrameTransmission(MspData);
 #endif
                 }
