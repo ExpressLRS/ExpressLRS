@@ -29,6 +29,7 @@ static bool is_pre_screen_flipped = false;
 #define SCREEN_DURATION 20
 
 extern void jumpToWifiRunning();
+extern void jumpToBleRunning();
 
 static bool jumpToBandSelect = false;
 static bool jumpToChannelSelect = false;
@@ -67,6 +68,11 @@ static int handle(void)
     if (state_machine.getParentState() != STATE_WIFI_TX && connectionState == wifiUpdate)
     {
         jumpToWifiRunning();
+    }
+    
+    if (state_machine.getParentState() != STATE_JOYSTICK && connectionState == bleJoystick)
+    {
+        jumpToBleRunning();
     }
 #endif
 
