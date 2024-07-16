@@ -652,4 +652,9 @@ void jumpToWifiRunning()
     state_machine.jumpTo(wifi_menu_fsm, STATE_WIFI_TX);
     state_machine.jumpTo(wifi_update_menu_fsm, STATE_WIFI_EXECUTE);
 }
+
+void jumpToBleRunning()
+{
+    state_machine.jumpTo(ble_menu_fsm, STATE_BLE_EXECUTE);
+}
 #endif

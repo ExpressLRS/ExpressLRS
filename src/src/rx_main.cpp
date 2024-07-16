@@ -27,7 +27,6 @@
 #include "rx-serial/SerialTramp.h"
 
 #include "rx-serial/devSerialIO.h"
-#include "rx-serial/devSerial1IO.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -76,9 +75,11 @@
 ///////////////////
 
 device_affinity_t ui_devices[] = {
-  {&Serial_device, 1},
+  {&Serial0_device, 1},
 #if defined(PLATFORM_ESP32)
-  {&Serial1_device, 1},         // secondary serial device
+  {&Serial1_device, 1},
+#endif
+#if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
 #ifdef HAS_LED
@@ -801,14 +802,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (LQCalcDVDA.currentIsSet())
         {
             crsfRCFrameAvailable();
-            crsfRCFrameAvailableSerial1();
             if (teamraceHasModelMatch)
                 servoNewChannelsAvailable();
         }
         else
         {
             crsfRCFrameMissed();
-            crsfRCFrameMissedSerial1();
         }
     }
     else if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
@@ -816,7 +815,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         if (!LQCalc.currentIsSet())
         {
             crsfRCFrameMissed();
-            crsfRCFrameMissedSerial1();
         }
     }
 
@@ -934,7 +932,6 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
             crsfRCFrameAvailable();
-            crsfRCFrameAvailableSerial1();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded
             if (teamraceHasModelMatch)
@@ -1276,8 +1273,8 @@ void MspReceiveComplete()
                     }
                     devicesTriggerEvent();
                     break;
-                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
 #if defined(PLATFORM_ESP32)
+                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP) {
                     serial1IO->queueMSPFrameTransmission(MspData);
 #endif
                 }
@@ -1333,8 +1330,11 @@ static void setupSerial()
         serialIO = new SerialNOOP();
         return;
     }
-
-    if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
+    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF)
+    {
+        serialBaud = firmwareOptions.uart_baud;
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_SBUS || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
     {
         sbusSerialOutput = true;
         serialBaud = 100000;
@@ -1526,7 +1526,7 @@ static void setupSerial1()
 
     switch(config.GetSerial1Protocol())
     {
-        case PROTOCOL_SERIAL1_NONE:
+        case PROTOCOL_SERIAL1_OFF:
             break;
         case PROTOCOL_SERIAL1_CRSF:
             Serial1.begin(firmwareOptions.uart_baud, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
@@ -1582,10 +1582,13 @@ static void serialShutdown()
     if(serialIO != nullptr)
     {
         Serial.end();
+    }
+#endif
+    if(serialIO != nullptr)
+    {
         delete serialIO;
         serialIO = nullptr;
     }
-#endif
 }
 
 void reconfigureSerial()

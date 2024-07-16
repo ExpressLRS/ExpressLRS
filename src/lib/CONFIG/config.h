@@ -207,7 +207,9 @@ typedef union {
 typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
-    uint8_t     unused_padding[2];
+    uint8_t     unused_padding;
+    uint8_t     serial1Protocol:4,  // secondary serial protocol
+                serial1Protocol_unused:4;
     uint32_t    flash_discriminator;
     struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
@@ -227,8 +229,6 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
-    uint8_t     serial1Protocol:4,  // secondary serial protocol
-                serial1Protocol_unused:4;
 } rx_config_t;
 
 class RxConfig
@@ -257,7 +257,9 @@ public:
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+#if defined(PLATFORM_ESP32)
     eSerial1Protocol GetSerial1Protocol() const { return (eSerial1Protocol)m_config.serial1Protocol; }
+#endif
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
@@ -279,7 +281,9 @@ public:
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+#if defined(PLATFORM_ESP32)
     void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+#endif
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
