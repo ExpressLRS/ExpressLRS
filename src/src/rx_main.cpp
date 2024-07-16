@@ -1561,7 +1561,7 @@ static void setupSerial1()
             break;
         case PROTOCOL_SERIAL1_SMARTAUDIO:
             Serial1.begin(4800, SERIAL_8N2, UNDEF_PIN, serial1TXpin, false);
-            serial1IO = new SerialSmartAudio(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            serial1IO = new SerialSmartAudio(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
             break;
     }
 }
