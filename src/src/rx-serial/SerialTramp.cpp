@@ -2,6 +2,23 @@
 #include "msptypes.h"
 #include "freqTable.h"
 
+void SerialTramp::setTXMode()
+{
+#if defined(PLATFORM_ESP32)
+    pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
+    digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
+    pinMatrixOutAttach(halfDuplexPin, UTXDoutIdx, false, false);    // attach GPIO as output of UART TX
+#endif
+}
+
+void SerialTramp::setRXMode()
+{
+#if defined(PLATFORM_ESP32)
+    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
+    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half duplex GPIO as input to UART RX
+#endif
+}
+
 // Calculate tramp protocol checksum of provided buffer
 uint8_t checksum(uint8_t *buf)
 {
@@ -23,7 +40,9 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
         uint8_t frame[frameSize];
         _fifo.popBytes(frame, frameSize);
         _fifo.unlock();
+        setTXMode();
         _outputPort->write(frame, frameSize);
+        setRXMode();
         bytesWritten += frameSize;
     }
 }
