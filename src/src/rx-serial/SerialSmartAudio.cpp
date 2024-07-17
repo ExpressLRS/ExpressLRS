@@ -34,9 +34,12 @@ void SerialSmartAudio::sendQueuedData(uint32_t maxBytesToSend)
         _fifo.unlock();
         setTXMode();
         _outputPort->write(frame, frameSize);
-        setRXMode();
         bytesWritten += frameSize;
         lastSendTime = millis();
+    }
+    if (_fifo.size() == 0 && millis() - lastSendTime > 20)
+    {
+        setRXMode();
     }
 }
 
