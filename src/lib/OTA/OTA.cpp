@@ -474,19 +474,6 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcFull(OTA_Packet_s * const otaPktPtr)
     uint16_t const calculatedCRC =
         ota_crc.calc((uint8_t*)otaPktPtr, OTA8_CRC_CALC_LEN, OtaCrcInitializer);
 
-#ifdef USE_ENCRYPTION
-    // If we haven't received the initial encryption handshake and the low
-	// nibble of the CRC is inverted, treat it as an encryption handshake packet.
-	/*
-    if (
-		(encryptionStateSend == ENCRYPTION_STATE_NONE) &&
-		(otaPktPtr->full.crc == calculatedCRC ^ 128)
-	)
-	{
-
-    }
-	*/
-#endif
     return otaPktPtr->full.crc == calculatedCRC;
 }
 
@@ -511,6 +498,7 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
         ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer);
 
     otaPktPtr->std.crcHigh = backupCrcHigh;
+    
     return inCRC == calculatedCRC;
 }
 

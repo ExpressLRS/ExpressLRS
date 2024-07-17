@@ -1472,7 +1472,6 @@ void setup()
     DBGLN("Initialised devices");
 
     setupBindingFromConfig();
-
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
     Radio.RXdoneCallback = &RXdoneISR;
@@ -1487,7 +1486,6 @@ void setup()
     config.Load(); // Load the stored values from eeprom
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
-
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
     #endif
