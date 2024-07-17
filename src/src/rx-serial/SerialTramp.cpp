@@ -34,6 +34,7 @@ uint8_t checksum(uint8_t *buf)
 void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
+    static unsigned long lastSendTime = 0;
     while (_fifo.size() > 0 && bytesWritten < maxBytesToSend) {
         _fifo.lock();
         uint8_t frameSize = _fifo.pop() - 1;
@@ -42,8 +43,11 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
         _fifo.unlock();
         setTXMode();
         _outputPort->write(frame, frameSize);
-        setRXMode();
         bytesWritten += frameSize;
+        lastSendTime = millis();
+    }
+    if (_fifo.size() == 0 && millis() - lastSendTime > 100) {
+        setRXMode();
     }
 }
 
