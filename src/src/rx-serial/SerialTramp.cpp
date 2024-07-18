@@ -34,6 +34,7 @@ uint8_t checksum(uint8_t *buf)
 
 void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 {
+#if defined(PLATFORM_ESP32)
     uint32_t bytesWritten = 0;
     static unsigned long lastSendTime = 0; // OVTX only changes protocols on startup every 500ms; if we send our 3 packets in different 500ms windows, we have a better chance of success
     while (_fifo.size() > 0 && bytesWritten < maxBytesToSend && millis() - lastSendTime > 200){
@@ -47,9 +48,10 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
         bytesWritten += frameSize;
         lastSendTime = millis();
     }
-    if (_fifo.size() == 0 && uart_ll_is_tx_idle(UART_LL_GET_HW(1))) {
+    if (uart_ll_is_tx_idle(UART_LL_GET_HW(1))) {
         setRXMode();
     }
+#endif
 }
 
 // Up to us how we want to define these; official Tramp VTXes are 600mW max but other non-IRC VTXes
