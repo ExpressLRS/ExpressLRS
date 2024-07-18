@@ -1,6 +1,7 @@
 #include "SerialTramp.h"
 #include "msptypes.h"
 #include "freqTable.h"
+#include <hal/uart_ll.h>
 
 void SerialTramp::setTXMode()
 {
@@ -34,8 +35,8 @@ uint8_t checksum(uint8_t *buf)
 void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
-    static unsigned long lastSendTime = 0;
-    while (_fifo.size() > 0 && bytesWritten < maxBytesToSend) {
+    static unsigned long lastSendTime = 0; // OVTX only changes protocols on startup every 500ms; if we send our 3 packets in different 500ms windows, we have a better chance of success
+    while (_fifo.size() > 0 && bytesWritten < maxBytesToSend && millis() - lastSendTime > 200){
         _fifo.lock();
         uint8_t frameSize = _fifo.pop() - 1;
         uint8_t frame[frameSize];
@@ -46,7 +47,7 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
         bytesWritten += frameSize;
         lastSendTime = millis();
     }
-    if (_fifo.size() == 0 && millis() - lastSendTime > 100) {
+    if (_fifo.size() == 0 && uart_ll_is_tx_idle(UART_LL_GET_HW(1))) {
         setRXMode();
     }
 }
