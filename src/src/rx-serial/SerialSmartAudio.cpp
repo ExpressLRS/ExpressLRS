@@ -1,7 +1,9 @@
 #include "SerialSmartAudio.h"
 #include "freqTable.h"
 #include "msptypes.h"
+#if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>
+#endif
 
 GENERIC_CRC8 crc(SMARTAUDIO_CRC_POLY);
 
