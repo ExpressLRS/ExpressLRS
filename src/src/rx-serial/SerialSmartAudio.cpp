@@ -1,6 +1,7 @@
 #include "SerialSmartAudio.h"
 #include "freqTable.h"
 #include "msptypes.h"
+#include <hal/uart_ll.h>
 
 GENERIC_CRC8 crc(SMARTAUDIO_CRC_POLY);
 
@@ -23,9 +24,10 @@ void SerialSmartAudio::setRXMode()
 
 void SerialSmartAudio::sendQueuedData(uint32_t maxBytesToSend)
 {
+#if defined(PLATFORM_ESP32)
     uint32_t bytesWritten = 0;
     static unsigned long lastSendTime = 0; // we need to delay between sending frames to allow for responses
-    while (millis() - lastSendTime > SMARTAUDIO_RESPONSE_DELAY_MS && _fifo.size() > 0 && bytesWritten < maxBytesToSend)
+    while (millis() - lastSendTime > SMARTAUDIO_RESPONSE_DELAY_MS && _fifo.size() > 0 && bytesWritten < maxBytesToSend) // OVTX only changes protocols on startup every 500ms; if we send our 3 packets in different 500ms windows, we have a better chance of success
     {
         _fifo.lock();
         uint8_t frameSize = _fifo.pop() - 1;
@@ -37,10 +39,11 @@ void SerialSmartAudio::sendQueuedData(uint32_t maxBytesToSend)
         bytesWritten += frameSize;
         lastSendTime = millis();
     }
-    if (_fifo.size() == 0 && millis() - lastSendTime > 20)
+    if (uart_ll_is_tx_idle(UART_LL_GET_HW(1)))
     {
         setRXMode();
     }
+#endif
 }
 
 void SerialSmartAudio::queueMSPFrameTransmission(uint8_t *data)

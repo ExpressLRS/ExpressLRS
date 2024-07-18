@@ -6,7 +6,7 @@
 #define SMARTAUDIO_HEADER_1 0xAA
 #define SMARTAUDIO_HEADER_2 0x55
 #define SMARTAUDIO_CRC_POLY 0xD5
-#define SMARTAUDIO_RESPONSE_DELAY_MS 150
+#define SMARTAUDIO_RESPONSE_DELAY_MS 200
 
 // check value for MSP_SET_VTX_CONFIG to determine if value is encoded
 // band/channel or frequency in MHz (3 bits for band and 3 bits for channel)
