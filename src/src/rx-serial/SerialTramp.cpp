@@ -1,7 +1,9 @@
 #include "SerialTramp.h"
 #include "msptypes.h"
 #include "freqTable.h"
+#if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>
+#endif
 
 void SerialTramp::setTXMode()
 {
