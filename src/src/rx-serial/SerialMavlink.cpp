@@ -9,6 +9,7 @@
 FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
 FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 
+
 #if defined(PLATFORM_STM32)
 // This is a dummy implementation for STM32, since we don't use Mavlink on STM32
 

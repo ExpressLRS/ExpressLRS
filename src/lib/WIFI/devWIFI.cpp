@@ -74,6 +74,12 @@ static const byte DNS_PORT = 53;
 static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
+static IPAddress broadcastAddress;
+
+#if defined(USE_MAVLINK_WIFI) && defined(TARGET_RX)
+uint32_t mavlink_from_uart_counter;
+uint32_t mavlink_to_uart_counter;
+#endif
 
 #if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
 #include "crsf2msp.h"
@@ -81,6 +87,18 @@ static IPAddress ipAddress;
 
 #include "tcpsocket.h"
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
+#endif
+
+#if defined(USE_MAVLINK_WIFI) && defined(TARGET_RX)
+#include "WiFiUdp.h"
+#define MAVLINK_COMM_NUM_BUFFERS 1
+#include "common/mavlink.h"
+
+#define MAVLINK_PORT_LISTEN 14555
+#define MAVLINK_PORT_SEND 14550
+
+WiFiUDP mavlinkUDP;
+
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -248,6 +266,19 @@ static void HandleReset(AsyncWebServerRequest *request)
   request->send(response);
   request->client()->close();
   rebootTime = millis() + 100;
+}
+
+static void WebUpdateHandleMAVLink(AsyncWebServerRequest *request)
+{
+  DynamicJsonDocument json(1024);
+  json["counters"]["to_gcs"] = mavlink_from_uart_counter;
+  json["counters"]["to_aircraft"] = mavlink_to_uart_counter;
+  json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
+  json["ports"]["send"] = MAVLINK_PORT_SEND;
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
@@ -1067,6 +1098,9 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
+#if defined(USE_MAVLINK_WIFI)
+  server.on("/mavlink", HTTP_GET, WebUpdateHandleMAVLink);
+#endif
   server.on("/access", WebUpdateAccessPoint);
   server.on("/target", WebUpdateGetTarget);
   server.on("/firmware.bin", WebUpdateGetFirmware);
@@ -1109,6 +1143,10 @@ static void startServices()
 
   dnsServer.start(DNS_PORT, "*", ipAddress);
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+
+  #if defined(USE_MAVLINK_WIFI) && defined(TARGET_RX)
+  mavlinkUDP.begin(MAVLINK_PORT_LISTEN);
+  #endif
 
   startMDNS();
 
@@ -1250,9 +1288,50 @@ void HandleMSP2WIFI()
   #endif
 }
 
+void HandleMAVLink2WIFI()
+{
+#if defined(USE_MAVLINK_WIFI) && defined(TARGET_RX)
+  if (config.GetSerialProtocol() != PROTOCOL_MAVLINK) {
+    return;
+  }
+
+  // UDP to Serial
+  const uint16_t udpBytesReady = mavlinkUDP.available();
+  if (udpBytesReady > 0)
+  {
+    uint8_t data[udpBytesReady];
+    mavlinkUDP.readBytes(data, udpBytesReady);
+    Serial.write(data, udpBytesReady);
+    mavlink_to_uart_counter++;
+  }
+
+  // Serial to UDP
+  const uint16_t serialBytesReady = Serial.available();
+  while (serialBytesReady > 0)
+  {
+      mavlink_message_t msg;
+      mavlink_status_t status;
+      char val = Serial.read();
+      if (mavlink_parse_char(MAVLINK_COMM_0, val, &msg, &status))
+      {
+          mavlink_from_uart_counter++;
+          uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+          uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+
+          // Determine the broadcast address
+          IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : broadcastAddress;
+          mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+          mavlinkUDP.write(buf, len);
+          mavlinkUDP.endPacket();
+      }
+  }
+#endif
+}
+
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
+  broadcastAddress.fromString(wifi_ap_broadcast_address);
   return firmwareOptions.wifi_auto_on_interval;
 }
 
@@ -1283,6 +1362,9 @@ static int timeout()
   {
     HandleWebUpdate();
     HandleMSP2WIFI();
+#if defined(USE_MAVLINK_WIFI) && defined(TARGET_RX)
+    HandleMAVLink2WIFI();
+#endif
 #if defined(PLATFORM_ESP8266)
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt

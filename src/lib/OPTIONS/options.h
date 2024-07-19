@@ -11,6 +11,7 @@ extern const char *wifi_hostname;
 extern const char *wifi_ap_ssid;
 extern const char *wifi_ap_password;
 extern const char *wifi_ap_address;
+extern const char *wifi_ap_broadcast_address;
 
 enum BuzzerMode {
     buzzerQuiet,

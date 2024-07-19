@@ -23,6 +23,7 @@ const char *wifi_ap_ssid = "ExpressLRS RX";
 #endif
 const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
+const char *wifi_ap_broadcast_address = "10.0.0.255";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 
