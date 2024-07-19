@@ -6,7 +6,9 @@
 #include "deferred.h"
 
 extern void reconfigureSerial();
+#if defined(PLATFORM_ESP32)
 extern void reconfigureSerial1();
+#endif
 extern bool BindingModeRequest;
 
 static char modelString[] = "000";
@@ -21,15 +23,17 @@ static struct luaItem_selection luaSerialProtocol = {
     STR_EMPTYSPACE
 };
 
+#if defined(PLATFORM_ESP32)
 static struct luaItem_selection luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-    "NONE;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry",
+    "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio",
     STR_EMPTYSPACE
 };
+#endif
 
-static struct luaItem_selection luaFailsafeMode = {
-    {"Failsafe Mode", CRSF_TEXT_SELECTION},
+static struct luaItem_selection luaSBUSFailsafeMode = {
+    {"SBUS failsafe", CRSF_TEXT_SELECTION},
     0, // value
     "No Pulses;Last Pos",
     STR_EMPTYSPACE
@@ -155,15 +159,15 @@ static struct luaItem_command luaSetFailsafe = {
 
 //---------------------------- Output Mapping -----------------------------
 
-static struct luaItem_selection luaVolatileBind = {
+static struct luaItem_selection luaBindStorage = {
     {"Bind Storage", CRSF_TEXT_SELECTION},
     0, // value
-    "Persistent;Volatile",
+    "Persistent;Volatile;Returnable",
     STR_EMPTYSPACE
 };
 
 static struct luaItem_command luaBindMode = {
-    {"Enter Bind Mode", CRSF_COMMAND},
+    {STR_EMPTYSPACE, CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
@@ -173,8 +177,10 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
 {
     bool sclAssigned = false;
     bool sdaAssigned = false;
+#if defined(PLATFORM_ESP32)
     bool serial1rxAssigned = false;
     bool serial1txAssigned = false;
+#endif
 
     const char *no1Option    = ";";
     const char *no2Options   = ";;";
@@ -184,9 +190,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     const char *i2c_SCL      = ";I2C SCL;";
     const char *i2c_SDA      = ";;I2C SDA";
     const char *i2c_BOTH     = ";I2C SCL;I2C SDA";
+#if defined(PLATFORM_ESP32)
     const char *serial1_RX   = ";Serial2 RX;";
     const char *serial1_TX   = ";;Serial2 TX";
     const char *serial1_BOTH = ";Serial2 RX;Serial2 TX";
+#endif
 
     const char *pModeString;
 
@@ -198,18 +206,20 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         continue;
 
       eServoOutputMode mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
-      
+
       if (mode == somSCL)
         sclAssigned = true;
 
       if (mode == somSDA)
         sdaAssigned = true;
 
+#if defined(PLATFORM_ESP32)
       if (mode == somSerial1RX)
         serial1rxAssigned = true;
 
       if (mode == somSerial1TX)
         serial1txAssigned = true;
+#endif
     }
 
     setLuaUint8Value(&luaMappingChannelOut, arg);
@@ -266,9 +276,9 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         {
             pModeString = no2Options;
         }
-    } 
+    }
     else
-    {  
+    {
         // otherwise allow any pin to be either SCL or SDA but only once
         if (sclAssigned && !sdaAssigned)
         {
@@ -420,7 +430,7 @@ static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t ar
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void luaparamSetFalisafe(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
 {
   luaCmdStep_e newStep;
   const char *msg;
@@ -485,6 +495,7 @@ static void registerLuaParameters()
     }
   });
 
+#if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSerial1Protocol((eSerial1Protocol)arg);
     if (config.IsModified()) {
@@ -493,17 +504,11 @@ static void registerLuaParameters()
       });
     }
   });
+#endif
 
-  eSerialProtocol prot0 = config.GetSerialProtocol();
-  eSerial1Protocol prot1 = config.GetSerial1Protocol();
-
-  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
-      prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO)
-  {
-    registerLUAParameter(&luaFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetFailsafeMode((eFailsafeMode)arg);
-    });
-  }
+  registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetFailsafeMode((eFailsafeMode)arg);
+  });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -543,17 +548,17 @@ static void registerLuaParameters()
     registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
     registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
     registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFalisafe);
+    registerLUAParameter(&luaSetFailsafe, &luaparamSetFailsafe);
   }
 #endif
 
-  registerLUAParameter(&luaVolatileBind, [](struct luaPropertiesCommon* item, uint8_t arg) {
-    config.SetVolatileBind(arg);
+  registerLUAParameter(&luaBindStorage, [](struct luaPropertiesCommon* item, uint8_t arg) {
+    config.SetBindStorage((rx_config_bindstorage_t)arg);
   });
   registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
-      deferExecutionMillis(200, [](){ BindingModeRequest = true; });
+      deferExecutionMillis(200, EnterBindingModeSafely);
     }
     sendLuaCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
   });
@@ -563,11 +568,22 @@ static void registerLuaParameters()
   registerLUAParameter(nullptr);
 }
 
+static void updateBindModeLabel()
+{
+  if (config.IsOnLoan())
+    luaBindMode.common.name = "Return Model";
+  else
+    luaBindMode.common.name = "Enter Bind Mode";
+}
+
 static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+#if defined(PLATFORM_ESP32)
   setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
-  setLuaTextSelectionValue(&luaFailsafeMode, config.GetFailsafeMode());
+#endif
+  
+  setLuaTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -609,7 +625,8 @@ static int event()
     itoa(config.GetModelId(), modelString, 10);
     setLuaStringValue(&luaModelNumber, modelString);
   }
-  setLuaTextSelectionValue(&luaVolatileBind, config.GetVolatileBind());
+  setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
+  updateBindModeLabel();
   return DURATION_IMMEDIATELY;
 }
 
