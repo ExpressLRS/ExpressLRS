@@ -246,15 +246,29 @@ void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
     uint8_t switchbuf[8];
-    switchbuf[0] = 0b00001111; // RfswEnable
-    switchbuf[1] = 0b00000000; // RfSwStbyCfg
-    switchbuf[2] = 0b00000100; // RfSwRxCfg
-    switchbuf[3] = 0b00001000; // RfSwTxCfg
-    switchbuf[4] = 0b00001000; // RfSwTxHPCfg
-    switchbuf[5] = 0b00000010; // RfSwTxHfCfg
-    switchbuf[6] = 0;          // 
-    switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
-    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);  
+    if (LR1121_RFSW_CTRL_COUNT == 8)
+    {
+        switchbuf[0] = LR1121_RFSW_CTRL[0]; // RfswEnable
+        switchbuf[1] = LR1121_RFSW_CTRL[1]; // RfSwStbyCfg
+        switchbuf[2] = LR1121_RFSW_CTRL[2]; // RfSwRxCfg
+        switchbuf[3] = LR1121_RFSW_CTRL[3]; // RfSwTxCfg
+        switchbuf[4] = LR1121_RFSW_CTRL[4]; // RfSwTxHPCfg
+        switchbuf[5] = LR1121_RFSW_CTRL[5]; // RfSwTxHfCfg
+        switchbuf[6] = LR1121_RFSW_CTRL[6]; // Unused
+        switchbuf[7] = LR1121_RFSW_CTRL[7]; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    }
+    else
+    {
+        switchbuf[0] = 0b00001111; // RfswEnable
+        switchbuf[1] = 0b00000000; // RfSwStbyCfg
+        switchbuf[2] = 0b00000100; // RfSwRxCfg
+        switchbuf[3] = 0b00001000; // RfSwTxCfg
+        switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+        switchbuf[5] = 0b00000010; // RfSwTxHfCfg
+        switchbuf[6] = 0;          // Unused
+        switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    }
+    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
