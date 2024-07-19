@@ -50,11 +50,14 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
                 if 'overlay' in config:
                     hardware.update(config['overlay'])
                 if rx_as_tx is not None:
-                    if hardware['serial_rx'] is None or hardware['serial_tx'] is None:
+                    if 'serial_rx' not in hardware or 'serial_tx' not in hardware:
                         sys.stderr.write(f'Cannot select this target as RX-as-TX\n')
                         exit(1)
                     if rx_as_tx == TXType.external and hardware['serial_rx']:
                         hardware['serial_rx'] = hardware['serial_tx']
+                    if 'led_red' not in hardware and 'led' in hardware:
+                        hardware['led_red'] = hardware['led']
+                        del hardware['led']
                 layout = (json.JSONEncoder().encode(hardware).encode() + (b'\0' * 2048))[0:2048]
                 firmware_file.write(layout)
         except EnvironmentError:
