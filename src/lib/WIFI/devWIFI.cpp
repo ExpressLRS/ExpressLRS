@@ -32,7 +32,6 @@
 #include "ArduinoJson.h"
 #include "AsyncJson.h"
 #include <ESPAsyncWebServer.h>
-#include <SPIEx.h>
 
 #include "common.h"
 #include "POWERMGNT.h"
@@ -47,6 +46,10 @@
 #include "WebContent.h"
 
 #include "config.h"
+
+#if defined(RADIO_LR1121)
+#include "lr1121.h"
+#endif
 
 #if defined(TARGET_TX)
 
@@ -801,238 +804,6 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
-#if defined(RADIO_LR1121)
-static size_t expectedFilesize;
-static SX12XX_Radio_Number_t updatingRadio;
-extern LR1121Hal hal;
-static uint8_t packet[256];
-static size_t left_over;
-
-static void writeLR1121Bytes(uint8_t *data, uint32_t sector_size) {
-    uint8_t header[6 + 256] = {
-        (uint8_t)(LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC >> 8),
-        (uint8_t)(LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC),
-        (uint8_t)(totalSize >> 24),
-        (uint8_t)(totalSize >> 16),
-        (uint8_t)(totalSize >> 8),
-        (uint8_t)(totalSize)
-    };
-    if (left_over)
-    {
-        DBGLN("left %x", left_over);
-        memcpy(header + 6, packet, left_over);
-    }
-    if (data != NULL)
-    {
-        DBGLN("new %x", sector_size - left_over);
-        memcpy(header + 6 + left_over, data, sector_size - left_over);
-    }
-    DBGLN("flashing %x at %x", sector_size, totalSize);
-
-    // Have to do this the OLD way, so we can pump out more than 64 bytes in one message
-    digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, LOW);
-    SPIEx.transferBytes(header, NULL, 6 + sector_size);
-    digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
-
-    while (digitalRead(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_BUSY : GPIO_PIN_BUSY_2) == HIGH)
-    {
-        delay(1);
-    }
-    DBGLN("flashed");
-}
-
-static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
-    // Complete upload and set error flag
-    bool uploadError = false;
-    uint8_t param = 0;
-    writeLR1121Bytes(NULL, left_over);
-    totalSize += left_over;
-
-    SPIEx.setHwCs(true);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
-    }
-
-    if (totalSize == expectedFilesize)
-    {
-        DBGLN("reboot 1121");
-        uint8_t reboot_cmd[] = {
-            (uint8_t)(LR11XX_BL_REBOOT_OC >> 8),
-            (uint8_t)LR11XX_BL_REBOOT_OC,
-            0
-        };
-        SPIEx.write(updatingRadio, reboot_cmd, 3);
-        while(!hal.WaitOnBusy(updatingRadio));
-
-        DBGLN("check not in BL mode");
-        packet[0] = LR11XX_SYSTEM_GET_VERSION_OC >> 8;
-        packet[1] = (uint8_t)LR11XX_SYSTEM_GET_VERSION_OC;
-        SPIEx.write(updatingRadio, packet, 2);
-        hal.WaitOnBusy(updatingRadio);
-        memset(packet, 0, sizeof(packet));
-        SPIEx.read(updatingRadio, packet, 5);
-        hal.WaitOnBusy(updatingRadio);
-        uploadError = (packet[2] != 3);
-        DBGLN("hardware %x", packet[1]);
-        DBGLN("type %x", packet[2]);
-        DBGLN("firmware %x", ( ( uint16_t )packet[3] << 8 ) + ( uint16_t )packet[4]);
-    }
-
-    String msg;
-    if (!uploadError && totalSize == expectedFilesize) {
-        msg = String(R"({"status": "ok", "msg": "Update complete. Refresh page to see new version information."})");
-        DBGLN("Update complete");
-    } else {
-        StreamString p = StreamString();
-        if (totalSize != expectedFilesize) {
-            p.println("Not enough data uploaded!");
-        } else {
-            p.println("Update failed, refresh and try again.");
-        }
-        DBGLN("Failed to upload firmware: %s", p.c_str());
-        msg = String(R"({"status": "error", "msg": ")") + p + R"("})";
-    }
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
-    response->addHeader("Connection", "close");
-    request->send(response);
-    request->client()->close();
-}
-
-static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (index == 0) {
-#ifdef HAS_WIFI_JOYSTICK
-        WifiJoystick::StopJoystickService();
-#endif
-        expectedFilesize = request->header("X-FileSize").toInt();
-        updatingRadio = request->header("X-Radio").toInt();
-        DBGLN("Update: '%s' size %u on radio %d", filename.c_str(), expectedFilesize, updatingRadio);
-        totalSize = 0;
-
-        // Reboot to BL mode
-        DBGLN("Reboot 1121 to bootloader mode");
-        uint8_t reboot_cmd[] = {
-            (uint8_t)(LR11XX_SYSTEM_REBOOT_OC >> 8),
-            (uint8_t)LR11XX_SYSTEM_REBOOT_OC,
-            3
-        };
-        SPIEx.write(updatingRadio, reboot_cmd, 3);
-        while(!hal.WaitOnBusy(updatingRadio)) {
-            DBGLN("Waiting...");
-            delay(10);
-        }
-
-        // Ensure we're in BL mode
-        DBGLN("Ensure BL mode");
-        packet[0] = LR11XX_BL_GET_VERSION_OC >> 8;
-        packet[1] = (uint8_t)LR11XX_BL_GET_VERSION_OC;
-        SPIEx.write(updatingRadio, packet, 2);
-        hal.WaitOnBusy(updatingRadio);
-        memset(packet, 0, sizeof(packet));
-        SPIEx.read(updatingRadio, packet, 5);
-        hal.WaitOnBusy(updatingRadio);
-        if (packet[2] != 0xDF) {
-            AsyncWebServerResponse *response = request->beginResponse(200, "application/json", R"({"status": "error", "msg": "Not in bootloader mode"})");
-            response->addHeader("Connection", "close");
-            request->send(response);
-            request->client()->close();
-            return;
-        }
-
-        // Erase flash
-        DBGLN("Erasing");
-        packet[0] = LR11XX_BL_ERASE_FLASH_OC >> 8;
-        packet[1] = (uint8_t)LR11XX_BL_ERASE_FLASH_OC;
-        SPIEx.write(updatingRadio, packet, 2);
-        while(!hal.WaitOnBusy(updatingRadio))
-        {
-            DBGLN("Waiting...");
-            delay(100);
-        }
-        DBGLN("Erased");
-
-        left_over = 0;
-        SPIEx.setHwCs(false);
-
-        pinMode(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, OUTPUT);
-        digitalWrite(updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
-    }
-    if (len) {
-        DBGLN("writing %x", len);
-        // Write len bytes to LR1121 from data
-        while (len >= 256)
-        {
-            uint32_t sector_size = len > 256 ? 256 : len;
-            writeLR1121Bytes(data, sector_size);
-            totalSize += sector_size;
-            len -= sector_size - left_over;
-            data += sector_size - left_over;
-            left_over = 0;
-        }
-        memcpy(packet, data, len);
-        left_over = len;
-    }
-}
-
-static void ReadStatusForRadio(JsonObject json, SX12XX_Radio_Number_t radio)
-{
-    packet[0] = LR11XX_BL_GET_VERSION_OC >> 8;
-    packet[1] = (uint8_t)LR11XX_BL_GET_VERSION_OC;
-    SPIEx.write(radio, packet, 2);
-    hal.WaitOnBusy(radio);
-    memset(packet, 0, sizeof(packet));
-    SPIEx.read(radio, packet, 5);
-    hal.WaitOnBusy(radio);
-    json["hardware"] = packet[1];
-    json["type"] = packet[2];
-    json["firmware"] = ( ( uint16_t )packet[3] << 8 ) + ( uint16_t )packet[4];
-
-    packet[0] = LR11XX_BL_GET_PIN_OC >> 8;
-    packet[1] = (uint8_t)LR11XX_BL_GET_PIN_OC;
-    SPIEx.write(radio, packet, 2);
-    hal.WaitOnBusy(radio);
-    memset(packet, 0, sizeof(packet));
-    SPIEx.read(radio, packet, 5);
-    hal.WaitOnBusy(radio);
-    copyArray(packet+1, 4, json["pin"].to<JsonArray>());
-
-    packet[0] = LR11XX_BL_READ_CHIP_EUI_OC >> 8;
-    packet[1] = (uint8_t)LR11XX_BL_READ_CHIP_EUI_OC;
-    SPIEx.write(radio, packet, 2);
-    hal.WaitOnBusy(radio);
-    memset(packet, 0, sizeof(packet));
-    SPIEx.read(radio, packet, 9);
-    hal.WaitOnBusy(radio);
-    copyArray(packet+1, 8, json["ceui"].to<JsonArray>());
-
-    packet[0] = LR11XX_BL_READ_JOIN_EUI_OC >> 8;
-    packet[1] = (uint8_t)LR11XX_BL_READ_JOIN_EUI_OC;
-    SPIEx.write(radio, packet, 2);
-    hal.WaitOnBusy(radio);
-    memset(packet, 0, sizeof(packet));
-    SPIEx.read(radio, packet, 9);
-    hal.WaitOnBusy(radio);
-    copyArray(packet+1, 8, json["jeui"].to<JsonArray>());
-}
-
-static void GetLR1121Status(AsyncWebServerRequest *request)
-{
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonObject json = response->getRoot();
-    hal.end();
-    hal.init();
-    hal.reset();
-
-    ReadStatusForRadio(json["radio1"].to<JsonObject>(), SX12XX_Radio_1);
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        ReadStatusForRadio(json["radio2"].to<JsonObject>(), SX12XX_Radio_2);
-    }
-    response->setLength();
-    request->send(response);
-}
-#endif
-
 #ifdef HAS_WIFI_JOYSTICK
 static void WebUdpControl(AsyncWebServerRequest *request)
 {
@@ -1336,9 +1107,8 @@ static void startServices()
   #if defined(RADIO_LR1121)
     server.on("/lr1121.html", WebUpdateSendContent);
     server.on("/lr1121.js", WebUpdateSendContent);
-    server.on("/lr1121.json", HTTP_GET, GetLR1121Status);
-    server.on("/lr1121", HTTP_POST, WebUploadLR1121ResponseHandler, WebUploadLR1121DataHandler);
     server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
+    addLR1121Handlers(server);
   #endif
 
   addCaptivePortalHandlers();
