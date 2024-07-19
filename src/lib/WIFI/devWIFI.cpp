@@ -1203,7 +1203,7 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         #if defined(PLATFORM_ESP8266)
-        WiFi.setOutputPower(20.5);
+        WiFi.setOutputPower(13.5);
         WiFi.setPhyMode(WIFI_PHY_MODE_11N);
         #elif defined(PLATFORM_ESP32)
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
@@ -1224,7 +1224,7 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         #if defined(PLATFORM_ESP8266)
-        WiFi.setOutputPower(20.5);
+        WiFi.setOutputPower(13.5);
         WiFi.setPhyMode(WIFI_PHY_MODE_11N);
         #elif defined(PLATFORM_ESP32)
         WiFi.setTxPower(WIFI_POWER_19_5dBm);

@@ -897,7 +897,7 @@ local function checkCrsfModule()
     local mod = model.getModule(modIdx)
     if mod and mod.Type == 5 then
       -- CRSF found
-      checkModuleEnabled = nil
+      checkCrsfModule = nil
       return 0
     end
   end
