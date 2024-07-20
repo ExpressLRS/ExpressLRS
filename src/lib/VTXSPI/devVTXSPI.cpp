@@ -398,8 +398,6 @@ static void initialize()
             analogWriteResolution(12); // 0 - 4095
         #endif
         setPWM();
-
-        delay(RTC6705_BOOT_DELAY);
     }
 }
 
