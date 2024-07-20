@@ -118,7 +118,8 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
     response->addHeader("Connection", "close");
     request->send(response);
-    request->client()->close();
+    delete lr1121UpdateState;
+    lr1121UpdateState = nullptr;
 }
 
 static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
