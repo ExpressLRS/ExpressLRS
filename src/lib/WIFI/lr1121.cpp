@@ -34,7 +34,7 @@ static void writeLR1121Bytes(uint8_t *data, uint32_t data_size) {
     lr1121UpdateState->packet.header[5] = (uint8_t)(lr1121UpdateState->totalSize);
 
     uint32_t write_size = lr1121UpdateState->left_over;
-    if (data != NULL)
+    if (data != nullptr)
     {
         DBGLN("new %x", data_size);
         memcpy(lr1121UpdateState->packet.buffer + lr1121UpdateState->left_over, data, data_size);
@@ -44,7 +44,7 @@ static void writeLR1121Bytes(uint8_t *data, uint32_t data_size) {
 
     // Have to do this the OLD way, so we can pump out more than 64 bytes in one message
     digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, LOW);
-    SPIEx.transferBytes(lr1121UpdateState->packet.header, NULL, 6 + write_size);
+    SPIEx.transferBytes(lr1121UpdateState->packet.header, nullptr, 6 + write_size);
     digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
 
     while (digitalRead(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_BUSY : GPIO_PIN_BUSY_2) == HIGH)
@@ -72,7 +72,7 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     // Complete upload and set error flag
     bool uploadError = false;
     uint8_t param = 0;
-    writeLR1121Bytes(NULL, 0);
+    writeLR1121Bytes(nullptr, 0);
     lr1121UpdateState->totalSize += lr1121UpdateState->left_over;
 
     SPIEx.setHwCs(true);
