@@ -29,9 +29,9 @@
 #include <set>
 #include <StreamString.h>
 
-#include <ESPAsyncWebServer.h>
-#include "AsyncJson.h"
 #include "ArduinoJson.h"
+#include "AsyncJson.h"
+#include <ESPAsyncWebServer.h>
 
 #include "common.h"
 #include "POWERMGNT.h"
@@ -46,6 +46,10 @@
 #include "WebContent.h"
 
 #include "config.h"
+
+#if defined(RADIO_LR1121)
+#include "lr1121.h"
+#endif
 
 #if defined(TARGET_TX)
 
@@ -159,6 +163,10 @@ static struct {
   {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
   {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
   {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
+#if defined(RADIO_LR1121)
+  {"/lr1121.html", "text/html", (uint8_t *)LR1121_HTML, sizeof(LR1121_HTML)},
+  {"/lr1121.js", "text/javascript", (uint8_t *)LR1121_JS, sizeof(LR1121_JS)},
+#endif
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -1099,6 +1107,13 @@ static void startServices()
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
     server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
+  #endif
+
+  #if defined(RADIO_LR1121)
+    server.on("/lr1121.html", WebUpdateSendContent);
+    server.on("/lr1121.js", WebUpdateSendContent);
+    server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
+    addLR1121Handlers(server);
   #endif
 
   addCaptivePortalHandlers();
