@@ -206,9 +206,8 @@ void RandRSSI(uint8_t *outrnd, size_t len)
     rnd = 0;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-        // FHSSsetCurrIndex(bit % FHSSconfig->freq_count);
-        Radio.SetMode(SX127X_CAD);
-        rnd |= ( Radio.GetCurrRSSI(transmittingRadio) & 0x01 ) << bit;
+        Radio.SetMode(SX127x_OPMODE_CAD, SX12XX_Radio_1);
+        rnd |= ( Radio.GetCurrRSSI(SX12XX_Radio_2) & 0x01 ) << bit;
         delay(1);
     }
     outrnd[i] = rnd;
@@ -245,7 +244,7 @@ void GetRandomBytes(uint8_t *outrnd, size_t len)
 {
 #ifdef RADIO_SX127X
   // Radio.ConfigLoraDefaults();
-  SetRxTimeoutUs(); // Sets continuous receive mode
+  Radio.SetRxTimeoutUs(0); // Sets continuous receive mode
   Radio.RXnb();
   for (int i = 0; i < len; i++)
   {
@@ -267,7 +266,7 @@ uint32_t GetRandom32t()
 #endif
 #ifdef RADIO_SX127X
   // Radio.ConfigLoraDefaults();
-  SetRxTimeoutUs(); // Sets continuous receive mode
+  Radio.SetRxTimeoutUs(0); // Sets continuous receive mode
   Radio.RXnb();
 #endif
 
