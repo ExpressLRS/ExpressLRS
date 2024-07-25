@@ -116,16 +116,16 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .lock_on_first_connection = false,
 #endif
-#if defined(DISABLE_POWER_CYCLE_BIND)
-    .disable_power_cycle_bind = true,
-#else
-    .disable_power_cycle_bind = false,
-#endif
     ._unused2 = false,
 #if defined(USE_AIRPORT_AT_BAUD)
     .is_airport = true,
 #else
     .is_airport = false,
+#endif
+#if defined(DISABLE_POWER_CYCLE_BIND)
+    .disable_power_cycle_bind = true,
+#else
+    .disable_power_cycle_bind = false,
 #endif
 #endif
 #if defined(TARGET_TX)
