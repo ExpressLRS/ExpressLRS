@@ -114,6 +114,9 @@ def patch_rx_params(mm, pos, args):
     if args.airport_baud != None:
         val |= ~8
         val |= 0 if args.airport_baud == 0 else 8
+    if args.disable_power_cycle_bind != None:
+        val &= ~16
+        val |= (args.disable_power_cycle_bind << 4)
     mm[pos] = val
     return pos + 1
 
@@ -343,6 +346,9 @@ def main():
     parser.add_argument('--lock-on-first-connection', dest='lock_on_first_connection', action='store_true', help='Lock RF mode on first connection')
     parser.add_argument('--no-lock-on-first-connection', dest='lock_on_first_connection', action='store_false', help='Do not lock RF mode on first connection')
     parser.set_defaults(lock_on_first_connection=None)
+    parser.add_argument('--disable-power-cycle-bind', dest='disable_power_cycle_bind', action='store_true', help='Disable the triple power cycling binding function')
+    parser.add_argument('--no-disable-power-cycle-bind', dest='disable_power_cycle_bind', action='store_false', help='Allow the triple power cycling binding function')
+    parser.set_defaults(disable_power_cycle_bind=None)
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')

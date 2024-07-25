@@ -33,6 +33,7 @@ config = {
             "rcvr-uart-baud": 400000,
             "rcvr-invert-tx": False,
             "lock-on-first-connection": True,
+            "disable-power-cycle-bind": False,
             "domain": 1,
             # "wifi-on-interval": 60,
             "wifi-password": "w1f1-pAssw0rd",

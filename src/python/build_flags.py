@@ -67,6 +67,8 @@ def process_json_flag(define):
         json_flags['unlock-higher-power'] = True
     if define == "-DLOCK_ON_FIRST_CONNECTION" and isRX:
         json_flags['lock-on-first-connection'] = True
+    if define == "-DDISABLE_POWER_CYCLE_BIND" and isRX:
+        json_flags['disable-power-cycle-bind'] = True
 
 def process_build_flag(define):
     if define.startswith("-D") or define.startswith("!-D"):

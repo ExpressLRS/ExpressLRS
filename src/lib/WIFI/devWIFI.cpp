@@ -988,6 +988,10 @@ static void startMDNS()
   {
     options += " -DLOCK_ON_FIRST_CONNECTION";
   }
+  if (firmwareOptions.disable_power_cycle_bind)
+  {
+    options += " -DDISABLE_POWER_CYCLE_BIND";
+  }
   options += " -DRCVR_UART_BAUD=" + String(firmwareOptions.uart_baud);
   #endif
 

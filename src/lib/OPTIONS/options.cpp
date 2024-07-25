@@ -116,6 +116,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .lock_on_first_connection = false,
 #endif
+#if defined(DISABLE_POWER_CYCLE_BIND)
+    .disable_power_cycle_bind = true,
+#else
+    .disable_power_cycle_bind = false,
+#endif
     ._unused2 = false,
 #if defined(USE_AIRPORT_AT_BAUD)
     .is_airport = true,
@@ -228,6 +233,7 @@ void saveOptions(Stream &stream, bool customised)
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
+    doc["disable-power-cycle-bind"] = firmwareOptions.disable_power_cycle_bind;
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
@@ -341,6 +347,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.is_airport = doc["is-airport"] | false;
     #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
+    firmwareOptions.disable_power_cycle_bind = doc["disable-power-cycle-bind"] | false;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
     firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;

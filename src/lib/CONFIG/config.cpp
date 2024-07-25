@@ -1009,6 +1009,10 @@ RxConfig::SetUID(uint8_t* uid)
 void
 RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 {
+    if (firmwareOptions.disable_power_cycle_bind) {
+        return;
+    }
+
 #if defined(PLATFORM_ESP8266)
     realPowerOnCounter = powerOnCounter;
     if (powerOnCounter == 0)
