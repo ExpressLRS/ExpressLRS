@@ -117,7 +117,7 @@ bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
         mavlink_status_t status;
 
         // Try parse a mavlink message
-        if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+        if (mavlink_frame_char(MAVLINK_COMM_0, c, &msg, &status))
         {
             // Message decoded successfully
             return true;
