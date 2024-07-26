@@ -399,10 +399,6 @@ void TFTDisplay::displayLinkstats()
     gfx->setFont(&SCREEN_SMALL_FONT);
     gfx->setTextColor(BLACK, WHITE);
 
-    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
-    gfx->print("Uplink");
-    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
-    gfx->print("Downlink");
     gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_SECOND);
     gfx->print("LQ");
     gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_THIRD);
@@ -413,34 +409,38 @@ void TFTDisplay::displayLinkstats()
     gfx->print("Ant");
 
     // Uplink Linkstats
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
+    gfx->print("Uplink");
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    gfx->printf("%03u", CRSF::LinkStatistics.uplink_Link_quality);
-
+    gfx->print(CRSF::LinkStatistics.uplink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    gfx->printf("%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
+    gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
     if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
     {
-        gfx->printf("/%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+        gfx->print('/');
+        gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
     }
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-    gfx->printf("%02d", CRSF::LinkStatistics.uplink_SNR);
-
+    gfx->print(CRSF::LinkStatistics.uplink_SNR);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    gfx->printf("%02u", CRSF::LinkStatistics.active_antenna);
+    gfx->print(CRSF::LinkStatistics.active_antenna);
 
     // Downlink Linkstats
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
+    gfx->print("Downlink");
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    gfx->printf("%03u", CRSF::LinkStatistics.downlink_Link_quality);
-
+    gfx->print(CRSF::LinkStatistics.downlink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    gfx->printf("%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
+    gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
     if (isDualRadio())
     {
-        gfx->printf("/%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
+        gfx->print('/');
+        gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
     }
+
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-    gfx->printf("%02d", CRSF::LinkStatistics.downlink_SNR);
+    gfx->print(CRSF::LinkStatistics.downlink_SNR);
 }
 
 #endif

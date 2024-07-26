@@ -424,7 +424,7 @@ void OLEDDisplay::displayLinkstats()
     u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
     if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
     {
-        u8g2->print("/");
+        u8g2->print('/');
         u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
     }
 
@@ -435,7 +435,7 @@ void OLEDDisplay::displayLinkstats()
     u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
     if (isDualRadio())
     {
-        u8g2->print("/");
+        u8g2->print('/');
         u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
     }
 
@@ -446,7 +446,7 @@ void OLEDDisplay::displayLinkstats()
         u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
         u8g2->print((int8_t)CRSF::LinkStatistics.downlink_SNR);
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-        u8g2->print((int8_t)CRSF::LinkStatistics.active_antenna);
+        u8g2->print(CRSF::LinkStatistics.active_antenna);
     }
 
     u8g2->sendBuffer();
