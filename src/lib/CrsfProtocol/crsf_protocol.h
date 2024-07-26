@@ -365,12 +365,14 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t rf_Mode;
     uint8_t uplink_TX_Power;
     uint8_t downlink_RSSI_1;
-    uint8_t downlink_RSSI_2;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
-} crsfLinkStatistics_t;
+} PACKED crsfLinkStatistics_t;
 
-typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
+typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
+{
+    uint8_t downlink_RSSI_2;
+} PACKED elrsLinkStatistics_t;
 
 // typedef struct crsfOpenTXsyncFrame_s
 // {
