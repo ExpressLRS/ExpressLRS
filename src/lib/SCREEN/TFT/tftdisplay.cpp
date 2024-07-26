@@ -120,16 +120,6 @@ constexpr uint16_t elrs_banner_bgColor[] = {
 #define SUB_PAGE_BINDING_WORD_START_X   0
 #define SUB_PAGE_BINDING_WORD_START_Y   (SCREEN_Y -  SCREEN_LARGE_FONT_SIZE)/2
 
-//LINKSTATS PAGE Definition
-#define LINKSTATS_COL_FIRST   0
-#define LINKSTATS_COL_SECOND  30
-#define LINKSTATS_COL_THIRD   100
-#define LINKSTATS_ROW_FIRST   10
-#define LINKSTATS_ROW_SECOND  25
-#define LINKSTATS_ROW_THIRD   40
-#define LINKSTATS_ROW_FOURTH  55
-#define LINKSTATS_ROW_FIFTH   70
-
 static Arduino_DataBus *bus;
 static Arduino_GFX *gfx;
 
@@ -395,11 +385,20 @@ void TFTDisplay::displaySending()
 
 void TFTDisplay::displayLinkstats()
 {
-    char buffer[5];
+    constexpr int16_t LINKSTATS_COL_FIRST   = 0;
+    constexpr int16_t LINKSTATS_COL_SECOND  = 30;
+    constexpr int16_t LINKSTATS_COL_THIRD   = 100;
+
+    constexpr int16_t LINKSTATS_ROW_FIRST   = 10;
+    constexpr int16_t LINKSTATS_ROW_SECOND  = 25;
+    constexpr int16_t LINKSTATS_ROW_THIRD   = 40;
+    constexpr int16_t LINKSTATS_ROW_FOURTH  = 55;
+    constexpr int16_t LINKSTATS_ROW_FIFTH   = 70;
+
     gfx->fillScreen(WHITE);
     gfx->setFont(&SCREEN_SMALL_FONT);
     gfx->setTextColor(BLACK, WHITE);
-    
+
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
     gfx->print("Uplink");
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
@@ -415,41 +414,33 @@ void TFTDisplay::displayLinkstats()
 
     // Uplink Linkstats
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    snprintf(buffer, sizeof(buffer), "%03d", CRSF::LinkStatistics.uplink_Link_quality);
-    gfx->print(String(buffer));
+    gfx->printf("%03u", CRSF::LinkStatistics.uplink_Link_quality);
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
-    gfx->print(String(buffer));
-    gfx->print("/");
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
-    gfx->print(String(buffer));
+    gfx->printf("%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
+    if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
+    {
+        gfx->printf("/%03d", (int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+    }
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.uplink_SNR);
-    gfx->print(String(buffer));
+    gfx->printf("%02d", CRSF::LinkStatistics.uplink_SNR);
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.active_antenna);
-    gfx->print(String(buffer));
+    gfx->printf("%02u", CRSF::LinkStatistics.active_antenna);
 
     // Downlink Linkstats
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    snprintf(buffer, sizeof(buffer), "%03d", CRSF::LinkStatistics.downlink_Link_quality);
-    gfx->print(String(buffer));
+    gfx->printf("%03u", CRSF::LinkStatistics.downlink_Link_quality);
 
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
-    gfx->print(String(buffer));
+    gfx->printf("%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
     if (isDualRadio())
     {
-        gfx->print("/");
-        snprintf(buffer, sizeof(buffer), "%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
-        gfx->print(String(buffer));
+        gfx->printf("/%03d", (int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
     }
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-    snprintf(buffer, sizeof(buffer), "%02d", CRSF::LinkStatistics.downlink_SNR);
-    gfx->print(String(buffer));
+    gfx->printf("%02d", CRSF::LinkStatistics.downlink_SNR);
 }
 
 #endif
