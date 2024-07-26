@@ -35,7 +35,7 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
 
-    static void makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4]);
+    static void makeLinkStatisticsPacket(uint8_t *buffer);
 
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
