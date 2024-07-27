@@ -39,8 +39,12 @@ char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
+static const char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
+static const char tlmRatiosMav[] = ";;;;;;;;1:2;";
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
+static const char switchmodeOpts4chMav[] = ";Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+static const char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 static const char linkModeOpts[] = "Normal;MAVLink";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
@@ -62,7 +66,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
+    tlmRatios,
     tlmBandwidth
 };
 
@@ -655,8 +659,9 @@ static void registerLuaParameters()
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
       if (eRatio <= TLM_RATIO_DISARMED)
       {
-        // Don't allow TLM ratio changes if using AIRPORT
-        if (!firmwareOptions.is_airport)
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        // Don't allow TLM ratio changes if using AIRPORT or Mavlink
+        if (!firmwareOptions.is_airport && !isMavlinkMode)
         {
           config.SetTlm(eRatio);
         }
@@ -683,8 +688,10 @@ static void registerLuaParameters()
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
         }
-        else
+        else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
+        {
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        }
       });
     }
     if (isDualRadio())
@@ -859,12 +866,25 @@ static int event()
   {
     return DURATION_NEVER;
   }
+
+  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
   recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
+
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
-  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  if (isMavlinkMode)
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8chMav : switchmodeOpts4chMav;
+  }
+  else
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  }
+
   if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
