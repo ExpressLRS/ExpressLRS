@@ -496,6 +496,27 @@ void injectBackpackPanTiltRollData(uint32_t const now)
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+  // Do not send a stale channels packet to the RX if one has not been received from the handset
+  // *Do* send data if a packet has never been received from handset and the timer is running
+  // this is the case when bench testing and TXing without a handset
+  bool dontSendChannelData = false;
+  uint32_t lastRcData = handset->GetRCdataLastRecv();
+  if (lastRcData && (micros() - lastRcData > 1000000))
+  {
+    // The tx is in Mavlink mode and without a valid crsf or RC input.  Do not send stale or fake zero packet RC!
+    // Only send sync and MSP packets.
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+      dontSendChannelData = true;
+    }
+    else
+    {
+      return;
+    }
+  }
+
+  busyTransmitting = true;
+
   uint32_t const now = millis();
   // ESP requires word aligned buffer
   WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
@@ -526,7 +547,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if (NextPacketIsMspData && MspSender.IsActive())
+    if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
@@ -675,15 +696,7 @@ void ICACHE_RAM_ATTR timerCallback()
 
   TelemetryRcvPhase = ttrpTransmitting;
 
-  // Do not send a stale channels packet to the RX if one has not been received from the handset
-  // *Do* send data if a packet has never been received from handset and the timer is running
-  //     this is the case when bench testing and TXing without a handset
-  uint32_t lastRcData = handset->GetRCdataLastRecv();
-  if (!lastRcData || (micros() - lastRcData < 1000000))
-  {
-    busyTransmitting = true;
-    SendRCdataToRF();
-  }
+  SendRCdataToRF();
 }
 
 static void UARTdisconnected()
@@ -1107,32 +1120,40 @@ static void HandleUARTin()
   // Read from the USB serial port
   if (TxUSB->available())
   {
-    auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
-    if (size > 0)
+    if (firmwareOptions.is_airport)
     {
-      uint8_t buf[size];
-      TxUSB->readBytes(buf, size);
-      uartInputBuffer.lock();
-      uartInputBuffer.pushBytes(buf, size);
-      uartInputBuffer.unlock();
+      auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
+      if (size > 0)
+      {
+        uint8_t buf[size];
+        TxUSB->readBytes(buf, size);
+        apInputBuffer.lock();
+        apInputBuffer.pushBytes(buf, size);
+        apInputBuffer.unlock();
+      }
     }
-  }
-
-  // Double buffer into the Airport buffer if Airport is enabled
-  if (firmwareOptions.is_airport && uartInputBuffer.size() > 0)
-  {
-    auto size = std::min((uint16_t)(AP_MAX_BUF_LEN - apInputBuffer.size()), uartInputBuffer.size());
-    if (size > 0)
+    else
     {
-      uint8_t buf[size];
+      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+      if (size > 0)
+      {
+        uint8_t buf[size];
+        TxUSB->readBytes(buf, size);
+        uartInputBuffer.lock();
+        uartInputBuffer.pushBytes(buf, size);
+        uartInputBuffer.unlock();
 
-      uartInputBuffer.lock();
-      uartInputBuffer.popBytes(buf, size);
-      uartInputBuffer.unlock();
-
-      apInputBuffer.lock();
-      apInputBuffer.pushBytes(buf, size);
-      apInputBuffer.unlock();
+        // Lets check if the data is Mav and auto change LinkMode
+        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+        if (connectionState == noCrossfire)
+        {
+          if (isThisAMavPacket(buf, size))
+          {
+            config.SetLinkMode(TX_MAVLINK_MODE);
+            UARTconnected();
+          }
+        }
+      }
     }
   }
 
@@ -1149,6 +1170,13 @@ static void HandleUARTin()
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
+
+        // The tx is in Mavlink mode and receiving data from the Backpack (mavesp).
+        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+        if (connectionState == noCrossfire)
+        {
+          UARTconnected();
+        }
       }
     }
     else if (msp.processReceivedByte(TxBackpack->read()))
