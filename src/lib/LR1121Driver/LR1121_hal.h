@@ -12,7 +12,7 @@ public:
 
     void init();
     void end();
-    void reset();
+    void reset(bool bootloader = false);
 
     void ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, SX12XX_Radio_Number_t radioNumber);
     void ICACHE_RAM_ATTR WriteCommand(uint16_t opcode, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber);

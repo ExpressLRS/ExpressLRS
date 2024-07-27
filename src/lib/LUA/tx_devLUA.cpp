@@ -20,9 +20,9 @@
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
-    "50Hz 2.4G;100Hz Full 2.4G;150Hz 2.4G;250Hz 2.4G;333Hz Full 2.4G;500Hz 2.4G;" \
-    "50Hz Low Band;100Hz Low Band;100Hz Full Low Band;200Hz Low Band;200Hz Full Low Band;250Hz Low Band;" \
-    "X100Hz Full(-112dBm);X150Hz(-112dBm)"
+    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;" \
+    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;" \
+    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band"
 #elif defined(RADIO_SX128X)
 #define STR_LUA_PACKETRATES \
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
@@ -630,9 +630,6 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-    arg = (arg + 4) % RATE_MAX;
-#endif
     if (arg < RATE_MAX)
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
@@ -704,8 +701,18 @@ static void registerLuaParameters()
       });
     }
     registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      // Only allow changing when disconnected since we need to guarantee
+      // the switch pack and unpack functions are matched on the tx and rx.
+      bool isDisconnected = connectionState == disconnected;
+      if (isDisconnected)
+      {
         config.SetLinkMode(arg);
-      });
+      }
+      else
+      {
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+      }
+    });
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -862,9 +869,6 @@ static int event()
 
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-  currentRate = (currentRate + 4) % RATE_MAX;
-#endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
 

@@ -19,7 +19,7 @@ enum lua_Flags{
 };
 
 struct luaPropertiesCommon {
-    const char* const name;    // display name
+    const char* name;   // display name
     crsf_value_type_e type;
     uint8_t id;         // Sequential id assigned by enumeration
     uint8_t parent;     // id of parent folder
