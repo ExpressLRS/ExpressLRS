@@ -1,5 +1,6 @@
 #include "CRSF.h"
 #if !defined(PLATFORM_STM32)
+#define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
 #endif
 #include <CRSFHandset.h>

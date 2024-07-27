@@ -1,6 +1,7 @@
 #pragma once
 
 #include <targets.h>
+#include "FEC.h"
 
 typedef uint8_t SX12XX_Radio_Number_t;
 enum
@@ -56,7 +57,6 @@ public:
     int8_t FuzzySNRThreshold;
 
     bool isFirstRxIrq = true;
-    bool ignoreSecondIRQ = false;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     typedef struct rxSignalStats_s
