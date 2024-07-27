@@ -13,7 +13,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
     {
         mavlink_message_t msg;
         mavlink_status_t status;
-        bool have_message = mavlink_parse_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status);
+        bool have_message = mavlink_frame_char(MAVLINK_COMM_0, CRSFinBuffer[CRSF_FRAME_NOT_COUNTED_BYTES + i], &msg, &status);
         // convert mavlink messages to CRSF messages
         if (have_message)
         {

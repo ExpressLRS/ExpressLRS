@@ -212,7 +212,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
   Radio.GetLastPacketStats();
   CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  CRSF::LinkStatistics.downlink_RSSI = Radio.LastPacketRSSI;
+  CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
+  CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
 
   // Full res mode
   if (OtaIsFullRes)
@@ -365,7 +366,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
   hwTimer::updateInterval(interval);
 
-  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4);
+  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
@@ -373,13 +374,18 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
+#if defined(RADIO_LR1121)
+               , (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4), (uint8_t)UID[5], (uint8_t)UID[4]
+#endif
                );
 
 #if defined(RADIO_LR1121)
   if (FHSSuseDualBand)
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval, SX12XX_Radio_2);
+                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval,
+                (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
+                (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
   }
 #endif
 
@@ -991,7 +997,9 @@ static void EnterBindingMode()
   FHSSuseDualBand = true;
   expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(RATE_DUALBAND_BINDING); // 2.4GHz 50Hz
   Radio.Config(dualBandBindingModParams->bw2, dualBandBindingModParams->sf2, dualBandBindingModParams->cr2, FHSSgetInitialGeminiFreq(),
-               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval, SX12XX_Radio_2);
+               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval,
+               (dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
+               (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
 #endif
 
   Radio.SetFrequencyReg(FHSSgetInitialFreq());
@@ -1218,6 +1226,11 @@ static void setupSerial()
     // Set TxUSB to TxBackpack so that data goes to the same place
     TxUSB = TxBackpack;
   }
+  else if (GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM)
+  {
+    // This is an internal module, or an external module configured with a relay.  Do not setup TxUSB.
+    TxUSB = new NullStream();
+  }
   else
   {
     // The backpack is on a separate UART to UART0
@@ -1427,8 +1440,6 @@ void loop()
 {
   uint32_t now = millis();
 
-  Radio.ignoreSecondIRQ = false;
-
   HandleUARTout(); // Only used for non-CRSF output
 
   #if defined(USE_BLE_JOYSTICK)
@@ -1473,9 +1484,10 @@ void loop()
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
   if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
-      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported))) {
-    // 3 byte header + 1 byte CRC
-    uint8_t linkStatisticsFrame[LinkStatisticsFrameLength + 4];
+      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
+  {
+    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
+
     CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
     handset->sendTelemetryToTX(linkStatisticsFrame);
     crsfTelemToMSPOut(linkStatisticsFrame);

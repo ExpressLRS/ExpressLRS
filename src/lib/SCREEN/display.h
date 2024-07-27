@@ -74,6 +74,7 @@ public:
     virtual void displayWiFiStatus() = 0;
     virtual void displayRunning() = 0;
     virtual void displaySending() = 0;
+    virtual void displayLinkstats() = 0;
 
     int getValueCount(menu_item_t menu);
     const char *getValue(menu_item_t menu, uint8_t value_index);

@@ -221,9 +221,13 @@
 					</div>
 					<form class="mui-form" action='/config' id='config' method='POST'>
 						<h2>Binding Phrase</h2>
-						<div class="mui-checkbox">
-							<input id="vbind" name="vbind" type="checkbox" value="1"/>
-							<label for="vbind">Never store bind information across reboots (volatile binding)</label>
+						<div class="mui-select">
+							<select id="vbind" name="vbind">
+								<option value="0">Persistent (Default) - Bind information is stored across reboots</option>
+								<option value="1">Volatile - Never store bind information across reboots</option>
+								<option value="2">Returnable - Unbinding a receiver reverts to flashed binding phrase</option>
+							</select>
+							<label for="vbind">Binding storage</label>
 						</div>
 						<div id="bindphrase">
 							Enter a new binding phrase to replace the current binding information.
@@ -261,7 +265,7 @@
 						<div id="serial1-config">
 							<div class="mui-select">
 								<select id='serial1-protocol' name='serial1-protocol'>
-									<option value='0'>NONE</option>
+									<option value='0'>Off</option>
 									<option value='1'>CRSF</option>
 									<option value='2'>Inverted CRSF</option>
 									<option value='3'>SBUS</option>
@@ -269,6 +273,8 @@
 									<option value='5'>SUMD</option>
 									<option value='6'>DJI RS Pro</option>
 									<option value='7'>HoTT Telemetry</option>
+									<option value='8'>Tramp</option>
+									<option value='9'>SmartAudio</option>
 								</select>
 								<label for='serial1-protocol'>Serial2 Protocol</label>
 							</div>
