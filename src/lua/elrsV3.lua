@@ -762,7 +762,7 @@ local function runDevicePage(event)
         local attr = lineIndex == (pageOffset+y)
           and ((edit and BLINK or 0) + INVERS)
           or 0
-        local color = field.grey and LIGHTGREY or 0
+        local color = field.grey and COLOR_THEME_DISABLED or 0
         if field.type < 11 or field.type == 12 then -- if not folder, command, or back
           lcd.drawText(COL1, y*textSize+textYoffset, field.name, color)
         end
