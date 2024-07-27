@@ -49,10 +49,10 @@
 #endif
 
 //
-// Code encapsulated by the ARDUINO_CORE_INVERT_FIX #ifdef temporarily fixes EpressLRS issue #2609 which is caused 
+// Code encapsulated by the ARDUINO_CORE_INVERT_FIX #ifdef temporarily fixes EpressLRS issue #2609 which is caused
 // by the Arduino core (see https://github.com/espressif/arduino-esp32/issues/9896) and fixed
 // by Espressif with Arduino core release 3.0.3 (see https://github.com/espressif/arduino-esp32/pull/9950)
-// 
+//
 // With availability of Arduino core 3.0.3 and upgrading ExpressLRS to Arduino core 3.0.3 the temporary fix
 // should be deleted again
 //
@@ -149,14 +149,14 @@ uint32_t serialBaud;
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
-    
+
     #if defined(PLATFORM_ESP32)
         #define SERIAL1_PROTOCOL_TX Serial1
 
-        // SBUS driver needs to distinguish stream for SBUS/DJI protocol 
+        // SBUS driver needs to distinguish stream for SBUS/DJI protocol
         const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
         const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
-        
+
         SerialIO *serial1IO = nullptr;
     #endif
 #endif
@@ -336,7 +336,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
     //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    CRSF::LinkStatistics.downlink_RSSI = debug1;
+    CRSF::LinkStatistics.downlink_RSSI_1 = debug1;
     CRSF::LinkStatistics.downlink_Link_quality = debug2;
     CRSF::LinkStatistics.downlink_SNR = debug3;
     CRSF::LinkStatistics.uplink_RSSI_2 = debug4;
@@ -1193,7 +1193,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     if (ProcessRFPacket(status))
     {
         didFHSS = HandleFHSS();
-        
+
         if (doStartTimer)
         {
             doStartTimer = false;
@@ -1573,7 +1573,7 @@ void reconfigureSerial1()
 }
 #else
     void setupSerial1() {};
-    void reconfigureSerial1() {}; 
+    void reconfigureSerial1() {};
 #endif
 
 static void serialShutdown()

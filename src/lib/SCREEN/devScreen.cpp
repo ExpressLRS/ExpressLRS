@@ -136,6 +136,7 @@ static int handle(void)
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
+
     return SCREEN_DURATION;
 }
 

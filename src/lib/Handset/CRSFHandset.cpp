@@ -149,17 +149,16 @@ void CRSFHandset::flush_port_input()
     }
 }
 
-void CRSFHandset::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
+void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
 {
+    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
+    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
+
     buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
-    {
-        buffer[i + 3] = ((uint8_t *)&CRSF::LinkStatistics)[i];
-    }
-    uint8_t crc = crsf_crc.calc(buffer[2]);
-    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+    memcpy(&buffer[3], (uint8_t *)&CRSF::LinkStatistics, payloadLen);
+    buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
 }
 
 /**
