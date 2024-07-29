@@ -7,6 +7,7 @@
 #include "CRSFHandset.h"
 #include "config.h"
 #include "logging.h"
+#include "MAVLink.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
@@ -30,7 +31,6 @@ uint8_t lastLinkMode; // will get set in start() and used in event()
 
 #include "CRSF.h"
 #include "hwTimer.h"
-#include <MAVLink.h>
 
 [[noreturn]] void startPassthrough()
 {
