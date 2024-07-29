@@ -81,7 +81,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 mavlink_msg_attitude_decode(&msg, &attitude);
                 CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
                 crsfatt = {0};
-                crsfatt.p.pitch = htobe16(attitude.pitch * -10000); // in Betaflight & INAV, CRSF positive pitch is nose down
+                crsfatt.p.pitch = htobe16(attitude.pitch * 10000); // in Betaflight & INAV, CRSF positive pitch is nose down, but in Ardupilot, it's nose up - we follow Ardupilot
                 crsfatt.p.roll = htobe16(attitude.roll * 10000);
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
