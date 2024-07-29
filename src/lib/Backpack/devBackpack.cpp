@@ -18,6 +18,7 @@ bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
 
 bool lastRecordingState = false;
+uint8_t lastLinkMode; // will get set in start() and used in event()
 
 #if defined(GPIO_PIN_BACKPACK_EN)
 
@@ -29,6 +30,7 @@ bool lastRecordingState = false;
 
 #include "CRSF.h"
 #include "hwTimer.h"
+#include <MAVLink.h>
 
 [[noreturn]] void startPassthrough()
 {
@@ -304,6 +306,7 @@ static void initialize()
 
 static int start()
 {
+    lastLinkMode = config.GetLinkMode();
     if (OPT_USE_TX_BACKPACK)
     {
         return DURATION_IMMEDIATELY;
@@ -363,6 +366,20 @@ static int event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
 #endif
+    // Update the backpack operating mode when the link mode changes
+    uint8_t newMode = config.GetLinkMode();
+    if (lastLinkMode != newMode)
+    {
+        if (lastLinkMode == TX_NORMAL_MODE) {
+            // Backpack will autodetect MAVLink for now - no reason to send an MSP message
+        } else if (lastLinkMode == TX_MAVLINK_MODE) {
+            // Send a mavlink message to the TX backpack to change the mode
+            uint8_t mavlinkOutputBuffer[MAVLINK_MAX_PACKET_LEN];
+            uint16_t len = buildMAVLinkELRSModeChange(newMode, mavlinkOutputBuffer);
+            TxBackpack->write(mavlinkOutputBuffer, len);
+        }
+    }
+    lastLinkMode = config.GetLinkMode();
     return DURATION_IGNORE;
 }
 
