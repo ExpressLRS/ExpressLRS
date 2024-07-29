@@ -366,7 +366,8 @@ static int event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
 #endif
-    // Update the backpack operating mode when the link mode changes
+#if !defined(PLATFORM_STM32)
+  // Update the backpack operating mode when the link mode changes
     uint8_t newMode = config.GetLinkMode();
     if (lastLinkMode != newMode)
     {
@@ -380,6 +381,7 @@ static int event()
         }
     }
     lastLinkMode = config.GetLinkMode();
+#endif
     return DURATION_IGNORE;
 }
 

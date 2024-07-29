@@ -129,6 +129,7 @@ bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
 
 uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
 {
+#if !defined(PLATFORM_STM32)
     constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
     mavlink_tunnel_t tunnelMsg;
     tunnelMsg.target_system = 255;
@@ -143,4 +144,7 @@ uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
     mavlink_msg_tunnel_encode(255, MAV_COMP_ID_TELEMETRY_RADIO, &msg, &tunnelMsg);
     uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
     return len;
+#else
+    return 0;
+#endif
 }
