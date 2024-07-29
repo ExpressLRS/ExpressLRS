@@ -131,17 +131,14 @@ uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
 {
 #if !defined(PLATFORM_STM32)
     constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
-    mavlink_tunnel_t tunnelMsg;
-    tunnelMsg.target_system = 255;
-    tunnelMsg.target_component = MAV_COMP_ID_UDP_BRIDGE;
-    tunnelMsg.payload_type = 0;
-    tunnelMsg.payload_length = 3;
-    memset(tunnelMsg.payload, 0, sizeof(tunnelMsg.payload));
-    tunnelMsg.payload[0] = MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE >> 8;
-    tunnelMsg.payload[1] = MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE & 0xFF;
-    tunnelMsg.payload[2] = mode;
+    mavlink_command_int_t commandMsg;
+    commandMsg.target_system = 255;
+    commandMsg.target_component = MAV_COMP_ID_UDP_BRIDGE;
+    commandMsg.command = MAV_CMD_USER_1;
+    commandMsg.param1 = MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE;
+    commandMsg.param2 = mode;
     mavlink_message_t msg;
-    mavlink_msg_tunnel_encode(255, MAV_COMP_ID_TELEMETRY_RADIO, &msg, &tunnelMsg);
+    mavlink_msg_command_int_encode(255, MAV_COMP_ID_TELEMETRY_RADIO, &msg, &commandMsg);
     uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
     return len;
 #else
