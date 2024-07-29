@@ -130,12 +130,12 @@ bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
 uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
 {
 #if !defined(PLATFORM_STM32)
-    constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
+    constexpr uint8_t ELRS_MODE_CHANGE = 0x8;
     mavlink_command_int_t commandMsg;
     commandMsg.target_system = 255;
     commandMsg.target_component = MAV_COMP_ID_UDP_BRIDGE;
     commandMsg.command = MAV_CMD_USER_1;
-    commandMsg.param1 = MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE;
+    commandMsg.param1 = ELRS_MODE_CHANGE;
     commandMsg.param2 = mode;
     mavlink_message_t msg;
     mavlink_msg_command_int_encode(255, MAV_COMP_ID_TELEMETRY_RADIO, &msg, &commandMsg);
