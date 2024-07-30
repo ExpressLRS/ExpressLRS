@@ -371,14 +371,9 @@ static int event()
     uint8_t newMode = config.GetLinkMode();
     if (lastLinkMode != newMode)
     {
-        if (lastLinkMode == TX_NORMAL_MODE) {
-            // Backpack will autodetect MAVLink for now - no reason to send an MSP message
-        } else if (lastLinkMode == TX_MAVLINK_MODE) {
-            // Send a mavlink message to the TX backpack to change the mode
-            uint8_t mavlinkOutputBuffer[MAVLINK_MAX_PACKET_LEN];
-            uint16_t len = buildMAVLinkELRSModeChange(newMode, mavlinkOutputBuffer);
-            TxBackpack->write(mavlinkOutputBuffer, len);
-        }
+        uint8_t mavlinkOutputBuffer[MAVLINK_MAX_PACKET_LEN];
+        uint16_t len = buildMAVLinkELRSModeChange(newMode, mavlinkOutputBuffer);
+        TxBackpack->write(mavlinkOutputBuffer, len);
     }
     lastLinkMode = config.GetLinkMode();
 #endif
