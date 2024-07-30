@@ -185,6 +185,20 @@
 			<div class="mui-tabs__pane" id="pane-justified-3">
 				<div class="mui-panel">
 					<div id="model_tab">
+						<h2>Channel Mixing</h2>
+						Setup mixes on the incoming CRSF data. This also effects for serial protocol output.
+						<ul>
+							<li><b>Active:</b> If the mix is applied.</li>
+							<li><b>Source:</b> Source channel used by the mix.</li>
+							<li><b>Destination:</b> Destination to apply the result of the mix.</li>
+							<li><b>Negative weight:</b>Percentage of the result mix to apply on the negative side.</li>
+							<li><b>Positive weight:</b>Percentage of the result mix to apply on the positive side.</li>
+							<li><b>Offset / Sub-trim:</b></li>
+						</ul>
+						<form action="/mixes" id="mixes" method="post"></form>
+					</div>
+
+					<div id="model_tab">
 						<h2>PWM Output</h2>
 						Set PWM output mode and failsafe positions.
 						<ul>

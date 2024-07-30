@@ -8,7 +8,11 @@
 
 using namespace std;
 
+#if defined(MIXER)
+uint32_t ChannelData[CRSF_NUM_CHANNELS + GYRO_SOURCES];      // Current state of channels, CRSF format
+#else
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
+#endif
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
 

@@ -20,7 +20,11 @@
 #include "crsf_sysmocks.h"
 
 CRSF crsf;  // need an instance to provide the fields used by the code under test
+#if defined(MIXER)
+uint32_t ChannelData[CRSF_NUM_CHANNELS + GYRO_SOURCES];      // Current state of channels, CRSF format
+#else
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
+#endif
 uint8_t UID[6] = {1,2,3,4,5,6};
 
 void test_crsf_endpoints()

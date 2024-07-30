@@ -6,7 +6,11 @@
 #include "mock_serial.h"
 
 MSP MSPProtocol;
+#if defined(MIXER)
+uint32_t ChannelData[CRSF_NUM_CHANNELS + GYRO_SOURCES];      // Current state of channels, CRSF format
+#else
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
+#endif
 
 void test_msp_receive(void)
 {

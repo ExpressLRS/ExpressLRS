@@ -8,6 +8,7 @@
 #else
 #include <SPIFFS.h>
 #endif
+#define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 
 typedef enum {

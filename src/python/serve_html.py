@@ -55,6 +55,44 @@ def parse_rx_config_pwm_t(value):
     struct.pack_into('>I', pwmStruct, 0, value)
     return pwmStruct
 
+class rx_config_mix_t(ctypes.BigEndianStructure):
+    """Struct that holds the configuration for a single mixer.
+    Note the reverse ordering from the cstruct in src/lib/CONFIG/config.h
+    """
+    _fields_ = [
+        ("unused", ctypes.c_uint64, 24),
+        ("offset", ctypes.c_int64, 11),
+        ("weight_positive", ctypes.c_int64, 8),
+        ("weight_negative", ctypes.c_int64, 8),
+        ("destination", ctypes.c_uint64, 6),
+        ("source", ctypes.c_uint64, 6),
+        ("active", ctypes.c_uint64, 1),
+    ]
+
+def make_rx_config_mix_t(active, source, destination, weight_negative, weight_positive, offset):
+    """Create a rx_config_mix_t value from the given parameters"""
+    mixStruct = rx_config_mix_t()
+    mixStruct.active = 1 if active else 0
+    mixStruct.source = source
+    mixStruct.destination = destination
+    mixStruct.weight_negative = weight_negative
+    mixStruct.weight_positive = weight_positive
+    mixStruct.offset = offset
+    return struct.unpack_from('>Q', mixStruct)[0]
+
+def parse_rx_config_mix_t(value):
+    """Create a rx_config_mix_t from the given value"""
+    mixStruct = rx_config_mix_t()
+    struct.pack_into('>Q', mixStruct, 0, value)
+    return mixStruct
+
+mixes = [
+    {"config": make_rx_config_mix_t(active=True, source=i, destination=i, weight_negative=-100, weight_positive=100, offset=0)}
+    if i <= 16 else
+    {"config": 0}
+    for i in range(0, 32)
+]
+
 config = {
         "options": {
             "uid": [1,2,3,4,5,6],   # this is the 'flashed' UID and may be empty if using traditional binding on an RX.
@@ -78,30 +116,36 @@ config = {
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
+            "mixes": mixes,
             "pwm":[
                 {
                     # 10fs 4ch 1inv 4mode 1narrow
                     "config": 0 + 0<<10 + 0<14 + 0<<15 + 0<<19,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 0,
                     "features": 12
                 },
                 {
                     "config": 1536,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 4,
                     "features": 12 + 16
                 },
                 {
                     "config": 2048,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 5,
                     "features": 12 + 16
                 },
                 {
                     "config": 3584,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 1,
                     "features": 1 + 16
                 },
                 {
                     "config": 4608,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 3,
                     "features": 2 + 16
                 }
@@ -261,6 +305,18 @@ def options():
 def update_config():
     if 'button-actions' in request.json:
         config['config']['button-actions'] = request.json['button-actions']
+    if 'mixes' in request.json:
+        i=0
+        for mix in request.json['mixes']:
+            val = parse_rx_config_mix_t(mix)
+            print("Mix %d: Active: %s Source %d -> Destination %d weight negative: %d weight positive: %d offset: %d" % (
+                    i, val.active, val.source, val.destination, val.weight_negative, val.weight_positive, val.offset))
+            try:
+                config['config']['mixes'][i]['config'] = mix
+            except IndexError:
+                print("Error: Incorrect mixes array index")
+                pass
+            i = i + 1
     if 'pwm' in request.json:
         i=0
         for pwm_value in request.json['pwm']:

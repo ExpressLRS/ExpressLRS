@@ -728,14 +728,30 @@ void RxConfig::Load()
     if (version == RX_CONFIG_VERSION)
     {
         CheckUpdateFlashedUid(false);
-        #if defined(DEBUG_LOG)
+        #if defined(MIXER) && defined(DEBUG_LOG)
         DBGLN("Limits:");
         for (uint8_t i = 0; i < PWM_MAX_CHANNELS; i++)
         {
             DBGLN("Channel %d: %d - %d",
                    i, GetPwmChannelLimits(i)->val.min, GetPwmChannelLimits(i)->val.max);
         }
-        #endif
+        DBGLN("Active mixes:");
+        for (unsigned mix_number = 0; mix_number < MAX_MIXES; mix_number++)
+        {
+            const rx_config_mix_t *mix = config.GetMix(mix_number);
+            if (!mix->val.active)
+                continue;
+
+            DBGLN("Mix %d: source %d destination %d wlow %d whigh %d offset %d",
+                mix_number,
+                (uint8_t) mix->val.source,
+                (uint8_t) mix->val.destination,
+                (int8_t) mix->val.weight_negative,
+                (int8_t) mix->val.weight_positive,
+                (uint16_t) mix->val.offset
+            );
+        }
+        #endif // MIXER && DEBUG_LOG
         return;
     }
 
@@ -1164,6 +1180,12 @@ RxConfig::SetDefaults(bool commit)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
 #endif
 
+    #if defined(MIXER)
+    // Configure a mix from each input channel to each output channel
+    for (unsigned int ch=0; ch<CRSF_NUM_CHANNELS; ch++)
+        SetMixer(ch, (mix_source_t) ch, (mix_destination_t) ch, (int8_t) 100, 100, 0, true);
+    #endif
+
     if (commit)
     {
         // Prevent rebinding to the flashed UID on first boot
@@ -1253,6 +1275,71 @@ RxConfig::SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw)
     m_modified = true;
 }
 #endif
+
+#if defined(MIXER)
+void
+RxConfig::SetMixer(uint8_t mixNumber, mix_source_t source, mix_destination_t destination, int8_t weight_negative, int8_t weight_positive, uint16_t offset, bool active) {
+    if (mixNumber > MAX_MIXES)
+        return;
+
+    rx_config_mix_t *mix = &m_config.mixes[mixNumber];
+    rx_config_mix_t new_mix;
+    new_mix.raw = mix->raw;
+
+    new_mix.val.source = source;
+    new_mix.val.destination = destination;
+    new_mix.val.weight_negative = weight_negative;
+    new_mix.val.weight_positive = weight_positive;
+    new_mix.val.offset = offset;
+    new_mix.val.active = active;
+
+    if (new_mix.raw == mix->raw)
+        return;
+
+    mix->raw = new_mix.raw;
+    m_modified = true;
+}
+
+void
+RxConfig::SetMixerRaw(uint8_t mixNumber, uint64_t raw)
+{
+    if (mixNumber > MAX_MIXES)
+        return;
+
+    rx_config_mix_t *mix = &m_config.mixes[mixNumber];
+
+    rx_config_mix_t nmix;
+    nmix.raw = raw;
+
+    // for(;i<size*8;++i){
+    //     // print last bit and shift left.
+    //     printf("%u ",num&maxPow ? 1 : 0);
+    //     num = num<<1;
+    // }
+    char line[128];
+    sprintf(
+        line,
+        "A: %d S:%d D:%d N:%d/%d P:%d/%d Offset: %d, Raw: %llu %llu",
+        (uint8_t) nmix.val.active,
+        (uint8_t) nmix.val.source,
+        (uint8_t) nmix.val.destination,
+        (uint8_t) nmix.val.weight_negative,
+        (int8_t) nmix.val.weight_negative,
+        (uint8_t) nmix.val.weight_positive,
+        (int8_t) nmix.val.weight_positive,
+        (uint16_t) nmix.val.offset,
+        raw,
+        nmix.raw
+    );
+    DBGLN("SetMixRaw: %d %s", mixNumber, line);
+
+    if (mix->raw == raw)
+        return;
+
+    mix->raw = raw;
+    m_modified = true;
+}
+#endif // MIXER
 
 void
 RxConfig::SetForceTlmOff(bool forceTlmOff)

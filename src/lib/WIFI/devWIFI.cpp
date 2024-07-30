@@ -1,4 +1,5 @@
 #include "device.h"
+#define ARDUINOJSON_USE_LONG_LONG 1
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
@@ -29,6 +30,9 @@
 #include <set>
 #include <StreamString.h>
 
+#include <ESPAsyncWebServer.h>
+#define ARDUINOJSON_USE_LONG_LONG 1
+#include "AsyncJson.h"
 #include "ArduinoJson.h"
 #include "AsyncJson.h"
 #include <ESPAsyncWebServer.h>
@@ -372,6 +376,10 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetBindStorage();
+
+    for (uint8_t mix=0; mix < MAX_MIXES; mix++)
+      json["config"]["mixes"][mix]["config"] = config.GetMix(mix)->raw;
+
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
@@ -535,6 +543,17 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
+  #if defined(MIXER)
+  JsonArray mixes = json["mixes"].as<JsonArray>();
+  for(uint8_t mix_number = 0 ; mix_number < mixes.size(); mix_number++)
+  {
+    uint64_t val = mixes[mix_number];
+    char line[30];
+    sprintf(line, "got mix %llu", val);
+    DBGLN("%s", line);
+    config.SetMixerRaw(mix_number, val);
+  }
+  #endif
 
   #if defined(GPIO_PIN_PWM_OUTPUTS)
   JsonArray pwm = json["pwm"].as<JsonArray>();
