@@ -193,6 +193,15 @@ typedef enum : uint8_t {
 
 typedef union {
     struct {
+        uint32_t max:12,
+                 min:12,
+                 unused: 8;
+    } val;
+    uint32_t raw;
+} rx_config_pwm_limits_t;
+
+typedef union {
+    struct {
         uint32_t failsafe:11,    // us output during failsafe
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
@@ -229,6 +238,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
 } rx_config_t;
 
 class RxConfig
@@ -253,6 +263,7 @@ public:
     bool     IsModified() const { return m_modified; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
+    const rx_config_pwm_limits_t *GetPwmChannelLimits(uint8_t ch) const { return &m_config.pwmLimits[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
@@ -277,6 +288,8 @@ public:
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+    void SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max);
+    void SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
