@@ -211,6 +211,11 @@ void saveOptions(Stream &stream, bool customised)
 {
     JsonDocument doc;
 
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
         doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
