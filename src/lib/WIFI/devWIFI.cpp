@@ -366,6 +366,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       const auto channel = cfg["pwm"][ch].to<JsonObject>();
       channel["config"] = config.GetPwmChannel(ch)->raw;
       channel["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      channel["limits"]["min"] = config.GetPwmChannelLimits(ch)->val.min;
+      channel["limits"]["max"] = config.GetPwmChannelLimits(ch)->val.max;
       uint8_t features = 0;
       auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
       if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
@@ -566,6 +568,13 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     uint32_t val = pwm[channel];
     //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
+  }
+
+  JsonArray limits = json["limits"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < limits.size() ; channel++)
+  {
+    uint32_t val = limits[channel];
+    config.SetPwmChannelLimitsRaw(channel, val);
   }
 
   config.Commit();

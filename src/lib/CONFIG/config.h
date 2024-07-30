@@ -16,7 +16,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   8U
-#define RX_CONFIG_VERSION   11U
+#define RX_CONFIG_VERSION   12U
 
 #if defined(TARGET_TX)
 
@@ -215,6 +215,15 @@ typedef enum : uint8_t {
 
 typedef union {
     struct {
+        uint32_t max:12,
+                 min:12,
+                 unused: 8;
+    } val;
+    uint32_t raw;
+} rx_config_pwm_limits_t;
+
+typedef union {
+    struct {
         uint32_t failsafe:11,    // us output during failsafe +476 (e.g. 1024 here would be 1500us)
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
@@ -254,6 +263,7 @@ typedef struct __attribute__((packed)) {
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
     uint8_t     targetSysId;
     uint8_t     sourceSysId;
+    rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
 } rx_config_t;
 
 class RxConfig
@@ -277,6 +287,7 @@ public:
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified != 0; }
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
+    const rx_config_pwm_limits_t *GetPwmChannelLimits(uint8_t ch) const { return &m_config.pwmLimits[ch]; }
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
@@ -301,6 +312,8 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+    void SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max);
+    void SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw);
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
@@ -323,6 +336,7 @@ private:
     void UpgradeEepromV6();
     void UpgradeEepromV7V8(uint8_t ver);
     void UpgradeEepromV9V10(uint8_t ver);
+    void UpgradeEepromV11();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;
