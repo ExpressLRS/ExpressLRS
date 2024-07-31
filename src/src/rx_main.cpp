@@ -1163,10 +1163,14 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     if (Radio.FrequencyErrorAvailable())
     {
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
     #if defined(RADIO_SX127X)
+        // Adjusts FreqCorrection for RX freq offset
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection);
+    #else /* !RADIO_SX127X */
+        // Adjusts FreqCorrection for RX freq offset
+        HandleFreqCorr(Radio.GetFrequencyErrorbool());
     #endif /* RADIO_SX127X */
     }
 
