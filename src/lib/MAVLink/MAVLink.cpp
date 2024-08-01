@@ -27,6 +27,9 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
             case MAVLINK_MSG_ID_BATTERY_STATUS: {
                 mavlink_battery_status_t battery_status;
                 mavlink_msg_battery_status_decode(&msg, &battery_status);
+                if (battery_status.id != 0) {
+                    break;
+                }
                 CRSF_MK_FRAME_T(crsf_sensor_battery_t)
                 crsfbatt = {0};
                 // mV -> mv*100
@@ -49,7 +52,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 // mm -> meters + 1000
                 crsfgps.p.altitude = htobe16(gps_int.alt / 1000 + 1000);
 #else
-                crsfgps.p.altitude = htobe16(((int16_t)relative_alt) / 1000 + 1000);
+                crsfgps.p.altitude = htobe16((uint16_t)(relative_alt / 1000 + 1000));
 #endif
                 // cm/s -> km/h / 10
                 crsfgps.p.groundspeed = htobe16(gps_int.vel * 36 / 100);
@@ -68,7 +71,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfvario = {0};
                 // store relative altitude for GPS Alt so we don't have 2 Alt sensors
                 relative_alt = global_pos.relative_alt;
-                crsfvario.p.verticalspd = htobe16(global_pos.vz);
+                crsfvario.p.verticalspd = htobe16(-global_pos.vz); // MAVLink vz is positive down
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfvario);
                 break;
@@ -78,7 +81,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 mavlink_msg_attitude_decode(&msg, &attitude);
                 CRSF_MK_FRAME_T(crsf_sensor_attitude_t)
                 crsfatt = {0};
-                crsfatt.p.pitch = htobe16(attitude.pitch * 10000);
+                crsfatt.p.pitch = htobe16(attitude.pitch * 10000); // in Betaflight & INAV, CRSF positive pitch is nose down, but in Ardupilot, it's nose up - we follow Ardupilot
                 crsfatt.p.roll = htobe16(attitude.roll * 10000);
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -92,9 +95,10 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsffm = {0};
                 ap_flight_mode_name4(crsffm.p.flight_mode, ap_vehicle_from_mavtype(heartbeat.type), heartbeat.custom_mode);
                 // if we have a good flight mode, and we're armed, suffix the flight mode with a * - see Ardupilot's AP_CRSF_Telem::calc_flight_mode()
-                if (strlen(crsffm.p.flight_mode) == 4 && (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED)) {
-                    crsffm.p.flight_mode[4] = '*';
-                    crsffm.p.flight_mode[5] = '\0';
+                size_t len = strnlen(crsffm.p.flight_mode, sizeof(crsffm.p.flight_mode));
+                if (len > 0 && (len + 1 < sizeof(crsffm.p.flight_mode)) && (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED)) {
+                    crsffm.p.flight_mode[len] = '*';
+                    crsffm.p.flight_mode[len + 1] = '\0';
                 }
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
