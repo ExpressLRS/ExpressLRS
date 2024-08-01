@@ -707,7 +707,6 @@ static void registerLuaParameters()
       if (isDisconnected)
       {
         config.SetLinkMode(arg);
-devicesTriggerEvent(); // trigger event to let the backpack know the link mode has changed (see devBackpack)
       }
       else
       {
