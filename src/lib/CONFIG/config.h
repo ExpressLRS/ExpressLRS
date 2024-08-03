@@ -186,6 +186,27 @@ extern TxConfig config;
 
 #if defined(MIXER)
 typedef enum {
+    LOGICAL_SWITCH_TYPE_OFF,
+
+    // Logical operations
+    LOGICAL_SWITCH_TYPE_AND,
+    LOGICAL_SWITCH_TYPE_OR,
+    LOGICAL_SWITCH_TYPE_XOR,
+
+    // Source vs constant
+    LOGICAL_SWITCH_TYPE_A_EQ_X,
+    LOGICAL_SWITCH_TYPE_A_CLOSE_X,
+    LOGICAL_SWITCH_TYPE_A_GT_X,
+    LOGICAL_SWITCH_TYPE_A_LT_X,
+
+    // Source vs source
+    LOGICAL_SWITCH_TYPE_A_EQ_B,
+    LOGICAL_SWITCH_TYPE_A_CLOSE_B,
+    LOGICAL_SWITCH_TYPE_A_GT_B,
+    LOGICAL_SWITCH_TYPE_A_LT_B,
+} logical_switch_func_t;
+
+typedef enum {
     MIX_SOURCE_CH1,
     MIX_SOURCE_CH2,
     MIX_SOURCE_CH3,
@@ -257,13 +278,24 @@ typedef union {
 
 typedef union {
     struct {
+        uint32_t type: 5,    // logical_switch_func_t
+                 source: 6,  // mix_source_t
+                 and_switch: 4,     // AND another logical switch for this switch to be active
+                 params: 17; // parameters for the switch, specific to the type
+    } val;
+    uint32_t raw;
+} rx_config_logical_switch_t;
+
+typedef union {
+    struct {
         uint64_t active:1,          // enable/disable the mix
                  source:6,          // mix_source_t
                  destination:6,     // mix_destination_t
                  weight_negative:8, // -100% - +100% (signed int)
                  weight_positive:8, // -100% - +100% (signed int)
                  offset:11,         // CRSF value to be added/subtracted (signed int)
-                 unused:24;         // TBD
+                 logical_switch: 4, // set if this mix is conditional on a logical switch
+                 unused:20;         // TBD
     } val;
     uint64_t raw;
 } rx_config_mix_t;
@@ -296,6 +328,7 @@ typedef struct __attribute__((packed)) {
     rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
     #if defined(MIXER)
     rx_config_mix_t mixes[MAX_MIXES];
+    rx_config_logical_switch_t logicalSwitches[MAX_LOGICAL_SWITCHES];
     #endif
 } rx_config_t;
 
@@ -325,6 +358,7 @@ public:
     #endif
     #if defined(MIXER)
     const rx_config_mix_t *GetMix(uint8_t mixNumber) const { return &m_config.mixes[mixNumber]; }
+    const rx_config_logical_switch_t *GetLogicalSwitch(uint8_t switchNumber) const { return &m_config.logicalSwitches[switchNumber]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }

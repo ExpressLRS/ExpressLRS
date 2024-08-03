@@ -159,6 +159,7 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams = nullptr;
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 #if defined(MIXER)
 uint32_t ChannelMixedData[CRSF_NUM_CHANNELS]; // Current state of channels after mixing, CRSF format
+bool LogicalSwitchData[MAX_LOGICAL_SWITCHES]; // Current state of logical switches
 #endif
 
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)

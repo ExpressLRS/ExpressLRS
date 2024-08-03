@@ -751,6 +751,18 @@ void RxConfig::Load()
                 (uint16_t) mix->val.offset
             );
         }
+        DBGLN("Logical switches:");
+        for (uint8_t switch_number = 0 ; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+        {
+            const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+            DBGLN("Logical switch %d: type %d source %d and %d params %d",
+                switch_number,
+                (uint8_t) lswitch->val.type,
+                (uint8_t) lswitch->val.source,
+                (uint8_t) lswitch->val.and_switch,
+                (uint32_t) lswitch->val.params
+            );
+        }
         #endif // MIXER && DEBUG_LOG
         return;
     }

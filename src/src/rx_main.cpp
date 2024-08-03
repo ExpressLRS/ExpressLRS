@@ -260,6 +260,31 @@ extern void setWifiUpdateMode();
 void reconfigureSerial();
 
 #if defined(MIXER)
+void applyLogicalSwitches()
+{
+    for (unsigned switch_number = 0; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+    {
+        const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+        switch (lswitch->val.type)
+        {
+            case LOGICAL_SWITCH_TYPE_OFF:
+                LogicalSwitchData[switch_number] = false;
+                break;
+        }
+    }
+
+    // Apply the logical switch AND parameter after all the other switches have been processed
+    // so a LS can reference a higher numbered LS correctly.
+    for (unsigned switch_number = 0; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+    {
+        const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+        if (LogicalSwitchData[switch_number] && lswitch->val.and_switch != 0)
+        {
+            LogicalSwitchData[switch_number] = LogicalSwitchData[lswitch->val.and_switch];
+        }
+    }
+}
+
 void applyMixes()
 {
     int64_t newChannelData[CRSF_NUM_CHANNELS];
@@ -271,6 +296,9 @@ void applyMixes()
         const rx_config_mix_t *mix = config.GetMix(mix_number);
 
         if (!mix->val.active)
+            continue;
+
+        if (mix->val.logical_switch && !LogicalSwitchData[mix->val.logical_switch])
             continue;
 
         newChannelData[mix->val.destination] += mix->val.offset;
