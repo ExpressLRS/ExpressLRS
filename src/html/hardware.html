@@ -86,6 +86,10 @@ td img.icon-pwm {
 					<tr><td width="30"></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='serial_rx' name='serial_rx' type='text'/></td><td>Pin used to receive CRSF signal from the handset</td></tr>
 					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='serial_tx' name='serial_tx' type='text'/></td><td>Pin used to transmit CRSF telemetry to the handset (may be the same as the RX PIN)</td></tr>
 
+					<tr><td colspan='2'><b>Serial2 Pins</td></tr>
+					<tr><td width="30"></td><td>RX pin<img class="icon-input"/></td><td><input size='3' id='serial1_rx' name='serial1_rx' type='text'/></td><td>Serial2 RX - ESP32 targets only</td></tr>
+					<tr><td></td><td>TX pin<img class="icon-output"/></td><td><input size='3' id='serial1_tx' name='serial1_tx' type='text'/></td><td>Serial2 TX - ESP32 targets only</td></tr>
+
 					<tr><td colspan='2'><b>Radio Chip Pins & Options</td></tr>
 					<tr><td></td><td>BUSY pin<img class="icon-input"/></td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td><td>GPIO Input connected to SX128x busy pin</td></tr>
 					<tr><td></td><td>DIO0 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td><td>Unused on SX128x, Interrupt pin for SX127x</td></tr>
@@ -103,6 +107,7 @@ td img.icon-pwm {
 					<tr><td></td><td>RST_2 pin<img class="icon-output"/></td><td><input size='3' id='radio_rst_2' name='radio_rst_2' type='text'/></td><td>Reset pin connected to second SX1280/127x</td></tr>
 					<tr><td></td><td>DCDC enabled</td><td><input size='3' id='radio_dcdc' name='radio_dcdc' type='checkbox'/></td><td>Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)</td></tr>
 					<tr><td></td><td>RFO_HF enabled</td><td><input size='3' id='radio_rfo_hf' name='radio_rfo_hf' type='checkbox'/></td><td>SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)</td></tr>
+					<tr><td></td><td>LR1121 RF Switch Controls</td><td><input size='40' id='radio_rfsw_ctrl' name='radio_rfsw_ctrl' type='text' class='array'/></td><td>Comma-separated list of 8 values used for setting the LR1121 RF switch controls</td></tr>
 
 					<tr><td colspan='2'><b>Radio Antenna</td></tr>
 					<tr><td></td><td>CTRL pin<img class="icon-output"/></td><td><input size='3' id='ant_ctrl' name='ant_ctrl' type='text'/></td><td>Pin connected to Antenna select pin on power amplifier</td></tr>

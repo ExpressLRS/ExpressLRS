@@ -30,6 +30,15 @@ class FirmwareOptions(NamedTuple):
     offset: int
     firmware: str
 
+
+class TXType(Enum):
+    internal = 'internal'
+    external = 'external'
+
+    def __str__(self):
+        return self.value
+
+
 def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')
 

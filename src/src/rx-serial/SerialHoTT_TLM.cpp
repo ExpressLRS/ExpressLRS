@@ -22,15 +22,6 @@
                                 // to HoTT bus speed if only a HoTT Vario is connected and
                                 // values change every HoTT bus poll cycle.
 
-typedef struct crsf_sensor_gps_s
-{
-    int32_t latitude;     // degree / 10,000,000 big endian
-    int32_t longitude;    // degree / 10,000,000 big endian
-    uint16_t groundspeed; // km/h / 10 big endian
-    uint16_t heading;     // GPS heading, degree/100 big endian
-    uint16_t altitude;    // meters, +1000m big endian
-    uint8_t satellites;   // satellites
-} PACKED crsf_sensor_gps_t;
 
 extern Telemetry telemetry;
 
@@ -44,7 +35,7 @@ void SerialHoTT_TLM::setTXMode()
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
     digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
-    pinMatrixOutAttach(halfDuplexPin, U0TXD_OUT_IDX, false, false); // attach GPIO as output of UART0 TX
+    pinMatrixOutAttach(halfDuplexPin, UTXDoutIdx, false, false);    // attach GPIO as output of UART TX
 #endif
 }
 
@@ -52,7 +43,7 @@ void SerialHoTT_TLM::setRXMode()
 {
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
-    pinMatrixInAttach(halfDuplexPin, U0RXD_IN_IDX, false);          // attach half duplex GPIO as input to UART0 RX
+    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half duplex GPIO as input to UART RX
 #endif
 }
 
@@ -271,9 +262,9 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     crsfGPS.p.latitude = htobe32(getHoTTlatitude());
     crsfGPS.p.longitude = htobe32(getHoTTlongitude());
     crsfGPS.p.groundspeed = htobe16(getHoTTgroundspeed() * 10); // Hott 1 = 1 km/h, ELRS 1 = 0.1km/h
-    crsfGPS.p.heading = htobe16(getHoTTheading() * 100);
+    crsfGPS.p.gps_heading = htobe16(getHoTTheading() * 100);
     crsfGPS.p.altitude = htobe16(getHoTTMSLaltitude() + 1000); // HoTT 1 = 1m, CRSF: 0m = 1000
-    crsfGPS.p.satellites = getHoTTsatellites();
+    crsfGPS.p.satellites_in_use = getHoTTsatellites();
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed

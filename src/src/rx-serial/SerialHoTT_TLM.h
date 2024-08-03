@@ -263,11 +263,25 @@ enum {
 class SerialHoTT_TLM : public SerialIO
 {
 public:
-    explicit SerialHoTT_TLM(Stream &out, Stream &in)
+    explicit SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN)
         : SerialIO(&out, &in)
-    {
-        // use UART0 default TX pin for half duplex if not defined otherwise
-        halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+    {       
+#if defined(PLATFORM_ESP32)
+        if (serial1TXpin == UNDEF_PIN)
+        {
+            // we are on UART0, use default TX pin for half duplex if not defined otherwise
+            UTXDoutIdx = U0TXD_OUT_IDX;
+            URXDinIdx = U0RXD_IN_IDX;
+            halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+        }
+        else
+        {   
+            // we are on UART1, use Serial1 TX assigned pin for half duplex
+            UTXDoutIdx = U1TXD_OUT_IDX;
+            URXDinIdx = U1RXD_IN_IDX;
+            halfDuplexPin = serial1TXpin;
+        } 
+#endif
 
         uint32_t now = millis();
 
@@ -287,6 +301,12 @@ public:
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
 private:
+#if defined(PLATFORM_ESP32)
+    int8_t halfDuplexPin;
+    uint8_t UTXDoutIdx;
+    uint8_t URXDinIdx;
+#endif
+
     void setTXMode();
     void setRXMode();
 
@@ -335,8 +355,6 @@ private:
         {SENSOR_ID_VARIO_B, false}};
 
     FIFO<HOTT_MAX_BUF_LEN> hottInputBuffer;
-
-    uint8_t halfDuplexPin;
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;

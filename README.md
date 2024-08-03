@@ -24,7 +24,7 @@ For general information on the project please refer to our guides on the [websit
 
 ## About
 
-ExpressLRS is an open source Radio Link for Radio Control applications. Designed to be the best FPV Racing link, it is based on the fantastic Semtech **SX127x**/**SX1280** LoRa hardware combined with an Espressif or STM32 Processor. Using LoRa modulation as well as reduced packet size it achieves best in class range and latency. It achieves this using a highly optimized over-the-air packet structure, giving simultaneous range and latency advantages. It supports both 900 MHz and 2.4 GHz links, each with their own benefits. 900 MHz supports a maximum of 200 Hz packet rate, with higher penetration. 2.4 GHz supports a blistering fast 1000 Hz on [EdgeTX](http://edgetx.org/). With over 60 different hardware targets and 13 hardware manufacturers, the choice of hardware is ever growing, with different hardware suited to different requirements.
+ExpressLRS is an open source Radio Link for Radio Control applications. Designed to be the best FPV Racing link, it is based on the fantastic Semtech **SX127x**/**SX1280** LoRa hardware combined with an Espressif or STM32 Processor. Using LoRa modulation as well as reduced packet size it achieves best in class range and latency. It achieves this using a highly optimized over-the-air packet structure, giving simultaneous range and latency advantages. It supports both 900 MHz and 2.4 GHz links, each with their own benefits. 900 MHz supports a maximum of 200 Hz packet rate, with higher penetration. 2.4 GHz supports a blistering fast 1000 Hz on [EdgeTX](http://edgetx.org/). With hundreds of different hardware targets from a wide range of hardware manufacturers, the choice of hardware is constantly growing, with different hardware suited to different requirements.
 
 ## Configurator
 To configure your ExpressLRS hardware, the ExpressLRS Configurator can be used, which is found here:
@@ -38,13 +38,14 @@ We have both a [Discord Server](https://discord.gg/expresslrs) and [Facebook Gro
 
 ExpressLRS has the following features:
 
-- 1000 Hz Packet Rate 
+- Up to 1000 Hz Packet Rate
 - Telemetry (Betaflight Lua Compatibility)
 - Wifi Updates
-- Bluetooth Sim Joystick
+- Bluetooth or WiFi Sim Joystick
 - Oled & TFT Displays
-- 2.4 GHz or 900 MHz RC Link
-- Ceramic Antenna - allows for easier installation into micros
+- 2.4 GHz, 900 MHz, and Dual-Band RC Link
+- SMD Antenna - allows for easier installation into micros
+- Supported receiver protocols: CRSF, SBUS, SUMD, HoTT Telemetry, and PWM
 - VTX and VRX Frequency adjustments from the Lua
 - Bind Phrases - no need for button binding
 
@@ -52,12 +53,12 @@ with many more features on the way!
 
 ## Supported Hardware
 
-ExpressLRS currently supports hardware from the following manufacturers: AxisFlying, BETAFPV, Flywoo, FrSky, HappyModel, HiYounger, HGLRC, ImmersionRC, iFlight, JHEMCU, Jumper, Matek, NamimnoRC, QuadKopters and SIYI.
+ExpressLRS currently supports hardware from a wide range of manufacturers. In principle, the targets listed in the [ExpressLRS Configurator](https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/) are tested and supported hardware.
 
-For an exhaustive list of hardware targets and their user guides, check out the [Supported Hardware](https://www.expresslrs.org/2.0/hardware/supported-hardware/) and [Receiver Selection](https://www.expresslrs.org/2.0/hardware/receiver-selection/) pages on the website. We do not manufacture any of our hardware, so we can only provide limited support on defective hardware.
+Please refer to the [Hardware Selection] page (https://www.expresslrs.org/hardware/hardware-selection/) on the website for guidance. We do not manufacture any of our hardware, so we can only provide limited support for faulty hardware.
 
 ## Developers
 
-If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/expresslrs) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to submit a Pull Request to the GitHub Repository. 
+If you are a developer and would like to contribute to the project, feel free to join the [discord](https://discord.gg/expresslrs) and chat about bugs and issues. You can also look for issues at the [GitHub Issue Tracker](https://github.com/ExpressLRS/ExpressLRS/issues). The best thing to do is to submit a Pull Request to the GitHub Repository.
 
 ![](https://github.com/ExpressLRS/ExpressLRS-Hardware/blob/master/img/community.png?raw=true)

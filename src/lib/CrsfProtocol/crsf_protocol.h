@@ -31,12 +31,6 @@
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define RCframeLength 22             // length of the RC data packed bytes frame. 16 channels in 11 bits each.
-#define LinkStatisticsFrameLength 10 //
-#define OpenTXsyncFrameLength 11     //
-#define BattSensorFrameLength 8      //
-#define VTXcontrolFrameLength 12     //
-
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
 #define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
@@ -307,6 +301,37 @@ typedef struct crsf_sensor_baro_vario_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_vario_t;
 
+// CRSF_FRAMETYPE_VARIO
+typedef struct crsf_sensor_vario_s
+{
+    int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
+} PACKED crsf_sensor_vario_t;
+
+// CRSF_FRAMETYPE_GPS
+typedef struct crsf_sensor_gps_s
+{
+    int32_t latitude; // degree / 10`000`000
+    int32_t longitude; // degree / 10`000`000
+    uint16_t groundspeed; // km/h / 10
+    uint16_t gps_heading; // degree / 100
+    uint16_t altitude; // meter ­1000m offset
+    uint8_t satellites_in_use; // counter
+} PACKED crsf_sensor_gps_t;
+
+// CRSF_FRAMETYPE_ATTITUDE
+typedef struct crsf_sensor_attitude_s
+{
+    int16_t pitch; // radians * 10000
+    int16_t roll; // radians * 10000
+    int16_t yaw; // radians * 10000
+} PACKED crsf_sensor_attitude_t;
+
+// CRSF_FRAMETYPE_FLIGHT_MODE
+typedef struct crsf_sensor_flight_mode_s
+{
+    char flight_mode[16];
+} PACKED crsf_flight_mode_t;
+
 /*
  * 0x14 Link statistics
  * Payload:
@@ -333,12 +358,15 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t active_antenna;
     uint8_t rf_Mode;
     uint8_t uplink_TX_Power;
-    uint8_t downlink_RSSI;
+    uint8_t downlink_RSSI_1;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
-} crsfLinkStatistics_t;
+} PACKED crsfLinkStatistics_t;
 
-typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
+typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
+{
+    uint8_t downlink_RSSI_2;
+} PACKED elrsLinkStatistics_t;
 
 // typedef struct crsfOpenTXsyncFrame_s
 // {

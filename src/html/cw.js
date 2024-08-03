@@ -1,3 +1,4 @@
+@@require(chip)
 /* eslint-disable max-len, require-jsdoc */
 document.addEventListener('DOMContentLoaded', init, false);
 
@@ -5,18 +6,49 @@ function _(el) {
   return document.getElementById(el);
 }
 
-const cwFreq = 2440000000;
-const xtalNominal = 52000000;
+var cwFreq = 2440000000;
+var xtalNominal = 52000000;
+var warn_offset;
+var bad_offset;
+
+function updateParams(data) {
+  cwFreq = data.center;
+@@if chip == 'SX128X':
+  xtalNominal = 52000000;
+  warn_offset = 90000;
+  bad_offset = 180000;
+@@end
+@@if chip == 'SX127X':
+  xtalNominal = 32000000;
+  warn_offset = 100000;
+  bad_offset = 125000;
+@@end
+@@if chip == 'LR1121':
+  xtalNominal = 32000000;
+  warn_offset = 100000;
+  bad_offset = 125000;
+  if (!_('optionsSetSubGHz').checked) {
+    cwFreq = data.center2;
+  }
+@@end
+  _('frequency').textContent = (cwFreq / 1000000).toString();
+  _('start-cw').disabled = false;
+}
 
 function init() {
   const xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
+    if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
-      if (data.radios == 2) {
+      if (data.radios === 2) {
         _('radioOption').style.display = 'block';
       }
-      _('start-cw').disabled = false;
+@@if chip == 'LR1121':
+      _('optionsSetSubGHz').onclick = () => {
+        updateParams(data);
+      }
+@@end
+      updateParams(data);
     }
   };
   xmlhttp.open('GET', '/cw', true);
@@ -34,6 +66,10 @@ _('start-cw').onclick = (e) => {
   xmlhttp.onreadystatechange = function() {};
   const formdata = new FormData;
   formdata.append('radio', _('optionsRadios1').checked ? 1 : 2);
+@@if chip == 'LR1121':
+  formdata.append('subGHz', _('optionsSetSubGHz').checked ? 1 : 0);
+  _('optionsSetSubGHz').disabled = true;
+@@end
   xmlhttp.send(formdata);
 };
 
@@ -41,13 +77,13 @@ _('measured').onchange = (e) => {
   const calc = (e.target.value/cwFreq)*xtalNominal;
   _('calculated').innerHTML = Math.round(calc);
   _('offset').innerHTML = Math.round(calc - xtalNominal) / 1000;
-  _('ppm').innerHTML = Math.abs(Math.round(calc - xtalNominal)) / 52;
+  _('ppm').innerHTML = Math.abs(Math.round(calc - xtalNominal)) / (xtalNominal /1000000);
   const rawShift = Math.round(e.target.value - cwFreq);
   _('raw').innerHTML = rawShift / 1000;
   let icon;
-  if (Math.abs(rawShift) < 90000) {
+  if (Math.abs(rawShift) < warn_offset) {
     icon = `<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="64" height="64" viewBox="0 0 96 96" enable-background="new 0 0 96 96" xml:space="preserve"><g><path fill-rule="evenodd" clip-rule="evenodd" fill="#6BBE66" d="M48,0c26.51,0,48,21.49,48,48S74.51,96,48,96S0,74.51,0,48 S21.49,0,48,0L48,0z M26.764,49.277c0.644-3.734,4.906-5.813,8.269-3.79c0.305,0.182,0.596,0.398,0.867,0.646l0.026,0.025 c1.509,1.446,3.2,2.951,4.876,4.443l1.438,1.291l17.063-17.898c1.019-1.067,1.764-1.757,3.293-2.101 c5.235-1.155,8.916,5.244,5.206,9.155L46.536,63.366c-2.003,2.137-5.583,2.332-7.736,0.291c-1.234-1.146-2.576-2.312-3.933-3.489 c-2.35-2.042-4.747-4.125-6.701-6.187C26.993,52.809,26.487,50.89,26.764,49.277L26.764,49.277z"/></g></svg>`;
-  } else if (Math.abs(rawShift) < 180000) {
+  } else if (Math.abs(rawShift) < bad_offset) {
     icon = `
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 20 20">
       <style type="text/css">.cls-1{ fill: #fc3 }</style>

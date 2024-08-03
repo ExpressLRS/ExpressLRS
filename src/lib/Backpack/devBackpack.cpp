@@ -7,6 +7,7 @@
 #include "CRSFHandset.h"
 #include "config.h"
 #include "logging.h"
+#include "MAVLink.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
@@ -18,6 +19,7 @@ bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
 
 bool lastRecordingState = false;
+uint8_t lastLinkMode; // will get set in start() and used in event()
 
 #if defined(GPIO_PIN_BACKPACK_EN)
 
@@ -304,6 +306,7 @@ static void initialize()
 
 static int start()
 {
+    lastLinkMode = config.GetLinkMode();
     if (OPT_USE_TX_BACKPACK)
     {
         return DURATION_IMMEDIATELY;
@@ -362,6 +365,17 @@ static int event()
         // EN should be HIGH to be active
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
+#endif
+#if !defined(PLATFORM_STM32)
+  // Update the backpack operating mode when the link mode changes
+    uint8_t newMode = config.GetLinkMode();
+    if (lastLinkMode != newMode)
+    {
+        uint8_t mavlinkOutputBuffer[MAVLINK_MAX_PACKET_LEN];
+        uint16_t len = buildMAVLinkELRSModeChange(newMode, mavlinkOutputBuffer);
+        TxBackpack->write(mavlinkOutputBuffer, len);
+    }
+    lastLinkMode = config.GetLinkMode();
 #endif
     return DURATION_IGNORE;
 }

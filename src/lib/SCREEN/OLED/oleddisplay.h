@@ -19,4 +19,5 @@ public:
     void displayWiFiStatus();
     void displayRunning();
     void displaySending();
+    void displayLinkstats();
 };

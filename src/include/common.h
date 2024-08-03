@@ -89,18 +89,24 @@ typedef enum : uint8_t
     RATE_LORA_250HZ,
     RATE_LORA_333HZ_8CH,
     RATE_LORA_500HZ,
-    RATE_DVDA_250HZ,
-    RATE_DVDA_500HZ,
+    RATE_DVDA_250HZ, // FLRC
+    RATE_DVDA_500HZ, // FLRC
     RATE_FLRC_500HZ,
     RATE_FLRC_1000HZ,
     RATE_DVDA_50HZ,
     RATE_LORA_200HZ_8CH,
+    RATE_FSK_2G4_DVDA_500HZ,
+    RATE_FSK_2G4_1000HZ,
+    RATE_FSK_900_1000HZ,
+    RATE_FSK_900_1000HZ_8CH,
 } expresslrs_RFrates_e;
 
 enum {
     RADIO_TYPE_SX127x_LORA,
     RADIO_TYPE_LR1121_LORA_900,
     RADIO_TYPE_LR1121_LORA_2G4,
+    RADIO_TYPE_LR1121_GFSK_900,
+    RADIO_TYPE_LR1121_GFSK_2G4,
     RADIO_TYPE_LR1121_LORA_DUAL,
     RADIO_TYPE_SX128x_LORA,
     RADIO_TYPE_SX128x_FLRC,
@@ -114,6 +120,12 @@ typedef enum : uint8_t
     TX_RADIO_MODE_SWITCH = 3
 } tx_radio_mode_e;
 
+typedef enum : uint8_t
+{
+    TX_NORMAL_MODE      = 0,
+    TX_MAVLINK_MODE     = 1,
+} tx_transmission_mode_e;
+
 // Value used for expresslrs_rf_pref_params_s.DynpowerUpThresholdSnr if SNR should not be used
 #define DYNPOWER_SNR_THRESH_NONE -127
 #define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
@@ -124,7 +136,6 @@ typedef enum : uint8_t
 typedef struct expresslrs_rf_pref_params_s
 {
     uint8_t index;
-    expresslrs_RFrates_e enum_rate;
     int16_t RXsensitivity;                // expected min RF sensitivity
     uint16_t TOA;                         // time on air in microseconds
     uint16_t DisconnectTimeoutMs;         // Time without a packet before receiver goes to disconnected (ms)
@@ -168,6 +179,7 @@ typedef enum : uint8_t {
     ACTION_SEND_VTX,
     ACTION_START_WIFI,
     ACTION_BIND,
+    ACTION_BLE_JOYSTICK,
     ACTION_RESET_REBOOT,
 
     ACTION_LAST
@@ -175,19 +187,23 @@ typedef enum : uint8_t {
 
 enum eServoOutputMode : uint8_t
 {
-    som50Hz,    // Hz modes are "Servo PWM" where the signal is 988-2012us
-    som60Hz,    // and the mode sets the refresh interval
-    som100Hz,   // 50Hz must be mode=0 for default in config
-    som160Hz,
-    som333Hz,
-    som400Hz,
-    som10KHzDuty,
-    somOnOff,   // Digital 0/1 mode
-    somDShot,   // DShot300
-    somSerial,  // Serial TX or RX depending on pin
-    somSCL,     // I2C clock signal
-    somSDA,     // I2C data line
-    somPwm,     // True PWM mode (NOT SUPPORTED)
+    som50Hz = 0,    // 0:  50 Hz  | modes are "Servo PWM" where the signal is 988-2012us
+    som60Hz,        // 1:  60 Hz  | and the mode sets the refresh interval
+    som100Hz,       // 2:  100 Hz | must be mode=0 for default in config
+    som160Hz,       // 3:  160Hz
+    som333Hz,       // 4:  333Hz
+    som400Hz,       // 5:  400Hz
+    som10KHzDuty,   // 6:  10kHz duty
+    somOnOff,       // 7:  Digital 0/1 mode
+    somDShot,       // 8:  DShot300
+    somSerial,      // 9:  primary Serial
+    somSCL,         // 10: I2C clock signal
+    somSDA,         // 11: I2C data line
+    somPwm,         // 12: true PWM mode (NOT SUPPORTED)
+#if defined(PLATFORM_ESP32)
+    somSerial1RX,   // 13: secondary Serial RX
+    somSerial1TX,   // 14: secondary Serial TX
+#endif
 };
 
 enum eServoOutputFailsafeMode : uint8_t
@@ -205,8 +221,25 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_INVERTED_SBUS,
 	PROTOCOL_SUMD,
     PROTOCOL_DJI_RS_PRO,
-    PROTOCOL_HOTT_TLM
+    PROTOCOL_HOTT_TLM,
+    PROTOCOL_MAVLINK
 };
+
+#if defined(PLATFORM_ESP32)
+enum eSerial1Protocol : uint8_t
+{
+    PROTOCOL_SERIAL1_OFF,
+    PROTOCOL_SERIAL1_CRSF,
+    PROTOCOL_SERIAL1_INVERTED_CRSF,
+    PROTOCOL_SERIAL1_SBUS,
+    PROTOCOL_SERIAL1_INVERTED_SBUS,
+	PROTOCOL_SERIAL1_SUMD,
+    PROTOCOL_SERIAL1_DJI_RS_PRO,
+    PROTOCOL_SERIAL1_HOTT_TLM,
+    PROTOCOL_SERIAL1_TRAMP,
+    PROTOCOL_SERIAL1_SMARTAUDIO,
+};
+#endif
 
 enum eFailsafeMode : uint8_t
 {
@@ -245,7 +278,7 @@ enum eAuxChannels : uint8_t
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 14
+#define RATE_MAX 16
 #define RATE_BINDING RATE_LORA_50HZ
 #define RATE_DUALBAND_BINDING 9 // 2.4GHz 50Hz
 
