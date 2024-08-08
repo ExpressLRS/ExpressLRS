@@ -97,11 +97,6 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
 SPIExClass SPIEx(FSPI);
 #elif defined(PLATFORM_ESP32)
 SPIExClass SPIEx(VSPI);
-#elif defined(M0139)
-SPIClass SPI_1
-#if defined(DUAL_RADIO)
-
-#endif // DUAL_RADIO
 #else
 SPIExClass SPIEx;
 #endif

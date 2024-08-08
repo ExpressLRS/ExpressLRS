@@ -2283,17 +2283,6 @@ void loop()
 }
 #endif
 
-void UpdateUID(uint8_t * newID)
-{
-    DBGLN("GOT NEW ID: 0x%x", newID[5]);
-    //config.SetIsBound(true);
-    memcpy(UID, newID, UID_LEN);
-    devicesTriggerEvent();
-    config.SetUID(UID);
-    config.Commit();
-    LostConnection(true);
-}
-
 struct bootloader {
     uint32_t key;
     uint32_t reset_type;
@@ -2327,4 +2316,18 @@ void reset_into_bootloader(void)
     delay(100);
     connectionState = serialUpdate;
 #endif
+}
+
+void UpdateUID(uint8_t * newID)
+{
+    DBGLN("GOT NEW ID: 0x%x", newID[5]);
+    //config.SetIsBound(true);
+    memcpy(UID, newID, UID_LEN);
+    devicesTriggerEvent();
+    config.SetUID(UID);
+    config.Commit();
+    LostConnection(true);
+
+    // Reboot after setting the UID
+    reset_into_bootloader();
 }
