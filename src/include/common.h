@@ -313,3 +313,5 @@ extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CR
 uint32_t uidMacSeedGet();
 bool isDualRadio();
 void EnterBindingModeSafely(); // defined in rx_main/tx_main
+void EnterUnbindMode();
+void UpdateUID(uint8_t * newID);

@@ -6,6 +6,8 @@
 #include "helpers.h"
 #include "logging.h"
 
+bool currentPwmConfig{false};
+
 #if defined(TARGET_TX)
 
 #define MODEL_CHANGED       bit(1)
@@ -727,6 +729,7 @@ void RxConfig::Load()
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)
     {
+        currentPwmConfig = true;
         CheckUpdateFlashedUid(false);
         return;
     }

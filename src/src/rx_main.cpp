@@ -145,7 +145,7 @@ uint32_t serialBaud;
 /* SERIAL_PROTOCOL_TX is used by CRSF output */
 #if defined(TARGET_RX_FM30_MINI)
     HardwareSerial SERIAL_PROTOCOL_TX(USART2);
-#elif defined(TARGET_DIY_900_RX_STM32)
+#elif defined(TARGET_DIY_900_RX_STM32) || defined(M0139)
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
@@ -170,7 +170,7 @@ SerialIO *serialIO = nullptr;
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
     #define SERIAL_PROTOCOL_RX CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
-#elif defined(TARGET_RX_FM30_MINI)
+#elif defined(TARGET_RX_FM30_MINI) || defined(M0139)
     #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #else
     #define SERIAL_PROTOCOL_RX Serial
@@ -216,6 +216,8 @@ bool doStartTimer = false;
 bool didFHSS = false;
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
+
+bool InForceUnbindMode = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -668,7 +670,7 @@ void ICACHE_RAM_ATTR updatePhaseLock()
             hwTimer::phaseShift(Offset >> 2);
         }
 
-        DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::getFreqOffset(), uplinkLQ);
+        //DBGVLN("%d:%d:%d:%d:%d", Offset, RawOffset, OffsetDx, hwTimer::getFreqOffset(), uplinkLQ);
         UNUSED(OffsetDx); // complier warning if no debug
     }
 
@@ -1405,7 +1407,7 @@ static void setupSerial()
     }
 #endif
 
-#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
+#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32) || defined(M0139)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
     Serial.begin(serialBaud); // Same baud as CRSF for simplicity
@@ -1735,6 +1737,7 @@ static void cycleRfMode(unsigned long now)
 
 static void EnterBindingMode()
 {
+    InForceUnbindMode = false;
     if (InBindingMode)
     {
         DBGLN("Already in binding mode");
@@ -1752,11 +1755,16 @@ static void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
-    Radio.SetFrequencyReg(FHSSgetInitialFreq());
+    Radio.SetFrequencyReg(FHSSgetInitialFreq(), SX12XX_Radio_1);
     if (geminiMode)
     {
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+        DBGLN("EnterBindingMode: Gemini mode");
+        DBGLN("Init Gemini Freq: %u",FHSSgetInitialGeminiFreq());
+        // Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetInitialFreq(), SX12XX_Radio_2);    // Just doing this for testing since don't have gemini tx module rn..
+        DBGLN("Current Freq: %u",Radio.currFreq);
     }
+    DBGLN("Enter Bind Mode RXnb");
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 
@@ -1884,6 +1892,16 @@ void EnterBindingModeSafely()
     }
 
     EnterBindingMode();
+}
+
+void EnterUnbindMode()
+{
+    DBGLN("Received Unbind command");
+    //InForceUnbindMode = true;
+    //config.SetIsBound(false);
+    //LostConnection(true);
+    //memcpy(UID, MasterUID, sizeof(UID));
+    //devicesTriggerEvent();
 }
 
 static void checkSendLinkStatsToFc(uint32_t now)
@@ -2037,6 +2055,10 @@ void resetConfigAndReboot()
 
 void setup()
 {
+    #if defined(FRSKY_R9MM) || defined(M0139)
+    __enable_irq();
+    #endif
+
     #if defined(TARGET_UNIFIED_RX)
     hardwareConfigured = options_init();
     if (!hardwareConfigured)
@@ -2079,6 +2101,15 @@ void setup()
 #endif
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
+
+        // Setup Antenna mode to be 2 (Diversity)
+        #if defined(M0139)
+        #ifdef DUAL_RADIO
+        config.SetAntennaMode(2);
+        config.Commit();
+        #endif
+        #endif
+
 #if !(defined(TARGET_USE_EEPROM) && defined(USE_I2C))
         setupTarget();
 #endif
@@ -2251,6 +2282,17 @@ void loop()
     }
 }
 #endif
+
+void UpdateUID(uint8_t * newID)
+{
+    DBGLN("GOT NEW ID: 0x%x", newID[5]);
+    //config.SetIsBound(true);
+    memcpy(UID, newID, UID_LEN);
+    devicesTriggerEvent();
+    config.SetUID(UID);
+    config.Commit();
+    LostConnection(true);
+}
 
 struct bootloader {
     uint32_t key;

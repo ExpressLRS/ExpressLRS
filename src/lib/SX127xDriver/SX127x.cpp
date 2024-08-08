@@ -70,13 +70,16 @@ bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     DBGLN("Setting 'lowFrequencyMode' used for 433MHz.");
   }
 
+  DBGLN("SX127x OPMODE STANDBY: BOTH RADIOS");
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
+  DBGLN("DETECT RADIO 1");
   if (!DetectChip(SX12XX_Radio_1))
   {
     return false;
   }
 
+  DBGLN("DETECT RADIO 2");
   if (GPIO_PIN_NSS_2 != UNDEF_PIN)
   {
     if (!DetectChip(SX12XX_Radio_2))
@@ -160,6 +163,11 @@ void SX127xDriver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 
 void SX127xDriver::ConfigLoraDefaults()
 {
+#if defined(M0139)
+  uint8_t tcxo = hal.readRegister(SX1276_REG_TCXO, SX12XX_Radio_All);
+  tcxo |= SX1276_REG_TCXO_ON;
+  hal.writeRegister(SX1276_REG_TCXO, tcxo, SX12XX_Radio_All);
+#endif
   hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, SX12XX_Radio_All);
   hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa, SX12XX_Radio_All); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);

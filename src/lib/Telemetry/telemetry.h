@@ -55,6 +55,8 @@ public:
     void ResetState();
     bool ShouldCallBootloader();
     bool ShouldCallEnterBind();
+    bool ShouldCallUnbind();
+    //bool ShouldCallUpdatePWM();
     bool ShouldCallUpdateModelMatch();
     bool ShouldSendDeviceFrame();
     void CheckCrsfBatterySensorDetected();
@@ -68,6 +70,14 @@ public:
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
     bool AppendTelemetryPackage(uint8_t *package);
+    bool ShouldCallUpdateUID();
+    uint8_t * GetNewUID(){ return newUID;}
+    //uint8_t GetPwmCmd(){ return pwmCmd;}
+    //uint8_t GetPwmPin(){ return pwmPin;}
+    //uint8_t GetPwmType(){ return pwmType;}
+    //uint8_t GetPwmChannel(){ return pwmOutputChannel;}
+    //uint8_t GetPwmInputChannel(){ return pwmInputChannel;}
+    //uint16_t GetPwmValue(){ return pwmValue;}
 private:
     bool processInternalTelemetryPackage(uint8_t *package);
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
@@ -78,11 +88,14 @@ private:
     uint8_t twoslotLastQueueIndex;
     volatile crsf_telemetry_package_t *telemetryPackageHead;
     uint8_t receivedPackages;
+    uint8_t newUID[6];
     bool callBootloader;
     bool callEnterBind;
+    bool callUnbind;
     bool callUpdateModelMatch;
     bool sendDeviceFrame;
     bool crsfBatterySensorDetected;
     bool crsfBaroSensorDetected;
+    bool callUpdateUID;
     uint8_t modelMatchId;
 };

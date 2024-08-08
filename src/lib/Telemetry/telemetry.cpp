@@ -40,6 +40,20 @@ bool Telemetry::ShouldCallEnterBind()
     return enterBind;
 }
 
+bool Telemetry::ShouldCallUnbind()
+{
+    bool enterUnbind = callUnbind;
+    callUnbind = false;
+    return enterUnbind;
+}
+
+bool Telemetry::ShouldCallUpdateUID()
+{
+    bool updateID = callUpdateUID;
+    callUpdateUID = false;
+    return updateID;
+}
+
 bool Telemetry::ShouldCallUpdateModelMatch()
 {
     bool updateModelMatch = callUpdateModelMatch;
@@ -258,6 +272,17 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
             && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND))
         {
             callEnterBind = true;
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'u' && package[4] == 'b')
+        {
+            callUnbind = true;
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'i' && package[4] == 'd')
+        {
+            memcpy(newUID, &(package[5]), 6);
+            callUpdateUID = true;
             return true;
         }
         // Non CRSF, dest=b src=m -> set modelmatch

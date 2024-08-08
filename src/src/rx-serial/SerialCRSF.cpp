@@ -137,9 +137,17 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
         {
             EnterBindingModeSafely();
         }
+        if (telemetry.ShouldCallUnbind())
+        {
+            EnterUnbindMode();
+        }
         if (telemetry.ShouldCallUpdateModelMatch())
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
+        if (telemetry.ShouldCallUpdateUID())
+        {
+            UpdateUID(telemetry.GetNewUID());
         }
         if (telemetry.ShouldSendDeviceFrame())
         {

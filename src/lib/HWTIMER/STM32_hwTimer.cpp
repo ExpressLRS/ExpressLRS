@@ -15,7 +15,11 @@ volatile int32_t hwTimer::FreqOffset = 0;
 static volatile uint32_t PauseDuration;
 static bool alreadyInit = false;
 
-#if defined(TIM1)
+#ifdef FRSKY_R9MM 
+static HardwareTimer *MyTim = new HardwareTimer(TIM3);   // Changed this to TIM3 so we can use TIM1 for PWMs  
+#elif defined(M0139)
+static HardwareTimer *MyTim = new HardwareTimer(TIM2);   // Changed this to TIM2 so we can use TIM1 and TIM3 for PWMs  
+#elif defined(TIM1)
 static HardwareTimer *MyTim = new HardwareTimer(TIM1);
 #else
 // FM30_mini (STM32F373xC) no advanced timer but TIM2 is 32-bit general purpose

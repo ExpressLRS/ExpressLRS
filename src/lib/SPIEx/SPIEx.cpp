@@ -82,10 +82,14 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
         }
     }
 #else
+#if defined(M0139) && defined(DUAL_RADIO)
+    // 
+#else
     // only one (software-controlled) CS pin supported on STM32 devices, so set the state of the pin
     digitalWrite(GPIO_PIN_NSS, LOW);
     transfer(data, size);
     digitalWrite(GPIO_PIN_NSS, HIGH);
+#endif
 #endif
 }
 
@@ -93,6 +97,11 @@ void ICACHE_RAM_ATTR SPIExClass::_transfer(uint8_t cs_mask, uint8_t *data, uint3
 SPIExClass SPIEx(FSPI);
 #elif defined(PLATFORM_ESP32)
 SPIExClass SPIEx(VSPI);
+#elif defined(M0139)
+SPIClass SPI_1
+#if defined(DUAL_RADIO)
+
+#endif // DUAL_RADIO
 #else
 SPIExClass SPIEx;
 #endif
