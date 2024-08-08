@@ -4,8 +4,8 @@
 # https://www.expresslrs.org/quick-start/receivers/firmware-version/#receiver-firmware-version 
 # https://semver.org/
 MAJOR_VERSION=3
-MINOR_VERSION=3
-PATCH_VERSION=2
+MINOR_VERSION=4
+PATCH_VERSION=3
 MODALAI_VERSION=0
 ENCRYPT=0
 TARGET=""
