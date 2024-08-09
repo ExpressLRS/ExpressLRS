@@ -1048,7 +1048,6 @@ void EnterBindingModeSafely()
   EnterBindingMode();
 }
 
-
 void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
 #if !defined(CRITICAL_FLASH)
@@ -1099,6 +1098,18 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
   }
 }
 
+void ParseMSPData(uint8_t *buf, uint8_t size)
+{
+  for (uint8_t i = 0; i < size; ++i)
+  {
+    if (msp.processReceivedByte(buf[i]))
+    {
+      ProcessMSPPacket(millis(), msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
+}
+
 static void HandleUARTout()
 {
   if (firmwareOptions.is_airport)
@@ -1122,7 +1133,7 @@ static void HandleUARTin()
   {
     if (firmwareOptions.is_airport)
     {
-      auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
+      auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
       if (size > 0)
       {
         uint8_t buf[size];
@@ -1134,7 +1145,7 @@ static void HandleUARTin()
     }
     else
     {
-      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+      auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
       if (size > 0)
       {
         uint8_t buf[size];
@@ -1160,30 +1171,33 @@ static void HandleUARTin()
   // Read from the Backpack serial port
   if (TxBackpack->available())
   {
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    auto size = std::min(uartInputBuffer.free(), (uint16_t)TxBackpack->available());
+    if (size > 0)
     {
-      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxBackpack->available());
-      if (size > 0)
+      uint8_t buf[size];
+      TxBackpack->readBytes(buf, size);
+      TxUSB->write(buf, size);
+
+      // If the TX is in Mavlink mode, push the bytes into the fifo buffer
+      if (config.GetLinkMode() == TX_MAVLINK_MODE)
       {
-        uint8_t buf[size];
-        TxBackpack->readBytes(buf, size);
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
 
-        // The tx is in Mavlink mode and receiving data from the Backpack (mavesp).
+        // The tx is in Mavlink mode and receiving data from the Backpack.
         // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
         if (connectionState == noCrossfire)
         {
-          UARTconnected();
+          if (isThisAMavPacket(buf, size))
+          {
+            UARTconnected();
+          }
         }
       }
-    }
-    else if (msp.processReceivedByte(TxBackpack->read()))
-    {
-      // Finished processing a complete packet
-      ProcessMSPPacket(millis(), msp.getReceivedPacket());
-      msp.markPacketReceived();
+
+      // Try to parse any MSP packets from the Backpack
+      ParseMSPData(buf, size);
     }
   }
 }
