@@ -1176,7 +1176,6 @@ static void HandleUARTin()
     {
       uint8_t buf[size];
       TxBackpack->readBytes(buf, size);
-      TxUSB->write(buf, size);
 
       // If the TX is in Mavlink mode, push the bytes into the fifo buffer
       if (config.GetLinkMode() == TX_MAVLINK_MODE)
