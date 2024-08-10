@@ -256,7 +256,7 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 
 bool BindingModeRequest = false;
 static uint32_t BindingRateChangeTime;
-#define BindingRateChangeCyclePeriod 250
+#define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
 void reconfigureSerial();
