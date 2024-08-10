@@ -85,8 +85,7 @@ typedef struct {
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
                     backpackDisable:1,  // bool, disable backpack via EN pin if available
-                    backpackTlmEnabled:1,  // bool, enable telemetry via ESPNOW from backpack
-                    unused:1;          // FUTURE available
+                    backpackTlmMode:2;  // 0=Off, 1=Fwd tlm via espnow, 2=fwd tlm via wifi 3=(FUTURE) bluetooth
     uint8_t         dvrStartDelay:3,
                     dvrAux:5;
     tx_button_color_t buttonColors[2];  // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
@@ -123,7 +122,7 @@ public:
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
-    bool     GetBackpackTlmEnabled() const { return m_config.backpackTlmEnabled; }
+    uint8_t  GetBackpackTlmMode() const { return m_config.backpackTlmMode; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
@@ -153,7 +152,7 @@ public:
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
     void SetBackpackDisable(bool backpackDisable);
-    void SetBackpackTlmEnabled(bool enabled);
+    void SetBackpackTlmMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
 
