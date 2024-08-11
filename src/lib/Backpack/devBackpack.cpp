@@ -260,7 +260,7 @@ static void AuxStateToMSPOut()
 
 void sendCRSFTelemetryToBackpack(uint8_t *data)
 {
-    if (config.GetBackpackTlmMode() == 0)
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
     {
         // Backpack telem is off
         return;
@@ -294,7 +294,7 @@ void sendCRSFTelemetryToBackpack(uint8_t *data)
 
 void sendMAVLinkTelemetryToBackpack(uint8_t *data)
 {
-    if (config.GetBackpackTlmMode() == 0)
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
     {
         // Backpack telem is off
         return;

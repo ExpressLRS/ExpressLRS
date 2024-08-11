@@ -73,6 +73,13 @@ typedef union {
     uint32_t raw;
 } tx_button_color_t;
 
+typedef enum {
+    BACKPACK_TELEM_MODE_OFF,
+    BACKPACK_TELEM_MODE_RECEIVER,
+    BACKPACK_TELEM_MODE_WIFI,
+    BACKPACK_TELEM_MODE_BLUETOOTH,
+} telem_mode_t;
+
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
