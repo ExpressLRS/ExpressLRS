@@ -310,6 +310,7 @@ extern bool RxWiFiReadyToSend;
 #if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
+extern bool BackpackTelemReadyToSend;
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
@@ -833,6 +834,7 @@ static void registerLuaParameters()
       registerLUAParameter(
             &luaBackpackTelemetry, [](luaPropertiesCommon *item, uint8_t arg) {
                 config.SetBackpackTlmMode(arg);
+                BackpackTelemReadyToSend = true;
             }, luaBackpackFolder.common.id);
 
       registerLUAParameter(&luaBackpackVersion, nullptr, luaBackpackFolder.common.id);

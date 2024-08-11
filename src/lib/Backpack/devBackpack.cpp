@@ -17,9 +17,9 @@ extern bool headTrackingEnabled;
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
+bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
-uint8_t lastLinkMode; // will get set in start() and used in event()
 
 #if defined(GPIO_PIN_BACKPACK_EN)
 
@@ -336,7 +336,6 @@ static void initialize()
 
 static int start()
 {
-    lastLinkMode = config.GetBackpackTlmMode();
     if (OPT_USE_TX_BACKPACK)
     {
         return DURATION_IMMEDIATELY;
@@ -384,6 +383,12 @@ static int timeout()
         BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
 
+    if (BackpackTelemReadyToSend && connectionState < MODE_STATES)
+    {
+        BackpackTelemReadyToSend = false;
+        sendConfigToBackpack();
+    }
+
     return BACKPACK_TIMEOUT;
 }
 
@@ -396,15 +401,7 @@ static int event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
 #endif
-#if !defined(PLATFORM_STM32)
-  // Update the backpack operating mode when the link mode changes
-    uint8_t newMode = config.GetBackpackTlmMode();
-    if (lastLinkMode != newMode)
-    {
-        sendConfigToBackpack();
-    }
-    lastLinkMode = config.GetBackpackTlmMode();
-#endif
+
     return DURATION_IGNORE;
 }
 
