@@ -3,6 +3,7 @@
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
+#include "logging.h"
 #if defined(USE_MSP_WIFI)
 #include "msp2crsf.h"
 
@@ -12,6 +13,17 @@ extern MSP2CROSSFIRE msp2crsf;
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
+
+// M0139 PWM config via Serial
+extern device_t ServoOut_device;
+
+bool updatePWM = false;
+uint8_t pwmPin{0};
+uint8_t pwmCmd{0};
+uint8_t pwmOutputChannel{0};
+uint8_t pwmInputChannel{0};
+uint8_t pwmType{0}; 
+uint16_t pwmValue{0};
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
@@ -155,6 +167,20 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             CRSF::GetDeviceInformation(deviceInformation, 0);
             CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             queueMSPFrameTransmission(deviceInformation);
+        }
+        if (telemetry.ShouldCallUpdatePWM()){
+            DBGLN("Received Update PWM command");
+            updatePWM = true;
+            pwmPin = telemetry.GetPwmPin();
+            pwmCmd = telemetry.GetPwmCmd();
+            pwmOutputChannel = telemetry.GetPwmChannel();
+            pwmInputChannel = telemetry.GetPwmInputChannel();
+            pwmType = telemetry.GetPwmType();
+            pwmValue = telemetry.GetPwmValue();
+            DBGLN("Pwm Pin: %u\tPwm Cmd: %u", pwmPin, pwmCmd);
+            DBGLN("Input Ch: %u\tOutput Ch: %u", pwmInputChannel, pwmOutputChannel);
+            DBGLN("Pwm Type: %s\tPwm Val: %u", pwmType, pwmValue);
+            ServoOut_device.event();
         }
     }
 }

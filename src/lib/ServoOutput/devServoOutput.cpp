@@ -1,5 +1,4 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-
 #include "devServoOutput.h"
 #include "PWM.h"
 #include "CRSF.h"
@@ -10,6 +9,7 @@
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
+static int pwmInputChannels[PWM_MAX_CHANNELS] = {-1};
 
 #if (defined(PLATFORM_ESP32))
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
@@ -20,6 +20,8 @@ const uint8_t RMT_MAX_CHANNELS = 8;
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
+
+constexpr unsigned SERVO_FAILSAFE_MIN = 886U;
 
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
@@ -128,7 +130,14 @@ static void servosUpdate(unsigned long now)
             {
                 us = 3000U - us;
             }
-            servoWrite(ch, us);
+            //
+            if (us < 1050U){
+                servoWrite(ch, SERVO_FAILSAFE_MIN);
+            } else if (us > 1500 && us < 1600){
+                servoWrite(ch, 1450);
+            } else {
+                servoWrite(ch, us);
+            }
         } /* for each servo */
     }     /* if newChannelsAvailable */
 
@@ -148,6 +157,10 @@ static void initialize()
     {
         return;
     }
+
+#if defined(M0139)
+    PWM.initialize();
+#endif //M0139
 
 #if defined(PLATFORM_ESP32)
     uint8_t rmtCH = 0;
@@ -227,6 +240,51 @@ static int start()
 
 static int event()
 {
+    #if defined(M0139)
+    // if (InForceUnbindMode){
+    //     servosFailsafe();
+    //     servoMgr->stopAllPwm();
+    //     return DURATION_NEVER;
+    // }
+
+    if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_VAL){
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            if(pwmInputChannels[ch] == pwmInputChannel)
+            {
+                if (pwmChannels[ch] == -1){
+                    return DURATION_IMMEDIATELY;
+                }
+
+                updatePWM = false;
+                if (pwmType == 's'){
+                    PWM.setMicroseconds(pwmChannels[ch], pwmValue);
+                }
+                else if (pwmType == 'd'){
+                    PWM.setDuty(pwmChannels[ch], pwmValue);
+                }
+            }
+        }
+
+    } else if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_CH){
+        updatePWM = false;
+        
+        // If channel is active then we should stop it first
+        //if (PWM.isPwmActive(pwmOutputChannel)){
+        
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            if(servoPins[ch] == pwmPin)
+            {
+                PWM.release(pwmPin);
+                pwmChannels[ch] = PWM.allocate(pwmPin, 50U);
+                break;
+            }
+        }
+    }
+
+#endif // End FRSKY_R9MM || M0139
+
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX,

@@ -47,6 +47,13 @@ bool Telemetry::ShouldCallUnbind()
     return enterUnbind;
 }
 
+bool Telemetry::ShouldCallUpdatePWM()
+{
+    bool updatePWM = callUpdatePWM;
+    callUpdatePWM = false;
+    return updatePWM;
+}
+
 bool Telemetry::ShouldCallUpdateUID()
 {
     bool updateID = callUpdateUID;
@@ -290,6 +297,24 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
         {
             callUpdateModelMatch = true;
             modelMatchId = package[5];
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_CH)
+        {
+            callUpdatePWM = true;
+            pwmPin = package[4]-1;
+            pwmCmd = package[3];
+            pwmOutputChannel = package[4]-1;      
+            pwmInputChannel = package[5]-1;
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_VAL)
+        {
+            callUpdatePWM = true;
+            pwmCmd = package[3];
+            pwmInputChannel = package[4]-1; 
+            pwmType = package[5];
+            pwmValue = package[6] << 8 | package[7];
             return true;
         }
     }

@@ -37,6 +37,10 @@ public:
      * @param microseconds the high time in microseconds
      */
     void setMicroseconds(pwm_channel_t channel, uint16_t microseconds);
+
+#ifdef M0139
+    void initialize(void);
+#endif // M0139
 };
 
 extern PWMController PWM;
