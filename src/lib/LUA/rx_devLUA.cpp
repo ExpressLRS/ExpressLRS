@@ -551,6 +551,23 @@ static void registerLuaParameters()
 
   }
 
+eSerialProtocol prot0 = config.GetSerialProtocol();
+bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
+#if defined(PLATFORM_ESP32)
+  eSerial1Protocol prot1 = config.GetSerial1Protocol();
+  hasMavlink == hasMavlink || (proto1 == PROTOCOL_MAVLINK)
+#endif
+
+  if (hasMavlink)
+  {
+    registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetTargetSysId((uint8_t)arg);
+    });
+    registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetSourceSysId((uint8_t)arg);
+    });
+  }
+
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
