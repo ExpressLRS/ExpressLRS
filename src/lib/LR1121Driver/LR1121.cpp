@@ -43,6 +43,7 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
     timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
+    useFEC = false;
 }
 
 void LR1121Driver::End()
@@ -142,7 +143,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
-    DBGLN("Config LoRa ");
     PayloadLength = _PayloadLength;
     
     bool isSubGHz = regfreq < 1000000000;
@@ -172,17 +172,26 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     if (useFSK)
     {
+        DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
         uint8_t bwf = sf;
         uint32_t fdev = (uint32_t)cr * 1000;
         ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
-        SetPacketParamsFSK(PreambleLength, _PayloadLength, radioNumber);
+        // Increase packet length for FEC used only on 1000Hz 2.5GHz.
+        useFEC = false;
+        if (!isSubGHz)
+        {
+            useFEC = true;
+            PayloadLength = 14;
+        }
 
+        SetPacketParamsFSK(PreambleLength, PayloadLength, radioNumber);
         SetFSKSyncWord(fskSyncWord1, fskSyncWord2, radioNumber);
     }
     else
     {
+        DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
     #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
@@ -191,7 +200,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
     #endif
 
-        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, IQinverted, radioNumber);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, PayloadLength, IQinverted, radioNumber);
     }
 
     SetFrequencyHz(regfreq, radioNumber);
@@ -246,15 +255,29 @@ void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
     uint8_t switchbuf[8];
-    switchbuf[0] = 0b00001111; // RfswEnable
-    switchbuf[1] = 0b00000000; // RfSwStbyCfg
-    switchbuf[2] = 0b00000100; // RfSwRxCfg
-    switchbuf[3] = 0b00001000; // RfSwTxCfg
-    switchbuf[4] = 0b00001000; // RfSwTxHPCfg
-    switchbuf[5] = 0b00000010; // RfSwTxHfCfg
-    switchbuf[6] = 0;          // 
-    switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
-    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);  
+    if (LR1121_RFSW_CTRL_COUNT == 8)
+    {
+        switchbuf[0] = LR1121_RFSW_CTRL[0]; // RfswEnable
+        switchbuf[1] = LR1121_RFSW_CTRL[1]; // RfSwStbyCfg
+        switchbuf[2] = LR1121_RFSW_CTRL[2]; // RfSwRxCfg
+        switchbuf[3] = LR1121_RFSW_CTRL[3]; // RfSwTxCfg
+        switchbuf[4] = LR1121_RFSW_CTRL[4]; // RfSwTxHPCfg
+        switchbuf[5] = LR1121_RFSW_CTRL[5]; // RfSwTxHfCfg
+        switchbuf[6] = LR1121_RFSW_CTRL[6]; // Unused
+        switchbuf[7] = LR1121_RFSW_CTRL[7]; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    }
+    else
+    {
+        switchbuf[0] = 0b00001111; // RfswEnable
+        switchbuf[1] = 0b00000000; // RfSwStbyCfg
+        switchbuf[2] = 0b00000100; // RfSwRxCfg
+        switchbuf[3] = 0b00001000; // RfSwTxCfg
+        switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+        switchbuf[5] = 0b00000010; // RfSwTxHfCfg
+        switchbuf[6] = 0;          // Unused
+        switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    }
+    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
@@ -596,8 +619,19 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         }
     }
 
-    // 3.7.4 WriteBuffer8
-    hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+    if (useFEC)
+    {
+        uint8_t FECBuffer[PayloadLength] = {0};
+        FECEncode(data, FECBuffer);
+
+        // 3.7.4 WriteBuffer8
+        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+    }
+    else
+    {
+        // 3.7.4 WriteBuffer8
+        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+    }
 
     SetMode(LR1121_MODE_TX, radioNumber);
 
@@ -625,7 +659,14 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radioNumber);
     hal.ReadCommand(payloadbuf, sizeof(payloadbuf), radioNumber);
 
-    memcpy(RXdataBuffer, payloadbuf + 1, PayloadLengthRX);
+    if (useFEC)
+    {
+        FECDecode(payloadbuf + 1, RXdataBuffer);
+    }
+    else
+    {
+        memcpy(RXdataBuffer, payloadbuf + 1, PayloadLengthRX);
+    }
 
     return RXdoneCallback(SX12XX_RX_OK);
 }
@@ -684,10 +725,23 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
             hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
 
-            // if the second packet is same to the first, it's valid
-            if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
+            if (useFEC)
             {
-                isSecondRadioGotData = true;
+                uint8_t decodedRXdataBuffer_second[8];
+                FECDecode(RXdataBuffer_second + 1, decodedRXdataBuffer_second);
+                // if the second packet is same to the first, it's valid
+                if(memcmp(RXdataBuffer, decodedRXdataBuffer_second, 8) == 0)
+                {
+                    isSecondRadioGotData = true;
+                }
+            }
+            else
+            {
+                // if the second packet is same to the first, it's valid
+                if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
+                {
+                    isSecondRadioGotData = true;
+                }
             }
         }
 

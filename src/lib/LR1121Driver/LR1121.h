@@ -65,6 +65,7 @@ private:
     bool radio1isSubGHz;
     bool radio2isSubGHz;
     lr11xx_RadioOperatingModes_t fallBackMode;
+    bool useFEC;
 
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
