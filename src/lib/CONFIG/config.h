@@ -229,6 +229,8 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    uint8_t     targetSysId;
+    uint8_t     sourceSysId;
 } rx_config_t;
 
 class RxConfig
@@ -261,6 +263,8 @@ public:
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
+    uint8_t GetTargetSysId()  const { return m_config.targetSysId; }
+    uint8_t GetSourceSysId()  const { return m_config.sourceSysId; }
     rx_config_bindstorage_t GetBindStorage() const { return (rx_config_bindstorage_t)m_config.bindStorage; }
     bool IsOnLoan() const;
 
@@ -283,6 +287,8 @@ public:
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
+    void SetTargetSysId(uint8_t sysID);
+    void SetSourceSysId(uint8_t sysID);
     void SetBindStorage(rx_config_bindstorage_t value);
     void ReturnLoan();
 
