@@ -529,27 +529,9 @@ static void registerLuaParameters()
   });
 #endif
 
-  eSerialProtocol prot0 = config.GetSerialProtocol();
-  eSerial1Protocol prot1 = config.GetSerial1Protocol();
-
-  if (prot0 == PROTOCOL_SBUS || prot0 == PROTOCOL_INVERTED_SBUS || prot0 == PROTOCOL_DJI_RS_PRO ||
-      prot1 == PROTOCOL_SERIAL1_SBUS || prot1 == PROTOCOL_SERIAL1_INVERTED_SBUS || prot1 == PROTOCOL_SERIAL1_DJI_RS_PRO)
-  {
-    registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetFailsafeMode((eFailsafeMode)arg);
   });
-  }
-  if (prot0 == PROTOCOL_MAVLINK ||
-      prot1 == PROTOCOL_MAVLINK)
-  {
-    registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetTargetSysId((uint8_t)arg);
-    });
-    registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetSourceSysId((uint8_t)arg);
-    });
-
-  }
 
 eSerialProtocol prot0 = config.GetSerialProtocol();
 bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
