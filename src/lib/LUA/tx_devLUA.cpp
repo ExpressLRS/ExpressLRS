@@ -289,7 +289,7 @@ static struct luaItem_selection luaHeadTrackingStartChannel = {
 static struct luaItem_selection luaBackpackTelemetry = {
     {"Telemetry", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;Rcvr;WiFi",
+    "Off;ESPNOW;WiFi",
     STR_EMPTYSPACE};
 
 static struct luaItem_string luaBackpackVersion = {
