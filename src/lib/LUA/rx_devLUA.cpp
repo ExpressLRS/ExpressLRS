@@ -668,18 +668,18 @@ static int event()
   setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
-  if (config.GetSourceSysId()==0) 
+  if (config.GetSourceSysId() == 0) 
   {
-    setLuaUint8Value(&luaSourceSysId,255);
+    setLuaUint8Value(&luaSourceSysId, 255);
   } else {
-    setLuaUint8Value(&luaSourceSysId,config.GetSourceSysId());
+    setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId());
   }
 
-  if (config.GetTargetSysId()==0)
+  if (config.GetTargetSysId() == 0)
   {
-    setLuaUint8Value(&luaTargetSysId,1);
-  }else{
-    setLuaUint8Value(&luaTargetSysId,config.GetTargetSysId());
+    setLuaUint8Value(&luaTargetSysId, 1);
+  } else {
+    setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId());
   }
 
   return DURATION_IMMEDIATELY;
