@@ -668,19 +668,8 @@ static int event()
   setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
-  if (config.GetSourceSysId() == 0) 
-  {
-    setLuaUint8Value(&luaSourceSysId, 255);
-  } else {
-    setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId());
-  }
-
-  if (config.GetTargetSysId() == 0)
-  {
-    setLuaUint8Value(&luaTargetSysId, 1);
-  } else {
-    setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId());
-  }
+  setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
+  setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
 
   return DURATION_IMMEDIATELY;
 }
