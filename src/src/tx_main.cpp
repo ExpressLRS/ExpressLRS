@@ -77,6 +77,7 @@ volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
 uint8_t MSPDataPackage[5];
+#define BindingSpamAmount 25
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
@@ -1006,20 +1007,6 @@ static void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
 
-#if defined(RADIO_LR1121)
-  FHSSuseDualBand = true;
-  expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(RATE_DUALBAND_BINDING); // 2.4GHz 50Hz
-  Radio.Config(dualBandBindingModParams->bw2, dualBandBindingModParams->sf2, dualBandBindingModParams->cr2, FHSSgetInitialGeminiFreq(),
-               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval,
-               (dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
-               (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
-#endif
-
-  Radio.SetFrequencyReg(FHSSgetInitialFreq());
-  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
-  {
-    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
-  }
   // Start transmitting again
   hwTimer::resume();
 
@@ -1553,8 +1540,16 @@ void loop()
   static bool mspTransferActive = false;
   if (InBindingMode)
   {
+#if defined(RADIO_LR1121)
+    // Send half of the bind packets on the 2.4GHz domain
+    if (BindingSendCount == BindingSpamAmount / 2) {
+      SetRFLinkRate(RATE_DUALBAND_BINDING);
+      // Increment BindingSendCount so that SetRFLinkRate is only called once.
+      BindingSendCount++;
+    }
+#endif
     // exit bind mode if package after some repeats
-    if (BindingSendCount > 6) {
+    if (BindingSendCount > BindingSpamAmount) {
       ExitBindingMode();
     }
   }
