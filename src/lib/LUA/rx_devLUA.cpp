@@ -537,7 +537,7 @@ eSerialProtocol prot0 = config.GetSerialProtocol();
 bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
 #if defined(PLATFORM_ESP32)
   eSerial1Protocol prot1 = config.GetSerial1Protocol();
-  hasMavlink == hasMavlink || (proto1 == PROTOCOL_MAVLINK)
+  hasMavlink = hasMavlink || (prot1 == PROTOCOL_MAVLINK);
 #endif
 
   if (hasMavlink)
