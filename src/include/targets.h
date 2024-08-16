@@ -288,7 +288,7 @@ extern bool pwmSerialDefined;
 #error "Either RADIO_SX127X, RADIO_LR1121 or RADIO_SX128X must be defined!"
 #endif
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX) || defined(M0139)
 #if !defined(U0RXD_GPIO_NUM)
 #define U0RXD_GPIO_NUM (3)
 #endif

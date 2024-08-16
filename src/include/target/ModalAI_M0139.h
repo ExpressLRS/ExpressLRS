@@ -2,9 +2,11 @@
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
-#if !defined(TARGET_R9SLIM_RX)
-    #define TARGET_USE_EEPROM               1
-    #define TARGET_EEPROM_ADDR              0x50
+#if !defined(TARGET_R9SLIM_RX) && defined(TARGET_RX)
+    // TODO
+    // EEPROM not working with TX
+    //#define TARGET_USE_EEPROM               1
+    //#define TARGET_EEPROM_ADDR              0x50
 #endif
 
 #define GPIO_PIN_SDA            PB7  // EEPROM
@@ -27,11 +29,19 @@ https://github.com/jaxxzer
 #define GPIO_PIN_SCK_2            PB13  // RADIO 2 
 #define GPIO_PIN_RST_2            PA15  // RADIO 2 
 
-
-#define GPIO_PIN_RCSIGNAL_RX        PA10
+#ifdef TARGET_TX
 #define GPIO_PIN_RCSIGNAL_TX        PA9
+#define GPIO_PIN_RCSIGNAL_RX        PA9
 #define GPIO_PIN_DEBUG_RX           PA3
 #define GPIO_PIN_DEBUG_TX           PA2
+#else
+#define GPIO_PIN_RCSIGNAL_TX        PA9
+#define GPIO_PIN_RCSIGNAL_RX        PA10
+#define GPIO_PIN_DEBUG_RX           PA3
+#define GPIO_PIN_DEBUG_TX           PA2
+#endif
+
+#define BACKPACK_LOGGING_BAUD       420000
 #ifndef DEVICE_NAME
     #define DEVICE_NAME "ModalAI M0139"
 #endif
@@ -43,6 +53,8 @@ https://github.com/jaxxzer
 // Output Power - Default to SX1276 max output
 #define POWER_OUTPUT_FIXED 127 //MAX power for 900 RXes
 
+// No PWM on TX
+#ifdef TARGET_RX
 // External pads
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS (int[]){Ch1, Ch2, Ch3, Ch4}
@@ -51,10 +63,13 @@ https://github.com/jaxxzer
 #define Ch2    PB1     // TIM3 CH4 
 #define Ch3    PA8     // TIM1 CH1 
 #define Ch4    PA11    // TIM1 CH4 
+#endif
 
 #define M0139
 #define DUAL_RADIO
 //#undef GPIO_PIN_NSS_2
 //#define GPIO_PIN_NSS_2 UNDEF_PIN
+#define STM32F1 1 
+#define STM32F1xx 1
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin

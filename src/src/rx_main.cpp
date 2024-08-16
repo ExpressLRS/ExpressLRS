@@ -135,7 +135,7 @@ CROSSFIRE2MSP crsf2msp;
 MSP2CROSSFIRE msp2crsf;
 #endif
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32) || defined(M0139)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
@@ -2055,6 +2055,7 @@ void resetConfigAndReboot()
 
 void setup()
 {
+    DBGLN("PA9: %d, PA_9: %d, PA8: %d, PA_8: %d", PA9, PA_9, PA8, PA_8);
     #if defined(FRSKY_R9MM) || defined(M0139)
     __enable_irq();
     #endif

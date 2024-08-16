@@ -52,6 +52,10 @@ case $TARGET in
         TARGET="MODALAI_M0139_via_UART"
         FW="ModalAI_M0139-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
         ;;
+    "m0139_tx"|"M0139_TX")
+        TARGET="MODALAI_M0139_TX_via_UART"
+        FW="ModalAI_M0139_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+        ;;
     "r9mini"|"R9Mini")
         # R9Mini support from us stops at fw version 3.2.1... last version from ModalAI was 3.2.1.3
         TARGET="MODALAI_Frsky_RX_R9MM_R9MINI_via_UART"

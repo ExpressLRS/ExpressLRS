@@ -1,10 +1,9 @@
 #include "PWM.h"
 
-#if defined(M0139)
+#if defined(M0139) && defined(TARGET_RX)
 #include "logging.h"
 #include "variant_M0139.h"
 extern bool servoInitialized;
-static uint8_t GPIO_PIN_PWM_OUTPUTS[GPIO_PIN_PWM_OUTPUTS_COUNT] = {Ch1, Ch2, Ch3, Ch4};
 
 /* Private variables */
 TIM_HandleTypeDef htim1;

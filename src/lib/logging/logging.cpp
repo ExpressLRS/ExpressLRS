@@ -2,6 +2,7 @@
 #include <cstdarg>
 #include "logging.h"
 
+
 #ifdef LOG_USE_PROGMEM
   #define GETCHAR pgm_read_byte(fmt)
 #else
@@ -50,9 +51,17 @@ void debugPrintf(const char* fmt, ...)
         default:
           break;
       }
+      #if defined(M0139)
+      SEGGER_RTT_WriteString(0, v);
+      #else
       LOGGING_UART.write((uint8_t*)v, strlen(v));
+      #endif
     } else {
+      #if defined(M0139)
+      SEGGER_RTT_Write(0, &c, 1);
+      #else
       LOGGING_UART.write(c);
+      #endif
     }
     fmt++;
     c = GETCHAR;

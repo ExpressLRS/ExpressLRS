@@ -17,6 +17,9 @@ HardwareSerial CRSFHandset::Port(0);
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
+#elif defined(M0139)
+//HardwareSerial CRSFHandset::Port((PinName)PA_9, (PinName)PA_9);
+SoftwareSerial CRSFHandset::Port(PA9, PA9, true);
 #elif defined(PLATFORM_STM32)
 HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -93,20 +96,22 @@ void CRSFHandset::Begin()
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 #elif defined(PLATFORM_STM32)
-    DBGLN("Start STM32 R9M TX CRSF UART");
+    DBGLN("Start STM32 R9M TX CRSF UART %d : %d", GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     halfDuplex = true;
 
-    CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+    // TODO convert correctly
+    //CRSFHandset::Port.setTx((PinName)GPIO_PIN_RCSIGNAL_TX);
+    //CRSFHandset::Port.setRx((PinName)GPIO_PIN_RCSIGNAL_RX);
 
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
     #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    CRSFHandset::Port.setHalfDuplex();
+    //CRSFHandset::Port.setHalfDuplex();
     #endif
 
-    CRSFHandset::Port.begin(UARTrequestedBaud);
+    //CRSFHandset::Port.begin(UARTrequestedBaud);
+    CRSFHandset::Port.begin(115200);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -122,6 +127,7 @@ void CRSFHandset::Begin()
     DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
     CRSFHandset::Port.flush();
     flush_port_input();
+    CRSFHandset::Port.listen();
 #endif
 }
 
@@ -454,6 +460,7 @@ void CRSFHandset::handleInput()
         flush_port_input();
     }
 
+    int startptr = SerialInPacketPtr;
     // Add new data, and then discard bytes until we start with header byte
     auto toRead = std::min(CRSFHandset::Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
     SerialInPacketPtr += CRSFHandset::Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
@@ -584,7 +591,8 @@ void CRSFHandset::duplex_set_RX() const
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    CRSFHandset::Port.enableHalfDuplexRx();
+    //CRSFHandset::Port.enableHalfDuplexRx();
+    CRSFHandset::Port.listen();
 #endif
 }
 
@@ -616,6 +624,7 @@ void CRSFHandset::duplex_set_TX() const
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     // writing to the port switches the mode
+    CRSFHandset::Port.stopListening();
 #endif
 }
 
@@ -748,6 +757,9 @@ uint32_t CRSFHandset::autobaud()
 }
 #else
 uint32_t CRSFHandset::autobaud() {
+    // TODO REMOVE
+    // FIX BAUD FOR TESTING
+    return 115200;
     UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
     return TxToHandsetBauds[UARTcurrentBaudIdx];
 }

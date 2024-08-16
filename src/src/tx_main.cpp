@@ -1232,8 +1232,9 @@ static void setupSerial()
   #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
     serialPort->setTx(GPIO_PIN_DEBUG_TX);
   #endif
-  serialPort->begin(BACKPACK_LOGGING_BAUD);
+  serialPort->begin(420000);
 #else
+  #error NO DEBUG
   Stream *serialPort = new NullStream();
 #endif
   TxBackpack = serialPort;
@@ -1379,6 +1380,14 @@ static void cyclePower()
 
 void setup()
 {
+  #if defined(FRSKY_R9MM) || defined(M0139)
+  HAL_Init();
+  __enable_irq();
+  #endif
+
+  #ifdef M0139
+  SEGGER_RTT_Init();
+  #endif
   if (setupHardwareFromOptions())
   {
     setupTarget();
@@ -1398,9 +1407,15 @@ void setup()
 
     DBGLN("ExpressLRS TX Module Booted...");
 
+    DBGLN("DBG Test");
+
     eeprom.Begin(); // Init the eeprom
+    DBGLN("DBG Test2");
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+    DBGLN("DBG Test3");
     config.Load(); // Load the stored values from eeprom
+
+    DBGLN("CFG Loaded");
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
@@ -1412,10 +1427,12 @@ void setup()
     #else
     if (GPIO_PIN_SCK != UNDEF_PIN)
     {
+      DBGLN("Init Success2");
       init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
     }
     else
     {
+      DBGLN("Init Success");
       // Assume BLE Joystick mode if no radio SCK pin
       init_success = true;
     }
@@ -1423,23 +1440,28 @@ void setup()
 
     if (!init_success)
     {
+      DBGLN("Init Failed");
       connectionState = radioFailed;
     }
     else
     {
+      DBGLN("Setting up telemetry");
       TelemetryReceiver.SetDataToReceive(CRSFinBuffer, sizeof(CRSFinBuffer));
 
       POWERMGNT::init();
       DynamicPower_Init();
+      DBGLN("Initialized Power Mgmt");
 
       // Set the pkt rate, TLM ratio, and power from the stored eeprom values
       ChangeRadioParams();
+      DBGLN("Setup Radio Params");
 
   #if defined(Regulatory_Domain_EU_CE_2400)
       SetClearChannelAssessmentTime();
   #endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
+      DBGLN("Finished init");
     }
   }
   else
@@ -1462,10 +1484,14 @@ void setup()
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   }
+
+  DBGLN("End Setup");
+
 }
 
 void loop()
 {
+
   uint32_t now = millis();
 
   HandleUARTout(); // Only used for non-CRSF output
@@ -1498,6 +1524,14 @@ void loop()
   executeDeferredFunction(micros());
 
   HandleUARTin();
+
+  // TODO REMOVE
+  // Hack to ignore the lack of a crossfire connection
+  /*if(connectionState == noCrossfire)
+  {
+    connectionState = awaitingModelId;
+    hwTimer::resume();
+  }*/
 
   if (connectionState > MODE_STATES)
   {
