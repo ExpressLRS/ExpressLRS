@@ -40,6 +40,8 @@ void SerialMavlink::processBytes(uint8_t *bytes, u_int16_t size)
 void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
 }
+void setThisSysId(uint8_t sysID){}
+void setTargetSysId(uint8_t sysID){}
 
 #else // ESP-based targets
 
