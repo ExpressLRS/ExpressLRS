@@ -1236,6 +1236,23 @@ void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
     }
 }
 
+void RxConfig::SetTargetSysId(uint8_t value)
+{
+    if (m_config.targetSysId != value)
+    {
+        m_config.targetSysId = value;
+        m_modified = true;
+    }
+}
+void RxConfig::SetSourceSysId(uint8_t value)
+{
+    if (m_config.sourceSysId != value)
+    {
+        m_config.sourceSysId = value;
+        m_modified = true;
+    }
+}
+
 void RxConfig::ReturnLoan()
 {
     if (IsOnLoan())
