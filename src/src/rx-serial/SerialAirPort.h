@@ -11,6 +11,8 @@ public:
     explicit SerialAirPort(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     virtual ~SerialAirPort() {}
 
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_AIRPORT;}
+
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
