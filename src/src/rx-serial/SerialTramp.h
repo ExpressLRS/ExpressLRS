@@ -19,6 +19,8 @@ public:
     }
     virtual ~SerialTramp() {}
 
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_TRAMP;};
+
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;

@@ -25,6 +25,8 @@ public:
     }
     virtual ~SerialSmartAudio() {}
 
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_SMARTAUDIO;};
+
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;

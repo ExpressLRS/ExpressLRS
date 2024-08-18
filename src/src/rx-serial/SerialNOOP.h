@@ -7,6 +7,9 @@ public:
     explicit SerialNOOP() : SerialIO(nullptr, nullptr) {}
     virtual ~SerialNOOP() {}
 
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_OFF;};
+
+
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return  DURATION_NEVER; }

@@ -293,6 +293,8 @@ public:
 
     virtual ~SerialHoTT_TLM() {}
 
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_HOTT_TLM;};
+
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t *data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };

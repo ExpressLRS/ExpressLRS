@@ -6,6 +6,7 @@ public:
     virtual ~SerialCRSF() {}
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_CRSF;};
     void queueMSPFrameTransmission(uint8_t* data) override;
     void queueLinkStatisticsPacket() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;

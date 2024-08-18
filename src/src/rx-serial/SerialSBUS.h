@@ -8,6 +8,8 @@ public:
     }
 
     ~SerialSBUS() override = default;
+    
+    eSerialProtocolType getProtocol(){return SERIAL_PROTOCOL_SBUS;};
 
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override {}
