@@ -15,12 +15,30 @@
  * * sendQueuedData
  * * processBytes
  */
+enum eSerialProtocolType : uint8_t
+{
+    SERIAL_PROTOCOL_OFF,
+    SERIAL_PROTOCOL_CRSF,
+    SERIAL_PROTOCOL_SBUS,
+	SERIAL_PROTOCOL_SUMD,
+    SERIAL_PROTOCOL_DJI_RS_PRO,
+    SERIAL_PROTOCOL_HOTT_TLM,
+    SERIAL_PROTOCOL_MAVLINK,
+    SERIAL_PROTOCOL_TRAMP,
+    SERIAL_PROTOCOL_SMARTAUDIO,
+
+    SERIAL_PROTOCOL_UNKNOWN = 255
+};
+
 class SerialIO {
 public:
 
     SerialIO(Stream *output, Stream *input) : _outputPort(output), _inputPort(input) {}
     virtual ~SerialIO() {}
 
+    virtual eSerialProtocolType getProtocol(){
+        return SERIAL_PROTOCOL_UNKNOWN;
+    };
     /**
      * @brief Set the Failsafe flag
      *

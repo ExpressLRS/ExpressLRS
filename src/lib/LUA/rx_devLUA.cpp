@@ -535,10 +535,11 @@ static void registerLuaParameters()
 
 eSerialProtocol prot0 = config.GetSerialProtocol();
 bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
-#if defined(PLATFORM_ESP32)
+
+/*#if defined(PLATFORM_ESP32) //We do not support MAVLink on serial 1// protocol 1
   eSerial1Protocol prot1 = config.GetSerial1Protocol();
   hasMavlink = hasMavlink || (prot1 == PROTOCOL_MAVLINK);
-#endif
+#endif*/
 
   if (hasMavlink)
   {

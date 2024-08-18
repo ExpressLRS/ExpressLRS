@@ -13,6 +13,10 @@ class SerialMavlink : public SerialIO {
 public:
     explicit SerialMavlink(Stream &out, Stream &in);
     virtual ~SerialMavlink() {}
+    
+    eSerialProtocolType getProtocol(){
+        return SERIAL_PROTOCOL_MAVLINK;
+    }
 
     void queueLinkStatisticsPacket() override {}
     void queueMSPFrameTransmission(uint8_t* data) override {}
@@ -21,13 +25,14 @@ public:
     int getMaxSerialReadSize() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
-private:
+    friend void setThisSysId(uint8_t sysID);
+    friend void setTargetSysId(uint8_t sysID);
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
-    const uint8_t this_system_id;
+    uint8_t this_system_id;
     const uint8_t this_component_id;
 
-    const uint8_t target_system_id;
+    uint8_t target_system_id;
     const uint8_t target_component_id;
 
     uint32_t lastSentFlowCtrl = 0;

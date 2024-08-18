@@ -174,6 +174,21 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     }
 }
 
+extern SerialIO* serialIO;
+
+void setThisSysId(uint8_t sysID){
+        if (serialIO->getProtocol()==SERIAL_PROTOCOL_MAVLINK){
+            SerialMavlink* port = (SerialMavlink*)(serialIO);
+            port->this_system_id = sysID;
+
+        }
+    };
+void setTargetSysId(uint8_t sysID){
+        if (serialIO->getProtocol()==SERIAL_PROTOCOL_MAVLINK){
+            SerialMavlink* port = (SerialMavlink*)(serialIO);
+            port->target_system_id = sysID;
+        }
+    };
 #endif // defined(PLATFORM_STM32)
 
 #endif // defined(TARGET_RX)
