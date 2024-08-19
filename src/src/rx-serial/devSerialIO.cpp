@@ -7,13 +7,14 @@
 #include "SerialIO.h"
 #include "CRSF.h"
 #include "config.h"
-
 #define NO_SERIALIO_INTERVAL 1000
 
 extern SerialIO *serialIO;
 #if defined(PLATFORM_ESP32)
 extern SerialIO *serial1IO;
 #endif
+extern void setTargetSysId(uint8_t sysID);
+extern void setThisSysId(uint8_t sysID);
 
 enum teamraceOutputInhibitState_e {
     troiPass = 0,               // Allow all packets through, normal operation
@@ -81,6 +82,11 @@ static int event(devserial_ctx_t *ctx)
 
 static int event0()
 {
+    if ((*(serial0.io))->getProtocol() == SERIAL_PROTOCOL_MAVLINK)  //Set this and target sysId only if we have mavlink enabled,
+    {
+        setTargetSysId(config.GetTargetSysId());
+        setThisSysId(config.GetSourceSysId());
+    }
     return event(&serial0);
 }
 
