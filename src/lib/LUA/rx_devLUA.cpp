@@ -541,6 +541,7 @@ bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
   hasMavlink = hasMavlink || (prot1 == PROTOCOL_MAVLINK);
 #endif*/
 
+
   if (hasMavlink)
   {
     registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
