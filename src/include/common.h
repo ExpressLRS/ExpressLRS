@@ -238,7 +238,7 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_HOTT_TLM,
     PROTOCOL_SERIAL1_TRAMP,
     PROTOCOL_SERIAL1_SMARTAUDIO,
-};  //if MAVLink is added to Serial 1 enable hasMavlink check in rx_devLUA.cpp
+};  //if MAVLink is added to Serial 1 enable hasMavlink check in rx_devLUA.cpp and move setters from event0 to event
 #endif
 
 enum eFailsafeMode : uint8_t
