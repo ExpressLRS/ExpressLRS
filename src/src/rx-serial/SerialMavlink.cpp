@@ -181,14 +181,14 @@ extern SerialIO* serialIO;
 void setThisSysId(uint8_t sysID){
         if (serialIO->getProtocol()==SERIAL_PROTOCOL_MAVLINK){
             SerialMavlink* port = (SerialMavlink*)(serialIO);
-            port->this_system_id = sysID;
+            port->this_system_id = sysID ? sysID : 255;
 
         }
     };
 void setTargetSysId(uint8_t sysID){
         if (serialIO->getProtocol()==SERIAL_PROTOCOL_MAVLINK){
             SerialMavlink* port = (SerialMavlink*)(serialIO);
-            port->target_system_id = sysID;
+            port->target_system_id = sysID ? sysID : 1;
         }
     };
 #endif // defined(PLATFORM_STM32)
