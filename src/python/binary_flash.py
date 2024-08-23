@@ -91,7 +91,7 @@ def upload_esp8266_bf(args, options):
     if retval != ElrsUploadResult.Success:
         return retval
     try:
-        cmd = ['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'soft_reset', '--no-stub', 'write_flash']
+        cmd = ['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'soft_reset', 'write_flash']
         if args.erase: cmd.append('--erase-all')
         cmd.extend(['0x0000', args.file.name])
         esptool.main(cmd)
