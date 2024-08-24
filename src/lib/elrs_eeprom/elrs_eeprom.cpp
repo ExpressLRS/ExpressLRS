@@ -24,7 +24,6 @@
 void
 ELRS_EEPROM::Begin()
 {
-    DBGLN("MUST PRINT");
 #if defined(PLATFORM_STM32)
     #if defined(STM32_USE_FLASH)
         eeprom_buffer_fill();

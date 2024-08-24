@@ -17,7 +17,9 @@ static bool alreadyInit = false;
 
 #ifdef FRSKY_R9MM 
 static HardwareTimer *MyTim = new HardwareTimer(TIM3);   // Changed this to TIM3 so we can use TIM1 for PWMs  
-#elif defined(M0139) && !defined(TARGET_TX)
+#elif defined(M0139) && defined(TARGET_TX)
+static HardwareTimer *MyTim = new HardwareTimer(TIM1);
+#elif defined(M0139) && defined(TARGET_RX)
 static HardwareTimer *MyTim = new HardwareTimer(TIM2);   // Changed this to TIM2 so we can use TIM1 and TIM3 for PWMs  
 #elif defined(TIM1)
 static HardwareTimer *MyTim = new HardwareTimer(TIM1);
@@ -33,7 +35,7 @@ void hwTimer::init(void (*callbackTick)(), void (*callbackTock)())
         hwTimer::callbackTick = callbackTick;
         hwTimer::callbackTock = callbackTock;
         MyTim->attachInterrupt(hwTimer::callback);
-        MyTim->setMode(1, TIMER_OUTPUT_COMPARE);
+        MyTim->setMode(1, TIMER_DISABLED);
 #if defined(TARGET_TX)
         // The prescaler only adjusts AFTER the overflow interrupt fires so
         // to make Pause() work, the prescaler needs to be fixed to avoid

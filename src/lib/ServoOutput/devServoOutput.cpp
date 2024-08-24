@@ -210,9 +210,10 @@ static void initialize()
             {
                 DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
             }
-
+#ifndef M0139
             pinMode(pin, OUTPUT);
             digitalWrite(pin, LOW);
+#endif // !M0139
         }
     }
 }
@@ -226,6 +227,7 @@ static int start()
         if (frequency && servoPins[ch] != UNDEF_PIN)
         {
             pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+            pwmInputChannels[ch] = chConfig->val.inputChannel;
         }
 #if defined(PLATFORM_ESP32)
         else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
@@ -248,6 +250,8 @@ static int event()
     // }
 
     if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_VAL){
+        updatePWM = false;
+
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
             if(pwmInputChannels[ch] == pwmInputChannel)
@@ -256,7 +260,6 @@ static int event()
                     return DURATION_IMMEDIATELY;
                 }
 
-                updatePWM = false;
                 if (pwmType == 's'){
                     PWM.setMicroseconds(pwmChannels[ch], pwmValue);
                 }
@@ -271,13 +274,35 @@ static int event()
         
         // If channel is active then we should stop it first
         //if (PWM.isPwmActive(pwmOutputChannel)){
+
+        int8_t pin = -1;
+        switch(pwmPin) {
+            case 0:
+                pin = Ch1;
+                break;
+            case 1:
+                pin = Ch2;
+                break;
+            case 2:
+                pin = Ch3;
+                break;
+            case 3:
+                pin = Ch4;
+                break;
+        }
         
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
-            if(servoPins[ch] == pwmPin)
+            // Skip changing channel if the new channel is the same as the old one
+            if(servoPins[ch] == pin && pwmInputChannels[ch] != pwmInputChannel)
             {
-                PWM.release(pwmPin);
-                pwmChannels[ch] = PWM.allocate(pwmPin, 50U);
+                // Release the pin from its old allocation (potentially unnecessary)
+                //PWM.release(pin);
+                //pwmChannels[ch] = PWM.allocate(pin, 50U);
+
+                // Set the new channel
+                config.SetPwmChannel(ch, 0, pwmInputChannel, false, som50Hz, false);
+                pwmInputChannels[ch] = pwmInputChannel;
                 break;
             }
         }

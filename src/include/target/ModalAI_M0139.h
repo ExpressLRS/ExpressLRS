@@ -43,9 +43,10 @@ https://github.com/jaxxzer
 
 #define BACKPACK_LOGGING_BAUD       420000
 #ifndef DEVICE_NAME
-    #define DEVICE_NAME "ModalAI M0139"
+    #define DEVICE_NAME "ModalAI M0184"
 #endif
 
+// LED Pins
 #define GPIO_PIN_LED_RED        PA12  // Red
 #define GPIO_PIN_LED_GREEN      PB3   // Green
 #define GPIO_PIN_BUTTON         PA1   // pullup e.g. LOW when pressed
@@ -53,16 +54,30 @@ https://github.com/jaxxzer
 // Output Power - Default to SX1276 max output
 #define POWER_OUTPUT_FIXED 127 //MAX power for 900 RXes
 
+// PWM Channels
+#define Ch1    PB0     // TIM3 CH3
+#define Ch2    PB1     // TIM3 CH4 
+#define Ch3    PA8     // TIM1 CH1 
+#define Ch4    PA11    // TIM1 CH4 
+
 // No PWM on TX
 #ifdef TARGET_RX
 // External pads
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS (int[]){Ch1, Ch2, Ch3, Ch4}
 #define GPIO_PIN_PWM_OUTPUTS_COUNT 4
-#define Ch1    PB0     // TIM3 CH3
-#define Ch2    PB1     // TIM3 CH4 
-#define Ch3    PA8     // TIM1 CH1 
-#define Ch4    PA11    // TIM1 CH4 
+#else
+#define CRSF_INVERTER
+
+#endif
+
+// Software inverter for half-duplex CRSF communication
+#ifdef CRSF_INVERTER
+#define INVERTER_HANDSET_PIN Ch2
+#define INVERTER_RADIO_PIN Ch1
+
+#define INVERTER_IRQ_HANDSET EXTI1_IRQn
+#define INVERTER_IRQ_RADIO EXTI0_IRQn
 #endif
 
 #define M0139
@@ -73,3 +88,5 @@ https://github.com/jaxxzer
 #define STM32F1xx 1
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin
+
+#define DEBUG_RTT

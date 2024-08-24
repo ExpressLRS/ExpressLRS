@@ -1382,12 +1382,31 @@ void setup()
 {
   #if defined(FRSKY_R9MM) || defined(M0139)
   HAL_Init();
-  __enable_irq();
+  __disable_irq();
   #endif
 
   #ifdef M0139
+
+  #ifdef DEBUG_RTT
   SEGGER_RTT_Init();
   #endif
+
+  LL_GPIO_DeInit(GPIOA);
+  LL_GPIO_InitTypeDef pin_init = {
+    .Pin=STM_LL_GPIO_PIN(digitalPinToPinName(PA9)),
+    .Mode=LL_GPIO_MODE_FLOATING,
+    .Speed=LL_GPIO_MODE_OUTPUT_50MHz,
+    .OutputType=LL_GPIO_OUTPUT_PUSHPULL,
+    .Pull=LL_GPIO_PULL_UP,
+  };
+  LL_GPIO_Init(GPIOA, &pin_init);
+
+  #endif
+
+  //DBGLN("TIM1: %p, TIM2: %p, TIM3: %p, TIM4: %p", TIM1, TIM2, TIM3, TIM4);
+  //DBGLN("TIM1: %d, TIM2: %d, TIM3: %d, TIM4: %d", TIMER1_INDEX, TIMER2_INDEX, TIMER3_INDEX, TIMER4_INDEX);
+  DBGLN("TIMER_SERIAL: %p, TIM1: %p", TIMER_SERIAL, TIM1);
+
   if (setupHardwareFromOptions())
   {
     setupTarget();
@@ -1484,6 +1503,10 @@ void setup()
     config.SetMotionMode(0); // Ensure motion detection is off
     UARTconnected();
   }
+
+#ifdef M0139
+  __enable_irq();
+#endif
 
   DBGLN("End Setup");
 

@@ -18,8 +18,15 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
 #elif defined(M0139)
-//HardwareSerial CRSFHandset::Port((PinName)PA_9, (PinName)PA_9);
-SoftwareSerial CRSFHandset::Port(PA9, PA9, true);
+// Must cast to PinName to use the correct constructor
+// HardwareSerial uses hardware pins not arduino pins so PA_9 instead of PA9
+HardwareSerial CRSFHandset::Port((PinName)PA_9, (PinName)PA_9);
+// Need the HAL to adjust interrupt priorities
+// Arduino code already redefines the EXTI callback so must use arduino interrupt system
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
+#include "stm32f1xx_hal_exti.h"
+
 #elif defined(PLATFORM_STM32)
 HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #if defined(STM32F3) || defined(STM32F3xx)
@@ -28,6 +35,8 @@ HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
 #elif defined(STM32F1) || defined(STM32F1xx)
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_gpio.h"
+#include "stm32f1xx_hal_exti.h"
+#include "arduino.h"
 #endif
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSFHandset::Port = Serial;
@@ -61,6 +70,61 @@ uint32_t CRSFHandset::UARTrequestedBaud = 5250000;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
 static const int UARTwdtInterval = 1000;
+
+#ifdef CRSF_INVERTER
+void _inverter_rx_cb(void)
+{
+    __disable_irq();
+    if(digitalRead(INVERTER_HANDSET_PIN))
+    {
+        //HAL_GPIO_WritePin(GPIOA, 10, GPIO_PIN_RESET);
+        digitalWrite(INVERTER_RADIO_PIN, LOW);
+    }
+    else {
+        //HAL_GPIO_WritePin(GPIOA, 10, GPIO_PIN_SET);
+        digitalWrite(INVERTER_RADIO_PIN, HIGH);
+    }
+    __enable_irq();
+}
+
+void _inverter_tx_cb(void)
+{
+    __disable_irq();
+    if(digitalRead(INVERTER_RADIO_PIN))
+    {
+        //HAL_GPIO_WritePin(GPIOA, 10, GPIO_PIN_RESET);
+        digitalWrite(INVERTER_HANDSET_PIN, LOW);
+    }
+    else {
+        //HAL_GPIO_WritePin(GPIOA, 10, GPIO_PIN_SET);
+        digitalWrite(INVERTER_HANDSET_PIN, HIGH);
+    }
+    __enable_irq();
+}
+
+void _inverter_set_rx(void)
+{
+    detachInterrupt(digitalPinToInterrupt(INVERTER_RADIO_PIN));
+    pinMode(INVERTER_RADIO_PIN, OUTPUT);
+    pinMode(INVERTER_HANDSET_PIN, INPUT);
+
+    attachInterrupt(digitalPinToInterrupt(INVERTER_HANDSET_PIN), &_inverter_rx_cb, CHANGE);
+    HAL_NVIC_SetPriority(INVERTER_IRQ_HANDSET, 0, 0);
+    HAL_NVIC_EnableIRQ(INVERTER_IRQ_HANDSET);
+}
+
+void _inverter_set_tx(void)
+{
+    detachInterrupt(digitalPinToInterrupt(INVERTER_HANDSET_PIN));
+    pinMode(INVERTER_HANDSET_PIN, OUTPUT);
+    pinMode(INVERTER_RADIO_PIN, INPUT_PULLUP);
+
+    // Needs input to start low
+    attachInterrupt(digitalPinToInterrupt(INVERTER_RADIO_PIN), &_inverter_tx_cb, CHANGE);
+    HAL_NVIC_SetPriority(INVERTER_IRQ_RADIO, 0, 0);
+    HAL_NVIC_EnableIRQ(INVERTER_IRQ_RADIO);
+}
+#endif
 
 void CRSFHandset::Begin()
 {
@@ -101,7 +165,7 @@ void CRSFHandset::Begin()
 
     // TODO convert correctly
     //CRSFHandset::Port.setTx((PinName)GPIO_PIN_RCSIGNAL_TX);
-    //CRSFHandset::Port.setRx((PinName)GPIO_PIN_RCSIGNAL_RX);
+    //CRSTODOFHandset::Port.setRx((PinName)GPIO_PIN_RCSIGNAL_RX);
 
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
@@ -125,9 +189,13 @@ void CRSFHandset::Begin()
     USART2->CR1 |= USART_CR1_UE;
 #endif
     DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
-    CRSFHandset::Port.flush();
+    //CRSFHandset::Port.flush();
     flush_port_input();
-    CRSFHandset::Port.listen();
+    CRSFHandset::Port.enableHalfDuplexRx();
+#if defined(CRSF_INVERTER)
+    _inverter_set_rx();
+#endif
+    interrupts();
 #endif
 }
 
@@ -470,6 +538,8 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < 3)
         return;
 
+    DBGLN("%x | %x | %x", SerialInBuffer[0], SerialInBuffer[1], SerialInBuffer[2]);
+
     // Sanity check: A total packet must be at least [sync][len][type][crc] (if no payload) and at most CRSF_MAX_PACKET_LEN
     const uint32_t totalLen = SerialInBuffer[1] + 2;
     if (totalLen < 4 || totalLen > CRSF_MAX_PACKET_LEN)
@@ -483,6 +553,7 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < totalLen)
         return;
 
+    // TODO: Investigate
     uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
@@ -536,7 +607,7 @@ void CRSFHandset::handleOutput(int receivedBytes)
             if (!transmitting)
             {
                 transmitting = true;
-                duplex_set_TX();
+                //duplex_set_TX();
             }
         }
 
@@ -556,6 +627,7 @@ void CRSFHandset::handleOutput(int receivedBytes)
             uint8_t writeLength = std::min(packageLengthRemaining, periodBytesRemaining);
 
             // write the packet out, if it's a large package the offset holds the starting position
+            duplex_set_TX();
             CRSFHandset::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
             if (CRSFHandset::PortSecondary)
             {
@@ -591,8 +663,12 @@ void CRSFHandset::duplex_set_RX() const
 #elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    //CRSFHandset::Port.enableHalfDuplexRx();
-    CRSFHandset::Port.listen();
+    CRSFHandset::Port.enableHalfDuplexRx();
+    //CRSFHandset::Port.listen();
+#if defined(CRSF_INVERTER)
+    _inverter_set_rx();
+#endif
+
 #endif
 }
 
@@ -624,7 +700,11 @@ void CRSFHandset::duplex_set_TX() const
     digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
 #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
     // writing to the port switches the mode
-    CRSFHandset::Port.stopListening();
+    //CRSFHandset::Port.stopListening();
+#if defined(CRSF_INVERTER)
+    _inverter_set_tx();
+#endif
+
 #endif
 }
 
@@ -757,9 +837,6 @@ uint32_t CRSFHandset::autobaud()
 }
 #else
 uint32_t CRSFHandset::autobaud() {
-    // TODO REMOVE
-    // FIX BAUD FOR TESTING
-    return 115200;
     UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);
     return TxToHandsetBauds[UARTcurrentBaudIdx];
 }

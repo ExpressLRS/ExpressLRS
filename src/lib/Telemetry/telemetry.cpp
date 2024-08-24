@@ -49,9 +49,9 @@ bool Telemetry::ShouldCallUnbind()
 
 bool Telemetry::ShouldCallUpdatePWM()
 {
-    bool updatePWM = callUpdatePWM;
+    bool pwmUp = callUpdatePWM;
     callUpdatePWM = false;
-    return updatePWM;
+    return pwmUp;
 }
 
 bool Telemetry::ShouldCallUpdateUID()

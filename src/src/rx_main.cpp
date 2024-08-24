@@ -217,8 +217,6 @@ bool didFHSS = false;
 bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
-bool InForceUnbindMode = false;
-
 //////////////////////////////////////////////////////////////
 
 ///////Variables for Telemetry and Link Quality///////////////
@@ -1737,7 +1735,6 @@ static void cycleRfMode(unsigned long now)
 
 static void EnterBindingMode()
 {
-    InForceUnbindMode = false;
     if (InBindingMode)
     {
         DBGLN("Already in binding mode");
@@ -1760,8 +1757,8 @@ static void EnterBindingMode()
     {
         DBGLN("EnterBindingMode: Gemini mode");
         DBGLN("Init Gemini Freq: %u",FHSSgetInitialGeminiFreq());
-        // Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
-        Radio.SetFrequencyReg(FHSSgetInitialFreq(), SX12XX_Radio_2);    // Just doing this for testing since don't have gemini tx module rn..
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+        // Radio.SetFrequencyReg(FHSSgetInitialFreq(), SX12XX_Radio_2);    // Just doing this for testing since don't have gemini tx module rn..
         DBGLN("Current Freq: %u",Radio.currFreq);
     }
     DBGLN("Enter Bind Mode RXnb");
@@ -1897,11 +1894,9 @@ void EnterBindingModeSafely()
 void EnterUnbindMode()
 {
     DBGLN("Received Unbind command");
-    //InForceUnbindMode = true;
-    //config.SetIsBound(false);
-    //LostConnection(true);
-    //memcpy(UID, MasterUID, sizeof(UID));
-    //devicesTriggerEvent();
+    LostConnection(true);
+    memcpy(UID, config.GetUID(), UID_LEN);
+    devicesTriggerEvent();
 }
 
 static void checkSendLinkStatsToFc(uint32_t now)
@@ -2055,9 +2050,9 @@ void resetConfigAndReboot()
 
 void setup()
 {
-    DBGLN("PA9: %d, PA_9: %d, PA8: %d, PA_8: %d", PA9, PA_9, PA8, PA_8);
     #if defined(FRSKY_R9MM) || defined(M0139)
-    __enable_irq();
+    HAL_Init();
+    SEGGER_RTT_Init();
     #endif
 
     #if defined(TARGET_UNIFIED_RX)
@@ -2151,6 +2146,7 @@ void setup()
             Radio.RXnb();
             hwTimer::init(HWtimerCallbackTick, HWtimerCallbackTock);
         }
+
     }
 
 #if defined(HAS_BUTTON)
@@ -2158,11 +2154,16 @@ void setup()
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
 #endif
 
+
     devicesStart();
 
     // setup() eats up some of this time, which can cause the first mode connection to fail.
     // Resetting the time here give the first mode a better chance of connection.
     RFmodeLastCycled = millis();
+
+#ifdef M0139
+    __enable_irq();
+#endif
 }
 
 #if defined(PLATFORM_ESP32_C3)

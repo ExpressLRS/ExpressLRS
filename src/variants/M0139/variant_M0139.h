@@ -106,7 +106,7 @@ extern "C" {
 #define TIMER_TONE              TIM3
 #define TIMER_SERVO             TIM4
 
-#define TIMER_SERIAL            TIM1
+#define TIMER_SERIAL            TIM3
 
 // UART Definitions
 #define SERIAL_UART_INSTANCE    1 //Connected to ST-Link

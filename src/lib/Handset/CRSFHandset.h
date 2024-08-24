@@ -4,11 +4,7 @@
 #include "handset.h"
 #include "crsf_protocol.h"
 #ifndef TARGET_NATIVE
-#ifdef M0139
-#include "SoftwareSerial.h"
-#else
 #include "HardwareSerial.h"
-#endif
 #endif
 #include "common.h"
 
@@ -30,7 +26,7 @@ public:
     void handleOutput(int receivedBytes);
 
 #ifdef M0139
-    static SoftwareSerial Port;
+    static HardwareSerial Port;
 #else
     static HardwareSerial Port;
 #endif

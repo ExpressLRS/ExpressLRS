@@ -1,8 +1,10 @@
 #include "PWM.h"
 
 #if defined(M0139) && defined(TARGET_RX)
+#include <Arduino.h>
 #include "logging.h"
 #include "variant_M0139.h"
+#include "stm32f1xx_hal.h"
 extern bool servoInitialized;
 
 /* Private variables */
@@ -47,31 +49,31 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
             refreshInterval[channel] = 1000000U / frequency;
             switch(pin){
                 case Ch1:
-                    // DBGLN("Starting PWM on: _pins[%u] %u", ch, pin);
+                    DBGLN("Starting PWM on: %u", pin);
                     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
                     __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, 0);  // ALL LEDs OFF
                     break;
                 
                 case Ch2:
-                    // DBGLN("Starting PWM on: _pins[%u] %u", ch, pin);
+                    DBGLN("Starting PWM on: %u", pin);
                     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
                     __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_4, 0);  // ALL LEDs OFF
                     break;
 
                 case Ch3:
-                    // DBGLN("Starting PWM on: _pins[%u] %u", ch, pin);
+                    DBGLN("Starting PWM on: %u", pin);
                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
                     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, 0);  // ALL LEDs OFF
                     break;
                 
                 case Ch4:
-                    // DBGLN("Starting PWM on: _pins[%u] %u", ch, pin);
+                    DBGLN("Starting PWM on: %u", pin);
                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
                     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_4, 0);  // ALL LEDs OFF
                     break;
 
                 default:
-                    // DBGLN("Trying to start Undefined pin: _pins[%u] %u", ch, pin);
+                    DBGLN("Trying to start Undefined pin: %u", pin);
                     break;
             }
 
@@ -117,7 +119,6 @@ void PWMController::release(pwm_channel_t channel)
             break;
     }
 
-    digitalWrite(pin, LOW);
     refreshInterval[channel] = 0;
     pwm_gpio[channel] = -1;
 }
@@ -204,7 +205,7 @@ void PWMController::initialize()
     GPIO_Init();
     TIM1_Init();
     TIM3_Init();
-    DBGLN("Initializing PWMs DONE");    
+    DBGLN("Initializing PWMs DONE");   
 }
 
 /**
@@ -238,7 +239,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
   else if(htim->Instance==TIM3)
   {
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**TIM2 GPIO Configuration
+    /**TIM3 GPIO Configuration
     PB0     ------> TIM3_CH3
     PB1     ------> TIM3_CH4
     */
@@ -272,7 +273,7 @@ static void TIM1_Init(void)
   htim1.Init.Period = 2068;         // 2100 us at 1 MHz 
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     PWM_Error_Handler();
@@ -343,7 +344,7 @@ static void TIM3_Init(void)
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 2068;         // 2100 us at 1 MHz 
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     PWM_Error_Handler();
@@ -364,7 +365,7 @@ static void TIM3_Init(void)
     PWM_Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 500;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)

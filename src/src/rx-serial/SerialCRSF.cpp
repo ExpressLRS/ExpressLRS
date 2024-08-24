@@ -179,7 +179,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             pwmValue = telemetry.GetPwmValue();
             DBGLN("Pwm Pin: %u\tPwm Cmd: %u", pwmPin, pwmCmd);
             DBGLN("Input Ch: %u\tOutput Ch: %u", pwmInputChannel, pwmOutputChannel);
-            DBGLN("Pwm Type: %s\tPwm Val: %u", pwmType, pwmValue);
+            DBGLN("Pwm Type: %c\tPwm Val: %u", pwmType, pwmValue);
             ServoOut_device.event();
         }
     }

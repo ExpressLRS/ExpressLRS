@@ -61,10 +61,10 @@ void debugFreeInitLogger();
   },LOGGING_UART.println("ERROR: " msg))
 #endif
 
-#if defined(DEBUG_LOG) && defined(M0139)
+#if defined(DEBUG_LOG) && defined(M0139) && defined(DEBUG_RTT)
     #define DBG(msg, ...)   debugPrintf(msg, ##__VA_ARGS__)
     #define DBGLN(msg, ...) do { \
-      debugPrintf(msg, ##__VA_ARGS__); \
+      SEGGER_RTT_printf(0, msg, ##__VA_ARGS__); \
       SEGGER_RTT_Write(0, "\n", 1); \
     } while(0)
     #define DBGCR SEGGER_RTT_Write(0, "\n", 1);
