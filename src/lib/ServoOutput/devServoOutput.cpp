@@ -242,13 +242,7 @@ static int start()
 
 static int event()
 {
-    #if defined(M0139)
-    // if (InForceUnbindMode){
-    //     servosFailsafe();
-    //     servoMgr->stopAllPwm();
-    //     return DURATION_NEVER;
-    // }
-
+    // Change pwm value from telemetry command
     if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_VAL){
         updatePWM = false;
 
@@ -268,12 +262,9 @@ static int event()
                 }
             }
         }
-
+    // Change pwm channel from telemetry command
     } else if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_CH){
         updatePWM = false;
-        
-        // If channel is active then we should stop it first
-        //if (PWM.isPwmActive(pwmOutputChannel)){
 
         int8_t pin = -1;
         switch(pwmPin) {
@@ -296,7 +287,8 @@ static int event()
             // Skip changing channel if the new channel is the same as the old one
             if(servoPins[ch] == pin && pwmInputChannels[ch] != pwmInputChannel)
             {
-                // Release the pin from its old allocation (potentially unnecessary)
+                // TODO: Allow setting the mode and failsafe as well
+                // Release the pin from its old allocation (unnecessary if not changing modes so commented out)
                 //PWM.release(pin);
                 //pwmChannels[ch] = PWM.allocate(pin, 50U);
 
@@ -307,8 +299,6 @@ static int event()
             }
         }
     }
-
-#endif // End FRSKY_R9MM || M0139
 
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {

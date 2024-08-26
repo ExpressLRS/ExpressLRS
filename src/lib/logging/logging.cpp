@@ -51,13 +51,13 @@ void debugPrintf(const char* fmt, ...)
         default:
           break;
       }
-      #if defined(M0139) && defined(DEBUG_RTT)
+      #if defined(DEBUG_RTT)
       SEGGER_RTT_WriteString(0, v);
       #else
       LOGGING_UART.write((uint8_t*)v, strlen(v));
       #endif
     } else {
-      #if defined(M0139) && defined(DEBUG_RTT)
+      #if defined(DEBUG_RTT)
       SEGGER_RTT_Write(0, &c, 1);
       #else
       LOGGING_UART.write(c);
