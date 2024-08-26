@@ -198,30 +198,15 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
 #ifdef M0139
     setNss(radioNumber, LOW);
     if (radioNumber == SX12XX_Radio_1){
-        //digitalWrite(GPIO_PIN_NSS, LOW);
-        //DBGLN("Reading Radio 1 SPI");
         SPI_1.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS, HIGH);
-        //DBGLN("SPI 1 OUT: 0x%x %x", buf[0], buf[1]);
     }
 #ifdef DUAL_RADIO
     else if (radioNumber == SX12XX_Radio_2){
-        //digitalWrite(GPIO_PIN_NSS_2, LOW);
-        //DBGLN("Reading Radio 2 SPI");
         SPI_2.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS_2, HIGH);
     } 
     else{
-        //digitalWrite(GPIO_PIN_NSS, LOW);
-        //DBGLN("Reading BOTH RADIOS");
-        // DBGLN("Reading Radio 1 SPI");
         SPI_1.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS, HIGH);
-
-        //digitalWrite(GPIO_PIN_NSS_2, LOW);
-        // DBGLN("Reading Radio 2 SPI");
         SPI_2.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS_2, HIGH);
     }
 #endif
     resetNss(HIGH);
@@ -263,30 +248,15 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_
 #ifdef M0139
     setNss(radioNumber, LOW);
     if (radioNumber == SX12XX_Radio_1){
-        //digitalWrite(GPIO_PIN_NSS, LOW);
-        //DBGLN("Reading Radio 1 SPI");
         SPI_1.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS, HIGH);
-        //DBGLN("SPI 1 OUT: 0x%x %x", buf[0], buf[1]);
     }
 #ifdef DUAL_RADIO
     else if (radioNumber == SX12XX_Radio_2){
-        //digitalWrite(GPIO_PIN_NSS_2, LOW);
-        //DBGLN("Reading Radio 2 SPI");
         SPI_2.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS_2, HIGH);
     } 
     else{
-        //digitalWrite(GPIO_PIN_NSS, LOW);
-        //DBGLN("Reading BOTH RADIOS");
-        // DBGLN("Reading Radio 1 SPI");
         SPI_1.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS, HIGH);
-
-        //digitalWrite(GPIO_PIN_NSS_2, LOW);
-        // DBGLN("Reading Radio 2 SPI");
         SPI_2.transfer(buf, numBytes + 1);
-        //digitalWrite(GPIO_PIN_NSS_2, HIGH);
     }
 #endif
     resetNss(HIGH);

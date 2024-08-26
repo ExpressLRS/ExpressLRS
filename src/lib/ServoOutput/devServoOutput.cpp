@@ -267,6 +267,7 @@ static int event()
         updatePWM = false;
 
         int8_t pin = -1;
+#ifdef M0139
         switch(pwmPin) {
             case 0:
                 pin = Ch1;
@@ -281,6 +282,9 @@ static int event()
                 pin = Ch4;
                 break;
         }
+#else
+        pin = pwmPin;
+#endif
         
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
