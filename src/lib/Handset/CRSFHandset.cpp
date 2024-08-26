@@ -159,23 +159,24 @@ void CRSFHandset::Begin()
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
+#elif defined(M0139)
+    halfDuplex = true;
+    CRSFHandset::Port.begin(UARTrequestedBaud);
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART %d : %d", GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
     halfDuplex = true;
 
-    // TODO convert correctly
-    //CRSFHandset::Port.setTx((PinName)GPIO_PIN_RCSIGNAL_TX);
-    //CRSTODOFHandset::Port.setRx((PinName)GPIO_PIN_RCSIGNAL_RX);
+    CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSTODOFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
 
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
     digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
     #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    //CRSFHandset::Port.setHalfDuplex();
+    CRSFHandset::Port.setHalfDuplex();
     #endif
 
-    //CRSFHandset::Port.begin(UARTrequestedBaud);
-    CRSFHandset::Port.begin(115200);
+    CRSFHandset::Port.begin(UARTrequestedBaud);
 
 #if defined(TARGET_TX_GHOST)
     USART1->CR1 &= ~USART_CR1_UE;
@@ -553,7 +554,6 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < totalLen)
         return;
 
-    // TODO: Investigate
     uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {

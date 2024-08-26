@@ -90,8 +90,6 @@ void PWMController::release(pwm_channel_t channel)
     {
         return;
     }
-    // TODO
-    //stopWaveform8266(pin);
     switch(pin){
         case Ch1:
             __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, 0);
@@ -130,8 +128,6 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
     {
         return;
     }
-    //TODO
-    //_activePwmChannels |= (1 << ch);
     uint16_t mappedValue = 0;
     switch(pin){
         case Ch1:
@@ -163,15 +159,11 @@ void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
 void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds)
 {
     const uint8_t pin = pwm_gpio[channel];
-    // DBGLN("WRITE MICROSECONDS. CH:%u\tPIN:%u\tACTIVE_CHANNELS:%u", ch, pin, _activePwmChannels);
     if (pin == PIN_DISCONNECTED)
     {
         return;
     }
-    //TODO
-    //_activePwmChannels |= (1 << ch);
     uint16_t mappedValue = 0;
-    // DBGLN("Updating PWM on: _pins[%u] %u", ch, pin);
     switch(pin){
         case Ch1:
             mappedValue = map(microseconds, 0, 2100, 0, htim3.Init.Period);

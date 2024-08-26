@@ -2052,6 +2052,9 @@ void setup()
 {
     #if defined(FRSKY_R9MM) || defined(M0139)
     HAL_Init();
+    #endif
+
+    #if defined(DEBUG_RTT) && defined(DEBUG_LOG)
     SEGGER_RTT_Init();
     #endif
 
