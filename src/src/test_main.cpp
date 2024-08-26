@@ -1,13 +1,11 @@
 #ifndef UNIT_TEST
+#include <iostream>
 
-void setup()
+using namespace std;
+
+int main()
 {
-	return;
+	cout << "Doing nothing just keep build all happy!" << endl;
+	return 0;
 }
-
-void loop()
-{
-	return;
-}
-
 #endif

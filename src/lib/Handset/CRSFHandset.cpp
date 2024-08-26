@@ -190,6 +190,8 @@ void CRSFHandset::Begin()
     //CRSFHandset::Port.flush();
     flush_port_input();
     CRSFHandset::Port.enableHalfDuplexRx();
+
+
 #if defined(CRSF_INVERTER)
     _inverter_set_rx();
 #endif
