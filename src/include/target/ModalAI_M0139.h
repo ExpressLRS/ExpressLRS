@@ -82,11 +82,9 @@ https://github.com/jaxxzer
 
 #define M0139
 #define DUAL_RADIO
-//#undef GPIO_PIN_NSS_2
-//#define GPIO_PIN_NSS_2 UNDEF_PIN
 #define STM32F1 1 
 #define STM32F1xx 1
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin
 
-#define DEBUG_RTT
+//#define DEBUG_RTT
