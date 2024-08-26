@@ -164,7 +164,7 @@ void CRSFHandset::Begin()
     halfDuplex = true;
 
     CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSTODOFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+    CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
 
     #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
     pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
