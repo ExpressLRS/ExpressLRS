@@ -14,6 +14,7 @@ extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
 
+#ifdef GPIO_PIN_PWM_OUTPUTS
 // M0139 PWM config via Serial
 extern device_t ServoOut_device;
 
@@ -24,6 +25,7 @@ uint8_t pwmOutputChannel{0};
 uint8_t pwmInputChannel{0};
 uint8_t pwmType{0}; 
 uint16_t pwmValue{0};
+#endif // Servo output
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
@@ -170,6 +172,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
         }
         if (telemetry.ShouldCallUpdatePWM()){
             DBGLN("Received Update PWM command");
+#ifdef GPIO_PIN_PWM_OUTPUTS
             updatePWM = true;
             pwmPin = telemetry.GetPwmPin();
             pwmCmd = telemetry.GetPwmCmd();
@@ -181,6 +184,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             DBGLN("Input Ch: %u\tOutput Ch: %u", pwmInputChannel, pwmOutputChannel);
             DBGLN("Pwm Type: %c\tPwm Val: %u", pwmType, pwmValue);
             ServoOut_device.event();
+#endif // Servo output
         }
     }
 }
