@@ -47,14 +47,24 @@ pwm_channel_t rfAmpPwmChannel = -1;
 
 uint16_t vtxSPIFrequency = 6000;
 static uint16_t vtxSPIFrequencyCurrent = 6000;
+
 uint8_t vtxSPIPowerIdx = 0;
 static uint8_t vtxSPIPowerIdxCurrent = 0;
+
 uint8_t vtxSPIPitmode = 1;
 static uint8_t vtxSPIPitmodeCurrent = 1;
+
+bool vtxPowerAmpEnable = false;
+bool vtxPowerAmpEnableCurrent = false;
+
 static uint8_t RfAmpVrefState = 0;
+
 static uint16_t vtxSPIPWM = MAX_PWM;
+static uint16_t vtxPreviousSPIPWM = 0;
+
 static uint16_t vtxMinPWM = MIN_PWM;
 static uint16_t vtxMaxPWM = MAX_PWM;
+
 static uint16_t VpdSetPoint = 0;
 static uint16_t Vpd = 0;
 
@@ -153,7 +163,11 @@ static void RfAmpVrefOff()
 
 static void setPWM()
 {
-#if defined(PLATFORM_ESP32_S3)
+    if (vtxSPIPWM == vtxPreviousSPIPWM) {
+        return;
+    }
+    vtxPreviousSPIPWM = vtxSPIPWM;
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     PWM.setDuty(rfAmpPwmChannel, vtxSPIPWM * 1000 / 4096);
 #elif defined(PLATFORM_ESP32)
     if (GPIO_PIN_RF_AMP_PWM == 25 || GPIO_PIN_RF_AMP_PWM == 26)
@@ -268,7 +282,7 @@ static void SetVpdSetPoint()
     }
 
     setPWM();
-    DBGLN("Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
+    DBGLN("VTX: Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
 }
 
 static void checkOutputPower()
@@ -294,7 +308,7 @@ static void checkOutputPower()
             VTxOutputDecrease();
         }
 
-        //DBGLN("VTX VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
+        //DBGLN("VTX: VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
     }
 }
 
@@ -384,8 +398,6 @@ static void initialize()
             analogWriteResolution(12); // 0 - 4095
         #endif
         setPWM();
-
-        delay(RTC6705_BOOT_DELAY);
     }
 }
 
@@ -404,26 +416,7 @@ static int start()
     return RTC6705_PLL_SETTLE_TIME_MS;
 #endif
 
-    rtc6705SetFrequency(5999); // Boot with VTx set away from standard frequencies.
-
-    rtc6705PowerAmpOn();
-
-    return VTX_POWER_INTERVAL_MS;
-}
-
-static int event()
-{
-    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
-
-    if (vtxSPIFrequencyCurrent != vtxSPIFrequency || vtxSPIPowerIdxCurrent != vtxSPIPowerIdx || vtxSPIPitmodeCurrent != vtxSPIPitmode)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-
-    return DURATION_IGNORE;
+    return RTC6705_BOOT_DELAY;
 }
 
 static int timeout()
@@ -447,22 +440,36 @@ static int timeout()
     {
         rtc6705SetFrequency(vtxSPIFrequency);
         vtxSPIFrequencyCurrent = vtxSPIFrequency;
+        vtxPowerAmpEnable = true;
 
-        DBGLN("Set VTX frequency: %d", vtxSPIFrequency);
+        DBGLN("VTX: Set frequency: %d", vtxSPIFrequency);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }
 
+    // Note: it's important that the PA is handled after the frequency.
+    if (vtxPowerAmpEnableCurrent != vtxPowerAmpEnable)
+    {
+        DBGLN("VTX: Changing internal PA, old: %d, new: %d", vtxPowerAmpEnableCurrent, vtxPowerAmpEnable);
+        if (vtxPowerAmpEnable)
+        {
+            rtc6705PowerAmpOn();
+        }
+        vtxPowerAmpEnableCurrent = vtxPowerAmpEnable;
+
+        return VTX_POWER_INTERVAL_MS;
+    }
+
     if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
-        DBGLN("Set VTX power: %d", vtxSPIPowerIdx);
+        DBGLN("VTX: Set power: %d", vtxSPIPowerIdx);
         SetVpdSetPoint();
         vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
     }
 
     if (vtxSPIPitmodeCurrent != vtxSPIPitmode)
     {
-        DBGLN("Set PIT mode: %d", vtxSPIPitmode);
+        DBGLN("VTX: Set PIT mode: %d", vtxSPIPitmode);
         vtxSPIPitmodeCurrent = vtxSPIPitmode;
     }
 
@@ -474,7 +481,7 @@ static int timeout()
 device_t VTxSPI_device = {
     .initialize = initialize,
     .start = start,
-    .event = event,
+    .event = nullptr,
     .timeout = timeout
 };
 

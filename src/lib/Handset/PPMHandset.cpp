@@ -9,7 +9,6 @@
 
 #include <driver/rmt.h>
 
-constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
 constexpr auto RMT_TICKS_PER_US = 10;
 
 void PPMHandset::Begin()
@@ -52,13 +51,20 @@ void PPMHandset::handleInput()
     if (items)
     {
         length /= 4; // one RMT = 4 Bytes
-        numChannels = length;
+        int channelCount = 0;
         for (int i = 0; i < length; i++)
         {
             const auto item = items[i];
+            // Stop if there is a 0 duration
+            if (item.duration0 == 0 || item.duration1 == 0)
+            {
+                break;
+            }
+            channelCount ++;
             const auto ppm = (item.duration0 + item.duration1) / RMT_TICKS_PER_US;
             ChannelData[i] = fmap(ppm, 988, 2012, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
         }
+        numChannels = channelCount;
         vRingbufferReturnItem(rb, static_cast<void *>(items));
         lastPPM = now;
     }

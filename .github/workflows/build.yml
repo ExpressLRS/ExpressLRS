@@ -147,7 +147,9 @@ jobs:
           merge-multiple: true
 
       - name: Copy hardware files to firmware folder
-        run: cp -r src/hardware dist/firmware
+        run: |
+          cp -r src/hardware dist/firmware
+          jq 'del(.generic)' src/hardware/targets.json > dist/firmware/hardware/targets.json
 
       - name: Copy Lua to to firmware folder
         run: |
@@ -191,21 +193,27 @@ jobs:
             exit 0
           fi
 
-          echo "Uploading firmware to artifactory"
-          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
+          aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null || NOT_EXIST=true
+          if [ $NOT_EXIST ]; then
+            echo "Uploading firmware to artifactory"
+            aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
 
-          echo "Generating artifact index"
-          aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
-          echo '{' > index.json
-          echo '"branches": {' >> index.json
-          git branch --list --remotes --format '"%(refname:short)": "%(objectname)",' | grep origin/ | sed s/origin.// | grep -f /tmp/hashes | head -c-2 >> index.json
-          echo '' >> index.json
-          echo '},' >> index.json
-          echo '"tags": {' >> index.json
-          git tag --list --format '"%(refname:short)": "%(objectname)",' | grep -f /tmp/hashes | head -c-2 >> index.json
-          echo '' >> index.json
-          echo '}' >> index.json
-          echo '}' >> index.json
+            echo "Generating artifact index"
+            aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
+            echo '{' > index.json
+            echo '"branches": {' >> index.json
+            git branch --list --remotes --format '"%(refname:short)": "%(objectname)",' | grep origin/ | sed s/origin.// | grep -f /tmp/hashes | head -c-2 >> index.json
+            echo '' >> index.json
+            echo '},' >> index.json
+            echo '"tags": {' >> index.json
+            git tag --list --format '"%(refname:short)": "%(objectname)",' | grep -f /tmp/hashes | head -c-2 >> index.json
+            echo '' >> index.json
+            echo '}' >> index.json
+            echo '}' >> index.json
 
-          echo "Uploading artifact index"
-          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json
+            echo "Uploading artifact index"
+            aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json
+          else
+            echo "Not overwriting already existing artifact at $GITHUB_SHA"
+            exit 1
+          fi

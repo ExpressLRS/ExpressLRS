@@ -25,6 +25,8 @@ static const struct {
 } fields[] = {
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
+    {HARDWARE_serial1_rx, "serial1_rx", INT},
+    {HARDWARE_serial1_tx, "serial1_tx", INT},
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
@@ -41,6 +43,8 @@ static const struct {
     {HARDWARE_radio_sck, "radio_sck", INT},
     {HARDWARE_radio_dcdc, "radio_dcdc", BOOL},
     {HARDWARE_radio_rfo_hf, "radio_rfo_hf", BOOL},
+    {HARDWARE_radio_rfsw_ctrl, "radio_rfsw_ctrl", ARRAY},
+    {HARDWARE_radio_rfsw_ctrl_count, "radio_rfsw_ctrl", COUNT},
     {HARDWARE_ant_ctrl, "ant_ctrl", INT},
     {HARDWARE_ant_ctrl_compl, "ant_ctrl_compl", INT},
     {HARDWARE_power_enable, "power_enable", INT},
@@ -221,7 +225,7 @@ bool hardware_init(EspFlashStream &strmFlash)
     builtinHardwareConfig.clear();
 
     Stream *strmSrc;
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;

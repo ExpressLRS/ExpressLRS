@@ -36,7 +36,7 @@ def dequote(str):
     return str
 
 def process_json_flag(define):
-    parts = re.search("-D(.*)\s*=\s*(.*)$", define)
+    parts = re.search(r"-D(.*)\s*=\s*(.*)$", define)
     if parts and define.startswith("-D"):
         if parts.group(1) == "MY_BINDING_PHRASE":
             json_flags['uid'] = [x for x in hashlib.md5(define.encode()).digest()[0:6]]
@@ -45,19 +45,19 @@ def process_json_flag(define):
         if parts.group(1) == "HOME_WIFI_PASSWORD":
             json_flags['wifi-password'] = dequote(parts.group(2))
         if parts.group(1) == "AUTO_WIFI_ON_INTERVAL":
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['wifi-on-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "TLM_REPORT_INTERVAL_MS"  and not isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['tlm-interval'] = int(dequote(parts.group(2)))
         if parts.group(1) == "FAN_MIN_RUNTIME"  and not isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['fan-runtime'] = int(dequote(parts.group(2)))
         if parts.group(1) == "RCVR_UART_BAUD" and isRX:
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
         if parts.group(1) == "USE_AIRPORT_AT_BAUD":
-            parts = re.search("-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
+            parts = re.search(r"-D(.*)\s*=\s*\"?([0-9]+).*\"?$", define)
             json_flags['is-airport'] = True
             if isRX:
                 json_flags['rcvr-uart-baud'] = int(dequote(parts.group(2)))
@@ -71,7 +71,6 @@ def process_json_flag(define):
 def process_build_flag(define):
     if define.startswith("-D") or define.startswith("!-D"):
         if "MY_BINDING_PHRASE" in define:
-            build_flags.append(define)
             bindingPhraseHash = hashlib.md5(define.encode()).digest()
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
             define = "-DMY_UID=" + UIDbytes
@@ -81,15 +80,15 @@ def process_build_flag(define):
             parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
             define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
         if "HOME_WIFI_SSID=" in define:
-            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            parts = re.search(r"(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
                 define = "-DHOME_WIFI_SSID=" + string_to_ascii(parts.group(2))
         if "HOME_WIFI_PASSWORD=" in define:
-            parts = re.search("(.*)=\w*\"(.*)\"$", define)
+            parts = re.search(r"(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
                 define = "-DHOME_WIFI_PASSWORD=" + string_to_ascii(parts.group(2))
         if "DEVICE_NAME=" in define:
-            parts = re.search("(.*)=\w*'?\"(.*)\"'?$", define)
+            parts = re.search(r"(.*)=\w*'?\"(.*)\"'?$", define)
             if parts and parts.group(2):
                 env['DEVICE_NAME'] = parts.group(2)
         if not define in build_flags:
@@ -118,7 +117,7 @@ def condense_flags():
     global build_flags
     for line in build_flags:
         # Some lines have multiple flags so this will split them and remove them all
-        for flag in re.findall("!-D\s*[^\s]+", line):
+        for flag in re.findall(r"!-D\s*[^\s]+", line):
             build_flags = [x.replace(flag,"") for x in build_flags] # remove the removal flag
             build_flags = [x.replace(flag[1:],"") for x in build_flags] # remove the flag if it matches the removal flag
     build_flags = [x for x in build_flags if (x.strip() != "")] # remove any blank items

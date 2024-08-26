@@ -228,6 +228,10 @@ typedef enum
 #define SX127x_TXCONTINUOUSMODE_OFF 0x00
 #define SX127x_PPMOFFSET 0x27
 
+///// SX1276 Regs /////
+#define SX1276_REG_TCXO 0x4B
+#define SX1276_REG_TCXO_ON 0x10
+
 ///// SX1278 Regs /////
 //SX1278 specific register map
 #define SX1278_REG_MODEM_CONFIG_3 0x26

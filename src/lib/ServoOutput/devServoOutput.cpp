@@ -1,5 +1,4 @@
 #if defined(GPIO_PIN_PWM_OUTPUTS)
-
 #include "devServoOutput.h"
 #include "PWM.h"
 #include "CRSF.h"
@@ -10,6 +9,7 @@
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
+static int pwmInputChannels[PWM_MAX_CHANNELS] = {-1};
 
 #if (defined(PLATFORM_ESP32))
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
@@ -20,6 +20,8 @@ const uint8_t RMT_MAX_CHANNELS = 8;
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
+
+constexpr unsigned SERVO_FAILSAFE_MIN = 886U;
 
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
@@ -128,7 +130,14 @@ static void servosUpdate(unsigned long now)
             {
                 us = 3000U - us;
             }
-            servoWrite(ch, us);
+            //
+            if (us < 1050U){
+                servoWrite(ch, SERVO_FAILSAFE_MIN);
+            } else if (us > 1500 && us < 1600){
+                servoWrite(ch, 1450);
+            } else {
+                servoWrite(ch, us);
+            }
         } /* for each servo */
     }     /* if newChannelsAvailable */
 
@@ -149,6 +158,10 @@ static void initialize()
         return;
     }
 
+#if defined(M0139)
+    PWM.initialize();
+#endif //M0139
+
 #if defined(PLATFORM_ESP32)
     uint8_t rmtCH = 0;
 #endif
@@ -159,11 +172,7 @@ static void initialize()
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
 #if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
         // Disconnect the debug UART pins if DEBUG_LOG
-#if defined(PLATFORM_ESP32_S3)
-        if (pin == 43 || pin == 44)
-#else
-        if (pin == 1 || pin == 3)
-#endif
+        if (pin == U0RXD_GPIO_NUM || pin == U0TXD_GPIO_NUM)
         {
             pin = UNDEF_PIN;
         }
@@ -201,9 +210,10 @@ static void initialize()
             {
                 DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
             }
-
+#ifndef M0139
             pinMode(pin, OUTPUT);
             digitalWrite(pin, LOW);
+#endif // !M0139
         }
     }
 }
@@ -217,6 +227,7 @@ static int start()
         if (frequency && servoPins[ch] != UNDEF_PIN)
         {
             pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+            pwmInputChannels[ch] = chConfig->val.inputChannel;
         }
 #if defined(PLATFORM_ESP32)
         else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
@@ -226,13 +237,73 @@ static int start()
         }
 #endif
     }
-    // set servo outputs to failsafe position on start in case they want to play silly buggers!
-    servosFailsafe();
     return DURATION_NEVER;
 }
 
 static int event()
 {
+    // Change pwm value from telemetry command
+    if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_VAL){
+        updatePWM = false;
+
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            if(pwmInputChannels[ch] == pwmInputChannel)
+            {
+                if (pwmChannels[ch] == -1){
+                    return DURATION_IMMEDIATELY;
+                }
+
+                if (pwmType == 's'){
+                    PWM.setMicroseconds(pwmChannels[ch], pwmValue);
+                }
+                else if (pwmType == 'd'){
+                    PWM.setDuty(pwmChannels[ch], pwmValue);
+                }
+            }
+        }
+    // Change pwm channel from telemetry command
+    } else if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_CH){
+        updatePWM = false;
+
+        int8_t pin = -1;
+#ifdef M0139
+        switch(pwmPin) {
+            case 0:
+                pin = Ch1;
+                break;
+            case 1:
+                pin = Ch2;
+                break;
+            case 2:
+                pin = Ch3;
+                break;
+            case 3:
+                pin = Ch4;
+                break;
+        }
+#else
+        pin = pwmPin;
+#endif
+        
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            // Skip changing channel if the new channel is the same as the old one
+            if(servoPins[ch] == pin && pwmInputChannels[ch] != pwmInputChannel)
+            {
+                // TODO: Allow setting the mode and failsafe as well
+                // Release the pin from its old allocation (unnecessary if not changing modes so commented out)
+                //PWM.release(pin);
+                //pwmChannels[ch] = PWM.allocate(pin, 50U);
+
+                // Set the new channel
+                config.SetPwmChannel(ch, 0, pwmInputChannel, false, som50Hz, false);
+                pwmInputChannels[ch] = pwmInputChannel;
+                break;
+            }
+        }
+    }
+
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX,

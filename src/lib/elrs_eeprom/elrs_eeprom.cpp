@@ -30,17 +30,20 @@ ELRS_EEPROM::Begin()
     #else // !STM32_USE_FLASH
         // I2C initialization is the responsibility of the caller
         // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
-
+        DBGLN("Initializing EEPROM");
         /* Initialize EEPROM */
         #if defined(TARGET_EEPROM_400K)
-            EEPROM.begin(extEEPROM::twiClock400kHz, &Wire);
+            DBGLN("400K");
+            EEPROM.begin(extEEPROM::twiClock400kHz);
         #else
-            EEPROM.begin(extEEPROM::twiClock100kHz, &Wire);
+            DBGLN("100K");
+            EEPROM.begin(extEEPROM::twiClock100kHz);
         #endif
     #endif // STM32_USE_FLASH
 #else /* !PLATFORM_STM32 */
     EEPROM.begin(RESERVED_EEPROM_SIZE);
 #endif /* PLATFORM_STM32 */
+DBGLN("EEPROM INIT");
 }
 
 uint8_t

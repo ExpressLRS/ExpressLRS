@@ -2,6 +2,9 @@
 #define DEBUG_H
 
 #include "VA_OPT.h"
+#ifdef DEBUG_RTT
+#include "SEGGER_RTT.h"
+#endif
 
 /**
  * Debug logging macros. Define DEBUG_LOG or DEBUG_LOG_VERBOSE to enable logging,
@@ -19,6 +22,10 @@
   #if defined(DEBUG_LOG_VERBOSE) || (defined(DEBUG_RX_SCOREBOARD) && TARGET_RX) || defined(DEBUG_INIT)
     #define DEBUG_LOG
   #endif
+#endif
+
+#if defined(TARGET_RX) && (defined(DEBUG_RCVR_LINKSTATS) || defined(DEBUG_RX_SCOREBOARD) || defined(DEBUG_RCVR_SIGNAL_STATS)) || defined(DEBUG_LOG)
+#define DEBUG_ENABLED
 #endif
 
 #if defined(TARGET_TX)
@@ -54,7 +61,29 @@ void debugFreeInitLogger();
   },LOGGING_UART.println("ERROR: " msg))
 #endif
 
-#if defined(DEBUG_LOG) && !defined(CRITICAL_FLASH)
+#if defined(DEBUG_LOG) && defined(M0139) && defined(DEBUG_RTT)
+    #define DBG(msg, ...)   debugPrintf(msg, ##__VA_ARGS__)
+    #define DBGLN(msg, ...) do { \
+      SEGGER_RTT_printf(0, msg, ##__VA_ARGS__); \
+      SEGGER_RTT_Write(0, "\n", 1); \
+    } while(0)
+    #define DBGCR SEGGER_RTT_Write(0, "\n", 1);
+    #define DBGW(c) SEGGER_RTT_Write(0, &c, 1);
+
+  // Verbose logging is for spammy stuff
+  #if defined(DEBUG_LOG_VERBOSE)
+    #define DBGVCR DBGCR
+    #define DBGVW(c) DBGW(c)
+    #define DBGV(...) DBG(__VA_ARGS__)
+    #define DBGVLN(...) DBGLN(__VA_ARGS__)
+  #else
+    #define DBGVCR
+    #define DBGVW(c)
+    #define DBGV(...)
+    #define DBGVLN(...)
+  #endif
+
+#elif defined(DEBUG_LOG) && !defined(CRITICAL_FLASH)
   #define DBGCR   LOGGING_UART.println()
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM

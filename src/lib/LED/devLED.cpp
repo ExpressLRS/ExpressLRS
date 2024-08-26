@@ -205,13 +205,13 @@ static int event()
 
             if (GPIO_PIN_LED != UNDEF_PIN)
             {
-                if (connectionHasModelMatch)
+                if (!connectionHasModelMatch || !teamraceHasModelMatch)
                 {
-                    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
+                    return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
                 }
                 else
                 {
-                    return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_MODEL_MISMATCH, sizeof(LEDSEQ_MODEL_MISMATCH));
+                    digitalWrite(GPIO_PIN_LED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
                 }
             }
         #endif
@@ -295,6 +295,10 @@ static int event()
         {
             // technically nocrossfire is {10,100} but {20,100} is close enough
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
+        else if (GPIO_PIN_LED != UNDEF_PIN)
+        {
+            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         }
     case serialUpdate:
         if (GPIO_PIN_LED_RED != UNDEF_PIN)

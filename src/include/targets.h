@@ -11,7 +11,7 @@
 /////////////////////////
 
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
-#define WORD_PADDED(size) (((size)+3)/4)
+#define WORD_PADDED(size) (((size)+3) & ~3)
 
 #ifdef PLATFORM_STM32
 /* ICACHE_RAM_ATTR1 is always linked into RAM */
@@ -243,7 +243,7 @@
 #endif
 
 // Using these DEBUG_* imply that no SerialIO will be used so the output is readable
-#if defined(TARGET_RX) && (defined(DEBUG_RCVR_LINKSTATS) || defined(DEBUG_RX_SCOREBOARD) || defined(DEBUG_RCVR_SIGNAL_STATS))
+#if !defined(DEBUG_CRSF_NO_OUTPUT) && defined(TARGET_RX) && (defined(DEBUG_RCVR_LINKSTATS) || defined(DEBUG_RX_SCOREBOARD) || defined(DEBUG_RCVR_SIGNAL_STATS))
 #define DEBUG_CRSF_NO_OUTPUT
 #endif
 
@@ -288,6 +288,12 @@ extern bool pwmSerialDefined;
 #error "Either RADIO_SX127X, RADIO_LR1121 or RADIO_SX128X must be defined!"
 #endif
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX) || defined(M0139)
+#if !defined(U0RXD_GPIO_NUM)
+#define U0RXD_GPIO_NUM (3)
+#endif
+#if !defined(U0TXD_GPIO_NUM)
+#define U0TXD_GPIO_NUM (1)
+#endif
 #include "hardware.h"
 #endif

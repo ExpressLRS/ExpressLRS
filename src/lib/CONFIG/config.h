@@ -55,7 +55,7 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                _unused:3;
+                linkMode:3;
 } model_config_t;
 
 typedef struct {
@@ -109,6 +109,7 @@ public:
     uint8_t GetBoostChannel() const { return m_model->boostChannel; }
     uint8_t GetSwitchMode() const { return m_model->switchMode; }
     uint8_t GetAntennaMode() const { return m_model->txAntenna; }
+    uint8_t GetLinkMode() const { return m_model->linkMode; }
     bool GetModelMatch() const { return m_model->modelMatch; }
     bool     IsModified() const { return m_modified; }
     uint8_t  GetVtxBand() const { return m_config.vtxBand; }
@@ -136,6 +137,7 @@ public:
     void SetBoostChannel(uint8_t boostChannel);
     void SetSwitchMode(uint8_t switchMode);
     void SetAntennaMode(uint8_t txAntenna);
+    void SetLinkMode(uint8_t linkMode);
     void SetModelMatch(bool modelMatch);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -183,6 +185,12 @@ extern TxConfig config;
 #if defined(TARGET_RX)
 constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
+typedef enum : uint8_t {
+    BINDSTORAGE_PERSISTENT = 0,
+    BINDSTORAGE_VOLATILE = 1,
+    BINDSTORAGE_RETURNABLE = 2,
+} rx_config_bindstorage_t;
+
 typedef union {
     struct {
         uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
@@ -199,14 +207,15 @@ typedef union {
 typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
-    uint8_t     unused_padding[2];
+    uint8_t     unused_padding;
+    uint8_t     serial1Protocol:4,  // secondary serial protocol
+                serial1Protocol_unused:4;
     uint32_t    flash_discriminator;
     struct __attribute__((packed)) {
         uint16_t    scale;          // FUTURE: Override compiled vbat scale
         int16_t     offset;         // FUTURE: Override comiled vbat offset
     } vbat;
-    uint8_t     volatileBind:1,     // 0=Persistent 1=Volatile
-                unused_onLoan:1,
+    uint8_t     bindStorage:2,     // rx_config_bindstorage_t
                 power:4,
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
@@ -217,6 +226,9 @@ typedef struct __attribute__((packed)) {
                 failsafeMode:2,
                 unused:2;
     rx_config_pwm_t pwmChannels[PWM_MAX_CHANNELS] __attribute__((aligned(4)));
+    uint8_t     teamraceChannel:4,
+                teamracePosition:3,
+                teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
 } rx_config_t;
 
 class RxConfig
@@ -230,19 +242,29 @@ public:
     // Getters
     bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
+#if defined(PLATFORM_ESP8266)
+    uint8_t  GetPowerOnCounter() const;
+#else
     uint8_t  GetPowerOnCounter() const { return m_config.powerOnCounter; }
+#endif
     uint8_t  GetModelId() const { return m_config.modelId; }
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
-    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    #if defined(GPIO_PIN_PWM_OUTPUTS) || defined(M0139)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
     eSerialProtocol GetSerialProtocol() const { return (eSerialProtocol)m_config.serialProtocol; }
+#if defined(PLATFORM_ESP32)
+    eSerial1Protocol GetSerial1Protocol() const { return (eSerial1Protocol)m_config.serial1Protocol; }
+#endif
+    uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
+    uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
-    bool GetVolatileBind() const { return m_config.volatileBind; }
+    rx_config_bindstorage_t GetBindStorage() const { return (rx_config_bindstorage_t)m_config.bindStorage; }
+    bool IsOnLoan() const;
 
     // Setters
     void SetUID(uint8_t* uid);
@@ -252,15 +274,21 @@ public:
     void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
-    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    #if defined(GPIO_PIN_PWM_OUTPUTS) || defined(M0139)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
     void SetSerialProtocol(eSerialProtocol serialProtocol);
+#if defined(PLATFORM_ESP32)
+    void SetSerial1Protocol(eSerial1Protocol serial1Protocol);
+#endif
+    void SetTeamraceChannel(uint8_t teamraceChannel);
+    void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
-    void SetVolatileBind(bool value);
+    void SetBindStorage(rx_config_bindstorage_t value);
+    void ReturnLoan();
 
 private:
     void CheckUpdateFlashedUid(bool skipDescrimCheck);

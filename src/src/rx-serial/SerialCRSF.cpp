@@ -3,6 +3,7 @@
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
+#include "logging.h"
 #if defined(USE_MSP_WIFI)
 #include "msp2crsf.h"
 
@@ -12,6 +13,19 @@ extern MSP2CROSSFIRE msp2crsf;
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
+
+#ifdef GPIO_PIN_PWM_OUTPUTS
+// M0139 PWM config via Serial
+extern device_t ServoOut_device;
+
+bool updatePWM = false;
+uint8_t pwmPin{0};
+uint8_t pwmCmd{0};
+uint8_t pwmOutputChannel{0};
+uint8_t pwmInputChannel{0};
+uint8_t pwmType{0}; 
+uint16_t pwmValue{0};
+#endif // Servo output
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
@@ -34,21 +48,24 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 
 void SerialCRSF::queueLinkStatisticsPacket()
 {
+    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
+    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
+
     constexpr uint8_t outBuffer[] = {
-        LinkStatisticsFrameLength + 4,
+        payloadLen + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        LinkStatisticsFrameLength + 2,
+        CRSF_FRAME_SIZE(payloadLen),
         CRSF_FRAMETYPE_LINK_STATISTICS
     };
 
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
 
     _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
     {
         _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
+        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, payloadLen);
         _fifo.push(crc);
     }
     _fifo.unlock();
@@ -58,13 +75,6 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
-
-    constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        RCframeLength + 2,
-        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-    };
 
     crsf_channels_s PackedRCdataOut;
     PackedRCdataOut.ch0 = channelData[0];
@@ -98,11 +108,18 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     }
 
+    constexpr uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
+        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
+
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+    crc = crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
 
     _outputPort->write(outBuffer, sizeof(outBuffer));
-    _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
+    _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
     _outputPort->write(crc);
     return DURATION_IMMEDIATELY;
 }
@@ -134,9 +151,17 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
         {
             EnterBindingModeSafely();
         }
+        if (telemetry.ShouldCallUnbind())
+        {
+            EnterUnbindMode();
+        }
         if (telemetry.ShouldCallUpdateModelMatch())
         {
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
+        }
+        if (telemetry.ShouldCallUpdateUID())
+        {
+            UpdateUID(telemetry.GetNewUID());
         }
         if (telemetry.ShouldSendDeviceFrame())
         {
@@ -144,6 +169,22 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             CRSF::GetDeviceInformation(deviceInformation, 0);
             CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             queueMSPFrameTransmission(deviceInformation);
+        }
+        if (telemetry.ShouldCallUpdatePWM()){
+            DBGLN("Received Update PWM command");
+#ifdef GPIO_PIN_PWM_OUTPUTS
+            updatePWM = true;
+            pwmPin = telemetry.GetPwmPin();
+            pwmCmd = telemetry.GetPwmCmd();
+            pwmOutputChannel = telemetry.GetPwmChannel();
+            pwmInputChannel = telemetry.GetPwmInputChannel();
+            pwmType = telemetry.GetPwmType();
+            pwmValue = telemetry.GetPwmValue();
+            DBGLN("Pwm Pin: %u\tPwm Cmd: %u", pwmPin, pwmCmd);
+            DBGLN("Input Ch: %u\tOutput Ch: %u", pwmInputChannel, pwmOutputChannel);
+            DBGLN("Pwm Type: %c\tPwm Val: %u", pwmType, pwmValue);
+            ServoOut_device.event();
+#endif // Servo output
         }
     }
 }

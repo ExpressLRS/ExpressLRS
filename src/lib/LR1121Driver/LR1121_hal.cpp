@@ -85,16 +85,26 @@ void LR1121Hal::init()
     }
 }
 
-void LR1121Hal::reset(void)
+void LR1121Hal::reset(bool bootloader)
 {
     DBGLN("LR1121 Reset");
 
     if (GPIO_PIN_RST != UNDEF_PIN)
     {
+        if (bootloader)
+        {
+            pinMode(GPIO_PIN_BUSY, OUTPUT);
+            digitalWrite(GPIO_PIN_BUSY, LOW);
+        }
         pinMode(GPIO_PIN_RST, OUTPUT);
         digitalWrite(GPIO_PIN_RST, LOW);
         if (GPIO_PIN_RST_2 != UNDEF_PIN)
         {
+            if (bootloader)
+            {
+                pinMode(GPIO_PIN_BUSY_2, OUTPUT);
+                digitalWrite(GPIO_PIN_BUSY_2, LOW);
+            }
             pinMode(GPIO_PIN_RST_2, OUTPUT);
             digitalWrite(GPIO_PIN_RST_2, LOW);
         }
@@ -105,6 +115,15 @@ void LR1121Hal::reset(void)
             digitalWrite(GPIO_PIN_RST_2, HIGH);
         }
         delay(300); // LR1121 busy is high for 230ms after reset.  The WaitOnBusy timeout is only 1ms.  So this long delay is required.
+        if (bootloader)
+        {
+            pinMode(GPIO_PIN_BUSY, INPUT);
+            if (GPIO_PIN_RST_2 != UNDEF_PIN)
+            {
+                pinMode(GPIO_PIN_BUSY_2, INPUT);
+            }
+            delay(100);
+        }
     }
 
     WaitOnBusy(SX12XX_Radio_All);
@@ -125,7 +144,7 @@ void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
 
 void ICACHE_RAM_ATTR LR1121Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t OutBuffer[2] = {
+    WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
         (uint8_t)(command & 0x00FF)
     };
@@ -157,9 +176,9 @@ bool ICACHE_RAM_ATTR LR1121Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
         {
             if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
         }
-        else if (GPIO_PIN_BUSY_2 != UNDEF_PIN && radioNumber == SX12XX_Radio_2)
+        else if (radioNumber == SX12XX_Radio_2)
         {
-            if (digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+            if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
         }
         else if (radioNumber == SX12XX_Radio_All)
         {

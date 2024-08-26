@@ -3,9 +3,9 @@
 #include "rxtx_devLua.h"
 #include "CRSF.h"
 #include "CRSFHandset.h"
-#include "logging.h"
 #include "OTA.h"
 #include "FHSS.h"
+#include "helpers.h"
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
 
@@ -15,6 +15,22 @@
                                ";AUX7" LUASYM_ARROW_UP ";AUX7" LUASYM_ARROW_DN ";AUX8" LUASYM_ARROW_UP ";AUX8" LUASYM_ARROW_DN \
                                ";AUX9" LUASYM_ARROW_UP ";AUX9" LUASYM_ARROW_DN ";AUX10" LUASYM_ARROW_UP ";AUX10" LUASYM_ARROW_DN
 
+#if defined(RADIO_SX127X)
+#define STR_LUA_PACKETRATES \
+    "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
+#elif defined(RADIO_LR1121)
+#define STR_LUA_PACKETRATES \
+    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;" \
+    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;" \
+    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band"
+#elif defined(RADIO_SX128X)
+#define STR_LUA_PACKETRATES \
+    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+    "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)"
+#else
+#error Invalid radio configuration!
+#endif
+
 extern char backpackVersion[];
 
 static char version_domain[20+1+6+1];
@@ -23,28 +39,34 @@ char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
+static const char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
+static const char tlmRatiosMav[] = ";;;;;;;;1:2;";
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
+static const char switchmodeOpts4chMav[] = ";Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+static const char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
+static const char linkModeOpts[] = "Normal;MAVLink";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
+static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
     0, // value
-    STR_LUA_PACKETRATES,
+    luastrPacketRates,
     STR_EMPTYSPACE
 };
 
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
+    tlmRatios,
     tlmBandwidth
 };
 
@@ -100,6 +122,13 @@ static struct luaItem_selection luaSwitch = {
       STR_EMPTYSPACE
   };
 #endif
+
+static struct luaItem_selection luaLinkMode = {
+    {"Link Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    linkModeOpts,
+    STR_EMPTYSPACE
+};
 
 static struct luaItem_selection luaModelMatch = {
     {"Model Match", CRSF_TEXT_SELECTION},
@@ -551,6 +580,39 @@ void luadevUpdateFolderNames()
   luadevUpdateBackpackOpts();
 }
 
+static void recalculatePacketRateOptions(int minInterval)
+{
+    const char *allRates = STR_LUA_PACKETRATES;
+    const char *pos = allRates;
+    luastrPacketRates[0] = 0;
+    for (int i=0 ; i < RATE_MAX ; i++)
+    {
+        uint8_t rate = i;
+#if defined(RADIO_LR1121) // Janky fix to order menu correctly
+        rate = (rate + 4) % RATE_MAX;
+#endif
+        rate = RATE_MAX - 1 - rate;
+        bool rateAllowed = get_elrs_airRateConfig(rate)->interval >= minInterval;
+        const char *semi = strchrnul(pos, ';');
+        if (rateAllowed)
+        {
+            strncat(luastrPacketRates, pos, semi - pos);
+        }
+        pos = semi;
+        if (*semi == ';')
+        {
+            strcat(luastrPacketRates, ";");
+            pos = semi+1;
+        }
+    }
+
+    // trim off trailing semicolons (assumes luastrPacketRates has at least 1 non-semicolon)
+    for (auto lastPos = strlen(luastrPacketRates)-1; luastrPacketRates[lastPos] == ';'; lastPos--)
+    {
+        luastrPacketRates[lastPos] = '\0';
+    }
+}
+
 uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
 {
   // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
@@ -568,9 +630,6 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
     registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-    arg = (arg + 4) % RATE_MAX;
-#endif
     if (arg < RATE_MAX)
     {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
@@ -578,7 +637,12 @@ static void registerLuaParameters()
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
         (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
       // If the switch mode is going to change, block the change while connected
-      if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
+      bool isDisconnected = connectionState == disconnected;
+      // Don't allow the switch mode to change if the TX is in mavlink mode
+      // Wide switchmode is not compatible with mavlink, and the switchmode is
+      // auto configuredwhen entering mavlink mode
+      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
       {
         config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
@@ -595,8 +659,9 @@ static void registerLuaParameters()
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
       if (eRatio <= TLM_RATIO_DISARMED)
       {
-        // Don't allow TLM ratio changes if using AIRPORT
-        if (!firmwareOptions.is_airport)
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        // Don't allow TLM ratio changes if using AIRPORT or Mavlink
+        if (!firmwareOptions.is_airport && !isMavlinkMode)
         {
           config.SetTlm(eRatio);
         }
@@ -613,21 +678,41 @@ static void registerLuaParameters()
       registerLUAParameter(&luaSwitch, [](struct luaPropertiesCommon *item, uint8_t arg) {
         // Only allow changing switch mode when disconnected since we need to guarantee
         // the pack and unpack functions are matched
-        if (connectionState == disconnected)
+        bool isDisconnected = connectionState == disconnected;
+        // Don't allow the switch mode to change if the TX is in mavlink mode
+        // Wide switchmode is not compatible with mavlink, and the switchmode is
+        // auto configuredwhen entering mavlink mode
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        if (isDisconnected && !isMavlinkMode)
         {
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
         }
-        else
+        else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
+        {
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        }
       });
     }
-      if (isDualRadio())
+    if (isDualRadio())
+    {
+      registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
+        config.SetAntennaMode(arg);
+      });
+    }
+    registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      // Only allow changing when disconnected since we need to guarantee
+      // the switch pack and unpack functions are matched on the tx and rx.
+      bool isDisconnected = connectionState == disconnected;
+      if (isDisconnected)
       {
-        registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
-          config.SetAntennaMode(arg);
-        });
+        config.SetLinkMode(arg);
       }
+      else
+      {
+        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+      }
+    });
     if (!firmwareOptions.is_airport)
     {
       registerLUAParameter(&luaModelMatch, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -781,18 +866,30 @@ static int event()
   {
     return DURATION_NEVER;
   }
+
+  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-  currentRate = (currentRate + 4) % RATE_MAX;
-#endif
+  recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
+
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
-  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  if (isMavlinkMode)
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8chMav : switchmodeOpts4chMav;
+  }
+  else
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  }
+
   if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
   }
+  setLuaTextSelectionValue(&luaLinkMode, config.GetLinkMode());
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);

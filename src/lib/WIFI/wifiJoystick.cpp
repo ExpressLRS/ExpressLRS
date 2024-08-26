@@ -25,6 +25,7 @@ WiFiUDP *WifiJoystick::udp = NULL;
 IPAddress WifiJoystick::remoteIP;
 uint8_t WifiJoystick::channelCount = JOYSTICK_DEFAULT_CHANNEL_COUNT;
 bool WifiJoystick::active = false;
+uint8_t WifiJoystick::failedCount = 0;
 
 static inline uint16_t htole16(uint16_t val)
 {
@@ -87,6 +88,7 @@ void WifiJoystick::StartSending(const IPAddress& ip, int32_t updateInterval, uin
     channelCount = newChannelCount;
 
     active = true;
+    failedCount = 0;
 }
 
 
@@ -142,7 +144,15 @@ void WifiJoystick::UpdateValues()
         udp->write((uint8_t*)&channel, 2);
     }
 
-    active = udp->endPacket() != 0;
+    // check if sending failed, don't stop sending after the first error since transient errors can happen
+    if (udp->endPacket() == 0)
+    {
+        failedCount++;
+        active = failedCount < JOYSTICK_MAX_SEND_ERROR_COUNT;
+    }
+    else {
+        failedCount = 0;
+    }
 }
 
 #endif

@@ -16,3 +16,9 @@ private:
     size_t numChannels = 0;
     RingbufHandle_t rb = nullptr;
 };
+
+#if defined(PLATFORM_ESP32_S3)
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_4;
+#else
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
+#endif

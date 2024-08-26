@@ -3,8 +3,6 @@
 #include "logging.h"
 #include "LBT.h"
 
-extern SX1280Driver Radio;
-
 LQCALC<100> LBTSuccessCalc;
 static uint32_t rxStartTime;
 
@@ -13,7 +11,7 @@ static uint32_t rxStartTime;
 #endif
 
 bool LBTEnabled = false;
-static bool LBTStarted = false;
+static uint32_t validRSSIdelayUs = 0;
 
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   SX1280_RadioLoRaSpreadingFactors_t SF,
@@ -29,13 +27,13 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
   // SF5: 39.4us
   // SF6: 78.8us
   // SF7: 157.6us
-  // SF9: 630.5us
+  // SF8: 315.2us
   // However, by measuring when the RSSI reading is stable and valid, it was found that
   // actual necessary wait times are:
   // SF5 ~100us (60us + SF5 symbol time)
   // SF6 ~141us (60us + SF6 symbol time)
   // SF7 ~218us (60us + SF7 symbol time)
-  // SF9 ~218us (Odd one out, measured to same as SF7 wait time)
+  // SF8 ~376us (60us + SF8 symbol time) Empirical testing shows 480us to be the sweet-spot
 
   if (radio_type == RADIO_TYPE_SX128x_LORA)
   {
@@ -44,8 +42,8 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(
         case SX1280_LORA_SF5: return 100;
         case SX1280_LORA_SF6: return 141;
         case SX1280_LORA_SF7: return 218;
-        case SX1280_LORA_SF8: return 218;
-        default: return 218;
+        case SX1280_LORA_SF8: return 480;
+        default: return 480;
       }
   }
   else if (radio_type == RADIO_TYPE_SX128x_FLRC)
@@ -101,26 +99,23 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
 
 void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
 {
-  rxStartTime = micros();
-}
+  if (!LBTEnabled)
+    return;
 
-void ICACHE_RAM_ATTR BeginClearChannelAssessment()
-{
-  if(!LBTStarted)
-  {
-    Radio.RXnb(SX1280_MODE_RX_CONT);
-    if (LBTEnabled)
-    {
-      rxStartTime = micros();
-      LBTStarted = true;
-    }
-  }
+  rxStartTime = micros();
+  validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
+
+#if defined(TARGET_TX)
+  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);
+#endif
 }
 
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
 {
+  if (radioNumber == SX12XX_Radio_NONE)
+    return SX12XX_Radio_NONE;
+
   LBTSuccessCalc.inc(); // Increment count for every channel check
-  LBTStarted = false;
 
   if (!LBTEnabled)
   {
@@ -141,21 +136,21 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  uint32_t validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs((SX1280_RadioLoRaSpreadingFactors_t)ExpressLRS_currAirRate_Modparams->sf,
-      ExpressLRS_currAirRate_Modparams->radio_type);
   uint32_t elapsed = micros() - rxStartTime;
   if(elapsed < validRSSIdelayUs)
   {
     delayMicroseconds(validRSSIdelayUs - elapsed);
   }
 
-  int8_t rssiInst = 0;
+  int8_t rssiInst1 = 0;
+  int8_t rssiInst2 = 0;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
+  int8_t rssiCutOff = PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
 
   if (radioNumber & SX12XX_Radio_1)
   {
-    rssiInst = Radio.GetRssiInst(SX12XX_Radio_1);
-    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+    rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
+    if(rssiInst1 < rssiCutOff)
     {
       clearChannelsMask |= SX12XX_Radio_1;
     }
@@ -163,15 +158,15 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
 
   if (radioNumber & SX12XX_Radio_2)
   {
-    rssiInst = Radio.GetRssiInst(SX12XX_Radio_2);
-    if(rssiInst < PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type))
+    rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
+    if(rssiInst2 < rssiCutOff)
     {
       clearChannelsMask |= SX12XX_Radio_2;
     }
   }
-  
-  // Useful to debug if and how long the rssi wait is, and rssi threshold level
-  // DBGLN("wait: %d, rssi: %d, %s", validRSSIdelayUs - elapsed, rssiInst, clearChannelsMask ? "clear" : "in use");
+
+  // Useful to debug if and how long the rssi wait is, and rssi threshold rssiCutOff
+  // DBGLN("wait: %d, cutoff: %d, rssi: %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask ? "clear" : "in use");
 
   if(clearChannelsMask)
   {

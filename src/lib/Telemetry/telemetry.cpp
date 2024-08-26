@@ -40,6 +40,27 @@ bool Telemetry::ShouldCallEnterBind()
     return enterBind;
 }
 
+bool Telemetry::ShouldCallUnbind()
+{
+    bool enterUnbind = callUnbind;
+    callUnbind = false;
+    return enterUnbind;
+}
+
+bool Telemetry::ShouldCallUpdatePWM()
+{
+    bool pwmUp = callUpdatePWM;
+    callUpdatePWM = false;
+    return pwmUp;
+}
+
+bool Telemetry::ShouldCallUpdateUID()
+{
+    bool updateID = callUpdateUID;
+    callUpdateUID = false;
+    return updateID;
+}
+
 bool Telemetry::ShouldCallUpdateModelMatch()
 {
     bool updateModelMatch = callUpdateModelMatch;
@@ -144,6 +165,7 @@ void Telemetry::ResetState()
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
     currentPayloadIndex = 0;
+    twoslotLastQueueIndex = 0;
     receivedPackages = 0;
 
     uint8_t offset = 0;
@@ -259,11 +281,40 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
             callEnterBind = true;
             return true;
         }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'u' && package[4] == 'b')
+        {
+            callUnbind = true;
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == 'i' && package[4] == 'd')
+        {
+            memcpy(newUID, &(package[5]), 6);
+            callUpdateUID = true;
+            return true;
+        }
         // Non CRSF, dest=b src=m -> set modelmatch
         if (package[3] == 'm' && package[4] == 'm')
         {
             callUpdateModelMatch = true;
             modelMatchId = package[5];
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_CH)
+        {
+            callUpdatePWM = true;
+            pwmPin = package[4]-1;
+            pwmCmd = package[3];
+            pwmOutputChannel = package[4]-1;      
+            pwmInputChannel = package[5]-1;
+            return true;
+        }
+        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_VAL)
+        {
+            callUpdatePWM = true;
+            pwmCmd = package[3];
+            pwmInputChannel = package[4]-1; 
+            pwmType = package[5];
+            pwmValue = package[6] << 8 | package[7];
             return true;
         }
     }
@@ -318,25 +369,29 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
                 else // if no TCP client we just want to forward MSP over the link
             #endif
             {
-                // larger msp resonses are sent in two chunks so special handling is needed so both get sent
+#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
                 if (header->type == CRSF_FRAMETYPE_MSP_RESP)
                 {
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
                     mspVtxProcessPacket(package);
-#endif
-                    // there is already another response stored
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        // use other slot
-                        targetIndex = payloadTypesCount - 1;
-                    }
-
-                    // if both slots are taked do not overwrite other data since the first chunk would be lost
-                    if (payloadTypes[targetIndex].updated)
-                    {
-                        targetFound = false;
-                    }
                 }
+#endif
+                // This code is emulating a two slot FIFO with head dropping
+                if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
+                {
+                    // Sending the first slot, use the second
+                    targetIndex = payloadTypesCount - 1;
+                }
+                else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
+                {
+                    // Sending the second slot, use the first
+                    targetIndex = payloadTypesCount - 2;
+                }
+                else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
+                {
+                    // Previous frame saved to the first slot, use the second
+                    targetIndex = payloadTypesCount - 1;
+                }
+                twoslotLastQueueIndex = targetIndex;
             }
         }
         else

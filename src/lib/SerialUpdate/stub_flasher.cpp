@@ -84,11 +84,11 @@ static void execute_command()
     case ESP_FLASH_VERIFY_MD5:
         resp.len_ret = 16 + 2; /* Will sent 16 bytes of data with MD5 value */
         break;
-#if ESP32S2_OR_LATER
+#if defined(HAS_SECURITY_INFO)
     case ESP_GET_SECURITY_INFO:
         resp.len_ret = SECURITY_INFO_BYTES; /* Buffer size varies */
         break;
-#endif // ESP32S2_OR_LATER
+#endif
     default:
         break;
     }
@@ -136,11 +136,15 @@ static void execute_command()
                ended. */
         }
         break;
-#if ESP32S2_OR_LATER
+#if defined(HAS_SECURITY_INFO)
     case ESP_GET_SECURITY_INFO:
-        error = verify_data_len(command, 0) || handle_get_security_info();
+        status = verify_data_len(command, 0) ;
+        if (status == ESP_UPDATE_OK)
+        {
+            status = handle_get_security_info();
+        }
         break;
-#endif // ESP32S2_OR_LATER
+#endif
     case ESP_SET_BAUD:
         status = verify_data_len(command, 8);
         break;
