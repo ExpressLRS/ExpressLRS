@@ -6,7 +6,6 @@
 #include "helpers.h"
 #include "logging.h"
 
-bool currentPwmConfig{false};
 
 #if defined(TARGET_TX)
 
@@ -729,7 +728,6 @@ void RxConfig::Load()
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)
     {
-        currentPwmConfig = true;
         CheckUpdateFlashedUid(false);
         return;
     }
@@ -1080,7 +1078,7 @@ RxConfig::SetDefaults(bool commit)
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
 
-#if defined(GPIO_PIN_PWM_OUTPUTS) && !defined(M0139)
+#if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
@@ -1125,7 +1123,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
-#if defined(GPIO_PIN_PWM_OUTPUTS) || defined (M0139)
+#if defined(GPIO_PIN_PWM_OUTPUTS)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {

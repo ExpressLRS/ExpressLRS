@@ -2,7 +2,7 @@
 #define DEBUG_H
 
 #include "VA_OPT.h"
-#ifdef M0139
+#ifdef DEBUG_RTT
 #include "SEGGER_RTT.h"
 #endif
 
