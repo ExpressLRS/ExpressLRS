@@ -1,0 +1,44 @@
+name: Build ExpressLRS On ModalAI Platforms
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/voxl-public/support/elrs-build-docker:latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run PlatformIO Tests
+      run: |
+        cd src
+        platformio pkg install --platform native
+        platformio pkg update
+        PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/voxl-public/support/elrs-build-docker:latest
+      env:
+        BOOT_KEY: FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build
+      run: |
+        cd src
+        bash build.sh -t M0139 -v 0 -e $BOOT_KEY
+
+    - name: Store Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: M0139 Firmware
+        path: ~/src/*.bin
+        retention-days: 1
+        if-no-files-found: error
+      continue-on-error: true

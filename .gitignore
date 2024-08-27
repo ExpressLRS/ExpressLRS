@@ -10,4 +10,4 @@ src/data/*.json
 src/hardware
 .vscode
 *.bin
-src/lib/RTT
+RTT/

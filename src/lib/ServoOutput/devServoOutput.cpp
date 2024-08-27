@@ -282,9 +282,6 @@ static int event()
                 pin = Ch4;
                 break;
         }
-#else
-        pin = pwmPin;
-#endif
         
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
@@ -302,6 +299,9 @@ static int event()
                 break;
             }
         }
+#else
+        config.SetPwmChannel(pwmPin, 0, pwmInputChannel, false, som50Hz, false);
+#endif
     }
 
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
