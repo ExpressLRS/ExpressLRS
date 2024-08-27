@@ -5,6 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: registry.gitlab.com/voxl-public/support/elrs-build-docker:latest
+      credentials:
+        username: public
+        password: glpat-LbNqtxx8rTFrnSsjLVoe
 
     steps:
     - name: Checkout
@@ -24,6 +27,9 @@ jobs:
       image: registry.gitlab.com/voxl-public/support/elrs-build-docker:latest
       env:
         BOOT_KEY: FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+      credentials:
+        username: public
+        password: glpat-LbNqtxx8rTFrnSsjLVoe
 
     steps:
     - name: Checkout
