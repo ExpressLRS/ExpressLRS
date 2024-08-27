@@ -1,5 +1,5 @@
 name: Build ExpressLRS
-on: [push, pull_request]
+on: release
 jobs:
   test:
     runs-on: ubuntu-latest

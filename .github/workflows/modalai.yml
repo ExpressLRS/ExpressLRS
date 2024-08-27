@@ -44,7 +44,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: M0139 Firmware
-        path: ~/src/*.bin
+        path: src/*.bin
         retention-days: 1
         if-no-files-found: error
       continue-on-error: true
