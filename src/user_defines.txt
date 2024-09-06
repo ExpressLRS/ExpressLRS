@@ -30,7 +30,7 @@
 
 ### PERFORMANCE OPTIONS: ###
 
-#unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
+#unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://www.expresslrs.org/hardware/fan-mod/)
 #-DUNLOCK_HIGHER_POWER
 
 -DLOCK_ON_FIRST_CONNECTION
