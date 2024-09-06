@@ -16,7 +16,6 @@ enum fsm_state_s {
     STATE_BIND,
     STATE_WIFI,
     STATE_VTX,
-    STATE_LINKSTATS,
 
     STATE_POWER_MAX,
     STATE_POWER_DYNAMIC,
@@ -57,6 +56,8 @@ enum fsm_state_s {
     STATE_VALUE_INC,
     STATE_VALUE_DEC,
     STATE_VALUE_SAVE,
+
+    STATE_LINKSTATS
 };
 
 
