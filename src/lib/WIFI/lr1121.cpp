@@ -78,7 +78,9 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     SPIEx.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
+#if defined(PLATFORM_ESP32)        
         spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
+#endif
     }
 
     if (lr1121UpdateState->totalSize == lr1121UpdateState->expectedFilesize)
