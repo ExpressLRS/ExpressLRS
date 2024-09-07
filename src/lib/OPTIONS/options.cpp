@@ -180,6 +180,7 @@ bool options_init()
 
 #else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
 
+#define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 #include <StreamString.h>
 #if defined(PLATFORM_ESP8266)

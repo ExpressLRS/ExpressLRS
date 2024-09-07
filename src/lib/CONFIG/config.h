@@ -183,6 +183,69 @@ extern TxConfig config;
 ///////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
+
+#if defined(MIXER)
+typedef enum {
+    LOGICAL_SWITCH_TYPE_OFF,
+
+    // Logical operations
+    LOGICAL_SWITCH_TYPE_AND,
+    LOGICAL_SWITCH_TYPE_OR,
+    LOGICAL_SWITCH_TYPE_XOR,
+
+    // Source vs constant
+    LOGICAL_SWITCH_TYPE_A_EQ_X,
+    LOGICAL_SWITCH_TYPE_A_CLOSE_X,
+    LOGICAL_SWITCH_TYPE_A_GT_X,
+    LOGICAL_SWITCH_TYPE_A_LT_X,
+
+    // Source vs source
+    LOGICAL_SWITCH_TYPE_A_EQ_B,
+    LOGICAL_SWITCH_TYPE_A_CLOSE_B,
+    LOGICAL_SWITCH_TYPE_A_GT_B,
+    LOGICAL_SWITCH_TYPE_A_LT_B,
+} logical_switch_func_t;
+
+typedef enum {
+    MIX_SOURCE_CH1,
+    MIX_SOURCE_CH2,
+    MIX_SOURCE_CH3,
+    MIX_SOURCE_CH4,
+    MIX_SOURCE_CH5,
+    MIX_SOURCE_CH6,
+    MIX_SOURCE_CH7,
+    MIX_SOURCE_CH8,
+    MIX_SOURCE_CH9,
+    MIX_SOURCE_CH10,
+    MIX_SOURCE_CH11,
+    MIX_SOURCE_CH12,
+    MIX_SOURCE_CH13,
+    MIX_SOURCE_CH14,
+    MIX_SOURCE_CH15,
+    MIX_SOURCE_CH16,
+    MIX_SOURCE_FAILSAFE,
+} mix_source_t;
+
+typedef enum {
+    MIX_DESTINATION_CH1,
+    MIX_DESTINATION_CH2,
+    MIX_DESTINATION_CH3,
+    MIX_DESTINATION_CH4,
+    MIX_DESTINATION_CH5,
+    MIX_DESTINATION_CH6,
+    MIX_DESTINATION_CH7,
+    MIX_DESTINATION_CH8,
+    MIX_DESTINATION_CH9,
+    MIX_DESTINATION_CH10,
+    MIX_DESTINATION_CH11,
+    MIX_DESTINATION_CH12,
+    MIX_DESTINATION_CH13,
+    MIX_DESTINATION_CH14,
+    MIX_DESTINATION_CH15,
+    MIX_DESTINATION_CH16,
+} mix_destination_t;
+#endif // MIXER
+
 constexpr uint8_t PWM_MAX_CHANNELS = 16;
 
 typedef enum : uint8_t {
@@ -193,16 +256,49 @@ typedef enum : uint8_t {
 
 typedef union {
     struct {
-        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+        uint32_t max:12,
+                 min:12,
+                 unused: 8;
+    } val;
+    uint32_t raw;
+} rx_config_pwm_limits_t;
+
+typedef union {
+    struct {
+        uint32_t failsafe:11,    // us output during failsafe
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  narrow:1,       // Narrow output mode (half pulse width)
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+                 unused:9;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;
 } rx_config_pwm_t;
+
+typedef union {
+    struct {
+        uint32_t type: 5,    // logical_switch_func_t
+                 source: 6,  // mix_source_t
+                 and_switch: 4,     // AND another logical switch for this switch to be active
+                 params: 17; // parameters for the switch, specific to the type
+    } val;
+    uint32_t raw;
+} rx_config_logical_switch_t;
+
+typedef union {
+    struct {
+        uint64_t active:1,          // enable/disable the mix
+                 source:6,          // mix_source_t
+                 destination:6,     // mix_destination_t
+                 weight_negative:8, // -100% - +100% (signed int)
+                 weight_positive:8, // -100% - +100% (signed int)
+                 offset:11,         // CRSF value to be added/subtracted (signed int)
+                 logical_switch: 4, // set if this mix is conditional on a logical switch
+                 unused:20;         // TBD
+    } val;
+    uint64_t raw;
+} rx_config_mix_t;
 
 typedef struct __attribute__((packed)) {
     uint32_t    version;
@@ -229,6 +325,11 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    rx_config_pwm_limits_t pwmLimits[PWM_MAX_CHANNELS];
+    #if defined(MIXER)
+    rx_config_mix_t mixes[MAX_MIXES];
+    rx_config_logical_switch_t logicalSwitches[MAX_LOGICAL_SWITCHES];
+    #endif
 } rx_config_t;
 
 class RxConfig
@@ -253,6 +354,11 @@ public:
     bool     IsModified() const { return m_modified; }
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
+    const rx_config_pwm_limits_t *GetPwmChannelLimits(uint8_t ch) const { return &m_config.pwmLimits[ch]; }
+    #endif
+    #if defined(MIXER)
+    const rx_config_mix_t *GetMix(uint8_t mixNumber) const { return &m_config.mixes[mixNumber]; }
+    const rx_config_logical_switch_t *GetLogicalSwitch(uint8_t switchNumber) const { return &m_config.logicalSwitches[switchNumber]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
     uint8_t GetRateInitialIdx() const { return m_config.rateInitialIdx; }
@@ -277,6 +383,16 @@ public:
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+    void SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max);
+    void SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw);
+    #endif
+    #if defined(MIXER)
+    void SetMixer(
+        uint8_t mixNumber, mix_source_t source, mix_destination_t destination,
+        int8_t weight_negative, int8_t weight_positive, uint16_t offset,
+        bool active
+    );
+    void SetMixerRaw(uint8_t mixNumber, uint64_t raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
@@ -297,6 +413,7 @@ private:
     void UpgradeEepromV5();
     void UpgradeEepromV6();
     void UpgradeEepromV7V8();
+    void UpgradeEepromV9();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

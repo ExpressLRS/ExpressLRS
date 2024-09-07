@@ -259,6 +259,103 @@ bool BindingModeRequest = false;
 extern void setWifiUpdateMode();
 void reconfigureSerial();
 
+#if defined(MIXER)
+void applyLogicalSwitches()
+{
+    for (unsigned switch_number = 0; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+    {
+        const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+        switch (lswitch->val.type)
+        {
+            case LOGICAL_SWITCH_TYPE_OFF:
+                LogicalSwitchData[switch_number] = false;
+                break;
+        }
+    }
+
+    // Apply the logical switch AND parameter after all the other switches have been processed
+    // so a LS can reference a higher numbered LS correctly.
+    for (unsigned switch_number = 0; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+    {
+        const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+        if (LogicalSwitchData[switch_number] && lswitch->val.and_switch != 0)
+        {
+            LogicalSwitchData[switch_number] = LogicalSwitchData[lswitch->val.and_switch];
+        }
+    }
+}
+
+void applyMixes()
+{
+    int64_t newChannelData[CRSF_NUM_CHANNELS];
+    for (uint8_t i = 0; i < CRSF_NUM_CHANNELS; i++)
+        newChannelData[i] = CRSF_CHANNEL_VALUE_MID;
+
+    for (unsigned mix_number = 0; mix_number < MAX_MIXES; mix_number++)
+    {
+        const rx_config_mix_t *mix = config.GetMix(mix_number);
+
+        if (!mix->val.active)
+            continue;
+
+        if (mix->val.logical_switch && !LogicalSwitchData[mix->val.logical_switch])
+            continue;
+
+        newChannelData[mix->val.destination] += mix->val.offset;
+
+        // The fist 16 enums are CRSF input channels
+        if (mix->val.source < 16)
+        {
+            const unsigned crsfVal = ChannelData[mix->val.source];
+            if (crsfVal < CRSF_CHANNEL_VALUE_MID)
+            {
+                uint16_t command = CRSF_CHANNEL_VALUE_MID - crsfVal;
+                int8_t scale = mix->val.weight_negative;
+                int32_t scaled = command * scale / 100;
+                newChannelData[mix->val.destination] -= scaled;
+            }
+            else
+            {
+                uint16_t value = crsfVal - CRSF_CHANNEL_VALUE_MID;
+                int8_t scale = mix->val.weight_positive;
+                int32_t result = value * scale / 100;
+                newChannelData[mix->val.destination] += result;
+            }
+        }
+        else
+        {
+            switch (mix->val.source)
+            {
+            case MIX_SOURCE_FAILSAFE:
+            {
+                // This is a full max throw input when we are in failsafe which
+                // can be mixed to other channels.
+                int8_t scale = (int8_t) mix->val.weight_positive;
+                uint32_t result = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MID) * scale / 100;
+                newChannelData[mix->val.destination] += result;
+                break;
+            }
+
+            // Later we will add other source mixes here (gyro, failsafe, etc)
+
+            default:
+                break;
+            }
+        }
+    }
+
+    for (unsigned ch = 0; ch < CRSF_NUM_CHANNELS; ch++)
+    {
+        if (newChannelData[ch] < CRSF_CHANNEL_VALUE_MIN)
+            ChannelMixedData[ch] = CRSF_CHANNEL_VALUE_MIN;
+        else if (newChannelData[ch] > CRSF_CHANNEL_VALUE_MAX)
+            ChannelMixedData[ch] = CRSF_CHANNEL_VALUE_MAX;
+        else
+            ChannelMixedData[ch] = newChannelData[ch];
+    }
+}
+#endif // MIXER
+
 uint8_t getLq()
 {
     return LQCalc.getLQ();
@@ -817,6 +914,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         {
             crsfRCFrameMissed();
         }
+        #if defined(MIXER)
+        applyMixes();
+        #endif
     }
 
     if (!didFHSS)
@@ -932,6 +1032,9 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     {
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
+            #if defined(MIXER)
+            applyMixes();
+            #endif
             crsfRCFrameAvailable();
             // teamrace is only checked for servos because the teamrace model select logic only runs
             // when new frames are available, and will decide later if the frame will be forwarded

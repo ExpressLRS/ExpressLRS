@@ -449,10 +449,9 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;
-      // The value must fit into the 10 bit range of the failsafe
       newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
-      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+988U);
+      newPwmCh.val.failsafe = CRSF_to_US(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
     }
   }

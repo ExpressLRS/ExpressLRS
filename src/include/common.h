@@ -309,6 +309,14 @@ extern connectionState_e connectionState;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
+#if defined(MIXER)
+// The first 16 mixes are used for remapping outputs. This includes serial
+// outputs and PWM outputs.
+constexpr uint8_t MAX_MIXES = 30; // json library seems to crash with more that 30 list elements
+constexpr uint8_t MAX_LOGICAL_SWITCHES = 16;
+extern uint32_t ChannelMixedData[CRSF_NUM_CHANNELS]; // Current state of channels after mixing, CRSF format
+extern bool LogicalSwitchData[MAX_LOGICAL_SWITCHES]; // Current state of logical switches
+#endif
 
 uint32_t uidMacSeedGet();
 bool isDualRadio();

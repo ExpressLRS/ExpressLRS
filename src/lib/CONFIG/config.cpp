@@ -728,6 +728,42 @@ void RxConfig::Load()
     if (version == RX_CONFIG_VERSION)
     {
         CheckUpdateFlashedUid(false);
+        #if defined(MIXER) && defined(DEBUG_LOG)
+        DBGLN("Limits:");
+        for (uint8_t i = 0; i < PWM_MAX_CHANNELS; i++)
+        {
+            DBGLN("Channel %d: %d - %d",
+                   i, GetPwmChannelLimits(i)->val.min, GetPwmChannelLimits(i)->val.max);
+        }
+        DBGLN("Active mixes:");
+        for (unsigned mix_number = 0; mix_number < MAX_MIXES; mix_number++)
+        {
+            const rx_config_mix_t *mix = config.GetMix(mix_number);
+            if (!mix->val.active)
+                continue;
+
+            DBGLN("Mix %d: source %d destination %d wlow %d whigh %d offset %d",
+                mix_number,
+                (uint8_t) mix->val.source,
+                (uint8_t) mix->val.destination,
+                (int8_t) mix->val.weight_negative,
+                (int8_t) mix->val.weight_positive,
+                (uint16_t) mix->val.offset
+            );
+        }
+        DBGLN("Logical switches:");
+        for (uint8_t switch_number = 0 ; switch_number < MAX_LOGICAL_SWITCHES; switch_number++)
+        {
+            const rx_config_logical_switch_t *lswitch = config.GetLogicalSwitch(switch_number);
+            DBGLN("Logical switch %d: type %d source %d and %d params %d",
+                switch_number,
+                (uint8_t) lswitch->val.type,
+                (uint8_t) lswitch->val.source,
+                (uint8_t) lswitch->val.and_switch,
+                (uint32_t) lswitch->val.params
+            );
+        }
+        #endif // MIXER && DEBUG_LOG
         return;
     }
 
@@ -745,6 +781,7 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
+    UpgradeEepromV9();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -972,6 +1009,56 @@ RxConfig::GetPowerOnCounter() const
 }
 #endif
 
+// ========================================================
+// V8 Upgrade
+static void PwmConfigV7toV9(v6_rx_config_pwm_t * const old, rx_config_pwm_t * const current)
+{
+    // Version 7 used 10 bits:
+    // us output during failsafe +988 (e.g. 512 here would be 1500us).
+    constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
+
+    // Version 9 uses 11 bits, so we can use a direct us output setting.
+    if (old->val.failsafe != 0) {
+        current->val.failsafe = old->val.failsafe + SERVO_FAILSAFE_MIN;
+    }
+}
+
+void RxConfig::UpgradeEepromV9()
+{
+    v7_rx_config_t v7Config;
+
+    // Populate the prev version struct from eeprom
+    m_eeprom->Get(0, v7Config);
+
+    if ((v7Config.version & ~CONFIG_MAGIC_MASK) != 7)
+        return;
+
+    // Manual field copying as some fields have moved
+    memcpy(m_config.uid, v7Config.uid, sizeof(v7Config.uid));
+    #define COPY(member) m_config.member = v7Config.member
+    COPY(power);
+    COPY(antennaMode);
+    COPY(powerOnCounter);
+    COPY(forceTlmOff);
+    COPY(rateInitialIdx);
+    COPY(modelId);
+    COPY(serialProtocol);
+    COPY(failsafeMode);
+    #undef LAZY
+
+    // PWM failsafe field width expanded in this version
+    for (unsigned ch=0; ch<16; ++ch) {
+        // Upgrade failsafe field width
+        PwmConfigV7toV9(&v7Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+
+        // PWM limits were introduced in v8, set sane defaults
+        m_config.pwmLimits[ch].val.min = 885; // allow extended range
+        m_config.pwmLimits[ch].val.max = 2135; // allow extended range
+    }
+}
+
+// ========================================================
+
 void
 RxConfig::Commit()
 {
@@ -1093,9 +1180,10 @@ RxConfig::SetDefaults(bool commit)
                 mode = somSDA;
             }
         }
-        SetPwmChannel(ch, 512, ch, false, mode, false);
+        SetPwmChannel(ch, 1500, ch, false, mode, false);
+        SetPwmChannelLimits(ch, 885, 2135);
     }
-    SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
+    SetPwmChannel(2, 988, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 #endif
 
     m_config.teamraceChannel = AUX7; // CH11
@@ -1103,6 +1191,12 @@ RxConfig::SetDefaults(bool commit)
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
 #endif
+
+    #if defined(MIXER)
+    // Configure a mix from each input channel to each output channel
+    for (unsigned int ch=0; ch<CRSF_NUM_CHANNELS; ch++)
+        SetMixer(ch, (mix_source_t) ch, (mix_destination_t) ch, (int8_t) 100, 100, 0, true);
+    #endif
 
     if (commit)
     {
@@ -1156,7 +1250,108 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
     pwm->raw = raw;
     m_modified = true;
 }
+
+void
+RxConfig::SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max)
+{
+    DBGLN("*** Store PWM limits ch %d min %d max %d", ch, min, max);
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_limits_t *limits = &m_config.pwmLimits[ch];
+    rx_config_pwm_limits_t new_limits;
+    new_limits.val.min = min;
+    new_limits.val.max = max;
+
+    if (limits->raw == new_limits.raw)
+        return;
+
+    limits->raw = new_limits.raw;
+    m_modified = true;
+}
+
+void
+RxConfig::SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw)
+{
+    DBGLN("*** Store PWM limits");
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_limits_t *pwm = &m_config.pwmLimits[ch];
+    if (pwm->raw == raw)
+        return;
+
+    pwm->raw = raw;
+    DBGLN("*** Stored new PWM Limits for channel %d: Min: %d Max: %d\n",
+          ch, (uint16_t) pwm->val.min, (uint16_t) pwm->val.max);
+    m_modified = true;
+}
 #endif
+
+#if defined(MIXER)
+void
+RxConfig::SetMixer(uint8_t mixNumber, mix_source_t source, mix_destination_t destination, int8_t weight_negative, int8_t weight_positive, uint16_t offset, bool active) {
+    if (mixNumber > MAX_MIXES)
+        return;
+
+    rx_config_mix_t *mix = &m_config.mixes[mixNumber];
+    rx_config_mix_t new_mix;
+    new_mix.raw = mix->raw;
+
+    new_mix.val.source = source;
+    new_mix.val.destination = destination;
+    new_mix.val.weight_negative = weight_negative;
+    new_mix.val.weight_positive = weight_positive;
+    new_mix.val.offset = offset;
+    new_mix.val.active = active;
+
+    if (new_mix.raw == mix->raw)
+        return;
+
+    mix->raw = new_mix.raw;
+    m_modified = true;
+}
+
+void
+RxConfig::SetMixerRaw(uint8_t mixNumber, uint64_t raw)
+{
+    if (mixNumber > MAX_MIXES)
+        return;
+
+    rx_config_mix_t *mix = &m_config.mixes[mixNumber];
+
+    rx_config_mix_t nmix;
+    nmix.raw = raw;
+
+    // for(;i<size*8;++i){
+    //     // print last bit and shift left.
+    //     printf("%u ",num&maxPow ? 1 : 0);
+    //     num = num<<1;
+    // }
+    char line[128];
+    sprintf(
+        line,
+        "A: %d S:%d D:%d N:%d/%d P:%d/%d Offset: %d, Raw: %llu %llu",
+        (uint8_t) nmix.val.active,
+        (uint8_t) nmix.val.source,
+        (uint8_t) nmix.val.destination,
+        (uint8_t) nmix.val.weight_negative,
+        (int8_t) nmix.val.weight_negative,
+        (uint8_t) nmix.val.weight_positive,
+        (int8_t) nmix.val.weight_positive,
+        (uint16_t) nmix.val.offset,
+        raw,
+        nmix.raw
+    );
+    DBGLN("SetMixRaw: %d %s", mixNumber, line);
+
+    if (mix->raw == raw)
+        return;
+
+    mix->raw = raw;
+    m_modified = true;
+}
+#endif // MIXER
 
 void
 RxConfig::SetForceTlmOff(bool forceTlmOff)

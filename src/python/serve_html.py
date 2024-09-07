@@ -10,6 +10,9 @@ add the following query params for TX and/or 900Mhz testing
     hasSubGHz
 """
 
+import struct
+import ctypes
+
 from external.bottle import route, run, response, request
 from external.wheezy.template.engine import Engine
 from external.wheezy.template.ext.core import CoreExtension
@@ -20,6 +23,75 @@ isTX = False
 hasSubGHz = False
 is8285 = True
 chip = 'LR1121'
+
+class rx_config_pwm_t(ctypes.BigEndianStructure):
+    """Struct that holds the configuration for a single PWM channel.
+    Note the reverse ordering from the cstruct in src/lib/CONFIG/config.h
+    """
+    _fields_ = [
+        ("unused", ctypes.c_uint32, 9),
+        ("failsafeMode", ctypes.c_uint32, 2),
+        ("narrow", ctypes.c_uint32, 1),
+        ("mode", ctypes.c_uint32, 4),
+        ("inverted", ctypes.c_uint32, 1),
+        ("inputChannel", ctypes.c_uint32, 4),
+        ("failsafe", ctypes.c_uint32, 11),
+    ]
+
+def make_rx_config_pwm_t(inputChannel, inverted, mode, narrow, failsafe, failsafeMode):
+    """Create a rx_config_pwm_t value from the given parameters"""
+    pwmStruct = rx_config_pwm_t()
+    pwmStruct.inputChannel = inputChannel
+    pwmStruct.inverted = 1 if inverted else 0
+    pwmStruct.mode = mode
+    pwmStruct.narrow = 1 if narrow else 0
+    pwmStruct.failsafe = failsafe
+    pwmStruct.failsafeMode = failsafeMode
+    return struct.unpack_from('>I', pwmStruct)[0]
+
+def parse_rx_config_pwm_t(value):
+    """Create a rx_config_pwm_t from the given value"""
+    pwmStruct = rx_config_pwm_t()
+    struct.pack_into('>I', pwmStruct, 0, value)
+    return pwmStruct
+
+class rx_config_mix_t(ctypes.BigEndianStructure):
+    """Struct that holds the configuration for a single mixer.
+    Note the reverse ordering from the cstruct in src/lib/CONFIG/config.h
+    """
+    _fields_ = [
+        ("unused", ctypes.c_uint64, 24),
+        ("offset", ctypes.c_int64, 11),
+        ("weight_positive", ctypes.c_int64, 8),
+        ("weight_negative", ctypes.c_int64, 8),
+        ("destination", ctypes.c_uint64, 6),
+        ("source", ctypes.c_uint64, 6),
+        ("active", ctypes.c_uint64, 1),
+    ]
+
+def make_rx_config_mix_t(active, source, destination, weight_negative, weight_positive, offset):
+    """Create a rx_config_mix_t value from the given parameters"""
+    mixStruct = rx_config_mix_t()
+    mixStruct.active = 1 if active else 0
+    mixStruct.source = source
+    mixStruct.destination = destination
+    mixStruct.weight_negative = weight_negative
+    mixStruct.weight_positive = weight_positive
+    mixStruct.offset = offset
+    return struct.unpack_from('>Q', mixStruct)[0]
+
+def parse_rx_config_mix_t(value):
+    """Create a rx_config_mix_t from the given value"""
+    mixStruct = rx_config_mix_t()
+    struct.pack_into('>Q', mixStruct, 0, value)
+    return mixStruct
+
+mixes = [
+    {"config": make_rx_config_mix_t(active=True, source=i, destination=i, weight_negative=-100, weight_positive=100, offset=0)}
+    if i <= 16 else
+    {"config": 0}
+    for i in range(0, 32)
+]
 
 config = {
         "options": {
@@ -44,30 +116,36 @@ config = {
             "ssid":"network-ssid",
             "mode":"STA",
             "modelid":255,
+            "mixes": mixes,
             "pwm":[
                 {
                     # 10fs 4ch 1inv 4mode 1narrow
                     "config": 0 + 0<<10 + 0<14 + 0<<15 + 0<<19,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 0,
                     "features": 12
                 },
                 {
                     "config": 1536,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 4,
                     "features": 12 + 16
                 },
                 {
                     "config": 2048,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 5,
                     "features": 12 + 16
                 },
                 {
                     "config": 3584,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 1,
                     "features": 1 + 16
                 },
                 {
                     "config": 4608,
+                    "limits": {"min": 900, "max": 1950},
                     "pin": 3,
                     "features": 2 + 16
                 }
@@ -227,11 +305,25 @@ def options():
 def update_config():
     if 'button-actions' in request.json:
         config['config']['button-actions'] = request.json['button-actions']
+    if 'mixes' in request.json:
+        i=0
+        for mix in request.json['mixes']:
+            val = parse_rx_config_mix_t(mix)
+            print("Mix %d: Active: %s Source %d -> Destination %d weight negative: %d weight positive: %d offset: %d" % (
+                    i, val.active, val.source, val.destination, val.weight_negative, val.weight_positive, val.offset))
+            try:
+                config['config']['mixes'][i]['config'] = mix
+            except IndexError:
+                print("Error: Incorrect mixes array index")
+                pass
+            i = i + 1
     if 'pwm' in request.json:
         i=0
-        for x in request.json['pwm']:
-            print(x)
-            config['config']['pwm'][i]['config'] = x
+        for pwm_value in request.json['pwm']:
+            pwm_data = parse_rx_config_pwm_t(pwm_value)
+            print("PWM %d: Channel %d, Inverted %d, Mode %d, Narrow %d, Failsafe %dus, FailsafeMode %d" % (
+                    i, pwm_data.inputChannel, pwm_data.inverted, pwm_data.mode, pwm_data.narrow, pwm_data.failsafe, pwm_data.failsafeMode))
+            config['config']['pwm'][i]['config'] = pwm_value
             i = i + 1
     if 'protocol' in request.json:
         config['config']['serial-protocol'] = request.json['protocol']

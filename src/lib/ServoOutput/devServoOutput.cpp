@@ -113,7 +113,11 @@ static void servosUpdate(unsigned long now)
         for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+            #if defined(MIXER)
+            const unsigned crsfVal = ChannelMixedData[chConfig->val.inputChannel];
+            #else
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
+            #endif
             // crsfVal might 0 if this is a switch channel, and it has not been
             // received yet. Delay initializing the servo until the channel is valid
             if (crsfVal == 0)
@@ -128,6 +132,11 @@ static void servosUpdate(unsigned long now)
             {
                 us = 3000U - us;
             }
+
+            // Limit output values to configured limits
+            const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(ch);
+            us = constrain(us, limits->val.min, limits->val.max);
+
             servoWrite(ch, us);
         } /* for each servo */
     }     /* if newChannelsAvailable */
