@@ -43,3 +43,6 @@ class ElrsUploadResult:
         ErrorGeneral = -1
         # ERROR: target mismatch
         ErrorMismatch = -2
+
+if __name__ == "__main__":
+    print(get_git_version())

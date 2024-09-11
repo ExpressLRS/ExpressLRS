@@ -251,7 +251,7 @@ public:
     uint8_t GetPower() const { return m_config.power; }
     uint8_t GetAntennaMode() const { return m_config.antennaMode; }
     bool     IsModified() const { return m_modified; }
-    #if defined(GPIO_PIN_PWM_OUTPUTS) || defined(M0139)
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
     const rx_config_pwm_t *GetPwmChannel(uint8_t ch) const { return &m_config.pwmChannels[ch]; }
     #endif
     bool GetForceTlmOff() const { return m_config.forceTlmOff; }
@@ -274,7 +274,7 @@ public:
     void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
-    #if defined(GPIO_PIN_PWM_OUTPUTS) || defined(M0139)
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     #endif

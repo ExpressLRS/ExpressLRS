@@ -70,10 +70,9 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     memcpy(frame + sizeof(crsf_ext_header_t), device_name, size);
     // Followed by the device
     device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
-#if defined(M0139)
-    // Hardware version = M184
-    device->hardwareVer = htobe32(0x6D313834); // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
-    device->softwareVer = htobe32(0x03040000 + MODALAI_VERSION); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+#if defined(MODAL_ELRS_VER)
+    device->hardwareVer = htobe32(0x6D313834); // For ModalAI m184: m184
+    device->softwareVer = htobe32(MODAL_ELRS_VER + MODALAI_VERSION); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
 #else
     device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"

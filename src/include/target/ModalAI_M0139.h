@@ -2,6 +2,7 @@
 Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
+
 #if !defined(TARGET_R9SLIM_RX) && defined(TARGET_RX)
     // TODO
     // EEPROM not working with TX
