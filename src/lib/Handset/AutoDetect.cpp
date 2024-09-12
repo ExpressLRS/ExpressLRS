@@ -17,8 +17,8 @@ void AutoDetect::Begin()
 
     rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), PPM_RMT_CHANNEL);
     rmt_rx_config.clk_div = divisor;
-    rmt_rx_config.rx_config.filter_ticks_thresh = 1;
-    rmt_rx_config.rx_config.idle_threshold = 100;
+    rmt_rx_config.rx_config.filter_ticks_thresh = 0;
+    rmt_rx_config.rx_config.idle_threshold = 5000;
     rmt_config(&rmt_rx_config);
     rmt_driver_install(PPM_RMT_CHANNEL, 1000, 0);
 
