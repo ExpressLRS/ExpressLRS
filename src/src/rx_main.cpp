@@ -1246,11 +1246,6 @@ void MspReceiveComplete()
 #endif
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
-        if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
-        {
-            config.SetSerialProtocol(PROTOCOL_MAVLINK);
-            reconfigureSerial();
-        }
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
         break;

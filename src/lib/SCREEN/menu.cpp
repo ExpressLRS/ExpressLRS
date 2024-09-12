@@ -577,7 +577,7 @@ fsm_state_entry_t const wifi_update_menu_fsm[] = {
     {STATE_LAST}
 };
 fsm_state_event_t const wifi_menu_update_events[] = {MENU_EVENTS(wifi_update_menu_fsm)};
-fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}};
+fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, ACTION_POP}};
 fsm_state_entry_t const wifi_ext_menu_fsm[] = {
     {STATE_WIFI_EXECUTE, nullptr, executeWiFi, 1000, wifi_ext_execute_events, ARRAY_SIZE(wifi_ext_execute_events)},
     {STATE_LAST}
