@@ -34,6 +34,7 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
 
 uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
+    // Only send MSP packets every 100ms
     if (millis() > m_lastSentMSP + 100)
     {
         m_lastSentMSP = millis();
@@ -43,20 +44,22 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
         return DURATION_IMMEDIATELY;
     }
 
-    // msp_fc_version_t fc_version = { 0 };
-    // msp_fc_variant_t fc_variant = { 0 };
-    // char fcVariant[5] = "BTFL";
+    // Send FC variant MSP
+    msp_fc_variant_t fc_variant = { 0 };
+    char fcVariant[5] = "BTFL";
+    memcpy(fc_variant.flightControlIdentifier, fcVariant, sizeof(fcVariant));
+    send(MSP_FC_VARIANT, &fc_variant, sizeof(fc_variant), _outputPort);
 
-    // memcpy(fc_variant.flightControlIdentifier, fcVariant, sizeof(fcVariant));
-    // send(MSP_FC_VARIANT, &fc_variant, sizeof(fc_variant), _outputPort);
-
-    // fc_version.versionMajor = 4;
-    // fc_version.versionMinor = 1;
-    // fc_version.versionPatchLevel = 1;
-    // send(MSP_FC_VERSION, &fc_version, sizeof(fc_version), _outputPort);
+    // Send FC version MSP
+    msp_fc_version_t fc_version = { 0 };
+    fc_version.versionMajor = 4;
+    fc_version.versionMinor = 1;
+    fc_version.versionPatchLevel = 1;
+    send(MSP_FC_VERSION, &fc_version, sizeof(fc_version), _outputPort);
     
     bool armed = channelData[4] > CRSF_CHANNEL_VALUE_MID;
 
+    // Send extended status MSP
     msp_status_DJI_t status_DJI;
     status_DJI.cycleTime = 0x0080;
     status_DJI.i2cErrorCounter = 0;
@@ -70,6 +73,7 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
     status_DJI.armingFlags = 0x0303;
     send(MSP_STATUS_EX, &status_DJI, sizeof(status_DJI), _outputPort);
 
+    // Send status MSP
     status_DJI.armingFlags = 0x0000;
     send(MSP_STATUS, &status_DJI, sizeof(status_DJI), _outputPort);
 
