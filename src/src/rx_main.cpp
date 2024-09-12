@@ -1354,6 +1354,10 @@ static void setupSerial()
         mavlinkSerialOutput = true;
         serialBaud = 460800;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialBaud = 115200;
+    }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
@@ -1415,29 +1419,29 @@ static void setupSerial()
 #endif
 
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = SERIAL_8N1;
+    SerialConfig serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
-    Serial.begin(serialBaud, config, mode, -1, invert);
+    Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = SERIAL_8N1;
+    uint32_t serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     // ARDUINO_CORE_INVERT_FIX PT2
@@ -1449,7 +1453,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1467,6 +1471,10 @@ static void setupSerial()
     else if (mavlinkSerialOutput)
     {
         serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (hottTlmSerial)
