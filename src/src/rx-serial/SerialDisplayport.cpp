@@ -24,11 +24,12 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
   _stream->write(messageID);
   uint8_t checksum = size ^ messageID;
   uint8_t * payloadPtr = (uint8_t*)payload;
-  for (uint8_t i = 0; i < size; ++i) {
+  for (uint8_t i = 0; i < size; ++i)
+  {
     uint8_t b = *(payloadPtr++);
     checksum ^= b;
-    _stream->write(b);
   }
+  _stream->write((uint8_t*)payload, size);
   _stream->write(checksum);
 }
 
@@ -43,20 +44,8 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
     {
         return DURATION_IMMEDIATELY;
     }
-
-    // Send FC variant MSP
-    msp_fc_variant_t fc_variant = { 0 };
-    char fcVariant[5] = "BTFL";
-    memcpy(fc_variant.flightControlIdentifier, fcVariant, sizeof(fcVariant));
-    send(MSP_FC_VARIANT, &fc_variant, sizeof(fc_variant), _outputPort);
-
-    // Send FC version MSP
-    msp_fc_version_t fc_version = { 0 };
-    fc_version.versionMajor = 4;
-    fc_version.versionMinor = 1;
-    fc_version.versionPatchLevel = 1;
-    send(MSP_FC_VERSION, &fc_version, sizeof(fc_version), _outputPort);
     
+    // Use ch5 to check armed state
     bool armed = channelData[4] > CRSF_CHANNEL_VALUE_MID;
 
     // Send extended status MSP

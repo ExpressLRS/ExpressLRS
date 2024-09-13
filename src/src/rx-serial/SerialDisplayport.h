@@ -15,22 +15,8 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 #pragma once
 #include "SerialIO.h"
 
-#define MSP_FC_VARIANT  2
-#define MSP_FC_VERSION  3
 #define MSP_STATUS      101
 #define MSP_STATUS_EX   150
-
-// MSP_FC_VARIANT
-struct msp_fc_variant_t {
-  char flightControlIdentifier[4];
-} __attribute__ ((packed));
-
-// MSP_FC_VERSION
-struct msp_fc_version_t {
-  uint8_t versionMajor;
-  uint8_t versionMinor;
-  uint8_t versionPatchLevel;
-} __attribute__ ((packed));
 
 // MSP_STATUS_DJI
 struct msp_status_DJI_t
