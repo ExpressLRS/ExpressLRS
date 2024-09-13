@@ -55,8 +55,10 @@ void ICACHE_RAM_ATTR crsfRCFrameMissed()
 static int start()
 {
     serial0.io = &serialIO;
+    serial0.lastConnectionState = disconnected;
 #if defined(PLATFORM_ESP32)
     serial1.io = &serial1IO;
+    serial1.lastConnectionState = disconnected;
 #endif
 
     return DURATION_IMMEDIATELY;
@@ -64,11 +66,12 @@ static int start()
 
 static int event(devserial_ctx_t *ctx)
 {
-    ctx->lastConnectionState = disconnected;
-
     if ((*(ctx->io)) != nullptr)
     {
-        (*(ctx->io))->setFailsafe(connectionState == disconnected && ctx->lastConnectionState == connected);
+        if (ctx->lastConnectionState != connectionState)
+        {
+            (*(ctx->io))->setFailsafe(connectionState == disconnected);
+        }
     }
 
     ctx->lastConnectionState = connectionState;

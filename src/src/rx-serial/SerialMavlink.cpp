@@ -42,6 +42,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 
 #else // ESP-based targets
 
+#define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
 
 #define MAV_FTP_OPCODE_OPENFILERO 4
@@ -158,7 +159,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         mavlink_status_t status;
 
         // Try parse a mavlink message
-        if (mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status))
+        if (mavlink_frame_char(MAVLINK_COMM_0, c, &msg, &status))
         {
             // Message decoded successfully
 

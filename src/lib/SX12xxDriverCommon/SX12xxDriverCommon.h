@@ -1,6 +1,7 @@
 #pragma once
 
 #include <targets.h>
+#include "FEC.h"
 
 typedef uint8_t SX12XX_Radio_Number_t;
 enum

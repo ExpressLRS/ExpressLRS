@@ -81,7 +81,9 @@ void CRSFHandset::Begin()
     UARTinverted = halfDuplex; // on a full UART we will start uninverted checking first
     CRSFHandset::Port.begin(UARTrequestedBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
-                     false, 500);
+                     false, 0);
+    // Arduino defaults every esp32 stream to a 1000ms timeout which is just baffling
+    CRSFHandset::Port.setTimeout(0);
     if (halfDuplex)
     {
         duplex_set_RX();
@@ -156,17 +158,16 @@ void CRSFHandset::flush_port_input()
     }
 }
 
-void CRSFHandset::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
+void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
 {
+    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
+    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
+
     buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
-    {
-        buffer[i + 3] = ((uint8_t *)&CRSF::LinkStatistics)[i];
-    }
-    uint8_t crc = crsf_crc.calc(buffer[2]);
-    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+    memcpy(&buffer[3], (uint8_t *)&CRSF::LinkStatistics, payloadLen);
+    buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
 }
 
 /**
@@ -427,6 +428,25 @@ bool CRSFHandset::ProcessPacket()
     return packetReceived;
 }
 
+void CRSFHandset::alignBufferToSync(uint8_t startIdx)
+{
+    uint8_t *SerialInBuffer = inBuffer.asUint8_t;
+
+    for (unsigned int i=startIdx ; i<SerialInPacketPtr ; i++)
+    {
+        // If we find a header byte then move that and trailing bytes to the head of the buffer and let's go!
+        if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
+        {
+            SerialInPacketPtr -= i;
+            memmove(SerialInBuffer, &SerialInBuffer[i], SerialInPacketPtr);
+            return;
+        }
+    }
+
+    // If no header found then discard this entire buffer
+    SerialInPacketPtr = 0;
+}
+
 void CRSFHandset::handleInput()
 {
     uint8_t *SerialInBuffer = inBuffer.asUint8_t;
@@ -463,76 +483,49 @@ void CRSFHandset::handleInput()
         flush_port_input();
     }
 
+    // Add new data, and then discard bytes until we start with header byte
     auto toRead = std::min(CRSFHandset::Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
-    SerialInPacketPtr += (int)CRSFHandset::Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
+    SerialInPacketPtr += CRSFHandset::Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
+    alignBufferToSync(0);
 
-    // discard bytes until we start with header byte
-    if (!CRSFframeActive)
+    // Make sure we have at least a packet header and a length byte
+    if (SerialInPacketPtr < 3)
+        return;
+
+    // Sanity check: A total packet must be at least [sync][len][type][crc] (if no payload) and at most CRSF_MAX_PACKET_LEN
+    const uint32_t totalLen = SerialInBuffer[1] + 2;
+    if (totalLen < 4 || totalLen > CRSF_MAX_PACKET_LEN)
     {
-        for (int i=0 ; i<SerialInPacketPtr ; i++)
-        {
-            // If we find a header byte then move that and trailing bytes to the head of the buffer and let's go!
-            if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
-            {
-                SerialInPacketPtr -= i;
-                memmove(SerialInBuffer, SerialInBuffer + i, SerialInPacketPtr);
-                CRSFframeActive = true;
-                break;
-            }
-        }
-        // If no header found then discard this entire buffer
-        if (!CRSFframeActive)
-        {
-            SerialInPacketPtr = 0;
-        }
+        // Start looking for another packet after this start byte
+        alignBufferToSync(1);
+        return;
     }
 
-    // We have a packet header and at least a length byte as well, so we see if we have a pull packet for processing
-    if (CRSFframeActive && SerialInPacketPtr>2)
-    {
-        // Sanity check: If the length byte is pushing over the max packet size skip this header byte and start scanning again
-        if ((SerialInBuffer[1] + 2) > CRSF_MAX_PACKET_LEN)
-        {
-            for (int i=0 ; i<SerialInPacketPtr ; i++)
-            {
-                if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
-                {
-                    SerialInPacketPtr -= i;
-                    memmove(SerialInBuffer, SerialInBuffer + i, SerialInPacketPtr);
-                    CRSFframeActive = true;
-                    return;
-                }
-            }
-            SerialInPacketPtr = 0;
-            CRSFframeActive = false;
-        }
-        // If we have at least the number of bytes for a full packet then validate and process it
-        else if (SerialInPacketPtr >= (SerialInBuffer[1] + 2))
-        {
-            uint8_t CalculatedCRC = crsf_crc.calc(SerialInBuffer + 2, SerialInBuffer[1] - 1);
+    // Only proceed one there are enough bytes in the buffer for the entire packet
+    if (SerialInPacketPtr < totalLen)
+        return;
 
-            if (CalculatedCRC == SerialInBuffer[SerialInBuffer[1] + 2 - 1])
+    uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
+    if (CalculatedCRC == SerialInBuffer[totalLen - 1])
+    {
+        GoodPktsCount++;
+        if (ProcessPacket())
+        {
+            handleOutput(totalLen);
+            if (RCdataCallback)
             {
-                GoodPktsCount++;
-                if (ProcessPacket())
-                {
-                    handleOutput(SerialInBuffer[1] + 2);
-                    if (RCdataCallback)
-                    {
-                        RCdataCallback();
-                    }
-                }
+                RCdataCallback();
             }
-            else
-            {
-                DBGLN("UART CRC failure");
-                BadPktsCount++;
-            }
-            SerialInPacketPtr -= (SerialInBuffer[1] + 2);
-            memmove(SerialInBuffer, SerialInBuffer + (SerialInBuffer[1] + 2), SerialInPacketPtr);
-            CRSFframeActive = false;
         }
     }
+    else
+    {
+        DBGLN("UART CRC failure");
+        BadPktsCount++;
+    }
+
+    SerialInPacketPtr -= totalLen;
+    memmove(SerialInBuffer, &SerialInBuffer[totalLen], SerialInPacketPtr);
 }
 
 void CRSFHandset::handleOutput(int receivedBytes)
@@ -794,9 +787,12 @@ bool CRSFHandset::UARTwdt()
     bool retval = false;
 #if !defined(DEBUG_TX_FREERUN)
     uint32_t now = millis();
-    if (now >= (UARTwdtLastChecked + UARTwdtInterval))
+    if (now - UARTwdtLastChecked > UARTwdtInterval)
     {
-        if (BadPktsCount >= GoodPktsCount || !controllerConnected)
+        // If no packets or more bad than good packets, rate cycle/autobaud the UART but
+        // do not adjust the parameters while in wifi mode. If a firmware is being
+        // uploaded, it will cause tons of serial errors during the flash writes
+        if ((connectionState != wifiUpdate) && (BadPktsCount >= GoodPktsCount || !controllerConnected))
         {
             DBGLN("Too many bad UART RX packets!");
 

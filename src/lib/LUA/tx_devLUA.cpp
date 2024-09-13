@@ -20,9 +20,9 @@
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
-    "50Hz 2.4G;100Hz Full 2.4G;150Hz 2.4G;250Hz 2.4G;333Hz Full 2.4G;500Hz 2.4G;" \
-    "50Hz Low Band;100Hz Low Band;100Hz Full Low Band;200Hz Low Band;200Hz Full Low Band;250Hz Low Band;" \
-    "X100Hz Full(-112dBm);X150Hz(-112dBm)"
+    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;" \
+    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;" \
+    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band"
 #elif defined(RADIO_SX128X)
 #define STR_LUA_PACKETRATES \
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
@@ -39,8 +39,12 @@ char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
+static const char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
+static const char tlmRatiosMav[] = ";;;;;;;;1:2;";
 static const char switchmodeOpts4ch[] = "Wide;Hybrid";
+static const char switchmodeOpts4chMav[] = ";Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+static const char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 #if defined(CRSF_MAVLINK) //TODO: Decide how to handle TX_CRSF_MAVLINK_MODE disabled, right now everything works but ERR is displayed in lua we should either reset to 1 when CRSF_MAVLINK is disabled or display MAVLink 
 static const char linkModeOpts[] = "Normal;MAVLink;MAVLink<->CRSF";
@@ -66,7 +70,7 @@ static struct luaItem_selection luaAirRate = {
 static struct luaItem_selection luaTlmRate = {
     {"Telem Ratio", CRSF_TEXT_SELECTION},
     0, // value
-    "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race",
+    tlmRatios,
     tlmBandwidth
 };
 
@@ -659,8 +663,9 @@ static void registerLuaParameters()
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
       if (eRatio <= TLM_RATIO_DISARMED)
       {
-        // Don't allow TLM ratio changes if using AIRPORT
-        if (!firmwareOptions.is_airport)
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        // Don't allow TLM ratio changes if using AIRPORT or Mavlink
+        if (!firmwareOptions.is_airport && !isMavlinkMode)
         {
           config.SetTlm(eRatio);
         }
@@ -687,8 +692,10 @@ static void registerLuaParameters()
           config.SetSwitchMode(arg);
           OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
         }
-        else
+        else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
+        {
           setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+        }
       });
     }
     if (isDualRadio())
@@ -863,12 +870,25 @@ static int event()
   {
     return DURATION_NEVER;
   }
+
+  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
   recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
+
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
-  luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  if (isMavlinkMode)
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8chMav : switchmodeOpts4chMav;
+  }
+  else
+  {
+    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+  }
+
   if (isDualRadio())
   {
     setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());

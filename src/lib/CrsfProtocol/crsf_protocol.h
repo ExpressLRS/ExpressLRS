@@ -31,12 +31,6 @@
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define RCframeLength 22             // length of the RC data packed bytes frame. 16 channels in 11 bits each.
-#define LinkStatisticsFrameLength 10 //
-#define OpenTXsyncFrameLength 11     //
-#define BattSensorFrameLength 8      //
-#define VTXcontrolFrameLength 12     //
-
 #define CRSF_PAYLOAD_SIZE_MAX 62
 #define CRSF_FRAME_NOT_COUNTED_BYTES 2
 #define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
@@ -373,12 +367,15 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t active_antenna;
     uint8_t rf_Mode;
     uint8_t uplink_TX_Power;
-    uint8_t downlink_RSSI;
+    uint8_t downlink_RSSI_1;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
-} crsfLinkStatistics_t;
+} PACKED crsfLinkStatistics_t;
 
-typedef struct crsfPayloadLinkstatistics_s crsfLinkStatistics_t;
+typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
+{
+    uint8_t downlink_RSSI_2;
+} PACKED elrsLinkStatistics_t;
 
 // typedef struct crsfOpenTXsyncFrame_s
 // {

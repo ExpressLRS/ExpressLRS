@@ -180,6 +180,7 @@ typedef enum : uint8_t {
     ACTION_SEND_VTX,
     ACTION_START_WIFI,
     ACTION_BIND,
+    ACTION_BLE_JOYSTICK,
     ACTION_RESET_REBOOT,
 
     ACTION_LAST
@@ -200,8 +201,10 @@ enum eServoOutputMode : uint8_t
     somSCL,         // 10: I2C clock signal
     somSDA,         // 11: I2C data line
     somPwm,         // 12: true PWM mode (NOT SUPPORTED)
+#if defined(PLATFORM_ESP32)
     somSerial1RX,   // 13: secondary Serial RX
     somSerial1TX,   // 14: secondary Serial TX
+#endif
 };
 
 enum eServoOutputFailsafeMode : uint8_t
@@ -223,17 +226,21 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_MAVLINK
 };
 
+#if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
 {
-    PROTOCOL_SERIAL1_NONE,
+    PROTOCOL_SERIAL1_OFF,
     PROTOCOL_SERIAL1_CRSF,
     PROTOCOL_SERIAL1_INVERTED_CRSF,
     PROTOCOL_SERIAL1_SBUS,
     PROTOCOL_SERIAL1_INVERTED_SBUS,
 	PROTOCOL_SERIAL1_SUMD,
     PROTOCOL_SERIAL1_DJI_RS_PRO,
-    PROTOCOL_SERIAL1_HOTT_TLM
+    PROTOCOL_SERIAL1_HOTT_TLM,
+    PROTOCOL_SERIAL1_TRAMP,
+    PROTOCOL_SERIAL1_SMARTAUDIO,
 };
+#endif
 
 enum eFailsafeMode : uint8_t
 {
