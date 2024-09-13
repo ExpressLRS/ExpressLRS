@@ -241,9 +241,6 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
 
 void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
-    // for monitoring arming state
-    uint32_t prev_AUX1 = ChannelData[4];
-
     auto payload = (uint8_t const * const)&inBuffer.asRCPacket_t.channels;
     constexpr unsigned srcBits = 11;
     constexpr unsigned dstBits = 11;
@@ -266,13 +263,6 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
         n = (readValue & inputChannelMask) << precisionShift;
         readValue >>= srcBits;
         bitsMerged -= srcBits;
-    }
-
-    if (prev_AUX1 != ChannelData[4])
-    {
-        #if defined(PLATFORM_ESP32)
-        devicesTriggerEvent();
-        #endif
     }
 }
 
@@ -299,20 +289,42 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
     {
         elrsLUAmode = header->orig_addr == CRSF_ADDRESS_ELRS_LUA;
 
-        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX && header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
+        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX)
         {
-            modelId = header->payload[2];
-            #if defined(PLATFORM_ESP32)
-            rtcModelId = modelId;
-            #endif
-            if (RecvModelUpdate) RecvModelUpdate();
-        }
-        else
-        {
-            if (RecvParameterUpdate) RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
+            if (header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
+            {
+                modelId = header->payload[2];
+                #if defined(PLATFORM_ESP32)
+                rtcModelId = modelId;
+                #endif
+                if (RecvModelUpdate) RecvModelUpdate();
+                return true;
+            }
+
+            if (header->payload[1] == CRSF_COMMAND_ARM)
+            {
+                armCmd = header->payload[2];
+
+                #if defined(PLATFORM_ESP32)
+                    // monitoring arming state
+
+                    static bool lastArmCmd = false;
+
+                    if (lastArmCmd != armCmd) {
+                        devicesTriggerEvent();
+                        lastArmCmd = armCmd;
+                    }
+                #endif
+
+                return true;
+            } 
         }
 
-        return true;
+        if (RecvParameterUpdate) 
+        { 
+            RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
+            return true;
+        }
     }
 
     return false;

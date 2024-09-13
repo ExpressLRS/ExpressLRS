@@ -21,7 +21,8 @@ public:
     void End() override;
 
 #ifdef CRSF_TX_MODULE
-    bool IsArmed() override { return CRSF_to_BIT(ChannelData[4]); } // AUX1
+    //bool IsArmed() override { return CRSF_to_BIT(ChannelData[4]); } // AUX1
+    bool IsArmed() override { return armCmd; } // AUX1
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
@@ -29,6 +30,7 @@ public:
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static uint8_t modelId;         // The model ID as received from the Transmitter
+    bool armCmd;                    // Arming command from radio
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static bool elrsLUAmode;
 
