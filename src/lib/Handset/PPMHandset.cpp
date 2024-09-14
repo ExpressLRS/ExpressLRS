@@ -67,6 +67,11 @@ void PPMHandset::handleInput()
         numChannels = channelCount;
         vRingbufferReturnItem(rb, static_cast<void *>(items));
         lastPPM = now;
+        if (channelCount && connected && connectionState == noCrossfire)
+        {
+            DBGLN("PPM signal regained");
+            connected();
+        }
     }
     else if (lastPPM && now - 1000 > lastPPM)
     {
