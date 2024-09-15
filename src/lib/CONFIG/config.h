@@ -45,7 +45,7 @@ typedef enum {
 } headTrackingEnable_t;
 
 typedef struct {
-    uint32_t    rate:4,
+    uint32_t    rate:5,
                 tlm:4,
                 power:3,
                 switchMode:2,
@@ -55,7 +55,7 @@ typedef struct {
                 txAntenna:2,    // FUTURE: Which TX antenna to use, 0=Auto
                 ptrStartChannel:4,
                 ptrEnableChannel:5,
-                linkMode:3;
+                linkMode:2;
 } model_config_t;
 
 typedef struct {
@@ -220,7 +220,8 @@ typedef struct __attribute__((packed)) {
                 antennaMode:2;      // 0=0, 1=1, 2=Diversity
     uint8_t     powerOnCounter:3,
                 forceTlmOff:1,
-                rateInitialIdx:4;   // Rate to start rateCycling at on boot
+                free:4;
+    uint8_t     rateInitialIdx;     // Rate to start rateCycling at on boot
     uint8_t     modelId;
     uint8_t     serialProtocol:4,
                 failsafeMode:2,

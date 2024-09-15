@@ -1054,8 +1054,8 @@ static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode
 
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
-    // Verify the first two of three bytes of the binding ID, which should always match
-    if (otaSync->UID3 != UID[3] || otaSync->UID4 != UID[4])
+    // Verify the first byte of the binding ID, which should always match
+    if (otaSync->UID4 != UID[4])
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
@@ -1070,7 +1070,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 #endif
 
     // Will change the packet air rate in loop() if this changes
-    ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
+    ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);
     updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX

@@ -326,10 +326,9 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
   syncPtr->fhssIndex = FHSSgetCurrIndex();
   syncPtr->nonce = OtaNonce;
-  syncPtr->rateIndex = Index;
+  syncPtr->rfRateEnum = get_elrs_airRateConfig(Index)->enum_rate;
   syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
   syncPtr->switchEncMode = SwitchEncMode;
-  syncPtr->UID3 = UID[3];
   syncPtr->UID4 = UID[4];
   syncPtr->UID5 = UID[5];
 
