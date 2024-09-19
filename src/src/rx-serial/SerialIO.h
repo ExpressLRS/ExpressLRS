@@ -95,6 +95,8 @@ public:
      */
     virtual int getMaxSerialWriteSize() { return defaultMaxSerialWriteSize; }
 
+    virtual bool sendImmediateRC() { return false; }
+
 protected:
     /// @brief the output stream for the serial port
     Stream *_outputPort;
