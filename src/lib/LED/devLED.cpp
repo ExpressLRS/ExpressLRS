@@ -51,7 +51,9 @@ static const uint8_t *_durations;
 static uint8_t _count;
 static uint8_t _counter = 0;
 static bool hasRGBLeds = false;
+#if defined(TARGET_TX)
 static bool hasGBLeds = false;
+#endif
 
 static uint16_t updateLED()
 {
@@ -141,6 +143,7 @@ static int timeout()
     return updateLED();
 }
 
+#if !defined(TARGET_RX)
 static void setPowerLEDs()
 {
     if (hasGBLeds)
@@ -166,6 +169,7 @@ static void setPowerLEDs()
         }
     }
 }
+#endif
 
 static int event()
 {
