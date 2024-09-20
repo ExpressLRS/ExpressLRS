@@ -129,6 +129,10 @@ typedef enum : uint8_t
     CRSF_ADDRESS_ELRS_LUA = 0xEF
 } crsf_addr_e;
 
+static inline bool isValidCrsfAddress(const uint8_t address) {
+    return (address & 0xC0) == 0xC0;
+}
+
 //typedef struct crsf_addr_e asas;
 
 typedef enum : uint8_t
