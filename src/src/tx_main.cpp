@@ -24,6 +24,9 @@
 #include "devBackpack.h"
 
 #include "MAVLink.h"
+#if defined(CRSF_MAVLINK)
+#include "common/mavlink.h"
+#endif
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -48,7 +51,11 @@ FIFO<AP_MAX_BUF_LEN> apOutputBuffer;
 FIFO<UART_INPUT_BUF_LEN> uartInputBuffer;
 
 uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
-
+#if defined(CRSF_MAVLINK)
+FIFO<2048U> mavlink_uplink_queue;
+#else
+FIFO<UART_INPUT_BUF_LEN> mavlink_uplink_queue=uartInputBuffer;
+#endif
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
@@ -555,7 +562,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.full.msp_ul.payload,
           sizeof(otaPkt.full.msp_ul.payload));
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (config.GetLinkMode() == TX_MAVLINK_MODE || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE)
           otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
       else
@@ -563,7 +570,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
         otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.std.msp_ul.payload,
           sizeof(otaPkt.std.msp_ul.payload));
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (config.GetLinkMode() == TX_MAVLINK_MODE || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE)
           otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
       }
 
@@ -1160,7 +1167,7 @@ static void HandleUARTin()
   // Read from the Backpack serial port
   if (TxBackpack->available())
   {
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    if (config.GetLinkMode() == TX_MAVLINK_MODE || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE)
     {
       auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxBackpack->available());
       if (size > 0)
@@ -1526,7 +1533,7 @@ void loop()
   {
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
-        if (config.GetLinkMode() == TX_MAVLINK_MODE)
+        if (config.GetLinkMode() == TX_MAVLINK_MODE || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE)
         {
           // raw mavlink data - forward to USB rather than handset
           uint8_t count = CRSFinBuffer[1];
@@ -1582,24 +1589,48 @@ void loop()
     }
   }
 
-  if (config.GetLinkMode() == TX_MAVLINK_MODE)
+  if (config.GetLinkMode() == TX_MAVLINK_MODE   || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE)
   {
     // Use MspSender for MAVLINK uplink data
     uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    uint16_t count = uartInputBuffer.size();
-    if (count > 0 && !MspSender.IsActive())
+    uint16_t count=0;
+#if defined(CRSF_MAVLINK)
+    count = uartInputBuffer.size();
+    if (count > 0)
     {
-        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
-        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-        mavlinkSSBuffer[1] = count;
-        // Following n bytes are just raw mavlink
-        uartInputBuffer.lock();
-        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        uartInputBuffer.unlock();
-        nextPayload = mavlinkSSBuffer;
-        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
-        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+      mavlink_message_t msg;
+      mavlink_status_t status;
+      uartInputBuffer.lock();
+      for(int i=0; i<count;i++){
+        if(mavlink_parse_char(MAVLINK_COMM_0,uartInputBuffer.pop(),&msg,&status)){
+          uint8_t buf[280];
+          uint16_t len = mavlink_msg_to_send_buffer(buf,&msg);
+          if (mavlink_uplink_queue.available(len)){
+            mavlink_uplink_queue.lock();
+            mavlink_uplink_queue.pushBytes(buf,len);
+            mavlink_uplink_queue.unlock();
+          }
+        }
+      }
+      uartInputBuffer.unlock();
+    }
+#endif
+    count=mavlink_uplink_queue.size();
+    if ( count > 0 &&!MspSender.IsActive()){
+      
+      count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
+      mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+      mavlinkSSBuffer[1] = count;
+      // Following n bytes are just raw mavlink
+      mavlink_uplink_queue.lock();
+      mavlink_uplink_queue.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+      mavlink_uplink_queue.unlock();
+      
+      nextPayload = mavlinkSSBuffer;
+      nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+
+      MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
   }
 }

@@ -46,7 +46,11 @@ static const char switchmodeOpts4chMav[] = ";Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
+#if defined(CRSF_MAVLINK) //TODO: Decide how to handle TX_CRSF_MAVLINK_MODE disabled, right now everything works but ERR is displayed in lua we should either reset to 1 when CRSF_MAVLINK is disabled or display MAVLink 
+static const char linkModeOpts[] = "Normal;MAVLink;MAVLink<->CRSF";
+#else
 static const char linkModeOpts[] = "Normal;MAVLink";
+#endif
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
 static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
@@ -641,7 +645,7 @@ static void registerLuaParameters()
       // Don't allow the switch mode to change if the TX is in mavlink mode
       // Wide switchmode is not compatible with mavlink, and the switchmode is
       // auto configuredwhen entering mavlink mode
-      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+      bool isMavlinkMode = (config.GetLinkMode() == TX_MAVLINK_MODE || config.GetLinkMode() == TX_CRSF_MAVLINK_MODE);
       if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
       {
         config.SetRate(actualRate);

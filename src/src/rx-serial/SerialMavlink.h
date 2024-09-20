@@ -4,6 +4,14 @@
 
 #define MAV_INPUT_BUF_LEN   1024
 #define MAV_OUTPUT_BUF_LEN  512
+#ifndef RX_SYSID
+#define RX_SYSID 1
+#endif
+
+#ifndef TX_SYSID
+#define TX_SYSID 255
+#endif
+
 
 // Variables / constants
 extern FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
