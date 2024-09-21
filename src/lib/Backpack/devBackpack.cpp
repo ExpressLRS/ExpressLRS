@@ -17,9 +17,9 @@ extern bool headTrackingEnabled;
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
+bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
-uint8_t lastLinkMode; // will get set in start() and used in event()
 
 #if defined(GPIO_PIN_BACKPACK_EN)
 
@@ -258,11 +258,17 @@ static void AuxStateToMSPOut()
 #endif // USE_TX_BACKPACK
 }
 
-void crsfTelemToMSPOut(uint8_t *data)
+void sendCRSFTelemetryToBackpack(uint8_t *data)
 {
-    if (config.GetBackpackTlmEnabled() == 0)
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
     {
         // Backpack telem is off
+        return;
+    }
+
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+        // Tx is in MAVLink mode, don't forward CRSF telemetry
         return;
     }
 
@@ -286,6 +292,30 @@ void crsfTelemToMSPOut(uint8_t *data)
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
+void sendMAVLinkTelemetryToBackpack(uint8_t *data)
+{
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
+    {
+        // Backpack telem is off
+        return;
+    }
+
+    uint8_t count = data[1];
+    TxBackpack->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+}
+
+void sendConfigToBackpack()
+{
+    // Send any config values to the tx-backpack, as one key/value pair per MSP msg
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_CONFIG;
+    packet.addByte(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE); // Backpack tlm mode
+    packet.addByte(config.GetBackpackTlmMode());
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+}
+
 static void initialize()
 {
 #if defined(GPIO_PIN_BACKPACK_EN)
@@ -306,7 +336,6 @@ static void initialize()
 
 static int start()
 {
-    lastLinkMode = config.GetLinkMode();
     if (OPT_USE_TX_BACKPACK)
     {
         return DURATION_IMMEDIATELY;
@@ -354,6 +383,12 @@ static int timeout()
         BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
 
+    if (BackpackTelemReadyToSend && connectionState < MODE_STATES)
+    {
+        BackpackTelemReadyToSend = false;
+        sendConfigToBackpack();
+    }
+
     return BACKPACK_TIMEOUT;
 }
 
@@ -366,17 +401,7 @@ static int event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
 #endif
-#if !defined(PLATFORM_STM32)
-  // Update the backpack operating mode when the link mode changes
-    uint8_t newMode = config.GetLinkMode();
-    if (lastLinkMode != newMode)
-    {
-        uint8_t mavlinkOutputBuffer[MAVLINK_MAX_PACKET_LEN];
-        uint16_t len = buildMAVLinkELRSModeChange(newMode, mavlinkOutputBuffer);
-        TxBackpack->write(mavlinkOutputBuffer, len);
-    }
-    lastLinkMode = config.GetLinkMode();
-#endif
+
     return DURATION_IGNORE;
 }
 
