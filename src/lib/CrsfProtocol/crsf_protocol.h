@@ -91,8 +91,9 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
     CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
-    CRSF_COMMAND_MODEL_SELECT_ID = 0x05,
-    CRSF_COMMAND_ARM = 0x06
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05,        // this is sent if ch4 arming is required
+    CRSF_COMMAND_MODEL_SELECT_ID_EXT = 0x06,    // this is sent ifSF Arm logic is required and is sent
+    CRSF_COMMAND_ARM = 0x07
 } crsf_subcommand_e;
 
 enum {

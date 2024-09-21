@@ -291,8 +291,16 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
 
         if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX)
         {
-            if (header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
+            uint8_t command = header->payload[1];
+
+            if (command == CRSF_COMMAND_MODEL_SELECT_ID || command == CRSF_COMMAND_MODEL_SELECT_ID_EXT)
             {
+                if (command == CRSF_COMMAND_MODEL_SELECT_ID_EXT)
+                {
+                    sfArm = true;                   // use new SF Arm logic
+                    extData = header->payload[3];   // currently unused
+                }
+
                 modelId = header->payload[2];
                 #if defined(PLATFORM_ESP32)
                 rtcModelId = modelId;
@@ -301,7 +309,7 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
                 return true;
             }
 
-            if (header->payload[1] == CRSF_COMMAND_ARM)
+            if (command == CRSF_COMMAND_ARM)
             {
                 armCmd = header->payload[2];
 

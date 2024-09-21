@@ -21,8 +21,7 @@ public:
     void End() override;
 
 #ifdef CRSF_TX_MODULE
-    //bool IsArmed() override { return CRSF_to_BIT(ChannelData[4]); } // AUX1
-    bool IsArmed() override { return armCmd; } // AUX1
+    bool IsArmed() override { return sfArm ? armCmd : CRSF_to_BIT(ChannelData[4]); } // AUX1 (legacy) or SF Arm (new)
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
@@ -31,6 +30,8 @@ public:
 
     static uint8_t modelId;         // The model ID as received from the Transmitter
     bool armCmd;                    // Arming command from radio
+    bool sfArm;                     // handset is using SF Arm instead of ch4 to signal armed status
+    uint8_t extData;                // additional data from handset
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static bool elrsLUAmode;
 
