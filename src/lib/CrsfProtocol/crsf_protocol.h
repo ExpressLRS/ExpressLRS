@@ -92,8 +92,7 @@ typedef enum : uint8_t {
 typedef enum : uint8_t {
     CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
     CRSF_COMMAND_MODEL_SELECT_ID = 0x05,
-    CRSF_COMMAND_SF_ARM_PRESENT = 0x06,    // handset sends SF ARM defined status
-    CRSF_COMMAND_ARM = 0x07
+    CRSF_COMMAND_SF_ARM = 0x06,             // handset sends SF ARM defined and active status
 } crsf_subcommand_e;
 
 enum {
