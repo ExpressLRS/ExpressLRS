@@ -281,6 +281,10 @@ def ask_for_firmware(args):
         if args.target is not None:
             target = args.target
             config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
+            if config is None and args.fdir is not None:
+                with open(os.path.join(args.fdir, 'hardware/targets.json')) as f:
+                    targets = json.load(f)
+                    config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
         else:
             i = 0
             for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900","{moduletype}_dual"][].*[]', targets):
