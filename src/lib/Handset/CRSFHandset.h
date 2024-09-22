@@ -29,9 +29,8 @@ public:
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static uint8_t modelId;         // The model ID as received from the Transmitter
-    bool armCmd;                    // Arming command from radio
-    bool sfArm;                     // handset is using SF Arm instead of ch4 to signal armed status
-    uint8_t extData;                // additional data from handset
+    bool armCmd;                    // Arming command from handset
+    bool sfArm;                     // status of SF Arm defined in handset
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static bool elrsLUAmode;
 
