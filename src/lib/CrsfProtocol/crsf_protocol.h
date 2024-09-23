@@ -130,7 +130,7 @@ typedef enum : uint8_t
 } crsf_addr_e;
 
 static inline bool isValidCrsfAddress(const uint8_t address) {
-    return (address & 0xC0) == 0xC0;
+    return (address >= 0xC0) && (address <= 0xCF);
 }
 
 //typedef struct crsf_addr_e asas;
