@@ -972,7 +972,7 @@ static void startMDNS()
     return;
   }
 
-  String options = "-DAUTO_WIFI_ON_INTERVAL=" + String(firmwareOptions.wifi_auto_on_interval / 1000);
+  String options = "-DAUTO_WIFI_ON_INTERVAL=" + (firmwareOptions.wifi_auto_on_interval == -1 ? "-1" : String(firmwareOptions.wifi_auto_on_interval / 1000));
 
   #ifdef TARGET_TX
   if (firmwareOptions.unlock_higher_power)

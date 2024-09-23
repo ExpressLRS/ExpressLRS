@@ -193,8 +193,9 @@ jobs:
             exit 0
           fi
 
-          aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null || NOT_EXIST=true
-          if [ $NOT_EXIST ]; then
+          aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null || ALLOW_UPLOAD=true
+          git describe --tags --exact-match HEAD && ALLOW_UPLOAD=true
+          if [ $ALLOW_UPLOAD ]; then
             echo "Uploading firmware to artifactory"
             aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
 

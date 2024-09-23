@@ -255,6 +255,8 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
+static uint32_t BindingRateChangeTime;
+#define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
 void reconfigureSerial();
@@ -1166,10 +1168,14 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     if (Radio.FrequencyErrorAvailable())
     {
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
     #if defined(RADIO_SX127X)
+        // Adjusts FreqCorrection for RX freq offset
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection);
+    #else /* !RADIO_SX127X */
+        // Adjusts FreqCorrection for RX freq offset
+        HandleFreqCorr(Radio.GetFrequencyErrorbool());
     #endif /* RADIO_SX127X */
     }
 
@@ -1247,11 +1253,6 @@ void MspReceiveComplete()
 #endif
         break;
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
-        if (config.GetSerialProtocol() != PROTOCOL_MAVLINK)
-        {
-            config.SetSerialProtocol(PROTOCOL_MAVLINK);
-            reconfigureSerial();
-        }
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
         break;
@@ -1755,11 +1756,7 @@ static void EnterBindingMode()
     // Start attempting to bind
     // Lock the RF rate and freq while binding
     SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
-    Radio.SetFrequencyReg(FHSSgetInitialFreq());
-    if (geminiMode)
-    {
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
-    }
+
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 
@@ -1802,13 +1799,31 @@ static void ExitBindingMode()
     devicesTriggerEvent();
 }
 
-static void updateBindingMode()
+static void updateBindingMode(unsigned long now)
 {
     // Exit binding mode if the config has been modified, indicating UID has been set
     if (InBindingMode && config.IsModified())
     {
         ExitBindingMode();
     }
+
+#if defined(RADIO_LR1121)
+    // Change frequency domains every 500ms.  This will allow single LR1121 receivers to receive bind packets from SX12XX Tx modules.
+    else if (InBindingMode && (now - BindingRateChangeTime) > BindingRateChangeCyclePeriod)
+    {
+        BindingRateChangeTime = now;
+        if (ExpressLRS_currAirRate_Modparams->index == RATE_DUALBAND_BINDING)
+        {
+            SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
+        }
+        else
+        {
+            SetRFLinkRate(RATE_DUALBAND_BINDING, true);
+        }
+
+        Radio.RXnb();
+    }
+#endif
 
     // If the power on counter is >=3, enter binding, the counter will be reset after 2s
     else if (!InBindingMode && config.GetPowerOnCounter() >= 3)
@@ -2235,7 +2250,7 @@ void loop()
     }
 
     updateTelemetryBurst();
-    updateBindingMode();
+    updateBindingMode(now);
     updateSwitchMode();
     checkGeminiMode();
     DynamicPower_UpdateRx(false);
