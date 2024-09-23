@@ -80,8 +80,6 @@ def patch_unified(args, options):
 
     if args.tlm_report is not None:
         json_flags['tlm-interval'] = args.tlm_report
-    if args.unlock_higher_power is not None:
-        json_flags['unlock-higher-power'] = args.unlock_higher_power
     if args.fan_min_runtime is not None:
         json_flags['fan-runtime'] = args.fan_min_runtime
 
@@ -194,9 +192,6 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
-    parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
-    parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
-    parser.set_defaults(unlock_higher_power=None)
     # Regulatory domain
     parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
     # Unified target
