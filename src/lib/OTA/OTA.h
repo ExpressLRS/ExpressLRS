@@ -58,7 +58,12 @@ typedef struct {
         struct {
             OTA_Channels_4x10 ch;
             uint8_t switches:7,
-                    ch4:1;
+                    isArmed:1;
+/* if receiver needs to know arming method
+            uint8_t isArmed:1,      // arm status
+                    hasSfArm:1,     // arming method (AUX1 or SF Arm)
+                    spare2:6;       // spare
+*/
         } rc;
         struct {
             uint32_t packetNum; // LittleEndian
@@ -103,11 +108,16 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     telemetryStatus: 1,
-                    uplinkPower: 3, // CRSF_power_level - 1 (1-8 is 0-7 in the air)
-                    isHighAux: 1, // true if chHigh are AUX6-9
-                    ch4: 1;   // AUX1, included up here so ch0 starts on a byte boundary
-            OTA_Channels_4x10 chLow;  // CH0-CH3
-            OTA_Channels_4x10 chHigh; // AUX2-5 or AUX6-9
+                    uplinkPower: 3,     // CRSF_power_level - 1 (1-8 is 0-7 in the air)
+                    isHighAux: 1,       // true if chHigh are AUX6-9
+                    isArmed: 1;         // Arm
+            OTA_Channels_4x10 chLow;    // CH0-CH3
+            OTA_Channels_4x10 chHigh;   // AUX2-5 or AUX6-9
+/* if receiver needs to know arming method
+            uint8_t isArmed:1,          // arm status
+                    hasSfArm:1,         // arming method (AUX1 or SF Arm)
+                    spare2:6;           // spare
+*/
         } PACKED rc;
         struct {
             uint8_t packetType; // actually struct rc's first byte

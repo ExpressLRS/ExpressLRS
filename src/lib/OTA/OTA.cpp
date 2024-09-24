@@ -44,6 +44,9 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 
 #if TARGET_TX || defined(UNIT_TEST)
 
+#include "handset.h"            // need access to handset data for arming
+extern Handset *handset;
+
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;
 #if defined(DEBUG_RCVR_LINKSTATS)
@@ -106,7 +109,10 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     // CRSF input is 11bit and OTA will carry only 10bit. Discard the Extended Limits (E.Limits)
     // range and use the full 10bits to carry only 998us - 2012us
     PackUInt11ToChannels4x10(&channelData[0], &ota4->rc.ch, &Decimate11to10_Limit);
-    ota4->rc.ch4 = CRSF_to_BIT(channelData[4]);
+
+    // send arming method (ch5 or via message) and armed status to receiver
+    // ota4->rc.hasSfArm = handset->ArmViaMsg(); // if the receiver needs to know the arming method
+    ota4->rc.isArmed = handset->ArmViaMsg() ? handset->IsArmed() : CRSF_to_BIT(channelData[4]);
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
 
@@ -219,7 +225,9 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     // uplinkPower has 8 items but only 3 bits, but 0 is 0 power which we never use, shift 1-8 -> 0-7
     ota8->rc.uplinkPower = constrain(CRSF::LinkStatistics.uplink_TX_Power, 1, 8) - 1;
     ota8->rc.isHighAux = isHighAux;
-    ota8->rc.ch4 = CRSF_to_BIT(channelData[4]);
+    // send arming method (ch5 or via msg) and armed status to receiver
+    //ota8->rc.hasSfArm = handset->ArmViaMsg(); // if the receiver needs to know the arming method
+    ota8->rc.isArmed = handset->ArmViaMsg() ? handset->IsArmed() : CRSF_to_BIT(channelData[4]);
 #if defined(DEBUG_RCVR_LINKSTATS)
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
     ota8->dbg_linkstats.packetNum = packetCnt++;
@@ -282,6 +290,8 @@ static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktP
 
 #if TARGET_RX || defined(UNIT_TEST)
 
+bool isArmed;       // global arming status for other functions
+
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t OtaUnpackChannelData;
 
@@ -321,6 +331,8 @@ static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChanne
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, uint32_t *channelData)
 {
+    isArmed = ota4->rc.isArmed;
+
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = ota4->dbg_linkstats.packetNum;
 #else
@@ -333,7 +345,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
     {
         channelData[ch] = UINT10_to_CRSF(channelData[ch] >> 1);
     }
-    channelData[4] = BIT_to_CRSF(ota4->rc.ch4);
+    channelData[4] = BIT_to_CRSF(isArmed);
 #endif
 }
 
@@ -433,6 +445,8 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
+    isArmed = ota8->rc.isArmed;
+
 #if defined(DEBUG_RCVR_LINKSTATS)
     debugRcvrLinkstatsPacketId = ota8->dbg_linkstats.packetNum;
 #else
@@ -453,7 +467,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     }
     else
     {
-        channelData[4] = BIT_to_CRSF(ota8->rc.ch4);
+        channelData[4] = BIT_to_CRSF(isArmed);
         chDstLow = 0;
         chDstHigh = (ota8->rc.isHighAux) ? 9 : 5;
     }

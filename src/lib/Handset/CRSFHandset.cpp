@@ -305,11 +305,11 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
 
             if (command == CRSF_COMMAND_SF_ARM)
             {
-                sfArm = header->payload[2];
+                armMethod = header->payload[2];
                 armCmd = header->payload[3];
 
                 #if defined(PLATFORM_ESP32)
-                    // monitoring arming state
+                    // monitoring armed state
 
                     static bool lastArmCmd = false;
 

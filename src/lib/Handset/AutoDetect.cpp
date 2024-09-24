@@ -37,6 +37,11 @@ bool AutoDetect::IsArmed()
     return false;
 }
 
+bool AutoDetect::ArmViaMsg()
+{
+    return false;
+}
+
 void AutoDetect::migrateTo(Handset *that) const
 {
     that->setRCDataCallback(RCdataCallback);

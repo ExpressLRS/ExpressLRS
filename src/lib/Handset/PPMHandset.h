@@ -9,6 +9,7 @@ public:
     void Begin() override;
     void End() override;
     bool IsArmed() override;
+    bool ArmViaMsg() override;
     void handleInput() override;
 
 private:
