@@ -45,11 +45,6 @@
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
-#define USE_SKY85321
-#define GPIO_PIN_PA_PDET hardware_pin(HARDWARE_power_pdet)
-#define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
-#define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
-
 // default value 0 means direct!
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)

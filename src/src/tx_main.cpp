@@ -104,17 +104,18 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
-#if defined(USE_TX_BACKPACK)
-  {&Backpack_device, 0},
-#endif
-#ifdef HAS_BLE
-  {&BLE_device, 0},
-#endif
 #ifdef HAS_WIFI
   {&WIFI_device, 0},
 #endif
 #ifdef HAS_BUTTON
   {&Button_device, 0},
+#endif
+#if defined(PLATFORM_ESP32)
+#if defined(USE_TX_BACKPACK)
+  {&Backpack_device, 0},
+#endif
+#ifdef HAS_BLE
+  {&BLE_device, 0},
 #endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
@@ -125,7 +126,6 @@ device_affinity_t ui_devices[] = {
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
-#if defined(GPIO_PIN_PA_PDET)
   {&PDET_device, 0},
 #endif
   {&VTX_device, 0}

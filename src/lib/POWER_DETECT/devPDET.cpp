@@ -4,16 +4,8 @@
 #include "logging.h"
 #include "POWERMGNT.h"
 
-#if defined(GPIO_PIN_PA_PDET)
-
-#if defined(USE_SKY85321)
+#if defined(TARGET_TX) && defined(PLATFORM_ESP32)
 #define SKY85321_MAX_DBM_INPUT 5
-
-// SKY85321_PDET_SLOPE/INTERCEPT convert mV from analogRead() to dBm
-#if !defined(SKY85321_PDET_SLOPE) || !defined(SKY85321_PDET_INTERCEPT)
-  #error "SKY85321 requires SKY85321_PDET_SLOPE and SKY85321_PDET_INTERCEPT"
-#endif
-#endif // USE_SKY85321
 
 typedef uint32_t pdet_storage_t;
 #define PDET_DBM_SCALE(x)         ((pdet_storage_t)((x) * 1000U))

@@ -43,7 +43,7 @@
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
-#define GPIO_PIN_BUTTON2 hardware_pin(HARDWARE_button2)
+#define GPIO_PIN_BUTTON2 UNDEF_PIN
 
 // Lighting
 #define GPIO_PIN_LED hardware_pin(HARDWARE_led)

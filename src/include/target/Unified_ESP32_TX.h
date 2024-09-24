@@ -45,7 +45,6 @@
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
-#define USE_SKY85321
 #define GPIO_PIN_PA_PDET hardware_pin(HARDWARE_power_pdet)
 #define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
 #define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
@@ -157,19 +156,3 @@
 #define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 
-/*
-// These are RX settings
-
-// PWM
-GPIO_PIN_PWM_OUTPUTS
-
-// VTX
-GPIO_PIN_RF_AMP_PWM
-GPIO_PIN_RF_AMP_VPD
-GPIO_PIN_RF_AMP_VREF
-GPIO_PIN_SPI_VTX_NSS
-VPD_VALUES_25MW
-VPD_VALUES_100MW
-PWM_VALUES_25MW
-PWM_VALUES_100MW
-*/
