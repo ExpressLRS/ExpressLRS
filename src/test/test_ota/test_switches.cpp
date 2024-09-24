@@ -487,7 +487,7 @@ void test_encodingFullres8ch()
     TEST_ASSERT_EQUAL(false, otaPktPtr->full.rc.telemetryStatus);
     TEST_ASSERT_EQUAL(PWR_250mW, otaPktPtr->full.rc.uplinkPower + 1);
     TEST_ASSERT_EQUAL(false, otaPktPtr->full.rc.isHighAux);
-    TEST_ASSERT_EQUAL(CRSF_to_BIT(ChannelsIn[4]), otaPktPtr->full.rc.ch4);
+    TEST_ASSERT_EQUAL(CRSF_to_BIT(ChannelsIn[4]), otaPktPtr->full.rc.isArmed);
 }
 
 void test_encodingFullres16ch()

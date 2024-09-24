@@ -44,8 +44,20 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 
 #if TARGET_TX || defined(UNIT_TEST)
 
+#if defined(UNIT_TEST)
+class Handset
+{
+public:
+    Handset() {}
+
+    bool IsArmed() { return false ; }
+    bool ArmViaMsg() { return false; }
+};
+
+Handset *handset = new Handset();
+#else
 #include "handset.h"            // need access to handset data for arming
-extern Handset *handset;
+#endif 
 
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;
