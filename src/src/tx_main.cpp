@@ -111,9 +111,7 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
 #if defined(PLATFORM_ESP32)
   {&Backpack_device, 0},
-#ifdef HAS_BLE
   {&BLE_device, 0},
-#endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
 #endif
