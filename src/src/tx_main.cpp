@@ -100,9 +100,7 @@ device_affinity_t ui_devices[] = {
   {&LED_device, 0},
   {&RGB_device, 0},
   {&LUA_device, 1},
-#ifdef HAS_WIFI
   {&WIFI_device, 0},
-#endif
 #ifdef HAS_BUTTON
   {&Button_device, 0},
 #endif
