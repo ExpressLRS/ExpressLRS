@@ -30,9 +30,7 @@ extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t p
 
 extern Display *display;
 
-#ifdef PLATFORM_ESP32
 extern unsigned long rebootTime;
-#endif
 
 fsm_state_t getInitialState()
 {
@@ -356,11 +354,9 @@ static void executeBLE(bool init)
 
 static void exitBLE(bool init)
 {
-#ifdef PLATFORM_ESP32
     if (connectionState == bleJoystick) {
         rebootTime = millis() + 200;
     }
-#endif
 }
 
 // WiFi
@@ -371,11 +367,9 @@ static void displayWiFiConfirm(bool init)
 
 static void exitWiFi(bool init)
 {
-#ifdef PLATFORM_ESP32
     if (connectionState == wifiUpdate) {
         rebootTime = millis() + 200;
     }
-#endif
 }
 
 static void executeWiFi(bool init)
@@ -386,9 +380,7 @@ static void executeWiFi(bool init)
         switch (state_machine.getParentState())
         {
             case STATE_WIFI_TX:
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
                 setWifiUpdateMode();
-#endif
                 break;
             case STATE_WIFI_RX:
                 RxWiFiReadyToSend = true;
@@ -584,9 +576,7 @@ fsm_state_entry_t const wifi_ext_menu_fsm[] = {
 };
 fsm_state_event_t const wifi_ext_menu_events[] = {MENU_EVENTS(wifi_ext_menu_fsm)};
 fsm_state_entry_t const wifi_menu_fsm[] = {
-#if defined(PLATFORM_ESP32)
     {STATE_WIFI_TX, nullptr, displayMenuScreen, 20000, wifi_menu_update_events, ARRAY_SIZE(wifi_menu_update_events)},
-#endif
     {STATE_WIFI_RX, nullptr, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
     {STATE_WIFI_BACKPACK, [](){return OPT_USE_TX_BACKPACK;}, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
     {STATE_WIFI_VRX, [](){return OPT_USE_TX_BACKPACK;}, displayMenuScreen, 20000, wifi_ext_menu_events, ARRAY_SIZE(wifi_ext_menu_events)},
@@ -661,7 +651,6 @@ fsm_state_entry_t const entry_fsm[] = {
     {STATE_LAST}
 };
 
-#if defined(PLATFORM_ESP32)
 void jumpToWifiRunning()
 {
     state_machine.jumpTo(wifi_menu_fsm, STATE_WIFI_TX);
@@ -673,4 +662,3 @@ void jumpToBleRunning()
     state_machine.jumpTo(main_menu_fsm, STATE_JOYSTICK);
     state_machine.jumpTo(ble_menu_fsm, STATE_BLE_EXECUTE);
 }
-#endif

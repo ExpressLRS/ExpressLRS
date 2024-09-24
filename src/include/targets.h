@@ -32,9 +32,6 @@
 #if defined(GPIO_PIN_FAN_EN)
 #define HAS_FAN
 #endif
-#if defined(USE_OLED_I2C) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(HAS_TFT_SCREEN)
-#define HAS_SCREEN
-#endif
 #if defined(GPIO_PIN_SPI_VTX_NSS)
 #if !defined(HAS_VTX_SPI)
 #define HAS_VTX_SPI
@@ -132,15 +129,6 @@
 #endif
 #ifndef GPIO_PIN_FAN_TACHO
 #define GPIO_PIN_FAN_TACHO UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_MOSI
-#define GPIO_PIN_OLED_MOSI UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_CS
-#define GPIO_PIN_OLED_CS UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_DC
-#define GPIO_PIN_OLED_DC UNDEF_PIN
 #endif
 
 

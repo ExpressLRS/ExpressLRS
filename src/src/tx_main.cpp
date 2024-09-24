@@ -112,9 +112,7 @@ device_affinity_t ui_devices[] = {
 #if defined(PLATFORM_ESP32)
   {&Backpack_device, 0},
   {&BLE_device, 0},
-#ifdef HAS_SCREEN
   {&Screen_device, 0},
-#endif
   {&Gsensor_device, 0},
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
