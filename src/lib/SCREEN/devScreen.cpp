@@ -19,12 +19,10 @@ Display *display;
 FiveWayButton fivewaybutton;
 #endif
 
-#ifdef HAS_GSENSOR
 #include "gsensor.h"
 extern Gsensor gsensor;
 static bool is_screen_flipped = false;
 static bool is_pre_screen_flipped = false;
-#endif
 
 #define SCREEN_DURATION 20
 
@@ -36,7 +34,6 @@ static bool jumpToChannelSelect = false;
 
 static int handle(void)
 {
-#ifdef HAS_GSENSOR
     is_screen_flipped = gsensor.isFlipped();
 
     if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
@@ -53,7 +50,6 @@ static int handle(void)
     {
         return 100; // no need to check as often if the screen is off!
     }
-#endif
     uint32_t now = millis();
 
 #if defined(PLATFORM_ESP32)

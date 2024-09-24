@@ -64,3 +64,6 @@
 
 #define OPT_USE_TX_BACKPACK false
 #define GPIO_PIN_BACKPACK_EN UNDEF_PIN
+#define OPT_HAS_GSENSOR false
+#define OPT_HAS_GSENSOR_STK8xxx false
+#define GPIO_PIN_GSENSOR_INT UNDEF_PIN

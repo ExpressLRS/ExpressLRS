@@ -115,9 +115,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
 #endif
-#ifdef HAS_GSENSOR
   {&Gsensor_device, 0},
-#endif
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
