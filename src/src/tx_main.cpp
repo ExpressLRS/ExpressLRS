@@ -101,9 +101,7 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
   {&LUA_device, 1},
   {&WIFI_device, 0},
-#ifdef HAS_BUTTON
   {&Button_device, 0},
-#endif
 #if defined(PLATFORM_ESP32)
 #if defined(USE_TX_BACKPACK)
   {&Backpack_device, 0},
@@ -1367,10 +1365,8 @@ void setup()
     TxBackpack = new NullStream();
   }
 
-#if defined(HAS_BUTTON)
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
   registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
-#endif
 
   devicesStart();
 

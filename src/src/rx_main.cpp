@@ -80,34 +80,32 @@ device_affinity_t ui_devices[] = {
   {&Serial0_device, 1},
 #if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
-#endif
-#if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
   {&LED_device, 0},
   {&LUA_device, 0},
   {&RGB_device, 0},
   {&WIFI_device, 0},
-#ifdef HAS_BUTTON
   {&Button_device, 0},
-#endif
-#ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
-#endif
 #ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
 #endif
+#if defined(PLATFORM_ESP32)
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
+#ifdef HAS_VTX_SPI
+  {&VTxSPI_device, 0},
 #endif
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
+#endif
 #endif
 };
 
@@ -2043,10 +2041,8 @@ void setup()
         }
     }
 
-#if defined(HAS_BUTTON)
     registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
-#endif
 
     devicesStart();
 
