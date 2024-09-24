@@ -64,14 +64,6 @@
 # to any device.
 #-DUSE_TX_BACKPACK
 
-# Silence the buzzer
-#-DDISABLE_ALL_BEEPS
-# Disables the startup tune and crsf connect/disconnct do beep-boop
-#-DDISABLE_STARTUP_BEEP
-# Startup is beep-boop, and crsf connect/disconnct do similar
-#-DJUST_BEEP_ONCE
-# Startup plays you own custom tune and crsf connect/disconnct do beep-boop
-#-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
 
 #If commented out the LED is RGB otherwise GRB
 #-DWS2812_IS_GRB
