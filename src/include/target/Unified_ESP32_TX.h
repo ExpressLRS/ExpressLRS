@@ -42,7 +42,6 @@
 #define GPIO_PIN_TX_ENABLE_2 hardware_pin(HARDWARE_power_txen_2)
 #define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
-#define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
@@ -52,10 +51,7 @@
 #define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
 
 // default value 0 means direct!
-// #define POWER_OUTPUT_ANALOG (hardware_int(HARDWARE_power_control)==1)   // frsky only
-// #define POWER_OUTPUT_DAC (hardware_int(HARDWARE_power_control)==2)  // stm32 only
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
-#define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
 #define POWER_OUTPUT_VALUES_DUAL hardware_i16_array(HARDWARE_power_values_dual)
