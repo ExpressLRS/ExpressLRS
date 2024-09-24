@@ -105,3 +105,5 @@
 #endif
 
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
+
+#define OPT_USE_TX_BACKPACK false

@@ -45,12 +45,6 @@
 #define OPT_HAS_VTX_SPI false
 #endif
 
-#ifndef USE_TX_BACKPACK
-#define OPT_USE_TX_BACKPACK false
-#elif !defined(OPT_USE_TX_BACKPACK)
-#define OPT_USE_TX_BACKPACK true
-#endif
-
 #ifndef HAS_THERMAL
 #define OPT_HAS_THERMAL false
 #define OPT_HAS_THERMAL_LM75A false

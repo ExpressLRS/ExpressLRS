@@ -61,3 +61,6 @@
 #define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
+
+#define OPT_USE_TX_BACKPACK false
+#define GPIO_PIN_BACKPACK_EN UNDEF_PIN

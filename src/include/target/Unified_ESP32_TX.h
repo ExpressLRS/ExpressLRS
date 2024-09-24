@@ -115,7 +115,6 @@
 #define GPIO_PIN_TFT_SCLK hardware_pin(HARDWARE_screen_sck)
 
 // Backpack
-#define USE_TX_BACKPACK
 #define OPT_USE_TX_BACKPACK hardware_flag(HARDWARE_use_backpack)
 #define BACKPACK_LOGGING_BAUD hardware_int(HARDWARE_debug_backpack_baud)
 #define GPIO_PIN_DEBUG_RX hardware_pin(HARDWARE_debug_backpack_rx)
