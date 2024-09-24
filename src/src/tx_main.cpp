@@ -139,19 +139,6 @@ device_affinity_t ui_devices[] = {
     static bool diversityAntennaState = LOW;
 #endif
 
-#ifdef TARGET_TX_GHOST
-extern "C"
-/**
-  * @brief This function handles external line 2 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI2_TSC_IRQHandler()
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
-}
-#endif
-
 void switchDiversityAntennas()
 {
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
@@ -1203,24 +1190,6 @@ static void setupSerial()
   {
     serialPort = new NullStream();
   }
-#elif defined(TARGET_TX_FM30)
-  #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
-    USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
-    serialPort->begin();
-  #else
-    Stream *serialPort = new NullStream();
-  #endif
-#elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  HardwareSerial *serialPort = new HardwareSerial(2);
-  #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-    serialPort->setRx(GPIO_PIN_DEBUG_RX);
-  #endif
-  #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-    serialPort->setTx(GPIO_PIN_DEBUG_TX);
-  #endif
-  serialPort->begin(BACKPACK_LOGGING_BAUD);
-#else
-  Stream *serialPort = new NullStream();
 #endif
   TxBackpack = serialPort;
 
@@ -1263,25 +1232,6 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
-  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
-  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
-  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
-  HardwareSerial *uart2 = new HardwareSerial(USART2);
-  uart2->begin(57600);
-  CRSFHandset::PortSecondary = uart2;
-#endif
-
-#if defined(TARGET_TX_FM30_MINI)
-  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
-
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);

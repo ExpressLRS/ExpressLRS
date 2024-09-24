@@ -143,20 +143,16 @@ bool pwmSerialDefined = false;
 uint32_t serialBaud;
 
 /* SERIAL_PROTOCOL_TX is used by CRSF output */
-#if defined(TARGET_RX_FM30_MINI)
-    HardwareSerial SERIAL_PROTOCOL_TX(USART2);
-#else
-    #define SERIAL_PROTOCOL_TX Serial
+#define SERIAL_PROTOCOL_TX Serial
 
-    #if defined(PLATFORM_ESP32)
-        #define SERIAL1_PROTOCOL_TX Serial1
+#if defined(PLATFORM_ESP32)
+    #define SERIAL1_PROTOCOL_TX Serial1
 
-        // SBUS driver needs to distinguish stream for SBUS/DJI protocol
-        const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
-        const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+    // SBUS driver needs to distinguish stream for SBUS/DJI protocol
+    const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+    const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
 
-        SerialIO *serial1IO = nullptr;
-    #endif
+    SerialIO *serial1IO = nullptr;
 #endif
 
 SerialIO *serialIO = nullptr;
@@ -1565,11 +1561,6 @@ static void setupTarget()
             digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
         }
     }
-
-#if defined(TARGET_RX_FM30_MINI)
-    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
-    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
 
     setupTargetCommon();
 }

@@ -84,7 +84,7 @@ static uint16_t flashLED(uint8_t pin, uint8_t pin_inverted, const uint8_t durati
 
 static void initialize()
 {
-    // TODO for future PR, remove TARGET_TX, TARGET_RX, and TARGET_TX_FM30 defines.
+    // TODO for future PR, remove TARGET_TX, TARGET_RX defines.
     #if defined(TARGET_TX)
         if (GPIO_PIN_LED_BLUE != UNDEF_PIN)
         {
@@ -112,12 +112,6 @@ static void initialize()
         {
             hasGBLeds = true;
         }
-        #if defined(TARGET_TX_FM30)
-            pinMode(GPIO_PIN_LED_RED_GREEN, OUTPUT); // Green LED on "Red" LED (off)
-            digitalWrite(GPIO_PIN_LED_RED_GREEN, HIGH);
-            pinMode(GPIO_PIN_LED_GREEN_RED, OUTPUT); // Red LED on "Green" LED (off)
-            digitalWrite(GPIO_PIN_LED_GREEN_RED, HIGH);
-        #endif
     #endif
     #if defined(TARGET_RX)
         if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
