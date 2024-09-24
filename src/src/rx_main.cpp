@@ -84,13 +84,9 @@ device_affinity_t ui_devices[] = {
 #if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
-#ifdef HAS_LED
   {&LED_device, 0},
-#endif
   {&LUA_device, 0},
-#ifdef HAS_RGB
   {&RGB_device, 0},
-#endif
 #ifdef HAS_WIFI
   {&WIFI_device, 0},
 #endif
