@@ -126,7 +126,6 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
-bool hardwareConfigured = true;
 
 #if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
@@ -1979,9 +1978,7 @@ void resetConfigAndReboot()
 
 void setup()
 {
-    #if defined(TARGET_UNIFIED_RX)
-    hardwareConfigured = options_init();
-    if (!hardwareConfigured)
+    if (!options_init())
     {
         // In the failure case we set the logging to the null logger so nothing crashes
         // if it decides to log something
@@ -1996,11 +1993,7 @@ void setup()
 
         connectionState = hardwareUndefined;
     }
-    #else
-    hardwareConfigured = options_init();
-    #endif
-
-    if (hardwareConfigured)
+    else
     {
         // default to CRSF protocol and the compiled baud rate
         serialBaud = firmwareOptions.uart_baud;

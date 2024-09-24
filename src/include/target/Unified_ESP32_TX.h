@@ -1,5 +1,3 @@
-#define TARGET_UNIFIED_TX
-
 #define HARDWARE_VERSION ""
 
 // Serial

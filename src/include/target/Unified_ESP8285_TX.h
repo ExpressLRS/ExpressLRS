@@ -1,5 +1,3 @@
-#define TARGET_UNIFIED_TX
-
 #define HARDWARE_VERSION ""
 
 // DEVICE_NAME is not defined here because we get it from the SPIFFS file system

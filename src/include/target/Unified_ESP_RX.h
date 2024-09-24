@@ -1,4 +1,4 @@
-#define TARGET_UNIFIED_RX
+#define HAS_BARO
 
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
