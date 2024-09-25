@@ -91,12 +91,8 @@ device_affinity_t ui_devices[] = {
   {&ServoOut_device, 1},
 #if defined(PLATFORM_ESP32)
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
-#endif
-#ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
-#endif
   {&Thermal_device, 0},
 #endif
 };
@@ -1249,6 +1245,7 @@ void MspReceiveComplete()
                 UpdateModelMatch(MspData[9]);
                 break;
             }
+#if defined(PLATFORM_ESP32)
             else if (MspData[7] == MSP_SET_VTX_CONFIG)
             {
                 if (OPT_HAS_VTX_SPI) {
@@ -1260,14 +1257,13 @@ void MspReceiveComplete()
                     }
                     devicesTriggerEvent();
                     break;
-#if defined(PLATFORM_ESP32)
                 } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
                     serial1IO->queueMSPFrameTransmission(MspData);
                     break;
-#endif
                 }
             }
             // FALLTHROUGH
+#endif
         default:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {

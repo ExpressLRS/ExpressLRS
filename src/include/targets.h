@@ -29,23 +29,6 @@
  * Features
  * define features based on pins before defining pins as UNDEF_PIN
  */
-#if defined(GPIO_PIN_SPI_VTX_NSS)
-#if !defined(HAS_VTX_SPI)
-#define HAS_VTX_SPI
-#define HAS_MSP_VTX
-#define OPT_HAS_VTX_SPI true
-#endif
-#else
-#define OPT_HAS_VTX_SPI false
-#endif
-
-#if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
-#define USE_I2C
-#else
-#define GPIO_PIN_SDA UNDEF_PIN
-#define GPIO_PIN_SCL UNDEF_PIN
-#endif
-
 #ifndef GPIO_PIN_BUFFER_OE
 #define GPIO_PIN_BUFFER_OE UNDEF_PIN
 #endif
