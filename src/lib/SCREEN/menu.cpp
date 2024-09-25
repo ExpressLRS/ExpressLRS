@@ -10,11 +10,9 @@
 #include "OTA.h"
 #include "deferred.h"
 
-#ifdef HAS_THERMAL
 #include "thermal.h"
 #define UPDATE_TEMP_TIMEOUT 5000
 extern Thermal thermal;
-#endif
 
 extern FiniteStateMachine state_machine;
 
@@ -61,7 +59,6 @@ static void displayIdleScreen(bool init)
     static uint8_t last_run_power = 0xFF;
 
     uint8_t temperature = last_temperature;
-#ifdef HAS_THERMAL
     static uint32_t last_update_temp_ms = 0;
     uint32_t now = millis();
     if(now - last_update_temp_ms > UPDATE_TEMP_TIMEOUT || last_update_temp_ms == 0)
@@ -69,7 +66,6 @@ static void displayIdleScreen(bool init)
         temperature = thermal.getTempValue();
         last_update_temp_ms = now;
     }
-#endif
 
     uint8_t changed = init ? CHANGED_ALL : 0;
     message_index_t disp_message;
@@ -611,9 +607,7 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_POWER, nullptr, displayMenuScreen, 20000, power_menu_events, ARRAY_SIZE(power_menu_events)},
     {STATE_TELEMETRY, [](){return !firmwareOptions.is_airport;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
     {STATE_POWERSAVE, [](){return OPT_HAS_GSENSOR && !firmwareOptions.is_airport;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-#ifdef HAS_THERMAL
     {STATE_SMARTFAN, [](){return OPT_HAS_THERMAL;}, displayMenuScreen, 20000, value_menu_events, ARRAY_SIZE(value_menu_events)},
-#endif
     {STATE_JOYSTICK, nullptr, displayMenuScreen, 20000, ble_menu_events, ARRAY_SIZE(ble_menu_events)},
     {STATE_BIND, nullptr, displayMenuScreen, 20000, bind_menu_events, ARRAY_SIZE(bind_menu_events)},
     {STATE_WIFI, nullptr, displayMenuScreen, 20000, wifi_menu_events, ARRAY_SIZE(wifi_menu_events)},

@@ -103,9 +103,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
-#endif
 #endif
 };
 

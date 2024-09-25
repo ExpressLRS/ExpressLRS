@@ -114,9 +114,7 @@ device_affinity_t ui_devices[] = {
   {&BLE_device, 0},
   {&Screen_device, 0},
   {&Gsensor_device, 0},
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
-#endif
   {&PDET_device, 0},
 #endif
   {&VTX_device, 0}

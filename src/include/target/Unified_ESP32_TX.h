@@ -113,8 +113,6 @@
 #define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
 
 // Misc sensors & things
-#define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
-#define define HAS_FAN
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
 #define GPIO_PIN_FAN_PWM hardware_pin(HARDWARE_misc_fan_pwm)
 #define GPIO_PIN_FAN_TACHO hardware_pin(HARDWARE_misc_fan_tacho)
@@ -123,9 +121,8 @@
 
 #define OPT_HAS_GSENSOR_STK8xxx hardware_flag(HARDWARE_gsensor_stk8xxx)
 #define OPT_HAS_GSENSOR OPT_HAS_GSENSOR_STK8xxx // If any of the sensors are present
+#define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
 
-#define HAS_THERMAL
-#define HAS_THERMAL_LM75A
 #define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 

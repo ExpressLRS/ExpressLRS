@@ -29,9 +29,6 @@
  * Features
  * define features based on pins before defining pins as UNDEF_PIN
  */
-#if defined(GPIO_PIN_FAN_EN)
-#define HAS_FAN
-#endif
 #if defined(GPIO_PIN_SPI_VTX_NSS)
 #if !defined(HAS_VTX_SPI)
 #define HAS_VTX_SPI
@@ -42,17 +39,11 @@
 #define OPT_HAS_VTX_SPI false
 #endif
 
-#ifndef HAS_THERMAL
-#define OPT_HAS_THERMAL false
-#define OPT_HAS_THERMAL_LM75A false
-#elif !defined(OPT_HAS_THERMAL)
-#define OPT_HAS_THERMAL true
-#endif
-
-#ifndef HAS_GSENSOR
-#define OPT_HAS_GSENSOR false
-#elif !defined(OPT_HAS_GSENSOR)
-#define OPT_HAS_GSENSOR true
+#if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
+#define USE_I2C
+#else
+#define GPIO_PIN_SDA UNDEF_PIN
+#define GPIO_PIN_SCL UNDEF_PIN
 #endif
 
 #ifndef GPIO_PIN_BUFFER_OE
@@ -120,15 +111,6 @@
 #endif
 #ifndef POWER_OUTPUT_VALUES2
 #define POWER_OUTPUT_VALUES2 nullptr
-#endif
-#ifndef GPIO_PIN_FAN_EN
-#define GPIO_PIN_FAN_EN UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_FAN_PWM
-#define GPIO_PIN_FAN_PWM UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_FAN_TACHO
-#define GPIO_PIN_FAN_TACHO UNDEF_PIN
 #endif
 
 
