@@ -590,7 +590,7 @@ static void recalculatePacketRateOptions(int minInterval)
     {
         uint8_t rate = i;
         rate = RATE_MAX - 1 - rate;
-        bool rateAllowed = get_elrs_airRateConfig(rate)->interval >= minInterval;
+        bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {
