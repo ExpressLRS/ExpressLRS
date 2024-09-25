@@ -226,13 +226,23 @@ static int timeout(devserial_ctx_t *ctx)
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable(ctx);
 
-    uint32_t duration = (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
+    return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
+}
 
-    // still get telemetry and send link stats if theres no model match
-    (*(ctx->io))->processSerialInput();
-    (*(ctx->io))->sendQueuedData((*(ctx->io))->getMaxSerialWriteSize());
-    
-    return duration;
+void handleSerialIO() {
+    // still get telemetry and send link stats if there's no model match
+    if (*(serial0.io) != nullptr)
+    {
+        (*(serial0.io))->processSerialInput();
+        (*(serial0.io))->sendQueuedData((*(serial0.io))->getMaxSerialWriteSize());
+    }
+#if defined(PLATFORM_ESP32)
+    if (*(serial1.io) != nullptr)
+    {
+        (*(serial1.io))->processSerialInput();
+        (*(serial1.io))->sendQueuedData((*(serial1.io))->getMaxSerialWriteSize());
+    }
+#endif
 }
 
 static int timeout0()
