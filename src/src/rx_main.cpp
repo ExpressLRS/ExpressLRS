@@ -36,15 +36,15 @@
 #include "devServoOutput.h"
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
-#include "devSerialUpdate.h"
-#include "devBaro.h"
-#include "devMSPVTX.h"
-#include "devThermal.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
+#include "devSerialUpdate.h"
+#include "devBaro.h"
+#include "devMSPVTX.h"
+#include "devThermal.h"
 #include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
@@ -90,9 +90,7 @@ device_affinity_t ui_devices[] = {
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
 #if defined(PLATFORM_ESP32)
-#ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#endif
 #ifdef HAS_VTX_SPI
   {&VTxSPI_device, 0},
 #endif

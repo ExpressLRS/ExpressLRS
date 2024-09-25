@@ -1,7 +1,7 @@
 
 #include "devBaro.h"
 
-#if defined(HAS_BARO)
+#if defined(PLATFORM_ESP32) && defined(TARGET_RX)
 
 #include "CRSF.h"
 #include "logging.h"

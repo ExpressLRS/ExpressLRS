@@ -4,8 +4,6 @@
 #include "device.h"
 #include "devAnalogVbat.h"
 
-#if defined(HAS_BARO)
-
 enum eBaroReadState : uint8_t
 {
     brsNoBaro,
@@ -17,4 +15,3 @@ enum eBaroReadState : uint8_t
 };
 
 extern device_t Baro_device;
-#endif
