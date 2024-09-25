@@ -1,7 +1,5 @@
 #include "device.h"
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-
 #include "deferred.h"
 
 #include <AsyncJson.h>
@@ -1339,5 +1337,3 @@ device_t WIFI_device = {
   .event = event,
   .timeout = timeout
 };
-
-#endif

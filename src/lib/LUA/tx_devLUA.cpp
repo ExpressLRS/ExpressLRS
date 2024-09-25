@@ -158,13 +158,11 @@ static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
-#endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
@@ -301,10 +299,8 @@ extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
-#endif
 
 static void luadevUpdateModelID() {
   itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
@@ -379,7 +375,6 @@ static void luadevUpdateBackpackOpts()
   }
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void setBleJoystickMode()
 {
   connectionState = bleJoystick;
@@ -435,7 +430,6 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
       break;
   }
 }
-#endif
 
 static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 {
@@ -761,14 +755,8 @@ static void registerLuaParameters()
   }
 
   // WIFI folder
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
-  #else
-  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
-    registerLUAParameter(&luaWiFiFolder);
-  }
-  #endif
   if (HAS_RADIO) {
     registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
 

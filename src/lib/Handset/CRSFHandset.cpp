@@ -737,12 +737,8 @@ bool CRSFHandset::UARTwdt()
                 adjustMaxPacketSize();
 
                 SerialOutFIFO.flush();
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
                 CRSFHandset::Port.flush();
                 CRSFHandset::Port.updateBaudRate(UARTrequestedBaud);
-#else
-                CRSFHandset::Port.begin(UARTrequestedBaud);
-#endif
                 if (halfDuplex)
                 {
                     duplex_set_RX();
