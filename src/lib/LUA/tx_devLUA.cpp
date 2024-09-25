@@ -589,9 +589,6 @@ static void recalculatePacketRateOptions(int minInterval)
     for (int i=0 ; i < RATE_MAX ; i++)
     {
         uint8_t rate = i;
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-        rate = (rate + 4) % RATE_MAX;
-#endif
         rate = RATE_MAX - 1 - rate;
         bool rateAllowed = get_elrs_airRateConfig(rate)->interval >= minInterval;
         const char *semi = strchrnul(pos, ';');
