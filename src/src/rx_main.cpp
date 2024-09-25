@@ -88,9 +88,7 @@ device_affinity_t ui_devices[] = {
   {&WIFI_device, 0},
   {&Button_device, 0},
   {&AnalogVbat_device, 0},
-#ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
-#endif
 #if defined(PLATFORM_ESP32)
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
@@ -2029,9 +2027,8 @@ void setup()
         setupConfigAndPocCheck();
         setupTarget();
 
-        #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
-        if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
+        if (OPT_HAS_SERVO_OUTPUT && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
         {
             for (int i = 0 ; i < GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
@@ -2043,7 +2040,6 @@ void setup()
                 }
             }
         }
-        #endif
         setupSerial();
         setupSerial1();
 
