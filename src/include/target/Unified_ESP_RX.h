@@ -83,7 +83,6 @@
 #define GPIO_PIN_PWM_OUTPUTS_COUNT hardware_int(HARDWARE_pwm_outputs_count)
 
 // VBat
-#define USE_ANALOG_VBAT
 #define GPIO_ANALOG_VBAT hardware_pin(HARDWARE_vbat)
 #define ANALOG_VBAT_OFFSET hardware_int(HARDWARE_vbat_offset)
 #define ANALOG_VBAT_SCALE hardware_int(HARDWARE_vbat_scale)

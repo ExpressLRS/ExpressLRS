@@ -87,9 +87,7 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
   {&WIFI_device, 0},
   {&Button_device, 0},
-#ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
-#endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
 #endif
