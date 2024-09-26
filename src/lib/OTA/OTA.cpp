@@ -269,7 +269,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     else
     {
         chSrcLow = 0;
-        chSrcHigh = isHighAux ? 9 : 5;
+        chSrcHigh = isHighAux ? 8 : 4;
     }
     PackUInt11ToChannels4x10(&channelData[chSrcLow], &ota8->rc.chLow, &Decimate11to10_Div2);
     PackUInt11ToChannels4x10(&channelData[chSrcHigh], &ota8->rc.chHigh, &Decimate11to10_Div2);
@@ -479,15 +479,17 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     }
     else
     {
-        channelData[4] = BIT_to_CRSF(isArmed);
         chDstLow = 0;
-        chDstHigh = (ota8->rc.isHighAux) ? 9 : 5;
+        chDstHigh = (ota8->rc.isHighAux) ? 8 : 4;
     }
 
     // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
     // ** Different than the 10bit encoding in Hybrid/Wide mode **
     UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channelData[chDstLow]);
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh]);
+
+    // enable this for legacy behavior (digital ch5) for 8ch and 12ch mode
+    //channelData[4] = BIT_to_CRSF(isArmed); 
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
     CRSF::updateUplinkPower(ota8->rc.uplinkPower + 1);
