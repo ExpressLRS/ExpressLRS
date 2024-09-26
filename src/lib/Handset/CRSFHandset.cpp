@@ -72,7 +72,11 @@ void CRSFHandset::Begin()
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
+#if defined(SERIAL_HALF_DUPLEX)
+    halfDuplex = true;
+#else
     halfDuplex = (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX);
+#endif
 
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
@@ -101,7 +105,6 @@ void CRSFHandset::Begin()
     // No log message because this is our only UART
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART");
-    halfDuplex = true;
 
     CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
     CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
@@ -443,10 +446,12 @@ void CRSFHandset::handleInput()
         // if currently transmitting in half-duplex mode then check if the TX buffers are empty.
         // If there is still data in the transmit buffers then exit, and we'll check next go round.
 #if defined(PLATFORM_STM32)
+#ifndef SERIAL_USE_DMA
         if (Port.availableForWrite() != SERIAL_TX_BUFFER_SIZE - 1)
         {
             return;
         }
+#endif
         Port.flush();
 #elif defined(PLATFORM_ESP32)
         if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
