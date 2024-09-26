@@ -89,6 +89,8 @@ public:
     /**
      * @brief send any previously queued data to the serial port stream `_outputPort`
      * member variable.
+     *
+     * This method is called each time around the main loop.
      */
     virtual void sendQueuedData(uint32_t maxBytesToSend);
 
@@ -100,6 +102,8 @@ public:
      *
      * This method *should* not be overridden by custom implementations, it is
      * only overridden by the `SerialNOOP` implementation.
+     *
+     * This method is called each time around the main loop.
      */
     virtual void processSerialInput();
 
