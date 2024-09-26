@@ -476,9 +476,9 @@ void test_encodingFullres8ch()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
     // High 4ch (CH5-CH8)
     expected[0] = ((ChannelsIn[4] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[6] >> 1) << 2);
-    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[7] >> 1) << 4);
-    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[8] >> 1) << 6);
+    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[5] >> 1) << 2);
+    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[6] >> 1) << 4);
+    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[7] >> 1) << 6);
     expected[4] = ((ChannelsIn[7] >> 1) >> 2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 
@@ -569,9 +569,9 @@ void test_encodingFullres12ch()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
     // High 4ch (CH5-CH8)
     expected[0] = ((ChannelsIn[4] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[6] >> 1) << 2);
-    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[7] >> 1) << 4);
-    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[8] >> 1) << 6);
+    expected[1] = ((ChannelsIn[4] >> 1) >> 8) | ((ChannelsIn[5] >> 1) << 2);
+    expected[2] = ((ChannelsIn[5] >> 1) >> 6) | ((ChannelsIn[6] >> 1) << 4);
+    expected[3] = ((ChannelsIn[6] >> 1) >> 4) | ((ChannelsIn[7] >> 1) << 6);
     expected[4] = ((ChannelsIn[7] >> 1) >> 2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 
@@ -587,9 +587,9 @@ void test_encodingFullres12ch()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chLow)], 5);
     // Other high 4ch (CH9-CH12)
     expected[0] = ((ChannelsIn[8] >> 1) >> 0);
-    expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[10] >> 1) << 2);
-    expected[2] = ((ChannelsIn[9] >> 1) >> 6) | ((ChannelsIn[11] >> 1) << 4);
-    expected[3] = ((ChannelsIn[10] >> 1) >> 4) | ((ChannelsIn[12] >> 1) << 6);
+    expected[1] = ((ChannelsIn[8] >> 1) >> 8) | ((ChannelsIn[9] >> 1) << 2);
+    expected[2] = ((ChannelsIn[9] >> 1) >> 6) | ((ChannelsIn[10] >> 1) << 4);
+    expected[3] = ((ChannelsIn[10] >> 1) >> 4) | ((ChannelsIn[11] >> 1) << 6);
     expected[4] = ((ChannelsIn[11] >> 1) >> 2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, &TXdataBuffer[offsetof(OTA_Packet8_s, rc.chHigh)], 5);
 }
