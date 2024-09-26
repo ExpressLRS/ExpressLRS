@@ -11,7 +11,6 @@
 #define GPIO_PIN_DIO0_2 hardware_pin(HARDWARE_radio_dio0_2)
 #define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
 #define GPIO_PIN_DIO1_2 hardware_pin(HARDWARE_radio_dio1_2)
-#define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)
 #define GPIO_PIN_MISO hardware_pin(HARDWARE_radio_miso)
 #define GPIO_PIN_MOSI hardware_pin(HARDWARE_radio_mosi)
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
@@ -32,7 +31,6 @@
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
-#define GPIO_PIN_RFamp_APC1 hardware_pin(HARDWARE_power_apc1)
 #define GPIO_PIN_RFamp_APC2 hardware_pin(HARDWARE_power_apc2)
 #define GPIO_PIN_RX_ENABLE hardware_pin(HARDWARE_power_rxen)
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
