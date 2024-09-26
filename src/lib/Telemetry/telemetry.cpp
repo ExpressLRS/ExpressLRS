@@ -3,7 +3,7 @@
 #include "telemetry.h"
 #include "logging.h"
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
 extern TCPSOCKET wifi2tcp;
 #endif

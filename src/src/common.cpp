@@ -4,7 +4,7 @@
 #if defined(RADIO_SX127X)
 
 #include "SX127xDriver.h"
-SX127xDriver DMA_ATTR Radio;
+SX127xDriver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RADIO_TYPE_SX127x_LORA, RATE_LORA_900_200HZ,     SX127x_BW_500_00_KHZ, SX127x_SF_6, SX127x_CR_4_7,  8, TLM_RATIO_1_64, 4,  5000, OTA4_PACKET_SIZE, 1},
@@ -26,7 +26,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #if defined(RADIO_LR1121)
 
 #include "LR1121Driver.h"
-LR1121Driver DMA_ATTR Radio;
+LR1121Driver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0,  RADIO_TYPE_LR1121_GFSK_900,  RATE_FSK_900_1000HZ_8CH,  LR11XX_RADIO_GFSK_BITRATE_300k, LR11XX_RADIO_GFSK_BW_467000, LR11XX_RADIO_GFSK_FDEV_100k, 16, LR11XX_RADIO_GFSK_BITRATE_300k, LR11XX_RADIO_GFSK_BW_467000, LR11XX_RADIO_GFSK_FDEV_100k, 16, TLM_RATIO_1_128, 2,  1000, OTA8_PACKET_SIZE, 1},
@@ -76,7 +76,7 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
 #if defined(RADIO_SX128X)
 
 #include "SX1280Driver.h"
-SX1280Driver DMA_ATTR Radio;
+SX1280Driver Radio;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
     {0, RADIO_TYPE_SX128x_FLRC, RATE_FLRC_2G4_1000HZ,     SX1280_FLRC_BR_0_650_BW_0_6, SX1280_FLRC_BT_1, SX1280_FLRC_CR_1_2,    32, TLM_RATIO_1_128, 2,  1000, OTA4_PACKET_SIZE, 1},

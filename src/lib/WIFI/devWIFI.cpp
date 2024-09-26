@@ -78,7 +78,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#if defined(TARGET_RX)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
@@ -1126,7 +1126,7 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   wifi2tcp.begin();
   #endif
 }
@@ -1235,7 +1235,7 @@ static void HandleWebUpdate()
 
 void HandleMSP2WIFI()
 {
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   // check is there is any data to write out
   if (crsf2msp.FIFOout.peekSize() > 0)
   {

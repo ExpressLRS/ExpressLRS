@@ -62,23 +62,19 @@ static struct luaItem_int8 luaSourceSysId = {
   STR_EMPTYSPACE
 };
 
-#if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
     "mW"
 };
-#endif
 
-#if defined(GPIO_PIN_ANT_CTRL)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna A;Antenna B;Diversity",
     STR_EMPTYSPACE
 };
-#endif
 
 static struct luaItem_folder luaTeamraceFolder = {
     {"Team Race", CRSF_FOLDER},
@@ -474,8 +470,6 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
   sendLuaCommandResponse((struct luaItem_command *)item, newStep, msg);
 }
 
-#if defined(POWER_OUTPUT_VALUES)
-
 static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 {
   UNUSED(item);
@@ -488,8 +482,6 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
   config.SetPower(newPower);
   // POWERMGNT::setPower() will be called in updatePower() in the main loop
 }
-
-#endif // POWER_OUTPUT_VALUES
 
 static void registerLuaParameters()
 {
@@ -534,10 +526,11 @@ static void registerLuaParameters()
     });
   }
 
-#if defined(POWER_OUTPUT_VALUES)
-  luadevGeneratePowerOpts(&luaTlmPower);
-  registerLUAParameter(&luaTlmPower, &luaparamSetPower);
-#endif
+  if (MinPower != MaxPower)
+  {
+    luadevGeneratePowerOpts(&luaTlmPower);
+    registerLUAParameter(&luaTlmPower, &luaparamSetPower);
+  }
 
   // Teamrace
   registerLUAParameter(&luaTeamraceFolder);
@@ -600,11 +593,12 @@ static int event()
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
   }
 
-#if defined(POWER_OUTPUT_VALUES)
-  // The last item (for MatchTX) will be MaxPower - MinPower + 1
-  uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
-  setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
-#endif
+  if (MinPower != MaxPower)
+  {
+    // The last item (for MatchTX) will be MaxPower - MinPower + 1
+    uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+    setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
+  }
 
   // Teamrace
   setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);

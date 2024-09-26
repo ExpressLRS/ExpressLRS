@@ -107,13 +107,11 @@ RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
 
-#if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
 CROSSFIRE2MSP crsf2msp;
 MSP2CROSSFIRE msp2crsf;
-#endif
 
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;

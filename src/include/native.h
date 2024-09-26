@@ -21,8 +21,8 @@
 #define OPT_USE_HARDWARE_DCDC false
 
 // fake pin definition to satisfy th MSPVTX  library
+#define OPT_HAS_VTX_SPI false
 #define GPIO_PIN_SPI_VTX_NSS UNDEF_PIN
-
 
 typedef uint8_t byte;
 

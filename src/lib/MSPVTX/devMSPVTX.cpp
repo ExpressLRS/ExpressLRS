@@ -15,10 +15,6 @@
  * Original author: Jye Smith.
 **/
 
-#if !defined(OPT_HAS_VTX_SPI)
-#define OPT_HAS_VTX_SPI false
-#endif
-
 #define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
 #define MSP_VTX_PAYLOAD_OFFSET  11

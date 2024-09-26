@@ -1,6 +1,3 @@
-#define HARDWARE_VERSION ""
-
-// DEVICE_NAME is not defined here because we get it from the SPIFFS file system
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
 #define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)
@@ -19,15 +16,20 @@
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
 #define GPIO_PIN_RST_2 hardware_pin(HARDWARE_radio_rst_2)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
-#define USE_HARDWARE_DCDC
 #define OPT_USE_HARDWARE_DCDC hardware_flag(HARDWARE_radio_dcdc)
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
+
+// Radio Antenna
+#define GPIO_PIN_ANT_CTRL hardware_pin(HARDWARE_ant_ctrl)
+#define GPIO_PIN_ANT_CTRL_COMPL hardware_pin(HARDWARE_ant_ctrl_compl)
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
 #define GPIO_PIN_RFamp_APC2 hardware_pin(HARDWARE_power_apc2)
 #define GPIO_PIN_RX_ENABLE hardware_pin(HARDWARE_power_rxen)
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
+#define GPIO_PIN_RX_ENABLE_2 UNDEF_PIN
+#define GPIO_PIN_TX_ENABLE_2 UNDEF_PIN
 #define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
@@ -61,13 +63,17 @@
 #define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
 #define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
+// Unsupported TX features for an 8285 TX
 #define OPT_HAS_THERMAL false
-#define OPT_HAS_THERMAL_LM75A false
+#define GPIO_PIN_FAN_EN UNDEF_PIN
+#define GPIO_PIN_FAN_PWM UNDEF_PIN
 
 #define OPT_USE_TX_BACKPACK false
 #define GPIO_PIN_BACKPACK_EN UNDEF_PIN
+#define BACKPACK_LOGGING_BAUD 0
+#define GPIO_PIN_DEBUG_RX UNDEF_PIN
+#define GPIO_PIN_DEBUG_TX UNDEF_PIN
+
 #define OPT_HAS_GSENSOR false
 #define OPT_HAS_GSENSOR_STK8xxx false
 #define GPIO_PIN_GSENSOR_INT UNDEF_PIN
-
-#define OPT_HAS_VTX_SPI false

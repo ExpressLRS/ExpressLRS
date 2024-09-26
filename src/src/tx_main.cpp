@@ -90,10 +90,8 @@ static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
 bool headTrackingEnabled = false;
-#if !defined(CRITICAL_FLASH)
 static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
 static uint32_t lastPTRValidTimeMs;
-#endif
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
@@ -118,9 +116,7 @@ device_affinity_t ui_devices[] = {
   {&VTX_device, 0}
 };
 
-#if defined(GPIO_PIN_ANT_CTRL)
-    static bool diversityAntennaState = LOW;
-#endif
+static bool diversityAntennaState = LOW;
 
 void switchDiversityAntennas()
 {
@@ -909,7 +905,6 @@ static void CheckReadyToSend()
   }
 }
 
-#if !defined(CRITICAL_FLASH)
 void OnPowerGetCalibration(mspPacket_t *packet)
 {
   uint8_t index = packet->readByte();
@@ -939,7 +934,6 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   DBGLN("power calibration done %d, %d", index, value);
   hwTimer::resume();
 }
-#endif
 
 void SendUIDOverMSP()
 {

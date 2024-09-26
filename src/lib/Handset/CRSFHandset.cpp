@@ -536,10 +536,6 @@ void CRSFHandset::duplex_set_RX() const
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCLBE);
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    CRSFHandset::Port.enableHalfDuplexRx();
 #endif
 }
 
@@ -567,10 +563,6 @@ void CRSFHandset::duplex_set_TX() const
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) &= ~BIT(UCLBE);
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    // writing to the port switches the mode
 #endif
 }
 
