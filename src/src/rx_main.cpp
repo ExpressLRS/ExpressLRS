@@ -2001,16 +2001,9 @@ void setup()
         SerialLogger = new NullStream();
         #endif
 
-        // External EEPROM needs I2C setup so it can load config
-        // but configurable I2C pins for PWM RX needs config loaded first
-#if (defined(TARGET_USE_EEPROM) && defined(USE_I2C))
-        setupTarget();
-#endif
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
-#if !(defined(TARGET_USE_EEPROM) && defined(USE_I2C))
         setupTarget();
-#endif
 
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration

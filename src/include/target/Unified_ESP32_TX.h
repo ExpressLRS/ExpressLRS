@@ -125,7 +125,6 @@
 #define PASSTHROUGH_BAUD hardware_int(HARDWARE_passthrough_baud)
 
 // I2C
-#define USE_I2C
 #define GPIO_PIN_SCL hardware_pin(HARDWARE_i2c_scl)
 #define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
 

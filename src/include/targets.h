@@ -64,13 +64,6 @@
 #define OPT_HAS_GSENSOR true
 #endif
 
-#if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
-#define USE_I2C
-#else
-#define GPIO_PIN_SDA UNDEF_PIN
-#define GPIO_PIN_SCL UNDEF_PIN
-#endif
-
 #ifndef GPIO_PIN_BUFFER_OE
 #define GPIO_PIN_BUFFER_OE UNDEF_PIN
 #endif
