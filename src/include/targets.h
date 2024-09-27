@@ -289,6 +289,9 @@ extern bool pwmSerialDefined;
 #endif
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#if defined(PLATFORM_ESP32)
+#include <soc/uart_pins.h>
+#endif
 #if !defined(U0RXD_GPIO_NUM)
 #define U0RXD_GPIO_NUM (3)
 #endif
