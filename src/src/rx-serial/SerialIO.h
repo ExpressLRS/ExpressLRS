@@ -96,7 +96,7 @@ public:
     virtual int getMaxSerialWriteSize() { return defaultMaxSerialWriteSize; }
 
     /**
-     * @brief This method is called on settings changed.
+     * @brief This method is called on events, for example settings changed.
      */
     virtual void event() {}
 
