@@ -5,8 +5,6 @@
 #include "devServoOutput.h"
 #include "deferred.h"
 
-#define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
-
 extern void reconfigureSerial();
 #if defined(PLATFORM_ESP32)
 extern void reconfigureSerial1();
@@ -21,7 +19,7 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLINK;DisplayPort",
     STR_EMPTYSPACE
 };
 
@@ -29,7 +27,7 @@ static struct luaItem_selection luaSerialProtocol = {
 static struct luaItem_selection luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio",
+    "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort",
     STR_EMPTYSPACE
 };
 #endif
@@ -521,29 +519,36 @@ static void registerLuaParameters()
   });
 
 #if defined(PLATFORM_ESP32)
-  if (RX_HAS_SERIAL1)
-  {
-    registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetSerial1Protocol((eSerial1Protocol)arg);
-      if (config.IsModified()) {
-        deferExecutionMillis(100, [](){
-          reconfigureSerial1();
-        });
-      }
-    });
-  }
+  registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+    config.SetSerial1Protocol((eSerial1Protocol)arg);
+    if (config.IsModified()) {
+      deferExecutionMillis(100, [](){
+        reconfigureSerial1();
+      });
+    }
+  });
 #endif
 
   registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetFailsafeMode((eFailsafeMode)arg);
   });
 
-  registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetTargetSysId((uint8_t)arg);
-  });
-  registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetSourceSysId((uint8_t)arg);
-  });
+eSerialProtocol prot0 = config.GetSerialProtocol();
+bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
+#if defined(PLATFORM_ESP32)
+  eSerial1Protocol prot1 = config.GetSerial1Protocol();
+  hasMavlink = hasMavlink || (prot1 == PROTOCOL_MAVLINK);
+#endif
+
+  if (hasMavlink)
+  {
+    registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetTargetSysId((uint8_t)arg);
+    });
+    registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetSourceSysId((uint8_t)arg);
+    });
+  }
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -615,10 +620,7 @@ static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 #if defined(PLATFORM_ESP32)
-  if (RX_HAS_SERIAL1)
-  {
-    setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
-  }
+  setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
 #endif
   
   setLuaTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
@@ -666,18 +668,8 @@ static int event()
   setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
-  if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
-  {
-    setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
-    setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
-    LUA_FIELD_SHOW(luaSourceSysId)
-    LUA_FIELD_SHOW(luaTargetSysId)
-  }
-  else
-  {
-    LUA_FIELD_HIDE(luaSourceSysId)
-    LUA_FIELD_HIDE(luaTargetSysId)
-  }
+  setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
+  setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
 
   return DURATION_IMMEDIATELY;
 }
