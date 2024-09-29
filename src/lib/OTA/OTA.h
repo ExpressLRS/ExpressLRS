@@ -9,6 +9,10 @@
 #include "telemetry_protocol.h"
 #include "FIFO.h"
 
+#if TARGET_RX 
+extern bool isArmed;
+#endif
+
 #define OTA4_PACKET_SIZE     8U
 #define OTA4_CRC_CALC_LEN    offsetof(OTA_Packet4_s, crcLow)
 #define OTA8_PACKET_SIZE     13U
