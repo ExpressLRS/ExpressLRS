@@ -30,6 +30,10 @@
 #define USBSerial Serial
 #endif
 
+#if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -133,19 +137,6 @@ device_affinity_t ui_devices[] = {
 
 #if defined(GPIO_PIN_ANT_CTRL)
     static bool diversityAntennaState = LOW;
-#endif
-
-#ifdef TARGET_TX_GHOST
-extern "C"
-/**
-  * @brief This function handles external line 2 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI2_TSC_IRQHandler()
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
-}
 #endif
 
 void switchDiversityAntennas()
@@ -805,26 +796,8 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
-    while (busyTransmitting); // wait until no longer transmitting
-#else
-    // The code expects to enter here shortly after the tock ISR has started sending the last
-    // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
-    // interrupts, FastForward the timer
-    const uint32_t EEPROM_WRITE_DURATION = 30000; // us, a page write on F103C8 takes ~29.3ms
-    const uint32_t cycleInterval = ExpressLRS_currAirRate_Modparams->interval;
-    // Total time needs to be at least DURATION, rounded up to next cycle
-    // adding one cycle that will be eaten by busywaiting for the transmit to end
-    uint32_t pauseCycles = ((EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval) + 1;
-    // Pause won't return until paused, and has just passed the tick ISR (but not fired)
-    hwTimer::pause(pauseCycles * cycleInterval);
-
-    while (busyTransmitting); // wait until no longer transmitting
-
-    --pauseCycles; // the last cycle will actually be a transmit
-    while (pauseCycles--)
-      nonceAdvance();
-#endif
+    // wait until no longer transmitting
+    while (busyTransmitting);
     // Set the commitInProgress flag to prevent any other RF SPI traffic during the commit from RX or scheduled TX
     commitInProgress = true;
     // If telemetry expected in the next interval, the radio was in RX mode
@@ -1217,24 +1190,6 @@ static void setupSerial()
   {
     serialPort = new NullStream();
   }
-#elif defined(TARGET_TX_FM30)
-  #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
-    USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
-    serialPort->begin();
-  #else
-    Stream *serialPort = new NullStream();
-  #endif
-#elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  HardwareSerial *serialPort = new HardwareSerial(2);
-  #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-    serialPort->setRx(GPIO_PIN_DEBUG_RX);
-  #endif
-  #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-    serialPort->setTx(GPIO_PIN_DEBUG_TX);
-  #endif
-  serialPort->begin(BACKPACK_LOGGING_BAUD);
-#else
-  Stream *serialPort = new NullStream();
 #endif
   TxBackpack = serialPort;
 
@@ -1277,25 +1232,6 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
-  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
-  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
-  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
-  HardwareSerial *uart2 = new HardwareSerial(USART2);
-  uart2->begin(57600);
-  CRSFHandset::PortSecondary = uart2;
-#endif
-
-#if defined(TARGET_TX_FM30_MINI)
-  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
-
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
@@ -1337,19 +1273,14 @@ static void setupBindingFromConfig()
 {
   if (firmwareOptions.hasUID)
   {
-      memcpy(UID, firmwareOptions.uid, UID_LEN);
+    memcpy(UID, firmwareOptions.uid, UID_LEN);
   }
   else
   {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32)
     esp_read_mac(UID, ESP_MAC_WIFI_STA);
-#elif PLATFORM_STM32
-    UID[0] = (uint8_t)HAL_GetUIDw0();
-    UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
-    UID[2] = (uint8_t)HAL_GetUIDw1();
-    UID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
-    UID[4] = (uint8_t)HAL_GetUIDw2();
-    UID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+#else
+    wifi_get_macaddr(STATION_IF, UID);
 #endif
   }
 

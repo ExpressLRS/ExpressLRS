@@ -54,7 +54,6 @@ PowerLevels_e crsfpowerToPower(uint8_t crsfpower)
  * A new target now just needs to define
  * - `MinPower`, the minimum power level supported
  * - `MaxPower`, the absolute maximum power level supported
- * - optionally `HighPower`, if defined then module uses this as max unless `UNLOCK_HIGHER_POWER` is defined by the user
  * - `POWER_OUTPUT_VALUES` array of values to be used to set appropriate power level from `MinPower` to `MaxPower`
  *
  * A target can also define one of the following to configure how the output power is set, the value given to the function

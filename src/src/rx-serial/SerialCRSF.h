@@ -10,6 +10,8 @@ public:
     void queueLinkStatisticsPacket() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
+    bool sendImmediateRC() override { return true; }
+
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override;
 };
