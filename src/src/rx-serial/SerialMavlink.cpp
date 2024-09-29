@@ -43,6 +43,10 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
 {
 }
 
+void SerialMavlink::event()
+{
+}
+
 #else // ESP-based targets
 
 #define MAVLINK_COMM_NUM_BUFFERS 1

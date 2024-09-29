@@ -21,6 +21,7 @@ public:
     int getMaxSerialReadSize() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
     void event();
+    
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
