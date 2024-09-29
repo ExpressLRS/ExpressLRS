@@ -35,16 +35,6 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
 
 uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
-    // Only send MSP packets every 100ms
-    if (millis() > m_lastSentMSP + 100)
-    {
-        m_lastSentMSP = millis();
-    }
-    else
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    
     // Use ch5 to check armed state
     bool armed = channelData[4] > CRSF_CHANNEL_VALUE_MID;
 
@@ -66,5 +56,5 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
     status_DJI.armingFlags = 0x0000;
     send(MSP_STATUS, &status_DJI, sizeof(status_DJI), _outputPort);
 
-    return DURATION_IMMEDIATELY;
+    return MSP_MSG_PERIOD_MS;   // Send MSP msgs to DJI at 10Hz
 }

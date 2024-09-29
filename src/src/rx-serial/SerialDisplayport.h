@@ -15,8 +15,9 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 #pragma once
 #include "SerialIO.h"
 
-#define MSP_STATUS      101
-#define MSP_STATUS_EX   150
+#define MSP_STATUS          101
+#define MSP_STATUS_EX       150
+#define MSP_MSG_PERIOD_MS   100
 
 // MSP_STATUS_DJI
 struct msp_status_DJI_t
