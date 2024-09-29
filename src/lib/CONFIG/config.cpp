@@ -210,7 +210,7 @@ void TxConfig::Load()
         Commit();
     }
 }
-#else  // STM32/ESP8266
+#else  // ESP8266
 void TxConfig::Load()
 {
     m_modified = 0;
@@ -671,7 +671,7 @@ TxConfig::SetDefaults(bool commit)
     }
 
 #if !defined(PLATFORM_ESP32)
-    // STM32/ESP8266 just needs one commit
+    // ESP8266 just needs one commit
     if (commit)
     {
         Commit();

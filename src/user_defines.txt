@@ -30,9 +30,6 @@
 
 ### PERFORMANCE OPTIONS: ###
 
-#unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://www.expresslrs.org/hardware/fan-mod/)
-#-DUNLOCK_HIGHER_POWER
-
 -DLOCK_ON_FIRST_CONNECTION
 
 # For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
