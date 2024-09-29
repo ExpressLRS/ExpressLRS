@@ -95,6 +95,11 @@ public:
      */
     virtual int getMaxSerialWriteSize() { return defaultMaxSerialWriteSize; }
 
+    /**
+     * @brief This method is called on settings changed.
+     */
+    virtual void event() {}
+
 protected:
     /// @brief the output stream for the serial port
     Stream *_outputPort;

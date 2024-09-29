@@ -20,14 +20,14 @@ public:
 
     int getMaxSerialReadSize() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
-
+    void event();
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
-    const uint8_t this_system_id;
+    uint8_t this_system_id;
     const uint8_t this_component_id;
 
-    const uint8_t target_system_id;
+    uint8_t target_system_id;
     const uint8_t target_component_id;
 
     uint32_t lastSentFlowCtrl = 0;
