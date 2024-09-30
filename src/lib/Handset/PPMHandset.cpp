@@ -42,11 +42,6 @@ bool PPMHandset::IsArmed()
     return maybeArmed && lastPPM;
 }
 
-bool PPMHandset::ArmViaMsg()
-{
-    return false;
-}
-
 void PPMHandset::handleInput()
 {
     const auto now = millis();

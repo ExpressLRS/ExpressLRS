@@ -60,10 +60,6 @@ public:
      */
     virtual bool IsArmed() = 0;
 
-    /**
-     * @return true if arming method is SF Arm
-     */
-    virtual bool ArmViaMsg() = 0;
 
     /**
      * Called to set the expected packet interval from the handset.

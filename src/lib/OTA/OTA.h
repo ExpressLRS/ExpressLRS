@@ -63,11 +63,6 @@ typedef struct {
             OTA_Channels_4x10 ch;
             uint8_t switches:7,
                     isArmed:1;
-/* if receiver needs to know arming method
-            uint8_t isArmed:1,      // arm status
-                    hasSfArm:1,     // arming method (AUX1 or SF Arm)
-                    spare2:6;       // spare
-*/
         } rc;
         struct {
             uint32_t packetNum; // LittleEndian
@@ -117,11 +112,6 @@ typedef struct {
                     isArmed: 1;         // Arm
             OTA_Channels_4x10 chLow;    // CH0-CH3
             OTA_Channels_4x10 chHigh;   // AUX2-5 or AUX6-9
-/* if receiver needs to know arming method
-            uint8_t isArmed:1,          // arm status
-                    hasSfArm:1,         // arming method (AUX1 or SF Arm)
-                    spare2:6;           // spare
-*/
         } PACKED rc;
         struct {
             uint8_t packetType; // actually struct rc's first byte

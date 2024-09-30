@@ -22,7 +22,6 @@ public:
 
 #ifdef CRSF_TX_MODULE
     bool IsArmed() override { return armMethod ? armCmd : CRSF_to_BIT(ChannelData[4]); } // AUX1 (ch5) or via message 
-    bool ArmViaMsg() override {return armMethod; }
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
