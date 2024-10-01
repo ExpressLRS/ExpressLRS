@@ -32,7 +32,8 @@ static enum VtxSendState_e
 
 void VtxTriggerSend()
 {
-    VtxSendState = VTXSS_MODIFIED;
+    VtxSendState = VTXSS_UNKNOWN;
+    sendEepromWrite = true;
     devicesTriggerEvent();
 }
 
