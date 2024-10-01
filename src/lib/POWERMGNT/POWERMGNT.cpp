@@ -21,7 +21,7 @@ uint8_t powerToCrsfPower(PowerLevels_e Power)
     }
 }
 
-PowerLevels_e crsfpowerToPower(uint8_t crsfpower)
+PowerLevels_e crsfPowerToPower(uint8_t crsfpower)
 {
     switch (crsfpower)
     {
