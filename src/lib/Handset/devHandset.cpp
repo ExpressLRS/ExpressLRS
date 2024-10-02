@@ -52,5 +52,7 @@ device_t Handset_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout};
+    .timeout = timeout,
+    .subscribe = EVENT_POWER_CHANGED
+};
 #endif

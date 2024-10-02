@@ -151,11 +151,11 @@ static bool initialize()
 
         registerButtonFunction(ACTION_GOTO_VTX_BAND, [](){
             jumpToBandSelect = true;
-            devicesTriggerEvent();
+            handle();
         });
         registerButtonFunction(ACTION_GOTO_VTX_CHANNEL, [](){
             jumpToChannelSelect = true;
-            devicesTriggerEvent();
+            handle();
         });
     }
     return OPT_HAS_SCREEN;
@@ -180,5 +180,7 @@ device_t Screen_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout};
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ARM_FLAG_CHANGED
+};
 #endif

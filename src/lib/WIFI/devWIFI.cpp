@@ -107,7 +107,7 @@ void setWifiUpdateMode()
   // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
   // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
-  connectionState = wifiUpdate;
+  setConnectionState(wifiUpdate);
 }
 
 /** Is this an IP? */
@@ -1336,5 +1336,5 @@ device_t WIFI_device = {
   .initialize = initialize,
   .start = start,
   .event = event,
-  .timeout = timeout
-};
+  .timeout = timeout,
+  .subscribe = EVENT_CONNECTION_CHANGED};

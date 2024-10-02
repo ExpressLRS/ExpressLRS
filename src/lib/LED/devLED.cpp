@@ -116,6 +116,11 @@ static void setPowerLEDs()
 }
 #endif
 
+static int start()
+{
+    return DURATION_IMMEDIATELY;
+}
+
 static int event()
 {
     #if defined(TARGET_TX)
@@ -218,7 +223,7 @@ static int event()
 
 device_t LED_device = {
     .initialize = initialize,
-    .start = event,
+    .start = start,
     .event = event,
-    .timeout = timeout
-};
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE};

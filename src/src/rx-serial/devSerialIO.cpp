@@ -277,16 +277,16 @@ device_t Serial0_device = {
     .initialize = nullptr,
     .start = start,
     .event = event0,
-    .timeout = timeout0
-};
+    .timeout = timeout0,
+    .subscribe = EVENT_CONNECTION_CHANGED};
 
 #if defined(PLATFORM_ESP32)
 device_t Serial1_device = {
     .initialize = nullptr,
     .start = start,
     .event = event1,
-    .timeout = timeout1
-};
+    .timeout = timeout1,
+    .subscribe = EVENT_CONNECTION_CHANGED};
 #endif
 
 #endif

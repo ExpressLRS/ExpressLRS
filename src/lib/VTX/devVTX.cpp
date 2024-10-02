@@ -35,7 +35,7 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     sendEepromWrite = true;
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_VTX_CHANGE);
 }
 
 void VtxPitmodeSwitchUpdate()
@@ -175,5 +175,6 @@ device_t VTX_device = {
     .initialize = initialize,
     .start = NULL,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_VTX_CHANGE
 };

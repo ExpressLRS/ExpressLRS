@@ -831,7 +831,7 @@ void LostConnection(bool resumeRx)
         config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
 
     RFmodeCycleMultiplier = 1;
-    connectionState = disconnected; //set lost connection
+    setConnectionState(disconnected); //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer::resetFreqOffset();
     PfdPrevRawOffset = 0;
@@ -863,7 +863,7 @@ void LostConnection(bool resumeRx)
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     PFDloop.reset();
-    connectionState = tentative;
+    setConnectionState(tentative);
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
@@ -885,7 +885,7 @@ void GotConnection(unsigned long now)
 
     LockRFmode = firmwareOptions.lock_on_first_connection;
 
-    connectionState = connected; //we got a packet, therefore no lost connection
+    setConnectionState(connected); //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
     webserverPreventAutoStart = true;
@@ -1270,7 +1270,7 @@ void MspReceiveComplete()
                         vtxSPIPowerIdx = MspData[10];
                         vtxSPIPitmode = MspData[11];
                     }
-                    devicesTriggerEvent();
+                    devicesTriggerEvent(EVENT_VTX_CHANGE);
                     break;
                 } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
                     serial1IO->queueMSPFrameTransmission(MspData);
@@ -1609,7 +1609,7 @@ static void setupRadio()
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
-        connectionState = radioFailed;
+        setConnectionState(radioFailed);
         return;
     }
 
@@ -1708,7 +1708,7 @@ static void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_ENTER_BIND_MODE);
 }
 
 static void ExitBindingMode()
@@ -1741,7 +1741,7 @@ static void ExitBindingMode()
     // if we're in binding mode
     InBindingMode = false;
     DBGLN("Exiting binding mode");
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_EXIT_BIND_MODE);
 }
 
 static void updateBindingMode(unsigned long now)
@@ -1803,7 +1803,7 @@ static void updateBindingMode(unsigned long now)
                 config.Commit(); // prevents CheckConfigChangePending() re-enabling radio
                 Radio.End();
                 // Enter a completely invalid state for a receiver, to prevent wifi or radio enabling
-                connectionState = noCrossfire;
+                setConnectionState(noCrossfire);
                 return;
             }
             // if the InitRate config item was changed by LostConnection
@@ -1949,8 +1949,8 @@ static void CheckConfigChangePending()
     if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
-        config.Commit();
-        devicesTriggerEvent();
+        uint32_t changes = config.Commit();
+        devicesTriggerEvent(changes);
 #if defined(Regulatory_Domain_EU_CE_2400)
         LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif
@@ -2005,7 +2005,7 @@ void setup()
         devicesRegister(wifi_device, ARRAY_SIZE(wifi_device));
         devicesInit();
 
-        connectionState = hardwareUndefined;
+        setConnectionState(hardwareUndefined);
     }
     else
     {
@@ -2210,6 +2210,6 @@ void reset_into_bootloader(void)
     ESP.rebootIntoUartDownloadMode();
 #elif defined(PLATFORM_ESP32)
     delay(100);
-    connectionState = serialUpdate;
+    setConnectionState(serialUpdate);
 #endif
 }

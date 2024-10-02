@@ -282,7 +282,6 @@ static struct luaItem_string luaBackpackVersion = {
 //---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
-static int event();
 
 extern TxConfig config;
 extern void VtxTriggerSend();
@@ -371,7 +370,7 @@ static void luadevUpdateBackpackOpts()
 
 static void setBleJoystickMode()
 {
-  connectionState = bleJoystick;
+  setConnectionState(bleJoystick);
 }
 
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
@@ -913,7 +912,8 @@ device_t LUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = 0xFFFF // all events
 };
 
 #endif

@@ -142,35 +142,38 @@ static int debouncedRead(int pin) {
 
 void checkBackpackUpdate()
 {
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
         {
-            startPassthrough();
+            if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+            {
+                startPassthrough();
+            }
         }
-    }
 #if defined(PLATFORM_ESP32_S3)
-    // Start passthrough mode if an Espressif resync packet is detected on the USB port
-    static const uint8_t resync[] = {
-        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-    };
-    static int resync_pos = 0;
-    while(Serial.available())
-    {
-        int byte = Serial.read();
-        if (byte == resync[resync_pos])
+        // Start passthrough mode if an Espressif resync packet is detected on the USB port
+        static const uint8_t resync[] = {
+            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+        };
+        static int resync_pos = 0;
+        while(Serial.available())
         {
-            resync_pos++;
-            if (resync_pos == sizeof(resync)) startPassthrough();
+            int byte = Serial.read();
+            if (byte == resync[resync_pos])
+            {
+                resync_pos++;
+                if (resync_pos == sizeof(resync)) startPassthrough();
+            }
+            else
+            {
+                resync_pos = 0;
+            }
         }
-        else
-        {
-            resync_pos = 0;
-        }
-    }
 #endif
+    }
 }
 
 static void BackpackWiFiToMSPOut(uint16_t command)
@@ -395,6 +398,7 @@ device_t Backpack_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MAIN_CHANGED
 };
 #endif
