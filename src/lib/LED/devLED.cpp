@@ -48,22 +48,26 @@ static uint16_t flashLED(int8_t pin, uint8_t pin_inverted, const uint8_t duratio
     return updateLED();
 }
 
-static void initialize()
+static bool initialize()
 {
+    bool hasLED = false;
     if (GPIO_PIN_LED_BLUE != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_LED_BLUE, OUTPUT);
         digitalWrite(GPIO_PIN_LED_BLUE, LOW ^ GPIO_LED_BLUE_INVERTED);
+        hasLED = true;
     }
     if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_LED_GREEN, OUTPUT);
         digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
+        hasLED = true;
     }
     if (GPIO_PIN_LED_RED != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_LED_RED, OUTPUT);
         digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED);
+        hasLED = true;
     }
     if (GPIO_PIN_LED_BLUE != UNDEF_PIN && GPIO_PIN_LED_GREEN != UNDEF_PIN && GPIO_PIN_LED_RED != UNDEF_PIN)
     {
@@ -76,6 +80,7 @@ static void initialize()
     {
         hasGBLeds = true;
     }
+    return hasLED || hasRGBLeds || hasGBLeds;
 }
 
 static int timeout()

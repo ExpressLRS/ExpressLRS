@@ -140,11 +140,11 @@ static void servosUpdate(unsigned long now)
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     if (!OPT_HAS_SERVO_OUTPUT)
     {
-        return;
+        return false;
     }
 
 #if defined(PLATFORM_ESP32)
@@ -200,6 +200,7 @@ static void initialize()
             digitalWrite(pin, LOW);
         }
     }
+    return true;
 }
 
 static int start()
@@ -225,7 +226,7 @@ static int start()
 
 static int event()
 {
-    if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
+    if (connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX,
         // so it is safe to shut down when disconnected

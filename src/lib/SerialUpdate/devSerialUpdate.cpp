@@ -13,9 +13,10 @@ extern void stub_handle_rx_byte(char byte);
 
 static bool running = false;
 
-static void initialize()
+static bool initialize()
 {
     running = true;
+    return true;
 }
 
 static int event()

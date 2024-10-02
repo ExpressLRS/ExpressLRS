@@ -133,7 +133,7 @@ static int handle(void)
     return SCREEN_DURATION;
 }
 
-static void initialize()
+static bool initialize()
 {
     if (OPT_HAS_SCREEN)
     {
@@ -158,33 +158,22 @@ static void initialize()
             devicesTriggerEvent();
         });
     }
+    return OPT_HAS_SCREEN;
 }
 
 static int start()
 {
-    if (OPT_HAS_SCREEN)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return DURATION_IMMEDIATELY;
 }
 
 static int event()
 {
-    if (OPT_HAS_SCREEN)
-    {
-        return handle();
-    }
-    return DURATION_NEVER;
+    return handle();
 }
 
 static int timeout()
 {
-    if (OPT_HAS_SCREEN)
-    {
-        return handle();
-    }
-    return DURATION_NEVER;
+    return handle();
 }
 
 device_t Screen_device = {

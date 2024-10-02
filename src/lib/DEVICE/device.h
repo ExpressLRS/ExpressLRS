@@ -10,8 +10,11 @@
 typedef struct {
     /**
      * @brief Called at the beginning of setup() so the device can configure IO pins etc.
+     *
+     * Devices that return false will not have their start, event or timeout functions called.
+     * i.e. the devices is effectively disabled.
      */
-    void (*initialize)();
+    bool (*initialize)();
 
     /**
      * @brief called at the end of setup() and returns the number of milliseconds when

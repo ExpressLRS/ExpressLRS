@@ -73,11 +73,12 @@ void BluetoothJoystickBegin()
     bleGamepad->begin(gamepadConfig);
 }
 
-static void initialize()
+static bool initialize()
 {
   registerButtonFunction(ACTION_BLE_JOYSTICK, [](){
     connectionState = bleJoystick;
   });
+  return true;
 }
 
 static int timeout()

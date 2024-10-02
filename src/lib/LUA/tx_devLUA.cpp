@@ -910,7 +910,7 @@ static int start()
 }
 
 device_t LUA_device = {
-  .initialize = NULL,
+  .initialize = nullptr,
   .start = start,
   .event = event,
   .timeout = timeout

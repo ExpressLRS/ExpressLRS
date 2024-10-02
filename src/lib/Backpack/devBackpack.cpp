@@ -306,29 +306,29 @@ void sendConfigToBackpack()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
-static void initialize()
+static bool initialize()
 {
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
-        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-        // Shut down the backpack via EN pin and hold it there until the first event()
-        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-        delay(20);
-        // Rely on event() to boot
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
+            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+            // Shut down the backpack via EN pin and hold it there until the first event()
+            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+            delay(20);
+            // Rely on event() to boot
+        }
+        handset->setRCDataCallback(AuxStateToMSPOut);
     }
-    handset->setRCDataCallback(AuxStateToMSPOut);
+    return OPT_USE_TX_BACKPACK;
 }
 
 static int start()
 {
-    if (OPT_USE_TX_BACKPACK)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
@@ -382,7 +382,7 @@ static int timeout()
 
 static int event()
 {
-    if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         // EN should be HIGH to be active
         digitalWrite(GPIO_PIN_BACKPACK_EN, (config.GetBackpackDisable() || connectionState == bleJoystick || connectionState == wifiUpdate) ? LOW : HIGH);

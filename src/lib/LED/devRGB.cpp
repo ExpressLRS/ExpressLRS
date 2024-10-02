@@ -330,7 +330,7 @@ static int blinkyUpdate() {
     return 3000/(256/hueStepValue);
 }
 
-static void initialize()
+static bool initialize()
 {
     if (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
     {
@@ -380,14 +380,11 @@ static void initialize()
         blinkyColor.s = 255;
         blinkyColor.v = 128;
     }
+    return GPIO_PIN_LED_WS2812 != UNDEF_PIN;
 }
 
 static int start()
 {
-    if (GPIO_PIN_LED_WS2812 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     blinkyState = STARTUP;
     #if defined(PLATFORM_ESP32)
     // Only do the blinkies if it was NOT a software reboot
@@ -404,10 +401,6 @@ static int start()
 
 static int timeout()
 {
-    if (GPIO_PIN_LED_WS2812 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     if (blinkyState == STARTUP && connectionState < FAILURE_STATES)
     {
         return blinkyUpdate();

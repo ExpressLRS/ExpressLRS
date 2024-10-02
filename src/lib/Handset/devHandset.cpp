@@ -13,16 +13,17 @@
 
 Handset *handset;
 
-static void initialize()
+static bool initialize()
 {
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
         handset = new AutoDetect();
-        return;
+        return true;
     }
 #endif
     handset = new CRSFHandset();
+    return true;
 }
 
 static int start()

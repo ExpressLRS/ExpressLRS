@@ -96,9 +96,10 @@ static void VtxConfigToMSPOut()
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    return true;
 }
 
 static int event()

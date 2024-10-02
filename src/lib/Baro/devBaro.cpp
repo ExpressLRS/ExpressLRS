@@ -117,16 +117,15 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     }
 }
 
+static bool initialize()
+{
+    return Baro_Detect();
+}
+
 static int start()
 {
-    if (Baro_Detect())
-    {
-        BaroReadState = brsUninitialized;
-        return BARO_STARTUP_INTERVAL;
-    }
-
-    BaroReadState = brsNoBaro;
-    return DURATION_NEVER;
+    BaroReadState = brsUninitialized;
+    return BARO_STARTUP_INTERVAL;
 }
 
 static int timeout()
@@ -188,7 +187,7 @@ static int timeout()
 }
 
 device_t Baro_device = {
-    .initialize = nullptr,
+    .initialize = initialize,
     .start = start,
     .event = nullptr,
     .timeout = timeout,

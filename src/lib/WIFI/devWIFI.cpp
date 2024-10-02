@@ -904,7 +904,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   }
 }
 
-static void initialize()
+static bool initialize()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -915,6 +915,7 @@ static void initialize()
   registerButtonFunction(ACTION_START_WIFI, [](){
     setWifiUpdateMode();
   });
+  return true;
 }
 
 static void startWiFi(unsigned long now)

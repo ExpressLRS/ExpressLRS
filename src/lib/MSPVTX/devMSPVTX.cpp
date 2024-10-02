@@ -353,20 +353,19 @@ void disableMspVtx(void)
     mspState = STOP_MSPVTX;
 }
 
-static void initialize()
+static bool initialize()
 {
-    if (OPT_HAS_VTX_SPI)
-    {
-        mspState = GET_VTX_TABLE_SIZE;
-    }
+    return OPT_HAS_VTX_SPI;
+}
+
+static int start()
+{
+    mspState = GET_VTX_TABLE_SIZE;
+    return DURATION_IMMEDIATELY;
 }
 
 static int event(void)
 {
-    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     return DURATION_IMMEDIATELY;
 }
 
@@ -389,7 +388,7 @@ static int timeout(void)
 
 device_t MSPVTx_device = {
     .initialize = initialize,
-    .start = nullptr,
+    .start = start,
     .event = event,
     .timeout = timeout
 };

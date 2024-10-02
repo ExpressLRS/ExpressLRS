@@ -64,8 +64,10 @@ void devicesInit()
 
     for(size_t i=0 ; i<deviceCount ; i++) {
         if (uiDevices[i].core == core || core == -1) {
-            if (uiDevices[i].device->initialize) {
-                (uiDevices[i].device->initialize)();
+            if (uiDevices[i].device->initialize && !(uiDevices[i].device->initialize)()) {
+                uiDevices[i].device->start = nullptr;
+                uiDevices[i].device->event = nullptr;
+                uiDevices[i].device->timeout = nullptr;
             }
         }
     }
