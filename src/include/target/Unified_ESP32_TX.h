@@ -1,39 +1,6 @@
 #define TARGET_UNIFIED_TX
 
 #define HARDWARE_VERSION ""
-// DEVICE_NAME is not defined here because we get it from the SPIFFS file system
-
-// // FM30
-// TARGET_TX_FM30
-// GPIO_PIN_ANT_CTRL
-// GPIO_PIN_BLUETOOTH_EN
-// GPIO_PIN_UART1RX_INVERT
-// GPIO_PIN_UART1TX_INVERT
-// GPIO_PIN_UART3RX_INVERT
-
-// // Ghost
-// TARGET_RX_GHOST_ATTO_V1
-// TARGET_TX_GHOST
-// TARGET_TX_GHOST_LITE
-// GPIO_PIN_RF_AMP_DET         // unused
-
-// // Frsky/HM915
-// GPIO_PIN_VRF1               // unused
-// GPIO_PIN_VRF2               // unused
-// GPIO_PIN_SWR                // unused
-// TARGET_EEPROM_400K
-// TARGET_EEPROM_ADDR
-// TARGET_USE_EEPROM
-
-// // various (unused)
-// GPIO_PIN_DIP1
-// GPIO_PIN_DIP2
-// GPIO_PIN_DIP3
-// GPIO_PIN_DIP4
-
-//
-// ====================================
-//
 
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
@@ -58,6 +25,8 @@
 #define OPT_USE_HARDWARE_DCDC hardware_flag(HARDWARE_radio_dcdc)
 #define USE_SX1276_RFO_HF
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
+#define LR1121_RFSW_CTRL hardware_u16_array(HARDWARE_radio_rfsw_ctrl)
+#define LR1121_RFSW_CTRL_COUNT hardware_int(HARDWARE_radio_rfsw_ctrl_count)
 
 // Radio Antenna
 #define GPIO_PIN_ANT_CTRL hardware_pin(HARDWARE_ant_ctrl)

@@ -4,9 +4,8 @@ from enum import Enum
 from typing import NamedTuple
 
 class MCUType(Enum):
-    STM32 = 0
-    ESP32 = 1
-    ESP8266 = 2
+    ESP32 = 0
+    ESP8266 = 1
 
 class DeviceType(Enum):
     TX = 0
@@ -20,8 +19,6 @@ class RadioType(Enum):
     LR1121 = 2
 
 class FirmwareOptions(NamedTuple):
-    hasWiFi: bool
-    hasBuzzer: bool
     mcuType: MCUType
     deviceType: DeviceType
     radioChip: RadioType
@@ -29,6 +26,15 @@ class FirmwareOptions(NamedTuple):
     bootloader: str
     offset: int
     firmware: str
+
+
+class TXType(Enum):
+    internal = 'internal'
+    external = 'external'
+
+    def __str__(self):
+        return self.value
+
 
 def find_patch_location(mm):
     return mm.find(b'\xBE\xEF\xBA\xBE\xCA\xFE\xF0\x0D')

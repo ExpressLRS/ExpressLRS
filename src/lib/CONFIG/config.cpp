@@ -180,7 +180,7 @@ void TxConfig::Load()
         if (nvs_get_u8(handle, "backpackdisable", &value8) == ESP_OK)
             m_config.backpackDisable = value8;
         if (nvs_get_u8(handle, "backpacktlmen", &value8) == ESP_OK)
-            m_config.backpackTlmEnabled = value8;
+            m_config.backpackTlmMode = value8;
     }
 
     for(unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
@@ -210,7 +210,7 @@ void TxConfig::Load()
         Commit();
     }
 }
-#else  // STM32/ESP8266
+#else  // ESP8266
 void TxConfig::Load()
 {
     m_modified = 0;
@@ -339,7 +339,7 @@ TxConfig::Commit()
         nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
 
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
-        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmEnabled);
+        nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmMode);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
@@ -441,7 +441,6 @@ TxConfig::SetLinkMode(uint8_t linkMode)
         {
             m_model->tlm = TLM_RATIO_1_2;
             m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
-            m_config.backpackTlmEnabled = false; // Disable backpack telemetry since it'd be MSP mixed with MAVLink
         }
         m_modified |= MODEL_CHANGED | MAIN_CHANGED;
     }
@@ -577,11 +576,11 @@ TxConfig::SetBackpackDisable(bool backpackDisable)
 }
 
 void
-TxConfig::SetBackpackTlmEnabled(bool enabled)
+TxConfig::SetBackpackTlmMode(uint8_t mode)
 {
-    if (m_config.backpackTlmEnabled != enabled)
+    if (m_config.backpackTlmMode != mode)
     {
-        m_config.backpackTlmEnabled = enabled;
+        m_config.backpackTlmMode = mode;
         m_modified |= MAIN_CHANGED;
     }
 }
@@ -672,7 +671,7 @@ TxConfig::SetDefaults(bool commit)
     }
 
 #if !defined(PLATFORM_ESP32)
-    // STM32/ESP8266 just needs one commit
+    // ESP8266 just needs one commit
     if (commit)
     {
         Commit();
@@ -705,6 +704,10 @@ TxConfig::SetModelId(uint8_t modelId)
 /////////////////////////////////////////////////////
 
 #if defined(TARGET_RX)
+
+#if defined(PLATFORM_ESP8266)
+#include "flash_hal.h"
+#endif
 
 RxConfig::RxConfig()
 {
@@ -930,14 +933,54 @@ void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
     }
 }
 
-bool  RxConfig::GetIsBound() const
+bool RxConfig::GetIsBound() const
 {
-    return !m_config.volatileBind && UID_IS_BOUND(m_config.uid);
+    if (m_config.bindStorage == BINDSTORAGE_VOLATILE)
+        return false;
+    return UID_IS_BOUND(m_config.uid);
 }
+
+bool RxConfig::IsOnLoan() const
+{
+    if (m_config.bindStorage != BINDSTORAGE_RETURNABLE)
+        return false;
+    if (!firmwareOptions.hasUID)
+        return false;
+    return GetIsBound() && memcmp(m_config.uid, firmwareOptions.uid, UID_LEN) != 0;
+}
+
+#if defined(PLATFORM_ESP8266)
+#define EMPTY_SECTOR ((FS_start - 0x1000 - 0x40200000) / SPI_FLASH_SEC_SIZE) // empty sector before FS area start
+static bool erase_power_on_count = false;
+static int realPowerOnCounter = -1;
+uint8_t
+RxConfig::GetPowerOnCounter() const
+{
+    if (realPowerOnCounter == -1) {
+        byte zeros[16];
+        ESP.flashRead(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE, zeros, sizeof(zeros));
+        realPowerOnCounter = sizeof(zeros);
+        for (int i=0 ; i<sizeof(zeros) ; i++) {
+            if (zeros[i] != 0) {
+                realPowerOnCounter = i;
+                break;
+            }
+        }
+    }
+    return realPowerOnCounter;
+}
+#endif
 
 void
 RxConfig::Commit()
 {
+#if defined(PLATFORM_ESP8266)
+    if (erase_power_on_count)
+    {
+        ESP.flashEraseSector(EMPTY_SECTOR);
+        erase_power_on_count = false;
+    }
+#endif
     if (!m_modified)
     {
         // No changes
@@ -965,11 +1008,25 @@ RxConfig::SetUID(uint8_t* uid)
 void
 RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
 {
+#if defined(PLATFORM_ESP8266)
+    realPowerOnCounter = powerOnCounter;
+    if (powerOnCounter == 0)
+    {
+        erase_power_on_count = true;
+        m_modified = true;
+    }
+    else
+    {
+        byte zeros[16] = {0};
+        ESP.flashWrite(EMPTY_SECTOR * SPI_FLASH_SEC_SIZE, zeros, std::min((size_t)powerOnCounter, sizeof(zeros)));
+    }
+#else
     if (m_config.powerOnCounter != powerOnCounter)
     {
         m_config.powerOnCounter = powerOnCounter;
         m_modified = true;
     }
+#endif
 }
 
 void
@@ -1044,11 +1101,7 @@ RxConfig::SetDefaults(bool commit)
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
-#else
-    m_config.serialProtocol = PROTOCOL_CRSF;
 #endif
-
-    m_config.serial1Protocol = PROTOCOL_SERIAL1_NONE;
 
     if (commit)
     {
@@ -1133,6 +1186,7 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
     }
 }
 
+#if defined(PLATFORM_ESP32)
 void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
 {
     if (m_config.serial1Protocol != serialProtocol)
@@ -1141,6 +1195,7 @@ void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
         m_modified = true;
     }
 }
+#endif
 
 void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
 {
@@ -1169,11 +1224,45 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
     }
 }
 
-void RxConfig::SetVolatileBind(bool value)
+void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
 {
-    if (m_config.volatileBind != value)
+    if (m_config.bindStorage != value)
     {
-        m_config.volatileBind = value;
+        // If switching away from returnable, revert
+        ReturnLoan();
+        m_config.bindStorage = value;
+        m_modified = true;
+    }
+}
+
+void RxConfig::SetTargetSysId(uint8_t value)
+{
+    if (m_config.targetSysId != value)
+    {
+        m_config.targetSysId = value;
+        m_modified = true;
+    }
+}
+void RxConfig::SetSourceSysId(uint8_t value)
+{
+    if (m_config.sourceSysId != value)
+    {
+        m_config.sourceSysId = value;
+        m_modified = true;
+    }
+}
+
+void RxConfig::ReturnLoan()
+{
+    if (IsOnLoan())
+    {
+        // go back to flashed UID if there is one
+        // or unbind if there is not
+        if (firmwareOptions.hasUID)
+            memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
+        else
+            memset(m_config.uid, 0, UID_LEN);
+
         m_modified = true;
     }
 }

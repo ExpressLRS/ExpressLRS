@@ -29,20 +29,13 @@ static bool is_pre_screen_flipped = false;
 #define SCREEN_DURATION 20
 
 extern void jumpToWifiRunning();
+extern void jumpToBleRunning();
 
 static bool jumpToBandSelect = false;
 static bool jumpToChannelSelect = false;
 
 static int handle(void)
 {
-#if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
-    // if we are using analog joystick then we can't cancel because WiFi is using the ADC2 (i.e. channel >= 8)!
-    if (connectionState == wifiUpdate && digitalPinToAnalogChannel(GPIO_PIN_JOYSTICK) >= 8)
-    {
-        return DURATION_NEVER;
-    }
-#endif
-
 #ifdef HAS_GSENSOR
     is_screen_flipped = gsensor.isFlipped();
 
@@ -68,6 +61,11 @@ static int handle(void)
     {
         jumpToWifiRunning();
     }
+    
+    if (state_machine.getParentState() != STATE_JOYSTICK && connectionState == bleJoystick)
+    {
+        jumpToBleRunning();
+    }
 #endif
 
 #ifdef HAS_FIVE_WAY_BUTTON
@@ -75,7 +73,19 @@ static int handle(void)
     {
         int key;
         bool isLongPressed;
+#if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
+        // if we are using analog joystick then we can't cancel because WiFi is using the ADC2 (i.e. channel >= 8)!
+        if (connectionState == wifiUpdate && digitalPinToAnalogChannel(GPIO_PIN_JOYSTICK) >= 8)
+        {
+            key = INPUT_KEY_NO_PRESS;
+        }
+        else
+        {
+            fivewaybutton.update(&key, &isLongPressed);
+        }
+#else
         fivewaybutton.update(&key, &isLongPressed);
+#endif
         fsm_event_t fsm_event;
         switch (key)
         {
@@ -130,6 +140,7 @@ static int handle(void)
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
+
     return SCREEN_DURATION;
 }
 

@@ -24,7 +24,9 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
         uint8_t OutData[OutPktLen];
         msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
         msp2crsf.FIFOout.unlock();
+        noInterrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
+        interrupts();
         bytesWritten += OutPktLen;
     }
     #endif
@@ -34,21 +36,24 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 
 void SerialCRSF::queueLinkStatisticsPacket()
 {
+    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
+    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
+
     constexpr uint8_t outBuffer[] = {
-        LinkStatisticsFrameLength + 4,
+        payloadLen + 4,
         CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        LinkStatisticsFrameLength + 2,
+        CRSF_FRAME_SIZE(payloadLen),
         CRSF_FRAMETYPE_LINK_STATISTICS
     };
 
     uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
 
     _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
     {
         _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength);
+        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, payloadLen);
         _fifo.push(crc);
     }
     _fifo.unlock();
@@ -58,13 +63,6 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
-
-    constexpr uint8_t outBuffer[] = {
-        // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        RCframeLength + 2,
-        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
-    };
 
     crsf_channels_s PackedRCdataOut;
     PackedRCdataOut.ch0 = channelData[0];
@@ -98,11 +96,18 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     }
 
+    constexpr uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
+        CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
+
     uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, RCframeLength, crc);
+    crc = crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
 
     _outputPort->write(outBuffer, sizeof(outBuffer));
-    _outputPort->write((byte *)&PackedRCdataOut, RCframeLength);
+    _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
     _outputPort->write(crc);
     return DURATION_IMMEDIATELY;
 }

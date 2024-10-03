@@ -70,6 +70,8 @@ public:
     /**
      * @brief send any previously queued data to the serial port stream `_outputPort`
      * member variable.
+     *
+     * This method is called each time around the main loop.
      */
     virtual void sendQueuedData(uint32_t maxBytesToSend);
 
@@ -81,6 +83,8 @@ public:
      *
      * This method *should* not be overridden by custom implementations, it is
      * only overridden by the `SerialNOOP` implementation.
+     *
+     * This method is called each time around the main loop.
      */
     virtual void processSerialInput();
 
@@ -90,6 +94,15 @@ public:
      * @return maximum number of bytes to write
      */
     virtual int getMaxSerialWriteSize() { return defaultMaxSerialWriteSize; }
+
+    /**
+     * @brief Returns true is the serial protocol driver wants to send RC packets immediately
+     * in the "tock" timer callback rather than waiting for the serial timeout. For example,
+     * CRSF protocol uses this to reduce jitter in teh RC commands being sent to the FC.
+     *
+     * @return true of the serial protocol driver wants to send RC packets in "tock"
+     */
+    virtual bool sendImmediateRC() { return false; }
 
 protected:
     /// @brief the output stream for the serial port

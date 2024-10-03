@@ -26,11 +26,6 @@ const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 
-#if defined(TARGET_RX)
-// This is created by the build_flags.py and used by STM32 (ESP gets it from json)
-#include "flashdiscrim.h"
-#endif
-
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
@@ -67,10 +62,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .hasUID = false,
     .uid = {},
 #endif
-#if defined(FLASH_DISCRIM)
-    .flash_discriminator = FLASH_DISCRIM,
-#else
     .flash_discriminator = 0,
+#if defined(FAN_MIN_RUNTIME)
+    .fan_min_runtime = FAN_MIN_RUNTIME,
+#else
+    .fan_min_runtime = 30,
 #endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
@@ -123,11 +119,6 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
     .tlm_report_interval = 240U,
-#endif
-#if defined(FAN_MIN_RUNTIME)
-    .fan_min_runtime = FAN_MIN_RUNTIME,
-#else
-    .fan_min_runtime = 30,
 #endif
     ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
@@ -211,6 +202,11 @@ void saveOptions(Stream &stream, bool customised)
 {
     JsonDocument doc;
 
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
         doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
@@ -317,7 +313,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
-    int32_t wifiInterval = doc["wifi-on-interval"] | 60;
+    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));

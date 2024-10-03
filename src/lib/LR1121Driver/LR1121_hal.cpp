@@ -67,15 +67,6 @@ void LR1121Hal::init()
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(17500000);
-#elif defined(PLATFORM_STM32)
-    DBGLN("Config SPI");
-    SPIEx.setBitOrder(MSBFIRST);
-    SPIEx.setDataMode(SPI_MODE0);
-    SPIEx.setMOSI(GPIO_PIN_MOSI);
-    SPIEx.setMISO(GPIO_PIN_MISO);
-    SPIEx.setSCLK(GPIO_PIN_SCK);
-    SPIEx.begin();
-    SPIEx.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
@@ -85,16 +76,26 @@ void LR1121Hal::init()
     }
 }
 
-void LR1121Hal::reset(void)
+void LR1121Hal::reset(bool bootloader)
 {
     DBGLN("LR1121 Reset");
 
     if (GPIO_PIN_RST != UNDEF_PIN)
     {
+        if (bootloader)
+        {
+            pinMode(GPIO_PIN_BUSY, OUTPUT);
+            digitalWrite(GPIO_PIN_BUSY, LOW);
+        }
         pinMode(GPIO_PIN_RST, OUTPUT);
         digitalWrite(GPIO_PIN_RST, LOW);
         if (GPIO_PIN_RST_2 != UNDEF_PIN)
         {
+            if (bootloader)
+            {
+                pinMode(GPIO_PIN_BUSY_2, OUTPUT);
+                digitalWrite(GPIO_PIN_BUSY_2, LOW);
+            }
             pinMode(GPIO_PIN_RST_2, OUTPUT);
             digitalWrite(GPIO_PIN_RST_2, LOW);
         }
@@ -105,6 +106,15 @@ void LR1121Hal::reset(void)
             digitalWrite(GPIO_PIN_RST_2, HIGH);
         }
         delay(300); // LR1121 busy is high for 230ms after reset.  The WaitOnBusy timeout is only 1ms.  So this long delay is required.
+        if (bootloader)
+        {
+            pinMode(GPIO_PIN_BUSY, INPUT);
+            if (GPIO_PIN_RST_2 != UNDEF_PIN)
+            {
+                pinMode(GPIO_PIN_BUSY_2, INPUT);
+            }
+            delay(100);
+        }
     }
 
     WaitOnBusy(SX12XX_Radio_All);
