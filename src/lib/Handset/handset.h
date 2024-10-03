@@ -60,7 +60,6 @@ public:
      */
     virtual bool IsArmed() = 0;
 
-
     /**
      * Called to set the expected packet interval from the handset.
      * This can be used to synchronise the packets from the handset.

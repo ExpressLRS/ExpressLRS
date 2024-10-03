@@ -62,6 +62,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
     CRSF_FRAMETYPE_RADIO_ID = 0x3A,
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
+    CRSF_FRAMETYPE_RC_CHANNELS_PACKED_EXT = 0x17,
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
     CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
     // Extended Header Frames, range: 0x28 to 0x96
@@ -91,8 +92,7 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
     CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
-    CRSF_COMMAND_MODEL_SELECT_ID = 0x05,
-    CRSF_COMMAND_SF_ARM = 0x06,             // handset sends SF ARM defined and active status
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05
 } crsf_subcommand_e;
 
 enum {

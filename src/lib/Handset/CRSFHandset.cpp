@@ -239,7 +239,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
     }
 }
 
-void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per channel
+void CRSFHandset::RcPacketToChannelsData(uint8_t packetType) // data is packed as 11 bits per channel
 {
     auto payload = (uint8_t const * const)&inBuffer.asRCPacket_t.channels;
     constexpr unsigned srcBits = 11;
@@ -264,7 +264,21 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
         readValue >>= srcBits;
         bitsMerged -= srcBits;
     }
+
+    armCmd = packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED_EXT ? payload[readByteIndex] == 1 : CRSF_to_BIT(ChannelData[4]);
+
+    #if defined(PLATFORM_ESP32)
+        // monitoring arming state
+
+        static bool lastArmCmd = false;
+
+        if (lastArmCmd != armCmd) {
+            devicesTriggerEvent();
+            lastArmCmd = armCmd;
+        }
+    #endif
 }
+
 
 bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
 {
@@ -289,45 +303,20 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
     {
         elrsLUAmode = header->orig_addr == CRSF_ADDRESS_ELRS_LUA;
 
-        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX)
+        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX && header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
         {
-            uint8_t command = header->payload[1];
-
-            if (command == CRSF_COMMAND_MODEL_SELECT_ID)
-            {
-                modelId = header->payload[2];
-                #if defined(PLATFORM_ESP32)
-                rtcModelId = modelId;
-                #endif
-                if (RecvModelUpdate) RecvModelUpdate();
-                return true;
-            }
-
-            if (command == CRSF_COMMAND_SF_ARM)
-            {
-                armMethod = header->payload[2];
-                armCmd = header->payload[3];
-
-                #if defined(PLATFORM_ESP32)
-                    // monitoring armed state
-
-                    static bool lastArmCmd = false;
-
-                    if (lastArmCmd != armCmd) {
-                        devicesTriggerEvent();
-                        lastArmCmd = armCmd;
-                    }
-                #endif
-
-                return true;
-            } 
+            modelId = header->payload[2];
+            #if defined(PLATFORM_ESP32)
+            rtcModelId = modelId;
+            #endif
+            if (RecvModelUpdate) RecvModelUpdate();
+        }
+        else
+        {
+            if (RecvParameterUpdate) RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
         }
 
-        if (RecvParameterUpdate) 
-        { 
-            RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
-            return true;
-        }
+        return true;
     }
 
     return false;
@@ -349,10 +338,10 @@ bool CRSFHandset::ProcessPacket()
     const uint8_t packetType = inBuffer.asRCPacket_t.header.type;
     uint8_t *SerialInBuffer = inBuffer.asUint8_t;
 
-    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED || packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED_EXT)
     {
         RCdataLastRecv = micros();
-        RcPacketToChannelsData();
+        RcPacketToChannelsData(packetType);
         packetReceived = true;
     }
     // check for all extended frames that are a broadcast or a message to the FC

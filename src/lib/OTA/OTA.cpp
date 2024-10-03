@@ -50,7 +50,7 @@ class Handset
 public:
     Handset() {}
 
-    bool IsArmed() { return false ; }
+    bool IsArmed() { return CRSF_to_BIT(ChannelData[4]); }
 };
 
 Handset *handset = new Handset();
@@ -121,7 +121,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     // range and use the full 10bits to carry only 998us - 2012us
     PackUInt11ToChannels4x10(&channelData[0], &ota4->rc.ch, &Decimate11to10_Limit);
 
-    // send arming method (ch5 or via message) and armed status to receiver
+    // send armed status to receiver
     ota4->rc.isArmed = handset->IsArmed();
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
@@ -235,6 +235,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     // uplinkPower has 8 items but only 3 bits, but 0 is 0 power which we never use, shift 1-8 -> 0-7
     ota8->rc.uplinkPower = constrain(CRSF::LinkStatistics.uplink_TX_Power, 1, 8) - 1;
     ota8->rc.isHighAux = isHighAux;
+    // send armed status to receiver
     ota8->rc.isArmed = handset->IsArmed();
 #if defined(DEBUG_RCVR_LINKSTATS)
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
