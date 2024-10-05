@@ -170,6 +170,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
+    useFEC = false;
     if (useFSK)
     {
         DBGLN("Config FSK");
@@ -179,7 +180,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
         // Increase packet length for FEC used only on 1000Hz 2.5GHz.
-        useFEC = false;
         if (!isSubGHz)
         {
             useFEC = true;
