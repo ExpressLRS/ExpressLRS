@@ -126,6 +126,25 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
     hal.WriteCommand(LR11XX_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
 
+    if (maximumFrequency < 600000000)
+    {
+        // 7.2.15 SetRssiCalibration
+        // Below 600MHz 0 12 12 14 0 1 3 4 4 3 6 6 6 6 6 6 6 6
+        uint8_t rssiCalbuf[11];
+        rssiCalbuf[0] = 12 | 12 << 4;
+        rssiCalbuf[1] = 14 | 0 << 4;
+        rssiCalbuf[2] = 1 | 3 << 4;
+        rssiCalbuf[3] = 4 | 4 << 4; 
+        rssiCalbuf[4] = 3 | 6 << 4; 
+        rssiCalbuf[5] = 6 | 6 << 4; 
+        rssiCalbuf[6] = 6 | 6 << 4; 
+        rssiCalbuf[7] = 6 | 6 << 4;
+        rssiCalbuf[8] = 6;
+        rssiCalbuf[9] = 0;
+        rssiCalbuf[10] = 0;
+        hal.WriteCommand(LR11XX_RADIO_SET_RSSI_CALIBRATION_OC, rssiCalbuf, sizeof(rssiCalbuf), SX12XX_Radio_All);
+    }
+
     return true;
 }
 
@@ -254,30 +273,30 @@ void LR1121Driver::SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX
 void LR1121Driver::SetDioAsRfSwitch()
 {
     // 4.2.1 SetDioAsRfSwitch
-    uint8_t switchbuf[8];
-    if (LR1121_RFSW_CTRL_COUNT == 8)
-    {
-        switchbuf[0] = LR1121_RFSW_CTRL[0]; // RfswEnable
-        switchbuf[1] = LR1121_RFSW_CTRL[1]; // RfSwStbyCfg
-        switchbuf[2] = LR1121_RFSW_CTRL[2]; // RfSwRxCfg
-        switchbuf[3] = LR1121_RFSW_CTRL[3]; // RfSwTxCfg
-        switchbuf[4] = LR1121_RFSW_CTRL[4]; // RfSwTxHPCfg
-        switchbuf[5] = LR1121_RFSW_CTRL[5]; // RfSwTxHfCfg
-        switchbuf[6] = LR1121_RFSW_CTRL[6]; // Unused
-        switchbuf[7] = LR1121_RFSW_CTRL[7]; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
-    }
-    else
-    {
-        switchbuf[0] = 0b00001111; // RfswEnable
-        switchbuf[1] = 0b00000000; // RfSwStbyCfg
-        switchbuf[2] = 0b00000100; // RfSwRxCfg
-        switchbuf[3] = 0b00001000; // RfSwTxCfg
-        switchbuf[4] = 0b00001000; // RfSwTxHPCfg
-        switchbuf[5] = 0b00000010; // RfSwTxHfCfg
-        switchbuf[6] = 0;          // Unused
-        switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
-    }
-    hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);
+    // uint8_t switchbuf[8];
+    // if (LR1121_RFSW_CTRL_COUNT == 8)
+    // {
+    //     switchbuf[0] = LR1121_RFSW_CTRL[0]; // RfswEnable
+    //     switchbuf[1] = LR1121_RFSW_CTRL[1]; // RfSwStbyCfg
+    //     switchbuf[2] = LR1121_RFSW_CTRL[2]; // RfSwRxCfg
+    //     switchbuf[3] = LR1121_RFSW_CTRL[3]; // RfSwTxCfg
+    //     switchbuf[4] = LR1121_RFSW_CTRL[4]; // RfSwTxHPCfg
+    //     switchbuf[5] = LR1121_RFSW_CTRL[5]; // RfSwTxHfCfg
+    //     switchbuf[6] = LR1121_RFSW_CTRL[6]; // Unused
+    //     switchbuf[7] = LR1121_RFSW_CTRL[7]; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    // }
+    // else
+    // {
+    //     switchbuf[0] = 0b00001111; // RfswEnable
+    //     switchbuf[1] = 0b00000000; // RfSwStbyCfg
+    //     switchbuf[2] = 0b00000100; // RfSwRxCfg
+    //     switchbuf[3] = 0b00001000; // RfSwTxCfg
+    //     switchbuf[4] = 0b00001000; // RfSwTxHPCfg
+    //     switchbuf[5] = 0b00000010; // RfSwTxHfCfg
+    //     switchbuf[6] = 0;          // Unused
+    //     switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
+    // }
+    // hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);
 }
 
 void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
