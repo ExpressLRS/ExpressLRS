@@ -38,7 +38,9 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
         uint8_t OutData[OutPktLen];
         msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
         msp2crsf.FIFOout.unlock();
+        noInterrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
+        interrupts();
         bytesWritten += OutPktLen;
     }
     #endif

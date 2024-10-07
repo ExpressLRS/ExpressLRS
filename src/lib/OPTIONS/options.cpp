@@ -26,11 +26,6 @@ const char *wifi_ap_address = "10.0.0.1";
 
 #if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
 
-#if defined(TARGET_RX)
-// This is created by the build_flags.py and used by STM32 (ESP gets it from json)
-#include "flashdiscrim.h"
-#endif
-
 const char device_name[] = DEVICE_NAME;
 const char *product_name = (const char *)(target_name+4);
 
@@ -67,11 +62,7 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .hasUID = false,
     .uid = {},
 #endif
-#if defined(FLASH_DISCRIM)
-    .flash_discriminator = FLASH_DISCRIM,
-#else
     .flash_discriminator = 0,
-#endif
 #if defined(FAN_MIN_RUNTIME)
     .fan_min_runtime = FAN_MIN_RUNTIME,
 #else
@@ -322,7 +313,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
-    int32_t wifiInterval = doc["wifi-on-interval"] | 60;
+    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));

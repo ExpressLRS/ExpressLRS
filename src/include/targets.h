@@ -13,20 +13,8 @@
 #define WORD_ALIGNED_ATTR __attribute__((aligned(4)))
 #define WORD_PADDED(size) (((size)+3) & ~3)
 
-#ifdef PLATFORM_STM32
-/* ICACHE_RAM_ATTR1 is always linked into RAM */
-#define ICACHE_RAM_ATTR1  __section(".ram_code")
-/* ICACHE_RAM_ATTR2 is linked into RAM only if enough space */
-#if RAM_CODE_LIMITED
-#define ICACHE_RAM_ATTR2
-#else
-#define ICACHE_RAM_ATTR2 __section(".ram_code")
-#endif
-#define ICACHE_RAM_ATTR //nothing//
-#else
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
 #define ICACHE_RAM_ATTR IRAM_ATTR
-#endif
 
 #if defined(TARGET_NATIVE)
 #define IRAM_ATTR
@@ -289,6 +277,9 @@ extern bool pwmSerialDefined;
 #endif
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX) || defined(M0139)
+#if defined(PLATFORM_ESP32)
+#include <soc/uart_pins.h>
+#endif
 #if !defined(U0RXD_GPIO_NUM)
 #define U0RXD_GPIO_NUM (3)
 #endif

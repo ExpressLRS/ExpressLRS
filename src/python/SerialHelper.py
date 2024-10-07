@@ -1,12 +1,11 @@
-import time, serial
+import time
 
 encoding = "utf-8"
 
 class SerialHelper:
-    def __init__(self, serial, timeout=2, delimiters=["\n", "CCC"], half_duplex=False):
+    def __init__(self, serial, timeout=2, delimiters=["\n", "CCC"]):
         self.serial = serial
         self.timeout = timeout
-        self.half_duplex = half_duplex
         self.clear()
         self.set_delimiters(delimiters)
 
@@ -62,20 +61,14 @@ class SerialHelper:
         self.buf = bytearray()
         return ""
 
-    def write(self, data, half_duplex=None):
-        if half_duplex is None:
-            half_duplex = self.half_duplex
+    def write(self, data):
         serial = self.serial
         data = self.encode(data)
         cnt = serial.write(data)
         serial.flush()
-        if half_duplex:
-            # Clean RX buffer in case of half duplex
-            #   All written data is read into RX buffer
-            serial.read(cnt)
 
-    def write_str(self, data, half_duplex=None):
-        self.write(data+'\r\n', half_duplex)
+    def write_str(self, data):
+        self.write(data+'\r\n')
 
     def __convert_to_str(self, data):
         try:

@@ -1,8 +1,6 @@
 #include "CRSF.h"
-#if !defined(PLATFORM_STM32)
 #define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
-#endif
 #include <CRSFHandset.h>
 
 // Takes a MAVLink message wrapped in CRSF and possibly converts it to a CRSF telemetry message

@@ -30,6 +30,10 @@
 #define USBSerial Serial
 #endif
 
+#if defined(PLATFORM_ESP8266)
+#include <user_interface.h>
+#endif
+
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
 
@@ -77,6 +81,7 @@ volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
 uint8_t MSPDataPackage[5];
+#define BindingSpamAmount 25
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
@@ -132,19 +137,6 @@ device_affinity_t ui_devices[] = {
 
 #if defined(GPIO_PIN_ANT_CTRL)
     static bool diversityAntennaState = LOW;
-#endif
-
-#ifdef TARGET_TX_GHOST
-extern "C"
-/**
-  * @brief This function handles external line 2 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI2_TSC_IRQHandler()
-{
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
-}
 #endif
 
 void switchDiversityAntennas()
@@ -804,26 +796,8 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
-    while (busyTransmitting); // wait until no longer transmitting
-#else
-    // The code expects to enter here shortly after the tock ISR has started sending the last
-    // sync packet, before the tick ISR. Because the EEPROM write takes so long and disables
-    // interrupts, FastForward the timer
-    const uint32_t EEPROM_WRITE_DURATION = 30000; // us, a page write on F103C8 takes ~29.3ms
-    const uint32_t cycleInterval = ExpressLRS_currAirRate_Modparams->interval;
-    // Total time needs to be at least DURATION, rounded up to next cycle
-    // adding one cycle that will be eaten by busywaiting for the transmit to end
-    uint32_t pauseCycles = ((EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval) + 1;
-    // Pause won't return until paused, and has just passed the tick ISR (but not fired)
-    hwTimer::pause(pauseCycles * cycleInterval);
-
-    while (busyTransmitting); // wait until no longer transmitting
-
-    --pauseCycles; // the last cycle will actually be a transmit
-    while (pauseCycles--)
-      nonceAdvance();
-#endif
+    // wait until no longer transmitting
+    while (busyTransmitting);
     // Set the commitInProgress flag to prevent any other RF SPI traffic during the commit from RX or scheduled TX
     commitInProgress = true;
     // If telemetry expected in the next interval, the radio was in RX mode
@@ -1006,20 +980,6 @@ static void EnterBindingMode()
   // Lock the RF rate and freq while binding
   SetRFLinkRate(enumRatetoIndex(RATE_BINDING));
 
-#if defined(RADIO_LR1121)
-  FHSSuseDualBand = true;
-  expresslrs_mod_settings_s *const dualBandBindingModParams = get_elrs_airRateConfig(RATE_DUALBAND_BINDING); // 2.4GHz 50Hz
-  Radio.Config(dualBandBindingModParams->bw2, dualBandBindingModParams->sf2, dualBandBindingModParams->cr2, FHSSgetInitialGeminiFreq(),
-               dualBandBindingModParams->PreambleLen2, true, dualBandBindingModParams->PayloadLength, dualBandBindingModParams->interval,
-               (dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || dualBandBindingModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
-               (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
-#endif
-
-  Radio.SetFrequencyReg(FHSSgetInitialFreq());
-  if (isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) // Gemini mode
-  {
-    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
-  }
   // Start transmitting again
   hwTimer::resume();
 
@@ -1047,7 +1007,6 @@ void EnterBindingModeSafely()
   // TX can always enter binding mode safely as the function handles stopping the transmitter
   EnterBindingMode();
 }
-
 
 void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
@@ -1099,6 +1058,18 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
   }
 }
 
+void ParseMSPData(uint8_t *buf, uint8_t size)
+{
+  for (uint8_t i = 0; i < size; ++i)
+  {
+    if (msp.processReceivedByte(buf[i]))
+    {
+      ProcessMSPPacket(millis(), msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
+}
+
 static void HandleUARTout()
 {
   if (firmwareOptions.is_airport)
@@ -1122,7 +1093,7 @@ static void HandleUARTin()
   {
     if (firmwareOptions.is_airport)
     {
-      auto size = std::min(AP_MAX_BUF_LEN - apInputBuffer.size(), TxUSB->available());
+      auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
       if (size > 0)
       {
         uint8_t buf[size];
@@ -1134,7 +1105,7 @@ static void HandleUARTin()
     }
     else
     {
-      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxUSB->available());
+      auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
       if (size > 0)
       {
         uint8_t buf[size];
@@ -1160,30 +1131,32 @@ static void HandleUARTin()
   // Read from the Backpack serial port
   if (TxBackpack->available())
   {
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    auto size = std::min(uartInputBuffer.free(), (uint16_t)TxBackpack->available());
+    if (size > 0)
     {
-      auto size = std::min(UART_INPUT_BUF_LEN - uartInputBuffer.size(), TxBackpack->available());
-      if (size > 0)
+      uint8_t buf[size];
+      TxBackpack->readBytes(buf, size);
+
+      // If the TX is in Mavlink mode, push the bytes into the fifo buffer
+      if (config.GetLinkMode() == TX_MAVLINK_MODE)
       {
-        uint8_t buf[size];
-        TxBackpack->readBytes(buf, size);
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
 
-        // The tx is in Mavlink mode and receiving data from the Backpack (mavesp).
+        // The tx is in Mavlink mode and receiving data from the Backpack.
         // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
         if (connectionState == noCrossfire)
         {
-          UARTconnected();
+          if (isThisAMavPacket(buf, size))
+          {
+            UARTconnected();
+          }
         }
       }
-    }
-    else if (msp.processReceivedByte(TxBackpack->read()))
-    {
-      // Finished processing a complete packet
-      ProcessMSPPacket(millis(), msp.getReceivedPacket());
-      msp.markPacketReceived();
+
+      // Try to parse any MSP packets from the Backpack
+      ParseMSPData(buf, size);
     }
   }
 }
@@ -1278,25 +1251,6 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
-  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
-  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
-  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
-  HardwareSerial *uart2 = new HardwareSerial(USART2);
-  uart2->begin(57600);
-  CRSFHandset::PortSecondary = uart2;
-#endif
-
-#if defined(TARGET_TX_FM30_MINI)
-  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
-
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
@@ -1338,19 +1292,14 @@ static void setupBindingFromConfig()
 {
   if (firmwareOptions.hasUID)
   {
-      memcpy(UID, firmwareOptions.uid, UID_LEN);
+    memcpy(UID, firmwareOptions.uid, UID_LEN);
   }
   else
   {
-#ifdef PLATFORM_ESP32
+#if defined(PLATFORM_ESP32)
     esp_read_mac(UID, ESP_MAC_WIFI_STA);
-#elif PLATFORM_STM32
-    UID[0] = (uint8_t)HAL_GetUIDw0();
-    UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
-    UID[2] = (uint8_t)HAL_GetUIDw1();
-    UID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
-    UID[4] = (uint8_t)HAL_GetUIDw2();
-    UID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
+#else
+    wifi_get_macaddr(STATION_IF, UID);
 #endif
   }
 
@@ -1578,7 +1527,7 @@ void loop()
 
     CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
     handset->sendTelemetryToTX(linkStatisticsFrame);
-    crsfTelemToMSPOut(linkStatisticsFrame);
+    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }
 
@@ -1596,7 +1545,7 @@ void loop()
           // If we have a backpack
           if (TxUSB != TxBackpack)
           {
-            TxBackpack->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+            sendMAVLinkTelemetryToBackpack(CRSFinBuffer);
           }
         }
       }
@@ -1604,7 +1553,7 @@ void loop()
       {
         // Send all other tlm to handset
         handset->sendTelemetryToTX(CRSFinBuffer);
-        crsfTelemToMSPOut(CRSFinBuffer);
+        sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       TelemetryReceiver.Unlock();
   }
@@ -1613,8 +1562,16 @@ void loop()
   static bool mspTransferActive = false;
   if (InBindingMode)
   {
+#if defined(RADIO_LR1121)
+    // Send half of the bind packets on the 2.4GHz domain
+    if (BindingSendCount == BindingSpamAmount / 2) {
+      SetRFLinkRate(RATE_DUALBAND_BINDING);
+      // Increment BindingSendCount so that SetRFLinkRate is only called once.
+      BindingSendCount++;
+    }
+#endif
     // exit bind mode if package after some repeats
-    if (BindingSendCount > 6) {
+    if (BindingSendCount > BindingSpamAmount) {
       ExitBindingMode();
     }
   }
