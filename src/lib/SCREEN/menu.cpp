@@ -674,6 +674,7 @@ void jumpToWifiRunning()
 
 void jumpToBleRunning()
 {
+    state_machine.jumpTo(main_menu_fsm, STATE_JOYSTICK);
     state_machine.jumpTo(ble_menu_fsm, STATE_BLE_EXECUTE);
 }
 #endif
