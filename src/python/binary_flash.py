@@ -8,7 +8,6 @@ from elrs_helpers import ElrsUploadResult
 import BFinitPassthrough
 import ETXinitPassthrough
 import serials_find
-import UARTupload
 import upload_via_esp8266_backpack
 from firmware import DeviceType, FirmwareOptions, MCUType
 
@@ -18,8 +17,6 @@ sys.path.append(dirname(__file__) + '/external/esptool')
 
 from external.esptool import esptool
 sys.path.append(dirname(__file__) + "/external")
-
-import external.pystlink
 
 class UploadMethod(Enum):
     wifi = 'wifi'
@@ -46,29 +43,6 @@ def upload_wifi(args, options, upload_addr, isstm: bool):
     else:
         return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
 
-def upload_stm32_uart(args, options):
-    if args.port == None:
-        args.port = serials_find.get_serial_port()
-    return UARTupload.uart_upload(args.port, args.file.name, args.baud, target=options.firmware.upper(), accept=args.accept, ignore_incorrect_target=args.force)
-
-def upload_stm32_stlink(args, options: FirmwareOptions):
-    stlink = external.pystlink.PyStlink(verbosity=1)
-
-    flash_start = app_start = 0x08000000
-    if "0x" in options.offset:
-        offset = int(options.offset, 16)
-    else:
-        offset = int(options.offset, 10)
-    app_start = flash_start + offset
-
-    if options.bootloader is not None:
-        bootloader_dir = '' if args.fdir is None else args.fdir + '/'
-        stlink.program_flash(bootloader_dir + 'bootloader/' + options.bootloader, flash_start, erase=True, verify=True, initialize_comms=True)
-
-    stlink.program_flash(args.file.name, app_start, erase=True, verify=True, initialize_comms=True)
-
-    return ElrsUploadResult.Success
-
 def upload_esp8266_uart(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
@@ -91,7 +65,7 @@ def upload_esp8266_bf(args, options):
     if retval != ElrsUploadResult.Success:
         return retval
     try:
-        cmd = ['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'soft_reset', '--no-stub', 'write_flash']
+        cmd = ['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', str(args.baud), '--before', 'no_reset', '--after', 'soft_reset', 'write_flash']
         if args.erase: cmd.append('--erase-all')
         cmd.extend(['0x0000', args.file.name])
         esptool.main(cmd)
@@ -144,11 +118,6 @@ def upload_esp32_bf(args, options):
     return ElrsUploadResult.Success
 
 def upload_dir(mcuType, args):
-    if mcuType == MCUType.STM32:
-        if args.flash == UploadMethod.stock:
-            shutil.copy2(args.file.name, os.path.join(args.out, 'firmware.elrs'))
-        else:
-            shutil.copy2(args.file.name, args.out)
     if mcuType == MCUType.ESP8266:
         shutil.copy2('firmware.bin.gz', os.path.join(args.out, 'firmware.bin.gz'))
     elif mcuType == MCUType.ESP32:
@@ -177,11 +146,6 @@ def upload(options: FirmwareOptions, args):
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
                 return upload_wifi(args, options, ['elrs_rx', 'elrs_rx.local'], False)
-        elif options.mcuType == MCUType.STM32:
-            if args.flash == UploadMethod.betaflight or args.flash == UploadMethod.uart:
-                return upload_stm32_uart(args, options)
-            elif args.flash == UploadMethod.stlink:      # untested
-                return upload_stm32_stlink(args, options)
     else:
         if options.mcuType == MCUType.ESP8266:
             if args.flash == UploadMethod.uart:
@@ -195,10 +159,5 @@ def upload(options: FirmwareOptions, args):
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
                 return upload_wifi(args, options, ['elrs_tx', 'elrs_tx.local'], False)
-        elif options.mcuType == MCUType.STM32:
-            if args.flash == UploadMethod.stlink:      # test
-                return upload_stm32_stlink(args, options)
-            elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, options, ['elrs_txbp', 'elrs_txbp.local'], True)
     print("Invalid upload method for firmware")
     return ElrsUploadResult.ErrorGeneral

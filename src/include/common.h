@@ -17,7 +17,7 @@
 
 // Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
 // It should be incremented when the OTA packet structure is modified.
-#define OTA_VERSION_ID      3
+#define OTA_VERSION_ID      4
 #define UID_LEN             6
 
 typedef enum : uint8_t
@@ -237,7 +237,8 @@ enum eSerialProtocol : uint8_t
 	PROTOCOL_SUMD,
     PROTOCOL_DJI_RS_PRO,
     PROTOCOL_HOTT_TLM,
-    PROTOCOL_MAVLINK
+    PROTOCOL_MAVLINK,
+    PROTOCOL_MSP_DISPLAYPORT,
 };
 
 #if defined(PLATFORM_ESP32)
@@ -253,6 +254,7 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_HOTT_TLM,
     PROTOCOL_SERIAL1_TRAMP,
     PROTOCOL_SERIAL1_SMARTAUDIO,
+    PROTOCOL_SERIAL1_MSP_DISPLAYPORT,
 };
 #endif
 

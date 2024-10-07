@@ -18,54 +18,6 @@ extern WiFiMode_t wifiMode;
 // OLED specific header files.
 U8G2 *u8g2;
 
-#ifdef TARGET_TX_GHOST
-/**
- * helper function is used to draw xbmp on the OLED.
- * x = x position of the image
- * y = y position of the image
- * size = demensions of the box size x size, this only works for square images 1:1
- * image = XBM character string
- */
-#ifndef TARGET_TX_GHOST_LITE
-static void helper(int x, int y, int size, const unsigned char *image)
-{
-    u8g2->clearBuffer();
-    u8g2->drawXBMP(x, y, size, size, image);
-    u8g2->sendBuffer();
-}
-#endif
-
-/**
- *  ghostChase will only be called for ghost TX hardware.
- */
-static void ghostChase()
-{
-    // Using i < 16 and (i*4) to get 64 total pixels. Change to i < 32 (i*2) to slow animation.
-    for (int i = 0; i < 20; i++)
-    {
-        u8g2->clearBuffer();
-#ifndef TARGET_TX_GHOST_LITE
-        u8g2->drawXBMP((26 + i), 16, 32, 32, ghost);
-        u8g2->drawXBMP((-31 + (i * 4)), 16, 32, 32, elrs32);
-#else
-        u8g2->drawXBMP((26 + i), 0, 32, 32, ghost);
-        u8g2->drawXBMP((-31 + (i * 4)), 0, 32, 32, elrs32);
-#endif
-        u8g2->sendBuffer();
-    }
-/**
- *  Animation for the ghost logo expanding in the center of the screen.
- *  helper function just draw's the XBM strings.
- */
-#ifndef TARGET_TX_GHOST_LITE
-    helper(38, 12, 40, elrs40);
-    helper(36, 8, 48, elrs48);
-    helper(34, 4, 56, elrs56);
-    helper(32, 0, 64, elrs64);
-#endif
-}
-#endif
-
 static void helperDrawImage(menu_item_t menu);
 static void drawCentered(u8g2_int_t y, const char *str)
 {
@@ -113,9 +65,6 @@ void OLEDDisplay::printScreenshot()
 void OLEDDisplay::displaySplashScreen()
 {
     u8g2->clearBuffer();
-#ifdef TARGET_TX_GHOST
-    ghostChase();
-#else
 #ifdef USE_OLED_SPI_SMALL
     if (OPT_USE_OLED_SPI_SMALL)
     {
@@ -141,7 +90,6 @@ void OLEDDisplay::displaySplashScreen()
         u8g2->setFont(u8g2_font_profont10_mr);
         drawCentered(60, buffer);
     }
-#endif
     u8g2->sendBuffer();
 }
 
