@@ -16,7 +16,7 @@
 
 ### REGULATORY DOMAIN: ###
 
--DRegulatory_Domain_FCC_915
+#-DRegulatory_Domain_FCC_915
 
 ### PERFORMANCE OPTIONS: ###
 

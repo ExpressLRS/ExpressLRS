@@ -6,8 +6,11 @@
 MAJOR_VERSION=3
 MINOR_VERSION=4
 PATCH_VERSION=3
-export MODALAI_VERSION="0x00"
-export ELRS_VER="0x0${MAJOR_VERSION}0${MINOR_VERSION}0${PATCH_VERSION}00"
+FORMAT_MAJOR=$(printf %02d $MAJOR_VERSION)
+FORMAT_MINOR=$(printf %02d $MINOR_VERSION)
+FORMAT_PATCH=$(printf %02d $PATCH_VERSION)
+export MODALAI_VERSION="0"
+export ELRS_VER="0x${FORMAT_MAJOR}${FORMAT_MINOR}${FORMAT_PATCH}00"
 ENCRYPT=0
 TARGET=""
 ENCRYPT_KEY=""
@@ -71,14 +74,29 @@ case $TARGET in
     *)
         if [[ $TARGET == "" ]]; then 
             echo "Missing Target to build for!"
+            exit
         else 
-            echo "Unknown target provided: ${TARGET}"
+            case $TARGET in
+                *2400* | FM30*)
+                    PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" platformio run -e $TARGET
+                    OUTDIR=artifacts/$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION/$TARGET
+                    mkdir -p $OUTDIR
+                    mv .pio/build/$TARGET/*.bin $OUTDIR >& /dev/null || :
+                    ;;
+                *)
+                    PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" platformio run -e $TARGET
+                    OUTDIR=artifacts/$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION/$TARGET
+                    mkdir -p $OUTDIR
+                    mv .pio/build/$TARGET/*.bin $OUTDIR >& /dev/null || :
+                    ;;
+            esac
+
         fi
-        print_usage
-        exit 
+        exit
         ;;
 esac
 
+export PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915"
 # Build application
 platformio run --environment $TARGET # -v > build_output.txt
 
@@ -99,5 +117,6 @@ md5sum $BUILD_DIR/$FW
 
 # Copy/Push ELRS FW bin to desired location on voxl2
 # adb push $BUILD_DIR/$FW /usr/share/modalai/voxl-elrs/firmware/rx
-
-cp $BUILD_DIR/$FW .
+OUTDIR=artifacts/$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION/$TARGET
+mkdir -p $OUTDIR
+cp $BUILD_DIR/$FW $OUTDIR

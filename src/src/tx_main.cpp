@@ -1548,13 +1548,16 @@ void loop()
 
   HandleUARTin();
 
-  // TODO REMOVE
+  // Unnecessary, use #define DEBUG_TX_FREERUN instead
+  #ifdef HWIL_TESTING
   // Hack to ignore the lack of a crossfire connection
-  /*if(connectionState == noCrossfire)
+  if(connectionState == noCrossfire)
   {
-    connectionState = awaitingModelId;
-    hwTimer::resume();
-  }*/
+    handset->forceConnection();
+    //connectionState = awaitingModelId;
+    //hwTimer::resume();
+  }
+  #endif
 
   if (connectionState > MODE_STATES)
   {

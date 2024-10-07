@@ -11,3 +11,4 @@ src/hardware
 .vscode
 *.bin
 RTT/
+src/artifacts
