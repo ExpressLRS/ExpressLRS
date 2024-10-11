@@ -1725,6 +1725,13 @@ static void cycleRfMode(unsigned long now)
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
+        // Skip Dual Band modes for hardware with only a single LR1121
+        while (GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+        {
+            DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
+            scanIndex++;
+        }
+
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
     } // if time to switch RF mode
