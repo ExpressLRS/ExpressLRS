@@ -255,7 +255,9 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
+#if defined(RADIO_LR1121)
 static uint32_t BindingRateChangeTime;
+#endif
 #define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
