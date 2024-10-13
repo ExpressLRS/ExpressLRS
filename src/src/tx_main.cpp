@@ -973,7 +973,7 @@ static void EnterBindingMode()
   // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();
 
-  // Binding uses a CRCInit=0, 50Hz, and InvertIQ
+  // Binding uses 50Hz, and InvertIQ
   OtaCrcInitializer = OTA_VERSION_ID;
   OtaNonce = 0; // Lock the OtaNonce to prevent syncspam packets
   InBindingMode = true; // Set binding mode before SetRFLinkRate() for correct IQ
