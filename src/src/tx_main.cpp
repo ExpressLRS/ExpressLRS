@@ -974,7 +974,7 @@ static void EnterBindingMode()
   SendUIDOverMSP();
 
   // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-  OtaCrcInitializer = 0;
+  OtaCrcInitializer = OTA_VERSION_ID;
   OtaNonce = 0; // Lock the OtaNonce to prevent syncspam packets
   InBindingMode = true; // Set binding mode before SetRFLinkRate() for correct IQ
 
