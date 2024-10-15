@@ -255,7 +255,9 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
+#if defined(RADIO_LR1121)
 static uint32_t BindingRateChangeTime;
+#endif
 #define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
@@ -1165,8 +1167,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     if (Radio.FrequencyErrorAvailable())
     {
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
     #if defined(RADIO_SX127X)
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection);
     #endif /* RADIO_SX127X */
