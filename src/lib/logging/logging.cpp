@@ -36,7 +36,6 @@ void debugPrintf(const char* fmt, ...)
         case 'x':
           utoa(va_arg(vlist, uint32_t), buf, HEX);
           break;
-#if !defined(PLATFORM_STM32)
         case 'f':
           {
             float val = va_arg(vlist, double);
@@ -46,7 +45,6 @@ void debugPrintf(const char* fmt, ...)
             itoa(decimals, buf + strlen(buf), DEC);
           }
           break;
-#endif
         default:
           break;
       }

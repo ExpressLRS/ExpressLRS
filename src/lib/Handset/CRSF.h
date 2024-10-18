@@ -9,7 +9,7 @@
 class CRSF
 {
 public:
-    static volatile crsfPayloadLinkstatistics_s LinkStatistics; // Link Statistics Stored as Struct
+    static elrsLinkStatistics_t LinkStatistics; // Link Statistics Stored as Struct
 
     static void GetMspMessage(uint8_t **data, uint8_t *len);
     static void UnlockMspMessage();

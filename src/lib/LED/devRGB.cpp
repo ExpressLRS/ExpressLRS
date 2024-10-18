@@ -13,23 +13,6 @@
     #define OPT_WS2812_IS_GRB false
 #endif
 
-#if defined(PLATFORM_STM32) && defined(GPIO_PIN_LED_WS2812)
-#ifndef GPIO_PIN_LED_WS2812_FAST
-#error "WS2812 support requires _FAST pin!"
-#endif
-
-#include "STM32F3_WS2812B_LED.h"
-
-#if !defined(WS2812_PIXEL_COUNT)
-#define WS2812_PIXEL_COUNT 1
-#endif
-constexpr uint8_t pixelCount = WS2812_PIXEL_COUNT;
-static uint8_t statusLEDcount = WS2812_PIXEL_COUNT;
-static uint8_t statusLEDs[] = { 0 };
-static uint8_t bootLEDcount = WS2812_PIXEL_COUNT;
-static uint8_t *bootLEDs = statusLEDs;
-#endif
-
 #include "logging.h"
 #include "crsf_protocol.h"
 #include "POWERMGNT.h"

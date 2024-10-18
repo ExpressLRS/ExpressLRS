@@ -73,6 +73,13 @@ typedef union {
     uint32_t raw;
 } tx_button_color_t;
 
+typedef enum {
+    BACKPACK_TELEM_MODE_OFF,
+    BACKPACK_TELEM_MODE_ESPNOW,
+    BACKPACK_TELEM_MODE_WIFI,
+    BACKPACK_TELEM_MODE_BLUETOOTH,
+} telem_mode_t;
+
 typedef struct {
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
@@ -85,8 +92,7 @@ typedef struct {
     uint8_t         motionMode:2,       // bool, but space for 2 more modes
                     dvrStopDelay:3,
                     backpackDisable:1,  // bool, disable backpack via EN pin if available
-                    backpackTlmEnabled:1,  // bool, enable telemetry via ESPNOW from backpack
-                    unused:1;          // FUTURE available
+                    backpackTlmMode:2;  // 0=Off, 1=Fwd tlm via espnow, 2=fwd tlm via wifi 3=(FUTURE) bluetooth
     uint8_t         dvrStartDelay:3,
                     dvrAux:5;
     tx_button_color_t buttonColors[2];  // FUTURE: TX RGB color / mode (sets color of TX, can be a static color or standard)
@@ -123,7 +129,7 @@ public:
     uint8_t  GetDvrStartDelay() const { return m_config.dvrStartDelay; }
     uint8_t  GetDvrStopDelay() const { return m_config.dvrStopDelay; }
     bool     GetBackpackDisable() const { return m_config.backpackDisable; }
-    bool     GetBackpackTlmEnabled() const { return m_config.backpackTlmEnabled; }
+    uint8_t  GetBackpackTlmMode() const { return m_config.backpackTlmMode; }
     tx_button_color_t const *GetButtonActions(uint8_t button) const { return &m_config.buttonColors[button]; }
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
@@ -153,7 +159,7 @@ public:
     void SetDvrStopDelay(uint8_t dvrStopDelay);
     void SetButtonActions(uint8_t button, tx_button_color_t actions[2]);
     void SetBackpackDisable(bool backpackDisable);
-    void SetBackpackTlmEnabled(bool enabled);
+    void SetBackpackTlmMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
 
@@ -230,6 +236,8 @@ typedef struct __attribute__((packed)) {
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
+    uint8_t     targetSysId;
+    uint8_t     sourceSysId;
 } rx_config_t;
 
 class RxConfig
@@ -264,6 +272,8 @@ public:
     uint8_t GetTeamraceChannel() const { return m_config.teamraceChannel; }
     uint8_t GetTeamracePosition() const { return m_config.teamracePosition; }
     eFailsafeMode GetFailsafeMode() const { return (eFailsafeMode)m_config.failsafeMode; }
+    uint8_t GetTargetSysId()  const { return m_config.targetSysId; }
+    uint8_t GetSourceSysId()  const { return m_config.sourceSysId; }
     rx_config_bindstorage_t GetBindStorage() const { return (rx_config_bindstorage_t)m_config.bindStorage; }
     bool IsOnLoan() const;
 
@@ -288,6 +298,8 @@ public:
     void SetTeamraceChannel(uint8_t teamraceChannel);
     void SetTeamracePosition(uint8_t teamracePosition);
     void SetFailsafeMode(eFailsafeMode failsafeMode);
+    void SetTargetSysId(uint8_t sysID);
+    void SetSourceSysId(uint8_t sysID);
     void SetBindStorage(rx_config_bindstorage_t value);
     void ReturnLoan();
 

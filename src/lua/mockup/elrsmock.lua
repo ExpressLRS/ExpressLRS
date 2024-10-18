@@ -2,7 +2,7 @@ return {
   {name='Packet Rate', id=0, type=9, values={'250(-108dBm)','500(-105dBm)'}, value=1, unit='Hz'},
   {name='Telem Ratio', id=1, type=9, values={'Off','1:128'}, value=1, unit=''},
   {name='Switch Mode', id=2, type=9, values={'Hybrid','Wide'}, value=1, unit=''},
-  {name='Model Match', id=3, type=9, values={'Off','On'}, value=0, unit=''},
+  {name='Model Match', id=3, type=9, values={'Off',''}, grey=true, value=0, unit='(ID:1)'},
   {name='TX Power', id=4, type=11},
     {name='Max Power', id=5, type=9, parent=4, values={'10','25','50'}, value=2, unit='mW'},
     {name='Dynamic', id=6, type=9, parent=4, values={'Off','On','AUX9'}, value=1, unit=''},

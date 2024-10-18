@@ -57,18 +57,10 @@ static void setupWire()
     if(gpio_sda != UNDEF_PIN && gpio_scl != UNDEF_PIN)
     {
         DBGLN("Starting wire on SCL %d, SDA %d", gpio_scl, gpio_sda);
-#if defined(PLATFORM_STM32)
-        // Wire::begin() passing ints is ambiguously overloaded, use the set functions
-        // which themselves might get the PinName overloads
-        Wire.setSCL(gpio_scl);
-        Wire.setSDA(gpio_sda);
-        Wire.begin();
-#else
         // ESP hopes to get Wire::begin(int, int)
         // ESP32 hopes to get Wire::begin(int = -1, int = -1, uint32 = 0)
         Wire.begin(gpio_sda, gpio_scl);
         Wire.setClock(400000);
-#endif
         i2c_enabled = true;
     }
 #endif

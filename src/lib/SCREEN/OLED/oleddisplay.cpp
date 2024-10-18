@@ -8,6 +8,7 @@
 #include "options.h"
 #include "logging.h"
 #include "common.h"
+#include "CRSF.h"
 
 #if defined(PLATFORM_ESP32)
 #include "WiFi.h"
@@ -16,54 +17,6 @@ extern WiFiMode_t wifiMode;
 
 // OLED specific header files.
 U8G2 *u8g2;
-
-#ifdef TARGET_TX_GHOST
-/**
- * helper function is used to draw xbmp on the OLED.
- * x = x position of the image
- * y = y position of the image
- * size = demensions of the box size x size, this only works for square images 1:1
- * image = XBM character string
- */
-#ifndef TARGET_TX_GHOST_LITE
-static void helper(int x, int y, int size, const unsigned char *image)
-{
-    u8g2->clearBuffer();
-    u8g2->drawXBMP(x, y, size, size, image);
-    u8g2->sendBuffer();
-}
-#endif
-
-/**
- *  ghostChase will only be called for ghost TX hardware.
- */
-static void ghostChase()
-{
-    // Using i < 16 and (i*4) to get 64 total pixels. Change to i < 32 (i*2) to slow animation.
-    for (int i = 0; i < 20; i++)
-    {
-        u8g2->clearBuffer();
-#ifndef TARGET_TX_GHOST_LITE
-        u8g2->drawXBMP((26 + i), 16, 32, 32, ghost);
-        u8g2->drawXBMP((-31 + (i * 4)), 16, 32, 32, elrs32);
-#else
-        u8g2->drawXBMP((26 + i), 0, 32, 32, ghost);
-        u8g2->drawXBMP((-31 + (i * 4)), 0, 32, 32, elrs32);
-#endif
-        u8g2->sendBuffer();
-    }
-/**
- *  Animation for the ghost logo expanding in the center of the screen.
- *  helper function just draw's the XBM strings.
- */
-#ifndef TARGET_TX_GHOST_LITE
-    helper(38, 12, 40, elrs40);
-    helper(36, 8, 48, elrs48);
-    helper(34, 4, 56, elrs56);
-    helper(32, 0, 64, elrs64);
-#endif
-}
-#endif
 
 static void helperDrawImage(menu_item_t menu);
 static void drawCentered(u8g2_int_t y, const char *str)
@@ -112,9 +65,6 @@ void OLEDDisplay::printScreenshot()
 void OLEDDisplay::displaySplashScreen()
 {
     u8g2->clearBuffer();
-#ifdef TARGET_TX_GHOST
-    ghostChase();
-#else
 #ifdef USE_OLED_SPI_SMALL
     if (OPT_USE_OLED_SPI_SMALL)
     {
@@ -140,7 +90,6 @@ void OLEDDisplay::displaySplashScreen()
         u8g2->setFont(u8g2_font_profont10_mr);
         drawCentered(60, buffer);
     }
-#endif
     u8g2->sendBuffer();
 }
 
@@ -393,6 +342,61 @@ void OLEDDisplay::displaySending()
     {
         drawCentered(29, "SENDING...");
     }
+    u8g2->sendBuffer();
+}
+
+void OLEDDisplay::displayLinkstats()
+{
+    constexpr int16_t LINKSTATS_COL_FIRST   = 0;
+    constexpr int16_t LINKSTATS_COL_SECOND  = 32;
+    constexpr int16_t LINKSTATS_COL_THIRD   = 85;
+
+    constexpr int16_t LINKSTATS_ROW_FIRST   = 10;
+    constexpr int16_t LINKSTATS_ROW_SECOND  = 20;
+    constexpr int16_t LINKSTATS_ROW_THIRD   = 30;
+    constexpr int16_t LINKSTATS_ROW_FOURTH  = 40;
+    constexpr int16_t LINKSTATS_ROW_FIFTH   = 50;
+
+    u8g2->clearBuffer();
+    u8g2->setFont(u8g2_font_profont10_mr);
+
+    u8g2->drawStr(LINKSTATS_COL_FIRST, LINKSTATS_ROW_SECOND, "LQ");
+    u8g2->drawStr(LINKSTATS_COL_FIRST, LINKSTATS_ROW_THIRD, "RSSI");
+    u8g2->drawStr(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FOURTH, "SNR");
+    u8g2->drawStr(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FIFTH, "Ant");
+
+    u8g2->drawStr(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST, "Uplink");
+    u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
+    u8g2->print(CRSF::LinkStatistics.uplink_Link_quality);
+    u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
+    u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
+    if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
+    {
+        u8g2->print('/');
+        u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+    }
+
+    u8g2->drawStr(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST, "Downlink");
+    u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
+    u8g2->print(CRSF::LinkStatistics.downlink_Link_quality);
+    u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
+    u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
+    if (isDualRadio())
+    {
+        u8g2->print('/');
+        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
+    }
+
+    if (!OPT_USE_OLED_SPI_SMALL)
+    {
+        u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
+        u8g2->print((int8_t)CRSF::LinkStatistics.uplink_SNR);
+        u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
+        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_SNR);
+        u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
+        u8g2->print(CRSF::LinkStatistics.active_antenna);
+    }
+
     u8g2->sendBuffer();
 }
 

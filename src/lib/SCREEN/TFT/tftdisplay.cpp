@@ -11,6 +11,7 @@
 #include "options.h"
 #include "logging.h"
 #include "common.h"
+#include "CRSF.h"
 
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
@@ -380,6 +381,66 @@ void TFTDisplay::displaySending()
 
     displayFontCenter(SUB_PAGE_BINDING_WORD_START_X, SCREEN_X, SUB_PAGE_BINDING_WORD_START_Y,  SCREEN_LARGE_FONT_SIZE, SCREEN_LARGE_FONT,
                         "SENDING...", BLACK, WHITE);
+}
+
+void TFTDisplay::displayLinkstats()
+{
+    constexpr int16_t LINKSTATS_COL_FIRST   = 0;
+    constexpr int16_t LINKSTATS_COL_SECOND  = 30;
+    constexpr int16_t LINKSTATS_COL_THIRD   = 100;
+
+    constexpr int16_t LINKSTATS_ROW_FIRST   = 10;
+    constexpr int16_t LINKSTATS_ROW_SECOND  = 25;
+    constexpr int16_t LINKSTATS_ROW_THIRD   = 40;
+    constexpr int16_t LINKSTATS_ROW_FOURTH  = 55;
+    constexpr int16_t LINKSTATS_ROW_FIFTH   = 70;
+
+    gfx->fillScreen(WHITE);
+    gfx->setFont(&SCREEN_SMALL_FONT);
+    gfx->setTextColor(BLACK, WHITE);
+
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_SECOND);
+    gfx->print("LQ");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_THIRD);
+    gfx->print("RSSI");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FOURTH);
+    gfx->print("SNR");
+    gfx->setCursor(LINKSTATS_COL_FIRST, LINKSTATS_ROW_FIFTH);
+    gfx->print("Ant");
+
+    // Uplink Linkstats
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
+    gfx->print("Uplink");
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
+    gfx->print(CRSF::LinkStatistics.uplink_Link_quality);
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
+    gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
+    if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
+    {
+        gfx->print('/');
+        gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+    }
+
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
+    gfx->print(CRSF::LinkStatistics.uplink_SNR);
+    gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
+    gfx->print(CRSF::LinkStatistics.active_antenna);
+
+    // Downlink Linkstats
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
+    gfx->print("Downlink");
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
+    gfx->print(CRSF::LinkStatistics.downlink_Link_quality);
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
+    gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
+    if (isDualRadio())
+    {
+        gfx->print('/');
+        gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
+    }
+
+    gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
+    gfx->print(CRSF::LinkStatistics.downlink_SNR);
 }
 
 #endif

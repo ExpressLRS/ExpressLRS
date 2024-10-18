@@ -1,39 +1,5 @@
 #define TARGET_UNIFIED_RX
 
-// DEVICE_NAME is not defined here because we get it from the SPIFFS file system
-
-// // FM30
-// TARGET_TX_FM30
-// GPIO_PIN_ANT_CTRL
-// GPIO_PIN_BLUETOOTH_EN
-// GPIO_PIN_UART1RX_INVERT
-// GPIO_PIN_UART1TX_INVERT
-// GPIO_PIN_UART3RX_INVERT
-
-// // Ghost
-// TARGET_RX_GHOST_ATTO_V1
-// TARGET_TX_GHOST
-// TARGET_TX_GHOST_LITE
-// GPIO_PIN_RF_AMP_DET         // unused
-
-// // Frsky/HM915
-// GPIO_PIN_VRF1               // unused
-// GPIO_PIN_VRF2               // unused
-// GPIO_PIN_SWR                // unused
-// TARGET_EEPROM_400K
-// TARGET_EEPROM_ADDR
-// TARGET_USE_EEPROM
-
-// // various (unused)
-// GPIO_PIN_DIP1
-// GPIO_PIN_DIP2
-// GPIO_PIN_DIP3
-// GPIO_PIN_DIP4
-
-//
-// ====================================
-//
-
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
 #define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)

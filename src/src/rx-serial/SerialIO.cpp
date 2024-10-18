@@ -25,7 +25,9 @@ void SerialIO::sendQueuedData(uint32_t maxBytesToSend)
         uint8_t OutData[OutPktLen];
         _fifo.popBytes(OutData, OutPktLen);
         _fifo.unlock();
+        noInterrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
+        interrupts();
         bytesWritten += OutPktLen;
     }
 }

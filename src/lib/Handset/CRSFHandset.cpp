@@ -17,15 +17,6 @@ HardwareSerial CRSFHandset::Port(0);
 RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
-#elif defined(PLATFORM_STM32)
-HardwareSerial CRSFHandset::Port(GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
-#if defined(STM32F3) || defined(STM32F3xx)
-#include "stm32f3xx_hal.h"
-#include "stm32f3xx_hal_gpio.h"
-#elif defined(STM32F1) || defined(STM32F1xx)
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
-#endif
 #elif defined(TARGET_NATIVE)
 HardwareSerial CRSFHandset::Port = Serial;
 #endif
@@ -92,36 +83,6 @@ void CRSFHandset::Begin()
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
-#elif defined(PLATFORM_STM32)
-    DBGLN("Start STM32 R9M TX CRSF UART");
-    halfDuplex = true;
-
-    CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
-    CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
-
-    #if defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    pinMode(GPIO_PIN_BUFFER_OE, OUTPUT);
-    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED); // RX mode default
-    #elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    CRSFHandset::Port.setHalfDuplex();
-    #endif
-
-    CRSFHandset::Port.begin(UARTrequestedBaud);
-
-#if defined(TARGET_TX_GHOST)
-    USART1->CR1 &= ~USART_CR1_UE;
-    USART1->CR3 |= USART_CR3_HDSEL;
-    USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
-    USART1->CR1 |= USART_CR1_UE;
-#elif defined(TARGET_TX_FM30_MINI)
-    LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
-    USART2->CR1 &= ~USART_CR1_UE;
-    USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
-    USART2->CR1 |= USART_CR1_UE;
-#endif
-    DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
-    CRSFHandset::Port.flush();
-    flush_port_input();
 #endif
 }
 
@@ -149,17 +110,16 @@ void CRSFHandset::flush_port_input()
     }
 }
 
-void CRSFHandset::makeLinkStatisticsPacket(uint8_t buffer[LinkStatisticsFrameLength + 4])
+void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
 {
+    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
+    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
+
     buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buffer[1] = LinkStatisticsFrameLength + 2;
+    buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    for (uint8_t i = 0; i < LinkStatisticsFrameLength; i++)
-    {
-        buffer[i + 3] = ((uint8_t *)&CRSF::LinkStatistics)[i];
-    }
-    uint8_t crc = crsf_crc.calc(buffer[2]);
-    buffer[LinkStatisticsFrameLength + 3] = crsf_crc.calc((byte *)&CRSF::LinkStatistics, LinkStatisticsFrameLength, crc);
+    memcpy(&buffer[3], (uint8_t *)&CRSF::LinkStatistics, payloadLen);
+    buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
 }
 
 /**
@@ -432,13 +392,7 @@ void CRSFHandset::handleInput()
     {
         // if currently transmitting in half-duplex mode then check if the TX buffers are empty.
         // If there is still data in the transmit buffers then exit, and we'll check next go round.
-#if defined(PLATFORM_STM32)
-        if (Port.availableForWrite() != SERIAL_TX_BUFFER_SIZE - 1)
-        {
-            return;
-        }
-        Port.flush();
-#elif defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
         if (!uart_ll_is_tx_idle(UART_LL_GET_HW(0)))
         {
             return;
@@ -786,18 +740,6 @@ bool CRSFHandset::UARTwdt()
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
                 CRSFHandset::Port.flush();
                 CRSFHandset::Port.updateBaudRate(UARTrequestedBaud);
-#elif defined(TARGET_TX_GHOST)
-                CRSFHandset::Port.begin(UARTrequestedBaud);
-                USART1->CR1 &= ~USART_CR1_UE;
-                USART1->CR3 |= USART_CR3_HDSEL;
-                USART1->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV | USART_CR2_SWAP; //inverted/swapped
-                USART1->CR1 |= USART_CR1_UE;
-#elif defined(TARGET_TX_FM30_MINI)
-                CRSFHandset::Port.begin(UARTrequestedBaud);
-                LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN); // default is PULLUP
-                USART2->CR1 &= ~USART_CR1_UE;
-                USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
-                USART2->CR1 |= USART_CR1_UE;
 #else
                 CRSFHandset::Port.begin(UARTrequestedBaud);
 #endif

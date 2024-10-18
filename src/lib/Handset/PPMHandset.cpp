@@ -9,7 +9,7 @@
 
 #include <driver/rmt.h>
 
-constexpr auto RMT_TICKS_PER_US = 10;
+constexpr auto RMT_TICKS_PER_US = 4;
 
 void PPMHandset::Begin()
 {
