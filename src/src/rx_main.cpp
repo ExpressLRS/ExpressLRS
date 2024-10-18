@@ -495,11 +495,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    if (firmwareOptions.is_airport)
-    {
-        OtaPackAirportData(&otaPkt, &apInputBuffer);
-    }
-    else if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -535,7 +531,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (TelemetrySender.IsActive())
+        if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        }
+        else if (TelemetrySender.IsActive())
         {
             if (OtaIsFullRes)
             {
