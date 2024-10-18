@@ -195,7 +195,7 @@ typedef enum : uint8_t {
     BINDSTORAGE_PERSISTENT = 0,
     BINDSTORAGE_VOLATILE = 1,
     BINDSTORAGE_RETURNABLE = 2,
-    BINDSTORAGE_PERMANENT = 3,
+    BINDSTORAGE_ADMINISTERED = 3,
 } rx_config_bindstorage_t;
 
 typedef union {
