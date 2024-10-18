@@ -171,7 +171,7 @@ uint8_t MspData[ELRS_MSP_BUFFER];
 uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
 
 static bool tlmSent = false;
-static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static uint8_t NextTelemetryType = PACKET_TYPE_LINKSTATS;
 static bool telemBurstValid;
 /// PFD Filters ////////////////
 LPF LPF_Offset(2);
@@ -475,17 +475,17 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // ESP requires word aligned buffer
     WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
     alreadyTLMresp = true;
-    otaPkt.std.type = PACKET_TYPE_TLM;
 
     bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
     bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued;
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
+    if (NextTelemetryType == PACKET_TYPE_LINKSTATS || noTlmQueued)
     {
+        otaPkt.std.type = PACKET_TYPE_LINKSTATS;
+
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
         {
-            otaPkt.full.tlm_dl.containsLinkStats = 1;
             ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
             // Include some advanced telemetry in the extra space
             // Note the use of `ul_link_stats.payload` vs just `payload`
@@ -495,12 +495,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else
         {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
             ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
         }
         LinkStatsToOta(ls);
 
-        NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+        NextTelemetryType = PACKET_TYPE_DATA;
         // Start the count at 1 because the next will be DATA and doing +1 before checking
         // against Max below is for some reason 10 bytes more code
         telemetryBurstCount = 1;
@@ -513,28 +512,39 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else
         {
-            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+            NextTelemetryType = PACKET_TYPE_LINKSTATS;
         }
 
-        if (TelemetrySender.IsActive())
+        otaPkt.std.type = PACKET_TYPE_DATA;
+
+        if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        }
+        else
         {
             if (OtaIsFullRes)
             {
-                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.full.tlm_dl.payload,
-                    sizeof(otaPkt.full.tlm_dl.payload));
+                otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+                
+                if (TelemetrySender.IsActive())
+                {
+                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                        otaPkt.full.tlm_dl.payload,
+                        sizeof(otaPkt.full.tlm_dl.payload));
+                }
             }
             else
             {
-                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.std.tlm_dl.payload,
-                    sizeof(otaPkt.std.tlm_dl.payload));
+                otaPkt.std.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+
+                if (TelemetrySender.IsActive())
+                {
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                        otaPkt.std.tlm_dl.payload,
+                        sizeof(otaPkt.std.tlm_dl.payload));
+                }
             }
-        }
-        else if (firmwareOptions.is_airport)
-        {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
     }
 
@@ -998,14 +1008,9 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
 
     // Must be fully connected to process MSP, prevents processing MSP
     // during sync, where packets can be received before connection
-    if (connectionState != connected)
-        return;
-
-    bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
-    MspReceiver.ReceiveData(packageIndex, payload, dataLen);
-    if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
+    if (connectionState == connected)
     {
-        NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        MspReceiver.ReceiveData(packageIndex, payload, dataLen);
     }
 }
 
@@ -1128,18 +1133,19 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     case PACKET_TYPE_RCDATA: //Standard RC Data Packet
         ProcessRfPacket_RC(otaPktPtr);
         break;
-    case PACKET_TYPE_MSPDATA:
-        ProcessRfPacket_MSP(otaPktPtr);
-        break;
     case PACKET_TYPE_SYNC: //sync packet from master
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
         break;
-    case PACKET_TYPE_TLM:
+    case PACKET_TYPE_DATA:
         if (firmwareOptions.is_airport)
         {
             OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
+        else
+        {
+            ProcessRfPacket_MSP(otaPktPtr);
         }
         break;
     default:
