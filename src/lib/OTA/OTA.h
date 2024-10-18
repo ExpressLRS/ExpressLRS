@@ -42,7 +42,7 @@ typedef struct {
     uint8_t uplink_RSSI_2:7,
             modelMatch:1;
     uint8_t lq:7,
-            mspConfirm:1;
+            tlmConfirm:1;
     int8_t SNR;
 } PACKED OTA_LinkStats_s;
 
@@ -69,7 +69,7 @@ typedef struct {
         /** PACKET_TYPE_MSP **/
         struct {
             uint8_t packageIndex:7,
-                    tlmFlag:1;
+                    tlmConfirm:1;
             uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
@@ -121,7 +121,7 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     packageIndex: 5,
-                    tlmFlag: 1;
+                    tlmConfirm: 1;
             uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
