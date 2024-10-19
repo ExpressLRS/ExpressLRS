@@ -1044,7 +1044,7 @@ static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
     // Verify the first two of three bytes of the binding ID, which should always match
-    if (otaSync->UID3 != UID[3] || otaSync->UID4 != UID[4])
+    if (otaSync->UID4 != UID[4])
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
@@ -1057,6 +1057,27 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('s');
 #endif
+
+    if (otaSync->otaProtocol) // Normal = 0, MAVLink = 1
+    {
+        config.SetSerialProtocol(PROTOCOL_MAVLINK);
+        if (config.IsModified())
+        {
+            deferExecutionMillis(100, [](){
+                reconfigureSerial();
+            });
+        }
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        config.SetSerialProtocol(PROTOCOL_CRSF); // default back to CRSF
+        if (config.IsModified())
+        {
+            deferExecutionMillis(100, [](){
+                reconfigureSerial();
+            });
+        }
+    }
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
