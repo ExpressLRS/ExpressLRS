@@ -74,7 +74,6 @@ end
 local subFieldIndex = 1
 
 local function textEdit(field, step)
-  print("textEdit", field.name, field.value, step, subFieldIndex)
   local c = string.sub(field.value, subFieldIndex, subFieldIndex)
   if (step == 1) then
     if (c == "Z") then
@@ -346,7 +345,6 @@ local function fieldStringDisplay(field, y, attr)
 end
 
 local function fieldStringSave(field) 
-  print("fieldStringSave", field.name, field.value)
   local frame = { deviceId, handsetId, field.id }
   for i = 1, #field.value do
     frame[#frame + 1] = string.byte(field.value, i)
@@ -795,10 +793,8 @@ local function handleDevicePageEvent(event)
     elseif event == EVT_VIRTUAL_PREV then
       incrField(-1)
     elseif event == EVT_VIRTUAL_NEXT_PAGE then
-      print("next Page")
       incrSubField(1)
     elseif event == EVT_VIRTUAL_PREV_PAGE then
-      print("prev Page")
       incrSubField(-1)
     end
   else
