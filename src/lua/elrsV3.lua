@@ -71,6 +71,45 @@ local function getField(line)
   end
 end
 
+local subFieldIndex = 1
+
+local function textEdit(field, step)
+  print("textEdit", field.name, field.value, step, subFieldIndex)
+  local c = string.sub(field.value, subFieldIndex, subFieldIndex)
+  if (step == 1) then
+    if (c == "Z") then
+      c = "a"
+    elseif (c == "z") then
+      c = "0"
+    elseif (c == "9") then
+      c = "A"
+    else
+      c = string.char(string.byte(c) + 1)
+    end
+  elseif (step == -1) then
+    if (c == "A") then
+      c = "9"
+    elseif (c == "0") then
+      c = "z"
+    elseif (c == "a") then
+      c = "Z"
+    else
+      c = string.char(string.byte(c) - 1)
+    end
+  end
+  field.value = string.sub(field.value, 1, subFieldIndex - 1) .. c .. string.sub(field.value, subFieldIndex + 1, string.len(field.value))
+end
+
+local function incrSubField(step)
+  local field = getField(lineIndex)
+  subFieldIndex = subFieldIndex + step
+  if (subFieldIndex > #field.value) then
+    subFieldIndex = 1
+  elseif (subFieldIndex < 1) then
+    subFieldIndex = #field.value
+  end
+end
+
 local function incrField(step)
   local field = getField(lineIndex)
   local min, max = 0, 0
@@ -81,6 +120,8 @@ local function incrField(step)
   elseif field.type == 9 then
     min = 0
     max = #field.values - 1
+  elseif field.type == 10 then
+    return textEdit(field, step)
   end
 
   local newval = field.value
@@ -290,7 +331,28 @@ local function fieldStringLoad(field, data, offset)
 end
 
 local function fieldStringDisplay(field, y, attr)
-  lcd.drawText(COL2, y, field.value, attr)
+  if (bit32.band(attr, BLINK) > 0) then -- editing
+    local s1 = string.sub(field.value, 1, subFieldIndex - 1)
+    local w1 = lcd.sizeText(s1)
+    lcd.drawText(COL2, y, s1)
+    local c = string.sub(field.value, subFieldIndex, subFieldIndex)
+    local wc = lcd.sizeText(c)
+    lcd.drawText(COL2 + w1, y, c, attr)
+    local s2 = string.sub(field.value, subFieldIndex + 1, #field.value)
+    lcd.drawText(COL2 + w1 + wc, y, s2)
+  else
+    lcd.drawText(COL2, y, field.value, attr)
+  end
+end
+
+local function fieldStringSave(field) 
+  print("fieldStringSave", field.name, field.value)
+  local frame = { deviceId, handsetId, field.id }
+  for i = 1, #field.value do
+    frame[#frame + 1] = string.byte(field.value, i)
+  end
+  frame[#frame + 1] = 0
+  crossfireTelemetryPush(0x2D, frame)
 end
 
 local function fieldFolderOpen(field)
@@ -424,7 +486,7 @@ local functions = {
   nil,
   { load=fieldFloatLoad, save=fieldIntSave, display=fieldFloatDisplay },  --9 FLOAT(8)
   { load=fieldTextSelLoad, save=fieldIntSave, display=nil }, --10 SELECT(9)
-  { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --11 STRING(10) editing NOTIMPL
+  { load=fieldStringLoad, save=fieldStringSave, display=fieldStringDisplay }, --11 STRING(10) editing NOTIMPL
   { load=nil, save=fieldFolderOpen, display=fieldFolderDisplay }, --12 FOLDER(11)
   { load=fieldStringLoad, save=nil, display=fieldStringDisplay }, --13 INFO(12)
   { load=fieldCommandLoad, save=fieldCommandSave, display=fieldCommandDisplay }, --14 COMMAND(13)
@@ -714,7 +776,7 @@ local function handleDevicePageEvent(event)
       local field = getField(lineIndex)
       if field and field.name then
         -- Editable fields
-        if not field.grey and field.type < 10 then
+        if not field.grey and field.type < 11 then -- include STRING
           edit = not edit
           if not edit then
             reloadRelatedFields(field)
@@ -732,8 +794,15 @@ local function handleDevicePageEvent(event)
       incrField(1)
     elseif event == EVT_VIRTUAL_PREV then
       incrField(-1)
+    elseif event == EVT_VIRTUAL_NEXT_PAGE then
+      print("next Page")
+      incrSubField(1)
+    elseif event == EVT_VIRTUAL_PREV_PAGE then
+      print("prev Page")
+      incrSubField(-1)
     end
   else
+    subFieldIndex = 1
     if event == EVT_VIRTUAL_NEXT then
       selectField(1)
     elseif event == EVT_VIRTUAL_PREV then
