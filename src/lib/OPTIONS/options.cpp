@@ -36,7 +36,7 @@ const char *product_name = (const char *)(target_name+4);
 
 __attribute__ ((used)) static firmware_options_t flashedOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
-    ._version_ = 1,
+    ._version_ = 3,
 #if defined(Regulatory_Domain_ISM_2400)
     .domain = 0,
 #else
