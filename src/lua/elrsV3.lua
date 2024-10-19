@@ -72,30 +72,12 @@ local function getField(line)
 end
 
 local subFieldIndex = 1
-
-local function textEdit(field, step)
+local stringPossibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#-."
+local function incrCharInTextField(field, step)
   local c = string.sub(field.value, subFieldIndex, subFieldIndex)
-  if (step == 1) then
-    if (c == "Z") then
-      c = "a"
-    elseif (c == "z") then
-      c = "0"
-    elseif (c == "9") then
-      c = "A"
-    else
-      c = string.char(string.byte(c) + 1)
-    end
-  elseif (step == -1) then
-    if (c == "A") then
-      c = "9"
-    elseif (c == "0") then
-      c = "z"
-    elseif (c == "a") then
-      c = "Z"
-    else
-      c = string.char(string.byte(c) - 1)
-    end
-  end
+  local idx = string.find(stringPossibleChars, c, 1, true)
+  idx = (idx + step + #stringPossibleChars - 1) % #stringPossibleChars + 1 
+  c = string.sub(stringPossibleChars, idx, idx)
   field.value = string.sub(field.value, 1, subFieldIndex - 1) .. c .. string.sub(field.value, subFieldIndex + 1, string.len(field.value))
 end
 
@@ -120,7 +102,7 @@ local function incrField(step)
     min = 0
     max = #field.values - 1
   elseif field.type == 10 then
-    return textEdit(field, step)
+    return incrCharInTextField(field, step)
   end
 
   local newval = field.value
