@@ -80,16 +80,6 @@ static struct luaItem_selection luaAntennaMode = {
 };
 #endif
 
-// Gemini Mode
-#if defined(GPIO_PIN_NSS_2)
-static struct luaItem_selection luaDiversityMode = {
-    {"Rx Mode", CRSF_TEXT_SELECTION},
-    0, // value
-    "Diversity;Gemini",
-    STR_EMPTYSPACE
-};
-#endif
-
 static struct luaItem_folder luaTeamraceFolder = {
     {"Team Race", CRSF_FOLDER},
 };
@@ -557,14 +547,6 @@ bool hasMavlink = prot0 == PROTOCOL_MAVLINK;
     });
   }
 
-  // Gemini Mode
-  if (isDualRadio())
-  {
-    registerLUAParameter(&luaDiversityMode, [](struct luaPropertiesCommon* item, uint8_t arg){
-      config.SetAntennaMode(arg); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
-    });
-  }
-
 #if defined(POWER_OUTPUT_VALUES)
   luadevGeneratePowerOpts(&luaTlmPower);
   registerLUAParameter(&luaTlmPower, &luaparamSetPower);
@@ -628,12 +610,6 @@ static int event()
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
-  }
-
-  // Gemini Mode
-  if (isDualRadio())
-  {
-    setLuaTextSelectionValue(&luaDiversityMode, config.GetAntennaMode()); // Reusing SetAntennaMode since both GPIO_PIN_ANTENNA_SELECT and GPIO_PIN_NSS_2 will not be defined together.
   }
 
 #if defined(POWER_OUTPUT_VALUES)
