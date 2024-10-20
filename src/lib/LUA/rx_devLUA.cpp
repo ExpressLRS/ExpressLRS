@@ -5,6 +5,8 @@
 #include "devServoOutput.h"
 #include "deferred.h"
 
+#define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
+
 extern void reconfigureSerial();
 #if defined(PLATFORM_ESP32)
 extern void reconfigureSerial1();
@@ -519,14 +521,17 @@ static void registerLuaParameters()
   });
 
 #if defined(PLATFORM_ESP32)
-  registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
-    config.SetSerial1Protocol((eSerial1Protocol)arg);
-    if (config.IsModified()) {
-      deferExecutionMillis(100, [](){
-        reconfigureSerial1();
-      });
-    }
-  });
+  if (RX_HAS_SERIAL1)
+  {
+    registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+      config.SetSerial1Protocol((eSerial1Protocol)arg);
+      if (config.IsModified()) {
+        deferExecutionMillis(100, [](){
+          reconfigureSerial1();
+        });
+      }
+    });
+  }
 #endif
 
   registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
@@ -620,7 +625,10 @@ static int event()
 {
   setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 #if defined(PLATFORM_ESP32)
-  setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+  if (RX_HAS_SERIAL1)
+  {
+    setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+  }
 #endif
   
   setLuaTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
