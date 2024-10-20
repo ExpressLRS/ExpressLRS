@@ -1727,12 +1727,16 @@ static void cycleRfMode(unsigned long now)
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
+#if defined(RADIO_LR1121)
         // Skip Dual Band modes for hardware with only a single LR1121
-        while (GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+        while ((GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL) ||
+            (POWER_OUTPUT_VALUES_COUNT == 0 && (get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_900 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_GFSK_900 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)) ||
+            (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)))
         {
             DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
             scanIndex++;
         }
+#endif
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;

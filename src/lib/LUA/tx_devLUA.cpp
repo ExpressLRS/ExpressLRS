@@ -593,11 +593,14 @@ static void recalculatePacketRateOptions(int minInterval)
         bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
 
         // Remove Dual Band menu option from hardware with only a single LR1121
-        if (GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+#if defined(RADIO_LR1121)
+        if ((GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL) ||
+            (POWER_OUTPUT_VALUES_COUNT == 0 && (get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_900 || get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_GFSK_900 || get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)) ||
+            (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || get_elrs_airRateConfig(rate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)))
         {
             rateAllowed = false;
         }
-
+#endif
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {
