@@ -119,7 +119,6 @@ def patch_rx_params(mm, pos, args):
 
 def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
-    pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
     val &= ~1   # unused1 - ex uart_inverted
     if args.unlock_higher_power != None:
@@ -212,6 +211,7 @@ def patch_firmware(options, mm, pos, args):
         pos += 1
         pos = patch_uid(mm, pos, args)
         pos = patch_flash_discriminator(mm, pos, args)
+        pos = write32(mm, pos, args.fan_min_runtime)
         if options.deviceType is DeviceType.TX:
             pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
