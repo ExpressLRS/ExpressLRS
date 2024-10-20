@@ -255,7 +255,9 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
+#if defined(RADIO_LR1121)
 static uint32_t BindingRateChangeTime;
+#endif
 #define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
@@ -493,10 +495,17 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
-    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued;
+    bool tlmQueued = false;
+    if (firmwareOptions.is_airport)
+    {
+        tlmQueued = apInputBuffer.size() > 0;
+    }
+    else
+    {
+        tlmQueued = TelemetrySender.IsActive();
+    }
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !tlmQueued)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -532,7 +541,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (TelemetrySender.IsActive())
+        if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        }
+        else if (TelemetrySender.IsActive())
         {
             if (OtaIsFullRes)
             {
@@ -547,10 +560,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     otaPkt.std.tlm_dl.payload,
                     sizeof(otaPkt.std.tlm_dl.payload));
             }
-        }
-        else if (firmwareOptions.is_airport)
-        {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
     }
 
@@ -1165,8 +1174,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     if (Radio.FrequencyErrorAvailable())
     {
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
     #if defined(RADIO_SX127X)
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection);
     #endif /* RADIO_SX127X */
@@ -1329,7 +1338,7 @@ static void setupSerial()
         serialIO = new SerialNOOP();
         return;
     }
-    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF)
+    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || firmwareOptions.is_airport)
     {
         serialBaud = firmwareOptions.uart_baud;
     }

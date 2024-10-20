@@ -167,7 +167,7 @@ jobs:
       - name: Build flasher "binary" with shiv
         run: |
           cd src/python
-          pip install shiv
+          pip install shiv==1.0.6
           shiv -c flash -o ../../dist/firmware/flasher.pyz pyserial .
 
       - name: Update firmware artifact

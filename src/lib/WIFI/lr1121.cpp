@@ -71,7 +71,6 @@ static void readRegister(SX12XX_Radio_Number_t radio, uint16_t reg, uint8_t *buf
 static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     // Complete upload and set error flag
     bool uploadError = false;
-    uint8_t param = 0;
     writeLR1121Bytes(nullptr, 0);
     lr1121UpdateState->totalSize += lr1121UpdateState->left_over;
 
