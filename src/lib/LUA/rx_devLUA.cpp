@@ -187,7 +187,7 @@ static struct luaItem_command luaSetFailsafe = {
 static struct luaItem_selection luaBindStorage = {
     {"Bind Storage", CRSF_TEXT_SELECTION},
     0, // value
-    "Persistent;Volatile;Returnable",
+    "Persistent;Volatile;Returnable;Administered",
     STR_EMPTYSPACE
 };
 
