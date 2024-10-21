@@ -239,7 +239,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
     }
 }
 
-void CRSFHandset::RcPacketToChannelsData(uint8_t packetType) // data is packed as 11 bits per channel
+void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
     auto payload = (uint8_t const * const)&inBuffer.asRCPacket_t.channels;
     constexpr unsigned srcBits = 11;
@@ -346,7 +346,7 @@ bool CRSFHandset::ProcessPacket()
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         RCdataLastRecv = micros();
-        RcPacketToChannelsData(packetType);
+        RcPacketToChannelsData();
         packetReceived = true;
     }
     // check for all extended frames that are a broadcast or a message to the FC

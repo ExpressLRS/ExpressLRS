@@ -21,7 +21,7 @@ public:
     void End() override;
 
 #ifdef CRSF_TX_MODULE
-    bool IsArmed() override { return armCmd; } // AUX1 (ch5) or via extended RC message 
+    bool IsArmed() override { return armCmd; } // AUX1/CH5 (Channel mode) or extra byte in RC channesl message (Function mode)
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
@@ -82,7 +82,7 @@ private:
     void adjustMaxPacketSize();
     void duplex_set_RX() const;
     void duplex_set_TX() const;
-    void RcPacketToChannelsData(uint8_t packetType);
+    void RcPacketToChannelsData();
     bool processInternalCrsfPackage(uint8_t *package);
     void alignBufferToSync(uint8_t startIdx);
     bool ProcessPacket();
