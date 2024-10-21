@@ -72,7 +72,8 @@ local function getField(line)
 end
 
 local subFieldIndex = 1
-local stringPossibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#-."
+local stringPossibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#-. "
+local maxStringLength = 16
 local function incrCharInTextField(field, step)
   local c = string.sub(field.value, subFieldIndex, subFieldIndex)
   local idx = string.find(stringPossibleChars, c, 1, true)
@@ -84,10 +85,17 @@ end
 local function incrSubField(step)
   local field = getField(lineIndex)
   subFieldIndex = subFieldIndex + step
-  if (subFieldIndex > #field.value) then
+  local maxlength = maxStringLength
+  if (field.maxlen) then
+    maxlength = field.maxlen
+  end
+  if (subFieldIndex > maxlength) then
     subFieldIndex = 1
   elseif (subFieldIndex < 1) then
     subFieldIndex = #field.value
+  end
+  if (subFieldIndex > #field.value) then
+    field.value = field.value .. " "
   end
 end
 
