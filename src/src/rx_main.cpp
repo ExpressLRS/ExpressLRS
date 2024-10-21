@@ -357,6 +357,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+
     // Binding always uses invertIQ
     bool invertIQ = bindMode || (UID[5] & 0x01);
 
@@ -1693,6 +1694,14 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     scanIndex = config.GetRateInitialIdx();
+    for (int i=0 ; i<RATE_MAX ; i++)
+    {
+        if (isSupportedRFRate(scanIndex))
+        {
+            break;
+        }
+        scanIndex = (scanIndex + 1) % RATE_MAX;
+    }
     SetRFLinkRate(scanIndex, false);
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
@@ -1733,6 +1742,13 @@ static void cycleRfMode(unsigned long now)
         scanIndex++;
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
+
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        while (!isSupportedRFRate(scanIndex % RATE_MAX))
+        {
+            DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
+            scanIndex++;
+        }
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -2192,8 +2208,14 @@ void loop()
         return;
     }
 
-    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)){ // forced change
+    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)) // forced change
+    {
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
+        if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
+        {
+            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
+        }
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
