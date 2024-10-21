@@ -1673,8 +1673,8 @@ static void EnterBindingMode()
         return;
     }
 
-    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-    OtaCrcInitializer = 0;
+    // Binding uses 50Hz, and InvertIQ
+    OtaCrcInitializer = OTA_VERSION_ID;
     InBindingMode = true;
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
