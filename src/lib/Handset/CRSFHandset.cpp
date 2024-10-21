@@ -265,7 +265,12 @@ void CRSFHandset::RcPacketToChannelsData(uint8_t packetType) // data is packed a
         bitsMerged -= srcBits;
     }
 
-    armCmd = packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED_EXT ? payload[readByteIndex] == 1 : CRSF_to_BIT(ChannelData[4]);
+    //
+    // sends channel data and also communicates commanded armed status in arming mode Function.
+    // frame len 24 -> arming mode Channel: use channel 5
+    // frame len 25 -> arming mode Function: use commanded arming status in extra byte
+    //
+    armCmd = inBuffer.asUint8_t[1] == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
 
     #if defined(PLATFORM_ESP32)
         // monitoring arming state
@@ -338,7 +343,7 @@ bool CRSFHandset::ProcessPacket()
     const uint8_t packetType = inBuffer.asRCPacket_t.header.type;
     uint8_t *SerialInBuffer = inBuffer.asUint8_t;
 
-    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED || packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED_EXT)
+    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         RCdataLastRecv = micros();
         RcPacketToChannelsData(packetType);
