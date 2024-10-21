@@ -398,7 +398,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
     json["config"]["reg_domain"] = FHSSgetRegulatoryDomain();
-    json["config"]["has-highpower"] = (MaxPower != HighPower);
     json["config"]["uidtype"] = GetConfigUidType(json);
   }
 

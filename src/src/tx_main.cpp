@@ -12,7 +12,6 @@
 #include "devHandset.h"
 #include "devLED.h"
 #include "devScreen.h"
-#include "devBuzzer.h"
 #include "devBLE.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -110,9 +109,6 @@ device_affinity_t ui_devices[] = {
 #endif
 #ifdef HAS_BLE
   {&BLE_device, 0},
-#endif
-#ifdef HAS_BUZZER
-  {&Buzzer_device, 0},
 #endif
 #ifdef HAS_WIFI
   {&WIFI_device, 0},

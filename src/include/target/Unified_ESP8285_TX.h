@@ -33,12 +33,10 @@
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
 #define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
-#define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
-//#define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
-#define POWER_OUTPUT_FIXED -99
+#define POWER_OUTPUT_DACWRITE false // Not supported on 8285 based hardware
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES_DUAL hardware_i16_array(HARDWARE_power_values_dual)

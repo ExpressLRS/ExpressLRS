@@ -214,7 +214,7 @@ void DynamicPower_UpdateRx(bool initialize)
   {
     if (CRSF::clearUpdatedUplinkPower())
     {
-      PowerLevels_e newPower = crsfpowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
+      PowerLevels_e newPower = crsfPowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
       DBGLN("Matching TX power %u", newPower);
       POWERMGNT::setPower(newPower);
     }

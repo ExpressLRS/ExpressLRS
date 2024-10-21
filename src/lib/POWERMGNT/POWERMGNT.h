@@ -7,16 +7,6 @@
 #include <nvs.h>
 #endif
 
-#ifndef POWER_OUTPUT_VALUES
-    // These are "fake" values as the power on the RX is not user selectable
-    #define MinPower PWR_10mW
-    #define MaxPower PWR_10mW
-#endif
-
-#if !defined(DefaultPower)
-    #define DefaultPower PWR_50mW
-#endif
-
 typedef enum
 {
     PWR_10mW = 0,
@@ -32,7 +22,7 @@ typedef enum
 } PowerLevels_e;
 
 uint8_t powerToCrsfPower(PowerLevels_e Power);
-PowerLevels_e crsfpowerToPower(uint8_t crsfpower);
+PowerLevels_e crsfPowerToPower(uint8_t crsfpower);
 
 class PowerLevelContainer
 {
