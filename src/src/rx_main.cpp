@@ -357,6 +357,13 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+
+    if (!isSupportedRFRate(index))
+    {
+        DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+        return;
+    }
+
     // Binding always uses invertIQ
     bool invertIQ = bindMode || (UID[5] & 0x01);
 
@@ -1686,6 +1693,14 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     scanIndex = config.GetRateInitialIdx();
+    for (int i=0 ; i<RATE_MAX ; i++)
+    {
+        if (isSupportedRFRate(scanIndex))
+        {
+            break;
+        }
+        scanIndex = (scanIndex + 1) % RATE_MAX;
+    }
     SetRFLinkRate(scanIndex, false);
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
@@ -1727,16 +1742,12 @@ static void cycleRfMode(unsigned long now)
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
 
-#if defined(RADIO_LR1121)
-        // Skip Dual Band modes for hardware with only a single LR1121
-        while ((GPIO_PIN_NSS_2 == UNDEF_PIN && get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL) ||
-            (POWER_OUTPUT_VALUES_COUNT == 0 && (get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_900 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_GFSK_900 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)) ||
-            (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || get_elrs_airRateConfig(scanIndex % RATE_MAX)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)))
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        while (!isSupportedRFRate(scanIndex % RATE_MAX))
         {
             DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
             scanIndex++;
         }
-#endif
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
