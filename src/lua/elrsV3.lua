@@ -334,8 +334,13 @@ local function fieldStringDisplay(field, y, attr)
   end
 end
 
+local function trim(s)
+  return (string.gsub(s, "^%s*(.-)%s*$", "%1"))
+end
+
 local function fieldStringSave(field) 
   local frame = { deviceId, handsetId, field.id }
+  field.value = trim(field.value)
   for i = 1, #field.value do
     frame[#frame + 1] = string.byte(field.value, i)
   end
