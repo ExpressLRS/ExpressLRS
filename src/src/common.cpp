@@ -122,7 +122,7 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval)
         expresslrs_mod_settings_s const * const ModParams = &ExpressLRS_AirRateConfig[rateIndex];
         // Handset interval = time between packets from handset, which is expected to be air rate * number of times it is sent
         uint32_t handsetInterval = ModParams->interval * ModParams->numOfSends;
-        if (handsetInterval >= minInterval)
+        if (handsetInterval >= minInterval && isSupportedRFRate(rateIndex))
             break;
         ++rateIndex;
     }
