@@ -548,7 +548,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
+    if (firmwareOptions.is_airport)
+    {
+      OtaPackAirportData(&otaPkt, &apInputBuffer);
+    }
+    else if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
