@@ -1028,8 +1028,8 @@ static void ExitBindingMode()
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
-
-  SetRFLinkRate(config.GetRate()); //return to original rate
+  
+  UARTconnected();
 
   DBGLN("Exiting binding mode");
 }

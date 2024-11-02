@@ -122,7 +122,7 @@ uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval)
         expresslrs_mod_settings_s const * const ModParams = &ExpressLRS_AirRateConfig[rateIndex];
         // Handset interval = time between packets from handset, which is expected to be air rate * number of times it is sent
         uint32_t handsetInterval = ModParams->interval * ModParams->numOfSends;
-        if (handsetInterval >= minInterval)
+        if (handsetInterval >= minInterval && isSupportedRFRate(rateIndex))
             break;
         ++rateIndex;
     }
@@ -207,3 +207,28 @@ bool ICACHE_RAM_ATTR isDualRadio()
 {
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }
+
+
+#if defined(RADIO_LR1121)
+bool isSupportedRFRate(uint8_t index)
+{
+    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+
+    // Dual Band modes not supported for hardware with only a single LR1121
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN && ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+    {
+        return false;
+    }
+    // 900MHz and Dual Band modes not supported for hardware with no 900MHz power values
+    if (POWER_OUTPUT_VALUES_COUNT == 0 && (ModParams->radio_type == RADIO_TYPE_LR1121_LORA_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL))
+    {
+        return false;
+    }
+    // 2.4GHz and Dual Band modes not supported for hardware with no 2.4GHz power values
+    if (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL))
+    {
+        return false;
+    }
+    return true;
+}
+#endif
