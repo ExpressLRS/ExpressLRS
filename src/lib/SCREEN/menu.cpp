@@ -210,7 +210,7 @@ static void incrementValueIndex(bool init)
     values_index = (values_index - values_min + 1) % values_count + values_min;
     if (state_machine.getParentState() == STATE_PACKET)
     {
-        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval())
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval() || !isSupportedRFRate(values_index))
         {
             values_index = (values_index - values_min + 1) % values_count + values_min;
         }
@@ -223,7 +223,7 @@ static void decrementValueIndex(bool init)
     values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
     if (state_machine.getParentState() == STATE_PACKET)
     {
-        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval())
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval() || !isSupportedRFRate(values_index))
         {
             values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
         }

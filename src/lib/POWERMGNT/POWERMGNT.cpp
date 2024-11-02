@@ -286,7 +286,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
     analogWrite(GPIO_PIN_RFamp_APC2, powerValues[Power - MinPower]);
 #else
     #if defined(PLATFORM_ESP32)
-    if (POWER_OUTPUT_DACWRITE)
+    if (POWER_OUTPUT_DACWRITE && POWER_OUTPUT_VALUES != nullptr)
     {
         if (POWER_OUTPUT_VALUES2 != nullptr)
         {
