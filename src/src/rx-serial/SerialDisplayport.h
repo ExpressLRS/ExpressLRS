@@ -12,6 +12,8 @@ COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
 CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 ************************************************************************************/
 
+#if defined(TARGET_RX)
+
 #pragma once
 #include "SerialIO.h"
 
@@ -53,3 +55,5 @@ private:
 
     uint32_t m_lastSentMSP;
 };
+
+#endif // defined(TARGET_RX)
