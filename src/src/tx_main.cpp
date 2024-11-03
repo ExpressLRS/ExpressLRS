@@ -874,6 +874,8 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
+
+      VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -967,8 +969,8 @@ static void EnterBindingMode()
   // Queue up sending the Master UID as MSP packets
   SendUIDOverMSP();
 
-  // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-  OtaCrcInitializer = 0;
+  // Binding uses 50Hz, and InvertIQ
+  OtaCrcInitializer = OTA_VERSION_ID;
   OtaNonce = 0; // Lock the OtaNonce to prevent syncspam packets
   InBindingMode = true; // Set binding mode before SetRFLinkRate() for correct IQ
 
