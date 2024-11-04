@@ -11,7 +11,7 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
--DMY_BINDING_PHRASE="modal dbg phrase"
+-DMY_BINDING_PHRASE="new test phrase"
 
 
 ### REGULATORY DOMAIN: ###

@@ -4,8 +4,8 @@
 # https://www.expresslrs.org/quick-start/receivers/firmware-version/#receiver-firmware-version 
 # https://semver.org/
 MAJOR_VERSION=3
-MINOR_VERSION=4
-PATCH_VERSION=3
+MINOR_VERSION=5
+PATCH_VERSION=1
 FORMAT_MAJOR=$(printf %02d $MAJOR_VERSION)
 FORMAT_MINOR=$(printf %02d $MINOR_VERSION)
 FORMAT_PATCH=$(printf %02d $PATCH_VERSION)

@@ -3,11 +3,12 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 
-#if !defined(TARGET_R9SLIM_RX) && defined(TARGET_RX)
+#if !defined(TARGET_R9SLIM_RX)
     // TODO
     // EEPROM not working with TX
     //#define TARGET_USE_EEPROM               1
     //#define TARGET_EEPROM_ADDR              0x50
+    #define STM32_USE_FLASH
 #endif
 
 #define GPIO_PIN_SDA            PB7  // EEPROM
@@ -68,9 +69,9 @@ https://github.com/jaxxzer
 #define GPIO_PIN_PWM_OUTPUTS (int[]){Ch1, Ch2, Ch3, Ch4}
 #define GPIO_PIN_PWM_OUTPUTS_COUNT 4
 #else
-#define CRSF_INVERTER
+// #define CRSF_INVERTER
 #define DEBUG_TX_FREERUN
-
+#define NO_INVERT
 #endif
 
 // Software inverter for half-duplex CRSF communication
@@ -89,4 +90,5 @@ https://github.com/jaxxzer
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin
 
-//#define DEBUG_RTT
+#define DEBUG_LOG
+#define DEBUG_RTT

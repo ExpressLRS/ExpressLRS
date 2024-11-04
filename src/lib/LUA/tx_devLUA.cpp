@@ -1,4 +1,6 @@
 #ifdef TARGET_TX
+#define _GNU_SOURCE
+#include <cstring>
 
 #include "rxtx_devLua.h"
 #include "CRSF.h"

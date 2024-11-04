@@ -150,6 +150,7 @@ uint32_t serialBaud;
     HardwareSerial SERIAL_PROTOCOL_TX(USART1);
 #else
     #define SERIAL_PROTOCOL_TX Serial
+#endif
 
 #if defined(PLATFORM_ESP32)
     #define SERIAL1_PROTOCOL_TX Serial1
@@ -682,10 +683,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     updatePhaseLock();
     OtaNonce++;
 
-    // if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    // {
-    //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    // }
+    if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
+    {
+        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
+    }
 
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
@@ -702,7 +703,13 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
+    {
+        if(!LQCalc.currentIsSet())
+        {
+            DBGLN("Missed a Packet!!");
+        }
         LQCalc.inc();
+    }
 
     alreadyTLMresp = false;
     alreadyFHSS = false;
@@ -1477,10 +1484,12 @@ static void setupSerial()
     {
         serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (hottTlmSerial)
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+#endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -2048,7 +2057,9 @@ RF_PRE_INIT()
 
 void resetConfigAndReboot()
 {
+
     config.SetDefaults(true);
+#if defined(PLATFORM_ESP32)
     // Prevent WDT from rebooting too early if
     // all this flash write is taking too long
     yield();
@@ -2056,9 +2067,10 @@ void resetConfigAndReboot()
     SPIFFS.format();
     yield();
     SPIFFS.begin();
-    options_SetTrueDefaults();
+    // options_SetTrueDefaults();
 
-    ESP.restart();
+    // ESP.restart();
+#endif
 }
 
 void setup()

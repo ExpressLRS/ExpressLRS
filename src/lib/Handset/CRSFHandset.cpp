@@ -20,7 +20,7 @@ HardwareSerial CRSFHandset::Port(0);
 #elif defined(M0139)
 // Must cast to PinName to use the correct constructor
 // HardwareSerial uses hardware pins not arduino pins so PA_9 instead of PA9
-HardwareSerial CRSFHandset::Port((PinName)PA_9, (PinName)PA_9);
+HardwareSerial CRSFHandset::Port((PinName)PA_9, (PinName)PA_10);
 // Need the HAL to adjust interrupt priorities
 // Arduino code already redefines the EXTI callback so must use arduino interrupt system
 #include "stm32f1xx_hal.h"
@@ -157,7 +157,7 @@ void CRSFHandset::Begin()
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 #elif defined(M0139)
-    halfDuplex = true;
+    halfDuplex = false;
     CRSFHandset::Port.begin(UARTrequestedBaud);
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART %d : %d", GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);

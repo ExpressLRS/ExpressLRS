@@ -61,7 +61,7 @@ void hwTimer::stop()
  * fire Duration - interval/2 after that
  * 65535us max!
  */
-#if defined(TARGET_TX)
+#if false
 void hwTimer::pause(uint32_t duration)
 {
     PauseDuration = duration;

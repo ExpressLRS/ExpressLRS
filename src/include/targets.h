@@ -14,7 +14,8 @@
 #define WORD_PADDED(size) (((size)+3) & ~3)
 
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
-#define ICACHE_RAM_ATTR IRAM_ATTR
+// #define ICACHE_RAM_ATTR IRAM_ATTR
+#define ICACHE_RAM_ATTR
 
 #if defined(TARGET_NATIVE)
 #define IRAM_ATTR

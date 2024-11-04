@@ -1298,6 +1298,8 @@ static void setupBindingFromConfig()
   {
 #if defined(PLATFORM_ESP32)
     esp_read_mac(UID, ESP_MAC_WIFI_STA);
+#elif defined(PLATFORM_STM32)
+    memset(UID, 0, UID_LEN); // TODO: Randomize UID
 #else
     wifi_get_macaddr(STATION_IF, UID);
 #endif

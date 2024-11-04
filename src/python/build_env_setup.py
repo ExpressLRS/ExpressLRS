@@ -90,7 +90,7 @@ if "_WIFI" in target_name:
     else:
         env.SetDefault(UPLOAD_PORT="elrs_rx.local")
 
-if platform != 'native':
+if platform != 'native' and not stm:
     add_target_uploadoption("uploadforce", "Upload even if target mismatch")
 
 # Remove stale binary so the platform is forced to build a new one and attach options/hardware-layout files
