@@ -506,50 +506,50 @@ void ICACHE_RAM_ATTR SX127xDriver::RXnb()
   }
 }
 
-
-void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+void ICACHE_RAM_ATTR SX127xDriver::CheckForSecondPacket()
 {
   SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-  bool gotRadio[2] = {false, false}; // one-radio default.
   uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
   uint8_t secondRadioIdx = !processingRadioIdx;
 
   // processingRadio always passed the sanity check here
   gotRadio[processingRadioIdx] = true;
+  gotRadio[secondRadioIdx] = false;
 
-  // if it's a dual radio, and if it's the first IRQ
-  // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
-  if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+  hasSecondRadioGotData = false;
+
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
   {
-    bool hasSecondRadioGotData = false;
     uint16_t secondIrqStatus = instance->GetIrqFlags(radio[secondRadioIdx]);
-
     if(secondIrqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
     {
       WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
       uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radio[secondRadioIdx]);
       hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
-      hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
+      hal.readRegister(SX127X_REG_FIFO, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
 
-      // if the second packet is same to the first, it's valid
-      if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
-      {
-        hasSecondRadioGotData = true;
-      }
+      hasSecondRadioGotData = true;
     }
-
-    gotRadio[secondRadioIdx] = hasSecondRadioGotData;
-    #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    // second radio received the same packet to the processing radio
-    if(!hasSecondRadioGotData)
-    {
-      instance->rxSignalStats[secondRadioIdx].fail_count++;
-    }
-    #endif
   }
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+{
+  SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+  uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+  uint8_t secondRadioIdx = !processingRadioIdx;
 
   int8_t rssi[2];
   int8_t snr[2];
+
+  gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+  #if defined(DEBUG_RCVR_SIGNAL_STATS)
+  // second radio received the same packet to the processing radio
+  if(!hasSecondRadioGotData)
+  {
+    instance->rxSignalStats[secondRadioIdx].fail_count++;
+  }
+  #endif
 
   for (uint8_t i = 0; i < 2; i++)
   {
@@ -768,7 +768,6 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
     else if (irqStatus == SX127X_CLEAR_IRQ_FLAG_NONE)
     {
