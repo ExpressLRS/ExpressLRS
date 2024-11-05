@@ -54,8 +54,6 @@ typedef struct {
 } v6_tx_config_t;
 
 // V7
-typedef v6_tx_config_t v7_tx_config_t;
-
 typedef struct {
     uint32_t    rate:4,
                 tlm:4,
@@ -69,6 +67,23 @@ typedef struct {
                 ptrEnableChannel:5,
                 linkMode:3;
 } v7_model_config_t;
+
+typedef struct {
+    uint32_t        version;
+    char            ssid[33];
+    char            password[33];
+    uint8_t         vtxBand;
+    uint8_t         vtxChannel;
+    uint8_t         vtxPower;
+    uint8_t         vtxPitmode;
+    uint8_t         powerFanThreshold:4; // Power level to enable fan if present
+    v7_model_config_t  model_config[64];
+    uint8_t         fanMode;
+    uint8_t         motionMode;
+    uint8_t         dvrAux:5;
+    uint8_t         dvrStartDelay:3;
+    uint8_t         dvrStopDelay:3;
+} v7_tx_config_t;
 
 /***
  * RX config
