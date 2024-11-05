@@ -638,8 +638,6 @@ void ICACHE_RAM_ATTR timerCallback()
     return;
   }
 
-  Radio.isFirstRxIrq = true;
-
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
   {

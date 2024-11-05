@@ -18,8 +18,6 @@ public:
 
     ///////////Radio Variables////////
     uint32_t timeout;
-    bool gotRadio[2] = {false, false}; // one-radio default.
-    bool hasSecondRadioGotData = false;
 
     ///////////////////////////////////
 
