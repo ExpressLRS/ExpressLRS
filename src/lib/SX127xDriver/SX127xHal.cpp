@@ -151,7 +151,7 @@ void SX127xHal::reset(void)
             pinMode(GPIO_PIN_RST_2, OUTPUT);
             digitalWrite(GPIO_PIN_RST_2, LOW);
         }
-//        delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
+        // delay(50); // Safety buffer. Busy takes longer to go low than the 1ms timeout in WaitOnBusy().
         pinMode(GPIO_PIN_RST, INPUT); // leave floating
         if (GPIO_PIN_RST_2 != UNDEF_PIN)
         {

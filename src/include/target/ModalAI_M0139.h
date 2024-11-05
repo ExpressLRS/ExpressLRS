@@ -70,7 +70,7 @@ https://github.com/jaxxzer
 #define GPIO_PIN_PWM_OUTPUTS_COUNT 4
 #else
 // #define CRSF_INVERTER
-#define DEBUG_TX_FREERUN
+// #define DEBUG_TX_FREERUN
 #define NO_INVERT
 #endif
 

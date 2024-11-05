@@ -34,7 +34,7 @@ void hwTimer::init(void (*callbackTick)(), void (*callbackTock)())
         hwTimer::callbackTock = callbackTock;
         MyTim->attachInterrupt(hwTimer::callback);
         MyTim->setMode(1, TIMER_DISABLED);
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) && 0
         // The prescaler only adjusts AFTER the overflow interrupt fires so
         // to make Pause() work, the prescaler needs to be fixed to avoid
         // having to ramp between prescalers
@@ -76,7 +76,7 @@ void hwTimer::resume()
     isTick = false;
 #endif
     running = true;
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) && 0
     MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
 #else
     MyTim->setOverflow((HWtimerInterval >> 1), MICROSEC_FORMAT);
@@ -104,16 +104,17 @@ void hwTimer::callback(void)
     if (hwTimer::isTick)
     {
 #if defined(TARGET_TX)
-        if (PauseDuration)
-        {
-            MyTim->setOverflow(PauseDuration - (HWtimerInterval >> 1), TICK_FORMAT);
-            PauseDuration = 0;
-        }
-        else
-        {
-            MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
-        }
+        // if (PauseDuration)
+        // {
+        //     MyTim->setOverflow(PauseDuration - (HWtimerInterval >> 1), TICK_FORMAT);
+        //     PauseDuration = 0;
+        // }
+        // else
+        // {
+        //     MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
+        // }
         // No tick callback
+        MyTim->setOverflow((HWtimerInterval >> 1), MICROSEC_FORMAT);
 #else
         MyTim->setOverflow((HWtimerInterval >> 1), MICROSEC_FORMAT);
         uint32_t adjustedInterval = MyTim->getOverflow(TICK_FORMAT) + FreqOffset;
@@ -124,7 +125,7 @@ void hwTimer::callback(void)
     else
     {
 #if defined(TARGET_TX)
-        MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
+        MyTim->setOverflow((HWtimerInterval >> 1) + PhaseShift, MICROSEC_FORMAT);
         hwTimer::callbackTock();
 #else
         MyTim->setOverflow((HWtimerInterval >> 1) + PhaseShift, MICROSEC_FORMAT);

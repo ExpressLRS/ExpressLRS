@@ -367,7 +367,11 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     hwTimer::updateInterval(interval);
 
     FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
+#if defined(M0139)
+    FHSSuseDualBand = true;
+#else
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
+#endif
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
@@ -704,10 +708,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
     {
-        if(!LQCalc.currentIsSet())
-        {
-            DBGLN("Missed a Packet!!");
-        }
+        // if(!LQCalc.currentIsSet())
+        // {
+        //     DBGLN("Missed a Packet!!");
+        // }
         LQCalc.inc();
     }
 
@@ -2217,7 +2221,7 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-    #endif
+#endif
 
     CheckConfigChangePending();
     executeDeferredFunction(micros());

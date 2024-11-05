@@ -68,7 +68,7 @@ void debugFreeInitLogger();
       SEGGER_RTT_Write(0, "\n", 1); \
     } while(0)
     #define DBGCR SEGGER_RTT_Write(0, "\n", 1);
-    #define DBGW(c) SEGGER_RTT_Write(0, &c, 1);
+    #define DBGW(c) SEGGER_RTT_PutChar(0, c);
 
   // Verbose logging is for spammy stuff
   #if defined(DEBUG_LOG_VERBOSE)
