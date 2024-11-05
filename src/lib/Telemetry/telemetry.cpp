@@ -17,6 +17,15 @@ using namespace std;
 #endif
 
 #include "crsf2msp.h"
+typedef struct crsf_sensor_gps_s
+{
+    int32_t latitude;     // degree / 10,000,000 big endian
+    int32_t longitude;    // degree / 10,000,000 big endian
+    uint16_t groundspeed; // km/h / 10 big endian
+    uint16_t heading;     // GPS heading, degree/100 big endian
+    uint16_t altitude;    // meters, +1000m big endian
+    uint8_t satellites;   // satellites
+} PACKED crsf_sensor_gps_t;
 
 Telemetry::Telemetry()
 {
@@ -63,6 +72,26 @@ void Telemetry::CheckCrsfBatterySensorDetected()
         SetCrsfBatterySensorDetected();
     }
 }
+
+#if ( defined(RADIO_SX127X) && defined(TARGET_RX) )
+void Telemetry::CheckCrsfGPSSensorDetected()
+{
+    if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS)
+    {
+        uint8_t sats = CRSFinBuffer[17];
+
+        if ( (sats >=4) && (sats <= 99) )
+        {
+            beaconSats = sats;
+            beaconLat = (uint32_t(CRSFinBuffer[ 3])<<24) + (uint32_t(CRSFinBuffer[ 4])<<16) + (uint32_t(CRSFinBuffer[ 5])<<8) + CRSFinBuffer[6]; 
+            beaconLon = (uint32_t(CRSFinBuffer[ 7])<<24) + (uint32_t(CRSFinBuffer[ 8])<<16) + (uint32_t(CRSFinBuffer[ 9])<<8) + CRSFinBuffer[10]; 
+            beaconSpd = (uint16_t(CRSFinBuffer[11])<<8) + CRSFinBuffer[12];
+            beaconHdg = (uint16_t(CRSFinBuffer[13])<<8) + CRSFinBuffer[14];
+            beaconAlt = (uint16_t(CRSFinBuffer[15])<<8) + CRSFinBuffer[16];
+        }
+    }
+}
+#endif
 
 void Telemetry::SetCrsfBaroSensorDetected()
 {
@@ -209,6 +238,10 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
                     CheckCrsfBatterySensorDetected();
                     CheckCrsfBaroSensorDetected();
+
+                    #if ( defined(RADIO_SX127X) && defined(TARGET_RX) )
+                    CheckCrsfGPSSensorDetected();
+                    #endif
 
                     receivedPackages++;
                     return true;
@@ -377,4 +410,32 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
     return targetFound;
 }
+
+#if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+/**
+ * @brief: Sends last good GPS CRSF frame received from FC
+ * @return: nothing
+*/
+void Telemetry::SendLastGoodGPS()
+{
+    static uint16_t counter = 0;
+    if (beaconSats > 0)
+    {
+        CRSF_MK_FRAME_T(crsf_sensor_gps_t)
+        crsfGPS = {0};
+        crsfGPS.p.latitude = htobe32(beaconLat);
+        crsfGPS.p.longitude = htobe32(beaconLon);
+        crsfGPS.p.groundspeed = htobe16(beaconSpd); // ELRS 1 = 0.1km/h
+        // crsfGPS.p.heading = htobe16(1 * 100);
+        crsfGPS.p.heading = htobe16(counter * 100); // rotating heading to indicate we're using stored data
+        crsfGPS.p.altitude = htobe16(beaconAlt); // 0m = 1000 - do not offset - we already store it with offset
+        crsfGPS.p.satellites = beaconSats&0b01111111;  // undo the bit flag indicating the old packet - elrs doesn't know how to use it
+        
+        CRSF::SetHeaderAndCrc((uint8_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+        AppendTelemetryPackage((uint8_t *)&crsfGPS);
+        counter = (counter+1)%360;
+    }
+}
+#endif
+
 #endif

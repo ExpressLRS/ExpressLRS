@@ -58,6 +58,7 @@ public:
     bool ShouldCallUpdateModelMatch();
     bool ShouldSendDeviceFrame();
     void CheckCrsfBatterySensorDetected();
+    void CheckCrsfGPSSensorDetected();
     void SetCrsfBatterySensorDetected();
     bool GetCrsfBatterySensorDetected() { return crsfBatterySensorDetected; };
     void CheckCrsfBaroSensorDetected();
@@ -68,6 +69,13 @@ public:
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
     bool AppendTelemetryPackage(uint8_t *package);
+    #if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+    void SendLastGoodGPS();
+    uint32_t beaconLat = 0;
+    uint32_t beaconLon = 0;
+    uint16_t beaconAlt = 1000;
+    uint8_t beaconSats=0;
+    #endif
 private:
     bool processInternalTelemetryPackage(uint8_t *package);
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
@@ -85,4 +93,8 @@ private:
     bool crsfBatterySensorDetected;
     bool crsfBaroSensorDetected;
     uint8_t modelMatchId;
+    #if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+    uint16_t beaconSpd = 0;
+    uint16_t beaconHdg = 0;
+    #endif
 };

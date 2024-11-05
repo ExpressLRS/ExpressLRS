@@ -75,6 +75,20 @@ uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
 
+#if defined(RADIO_SX127X)
+#define BeaconFrequency     868750000
+GENERIC_CRC8 beacon_crc(ELRS_CRC_POLY);
+bool BeaconEnabled = false;
+char BeaconSNR[7] = {" "};
+char BeaconRSSI[9] = {" "};
+char BeaconLat[14] = {" "};
+char BeaconLon[14] = {" "};
+char BeaconAlt[9] = {" "};
+char BeaconSats[11] = {" "};
+char BeaconData[14] = "No data";
+uint16_t BeaconPackets[2] = {0};  // 0 - bad, 1 - good
+#endif
+
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 static bool commitInProgress = false;
@@ -905,6 +919,35 @@ static void CheckReadyToSend()
   }
 }
 
+#if defined(RADIO_SX127X)
+bool ICACHE_RAM_ATTR BeaconCallback(SX12xxDriverCommon::rx_status const status)
+{
+    if (status != SX12xxDriverCommon::SX12XX_RX_OK)
+    {
+      BeaconPackets[0]++;
+      return false;
+    }
+    BeaconPackets[1]++;
+    return true;
+}
+
+static void CheckBeaconEnable()
+{
+  static bool active = false;
+  if ( (BeaconEnabled) && (!active) )
+  {
+    connectionState = beaconMode;
+    hwTimer::stop();
+    while (busyTransmitting);
+    OtaNonce = 0;
+    Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+    Radio.RXdoneCallback = &BeaconCallback;
+    Radio.RXnb();
+    active = true;
+  }
+}
+#endif
+
 void OnPowerGetCalibration(mspPacket_t *packet)
 {
   uint8_t index = packet->readByte();
@@ -1373,6 +1416,55 @@ void setup()
   }
 }
 
+#if defined(RADIO_SX127X)
+void HandleBeacon(unsigned long now)
+{
+  if (connectionState == beaconMode)
+  {
+    static uint32_t PrevBeaconPackets = 0;
+    static unsigned long LastPacketSec = now;
+
+    uint8_t eta = ((now - LastPacketSec)/1000)%30;        
+    CRSFHandset::BadPktsCountResult = eta;
+    CRSFHandset::GoodPktsCountResult = BeaconPackets[1];
+
+    if (PrevBeaconPackets != BeaconPackets[1])  // this will be triggered only on packets with good HW CRC
+    {
+      LastPacketSec = now;
+           
+      // check crc
+      uint8_t rx_crc = Radio.RXdataBuffer[11];
+      uint8_t crc = beacon_crc.calc(Radio.RXdataBuffer, 11, 0);
+      if (crc == rx_crc)
+      {
+        Radio.GetLastPacketStats();
+        // snprintf(BeaconRSSI, sizeof(BeaconRSSI), "%d", Radio.LastPacketRSSI);
+        snprintf(BeaconRSSI, sizeof(BeaconRSSI), "%d dbm", Radio.LastPacketRSSI);
+        snprintf(BeaconSNR, sizeof(BeaconSNR), "%d db", SNR_DESCALE(Radio.LastPacketSNRRaw)); 
+        
+        // assemble Lat Lon
+        int32_t lat = (uint32_t)(Radio.RXdataBuffer[3]<<24) + (uint32_t)(Radio.RXdataBuffer[2]<<16) + (uint32_t)(Radio.RXdataBuffer[1]<<8) + Radio.RXdataBuffer[0];
+        int32_t lon = (uint32_t)(Radio.RXdataBuffer[7]<<24) + (uint32_t)(Radio.RXdataBuffer[6]<<16) + (uint32_t)(Radio.RXdataBuffer[5]<<8) + Radio.RXdataBuffer[4];
+        // assemble Alt
+        int16_t alt = ((uint16_t)(Radio.RXdataBuffer[9]<<8) + Radio.RXdataBuffer[8]) - 1000;
+        // assemble Sats
+        uint8_t sats = Radio.RXdataBuffer[10];
+        if ((sats&0b10000000)==0) snprintf(BeaconSats, sizeof(BeaconSats), "%d live", sats);
+        else snprintf(BeaconSats, sizeof(BeaconSats), "%d saved", sats&0b01111111);
+        
+        snprintf(BeaconLat, sizeof(BeaconLat), "%d.%d", lat/10000000, lat%10000000);
+        snprintf(BeaconLon, sizeof(BeaconLon), "%d.%d", lon/10000000, lon%10000000);
+        snprintf(BeaconAlt, sizeof(BeaconAlt), "%d m", alt);
+          
+        snprintf(BeaconData, sizeof(BeaconData), "Ok");
+      }
+      else snprintf(BeaconData, sizeof(BeaconData), "Bad");
+      PrevBeaconPackets = BeaconPackets[1];
+    } 
+  }
+}
+#endif
+
 void loop()
 {
   uint32_t now = millis();
@@ -1384,6 +1476,10 @@ void loop()
   {
       connectionState = bleJoystick;
   }
+  #endif
+
+  #if defined(RADIO_SX127X)
+  HandleBeacon(now);
   #endif
 
   if (connectionState < MODE_STATES)
@@ -1412,6 +1508,9 @@ void loop()
   }
 
   CheckReadyToSend();
+  #if defined(RADIO_SX127X)
+  CheckBeaconEnable();
+  #endif
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
