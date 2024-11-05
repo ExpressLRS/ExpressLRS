@@ -749,16 +749,13 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
     int8_t rssi[2];
     int8_t snr[2];
 
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    if(!hasSecondRadioGotData)
     {
-        gotRadio[secondRadioIdx] = hasSecondRadioGotData;
-        #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        if(!hasSecondRadioGotData)
-        {
-            instance->rxSignalStats[secondRadioIdx].fail_count++;
-        }
-        #endif
+        instance->rxSignalStats[secondRadioIdx].fail_count++;
     }
+    #endif
 
     // Get both radios ready at the same time to return packet stats
     hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio | (gotRadio[secondRadioIdx] ? radio[secondRadioIdx] : 0));
