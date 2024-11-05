@@ -1123,6 +1123,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     LastValidPacket = now;
 
+    Radio.CheckForSecondPacket();
+    if (Radio.hasSecondRadioGotData)
+    {
+        OTA_Packet_s * const otaPktPtrSecond = (OTA_Packet_s * const)Radio.RXdataBufferSecond;
+        if (!OtaValidatePacketCrc(otaPktPtrSecond))
+        {
+            Radio.hasSecondRadioGotData = false;
+        }
+    }
+
     switch (otaPktPtr->std.type)
     {
     case PACKET_TYPE_RCDATA: //Standard RC Data Packet

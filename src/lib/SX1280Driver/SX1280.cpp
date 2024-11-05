@@ -613,7 +613,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
     // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
     if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        bool isSecondRadioGotData = false;
+        bool hasSecondRadioGotData = false;
 
         uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
         if(secondIrqStatus&SX1280_IRQ_RX_DONE)
@@ -634,15 +634,15 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
                 // if the second packet is same to the first, it's valid
                 if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
                 {
-                    isSecondRadioGotData = true;
+                    hasSecondRadioGotData = true;
                 }
             }
         }
 
         // second radio received the same packet to the processing radio
-        gotRadio[secondRadioIdx] = isSecondRadioGotData;
+        gotRadio[secondRadioIdx] = hasSecondRadioGotData;
         #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        if(!isSecondRadioGotData)
+        if(!hasSecondRadioGotData)
         {
             instance->rxSignalStats[secondRadioIdx].fail_count++;
         }

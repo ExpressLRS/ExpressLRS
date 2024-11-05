@@ -18,6 +18,8 @@ public:
 
     ///////////Radio Variables////////
     uint32_t timeout;
+    bool gotRadio[2] = {false, false}; // one-radio default.
+    bool hasSecondRadioGotData = false;
 
     ///////////////////////////////////
 
@@ -48,6 +50,7 @@ public:
 
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
+    void CheckForSecondPacket();
 
 private:
     // constant used for no power change pending

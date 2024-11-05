@@ -37,6 +37,7 @@ public:
 
     #define RXBuffSize 16
     WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
+    WORD_ALIGNED_ATTR uint8_t RXdataBufferSecond[RXBuffSize];
 
     ///////////Radio Variables////////
     uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
