@@ -56,7 +56,7 @@ public:
     int8_t LastPacketRSSI2;
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
     int8_t FuzzySNRThreshold;
-    bool gotRadio[2] = {false, false}; // one-radio default.
+    bool gotRadio[2] = {false, false};
     bool hasSecondRadioGotData = false;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)

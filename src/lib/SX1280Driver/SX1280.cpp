@@ -626,7 +626,6 @@ void ICACHE_RAM_ATTR SX1280Driver::CheckForSecondPacket()
             if (second_rx_fail == SX12XX_RX_OK)
             {
                 uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
-                WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
                 hal.ReadBuffer (FIFOaddr, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
                 hasSecondRadioGotData = true;
             }

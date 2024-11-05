@@ -720,18 +720,18 @@ void ICACHE_RAM_ATTR LR1121Driver::CheckForSecondPacket()
             inbuf[0] = RxStartBufferPointer;
             inbuf[1] = PayloadLengthRX;
 
-            WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[PayloadLengthRX + 1] = {0};
+            WORD_ALIGNED_ATTR uint8_t TempRXdataBufferSecond[PayloadLengthRX + 1] = {0};
 
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
-            hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
+            hal.ReadCommand(TempRXdataBufferSecond, sizeof(TempRXdataBufferSecond), radio[secondRadioIdx]);
 
             if (useFEC)
             {
-                FECDecode(RXdataBuffer_second + 1, RXdataBufferSecond);
+                FECDecode(TempRXdataBufferSecond + 1, RXdataBufferSecond);
             }
             else
             {
-                memcpy(RXdataBufferSecond, RXdataBuffer_second + 1, PayloadLength);
+                memcpy(RXdataBufferSecond, TempRXdataBufferSecond + 1, PayloadLength);
             }
 
             hasSecondRadioGotData = true;

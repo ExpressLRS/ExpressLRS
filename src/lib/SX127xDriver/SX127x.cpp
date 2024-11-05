@@ -523,7 +523,6 @@ void ICACHE_RAM_ATTR SX127xDriver::CheckForSecondPacket()
     uint16_t secondIrqStatus = instance->GetIrqFlags(radio[secondRadioIdx]);
     if(secondIrqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
     {
-      WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
       uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radio[secondRadioIdx]);
       hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
       hal.readRegister(SX127X_REG_FIFO, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
@@ -544,7 +543,6 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
 
   gotRadio[secondRadioIdx] = hasSecondRadioGotData;
   #if defined(DEBUG_RCVR_SIGNAL_STATS)
-  // second radio received the same packet to the processing radio
   if(!hasSecondRadioGotData)
   {
     instance->rxSignalStats[secondRadioIdx].fail_count++;
