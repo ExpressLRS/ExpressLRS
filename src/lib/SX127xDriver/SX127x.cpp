@@ -670,15 +670,15 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
  * @param offset is in Hz or FREQ_STEP (FREQ_HZ_TO_REG_VAL) units, whichever
  *    was used to SetFrequencyHz/SetFrequencyReg
  */
-void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset)
+void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset, SX12XX_Radio_Number_t radioNumber)
 {
   int8_t offsetPPM = (offset * 1e6 / currFreq) * 95 / 100;
-  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, processingPacketRadio);
+  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, radioNumber);
 }
 
-bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
-  return (hal.readRegister(SX127X_REG_FEI_MSB, processingPacketRadio) & 0b1000) >> 3; // returns true if pos freq error, neg if false
+  return (hal.readRegister(SX127X_REG_FEI_MSB, radioNumber) & 0b1000) >> 3; // returns true if pos freq error, neg if false
 }
 
 int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()

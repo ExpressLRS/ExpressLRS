@@ -54,8 +54,8 @@ public:
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
-    bool GetFrequencyErrorbool();
-    void SetPPMoffsetReg(int32_t offset);
+    bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
+    void SetPPMoffsetReg(int32_t offset, SX12XX_Radio_Number_t radioNumber);
 
     ////////////////////////////////////////////////////
 
