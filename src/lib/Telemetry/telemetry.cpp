@@ -17,15 +17,6 @@ using namespace std;
 #endif
 
 #include "crsf2msp.h"
-typedef struct crsf_sensor_gps_s
-{
-    int32_t latitude;     // degree / 10,000,000 big endian
-    int32_t longitude;    // degree / 10,000,000 big endian
-    uint16_t groundspeed; // km/h / 10 big endian
-    uint16_t heading;     // GPS heading, degree/100 big endian
-    uint16_t altitude;    // meters, +1000m big endian
-    uint8_t satellites;   // satellites
-} PACKED crsf_sensor_gps_t;
 
 Telemetry::Telemetry()
 {
@@ -427,9 +418,9 @@ void Telemetry::SendLastGoodGPS()
         crsfGPS.p.longitude = htobe32(beaconLon);
         crsfGPS.p.groundspeed = htobe16(beaconSpd); // ELRS 1 = 0.1km/h
         // crsfGPS.p.heading = htobe16(1 * 100);
-        crsfGPS.p.heading = htobe16(counter * 100); // rotating heading to indicate we're using stored data
+        crsfGPS.p.gps_heading = htobe16(counter * 100); // rotating heading to indicate we're using stored data
         crsfGPS.p.altitude = htobe16(beaconAlt); // 0m = 1000 - do not offset - we already store it with offset
-        crsfGPS.p.satellites = beaconSats&0b01111111;  // undo the bit flag indicating the old packet - elrs doesn't know how to use it
+        crsfGPS.p.satellites_in_use = beaconSats&0b01111111;  // undo the bit flag indicating the old packet - elrs doesn't know how to use it
         
         CRSF::SetHeaderAndCrc((uint8_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
         AppendTelemetryPackage((uint8_t *)&crsfGPS);
