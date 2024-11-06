@@ -266,9 +266,9 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
     }
 
     //
-    // sends channel data and also communicates commanded armed status in arming mode Function.
-    // frame len 24 -> arming mode Channel: use channel 5
-    // frame len 25 -> arming mode Function: use commanded arming status in extra byte
+    // sends channel data and also communicates commanded armed status in arming mode Switch.
+    // frame len 24 -> arming mode CH5: use channel 5 value
+    // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
     //
     armCmd = inBuffer.asUint8_t[1] == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
 
