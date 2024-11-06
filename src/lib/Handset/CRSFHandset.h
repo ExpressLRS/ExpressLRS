@@ -21,7 +21,7 @@ public:
     void End() override;
 
 #ifdef CRSF_TX_MODULE
-    bool IsArmed() override { return armCmd; } // AUX1/CH5 (Channel mode) or extra byte in RC channesl message (Function mode)
+    bool IsArmed() override { return armCmd; } // AUX1/CH5 (CH5 mode) or extra byte in RC channels message (Switch mode)
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
