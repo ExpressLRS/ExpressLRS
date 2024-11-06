@@ -26,6 +26,7 @@
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
+#include "rx-serial/SerialDisplayport.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -143,39 +144,22 @@ bool pwmSerialDefined = false;
 uint32_t serialBaud;
 
 /* SERIAL_PROTOCOL_TX is used by CRSF output */
-#if defined(TARGET_RX_FM30_MINI)
-    HardwareSerial SERIAL_PROTOCOL_TX(USART2);
-#elif defined(TARGET_DIY_900_RX_STM32)
-    HardwareSerial SERIAL_PROTOCOL_TX(USART1);
-#else
-    #define SERIAL_PROTOCOL_TX Serial
+#define SERIAL_PROTOCOL_TX Serial
 
-    #if defined(PLATFORM_ESP32)
-        #define SERIAL1_PROTOCOL_TX Serial1
+#if defined(PLATFORM_ESP32)
+    #define SERIAL1_PROTOCOL_TX Serial1
 
-        // SBUS driver needs to distinguish stream for SBUS/DJI protocol
-        const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
-        const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+    // SBUS driver needs to distinguish stream for SBUS/DJI protocol
+    const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+    const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
 
-        SerialIO *serial1IO = nullptr;
-    #endif
+    SerialIO *serial1IO = nullptr;
 #endif
 
 SerialIO *serialIO = nullptr;
 
-/* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
-#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
-    #define SERIAL_PROTOCOL_RX CrsfRxSerial
-    HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
-#elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
-    #define SERIAL_PROTOCOL_RX CrsfRxSerial
-    HardwareSerial CrsfRxSerial(USART3);
-#elif defined(TARGET_RX_FM30_MINI)
-    #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
-#else
-    #define SERIAL_PROTOCOL_RX Serial
-    #define SERIAL1_PROTOCOL_RX Serial1
-#endif
+#define SERIAL_PROTOCOL_RX Serial
+#define SERIAL1_PROTOCOL_RX Serial1
 
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
@@ -831,6 +815,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         }
     }
 
+    // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
+    sendImmediateRC();
+
     if (!didFHSS)
     {
         HandleFHSS();
@@ -1176,9 +1163,13 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     if (Radio.FrequencyErrorAvailable())
     {
     #if defined(RADIO_SX127X)
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+        // Adjusts FreqCorrection for RX freq offset
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());
         // Teamp900 also needs to adjust its demood PPM
         Radio.SetPPMoffsetReg(tempFreqCorrection);
+    #else /* !RADIO_SX127X */
+        // Adjusts FreqCorrection for RX freq offset
+        HandleFreqCorr(Radio.GetFrequencyErrorbool());
     #endif /* RADIO_SX127X */
     }
 
@@ -1358,6 +1349,10 @@ static void setupSerial()
         mavlinkSerialOutput = true;
         serialBaud = 460800;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialBaud = 115200;
+    }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
@@ -1367,81 +1362,30 @@ static void setupSerial()
 #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
-#ifdef PLATFORM_STM32
-#if defined(TARGET_R9SLIMPLUS_RX)
-    SERIAL_PROTOCOL_RX.setRx(GPIO_PIN_RCSIGNAL_RX);
-    SERIAL_PROTOCOL_RX.begin(serialBaud);
-
-    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-#else
-#if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
-    if (invert)
-    {
-        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
-        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
-    }
-    else
-#endif
-    {
-        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX);
-    }
-#endif /* TARGET_R9SLIMPLUS_RX */
-#if defined(TARGET_RX_GHOST_ATTO_V1)
-    // USART1 is used for RX (half duplex)
-    SERIAL_PROTOCOL_RX.setHalfDuplex();
-    SERIAL_PROTOCOL_RX.setTx(GPIO_PIN_RCSIGNAL_RX);
-    SERIAL_PROTOCOL_RX.begin(serialBaud);
-    SERIAL_PROTOCOL_RX.enableHalfDuplexRx();
-
-    // USART2 is used for TX (half duplex)
-    // Note: these must be set before begin()
-    SERIAL_PROTOCOL_TX.setHalfDuplex();
-    SERIAL_PROTOCOL_TX.setRx((PinName)NC);
-    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-#endif /* TARGET_RX_GHOST_ATTO_V1 */
-    SERIAL_PROTOCOL_TX.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
-#endif /* PLATFORM_STM32 */
-#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
-    if (invert)
-    {
-        LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN);
-        USART2->CR1 &= ~USART_CR1_UE;
-        USART2->CR2 |= USART_CR2_TXINV;
-        USART2->CR1 |= USART_CR1_UE;
-    }
-#endif
-
-#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
-    Serial.setRx(GPIO_PIN_DEBUG_RX);
-    Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(serialBaud); // Same baud as CRSF for simplicity
-#endif
-
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = SERIAL_8N1;
+    SerialConfig serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
-    Serial.begin(serialBaud, config, mode, -1, invert);
+    Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = SERIAL_8N1;
+    uint32_t serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     // ARDUINO_CORE_INVERT_FIX PT2
@@ -1453,7 +1397,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1472,12 +1416,14 @@ static void setupSerial()
     {
         serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
     else if (hottTlmSerial)
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-    #endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -1570,6 +1516,10 @@ static void setupSerial1()
             Serial1.begin(4800, SERIAL_8N2, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialSmartAudio(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
             break;
+        case PROTOCOL_SERIAL1_MSP_DISPLAYPORT:
+            Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialDisplayport(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
     }
 }
 
@@ -1586,19 +1536,9 @@ void reconfigureSerial1()
 static void serialShutdown()
 {
     SerialLogger = new NullStream();
-#ifdef PLATFORM_STM32
-#if defined(TARGET_R9SLIMPLUS_RX) || defined(TARGET_RX_GHOST_ATTO_V1)
-    SERIAL_PROTOCOL_RX.end();
-#endif
-    SERIAL_PROTOCOL_TX.end();
-#else
     if(serialIO != nullptr)
     {
         Serial.end();
-    }
-#endif
-    if(serialIO != nullptr)
-    {
         delete serialIO;
         serialIO = nullptr;
     }
@@ -1645,11 +1585,6 @@ static void setupTarget()
             digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
         }
     }
-
-#if defined(TARGET_RX_FM30_MINI)
-    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
-    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
 
     setupTargetCommon();
 }
@@ -1763,8 +1698,8 @@ static void EnterBindingMode()
         return;
     }
 
-    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-    OtaCrcInitializer = 0;
+    // Binding uses 50Hz, and InvertIQ
+    OtaCrcInitializer = OTA_VERSION_ID;
     InBindingMode = true;
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
@@ -2055,9 +1990,6 @@ RF_PRE_INIT()
 void resetConfigAndReboot()
 {
     config.SetDefaults(true);
-#if defined(PLATFORM_STM32)
-    HAL_NVIC_SystemReset();
-#else
     // Prevent WDT from rebooting too early if
     // all this flash write is taking too long
     yield();
@@ -2068,7 +2000,6 @@ void resetConfigAndReboot()
     options_SetTrueDefaults();
 
     ESP.restart();
-#endif
 }
 
 void setup()
@@ -2306,24 +2237,7 @@ void reset_into_bootloader(void)
 {
     SERIAL_PROTOCOL_TX.println((const char *)&target_name[4]);
     SERIAL_PROTOCOL_TX.flush();
-#if defined(PLATFORM_STM32)
-    delay(100);
-    DBGLN("Jumping to Bootloader...");
-    delay(100);
-
-    /** Write command for firmware update.
-     *
-     * Bootloader checks this memory area (if newer enough) and
-     * perpare itself for fw update. Otherwise it skips the check
-     * and starts ELRS firmware immediately
-     */
-    extern __IO uint32_t _bootloader_data;
-    volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
-    blinfo->key = 0x454c5253; // ELRS
-    blinfo->reset_type = 0xACDC;
-
-    HAL_NVIC_SystemReset();
-#elif defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
 #elif defined(PLATFORM_ESP32)

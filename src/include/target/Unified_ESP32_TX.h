@@ -1,39 +1,6 @@
 #define TARGET_UNIFIED_TX
 
 #define HARDWARE_VERSION ""
-// DEVICE_NAME is not defined here because we get it from the SPIFFS file system
-
-// // FM30
-// TARGET_TX_FM30
-// GPIO_PIN_ANT_CTRL
-// GPIO_PIN_BLUETOOTH_EN
-// GPIO_PIN_UART1RX_INVERT
-// GPIO_PIN_UART1TX_INVERT
-// GPIO_PIN_UART3RX_INVERT
-
-// // Ghost
-// TARGET_RX_GHOST_ATTO_V1
-// TARGET_TX_GHOST
-// TARGET_TX_GHOST_LITE
-// GPIO_PIN_RF_AMP_DET         // unused
-
-// // Frsky/HM915
-// GPIO_PIN_VRF1               // unused
-// GPIO_PIN_VRF2               // unused
-// GPIO_PIN_SWR                // unused
-// TARGET_EEPROM_400K
-// TARGET_EEPROM_ADDR
-// TARGET_USE_EEPROM
-
-// // various (unused)
-// GPIO_PIN_DIP1
-// GPIO_PIN_DIP2
-// GPIO_PIN_DIP3
-// GPIO_PIN_DIP4
-
-//
-// ====================================
-//
 
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
@@ -75,7 +42,6 @@
 #define GPIO_PIN_TX_ENABLE_2 hardware_pin(HARDWARE_power_txen_2)
 #define LBT_RSSI_THRESHOLD_OFFSET_DB hardware_int(HARDWARE_power_lna_gain)
 #define MinPower (PowerLevels_e)hardware_int(HARDWARE_power_min)
-#define HighPower (PowerLevels_e)hardware_int(HARDWARE_power_high)
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
@@ -85,10 +51,7 @@
 #define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
 
 // default value 0 means direct!
-// #define POWER_OUTPUT_ANALOG (hardware_int(HARDWARE_power_control)==1)   // frsky only
-// #define POWER_OUTPUT_DAC (hardware_int(HARDWARE_power_control)==2)  // stm32 only
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
-#define POWER_OUTPUT_FIXED -99
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
 #define POWER_OUTPUT_VALUES_COUNT hardware_int(HARDWARE_power_values_count)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)

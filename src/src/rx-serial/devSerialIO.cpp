@@ -199,9 +199,10 @@ static int timeout(devserial_ctx_t *ctx)
         return NO_SERIALIO_INTERVAL;
     }
 
-    if (connectionState == serialUpdate)
+    // stop callbacks when serial driver wants immediate sends or when doing serial update
+    if ((*(ctx->io))->sendImmediateRC() || connectionState == serialUpdate)
     {
-        return DURATION_NEVER;  // stop callbacks when doing serial update
+        return DURATION_NEVER;
     }
 
     /***
@@ -229,7 +230,22 @@ static int timeout(devserial_ctx_t *ctx)
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 }
 
-void handleSerialIO() {
+void sendImmediateRC()
+{
+    if (*(serial0.io) != nullptr && (*(serial0.io))->sendImmediateRC() && connectionState != serialUpdate)
+    {
+        bool missed = serial0.frameMissed;
+        serial0.frameMissed = false;
+
+        // Verify there is new ChannelData and they should be sent on
+        bool sendChannels = confirmFrameAvailable(&serial0);
+
+        (*(serial0.io))->sendRCFrame(sendChannels, missed, ChannelData);
+    }
+}
+
+void handleSerialIO()
+{
     // still get telemetry and send link stats if there's no model match
     if (*(serial0.io) != nullptr)
     {
