@@ -77,20 +77,7 @@ uint32_t SyncPacketLastSent = 0;
 
 #if defined(RADIO_SX127X)
 
-#if (defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)) 
-    #define BeaconFrequency     915750000
-#elif (defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866))
-    #define BeaconFrequency     868750000
-#elif (defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || \
-        defined(Regulatory_Domain_US_433) || defined(Regulatory_Domain_US_433_WIDE))
-    #define BeaconFrequency     433750000
-#elif (defined(Regulatory_Domain_JP_920))
-    #define BeaconFrequency     920750000
-#else 
-    #error "Unsupported Regulatory_Domain defined. Add beacon frequency for it here."
-#endif
-
-#define BeaconFrequency     868750000
+#define BeaconFrequency     FHSSconfig->freq_center
 GENERIC_CRC8 beacon_crc(ELRS_CRC_POLY);
 bool BeaconEnabled = false;
 char BeaconSNR[7] = {" "};

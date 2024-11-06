@@ -139,20 +139,7 @@ SerialIO *serialIO = nullptr;
 #if defined(RADIO_SX127X)
 // #define BEACON_DEBUG        // disable for flight use
 
-#if (defined(Regulatory_Domain_AU_915) || defined(Regulatory_Domain_FCC_915)) 
-    #define BeaconFrequency     915750000
-#elif (defined(Regulatory_Domain_EU_868) || defined(Regulatory_Domain_IN_866))
-    #define BeaconFrequency     868750000
-#elif (defined(Regulatory_Domain_AU_433) || defined(Regulatory_Domain_EU_433) || \
-        defined(Regulatory_Domain_US_433) || defined(Regulatory_Domain_US_433_WIDE))
-    #define BeaconFrequency     433750000
-#elif (defined(Regulatory_Domain_JP_920))
-    #define BeaconFrequency     920750000
-#else 
-    #error "Unsupported Regulatory_Domain defined. Add beacon frequency for it here."
-#endif
-
-#define BeaconFrequency     868750000
+#define BeaconFrequency     FHSSconfig->freq_center
 #define MSPBeaconInterval   10 * 1000UL // every 10s
 #define MSPBeaconSkipPkts   5           // skip 5*10s=50s and run after next interval
 #define LRBeaconInterval    30 * 1000UL // every 30s
