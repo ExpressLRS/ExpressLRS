@@ -274,9 +274,6 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
 
     #if defined(PLATFORM_ESP32)
         // monitoring arming state
-
-        static bool lastArmCmd = false;
-
         if (lastArmCmd != armCmd) {
             devicesTriggerEvent();
             lastArmCmd = armCmd;

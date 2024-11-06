@@ -29,7 +29,6 @@ public:
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static uint8_t modelId;         // The model ID as received from the Transmitter
-    bool armCmd;                    // Arm command from handset either via ch5 or arm message
     static bool ForwardDevicePings; // true if device pings should be forwarded OTA
     static bool elrsLUAmode;
 
@@ -73,6 +72,9 @@ private:
 
     static uint8_t UARTcurrentBaudIdx;
     static uint32_t UARTrequestedBaud;
+
+    bool armCmd = false;           // Arm command from handset either via ch5 or arm message
+    bool lastArmCmd = false;
 
 #if defined(PLATFORM_ESP32)
     bool UARTinverted = false;
