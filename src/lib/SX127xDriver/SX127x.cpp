@@ -672,7 +672,7 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
  */
 void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset, SX12XX_Radio_Number_t radioNumber)
 {
-  int8_t offsetPPM = (offset * 1e6 / currFreq) * 95 / 100;
+  int8_t offsetPPM = (offset * 1000000 / currFreq) * 95 / 100;
   hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, radioNumber);
 }
 
