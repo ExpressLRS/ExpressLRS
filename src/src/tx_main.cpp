@@ -1453,8 +1453,8 @@ void HandleBeacon(unsigned long now)
         if ((sats&0b10000000)==0) snprintf(BeaconSats, sizeof(BeaconSats), "%d live", sats);
         else snprintf(BeaconSats, sizeof(BeaconSats), "%d saved", sats&0b01111111);
         
-        snprintf(BeaconLat, sizeof(BeaconLat), "%d.%d", lat/10000000, lat%10000000);
-        snprintf(BeaconLon, sizeof(BeaconLon), "%d.%d", lon/10000000, lon%10000000);
+        snprintf(BeaconLat, sizeof(BeaconLat), "%d.%d", lat/10000000, abs(lat)%10000000);
+        snprintf(BeaconLon, sizeof(BeaconLon), "%d.%d", lon/10000000, abs(lon)%10000000);
         snprintf(BeaconAlt, sizeof(BeaconAlt), "%d m", alt);
           
         snprintf(BeaconData, sizeof(BeaconData), "Ok");
