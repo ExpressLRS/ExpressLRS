@@ -1,6 +1,6 @@
 #include "targets.h"
 
-#if (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)) && defined(RADIO_LR1121)
+#if defined(RADIO_LR1121)
 
 #include "ArduinoJson.h"
 #include "AsyncJson.h"
@@ -10,6 +10,10 @@
 #include "common.h"
 #include "SPIEx.h"
 #include "logging.h"
+
+#if defined(TARGET_TX)
+#include "wifiJoystick.h"
+#endif
 
 struct lr1121UpdateState_s {
     size_t expectedFilesize;
@@ -124,7 +128,7 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
 
 static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (index == 0) {
-#ifdef HAS_WIFI_JOYSTICK
+#if defined(TARGET_TX)
         WifiJoystick::StopJoystickService();
 #endif
         lr1121UpdateState = new lr1121UpdateState_s;

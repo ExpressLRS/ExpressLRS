@@ -65,9 +65,6 @@
 #-DUSE_TX_BACKPACK
 
 
-#If commented out the LED is RGB otherwise GRB
-#-DWS2812_IS_GRB
-
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
