@@ -1,5 +1,3 @@
-#define TARGET_UNIFIED_TX
-
 #define HARDWARE_VERSION ""
 
 // DEVICE_NAME is not defined here because we get it from the SPIFFS file system
@@ -43,21 +41,17 @@
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
-#define GPIO_PIN_BUTTON2 hardware_pin(HARDWARE_button2)
+#define GPIO_PIN_BUTTON2 UNDEF_PIN
 
 // Lighting
-#define GPIO_PIN_LED hardware_pin(HARDWARE_led)
 #define GPIO_PIN_LED_BLUE hardware_pin(HARDWARE_led_blue)
 #define GPIO_LED_BLUE_INVERTED hardware_pin(HARDWARE_led_blue_invert)
 #define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
 #define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
-#define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
-#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
+#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_red_green)
+
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
-// #define GPIO_PIN_LED_WS2812_FAST // stm32
-#define WS2812_IS_GRB
 #define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
 #define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_status)
 #define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_status_count)
