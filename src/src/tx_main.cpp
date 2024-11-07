@@ -1201,6 +1201,11 @@ static void setupSerial()
   #else
     Stream *serialPort = new NullStream();
   #endif
+#elif defined(M0139)
+  HardwareSerial *serialPort = new HardwareSerial(USART2);
+  serialPort->setRx((uint32_t)PA3);
+  serialPort->setTx((uint32_t)PA2);
+  serialPort->begin(420000);
 #elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   HardwareSerial *serialPort = new HardwareSerial(2);
   #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
@@ -1360,7 +1365,7 @@ void setup()
 
   //DBGLN("TIM1: %p, TIM2: %p, TIM3: %p, TIM4: %p", TIM1, TIM2, TIM3, TIM4);
   //DBGLN("TIM1: %d, TIM2: %d, TIM3: %d, TIM4: %d", TIMER1_INDEX, TIMER2_INDEX, TIMER3_INDEX, TIMER4_INDEX);
-  DBGLN("TIMER_SERIAL: %p, TIM1: %p", TIMER_SERIAL, TIM1);
+  // DBGLN("TIMER_SERIAL: %p, TIM1: %p", TIMER_SERIAL, TIM1);
 
   if (setupHardwareFromOptions())
   {
@@ -1504,7 +1509,7 @@ void loop()
   HandleUARTin();
 
   // Unnecessary, use #define DEBUG_TX_FREERUN instead
-  #ifdef HWIL_TESTING
+  #if defined(HWIL_TESTING) && !defined(DEBUG_TX_FREERUN) 
   // Hack to ignore the lack of a crossfire connection
   if(connectionState == noCrossfire)
   {
