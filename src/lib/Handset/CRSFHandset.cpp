@@ -272,13 +272,13 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
     //
     armCmd = inBuffer.asUint8_t[1] == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
 
-    #if defined(PLATFORM_ESP32)
-        // monitoring arming state
-        if (lastArmCmd != armCmd) {
-            devicesTriggerEvent();
-            lastArmCmd = armCmd;
-        }
-    #endif
+    // monitoring arming state
+    if (lastArmCmd != armCmd) {
+        #if defined(PLATFORM_ESP32)
+        devicesTriggerEvent();
+        #endif
+        lastArmCmd = armCmd;
+    }
 }
 
 
