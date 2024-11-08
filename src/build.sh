@@ -20,7 +20,7 @@ print_usage () {
 	echo "Build script for buidling ExpressLRS firmware"
     echo "Args:"
     echo -e "   e) Enable encrpytion of firmware (pass in the key)"
-    echo -e "   t) Target to build (m0139, r9mini)"
+    echo -e "   t) Target to build (m0184, r9mini)"
     echo -e "   v) Version of firmware being built"
 }
 
@@ -52,21 +52,37 @@ while getopts "e:t:v:" opt; do
 done
 
 case $TARGET in
-    "m0139"|"M0139")
-        TARGET="MODALAI_M0139_via_UART"
-        FW="ModalAI_M0139-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+    "m0184_rx"|"M0184")
+        TARGET="MODALAI_M0184_RX_via_UART"
+        FW="ModalAI_M0184-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
         ;;
-    "m0139_tx"|"M0139_TX")
-        TARGET="MODALAI_M0139_TX_via_UART"
-        FW="ModalAI_M0139_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+    "m0184_tx"|"M0184_TX")
+        TARGET="MODALAI_M0184_TX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
         ;;
-    "m0139_hwil_tx"|"M0139_HWIL_TX")
-        TARGET="MODALAI_M0139_HWIL_TX_via_UART"
-        FW="ModalAI_M0139_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+    "m0184_hwil_tx"|"M0184_HWIL_TX")
+        TARGET="MODALAI_M0184_HWIL_TX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
         ;;
-    "m0139_hwil_rx"|"M0139_HWIL_RX")
-        TARGET="MODALAI_M0139_HWIL_RX_via_UART"
-        FW="ModalAI_M0139_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+    "m0184_hwil_rx"|"M0184_HWIL_RX")
+        TARGET="MODALAI_M0184_HWIL_RX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+        ;;
+    "m0193_rx"|"M0193")
+        TARGET="MODALAI_M0193_RX_via_UART"
+        FW="ModalAI_M0184-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+        ;;
+    "m0193_tx"|"M0193_TX")
+        TARGET="MODALAI_M0193_TX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+        ;;
+    "m0193_hwil_tx"|"M0193_HWIL_TX")
+        TARGET="MODALAI_M0193_HWIL_TX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
+        ;;
+    "m0193_hwil_rx"|"M0193_HWIL_RX")
+        TARGET="MODALAI_M0193_HWIL_RX_via_UART"
+        FW="ModalAI_M0184_TX-$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION.$MODALAI_VERSION.bin"
         ;;
     "r9mini"|"R9Mini")
         # R9Mini support from us stops at fw version 3.2.1... last version from ModalAI was 3.2.1.3

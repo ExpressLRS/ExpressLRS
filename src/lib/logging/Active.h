@@ -35,6 +35,8 @@
 
 #ifndef ACTIVE_DEBUG_H
 #define ACTIVE_DEBUG_H
+
+#define LQ_CH 2
    
 void ACTIVEInit( void );                            
 void ACTIVEValue( int channel, int value );         

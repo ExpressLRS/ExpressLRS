@@ -705,6 +705,9 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     }
 
     CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
+    #if defined(DEBUG_ACTIVE)
+    ACTIVEValue(LQ_CH, uplinkLQ);
+    #endif
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
     {
@@ -1104,12 +1107,12 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     bool modelMatched = otaSync->UID5 == (UID[5] ^ modelXor);
     DBGVLN("MM %u=%u %d", otaSync->UID5, UID[5], modelMatched);
 
+    DBGLN("%u:%u | %u:%u", OtaNonce, otaSync->nonce, otaSync->fhssIndex, FHSSgetCurrIndex());
     if (connectionState == disconnected
         || OtaNonce != otaSync->nonce
-        || FHSSgetCurrIndex() != otaSync->fhssIndex
+        || (FHSSgetCurrIndex() != otaSync->fhssIndex && !(FHSSgetCurrIndex() - otaSync->fhssIndex)) // If packet is processed late, FHSS will have advanced already and tentative connection will start
         || connectionHasModelMatch != modelMatched)
     {
-        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
         FHSSsetCurrIndex(otaSync->fhssIndex);
         OtaNonce = otaSync->nonce;
         TentativeConnection(now);

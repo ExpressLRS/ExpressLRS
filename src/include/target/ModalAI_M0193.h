@@ -9,3 +9,5 @@
 #ifndef DEVICE_NAME
     #define DEVICE_NAME "ModalAI M0193"
 #endif
+
+#define M0139_PA // 
