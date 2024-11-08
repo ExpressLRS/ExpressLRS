@@ -48,8 +48,10 @@
 // default value 0 means direct!
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
+#define POWER_OUTPUT_VALUES_COUNT hardware_int(HARDWARE_power_values_count)
 #define POWER_OUTPUT_VALUES2 hardware_i16_array(HARDWARE_power_values2)
 #define POWER_OUTPUT_VALUES_DUAL hardware_i16_array(HARDWARE_power_values_dual)
+#define POWER_OUTPUT_VALUES_DUAL_COUNT hardware_int(HARDWARE_power_values_dual_count)
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
