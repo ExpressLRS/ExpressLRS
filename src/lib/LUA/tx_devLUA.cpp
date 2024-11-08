@@ -507,13 +507,9 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       if (BeaconEnabled) 
       {
-        #if (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
         msg = "Deactivating...";
-        rebootTime = millis() + 400;
-        #else
         BeaconEnabled = false;
-        msg = "Please reboot radio";
-        #endif
+        rebootTime = millis() + 400;
       }
       else
       {
