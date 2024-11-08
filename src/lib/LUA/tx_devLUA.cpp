@@ -20,9 +20,9 @@
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
-    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;" \
-    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;" \
-    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band"
+    "X100F;X150;" \
+    "50 2.4G;100F 2.4G;150 2.4G;250 2.4G;333F 2.4G;500 2.4G;DK250 2.4G;DK500 2.4G;K1000 2.4G;" \
+    "D50 Low;25 Low;50 Low;100 Low;100F Low;200 Low;200F Low;250 Low;K1000F Low"
 #elif defined(RADIO_SX128X)
 #define STR_LUA_PACKETRATES \
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \

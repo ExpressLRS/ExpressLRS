@@ -98,6 +98,21 @@ static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * con
     v7->boostChannel = v6->boostChannel;
 }
 
+static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * const v8)
+{
+    v8->rate = v7->rate;
+    v8->tlm = v7->tlm;
+    v8->power = v7->power;
+    v8->switchMode = v7->switchMode;
+    v8->boostChannel = v7->boostChannel;
+    v8->dynamicPower = v7->dynamicPower;
+    v8->modelMatch = v7->modelMatch;
+    v8->txAntenna = v7->txAntenna;
+    v8->ptrStartChannel = v7->ptrStartChannel;
+    v8->ptrEnableChannel = v7->ptrEnableChannel;
+    v8->linkMode = v7->linkMode;
+}
+
 TxConfig::TxConfig() :
     m_model(m_config.model_config)
 {
@@ -189,11 +204,7 @@ void TxConfig::Load()
         itoa(i, model+5, 10);
         if (nvs_get_u32(handle, model, &value) == ESP_OK)
         {
-            if (version >= 7)
-            {
-                U32_to_Model(value, &m_config.model_config[i]);
-            }
-            else
+            if (version == 6)
             {
                 // Upgrade v6 to v7 directly writing to nvs instead of calling Commit() over and over
                 v6_model_config_t v6model;
@@ -201,6 +212,21 @@ void TxConfig::Load()
                 model_config_t * const newModel = &m_config.model_config[i];
                 ModelV6toV7(&v6model, newModel);
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
+            }
+            
+            if (version <= 7)
+            {
+                // Upgrade v7 to v8 directly writing to nvs instead of calling Commit() over and over
+                v7_model_config_t v7model;
+                U32_to_Model(value, &v7model);
+                model_config_t * const newModel = &m_config.model_config[i];
+                ModelV7toV8(&v7model, newModel);
+                nvs_set_u32(handle, model, Model_to_U32(newModel));
+            }
+
+            if (version == TX_CONFIG_VERSION)
+            {
+                U32_to_Model(value, &m_config.model_config[i]);
             }
         }
     } // for each model
@@ -244,6 +270,12 @@ void TxConfig::Load()
     if (version == 6)
     {
         UpgradeEepromV6ToV7();
+        version = 7;
+    }
+
+    if (version == 7)
+    {
+        UpgradeEepromV7ToV8();
     }
 }
 
@@ -294,6 +326,25 @@ void TxConfig::UpgradeEepromV6ToV7()
 
     // Full Commit now
     m_config.version = 7U | TX_CONFIG_MAGIC;
+    Commit();
+}
+
+void TxConfig::UpgradeEepromV7ToV8()
+{
+    v7_tx_config_t v7Config;
+
+    // Populate the prev version struct from eeprom
+    m_eeprom->Get(0, v7Config);
+
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
+    {
+        ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
+    }
+
+    m_modified = ALL_CHANGED;
+
+    // Full Commit now
+    m_config.version = 8U | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif
@@ -655,11 +706,11 @@ TxConfig::SetDefaults(bool commit)
     {
         SetModelId(i);
         #if defined(RADIO_SX127X)
-            SetRate(enumRatetoIndex(RATE_LORA_200HZ));
+            SetRate(enumRatetoIndex(RATE_LORA_900_200HZ));
         #elif defined(RADIO_LR1121)
-            SetRate(enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_250HZ : RATE_LORA_200HZ));
+            SetRate(enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ));
         #elif defined(RADIO_SX128X)
-            SetRate(enumRatetoIndex(RATE_LORA_250HZ));
+            SetRate(enumRatetoIndex(RATE_LORA_2G4_250HZ));
         #endif
         SetPower(POWERMGNT::getDefaultPower());
 #if defined(PLATFORM_ESP32)
@@ -746,6 +797,7 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
+    UpgradeEepromV9();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -906,6 +958,22 @@ void RxConfig::UpgradeEepromV7V8()
                 m_config.pwmChannels[ch].val.mode += 1;
         }
 #endif
+    }
+}
+
+// ========================================================
+// V9 Upgrade
+
+void RxConfig::UpgradeEepromV9()
+{
+    v9_rx_config_t v9Config;
+    m_eeprom->Get(0, v9Config);
+
+    if ((v9Config.version & ~CONFIG_MAGIC_MASK) == 9)
+    {
+        m_config.powerOnCounter = v9Config.powerOnCounter;
+        m_config.forceTlmOff = v9Config.forceTlmOff;
+        m_config.rateInitialIdx = v9Config.rateInitialIdx;
     }
 }
 

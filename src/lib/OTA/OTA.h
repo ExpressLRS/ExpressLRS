@@ -26,10 +26,10 @@
 typedef struct {
     uint8_t fhssIndex;
     uint8_t nonce;
+    uint8_t rfRateEnum;
     uint8_t switchEncMode:1,
             newTlmRatio:3,
-            rateIndex:4;
-    uint8_t UID3;
+            free:4;
     uint8_t UID4;
     uint8_t UID5;
 } PACKED OTA_Sync_s;
