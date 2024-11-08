@@ -1,4 +1,4 @@
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
+#if !defined(UNIT_TEST)
 
 #include "EspFlashStream.h"
 

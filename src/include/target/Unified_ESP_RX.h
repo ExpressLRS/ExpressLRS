@@ -1,4 +1,4 @@
-#define TARGET_UNIFIED_RX
+#define HAS_BARO
 
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
@@ -45,11 +45,6 @@
 #define MaxPower (PowerLevels_e)hardware_int(HARDWARE_power_max)
 #define DefaultPower (PowerLevels_e)hardware_int(HARDWARE_power_default)
 
-#define USE_SKY85321
-#define GPIO_PIN_PA_PDET hardware_pin(HARDWARE_power_pdet)
-#define SKY85321_PDET_INTERCEPT hardware_float(HARDWARE_power_pdet_intercept)
-#define SKY85321_PDET_SLOPE hardware_float(HARDWARE_power_pdet_slope)
-
 // default value 0 means direct!
 #define POWER_OUTPUT_DACWRITE (hardware_int(HARDWARE_power_control)==3)
 #define POWER_OUTPUT_VALUES hardware_i16_array(HARDWARE_power_values)
@@ -58,20 +53,17 @@
 
 // Input
 #define GPIO_PIN_BUTTON hardware_pin(HARDWARE_button)
+#define GPIO_PIN_BUTTON2 UNDEF_PIN
 
 // Lighting
-#define GPIO_PIN_LED hardware_pin(HARDWARE_led)
-#define GPIO_PIN_LED_BLUE hardware_pin(HARDWARE_led_blue)
-#define GPIO_LED_BLUE_INVERTED hardware_pin(HARDWARE_led_blue_invert)
-#define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
-#define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
-#define GPIO_PIN_LED_GREEN_RED hardware_pin(HARDWARE_led_green_red)
-#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
+#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led)
 #define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
-#define GPIO_PIN_LED_RED_GREEN hardware_pin(HARDWARE_led_red_green)
+#define GPIO_PIN_LED_BLUE UNDEF_PIN
+#define GPIO_LED_BLUE_INVERTED false
+#define GPIO_PIN_LED_GREEN UNDEF_PIN
+#define GPIO_LED_GREEN_INVERTED false
+
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
-// #define GPIO_PIN_LED_WS2812_FAST // stm32
-#define WS2812_IS_GRB
 #define OPT_WS2812_IS_GRB hardware_flag(HARDWARE_led_rgb_isgrb)
 #define WS2812_STATUS_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_status)
 #define WS2812_STATUS_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_status_count)
