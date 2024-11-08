@@ -582,6 +582,10 @@ static void recalculatePacketRateOptions(int minInterval)
         uint8_t rate = i;
         rate = RATE_MAX - 1 - rate;
         bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
+
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        rateAllowed &= isSupportedRFRate(rate);
+
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {

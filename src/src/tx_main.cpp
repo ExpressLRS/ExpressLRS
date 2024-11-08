@@ -97,24 +97,17 @@ uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
-#ifdef HAS_LED
   {&LED_device, 0},
-#endif
-#ifdef HAS_RGB
   {&RGB_device, 0},
-#endif
   {&LUA_device, 1},
+  {&WIFI_device, 0},
+  {&Button_device, 0},
+#if defined(PLATFORM_ESP32)
 #if defined(USE_TX_BACKPACK)
   {&Backpack_device, 0},
 #endif
 #ifdef HAS_BLE
   {&BLE_device, 0},
-#endif
-#ifdef HAS_WIFI
-  {&WIFI_device, 0},
-#endif
-#ifdef HAS_BUTTON
-  {&Button_device, 0},
 #endif
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
@@ -125,7 +118,6 @@ device_affinity_t ui_devices[] = {
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
-#if defined(GPIO_PIN_PA_PDET)
   {&PDET_device, 0},
 #endif
   {&VTX_device, 0}
@@ -342,7 +334,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
-    && (invertIQ == Radio.IQinverted)
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
@@ -534,7 +525,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
+    if (firmwareOptions.is_airport)
+    {
+      OtaPackAirportData(&otaPkt, &apInputBuffer);
+    }
+    else if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
@@ -993,8 +988,8 @@ static void ExitBindingMode()
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
-
-  SetRFLinkRate(config.GetRate()); //return to original rate
+  
+  UARTconnected();
 
   DBGLN("Exiting binding mode");
 }
@@ -1246,7 +1241,6 @@ static void setupTarget()
 
 bool setupHardwareFromOptions()
 {
-#if defined(TARGET_UNIFIED_TX)
   if (!options_init())
   {
     // Register the WiFi with the framework
@@ -1259,10 +1253,6 @@ bool setupHardwareFromOptions()
     connectionState = hardwareUndefined;
     return false;
   }
-#else
-  options_init();
-#endif
-
   return true;
 }
 
@@ -1377,10 +1367,8 @@ void setup()
     TxBackpack = new NullStream();
   }
 
-#if defined(HAS_BUTTON)
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
   registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
-#endif
 
   devicesStart();
 
