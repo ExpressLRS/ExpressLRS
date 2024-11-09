@@ -690,20 +690,20 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
     return -(int8_t)(status[1] / 2);
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
+void ICACHE_RAM_ATTR LR1121Driver::CheckForSecondPacket()
 {
     SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    bool gotRadio[2] = {false, false}; // one-radio default.
     uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
     // processingRadio always passed the sanity check here
     gotRadio[processingRadioIdx] = true;
+    gotRadio[secondRadioIdx] = false;
+
+    hasSecondRadioGotData = false;
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        bool isSecondRadioGotData = false;
-
         uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
@@ -720,44 +720,42 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             inbuf[0] = RxStartBufferPointer;
             inbuf[1] = PayloadLengthRX;
 
-            WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[PayloadLengthRX + 1] = {0};
+            WORD_ALIGNED_ATTR uint8_t TempRXdataBufferSecond[PayloadLengthRX + 1] = {0};
 
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
-            hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
+            hal.ReadCommand(TempRXdataBufferSecond, sizeof(TempRXdataBufferSecond), radio[secondRadioIdx]);
 
             if (useFEC)
             {
-                uint8_t decodedRXdataBuffer_second[8];
-                FECDecode(RXdataBuffer_second + 1, decodedRXdataBuffer_second);
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, decodedRXdataBuffer_second, 8) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
+                FECDecode(TempRXdataBufferSecond + 1, RXdataBufferSecond);
             }
             else
             {
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
+                memcpy(RXdataBufferSecond, TempRXdataBufferSecond + 1, PayloadLength);
             }
-        }
 
-        // second radio received the same packet to the processing radio
-        gotRadio[secondRadioIdx] = isSecondRadioGotData;
-        #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        if(!isSecondRadioGotData)
-        {
-            instance->rxSignalStats[secondRadioIdx].fail_count++;
+            hasSecondRadioGotData = true;
         }
-        #endif
     }
+}
+
+void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
+{
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+    uint8_t secondRadioIdx = !processingRadioIdx;
 
     uint8_t status[3];
     int8_t rssi[2];
     int8_t snr[2];
+
+    gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    if(!hasSecondRadioGotData)
+    {
+        instance->rxSignalStats[secondRadioIdx].fail_count++;
+    }
+    #endif
 
     // Get both radios ready at the same time to return packet stats
     hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio | (gotRadio[secondRadioIdx] ? radio[secondRadioIdx] : 0));

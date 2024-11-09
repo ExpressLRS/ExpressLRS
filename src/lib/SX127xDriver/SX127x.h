@@ -72,6 +72,7 @@ public:
     int8_t GetLastPacketSNRRaw(SX12XX_Radio_Number_t radioNumber);
     int8_t GetCurrRSSI(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
+    void CheckForSecondPacket();
 
     ////////////Non-blocking TX related Functions/////////////////
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
