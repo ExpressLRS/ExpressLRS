@@ -6,10 +6,6 @@
 #include "devAnalogVbat.h"
 #endif
 
-#if defined(TARGET_UNIFIED_RX)
-    #define HAS_BARO
-#endif
-
 #if defined(HAS_BARO)
 
 enum eBaroReadState : uint8_t

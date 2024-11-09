@@ -67,6 +67,7 @@ void BluetoothJoystickBegin()
 
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);
+    gamepadConfig->setControllerType(CONTROLLER_TYPE_JOYSTICK); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
 
     DBGLN("Starting BLE Joystick!");
     bleGamepad->begin(gamepadConfig);

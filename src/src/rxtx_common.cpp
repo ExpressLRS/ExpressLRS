@@ -4,10 +4,7 @@
 #include "logging.h"
 
 #include <functional>
-
-#if defined(USE_I2C)
 #include <Wire.h>
-#endif
 
 static const int maxDeferredFunctions = 3;
 
@@ -27,11 +24,11 @@ boolean i2c_enabled = false;
 
 static void setupWire()
 {
-#if defined(USE_I2C)
+#if defined(PLATFORM_ESP32)
     int gpio_scl = GPIO_PIN_SCL;
     int gpio_sda = GPIO_PIN_SDA;
 
-#if defined(TARGET_RX) && defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
