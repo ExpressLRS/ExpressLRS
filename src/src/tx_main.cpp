@@ -311,8 +311,9 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   syncPtr->fhssIndex = FHSSgetCurrIndex();
   syncPtr->nonce = OtaNonce;
   syncPtr->rfRateEnum = get_elrs_airRateConfig(Index)->enum_rate;
-  syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
   syncPtr->switchEncMode = SwitchEncMode;
+  syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
+  syncPtr->otaProtocol = config.GetLinkMode(); // Normal = 0, MAVLink = 1
   syncPtr->UID4 = UID[4];
   syncPtr->UID5 = UID[5];
 

@@ -1064,6 +1064,24 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
+    if (otaSync->otaProtocol) // Normal = 0, MAVLink = 1
+    {
+        config.SetSerialProtocol(PROTOCOL_MAVLINK);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        config.SetSerialProtocol(PROTOCOL_CRSF); // default back to CRSF
+
+    }
+
+    // Check if otaProtocol has been updated.
+    if (config.IsModified())
+    {
+        deferExecutionMillis(100, [](){
+            reconfigureSerial();
+        });
+    }
+
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);
     updateSwitchModePendingFromOta(otaSync->switchEncMode);
