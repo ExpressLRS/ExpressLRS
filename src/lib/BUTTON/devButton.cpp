@@ -1,26 +1,13 @@
 #include "devButton.h"
 
-#if defined(GPIO_PIN_BUTTON)
 #include "logging.h"
 #include "button.h"
 #include "config.h"
 #include "helpers.h"
 #include "handset.h"
 
-#ifndef GPIO_BUTTON_INVERTED
-#define GPIO_BUTTON_INVERTED false
-#endif
-#ifndef GPIO_BUTTON2_INVERTED
-#define GPIO_BUTTON2_INVERTED false
-#endif
-#if !defined(GPIO_PIN_BUTTON2)
-#define GPIO_PIN_BUTTON2 UNDEF_PIN
-#endif
-
 static Button button1;
-#if defined(GPIO_PIN_BUTTON2)
 static Button button2;
-#endif
 
 // only check every second if the device is in-use, i.e. RX connected, or TX is armed
 static constexpr int MS_IN_USE = 1000;
@@ -74,57 +61,64 @@ static void handlePress(uint8_t button, bool longPress, uint8_t count)
 
 static int start()
 {
-    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    if (GPIO_PIN_BUTTON == UNDEF_PIN && GPIO_PIN_BUTTON2 == UNDEF_PIN)
     {
         return DURATION_NEVER;
     }
 
     if (GPIO_PIN_BUTTON != UNDEF_PIN)
     {
-        button1.init(GPIO_PIN_BUTTON, GPIO_BUTTON_INVERTED);
+        button1.init(GPIO_PIN_BUTTON);
         button1.OnShortPress = [](){ handlePress(0, false, button1.getCount()); };
         button1.OnLongPress = [](){ handlePress(0, true, button1.getLongCount()+1); };
     }
-#if defined(TARGET_TX)
     if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {
-        button2.init(GPIO_PIN_BUTTON2, GPIO_BUTTON_INVERTED);
+        button2.init(GPIO_PIN_BUTTON2);
         button2.OnShortPress = [](){ handlePress(1, false, button2.getCount()); };
         button2.OnLongPress = [](){ handlePress(1, true, button2.getLongCount()+1); };
     }
-#endif
 
     return DURATION_IMMEDIATELY;
 }
 
-static int timeout()
+static int event()
 {
-    if (GPIO_PIN_BUTTON == UNDEF_PIN)
+    if (GPIO_PIN_BUTTON == UNDEF_PIN && GPIO_PIN_BUTTON2 == UNDEF_PIN)
     {
         return DURATION_NEVER;
     }
 #if defined(TARGET_TX)
     if (handset->IsArmed())
-        return MS_IN_USE;
+    {
+        return DURATION_NEVER;
+    }
 #else
     if (connectionState == connected)
-        return MS_IN_USE;
-#endif
-
-#if defined(GPIO_PIN_BUTTON2)
-    if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
     {
-        button2.update();
+        return DURATION_NEVER;
     }
 #endif
-    return button1.update();
+    return DURATION_IMMEDIATELY;
+}
+
+static int timeout()
+{
+    int timeout = DURATION_NEVER;
+    if (GPIO_PIN_BUTTON != UNDEF_PIN)
+    {
+        timeout = button1.update();
+    }
+    if (GPIO_PIN_BUTTON2 != UNDEF_PIN)
+    {
+        timeout = button2.update();
+    }
+    return timeout;
 }
 
 device_t Button_device = {
     .initialize = nullptr,
     .start = start,
-    .event = nullptr,
+    .event = event,
     .timeout = timeout
 };
-
-#endif

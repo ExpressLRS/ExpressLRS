@@ -71,8 +71,8 @@
 
 typedef enum
 {
-    LR1121_LORA_PACKET_VARIABLE_LENGTH = 0x00, //!< The packet is on variable size, header included
-    LR1121_LORA_PACKET_FIXED_LENGTH = 0x01,    //!< The packet is known on both sides, no header included in the packet
+    LR1121_LORA_PACKET_VARIABLE_LENGTH = 0x00, //!< The packet length is variable size, header included in the packet
+    LR1121_LORA_PACKET_FIXED_LENGTH = 0x01,    //!< The packet length is known on both sides, no header included in the packet
     LR1121_LORA_PACKET_EXPLICIT = LR1121_LORA_PACKET_VARIABLE_LENGTH,
     LR1121_LORA_PACKET_IMPLICIT = LR1121_LORA_PACKET_FIXED_LENGTH,
 } lr11xx_RadioLoRaPacketLengthsModes_t;
