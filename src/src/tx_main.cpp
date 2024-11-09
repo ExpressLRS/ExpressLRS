@@ -241,7 +241,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
             if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
             {
                 TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES, 
-                    tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.payload));
+                    tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.ul_link_stats.payload));
                 packageIndexRadio1 = 0xFF;
                 packageIndexRadio2 = 0xFF;
             }
