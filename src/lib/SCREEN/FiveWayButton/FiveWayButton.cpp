@@ -1,6 +1,6 @@
-#ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
 
+#if defined(PLATFORM_ESP32)
 uint16_t FiveWayButton::joyAdcValues[] = {0};
 
 /**
@@ -144,5 +144,4 @@ void FiveWayButton::update(int *keyValue, bool *keyLongPressed)
 
     keyInProcess = newKey;
 }
-
 #endif
