@@ -1066,7 +1066,6 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
         config.SetSerialProtocol(PROTOCOL_CRSF); // default back to CRSF
-
     }
 
     // Check if otaProtocol has been updated.
