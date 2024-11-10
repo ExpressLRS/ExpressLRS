@@ -1,16 +1,10 @@
-#ifdef HAS_GSENSOR
+#include "targets.h"
+
 #include "gsensor.h"
 #include "logging.h"
 
-#ifdef HAS_GSENSOR_STK8xxx
 #include "stk8baxx.h"
-#ifndef OPT_HAS_GSENSOR_STK8xxx
-#define OPT_HAS_GSENSOR_STK8xxx true
-#endif
 STK8xxx stk8xxx;
-#else
-#define OPT_HAS_GSENSOR_STK8xxx false
-#endif
 
 int gensor_status = GSENSOR_STATUS_FAIL;
 
@@ -208,5 +202,3 @@ bool Gsensor::isFlipped()
 {
     return is_flipped;
 }
-
-#endif

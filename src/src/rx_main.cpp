@@ -103,9 +103,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
-#endif
 #endif
 };
 
@@ -1063,6 +1061,11 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('s');
 #endif
+
+    if (isDualRadio())
+    {
+        config.SetAntennaMode(otaSync->geminiMode);
+    }
 
     // Will change the packet air rate in loop() if this changes
     ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);

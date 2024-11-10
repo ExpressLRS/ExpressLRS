@@ -1,4 +1,4 @@
-#ifdef HAS_TFT_SCREEN
+#if defined(PLATFORM_ESP32)
 
 #include <Arduino_GFX_Library.h>
 #include "Pragma_Sans36pt7b.h"
@@ -125,12 +125,12 @@ static Arduino_GFX *gfx;
 
 void TFTDisplay::init()
 {
-    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_TFT_BL, OUTPUT);
+        pinMode(GPIO_PIN_SCREEN_BL, OUTPUT);
     }
-    bus = new Arduino_ESP32SPI(GPIO_PIN_TFT_DC, GPIO_PIN_TFT_CS, GPIO_PIN_TFT_SCLK, GPIO_PIN_TFT_MOSI, GFX_NOT_DEFINED, HSPI);
-    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, OPT_OLED_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+    bus = new Arduino_ESP32SPI(GPIO_PIN_SCREEN_DC, GPIO_PIN_SCREEN_CS, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_MOSI, GFX_NOT_DEFINED, HSPI);
+    gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, OPT_SCREEN_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
 
     gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
@@ -138,9 +138,9 @@ void TFTDisplay::init()
 
 void TFTDisplay::doScreenBackLight(screen_backlight_t state)
 {
-    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
     {
-        digitalWrite(GPIO_PIN_TFT_BL, state);
+        digitalWrite(GPIO_PIN_SCREEN_BL, state);
     }
 }
 
