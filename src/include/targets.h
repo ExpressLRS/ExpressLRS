@@ -29,12 +29,6 @@
  * Features
  * define features based on pins before defining pins as UNDEF_PIN
  */
-#if defined(GPIO_PIN_FAN_EN)
-#define HAS_FAN
-#endif
-#if defined(USE_OLED_I2C) || defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(HAS_TFT_SCREEN)
-#define HAS_SCREEN
-#endif
 #if defined(GPIO_PIN_SPI_VTX_NSS)
 #if !defined(HAS_VTX_SPI)
 #define HAS_VTX_SPI
@@ -43,25 +37,6 @@
 #endif
 #else
 #define OPT_HAS_VTX_SPI false
-#endif
-
-#ifndef USE_TX_BACKPACK
-#define OPT_USE_TX_BACKPACK false
-#elif !defined(OPT_USE_TX_BACKPACK)
-#define OPT_USE_TX_BACKPACK true
-#endif
-
-#ifndef HAS_THERMAL
-#define OPT_HAS_THERMAL false
-#define OPT_HAS_THERMAL_LM75A false
-#elif !defined(OPT_HAS_THERMAL)
-#define OPT_HAS_THERMAL true
-#endif
-
-#ifndef HAS_GSENSOR
-#define OPT_HAS_GSENSOR false
-#elif !defined(OPT_HAS_GSENSOR)
-#define OPT_HAS_GSENSOR true
 #endif
 
 #if defined(GPIO_PIN_SDA) && defined(GPIO_PIN_SCL)
@@ -134,26 +109,8 @@
 #ifndef GPIO_PIN_RFamp_APC2
 #define GPIO_PIN_RFamp_APC2 UNDEF_PIN
 #endif
-#ifndef POWER_OUTPUT_FIXED
-#define POWER_OUTPUT_FIXED -99
-#endif
-#ifndef GPIO_PIN_FAN_EN
-#define GPIO_PIN_FAN_EN UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_FAN_PWM
-#define GPIO_PIN_FAN_PWM UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_FAN_TACHO
-#define GPIO_PIN_FAN_TACHO UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_MOSI
-#define GPIO_PIN_OLED_MOSI UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_CS
-#define GPIO_PIN_OLED_CS UNDEF_PIN
-#endif
-#ifndef GPIO_PIN_OLED_DC
-#define GPIO_PIN_OLED_DC UNDEF_PIN
+#ifndef POWER_OUTPUT_VALUES2
+#define POWER_OUTPUT_VALUES2 nullptr
 #endif
 
 
@@ -203,16 +160,6 @@
 #define GPIO_PIN_DEBUG_TX       UNDEF_PIN
 #endif
 #endif
-#if !defined(TARGET_UNIFIED_TX)
-#if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE) || defined(USE_TX_BACKPACK)
-#if GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_TX || GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_DEBUG_RX
-#error "Cannot debug out the RC signal port!"
-#endif
-#if !defined(GPIO_PIN_DEBUG_RX) || !defined(GPIO_PIN_DEBUG_TX) || GPIO_PIN_DEBUG_RX == UNDEF_PIN || GPIO_PIN_DEBUG_TX == UNDEF_PIN
-#error "When using DEBUG_LOG, DEBUG_LOG_VERBOSE or USE_TX_BACKPACK you must define both GPIO_PIN_DEBUG_RX and GPIO_PIN_DEBUG_TX"
-#endif
-#endif
-#endif
 #else // TARGET_RX
 #ifndef GPIO_PIN_RCSIGNAL_TX_SBUS
 #define GPIO_PIN_RCSIGNAL_TX_SBUS UNDEF_PIN
@@ -237,7 +184,7 @@
 
 #if defined(DEBUG_CRSF_NO_OUTPUT)
 #define OPT_CRSF_RCVR_NO_SERIAL true
-#elif defined(TARGET_UNIFIED_RX)
+#elif defined(TARGET_RX)
 extern bool pwmSerialDefined;
 
 #define OPT_CRSF_RCVR_NO_SERIAL (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN && !pwmSerialDefined)
@@ -276,7 +223,6 @@ extern bool pwmSerialDefined;
 #error "Either RADIO_SX127X, RADIO_LR1121 or RADIO_SX128X must be defined!"
 #endif
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 #if defined(PLATFORM_ESP32)
 #include <soc/uart_pins.h>
 #endif
@@ -287,4 +233,3 @@ extern bool pwmSerialDefined;
 #define U0TXD_GPIO_NUM (1)
 #endif
 #include "hardware.h"
-#endif

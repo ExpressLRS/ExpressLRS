@@ -11,16 +11,23 @@
 
 #include "devHandset.h"
 #include "devLED.h"
-#include "devScreen.h"
-#include "devBLE.h"
 #include "devLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
+#if defined(PLATFORM_ESP32)
+#include "devScreen.h"
+#include "devBLE.h"
 #include "devGsensor.h"
 #include "devThermal.h"
 #include "devPDET.h"
 #include "devBackpack.h"
+#else
+// Fake functions for 8285
+void checkBackpackUpdate() {}
+void sendCRSFTelemetryToBackpack(uint8_t *) {}
+void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
+#endif
 
 #include "MAVLink.h"
 
@@ -97,35 +104,17 @@ uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
-#ifdef HAS_LED
   {&LED_device, 0},
-#endif
-#ifdef HAS_RGB
   {&RGB_device, 0},
-#endif
   {&LUA_device, 1},
-#if defined(USE_TX_BACKPACK)
-  {&Backpack_device, 0},
-#endif
-#ifdef HAS_BLE
-  {&BLE_device, 0},
-#endif
-#ifdef HAS_WIFI
   {&WIFI_device, 0},
-#endif
-#ifdef HAS_BUTTON
   {&Button_device, 0},
-#endif
-#ifdef HAS_SCREEN
+#if defined(PLATFORM_ESP32)
+  {&Backpack_device, 0},
+  {&BLE_device, 0},
   {&Screen_device, 0},
-#endif
-#ifdef HAS_GSENSOR
   {&Gsensor_device, 0},
-#endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
-#endif
-#if defined(GPIO_PIN_PA_PDET)
   {&PDET_device, 0},
 #endif
   {&VTX_device, 0}
@@ -325,10 +314,10 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
 
   syncPtr->fhssIndex = FHSSgetCurrIndex();
   syncPtr->nonce = OtaNonce;
-  syncPtr->rateIndex = Index;
-  syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
+  syncPtr->rfRateEnum = get_elrs_airRateConfig(Index)->enum_rate;
   syncPtr->switchEncMode = SwitchEncMode;
-  syncPtr->UID3 = UID[3];
+  syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
+  syncPtr->geminiMode = isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI;
   syncPtr->UID4 = UID[4];
   syncPtr->UID5 = UID[5];
 
@@ -354,7 +343,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
-    && (invertIQ == Radio.IQinverted)
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
@@ -454,7 +442,7 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
 
 void injectBackpackPanTiltRollData(uint32_t const now)
 {
-#if !defined(CRITICAL_FLASH)
+#if defined(PLATFORM_ESP32)
   // Do not override channels if the backpack is NOT communicating or PanTiltRoll is disabled
   if (config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
   {
@@ -546,7 +534,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
   {
-    if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
+    if (firmwareOptions.is_airport)
+    {
+      OtaPackAirportData(&otaPkt, &apInputBuffer);
+    }
+    else if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_MSPDATA;
       if (OtaIsFullRes)
@@ -1003,8 +995,8 @@ static void ExitBindingMode()
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
-
-  SetRFLinkRate(config.GetRate()); //return to original rate
+  
+  UARTconnected();
 
   DBGLN("Exiting binding mode");
 }
@@ -1017,7 +1009,7 @@ void EnterBindingModeSafely()
 
 void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 {
-#if !defined(CRITICAL_FLASH)
+#if defined(PLATFORM_ESP32)
   // Inspect packet for ELRS specific opcodes
   if (packet->function == MSP_ELRS_FUNC)
   {
@@ -1057,12 +1049,12 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
     ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
     lastPTRValidTimeMs = now;
   }
-#endif
   if (packet->function == MSP_ELRS_GET_BACKPACK_VERSION)
   {
     memset(backpackVersion, 0, sizeof(backpackVersion));
     memcpy(backpackVersion, packet->payload, min((size_t)packet->payloadSize, sizeof(backpackVersion)-1));
   }
+#endif
 }
 
 void ParseMSPData(uint8_t *buf, uint8_t size)
@@ -1256,7 +1248,6 @@ static void setupTarget()
 
 bool setupHardwareFromOptions()
 {
-#if defined(TARGET_UNIFIED_TX)
   if (!options_init())
   {
     // Register the WiFi with the framework
@@ -1269,10 +1260,6 @@ bool setupHardwareFromOptions()
     connectionState = hardwareUndefined;
     return false;
   }
-#else
-  options_init();
-#endif
-
   return true;
 }
 
@@ -1387,10 +1374,8 @@ void setup()
     TxBackpack = new NullStream();
   }
 
-#if defined(HAS_BUTTON)
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
   registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
-#endif
 
   devicesStart();
 

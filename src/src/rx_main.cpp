@@ -80,39 +80,29 @@ device_affinity_t ui_devices[] = {
   {&Serial0_device, 1},
 #if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
-#endif
-#if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
-#ifdef HAS_LED
   {&LED_device, 0},
-#endif
   {&LUA_device, 0},
-#ifdef HAS_RGB
   {&RGB_device, 0},
-#endif
-#ifdef HAS_WIFI
   {&WIFI_device, 0},
-#endif
-#ifdef HAS_BUTTON
   {&Button_device, 0},
-#endif
-#ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
-#endif
 #ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
 #endif
 #ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
 #endif
+#if defined(PLATFORM_ESP32)
 #ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#endif
+#ifdef HAS_VTX_SPI
+  {&VTxSPI_device, 0},
 #endif
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
 };
@@ -126,7 +116,6 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
-bool hardwareConfigured = true;
 
 #if defined(USE_MSP_WIFI)
 #include "crsf2msp.h"
@@ -239,7 +228,9 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
+#if defined(RADIO_LR1121)
 static uint32_t BindingRateChangeTime;
+#endif
 #define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
@@ -339,6 +330,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 {
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
+
     // Binding always uses invertIQ
     bool invertIQ = bindMode || (UID[5] & 0x01);
 
@@ -477,10 +469,17 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     alreadyTLMresp = true;
     otaPkt.std.type = PACKET_TYPE_TLM;
 
-    bool noAirportDataQueued = firmwareOptions.is_airport && apOutputBuffer.size() == 0;
-    bool noTlmQueued = !TelemetrySender.IsActive() && noAirportDataQueued;
+    bool tlmQueued = false;
+    if (firmwareOptions.is_airport)
+    {
+        tlmQueued = apInputBuffer.size() > 0;
+    }
+    else
+    {
+        tlmQueued = TelemetrySender.IsActive();
+    }
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || noTlmQueued)
+    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !tlmQueued)
     {
         OTA_LinkStats_s * ls;
         if (OtaIsFullRes)
@@ -516,7 +515,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
             NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
         }
 
-        if (TelemetrySender.IsActive())
+        if (firmwareOptions.is_airport)
+        {
+            OtaPackAirportData(&otaPkt, &apInputBuffer);
+        }
+        else if (TelemetrySender.IsActive())
         {
             if (OtaIsFullRes)
             {
@@ -531,10 +534,6 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
                     otaPkt.std.tlm_dl.payload,
                     sizeof(otaPkt.std.tlm_dl.payload));
             }
-        }
-        else if (firmwareOptions.is_airport)
-        {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
     }
 
@@ -1042,8 +1041,8 @@ static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode
 
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
-    // Verify the first two of three bytes of the binding ID, which should always match
-    if (otaSync->UID3 != UID[3] || otaSync->UID4 != UID[4])
+    // Verify the first byte of the binding ID, which should always match
+    if (otaSync->UID4 != UID[4])
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
@@ -1057,8 +1056,13 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
+    if (isDualRadio())
+    {
+        config.SetAntennaMode(otaSync->geminiMode);
+    }
+
     // Will change the packet air rate in loop() if this changes
-    ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
+    ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);
     updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
@@ -1330,7 +1334,7 @@ static void setupSerial()
         serialIO = new SerialNOOP();
         return;
     }
-    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF)
+    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || firmwareOptions.is_airport)
     {
         serialBaud = firmwareOptions.uart_baud;
     }
@@ -1629,6 +1633,14 @@ static void setupRadio()
     Radio.TXdoneCallback = &TXdoneISR;
 
     scanIndex = config.GetRateInitialIdx();
+    for (int i=0 ; i<RATE_MAX ; i++)
+    {
+        if (isSupportedRFRate(scanIndex))
+        {
+            break;
+        }
+        scanIndex = (scanIndex + 1) % RATE_MAX;
+    }
     SetRFLinkRate(scanIndex, false);
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
@@ -1669,6 +1681,13 @@ static void cycleRfMode(unsigned long now)
         scanIndex++;
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
+
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        while (!isSupportedRFRate(scanIndex % RATE_MAX))
+        {
+            DBGLN("Skip %u", get_elrs_airRateConfig(scanIndex % RATE_MAX)->interval);
+            scanIndex++;
+        }
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -1989,9 +2008,7 @@ void resetConfigAndReboot()
 
 void setup()
 {
-    #if defined(TARGET_UNIFIED_RX)
-    hardwareConfigured = options_init();
-    if (!hardwareConfigured)
+    if (!options_init())
     {
         // In the failure case we set the logging to the null logger so nothing crashes
         // if it decides to log something
@@ -2006,11 +2023,7 @@ void setup()
 
         connectionState = hardwareUndefined;
     }
-    #else
-    hardwareConfigured = options_init();
-    #endif
-
-    if (hardwareConfigured)
+    else
     {
         // default to CRSF protocol and the compiled baud rate
         serialBaud = firmwareOptions.uart_baud;
@@ -2024,16 +2037,9 @@ void setup()
         SerialLogger = new NullStream();
         #endif
 
-        // External EEPROM needs I2C setup so it can load config
-        // but configurable I2C pins for PWM RX needs config loaded first
-#if (defined(TARGET_USE_EEPROM) && defined(USE_I2C))
-        setupTarget();
-#endif
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
-#if !(defined(TARGET_USE_EEPROM) && defined(USE_I2C))
         setupTarget();
-#endif
 
         #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
@@ -2073,10 +2079,8 @@ void setup()
         }
     }
 
-#if defined(HAS_BUTTON)
     registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
-#endif
 
     devicesStart();
 
@@ -2124,8 +2128,14 @@ void loop()
         return;
     }
 
-    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)){ // forced change
+    if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)) // forced change
+    {
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
+        if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
+        {
+            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
+        }
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
