@@ -1798,7 +1798,7 @@ static void ExitBindingMode()
     // if we're in binding mode
     InBindingMode = false;
     DBGLN("Exiting binding mode");
-    devicesTriggerEvent(EVENT_BINDINGSTOP);
+    devicesTriggerEvent(DEVEVENT_BINDINGSTOP);
 }
 
 static void updateBindingMode(unsigned long now)
@@ -2011,7 +2011,7 @@ static void CheckConfigChangePending()
     {
         LostConnection(false);
         config.Commit();
-        devicesTriggerEvent(EVENT_CONFIGCHANGED);
+        devicesTriggerEvent(DEVEVENT_CONFIGCHANGED);
 #if defined(Regulatory_Domain_EU_CE_2400)
         LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif

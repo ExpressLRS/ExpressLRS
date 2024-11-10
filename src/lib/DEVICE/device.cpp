@@ -122,7 +122,7 @@ void devicesTriggerEvent(eEventType event)
 
 void devicesTriggerEvent()
 {
-    devicesTriggerEvent(EVENT_UNKNOWN);
+    devicesTriggerEvent(DEVEVENT_UNKNOWN);
 }
 
 bool devicesCheckEvent(eEventType event)

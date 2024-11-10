@@ -81,17 +81,17 @@ void devicesUpdate(unsigned long now);
  * @brief Event type bitmask, if multiple events should be triggered, triggers can be added together.
  */
 enum eEventType:uint32_t{
-  EVENT_UNKNOWN = 1,  // Event not yet classified
-  EVENT_FAILSAFE = 2, // Failsafe state changed
-  EVENT_CONFIGCHANGED = 4,// Configuration changed
-  EVENT_POWERCHANGED = 8, // Power changed
-  EVENT_ARMING = 16, //Arming state changed
-  EVENT_VTXSS = 32, //VTXSS Trigger
-  EVENT_VTXCONFIG = 64, //VTX config received over MSP
-  EVENT_BINDINGSTART = 128, //Binding started 
-  EVENT_BINDINGSTOP = 256, //Binding stopped
-  EVENT_BLUETOOTHENABLECHANGED = 512,
-  EVENT_PWMCONFIGCHANGED = 1024,
+  DEVEVENT_UNKNOWN = 1,  // Event not yet classified
+  DEVEVENT_FAILSAFE = 2, // Failsafe state changed
+  DEVEVENT_CONFIGCHANGED = 4,// Configuration changed
+  DEVEVENT_POWERCHANGED = 8, // Power changed
+  DEVEVENT_ARMING = 16, //Arming state changed
+  DEVEVENT_VTXSS = 32, //VTXSS Trigger
+  DEVEVENT_VTXCONFIG = 64, //VTX config received over MSP
+  DEVEVENT_BINDINGSTART = 128, //Binding started 
+  DEVEVENT_BINDINGSTOP = 256, //Binding stopped
+  DEVEVENT_BLUETOOTHENABLECHANGED = 512, // Bluetooth enable state changed
+  DEVEVENT_PWMCONFIGCHANGED = 1024, // PWM config changed
 };
 void devicesTriggerEvent();
 
