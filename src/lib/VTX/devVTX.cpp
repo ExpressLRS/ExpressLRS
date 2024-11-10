@@ -35,7 +35,7 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     sendEepromWrite = true;
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_VTXSS);
 }
 
 void VtxPitmodeSwitchUpdate()

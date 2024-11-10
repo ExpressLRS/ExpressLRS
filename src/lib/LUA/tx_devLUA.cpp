@@ -668,7 +668,7 @@ static void registerLuaParameters()
     #if defined(TARGET_TX_FM30)
     registerLUAParameter(&luaBluetoothTelem, [](struct luaPropertiesCommon *item, uint8_t arg) {
       digitalWrite(GPIO_PIN_BLUETOOTH_EN, !arg);
-      devicesTriggerEvent();
+      devicesTriggerEvent(EVENT_BLUETOOTHENABLECHANGED);
     });
     #endif
     if (!firmwareOptions.is_airport)

@@ -1278,7 +1278,7 @@ void MspReceiveComplete()
                         vtxSPIPowerIdx = MspData[10];
                         vtxSPIPitmode = MspData[11];
                     }
-                    devicesTriggerEvent();
+                    devicesTriggerEvent(EVENT_VTXCONFIG);
                     break;
 #if defined(PLATFORM_ESP32)
                 } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
@@ -1763,7 +1763,7 @@ static void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_BINDINGSTART);
 }
 
 static void ExitBindingMode()
@@ -1798,7 +1798,7 @@ static void ExitBindingMode()
     // if we're in binding mode
     InBindingMode = false;
     DBGLN("Exiting binding mode");
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_BINDINGSTOP);
 }
 
 static void updateBindingMode(unsigned long now)
@@ -2011,7 +2011,7 @@ static void CheckConfigChangePending()
     {
         LostConnection(false);
         config.Commit();
-        devicesTriggerEvent();
+        devicesTriggerEvent(EVENT_CONFIGCHANGED);
 #if defined(Regulatory_Domain_EU_CE_2400)
         LBTEnabled = (config.GetPower() > PWR_10mW);
 #endif

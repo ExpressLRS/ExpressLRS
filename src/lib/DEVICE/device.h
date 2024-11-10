@@ -76,7 +76,39 @@ void devicesUpdate(unsigned long now);
  * @brief Notify the device framework that an event has occurred and on the next call to
  * deviceUpdate() the event() function of the devices should be called.
  */
+
+/**
+ * @brief Event type bitmask, if multiple events should be triggered, triggers can be added together.
+ */
+enum eEventType:uint32_t{
+  EVENT_UNKNOWN = 1,  // Event not yet classified
+  EVENT_FAILSAFE = 2, // Failsafe state changed
+  EVENT_CONFIGCHANGED = 4,// Configuration changed
+  EVENT_POWERCHANGED = 8, // Power changed
+  EVENT_ARMING = 16, //Arming state changed
+  EVENT_VTXSS = 32, //VTXSS Trigger
+  EVENT_VTXCONFIG = 64, //VTX config received over MSP
+  EVENT_BINDINGSTART = 128, //Binding started 
+  EVENT_BINDINGSTOP = 256, //Binding stopped
+  EVENT_BLUETOOTHENABLECHANGED = 512,
+  EVENT_PWMCONFIGCHANGED = 1024,
+};
 void devicesTriggerEvent();
+
+/**
+ * @brief Notify the device framework that an event has occurred and on the next call to
+ * deviceUpdate() the event() function of the devices should be called.
+ * 
+ * @param event event type 
+ */
+void devicesTriggerEvent(eEventType event);
+
+/**
+ * @brief Check if event of given type(s) was triggered, for multiple event types use |
+ * 
+ * @param event event type
+ */
+bool devicesCheckEvent(eEventType event);
 
 /**
  * @brief Stop all the devices.

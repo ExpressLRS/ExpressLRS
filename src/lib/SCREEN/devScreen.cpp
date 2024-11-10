@@ -165,11 +165,11 @@ static void initialize()
 
     registerButtonFunction(ACTION_GOTO_VTX_BAND, [](){
         jumpToBandSelect = true;
-        devicesTriggerEvent();
+        devicesTriggerEvent(); //maybe should be VTXCONFIG
     });
     registerButtonFunction(ACTION_GOTO_VTX_CHANNEL, [](){
         jumpToChannelSelect = true;
-        devicesTriggerEvent();
+        devicesTriggerEvent(); //maybe should be VTXCONFIG
     });
 }
 

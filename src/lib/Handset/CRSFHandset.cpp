@@ -310,7 +310,7 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
     if (prev_AUX1 != ChannelData[4])
     {
         #if defined(PLATFORM_ESP32)
-        devicesTriggerEvent();
+        devicesTriggerEvent(EVENT_ARMING);
         #endif
     }
 }
