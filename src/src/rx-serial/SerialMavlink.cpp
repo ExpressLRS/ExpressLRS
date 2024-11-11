@@ -143,4 +143,13 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     }
 }
 
+void SerialMavlink::event()
+{
+    if(devicesCheckEvent(DEVEVENT_CONFIGCHANGED))
+    {
+        this_system_id = config.GetSourceSysId() ? config.GetSourceSysId() : 255;
+        target_system_id = config.GetTargetSysId() ? config.GetTargetSysId() : 1;
+    }
+}
+
 #endif // defined(TARGET_RX)
