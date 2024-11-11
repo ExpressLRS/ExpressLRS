@@ -1062,6 +1062,23 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
+    if (otaSync->otaProtocol == TX_MAVLINK_MODE)
+    {
+        config.SetSerialProtocol(PROTOCOL_MAVLINK);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        config.SetSerialProtocol(PROTOCOL_CRSF);
+    }
+
+    // Check if otaProtocol has been updated.
+    if (config.IsModified())
+    {
+        deferExecutionMillis(100, [](){
+            reconfigureSerial();
+        });
+    }
+
     if (isDualRadio())
     {
         config.SetAntennaMode(otaSync->geminiMode);
