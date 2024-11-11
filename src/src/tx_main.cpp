@@ -160,7 +160,7 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
   // -- rf_mode is updated when we change rates
   // -- downlink_Link_quality is updated before the LQ period is incremented
-  MspSender.ConfirmCurrentPayload(ls->mspConfirm);
+  MspSender.ConfirmCurrentPayload(ls->tlmConfirm);
 }
 
 bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
@@ -177,12 +177,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
     DBGLN("TLM crc error");
-    return false;
-  }
-
-  if (otaPktPtr->std.type != PACKET_TYPE_TLM)
-  {
-    DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
   }
 
@@ -209,43 +203,53 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     OTA_Packet8_s * const ota8 = (OTA_Packet8_s * const)otaPktPtr;
     uint8_t *telemPtr;
     uint8_t dataLen;
-    if (ota8->tlm_dl.containsLinkStats)
+    
+    switch (otaPktPtr->std.type)
     {
-      LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
-      telemPtr = ota8->tlm_dl.ul_link_stats.payload;
-      dataLen = sizeof(ota8->tlm_dl.ul_link_stats.payload);
+      case PACKET_TYPE_LINKSTATS:
+        LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
+        telemPtr = ota8->tlm_dl.ul_link_stats.payload;
+        dataLen = sizeof(ota8->tlm_dl.ul_link_stats.payload);
+        break;
+
+      case PACKET_TYPE_DATA:
+        if (firmwareOptions.is_airport)
+        {
+          OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
+        else
+        {
+          telemPtr = ota8->tlm_dl.payload;
+          dataLen = sizeof(ota8->tlm_dl.payload);
+          MspSender.ConfirmCurrentPayload(ota8->tlm_dl.tlmConfirm);
+        }
+        break;
     }
-    else
-    {
-      if (firmwareOptions.is_airport)
-      {
-        OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        return true;
-      }
-      telemPtr = ota8->tlm_dl.payload;
-      dataLen = sizeof(ota8->tlm_dl.payload);
-    }
+
     //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
     TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES, telemPtr, dataLen);
   }
   // Std res mode
   else
   {
-    switch (otaPktPtr->std.tlm_dl.type)
+    switch (otaPktPtr->std.type)
     {
-      case ELRS_TELEMETRY_TYPE_LINK:
+      case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
         break;
 
-      case ELRS_TELEMETRY_TYPE_DATA:
+      case PACKET_TYPE_DATA:
         if (firmwareOptions.is_airport)
         {
           OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-          return true;
         }
-        TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex & ELRS4_TELEMETRY_MAX_PACKAGES,
-          otaPktPtr->std.tlm_dl.payload,
-          sizeof(otaPktPtr->std.tlm_dl.payload));
+        else
+        {
+          MspSender.ConfirmCurrentPayload(otaPktPtr->std.tlm_dl.tlmConfirm);
+          TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex & ELRS4_TELEMETRY_MAX_PACKAGES,
+            otaPktPtr->std.tlm_dl.payload,
+            sizeof(otaPktPtr->std.tlm_dl.payload));
+        }
         break;
     }
   }
@@ -318,6 +322,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   syncPtr->switchEncMode = SwitchEncMode;
   syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
   syncPtr->geminiMode = isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI;
+  syncPtr->otaProtocol = config.GetLinkMode();
   syncPtr->UID4 = UID[4];
   syncPtr->UID5 = UID[5];
 
@@ -540,14 +545,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
     {
-      otaPkt.std.type = PACKET_TYPE_MSPDATA;
+      otaPkt.std.type = PACKET_TYPE_DATA;
       if (OtaIsFullRes)
       {
         otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
           otaPkt.full.msp_ul.payload,
           sizeof(otaPkt.full.msp_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.full.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.full.msp_ul.tlmConfirm = TelemetryReceiver.GetCurrentConfirm();
       }
       else
       {
@@ -555,7 +560,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
           otaPkt.std.msp_ul.payload,
           sizeof(otaPkt.std.msp_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.std.msp_ul.tlmFlag = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.std.msp_ul.tlmConfirm = TelemetryReceiver.GetCurrentConfirm();
       }
 
       // send channel data next so the channel messages also get sent during msp transmissions

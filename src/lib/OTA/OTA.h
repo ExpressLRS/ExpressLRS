@@ -14,11 +14,13 @@
 #define OTA8_PACKET_SIZE     13U
 #define OTA8_CRC_CALC_LEN    offsetof(OTA_Packet8_s, crc)
 
-// Packet header types (ota.std.type)
-#define PACKET_TYPE_RCDATA  0b00
-#define PACKET_TYPE_MSPDATA 0b01
-#define PACKET_TYPE_TLM     0b11
-#define PACKET_TYPE_SYNC    0b10
+// Packet header types
+#define PACKET_TYPE_DATA        0b01
+// Uplink only header types
+#define PACKET_TYPE_RCDATA      0b00
+#define PACKET_TYPE_SYNC        0b10
+// Downlink only header types
+#define PACKET_TYPE_LINKSTATS   0b00
 
 // Mask used to XOR the ModelId into the SYNC packet for ModelMatch
 #define MODELMATCH_MASK 0x3f
@@ -30,7 +32,8 @@ typedef struct {
     uint8_t switchEncMode:1,
             newTlmRatio:3,
             geminiMode:1,
-            free:3;
+            otaProtocol:2,
+            free:1;
     uint8_t UID4;
     uint8_t UID5;
 } PACKED OTA_Sync_s;
@@ -41,7 +44,7 @@ typedef struct {
     uint8_t uplink_RSSI_2:7,
             modelMatch:1;
     uint8_t lq:7,
-            mspConfirm:1;
+            tlmConfirm:1;
     int8_t SNR;
 } PACKED OTA_LinkStats_s;
 
@@ -68,15 +71,16 @@ typedef struct {
         /** PACKET_TYPE_MSP **/
         struct {
             uint8_t packageIndex:7,
-                    tlmFlag:1;
+                    tlmConfirm:1;
             uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
         OTA_Sync_s sync;
         /** PACKET_TYPE_TLM **/
         struct {
-            uint8_t type:ELRS4_TELEMETRY_SHIFT,
-                    packageIndex:(8 - ELRS4_TELEMETRY_SHIFT);
+            uint8_t free:1,
+                    tlmConfirm: 1,
+                    packageIndex:6;
             union {
                 struct {
                     OTA_LinkStats_s stats;
@@ -87,8 +91,8 @@ typedef struct {
         } tlm_dl; // PACKET_TYPE_TLM
         /** PACKET_TYPE_AIRPORT **/
         struct {
-            uint8_t type:ELRS4_TELEMETRY_SHIFT,
-                    count:(8 - ELRS4_TELEMETRY_SHIFT);
+            uint8_t free:2,
+                    count:6;
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
     };
@@ -119,7 +123,7 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     packageIndex: 5,
-                    tlmFlag: 1;
+                    tlmConfirm: 1;
             uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
@@ -131,7 +135,7 @@ typedef struct {
         /** PACKET_TYPE_TLM **/
         struct {
             uint8_t packetType: 2,
-                    containsLinkStats: 1,
+                    tlmConfirm: 1,
                     packageIndex: 5;
             union {
                 struct {
@@ -144,7 +148,7 @@ typedef struct {
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t packetType: 2,
-                    containsLinkStats: 1,
+                    free: 1,
                     count: 5;
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
