@@ -1057,7 +1057,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
-    if (otaSync->otaProtocol == OTA_PROTOCOL_MAVLINK)
+    if (otaSync->otaProtocol == TX_MAVLINK_MODE)
     {
         config.SetSerialProtocol(PROTOCOL_MAVLINK);
     }

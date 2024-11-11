@@ -241,15 +241,6 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_MSP_DISPLAYPORT,
 };
 
-// Order must match linkModeOpts[] in tx_devLUA.cpp
-enum eOTAProtocol : uint8_t
-{
-    OTA_PROTOCOL_NORMAL,
-    OTA_PROTOCOL_MAVLINK,
-    OTA_PROTOCOL_FREE_3,
-    OTA_PROTOCOL_FREE_4,
-};
-
 #if defined(PLATFORM_ESP32)
 enum eSerial1Protocol : uint8_t
 {
