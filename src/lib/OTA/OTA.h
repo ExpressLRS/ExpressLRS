@@ -30,7 +30,7 @@ typedef struct {
     uint8_t switchEncMode:1,
             newTlmRatio:3,
             geminiMode:1,
-            otaProtocol:2;
+            otaProtocol:2,
             free:1;
     uint8_t UID4;
     uint8_t UID5;
