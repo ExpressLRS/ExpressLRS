@@ -103,9 +103,7 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
 #endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
-#endif
 #endif
 };
 
@@ -1059,13 +1057,13 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
-    if (otaSync->otaProtocol) // Normal = 0, MAVLink = 1
+    if (otaSync->otaProtocol == OTA_PROTOCOL_MAVLINK)
     {
         config.SetSerialProtocol(PROTOCOL_MAVLINK);
     }
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
-        config.SetSerialProtocol(PROTOCOL_CRSF); // default back to CRSF
+        config.SetSerialProtocol(PROTOCOL_CRSF);
     }
 
     // Check if otaProtocol has been updated.
@@ -1074,6 +1072,11 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         deferExecutionMillis(100, [](){
             reconfigureSerial();
         });
+    }
+
+    if (isDualRadio())
+    {
+        config.SetAntennaMode(otaSync->geminiMode);
     }
 
     // Will change the packet air rate in loop() if this changes

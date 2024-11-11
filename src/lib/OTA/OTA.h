@@ -29,8 +29,9 @@ typedef struct {
     uint8_t rfRateEnum;
     uint8_t switchEncMode:1,
             newTlmRatio:3,
-            free:1,
-            otaProtocol:3;
+            geminiMode:1,
+            otaProtocol:2;
+            free:1;
     uint8_t UID4;
     uint8_t UID5;
 } PACKED OTA_Sync_s;
