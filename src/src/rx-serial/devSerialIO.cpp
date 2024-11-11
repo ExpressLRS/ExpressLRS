@@ -72,6 +72,7 @@ static int event(devserial_ctx_t *ctx)
         {
             (*(ctx->io))->setFailsafe(connectionState == disconnected);
         }
+        (*(ctx->io))->event();
     }
 
     ctx->lastConnectionState = connectionState;

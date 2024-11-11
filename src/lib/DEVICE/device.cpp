@@ -29,7 +29,7 @@ extern bool connectionHasModelMatch;
 static device_affinity_t *uiDevices;
 static uint8_t deviceCount;
 
-static bool eventFired[2] = {false, false};
+static uint32_t eventFired[2] = {0, 0};
 static connectionState_e lastConnectionState[2] = {disconnected, disconnected};
 static bool lastModelMatch[2] = {false, false};
 
@@ -110,14 +110,26 @@ void devicesStop()
     #endif
 }
 
-void devicesTriggerEvent()
+void devicesTriggerEvent(eEventType event)
 {
-    eventFired[0] = true;
-    eventFired[1] = true;
+    eventFired[0] |= event;
+    eventFired[1] |= event;
     #if MULTICORE
     // Release teh semaphore so the tasks on core 0 run now
     xSemaphoreGive(taskSemaphore);
     #endif
+}
+
+void devicesTriggerEvent()
+{
+    devicesTriggerEvent(DEVEVENT_UNKNOWN);
+}
+
+bool devicesCheckEvent(eEventType event)
+{
+    const int32_t core = CURRENT_CORE;
+    const int32_t coreMulti = (core == -1) ? 0 : core;
+    return (eventFired[coreMulti] & event) > 0;
 }
 
 static int _devicesUpdate(unsigned long now)
@@ -127,9 +139,6 @@ static int _devicesUpdate(unsigned long now)
 
     bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
     bool handleEvents = eventFired[coreMulti] || lastConnectionState[coreMulti] != connectionState || lastModelMatch[coreMulti] != newModelMatch;
-    eventFired[coreMulti] = false;
-    lastConnectionState[coreMulti] = connectionState;
-    lastModelMatch[coreMulti] = newModelMatch;
 
     for(size_t i=0 ; i<deviceCount ; i++)
     {
@@ -162,6 +171,9 @@ static int _devicesUpdate(unsigned long now)
             }
         }
     }
+    eventFired[coreMulti] = 0;
+    lastConnectionState[coreMulti] = connectionState;
+    lastModelMatch[coreMulti] = newModelMatch;
     return smallest_delay;
 }
 
