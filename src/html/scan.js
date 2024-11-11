@@ -25,7 +25,7 @@ function getPwmFormData() {
     const inChannel = inField.value;
     const mode = _(`pwm_${ch}_mode`).value;
     const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
-    const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
+    const stretch = _(`pwm_${ch}_stretch`).checked ? 1 : 0;
     const failsafeField = _(`pwm_${ch}_fs`);
     const failsafeModeField = _(`pwm_${ch}_fsmode`);
     let failsafe = failsafeField.value;
@@ -34,8 +34,8 @@ function getPwmFormData() {
     failsafeField.value = failsafe;
     let failsafeMode = failsafeModeField.value;
 
-    const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
-    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
+    const raw = (stretch << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
+    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} stretch=${stretch} raw=${raw}`);
     outData.push(raw);
     ++ch;
   }
@@ -77,15 +77,15 @@ function updatePwmSettings(arPwm) {
   var pinRxIndex = undefined;
   var pinTxIndex = undefined;
   var pinModes = []
-  // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
-  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
+  // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bits for stretch
+  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">Stretch?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
   arPwm.forEach((item, index) => {
     const failsafe = (item.config & 1023) + 988; // 10 bits
     const failsafeMode = (item.config >> 20) & 3; // 2 bits
     const ch = (item.config >> 10) & 15; // 4 bits
     const inv = (item.config >> 14) & 1;
     const mode = (item.config >> 15) & 15; // 4 bits
-    const narrow = (item.config >> 19) & 1;
+    const stretch = (item.config >> 19) & 1;
     const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (features & 16) {
@@ -144,7 +144,7 @@ function updatePwmSettings(arPwm) {
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
-            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
+            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_stretch"${(stretch) ? ' checked' : ''}></div></td>
             <td>${failsafeModeSelect}</td>
             <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6" class="pwmitm" /></div></td></tr>`);
     pinModes[index] = mode;
@@ -160,7 +160,7 @@ function updatePwmSettings(arPwm) {
   const setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
     _(`pwm_${index}_inv`).disabled = onoff;
-    _(`pwm_${index}_nar`).disabled = onoff;
+    _(`pwm_${index}_stretch`).disabled = onoff;
     _(`pwm_${index}_fs`).disabled = onoff;
     _(`pwm_${index}_fsmode`).disabled = onoff;
   }
