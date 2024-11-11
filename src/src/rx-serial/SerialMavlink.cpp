@@ -139,6 +139,12 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
     }
 }
 
+void SerialMavlink::event()
+{
+    this_system_id = config.GetSourceSysId() ? config.GetSourceSysId() : 255;
+    target_system_id = config.GetTargetSysId() ? config.GetTargetSysId() : 1;
+}
+
 void SerialMavlink::forwardMessage(const uint8_t *data)
 {
     mavlinkOutputBuffer.atomicPushBytes(data + 2, data[1]);
