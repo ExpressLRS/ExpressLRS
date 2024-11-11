@@ -79,7 +79,7 @@ typedef struct {
         struct {
             uint8_t free:1,
                     tlmConfirm: 1,
-                    packageIndex:(8 - ELRS4_TELEMETRY_SHIFT);
+                    packageIndex:6;
             union {
                 struct {
                     OTA_LinkStats_s stats;
@@ -91,7 +91,7 @@ typedef struct {
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t free:2,
-                    count:(8 - ELRS4_TELEMETRY_SHIFT);
+                    count:6;
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
     };
