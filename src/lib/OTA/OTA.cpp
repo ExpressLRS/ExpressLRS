@@ -573,7 +573,7 @@ void OtaUpdateSerializers(OtaSwitchMode_e const switchMode, uint8_t packetSize)
 
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *inputBuffer)
 {
-    otaPktPtr->std.type = PACKET_TYPE_TLM;
+    otaPktPtr->std.type = PACKET_TYPE_DATA;
 
     inputBuffer->lock();
     uint8_t count = inputBuffer->size();
@@ -588,7 +588,6 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *in
         count = std::min(count, (uint8_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
         otaPktPtr->std.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
-        otaPktPtr->std.airport.type = ELRS_TELEMETRY_TYPE_DATA;
     }
     inputBuffer->unlock();
 }
