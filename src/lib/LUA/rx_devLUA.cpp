@@ -376,7 +376,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     }
 
     // Trigger an event to update the related fields to represent the selected channel
-    devicesTriggerEvent(EVENT_PWMCONFIGCHANGED);
+    devicesTriggerEvent(DEVEVENT_PWMCONFIGCHANGED);
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
@@ -543,7 +543,7 @@ static void registerLuaParameters()
   });
   registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSourceSysId((uint8_t)arg);
-    devicesTriggerEvent(EVENT_CONFIGCHANGED);
+    devicesTriggerEvent(DEVEVENT_CONFIGCHANGED);
   });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)

@@ -1278,7 +1278,7 @@ void MspReceiveComplete()
                         vtxSPIPowerIdx = MspData[10];
                         vtxSPIPitmode = MspData[11];
                     }
-                    devicesTriggerEvent(EVENT_VTXCONFIG);
+                    devicesTriggerEvent(DEVEVENT_VTXCONFIG);
                     break;
 #if defined(PLATFORM_ESP32)
                 } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
@@ -1763,7 +1763,7 @@ static void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    devicesTriggerEvent(EVENT_BINDINGSTART);
+    devicesTriggerEvent(DEVEVENT_BINDINGSTART);
 }
 
 static void ExitBindingMode()

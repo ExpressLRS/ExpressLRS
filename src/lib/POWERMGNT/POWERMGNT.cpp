@@ -319,7 +319,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #endif
 
     CurrentPower = Power;
-    devicesTriggerEvent(EVENT_POWERCHANGED);
+    devicesTriggerEvent(DEVEVENT_POWERCHANGED);
 }
 
 #endif /* !UNIT_TEST */
