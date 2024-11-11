@@ -244,7 +244,7 @@ enum eSerialProtocol : uint8_t
 // Order must match linkModeOpts[] in tx_devLUA.cpp
 enum eOTAProtocol : uint8_t
 {
-    OTA_PROTOCOL_CRSF,
+    OTA_PROTOCOL_NORMAL,
     OTA_PROTOCOL_MAVLINK,
     OTA_PROTOCOL_FREE_3,
     OTA_PROTOCOL_FREE_4,
