@@ -14,9 +14,7 @@ extern void reconfigureSerial1();
 extern bool BindingModeRequest;
 
 static char modelString[] = "000";
-#if defined(GPIO_PIN_PWM_OUTPUTS)
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
-#endif
 
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -121,7 +119,6 @@ static struct luaItem_string luaELRSversion = {
 
 //---------------------------- Output Mapping -----------------------------
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
 static struct luaItem_folder luaMappingFolder = {
     {"Output Mapping", CRSF_FOLDER},
 };
@@ -170,8 +167,6 @@ static struct luaItem_command luaSetFailsafe = {
     STR_EMPTYSPACE
 };
 
-#endif // GPIO_PIN_PWM_OUTPUTS
-
 //---------------------------- Output Mapping -----------------------------
 
 static struct luaItem_selection luaBindStorage = {
@@ -187,7 +182,6 @@ static struct luaItem_command luaBindMode = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
 static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
 {
     bool sclAssigned = false;
@@ -480,8 +474,6 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
   sendLuaCommandResponse((struct luaItem_command *)item, newStep, msg);
 }
 
-#endif // GPIO_PIN_PWM_OUTPUTS
-
 #if defined(POWER_OUTPUT_VALUES)
 
 static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
@@ -556,7 +548,6 @@ static void registerLuaParameters()
     config.SetTeamracePosition(arg);
   }, luaTeamraceFolder.common.id);
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
     luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
@@ -567,7 +558,6 @@ static void registerLuaParameters()
     registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
     registerLUAParameter(&luaSetFailsafe, &luaparamSetFailsafe);
   }
-#endif
 
   registerLUAParameter(&luaBindStorage, [](struct luaPropertiesCommon* item, uint8_t arg) {
     config.SetBindStorage((rx_config_bindstorage_t)arg);
@@ -620,7 +610,6 @@ static int event()
   setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
   setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
   if (OPT_HAS_SERVO_OUTPUT)
   {
     const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
@@ -628,7 +617,6 @@ static int event()
     setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
     setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
   }
-#endif
 
   if (config.GetModelId() == 255)
   {
