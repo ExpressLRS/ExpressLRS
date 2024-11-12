@@ -306,7 +306,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
 
-#if defined(PLATFORM_ESP32)
+#if defined(TARGET_RX)
             // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
             if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
             {
