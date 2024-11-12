@@ -34,7 +34,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devServoOutput.h"
-#include "devVTXSPI.h"
+#include "devBaro.h"
 #include "devAnalogVbat.h"
 
 #if defined(PLATFORM_ESP8266)
@@ -42,7 +42,7 @@
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include "devSerialUpdate.h"
-#include "devBaro.h"
+#include "devVTXSPI.h"
 #include "devMSPVTX.h"
 #include "devThermal.h"
 #include <SPIFFS.h>
@@ -89,8 +89,8 @@ device_affinity_t ui_devices[] = {
   {&Button_device, 0},
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
-#if defined(PLATFORM_ESP32)
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
+#if defined(PLATFORM_ESP32)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
   {&Thermal_device, 0},
@@ -2111,7 +2111,7 @@ void loop()
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
         {
-            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            DBGLN("Mode %u not supported, ignoring", ExpressLRS_nextAirRateIndex);
             ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
         }
         LostConnection(true);
