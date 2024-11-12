@@ -82,6 +82,7 @@ void saveOptions(Stream &stream, bool customised)
     #else
     doc["rcvr-uart-baud"] = firmwareOptions.uart_baud;
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
+    doc["dji-permanently-armed"] = firmwareOptions.dji_permanently_armed;
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
     doc["domain"] = firmwareOptions.domain;
@@ -195,6 +196,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.is_airport = doc["is-airport"] | false;
     #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
+    firmwareOptions.dji_permanently_armed = doc["dji-permanently-armed"] | false;
     #endif
     firmwareOptions.domain = doc["domain"] | 0;
     firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;
