@@ -60,21 +60,6 @@ enum fsm_state_s {
     STATE_LINKSTATS
 };
 
-
-// -------------- Events --------------
-#define LONG_PRESSED 0x40
-
-#define EVENT_ENTER 0
-#define EVENT_UP 1
-#define EVENT_DOWN 2
-#define EVENT_LEFT 3
-#define EVENT_RIGHT 4
-#define EVENT_LONG_ENTER (EVENT_ENTER | LONG_PRESSED)
-#define EVENT_LONG_UP (EVENT_UP | LONG_PRESSED)
-#define EVENT_LONG_DOWN (EVENT_DOWN | LONG_PRESSED)
-#define EVENT_LONG_LEFT (EVENT_LEFT | LONG_PRESSED)
-#define EVENT_LONG_RIGHT (EVENT_RIGHT | LONG_PRESSED)
-
 extern fsm_state_entry_t const entry_fsm[];
 extern fsm_state_entry_t const vtx_menu_fsm[];
 extern fsm_state_entry_t const value_select_fsm[];

@@ -10,7 +10,7 @@
 #include "config.h"
 #include "logging.h"
 
-Gsensor gsensor;
+Gsensor gSensor;
 
 static int system_quiet_state = GSENSOR_SYSTEM_STATE_MOVING;
 static int system_quiet_pre_state = GSENSOR_SYSTEM_STATE_MOVING;
@@ -25,7 +25,7 @@ static bool initialize()
 {
     if (OPT_HAS_GSENSOR)
     {
-        return gsensor.init();
+        return gSensor.init();
     }
     return false;
 }
@@ -41,9 +41,9 @@ static int timeout()
     unsigned long now = millis();
     if (now - lastIdleCheckMs > GSENSOR_SYSTEM_IDLE_INTERVAL)
     {
-        gsensor.handle();
+        gSensor.handle();
 
-        system_quiet_state = gsensor.getSystemState();
+        system_quiet_state = gSensor.getSystemState();
         //When system is idle, set power to minimum
         if(config.GetMotionMode() == 1)
         {

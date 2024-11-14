@@ -337,7 +337,7 @@ void OLEDDisplay::displaySending()
     u8g2->sendBuffer();
 }
 
-void OLEDDisplay::displayLinkstats()
+void OLEDDisplay::displayLinkStats()
 {
     constexpr int16_t LINKSTATS_COL_FIRST   = 0;
     constexpr int16_t LINKSTATS_COL_SECOND  = 32;

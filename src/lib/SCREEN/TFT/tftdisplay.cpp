@@ -383,7 +383,7 @@ void TFTDisplay::displaySending()
                         "SENDING...", BLACK, WHITE);
 }
 
-void TFTDisplay::displayLinkstats()
+void TFTDisplay::displayLinkStats()
 {
     constexpr int16_t LINKSTATS_COL_FIRST   = 0;
     constexpr int16_t LINKSTATS_COL_SECOND  = 30;

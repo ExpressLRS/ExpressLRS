@@ -4,19 +4,32 @@
 
 #define STATE_LAST -1
 
-#define EVENT_IMMEDIATE -1 // immediately do this after the entry-function
-#define EVENT_TIMEOUT -2
-
-#define ACTION_GOTO 0
-#define ACTION_NEXT 1
-#define ACTION_PREVIOUS 2
-#define ACTION_PUSH 3
-#define ACTION_POP 4
-#define ACTION_POPALL 5
-
 typedef int8_t fsm_state_t;
-typedef int8_t fsm_event_t;
-typedef int8_t fsm_action_t;
+
+enum fsm_event_t : int8_t {
+    EVENT_TIMEOUT = -2,
+    EVENT_IMMEDIATE = -1, // immediately do this after the entry-function
+
+    EVENT_ENTER = 0,
+    EVENT_UP,
+    EVENT_DOWN,
+    EVENT_LEFT,
+    EVENT_RIGHT,
+    EVENT_LONG_ENTER,
+    EVENT_LONG_UP,
+    EVENT_LONG_DOWN,
+    EVENT_LONG_LEFT,
+    EVENT_LONG_RIGHT
+};
+
+enum fsm_action_t : int8_t {
+    ACTION_GOTO,
+    ACTION_NEXT,
+    ACTION_PREVIOUS,
+    ACTION_PUSH,
+    ACTION_POP,
+    ACTION_POPALL
+};
 
 typedef struct fsm_state_entry_s fsm_state_entry_t;
 

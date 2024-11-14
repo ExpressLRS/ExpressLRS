@@ -13,15 +13,13 @@
 #include "devButton.h"
 #include "handset.h"
 
-FiniteStateMachine state_machine(entry_fsm);
-
-Display *display;
+extern FiniteStateMachine state_machine;
 
 #include "FiveWayButton/FiveWayButton.h"
-FiveWayButton fivewaybutton;
+static FiveWayButton fiveWayButton;
 
 #include "gsensor.h"
-extern Gsensor gsensor;
+extern Gsensor gSensor;
 static bool is_screen_flipped = false;
 static bool is_pre_screen_flipped = false;
 
@@ -33,15 +31,17 @@ extern void jumpToBleRunning();
 static bool jumpToBandSelect = false;
 static bool jumpToChannelSelect = false;
 
+Display *display;
+
 static int handle(void)
 {
-    is_screen_flipped = gsensor.isFlipped();
+    is_screen_flipped = gSensor.isFlipped();
 
-    if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
+    if (is_screen_flipped && !is_pre_screen_flipped)
     {
         display->doScreenBackLight(SCREEN_BACKLIGHT_OFF);
     }
-    else if ((is_screen_flipped == false) && (is_pre_screen_flipped == true))
+    else if (!is_screen_flipped && is_pre_screen_flipped)
     {
         display->doScreenBackLight(SCREEN_BACKLIGHT_ON);
         state_machine.start(millis(), STATE_IDLE);
@@ -74,32 +74,28 @@ static int handle(void)
         }
         else
         {
-            fivewaybutton.update(&key, &isLongPressed);
+            fiveWayButton.update(&key, &isLongPressed);
         }
         fsm_event_t fsm_event;
         switch (key)
         {
         case INPUT_KEY_DOWN_PRESS:
-            fsm_event = EVENT_DOWN;
+            fsm_event = isLongPressed ? EVENT_LONG_DOWN : EVENT_DOWN;
             break;
         case INPUT_KEY_UP_PRESS:
-            fsm_event = EVENT_UP;
+            fsm_event = isLongPressed ? EVENT_LONG_UP : EVENT_UP;
             break;
         case INPUT_KEY_LEFT_PRESS:
-            fsm_event = EVENT_LEFT;
+            fsm_event = isLongPressed ? EVENT_LONG_LEFT : EVENT_LEFT;
             break;
         case INPUT_KEY_RIGHT_PRESS:
-            fsm_event = EVENT_RIGHT;
+            fsm_event = isLongPressed ? EVENT_LONG_RIGHT : EVENT_RIGHT;
             break;
         case INPUT_KEY_OK_PRESS:
-            fsm_event = EVENT_ENTER;
+            fsm_event = isLongPressed ? EVENT_LONG_ENTER : EVENT_ENTER;
             break;
         default: // INPUT_KEY_NO_PRESS
             fsm_event = EVENT_TIMEOUT;
-        }
-        if (fsm_event != EVENT_TIMEOUT && isLongPressed)
-        {
-            fsm_event = (fsm_event | LONG_PRESSED);
         }
 #if defined(DEBUG_SCREENSHOT)
         if (key == INPUT_KEY_DOWN_PRESS && isLongPressed)
@@ -137,7 +133,7 @@ static bool initialize()
 {
     if (OPT_HAS_SCREEN)
     {
-        fivewaybutton.init();
+        fiveWayButton.init();
         if (OPT_HAS_TFT_SCREEN)
         {
             display = new TFTDisplay();
