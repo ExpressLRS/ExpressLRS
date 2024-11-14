@@ -1,7 +1,7 @@
-#if defined(HAS_VTX_SPI)
-
-#include "devVTXSPI.h"
 #include "targets.h"
+
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
+#include "devVTXSPI.h"
 #include "common.h"
 #include "helpers.h"
 #include "hwTimer.h"
@@ -475,5 +475,4 @@ device_t VTxSPI_device = {
     .event = nullptr,
     .timeout = timeout
 };
-
 #endif

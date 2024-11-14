@@ -70,3 +70,5 @@
 #define OPT_HAS_GSENSOR false
 #define OPT_HAS_GSENSOR_STK8xxx false
 #define GPIO_PIN_GSENSOR_INT UNDEF_PIN
+
+#define OPT_HAS_VTX_SPI false

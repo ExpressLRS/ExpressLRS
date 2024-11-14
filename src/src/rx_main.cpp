@@ -34,17 +34,17 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devServoOutput.h"
-#include "devVTXSPI.h"
-#include "devAnalogVbat.h"
-#include "devSerialUpdate.h"
 #include "devBaro.h"
-#include "devMSPVTX.h"
-#include "devThermal.h"
+#include "devAnalogVbat.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
+#include "devSerialUpdate.h"
+#include "devVTXSPI.h"
+#include "devMSPVTX.h"
+#include "devThermal.h"
 #include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
@@ -87,22 +87,12 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
   {&WIFI_device, 0},
   {&Button_device, 0},
-#ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
-#endif
-#ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
-#endif
-#if defined(PLATFORM_ESP32)
-#ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#endif
-#ifdef HAS_VTX_SPI
+#if defined(PLATFORM_ESP32)
   {&VTxSPI_device, 0},
-#endif
-#ifdef HAS_MSP_VTX
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
-#endif
   {&Thermal_device, 0},
 #endif
 };
@@ -1278,6 +1268,7 @@ void MspReceiveComplete()
                 UpdateModelMatch(MspData[9]);
                 break;
             }
+#if defined(PLATFORM_ESP32)
             else if (MspData[7] == MSP_SET_VTX_CONFIG)
             {
                 if (OPT_HAS_VTX_SPI) {
@@ -1289,14 +1280,13 @@ void MspReceiveComplete()
                     }
                     devicesTriggerEvent();
                     break;
-#if defined(PLATFORM_ESP32)
                 } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
                     serial1IO->queueMSPFrameTransmission(MspData);
                     break;
-#endif
                 }
             }
             // FALLTHROUGH
+#endif
         default:
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {
@@ -2054,9 +2044,8 @@ void setup()
         setupConfigAndPocCheck();
         setupTarget();
 
-        #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
-        if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
+        if (OPT_HAS_SERVO_OUTPUT && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
         {
             for (int i = 0 ; i < GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
@@ -2068,7 +2057,6 @@ void setup()
                 }
             }
         }
-        #endif
         setupSerial();
         setupSerial1();
 
@@ -2146,7 +2134,7 @@ void loop()
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
         {
-            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            DBGLN("Mode %u not supported, ignoring", ExpressLRS_nextAirRateIndex);
             ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
         }
         LostConnection(true);
