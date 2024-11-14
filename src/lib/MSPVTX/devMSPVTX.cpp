@@ -1,4 +1,6 @@
 #include "targets.h"
+
+#if defined(PLATFORM_ESP32) || defined(UNIT_TEST)
 #include "common.h"
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
@@ -13,7 +15,9 @@
  * Original author: Jye Smith.
 **/
 
-#ifdef HAS_MSP_VTX
+#if !defined(OPT_HAS_VTX_SPI)
+#define OPT_HAS_VTX_SPI false
+#endif
 
 #define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
@@ -393,5 +397,4 @@ device_t MSPVTx_device = {
     .event = event,
     .timeout = timeout
 };
-
 #endif

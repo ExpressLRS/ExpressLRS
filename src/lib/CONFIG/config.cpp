@@ -842,13 +842,11 @@ void RxConfig::UpgradeEepromV4()
     {
         UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
         m_config.modelId = v4Config.modelId;
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
             PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -883,12 +881,10 @@ void RxConfig::UpgradeEepromV5()
         m_config.rateInitialIdx = v5Config.rateInitialIdx;
         m_config.modelId = v5Config.modelId;
 
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -919,12 +915,10 @@ void RxConfig::UpgradeEepromV6()
         m_config.rateInitialIdx = v6Config.rateInitialIdx;
         m_config.modelId = v6Config.modelId;
 
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -950,14 +944,12 @@ void RxConfig::UpgradeEepromV7V8()
         m_config.serialProtocol = v7Config.serialProtocol;
         m_config.failsafeMode = v7Config.failsafeMode;
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
             if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
                 m_config.pwmChannels[ch].val.mode += 1;
         }
-#endif
     }
 }
 
@@ -1146,7 +1138,6 @@ RxConfig::SetDefaults(bool commit)
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
@@ -1165,7 +1156,6 @@ RxConfig::SetDefaults(bool commit)
         SetPwmChannel(ch, 512, ch, false, mode, false);
     }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
-#endif
 
     m_config.teamraceChannel = AUX7; // CH11
 
@@ -1191,7 +1181,6 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {
@@ -1225,7 +1214,6 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
     pwm->raw = raw;
     m_modified = true;
 }
-#endif
 
 void
 RxConfig::SetForceTlmOff(bool forceTlmOff)

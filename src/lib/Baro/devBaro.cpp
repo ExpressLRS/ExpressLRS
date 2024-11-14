@@ -1,7 +1,7 @@
 
 #include "devBaro.h"
 
-#if defined(HAS_BARO)
+#if defined(TARGET_RX)
 
 #include "CRSF.h"
 #include "logging.h"

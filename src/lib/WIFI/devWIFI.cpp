@@ -373,7 +373,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetBindStorage();
-    #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
@@ -394,7 +393,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
-    #endif
     #endif
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
@@ -534,7 +532,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
 
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
   JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
@@ -542,7 +539,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
   }
-  #endif
 
   config.Commit();
   request->send(200, "text/plain", "Configuration updated");

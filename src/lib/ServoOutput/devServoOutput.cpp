@@ -1,5 +1,3 @@
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-
 #include "devServoOutput.h"
 #include "PWM.h"
 #include "CRSF.h"
@@ -11,7 +9,7 @@ static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
 
-#if (defined(PLATFORM_ESP32))
+#if defined(PLATFORM_ESP32)
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
 const uint8_t RMT_MAX_CHANNELS = 8;
 #endif
@@ -268,5 +266,3 @@ device_t ServoOut_device = {
     .event = event,
     .timeout = timeout,
 };
-
-#endif
