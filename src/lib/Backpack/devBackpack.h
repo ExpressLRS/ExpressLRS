@@ -8,7 +8,7 @@
  * @param now current time in millis
  * @param packet the msp packet containing the PTR MSP packet
  */
-void processPanTiltRollPacket(uint32_t now, mspPacket_t *packet);
+void processPanTiltRollPacket(uint32_t now, const mspPacket_t *packet);
 
 /**
  * @brief perform check to see if a backpack firmware update has been requested.
@@ -26,13 +26,13 @@ void checkBackpackUpdate();
  *
  * @param data the CRSF telemetry packet to send.
  */
-void sendCRSFTelemetryToBackpack(uint8_t *data);
+void sendCRSFTelemetryToBackpack(const uint8_t *data);
 
 /**
  * @brief send MAVLink telemetry packet (inside a CRSF packet) to the backpack.
  *
  * @param data the MAVLink telemetry packet to send.
  */
-void sendMAVLinkTelemetryToBackpack(uint8_t *data);
+void sendMAVLinkTelemetryToBackpack(const uint8_t *data);
 
 extern device_t Backpack_device;
