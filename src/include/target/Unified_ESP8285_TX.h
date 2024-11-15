@@ -62,4 +62,13 @@
 #define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
 #define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
-#define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
+#define OPT_HAS_THERMAL false
+#define OPT_HAS_THERMAL_LM75A false
+
+#define OPT_USE_TX_BACKPACK false
+#define GPIO_PIN_BACKPACK_EN UNDEF_PIN
+#define OPT_HAS_GSENSOR false
+#define OPT_HAS_GSENSOR_STK8xxx false
+#define GPIO_PIN_GSENSOR_INT UNDEF_PIN
+
+#define OPT_HAS_VTX_SPI false

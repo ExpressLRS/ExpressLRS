@@ -56,8 +56,6 @@
 #define POWER_OUTPUT_VALUES_DUAL_COUNT hardware_int(HARDWARE_power_values_dual_count)
 
 // Input
-#define HAS_FIVE_WAY_BUTTON
-
 #define GPIO_PIN_JOYSTICK hardware_pin(HARDWARE_joystick)
 #define JOY_ADC_VALUES hardware_u16_array(HARDWARE_joystick_values)
 
@@ -87,37 +85,23 @@
 #define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
 #define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
-// OLED
-#define GPIO_PIN_OLED_CS hardware_pin(HARDWARE_screen_cs)        // SPI
-#define GPIO_PIN_OLED_DC hardware_pin(HARDWARE_screen_dc)        // SPI
-#define GPIO_PIN_OLED_MOSI hardware_pin(HARDWARE_screen_mosi)    // SPI
-#define GPIO_PIN_OLED_RST hardware_pin(HARDWARE_screen_rst)      // SPI & I2c (optional)
-#define GPIO_PIN_OLED_SCK hardware_pin(HARDWARE_screen_sck)      // clock for SPI & I2C
-#define GPIO_PIN_OLED_SDA hardware_pin(HARDWARE_screen_sda)      // I2C data
-
-// screen_type == 0 is no oled
-#define USE_OLED_I2C
-#define OPT_USE_OLED_I2C (hardware_int(HARDWARE_screen_type)==1)
-#define USE_OLED_SPI
-#define OPT_USE_OLED_SPI (hardware_int(HARDWARE_screen_type)==2)
-#define USE_OLED_SPI_SMALL
-#define OPT_USE_OLED_SPI_SMALL (hardware_int(HARDWARE_screen_type)==3)
-#define OLED_REVERSED
-#define OPT_OLED_REVERSED hardware_flag(HARDWARE_screen_reversed)
-
-// TFT
-#define HAS_TFT_SCREEN
+// OLED/TFT
+#define OPT_HAS_SCREEN (hardware_int(HARDWARE_screen_type) > 0)
+#define OPT_HAS_OLED_I2C (hardware_int(HARDWARE_screen_type)==1)
+#define OPT_HAS_OLED_SPI (hardware_int(HARDWARE_screen_type)==2)
+#define OPT_HAS_OLED_SPI_SMALL (hardware_int(HARDWARE_screen_type)==3)
 #define OPT_HAS_TFT_SCREEN (hardware_int(HARDWARE_screen_type)==4)
 
-#define GPIO_PIN_TFT_BL hardware_pin(HARDWARE_screen_bl)
-#define GPIO_PIN_TFT_CS hardware_pin(HARDWARE_screen_cs)
-#define GPIO_PIN_TFT_DC hardware_pin(HARDWARE_screen_dc)
-#define GPIO_PIN_TFT_MOSI hardware_pin(HARDWARE_screen_mosi)
-#define GPIO_PIN_TFT_RST hardware_pin(HARDWARE_screen_rst)
-#define GPIO_PIN_TFT_SCLK hardware_pin(HARDWARE_screen_sck)
+#define GPIO_PIN_SCREEN_CS hardware_pin(HARDWARE_screen_cs)         // SPI
+#define GPIO_PIN_SCREEN_DC hardware_pin(HARDWARE_screen_dc)         // SPI
+#define GPIO_PIN_SCREEN_MOSI hardware_pin(HARDWARE_screen_mosi)     // SPI
+#define GPIO_PIN_SCREEN_RST hardware_pin(HARDWARE_screen_rst)       // SPI & I2c (optional)
+#define GPIO_PIN_SCREEN_SCK hardware_pin(HARDWARE_screen_sck)       // clock for SPI & I2C
+#define GPIO_PIN_SCREEN_SDA hardware_pin(HARDWARE_screen_sda)       // I2C data
+#define GPIO_PIN_SCREEN_BL hardware_pin(HARDWARE_screen_bl)         // Backlight
+#define OPT_SCREEN_REVERSED hardware_flag(HARDWARE_screen_reversed)
 
 // Backpack
-#define USE_TX_BACKPACK
 #define OPT_USE_TX_BACKPACK hardware_flag(HARDWARE_use_backpack)
 #define BACKPACK_LOGGING_BAUD hardware_int(HARDWARE_debug_backpack_baud)
 #define GPIO_PIN_DEBUG_RX hardware_pin(HARDWARE_debug_backpack_rx)
@@ -131,22 +115,17 @@
 #define GPIO_PIN_SDA hardware_pin(HARDWARE_i2c_sda)
 
 // Misc sensors & things
-#define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
-// #define GPIO_PIN_BUZZER hardware_pin(HARDWARE_misc_buzzer)  // stm32 only
-#define define HAS_FAN
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
 #define GPIO_PIN_FAN_PWM hardware_pin(HARDWARE_misc_fan_pwm)
 #define GPIO_PIN_FAN_TACHO hardware_pin(HARDWARE_misc_fan_tacho)
 #define GPIO_PIN_FAN_SPEEDS hardware_u16_array(HARDWARE_misc_fan_speeds)
 #define GPIO_PIN_FAN_SPEEDS_COUNT hardware_int(HARDWARE_misc_fan_speeds_count)
 
-#define HAS_GSENSOR
-#define HAS_GSENSOR_STK8xxx
 #define OPT_HAS_GSENSOR_STK8xxx hardware_flag(HARDWARE_gsensor_stk8xxx)
 #define OPT_HAS_GSENSOR OPT_HAS_GSENSOR_STK8xxx // If any of the sensors are present
+#define GPIO_PIN_GSENSOR_INT hardware_pin(HARDWARE_misc_gsensor_int)
 
-#define HAS_THERMAL
-#define HAS_THERMAL_LM75A
 #define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 
+#define OPT_HAS_VTX_SPI false

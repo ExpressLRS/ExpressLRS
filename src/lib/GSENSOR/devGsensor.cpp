@@ -1,11 +1,6 @@
 #include "targets.h"
 #include "common.h"
 
-#ifdef HAS_GSENSOR
-#if !defined(OPT_HAS_GSENSOR)
-#define OPT_HAS_GSENSOR true
-#endif
-
 #include "devGsensor.h"
 #include <functional>
 
@@ -14,12 +9,6 @@
 #include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
-
-#if defined(TARGET_TX)
-extern TxConfig config;
-#else
-extern RxConfig config;
-#endif
 
 Gsensor gsensor;
 
@@ -36,7 +25,7 @@ static bool gSensorOk = false;
 
 static void initialize()
 {
-    if (OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    if (OPT_HAS_GSENSOR)
     {
         gSensorOk = gsensor.init();
     }
@@ -44,7 +33,7 @@ static void initialize()
 
 static int start()
 {
-    if (gSensorOk && OPT_HAS_GSENSOR && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
+    if (OPT_HAS_GSENSOR && gSensorOk)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -84,5 +73,3 @@ device_t Gsensor_device = {
     .event = NULL,
     .timeout = timeout
 };
-
-#endif

@@ -1,5 +1,3 @@
-#define HAS_BARO
-
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
 #define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)
@@ -81,17 +79,15 @@
 // PWM
 #define GPIO_PIN_PWM_OUTPUTS hardware_i16_array(HARDWARE_pwm_outputs)
 #define GPIO_PIN_PWM_OUTPUTS_COUNT hardware_int(HARDWARE_pwm_outputs_count)
+#define OPT_HAS_SERVO_OUTPUT (GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
 
 // VBat
-#define USE_ANALOG_VBAT
 #define GPIO_ANALOG_VBAT hardware_pin(HARDWARE_vbat)
 #define ANALOG_VBAT_OFFSET hardware_int(HARDWARE_vbat_offset)
 #define ANALOG_VBAT_SCALE hardware_int(HARDWARE_vbat_scale)
 
 #if defined(PLATFORM_ESP32)
 // VTX
-#define HAS_VTX_SPI
-#define HAS_MSP_VTX
 #define OPT_HAS_VTX_SPI (hardware_pin(HARDWARE_vtx_nss) != UNDEF_PIN)
 #define GPIO_PIN_RF_AMP_PWM hardware_pin(HARDWARE_vtx_amp_pwm)
 #define GPIO_PIN_RF_AMP_VPD hardware_pin(HARDWARE_vtx_amp_vpd)
@@ -104,6 +100,11 @@
 #define VPD_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_vpd_100mW)
 #define PWM_VALUES_25MW hardware_u16_array(HARDWARE_vtx_amp_pwm_25mW)
 #define PWM_VALUES_100MW hardware_u16_array(HARDWARE_vtx_amp_pwm_100mW)
-#endif
 
+#define OPT_HAS_THERMAL_LM75A false
 #define GPIO_PIN_FAN_EN hardware_pin(HARDWARE_misc_fan_en)
+#define GPIO_PIN_FAN_PWM hardware_pin(HARDWARE_misc_fan_pwm)
+#define GPIO_PIN_FAN_TACHO hardware_pin(HARDWARE_misc_fan_tacho)
+#define GPIO_PIN_FAN_SPEEDS hardware_u16_array(HARDWARE_misc_fan_speeds)
+#define GPIO_PIN_FAN_SPEEDS_COUNT hardware_int(HARDWARE_misc_fan_speeds_count)
+#endif
