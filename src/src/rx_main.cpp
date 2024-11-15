@@ -2251,9 +2251,8 @@ void loop()
     uint16_t count = mavlinkInputBuffer.size();
     if (count > 0 && !TelemetrySender.IsActive())
     {
-        uint16_t roundedCRSFMaxSize = ((uint16_t)CRSF_PAYLOAD_SIZE_MAX / 20 ) * 20 - (uint16_t)CRSF_FRAME_NOT_COUNTED_BYTES;
-        count = std::min(count, roundedCRSFMaxSize); // Constrain to CRSF max payload size to match SS
-        // count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
+        uint16_t maxMavPayloadSize = (uint16_t)MAV_PAYLOAD_SIZE_MAX - CRSF_FRAME_NOT_COUNTED_BYTES; // Constrain to multiplication of the OTA payload size e.g. 5, 10, and 20B.
+        count = std::min(count, maxMavPayloadSize);
         // First 2 bytes conform to crsf_header_s format
         mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
         mavlinkSSBuffer[1] = count;
