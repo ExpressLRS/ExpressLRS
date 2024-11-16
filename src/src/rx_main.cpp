@@ -478,6 +478,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         if (OtaIsFullRes)
         {
             ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
+            otaPkt.full.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
 
             // Include some advanced telemetry in the extra space
             // Note the use of `ul_link_stats.payload` vs just `payload`
@@ -510,6 +511,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         {
             ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
             LinkStatsToOta(ls);
+            otaPkt.std.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
         }
 
         NextTelemetryType = PACKET_TYPE_DATA;

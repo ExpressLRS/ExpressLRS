@@ -84,7 +84,8 @@ typedef struct {
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t free;
+                    uint8_t trueDiversityAvailable:1,
+                            free:7;
                 } PACKED ul_link_stats;
                 uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
             };
@@ -140,7 +141,9 @@ typedef struct {
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
+                    uint8_t trueDiversityAvailable:1,
+                            free:7;
+                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s) - 1];
                 } PACKED ul_link_stats;
                 uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL]; // containsLinkStats == false
             };
