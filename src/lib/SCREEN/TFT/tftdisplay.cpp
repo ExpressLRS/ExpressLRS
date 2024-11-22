@@ -182,7 +182,7 @@ void TFTDisplay::displaySplashScreen()
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, BLACK);
 
     char buffer[50];
-    snprintf(buffer, sizeof(buffer), "%s  ELRS-%.6s", HARDWARE_VERSION, version);
+    snprintf(buffer, sizeof(buffer), "ELRS-%.6s", version);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), WHITE, BLACK);

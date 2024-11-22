@@ -299,7 +299,6 @@ static int blinkyUpdate() {
     if ((int)blinkyColor.h + hueStepValue > 255) {
         if ((int)blinkyColor.v - lightnessStep < 0) {
             blinkyState = NORMAL;
-            #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
             if (pixelCount != 1)
             {
                 if (OPT_WS2812_IS_GRB)
@@ -322,7 +321,6 @@ static int blinkyUpdate() {
             {
                 striprgb->Show();
             }
-            #endif
             return NORMAL_UPDATE_INTERVAL;
         }
         blinkyColor.v -= lightnessStep;

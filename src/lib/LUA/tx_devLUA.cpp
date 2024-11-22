@@ -89,14 +89,12 @@ static struct luaItem_selection luaDynamicPower = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_FAN_EN) || defined(GPIO_PIN_FAN_PWM)
 static struct luaItem_selection luaFanThreshold = {
     {"Fan Thresh", CRSF_TEXT_SELECTION},
     0, // value
     "10mW;25mW;50mW;100mW;250mW;500mW;1000mW;2000mW;Never",
     STR_EMPTYSPACE // units embedded so it won't display "NevermW"
 };
-#endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
@@ -114,14 +112,12 @@ static struct luaItem_selection luaSwitch = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_NSS_2)
-  static struct luaItem_selection luaAntenna = {
-      {"Antenna Mode", CRSF_TEXT_SELECTION},
-      0, // value
-      antennamodeOpts,
-      STR_EMPTYSPACE
-  };
-#endif
+static struct luaItem_selection luaAntenna = {
+    {"Antenna Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    antennamodeOpts,
+    STR_EMPTYSPACE
+};
 
 static struct luaItem_selection luaLinkMode = {
     {"Link Mode", CRSF_TEXT_SELECTION},
@@ -158,13 +154,11 @@ static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
-#endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
@@ -239,13 +233,11 @@ static struct luaItem_folder luaBackpackFolder = {
     {"Backpack", CRSF_FOLDER},
 };
 
-#if defined(GPIO_PIN_BACKPACK_EN)
 static struct luaItem_selection luaBackpackEnable = {
     {"Backpack", CRSF_TEXT_SELECTION},
     0, // value
     luastrOffOn,
     STR_EMPTYSPACE};
-#endif
 
 static struct luaItem_selection luaDvrAux = {
     {"DVR Rec", CRSF_TEXT_SELECTION},
@@ -301,10 +293,8 @@ extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
-#endif
 
 static void luadevUpdateModelID() {
   itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
@@ -379,7 +369,6 @@ static void luadevUpdateBackpackOpts()
   }
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void setBleJoystickMode()
 {
   connectionState = bleJoystick;
@@ -435,7 +424,6 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
       break;
   }
 }
-#endif
 
 static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 {
@@ -730,13 +718,11 @@ static void registerLuaParameters()
       config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
     }, luaPowerFolder.common.id);
   }
-#if defined(GPIO_PIN_FAN_EN)
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN) {
     registerLUAParameter(&luaFanThreshold, [](struct luaPropertiesCommon *item, uint8_t arg){
       config.SetPowerFanThreshold(arg);
     }, luaPowerFolder.common.id);
   }
-#endif
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (HAS_RADIO) {
     registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
@@ -761,14 +747,8 @@ static void registerLuaParameters()
   }
 
   // WIFI folder
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
-  #else
-  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
-    registerLUAParameter(&luaWiFiFolder);
-  }
-  #endif
   if (HAS_RADIO) {
     registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
 
@@ -777,7 +757,6 @@ static void registerLuaParameters()
       registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
       // Backpack folder
       registerLUAParameter(&luaBackpackFolder);
-      #if defined(GPIO_PIN_BACKPACK_EN)
       if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
       {
         registerLUAParameter(
@@ -786,7 +765,6 @@ static void registerLuaParameters()
                 config.SetBackpackDisable(arg == 0);
             }, luaBackpackFolder.common.id);
       }
-      #endif
       registerLUAParameter(
           &luaDvrAux, [](luaPropertiesCommon *item, uint8_t arg) {
               if (config.GetBackpackDisable() == false)
@@ -879,12 +857,10 @@ static int event()
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
-#if defined(GPIO_PIN_FAN_EN)
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
   }
-#endif
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
   setLuaTextSelectionValue(&luaDynamicPower, dynamic);

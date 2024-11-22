@@ -1,5 +1,3 @@
-#define HARDWARE_VERSION ""
-
 // Serial
 #define GPIO_PIN_RCSIGNAL_RX hardware_pin(HARDWARE_serial_rx)
 #define GPIO_PIN_RCSIGNAL_TX hardware_pin(HARDWARE_serial_tx)
@@ -11,7 +9,6 @@
 #define GPIO_PIN_DIO0_2 hardware_pin(HARDWARE_radio_dio0_2)
 #define GPIO_PIN_DIO1 hardware_pin(HARDWARE_radio_dio1)
 #define GPIO_PIN_DIO1_2 hardware_pin(HARDWARE_radio_dio1_2)
-#define GPIO_PIN_DIO2 hardware_pin(HARDWARE_radio_dio2)
 #define GPIO_PIN_MISO hardware_pin(HARDWARE_radio_miso)
 #define GPIO_PIN_MOSI hardware_pin(HARDWARE_radio_mosi)
 #define GPIO_PIN_NSS hardware_pin(HARDWARE_radio_nss)
@@ -19,9 +16,7 @@
 #define GPIO_PIN_RST hardware_pin(HARDWARE_radio_rst)
 #define GPIO_PIN_RST_2 hardware_pin(HARDWARE_radio_rst_2)
 #define GPIO_PIN_SCK hardware_pin(HARDWARE_radio_sck)
-#define USE_HARDWARE_DCDC
 #define OPT_USE_HARDWARE_DCDC hardware_flag(HARDWARE_radio_dcdc)
-#define USE_SX1276_RFO_HF
 #define OPT_USE_SX1276_RFO_HF hardware_flag(HARDWARE_radio_rfo_hf)
 #define LR1121_RFSW_CTRL hardware_u16_array(HARDWARE_radio_rfsw_ctrl)
 #define LR1121_RFSW_CTRL_COUNT hardware_int(HARDWARE_radio_rfsw_ctrl_count)
@@ -32,7 +27,6 @@
 
 // Radio power
 #define GPIO_PIN_PA_ENABLE hardware_pin(HARDWARE_power_enable)
-#define GPIO_PIN_RFamp_APC1 hardware_pin(HARDWARE_power_apc1)
 #define GPIO_PIN_RFamp_APC2 hardware_pin(HARDWARE_power_apc2)
 #define GPIO_PIN_RX_ENABLE hardware_pin(HARDWARE_power_rxen)
 #define GPIO_PIN_TX_ENABLE hardware_pin(HARDWARE_power_txen)
@@ -129,3 +123,4 @@
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
 
 #define OPT_HAS_VTX_SPI false
+#define GPIO_PIN_SPI_VTX_NSS UNDEF_PIN

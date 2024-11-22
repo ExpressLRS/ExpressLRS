@@ -155,7 +155,7 @@ static void initialize()
         pwmChannelValues[ch] = UINT16_MAX;
         pwmChannels[ch] = -1;
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+#if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == U0RXD_GPIO_NUM || pin == U0TXD_GPIO_NUM)
         {
