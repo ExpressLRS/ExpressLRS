@@ -11,7 +11,6 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 
 ### REGULATORY DOMAIN: ###
@@ -24,14 +23,14 @@
 #-DRegulatory_Domain_EU_433
 #-DRegulatory_Domain_US_433
 #-DRegulatory_Domain_US_433_WIDE
-#-DRegulatory_Domain_FCC_915
+-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
 #-DRegulatory_Domain_EU_CE_2400
 
 ### PERFORMANCE OPTIONS: ###
 
 #unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
-#-DUNLOCK_HIGHER_POWER
+-DUNLOCK_HIGHER_POWER
 
 -DLOCK_ON_FIRST_CONNECTION
 

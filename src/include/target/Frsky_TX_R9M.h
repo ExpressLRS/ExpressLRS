@@ -1,6 +1,6 @@
 
 #if !defined(DEVICE_NAME)
-    #define DEVICE_NAME "FrSky R9M"
+    #define DEVICE_NAME "NEROS ELRS TX"
 #endif
 
 #define TARGET_USE_EEPROM               1
@@ -9,7 +9,7 @@
 
 // GPIO pin definitions
 #define GPIO_PIN_RFamp_APC1             PA6  //APC2 is connected through a I2C dac and is handled elsewhere
-#define GPIO_PIN_RFswitch_CONTROL       PB3  //HIGH = RX, LOW = TX
+#define GPIO_PIN_RFswitch_CONTROL       PB2  //HIGH = RX, LOW = TX
 
 #define GPIO_PIN_NSS                    PB12
 #define GPIO_PIN_DIO0                   PA15
@@ -44,7 +44,7 @@
 #define POWER_OUTPUT_DAC2               0b0001110
 #define MinPower                        PWR_10mW
 #define HighPower                       PWR_250mW
-#define MaxPower                        PWR_1000mW
+#define MaxPower                        PWR_2000mW
 #if !defined(POWER_OUTPUT_VALUES)
     #define POWER_OUTPUT_VALUES         {720,875,1000,1140,1390,1730,2100,2600}
     #define POWER_OUTPUT_VALUES_868     {650,860,1000,1160,1420,1730,2100,2600}

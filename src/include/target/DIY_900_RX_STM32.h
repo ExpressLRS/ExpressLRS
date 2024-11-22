@@ -5,6 +5,7 @@
 #define TARGET_DIY_900_RX_STM32
 
 // GPIO pin definitions
+//#define GPIO_PIN_TX_ENABLE   PB3
 #define GPIO_PIN_NSS         PA4
 #define GPIO_PIN_MOSI        PA7
 #define GPIO_PIN_MISO        PA6

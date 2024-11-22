@@ -14,7 +14,7 @@
 #endif
 
 #if !defined(DefaultPower)
-    #define DefaultPower PWR_50mW
+    #define DefaultPower PWR_2000mW
 #endif
 
 #if !defined(HighPower)

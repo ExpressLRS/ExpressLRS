@@ -757,6 +757,7 @@ static void ChangeRadioParams()
 {
   ModelUpdatePending = false;
   SetRFLinkRate(config.GetRate());
+  config.SetTlm(TLM_RATIO_1_2);
   ResetPower();
 }
 
@@ -1457,6 +1458,7 @@ void setup()
 #endif
 
   devicesStart();
+  config.SetTlm(TLM_RATIO_1_2);
 
   if (firmwareOptions.is_airport)
   {
