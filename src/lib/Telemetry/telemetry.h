@@ -69,7 +69,7 @@ public:
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
     bool AppendTelemetryPackage(uint8_t *package);
-    #if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+    #if defined(TARGET_RX)
     void SendLastGoodGPS();
     uint32_t beaconLat = 0;
     uint32_t beaconLon = 0;
@@ -93,7 +93,7 @@ private:
     bool crsfBatterySensorDetected;
     bool crsfBaroSensorDetected;
     uint8_t modelMatchId;
-    #if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+    #if defined(TARGET_RX)
     uint16_t beaconSpd = 0;
     uint16_t beaconHdg = 0;
     #endif

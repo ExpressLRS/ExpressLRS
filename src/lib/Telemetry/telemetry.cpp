@@ -64,7 +64,7 @@ void Telemetry::CheckCrsfBatterySensorDetected()
     }
 }
 
-#if ( defined(RADIO_SX127X) && defined(TARGET_RX) )
+#if defined(TARGET_RX)
 void Telemetry::CheckCrsfGPSSensorDetected()
 {
     if (CRSFinBuffer[CRSF_TELEMETRY_TYPE_INDEX] == CRSF_FRAMETYPE_GPS)
@@ -230,7 +230,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     CheckCrsfBatterySensorDetected();
                     CheckCrsfBaroSensorDetected();
 
-                    #if ( defined(RADIO_SX127X) && defined(TARGET_RX) )
+                    #if defined(TARGET_RX)
                     CheckCrsfGPSSensorDetected();
                     #endif
 
@@ -402,7 +402,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     return targetFound;
 }
 
-#if ( defined(TARGET_RX) && defined(RADIO_SX127X) )
+#if defined(TARGET_RX)
 /**
  * @brief: Sends last good GPS CRSF frame received from FC
  * @return: nothing

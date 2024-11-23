@@ -75,8 +75,6 @@ uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
 
-#if defined(RADIO_SX127X)
-
 #define BeaconFrequency     FHSSconfig->freq_center
 GENERIC_CRC8 beacon_crc(ELRS_CRC_POLY);
 bool BeaconEnabled = false;
@@ -88,7 +86,6 @@ char BeaconAlt[9] = {" "};
 char BeaconSats[11] = {" "};
 char BeaconData[14] = "No data";
 uint16_t BeaconPackets[2] = {0};  // 0 - bad, 1 - good
-#endif
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
@@ -920,7 +917,6 @@ static void CheckReadyToSend()
   }
 }
 
-#if defined(RADIO_SX127X)
 bool ICACHE_RAM_ATTR BeaconCallback(SX12xxDriverCommon::rx_status const status)
 {
     if (status != SX12xxDriverCommon::SX12XX_RX_OK)
@@ -941,13 +937,20 @@ static void CheckBeaconEnable()
     hwTimer::stop();
     while (busyTransmitting);
     OtaNonce = 0;
-    Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+
+    #if defined(RADIO_SX127X)
+        Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+    #elif defined(RADIO_SX128X)
+        Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+    #elif defined(RADIO_LR1121)
+        Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
+    #endif
+    
     Radio.RXdoneCallback = &BeaconCallback;
     Radio.RXnb();
     active = true;
   }
 }
-#endif
 
 void OnPowerGetCalibration(mspPacket_t *packet)
 {
@@ -1417,7 +1420,6 @@ void setup()
   }
 }
 
-#if defined(RADIO_SX127X)
 void HandleBeacon(unsigned long now)
 {
   if (connectionState == beaconMode)
@@ -1464,7 +1466,6 @@ void HandleBeacon(unsigned long now)
     } 
   }
 }
-#endif
 
 void loop()
 {
@@ -1479,9 +1480,7 @@ void loop()
   }
   #endif
 
-  #if defined(RADIO_SX127X)
   HandleBeacon(now);
-  #endif
 
   if (connectionState < MODE_STATES)
   {
@@ -1509,9 +1508,7 @@ void loop()
   }
 
   CheckReadyToSend();
-  #if defined(RADIO_SX127X)
   CheckBeaconEnable();
-  #endif
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();

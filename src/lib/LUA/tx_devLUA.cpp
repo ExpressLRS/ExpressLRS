@@ -36,7 +36,6 @@ extern char backpackVersion[];
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
-#if defined(RADIO_SX127X)
 extern bool BeaconEnabled;
 extern char BeaconSNR[5];
 extern char BeaconRSSI[5]; 
@@ -45,7 +44,6 @@ extern char BeaconLon[14];
 extern char BeaconAlt[7];
 extern char BeaconSats[11];
 extern char BeaconData[14];
-#endif
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
@@ -190,15 +188,13 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 //---------------------------- WiFi -----------------------------
 
 //---------------------------- Beacon -----------------------------
-#if defined(RADIO_SX127X)
-
 static struct luaItem_folder luaBeaconFolder = {
     {"Beacon Mode", CRSF_FOLDER}
 };
 
 static struct luaItem_command luaStartStopBeacon = {
     {"Start Stop", CRSF_COMMAND},
-    lcsIdle, // step
+    lcsIdle, 
     STR_EMPTYSPACE
 };
 
@@ -229,8 +225,6 @@ static struct luaItem_string luaBeaconSats = {
 static struct luaItem_string luaBeaconData = {
     {"Checksum:", CRSF_INFO},
     BeaconData};
-
-#endif
 //---------------------------- Beacon -----------------------------
 
 #if defined(PLATFORM_ESP32)
@@ -349,9 +343,7 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
-#if defined(RADIO_SX127X)
 extern unsigned long rebootTime;
-#endif
 
 static void luadevUpdateModelID() {
   itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
@@ -502,7 +494,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       RxWiFiReadyToSend = true;
     }
-  #if defined(RADIO_SX127X)
+  
     else if ((void *)item == (void *)&luaStartStopBeacon)
     {
       if (BeaconEnabled) 
@@ -517,7 +509,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
         BeaconEnabled = true;
       }
     }
-  #endif
+  
     else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       TxBackpackWiFiReadyToSend = true;
@@ -876,7 +868,6 @@ static void registerLuaParameters()
     }
   }
 
-  #if defined(RADIO_SX127X)
   registerLUAParameter(&luaBeaconFolder);
   registerLUAParameter(&luaStartStopBeacon, &luahandSimpleSendCmd, luaBeaconFolder.common.id);
   registerLUAParameter(&luaBeaconRSSI, nullptr, luaBeaconFolder.common.id);
@@ -886,7 +877,6 @@ static void registerLuaParameters()
   registerLUAParameter(&luaBeaconAlt, nullptr, luaBeaconFolder.common.id);
   registerLUAParameter(&luaBeaconSats, nullptr, luaBeaconFolder.common.id);
   registerLUAParameter(&luaBeaconData, nullptr, luaBeaconFolder.common.id);
-  #endif
 
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
@@ -966,7 +956,6 @@ static int event()
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
 
-#if defined(RADIO_SX127X)
   setLuaStringValue(&luaBeaconRSSI, BeaconRSSI);
   setLuaStringValue(&luaBeaconSNR, BeaconSNR);
   setLuaStringValue(&luaBeaconLat, BeaconLat);
@@ -974,7 +963,6 @@ static int event()
   setLuaStringValue(&luaBeaconAlt, BeaconAlt);
   setLuaStringValue(&luaBeaconSats, BeaconSats);
   setLuaStringValue(&luaBeaconData, BeaconData);
-#endif
 
   luadevUpdateFolderNames();
   return DURATION_IMMEDIATELY;
