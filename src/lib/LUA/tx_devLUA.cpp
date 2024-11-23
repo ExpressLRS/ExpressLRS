@@ -349,7 +349,7 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
-#elif defined(RADIO_SX127X)
+#if defined(RADIO_SX127X)
 extern unsigned long rebootTime;
 #endif
 
