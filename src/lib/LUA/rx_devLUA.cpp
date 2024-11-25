@@ -356,7 +356,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     }
 
     // Trigger an event to update the related fields to represent the selected channel
-    devicesTriggerEvent();
+    devicesTriggerEvent(DEVEVENT_PWMCONFIGCHANGED);
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
