@@ -104,6 +104,11 @@ public:
      */
     virtual bool sendImmediateRC() { return false; }
 
+    /**
+     * @brief This method is called on events, for example settings changed.
+     */
+    virtual void event() {}
+
 protected:
     /// @brief the output stream for the serial port
     Stream *_outputPort;

@@ -746,7 +746,7 @@ void ModelUpdateReq()
     ModelUpdatePending = true;
   }
 
-  devicesTriggerEvent();
+  devicesTriggerEvent(DEVEVENT_CONFIGCHANGED);
 
   // Jump from awaitingModelId to transmitting to break the startup delay now
   // that the ModelID has been confirmed by the handset
@@ -770,7 +770,7 @@ static void ConfigChangeCommit()
   commitInProgress = false;
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
-  devicesTriggerEvent();
+  devicesTriggerEvent(DEVEVENT_CONFIGCHANGED);
 }
 
 static void CheckConfigChangePending()
