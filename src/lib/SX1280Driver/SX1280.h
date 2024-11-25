@@ -37,7 +37,7 @@ public:
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
-    bool GetFrequencyErrorbool();
+    bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
@@ -51,6 +51,7 @@ public:
     uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
+    void CheckForSecondPacket();
 
 private:
     // constant used for no power change pending
