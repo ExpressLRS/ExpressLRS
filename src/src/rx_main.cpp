@@ -47,6 +47,8 @@
 #elif defined(PLATFORM_ESP32)
 #include <SPIFFS.h>
 #include "esp_task_wdt.h"
+#elif defined(M0139)
+#include "stm32f1xx.h"
 #endif
 
 //
@@ -705,9 +707,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     }
 
     CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
-    #if defined(DEBUG_ACTIVE)
-    ACTIVEValue(LQ_CH, uplinkLQ);
-    #endif
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
     {
@@ -2338,6 +2337,13 @@ void reset_into_bootloader(void)
 #elif defined(PLATFORM_ESP32)
     delay(100);
     connectionState = serialUpdate;
+#elif defined(PLATFORM_STM32)
+    __disable_irq();
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __DSB();
+    __ISB();
+    SCB->VTOR = 0;
+    NVIC_SystemReset();
 #endif
 }
 

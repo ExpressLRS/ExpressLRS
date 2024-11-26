@@ -158,6 +158,9 @@ void CRSFHandset::Begin()
     // No log message because this is our only UART
 #elif defined(M0139)
     halfDuplex = false;
+    CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
+    CRSFHandset::Port.setRx(GPIO_PIN_RCSIGNAL_RX);
+
     CRSFHandset::Port.begin(UARTrequestedBaud);
 #elif defined(PLATFORM_STM32)
     DBGLN("Start STM32 R9M TX CRSF UART %d : %d", GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
@@ -532,7 +535,6 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < 3)
         return;
 
-    DBGLN("%x | %x | %x", SerialInBuffer[0], SerialInBuffer[1], SerialInBuffer[2]);
 
     // Sanity check: A total packet must be at least [sync][len][type][crc] (if no payload) and at most CRSF_MAX_PACKET_LEN
     const uint32_t totalLen = SerialInBuffer[1] + 2;

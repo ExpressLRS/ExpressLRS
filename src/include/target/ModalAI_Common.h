@@ -3,6 +3,9 @@ Credit to Jacob Walser (jaxxzer) for the pinout!!!
 https://github.com/jaxxzer
 */
 
+#ifndef MODALAI_COMMON_H
+#define MODALAI_COMMON_H
+
 #if !defined(TARGET_R9SLIM_RX)
     // TODO
     // EEPROM not working with TX
@@ -85,7 +88,10 @@ https://github.com/jaxxzer
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin
 
+#define DEV
 #if defined(DEV)
 #define DEBUG_LOG
 #define DEBUG_ACTIVE
 #endif
+
+#endif // Header guard
