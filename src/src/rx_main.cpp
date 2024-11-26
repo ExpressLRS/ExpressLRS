@@ -137,7 +137,6 @@ SerialIO *serialIO = nullptr;
 #define SERIAL1_PROTOCOL_RX Serial1
 
 // #define BEACON_DEBUG        // disable for flight use
-#define BeaconFrequency     FHSSconfig->freq_center
 #define MSPBeaconInterval   10 * 1000UL // every 10s
 #define MSPBeaconSkipPkts   5           // skip 5*10s=50s and run after next interval
 #define LRBeaconInterval    30 * 1000UL // every 30s
@@ -1966,6 +1965,7 @@ static void updateBeaconMode(unsigned long now)
 
     if (beaconDone == true)
     {
+        DBGLN("Beacon sent");
         beaconDone = false;
         LostConnection(true);   // switch from Beacon to ELRS link settings
     }
@@ -2017,12 +2017,14 @@ static void updateBeaconMode(unsigned long now)
             POWERMGNT::setPower(POWERMGNT::getMaxPower());  // force max RF power
             #endif
 
+            beaconSending = false;
+            beaconDone = false;
             #if defined(RADIO_SX127X)
-                Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+                Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
             #elif defined(RADIO_SX128X)
-                Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+                Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
             #elif defined(RADIO_LR1121)
-                Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
+                Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
             #endif
             
             Radio.TXnb(beaconPacket, sizeof(beaconPacket), SX12XX_Radio_1); // TODO: add real diversity support
@@ -2211,6 +2213,7 @@ void loop()
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
+    
     if (lastWifiActivityTime!=0)
     {
         checkWifiActivity();

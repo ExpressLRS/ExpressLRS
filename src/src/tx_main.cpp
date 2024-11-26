@@ -75,7 +75,6 @@ uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
 
-#define BeaconFrequency     FHSSconfig->freq_center
 GENERIC_CRC8 beacon_crc(ELRS_CRC_POLY);
 bool BeaconEnabled = false;
 char BeaconSNR[7] = {" "};
@@ -939,11 +938,11 @@ static void CheckBeaconEnable()
     OtaNonce = 0;
 
     #if defined(RADIO_SX127X)
-        Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+        Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
     #elif defined(RADIO_SX128X)
-        Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0);
+        Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
     #elif defined(RADIO_LR1121)
-        Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, BeaconFrequency, 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
+        Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
     #endif
     
     Radio.RXdoneCallback = &BeaconCallback;
