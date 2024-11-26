@@ -809,7 +809,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
     didFHSS = false;
 
-    Radio.isFirstRxIrq = true;
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
 
@@ -1117,6 +1116,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     uint32_t const beginProcessing = micros();
 
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+    OTA_Packet_s * const otaPktPtrSecond = (OTA_Packet_s * const)Radio.RXdataBufferSecond;
+
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
         DBGVLN("CRC error");
@@ -1132,6 +1133,15 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     unsigned long now = millis();
 
     LastValidPacket = now;
+
+    Radio.CheckForSecondPacket();
+    if (Radio.hasSecondRadioGotData)
+    {
+        if (!OtaValidatePacketCrc(otaPktPtrSecond))
+        {
+            Radio.hasSecondRadioGotData = false;
+        }
+    }
 
     switch (otaPktPtr->std.type)
     {

@@ -166,6 +166,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+  OTA_Packet_s * const otaPktPtrSecond = (OTA_Packet_s * const)Radio.RXdataBufferSecond;
+
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
     DBGLN("TLM crc error");
@@ -174,6 +176,15 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 
   LastTLMpacketRecvMillis = millis();
   LQCalc.add();
+
+  Radio.CheckForSecondPacket();
+  if (Radio.hasSecondRadioGotData)
+  {
+    if (!OtaValidatePacketCrc(otaPktPtrSecond))
+    {
+      Radio.hasSecondRadioGotData = false;
+    }
+  }
 
   Radio.GetLastPacketStats();
   CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
@@ -628,8 +639,6 @@ void ICACHE_RAM_ATTR timerCallback()
     nonceAdvance();
     return;
   }
-
-  Radio.isFirstRxIrq = true;
 
   // Sync OpenTX to this point
   if (!(OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends))
