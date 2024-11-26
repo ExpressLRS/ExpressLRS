@@ -44,6 +44,9 @@ typedef enum
     // States below here are special mode states
     noCrossfire,
     bleJoystick,
+    #if defined(TARGET_TX)
+    beaconMode,
+    #endif
     NO_CONFIG_SAVE_STATES,
     wifiUpdate,
     serialUpdate,

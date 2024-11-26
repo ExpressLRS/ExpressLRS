@@ -36,6 +36,14 @@ extern char backpackVersion[];
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
+extern bool BeaconEnabled;
+extern char BeaconSNR[5];
+extern char BeaconRSSI[5]; 
+extern char BeaconLat[14];
+extern char BeaconLon[14];
+extern char BeaconAlt[7];
+extern char BeaconSats[11];
+extern char BeaconData[14];
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static const char folderNameSeparator[2] = {' ',':'};
@@ -179,6 +187,46 @@ static struct luaItem_command luaVRxBackpackUpdate = {
 };
 //---------------------------- WiFi -----------------------------
 
+//---------------------------- Beacon -----------------------------
+static struct luaItem_folder luaBeaconFolder = {
+    {"Beacon Mode", CRSF_FOLDER}
+};
+
+static struct luaItem_command luaStartStopBeacon = {
+    {"Start Stop", CRSF_COMMAND},
+    lcsIdle, 
+    STR_EMPTYSPACE
+};
+
+static struct luaItem_string luaBeaconRSSI = {
+    {"RSSI:", CRSF_INFO},
+    BeaconRSSI};
+
+static struct luaItem_string luaBeaconSNR = {
+    {"SNR:", CRSF_INFO},
+    BeaconSNR};
+
+static struct luaItem_string luaBeaconLat = {
+    {"Latitude:", CRSF_INFO},
+    BeaconLat};
+  
+static struct luaItem_string luaBeaconLon = {
+    {"Longitude:", CRSF_INFO},
+    BeaconLon};
+
+static struct luaItem_string luaBeaconAlt = {
+    {"Altitude:", CRSF_INFO},
+    BeaconAlt};
+
+static struct luaItem_string luaBeaconSats = {
+    {"Satellites:", CRSF_INFO},
+    BeaconSats};
+
+static struct luaItem_string luaBeaconData = {
+    {"Checksum:", CRSF_INFO},
+    BeaconData};
+//---------------------------- Beacon -----------------------------
+
 #if defined(PLATFORM_ESP32)
 static struct luaItem_command luaBLEJoystick = {
     {"BLE Joystick", CRSF_COMMAND},
@@ -295,6 +343,7 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
+extern unsigned long rebootTime;
 
 static void luadevUpdateModelID() {
   itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
@@ -445,6 +494,22 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       RxWiFiReadyToSend = true;
     }
+  
+    else if ((void *)item == (void *)&luaStartStopBeacon)
+    {
+      if (BeaconEnabled) 
+      {
+        msg = "Deactivating...";
+        BeaconEnabled = false;
+        rebootTime = millis() + 400;
+      }
+      else
+      {
+        msg = "Activating...";
+        BeaconEnabled = true;
+      }
+    }
+  
     else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       TxBackpackWiFiReadyToSend = true;
@@ -803,6 +868,16 @@ static void registerLuaParameters()
     }
   }
 
+  registerLUAParameter(&luaBeaconFolder);
+  registerLUAParameter(&luaStartStopBeacon, &luahandSimpleSendCmd, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconRSSI, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconSNR, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconLat, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconLon, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconAlt, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconSats, nullptr, luaBeaconFolder.common.id);
+  registerLUAParameter(&luaBeaconData, nullptr, luaBeaconFolder.common.id);
+
   #if defined(PLATFORM_ESP32)
   registerLUAParameter(&luaBLEJoystick, &luahandWifiBle);
   #endif
@@ -880,6 +955,15 @@ static int event()
     setLuaTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
+
+  setLuaStringValue(&luaBeaconRSSI, BeaconRSSI);
+  setLuaStringValue(&luaBeaconSNR, BeaconSNR);
+  setLuaStringValue(&luaBeaconLat, BeaconLat);
+  setLuaStringValue(&luaBeaconLon, BeaconLon);
+  setLuaStringValue(&luaBeaconAlt, BeaconAlt);
+  setLuaStringValue(&luaBeaconSats, BeaconSats);
+  setLuaStringValue(&luaBeaconData, BeaconData);
+
   luadevUpdateFolderNames();
   return DURATION_IMMEDIATELY;
 }

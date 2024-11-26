@@ -136,6 +136,22 @@ SerialIO *serialIO = nullptr;
 #define SERIAL_PROTOCOL_RX Serial
 #define SERIAL1_PROTOCOL_RX Serial1
 
+// #define BEACON_DEBUG        // disable for flight use
+#define MSPBeaconInterval   10 * 1000UL // every 10s
+#define MSPBeaconSkipPkts   5           // skip 5*10s=50s and run after next interval
+#define LRBeaconInterval    30 * 1000UL // every 30s
+#if defined(BEACON_DEBUG)
+#define LRBeaconSkipPkts    0           // skip 0*30s=0s and run after next interval
+#else
+#define LRBeaconSkipPkts    9           // skip 9*30s=270s=4min30s and run after next interval
+#endif
+static unsigned long lastMspBeaconTime = 0;
+static unsigned long lastLRBeaconTime = 0;
+volatile bool beaconSending = false;
+volatile bool beaconDone = false;
+volatile uint8_t skipMSPPkts = 0;
+GENERIC_CRC8 beacon_crc(ELRS_CRC_POLY);
+
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
@@ -220,6 +236,8 @@ static uint32_t BindingRateChangeTime;
 #define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
+extern unsigned long lastWifiActivityTime;
+extern void checkWifiActivity();
 void reconfigureSerial();
 
 uint8_t getLq()
@@ -1218,6 +1236,13 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
+
+    if (beaconSending) 
+    {
+        beaconDone = true;
+        beaconSending = false;
+    }
+
 }
 
 void UpdateModelMatch(uint8_t model)
@@ -1934,6 +1959,100 @@ static void debugRcvrSignalStats(uint32_t now)
 #endif
 }
 
+static void updateBeaconMode(unsigned long now)
+{
+    static uint8_t skipLRPkts = 0;
+
+    if (beaconDone == true)
+    {
+        DBGLN("Beacon sent");
+        beaconDone = false;
+        LostConnection(true);   // switch from Beacon to ELRS link settings
+    }
+
+    if (connectionState == disconnected)
+    {
+        lastMspBeaconTime = now;
+        skipMSPPkts = 0;   // reset skipMSPPkts for MSP beacon
+
+        if ( (now - lastLRBeaconTime) > LRBeaconInterval)
+        {
+            lastLRBeaconTime = now;    // advance to next interval
+
+            // skip first LRBeaconSkipPkts number of packets
+            if (skipLRPkts < LRBeaconSkipPkts)
+            {
+                skipLRPkts++;
+                return;
+            }
+            uint8_t beaconPacket[12] = {0};
+            // assemble Lat
+            beaconPacket[ 0] = (uint8_t)(telemetry.beaconLat);
+            beaconPacket[ 1] = (uint8_t)(telemetry.beaconLat>>8);
+            beaconPacket[ 2] = (uint8_t)(telemetry.beaconLat>>16);
+            beaconPacket[ 3] = (uint8_t)(telemetry.beaconLat>>24);
+            // assemble Lon
+            beaconPacket[ 4] = (uint8_t)(telemetry.beaconLon);
+            beaconPacket[ 5] = (uint8_t)(telemetry.beaconLon>>8);
+            beaconPacket[ 6] = (uint8_t)(telemetry.beaconLon>>16);
+            beaconPacket[ 7] = (uint8_t)(telemetry.beaconLon>>24);
+            // assemble Alt
+            beaconPacket[ 8] = (uint8_t)(telemetry.beaconAlt);
+            beaconPacket[ 9] = (uint8_t)(telemetry.beaconAlt>>8);
+            // assemble Sats
+            beaconPacket[10] = (uint8_t)telemetry.beaconSats;
+            telemetry.beaconSats|=0b10000000;   // flip the bit so next time we use this packet - we'll know it is old
+            // add crc
+            uint8_t crc = beacon_crc.calc(beaconPacket, 11, 0);
+            beaconPacket[11] = crc;
+
+            // switch antenna every time before we send a beacon packet
+            static bool desiredAntennaNo = false;
+            if (antenna != desiredAntennaNo) switchAntenna();
+            desiredAntennaNo = !desiredAntennaNo;
+
+            #if defined(BEACON_DEBUG)
+            POWERMGNT::setPower(POWERMGNT::getMinPower());  // force min RF power - DEBUG
+            #else
+            POWERMGNT::setPower(POWERMGNT::getMaxPower());  // force max RF power
+            #endif
+
+            beaconSending = false;
+            beaconDone = false;
+            #if defined(RADIO_SX127X)
+                Radio.Config(SX127x_BW_125_00_KHZ, SX127x_SF_12, SX127x_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
+            #elif defined(RADIO_SX128X)
+                Radio.Config(SX1280_LORA_BW_0400, SX1280_LORA_SF12, SX1280_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0);
+            #elif defined(RADIO_LR1121)
+                Radio.Config(LR11XX_RADIO_LORA_BW_125, LR11XX_RADIO_LORA_SF12, LR11XX_RADIO_LORA_CR_4_8, FREQ_HZ_TO_REG_VAL(FHSSconfig->freq_center), 12, false, 12, 0, false, 0, 0, SX12XX_Radio_1);
+            #endif
+            
+            Radio.TXnb(beaconPacket, sizeof(beaconPacket), SX12XX_Radio_1); // TODO: add real diversity support
+            beaconSending = true;
+        }
+    }
+    else if (connectionState == connected)   // back online - reset lastLRBeaconTime
+    {
+        lastLRBeaconTime = now;    // advance to next interval
+        skipLRPkts = 0;   // reset skipLRPkts for LR beacon
+
+        if ( (now - lastMspBeaconTime) > MSPBeaconInterval)
+        {
+            lastMspBeaconTime = now;    // advance to next interval even when no new MSP packets received
+
+            // skip first MSPBeaconSkipPkts number of packets
+            if (skipMSPPkts < MSPBeaconSkipPkts)
+            {
+                skipMSPPkts++;
+                return;
+            }
+            
+            // do not alter RF power here - the link is controlling it by itself
+            telemetry.SendLastGoodGPS(); 
+        }
+    }   
+}
+
 static void updateSwitchMode()
 {
     // Negative value means waiting for confirm of the new switch mode while connected
@@ -2081,6 +2200,8 @@ void loop()
     if (MspReceiver.HasFinishedData())
     {
         MspReceiveComplete();
+        lastMspBeaconTime = now; // save last msp packet time
+        skipMSPPkts = 0;
     }
 
     devicesUpdate(now);
@@ -2091,6 +2212,11 @@ void loop()
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
+    }
+    
+    if (lastWifiActivityTime!=0)
+    {
+        checkWifiActivity();
     }
 
     CheckConfigChangePending();
@@ -2180,6 +2306,7 @@ void loop()
     DynamicPower_UpdateRx(false);
     debugRcvrLinkstats();
     debugRcvrSignalStats(now);
+    updateBeaconMode(now);
 }
 
 #if defined(PLATFORM_ESP32_C3)
