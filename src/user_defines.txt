@@ -13,7 +13,6 @@
 # Leave commented to use traditional binding
 #-DMY_BINDING_PHRASE="abc"
 
-
 ### REGULATORY DOMAIN: ###
 
 # Domain is used to define correct frequency band for 900MHz hardware.
