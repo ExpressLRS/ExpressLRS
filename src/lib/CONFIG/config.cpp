@@ -655,7 +655,7 @@ TxConfig::SetDefaults(bool commit)
     {
         SetModelId(i);
         #if defined(RADIO_SX127X) || defined(RADIO_LR1121)
-            SetRate(enumRatetoIndex(RATE_LORA_200HZ));
+            SetRate(enumRatetoIndex(RATE_LORA_25HZ));
         #elif defined(RADIO_SX128X)
             SetRate(enumRatetoIndex(RATE_LORA_250HZ));
         #endif

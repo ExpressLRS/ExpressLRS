@@ -10,7 +10,7 @@
 #define GPIO_PIN_RX_ENABLE PB3 // Low band.
 
 //High  - Mods on FHSS.CPP and user_define.txt
-//  #define GPIO_PIN_RX_ENABLE PB2 // 915.
+// #define GPIO_PIN_RX_ENABLE PB2 // 915.
 
 // GPIO pin definitions
 #define GPIO_PIN_NSS         PA4

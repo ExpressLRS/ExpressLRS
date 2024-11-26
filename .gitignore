@@ -8,3 +8,5 @@ src/.vscode
 src/data/*.ini
 src/data/*.json
 src/hardware
+src/user_defines.txt
+src/lib/FHSS/FHSS.CPP
