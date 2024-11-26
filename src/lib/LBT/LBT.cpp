@@ -6,10 +6,6 @@
 LQCALC<100> LBTSuccessCalc;
 static uint32_t rxStartTime;
 
-#if !defined(LBT_RSSI_THRESHOLD_OFFSET_DB)
-  #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
-#endif
-
 bool LBTEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 

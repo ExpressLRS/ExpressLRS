@@ -1159,10 +1159,6 @@ RxConfig::SetDefaults(bool commit)
 
     m_config.teamraceChannel = AUX7; // CH11
 
-#if defined(RCVR_INVERT_TX)
-    m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
-#endif
-
     if (commit)
     {
         // Prevent rebinding to the flashed UID on first boot
