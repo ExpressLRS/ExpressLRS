@@ -53,5 +53,6 @@ device_t SerialUpdate_device = {
     .start = nullptr,
     .event = event,
     .timeout = timeout,
-    .subscribe = EVENT_CONNECTION_CHANGED};
+    .subscribe = EVENT_CONNECTION_CHANGED
+};
 #endif

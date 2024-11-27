@@ -407,5 +407,6 @@ device_t MSPVTx_device = {
     .start = start,
     .event = event,
     .timeout = timeout,
-    .subscribe = EVENT_VTX_CHANGE};
+    .subscribe = EVENT_VTX_CHANGE
+};
 #endif

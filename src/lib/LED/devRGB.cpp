@@ -467,4 +467,5 @@ device_t RGB_device = {
     .start = start,
     .event = timeout,
     .timeout = timeout,
-    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE};
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE
+};

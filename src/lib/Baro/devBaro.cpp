@@ -191,7 +191,7 @@ device_t Baro_device = {
     .start = start,
     .event = nullptr,
     .timeout = timeout,
-    .subscribe = 0
+    .subscribe = EVENT_NONE
 };
 
 #endif

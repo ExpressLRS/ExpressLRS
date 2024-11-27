@@ -1337,4 +1337,5 @@ device_t WIFI_device = {
   .start = start,
   .event = event,
   .timeout = timeout,
-  .subscribe = EVENT_CONNECTION_CHANGED};
+  .subscribe = EVENT_CONNECTION_CHANGED
+};

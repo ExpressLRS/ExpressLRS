@@ -8,6 +8,8 @@
 #define DURATION_IMMEDIATELY 0  // timeout() will be called each loop
 
 enum deviceEvent_t {
+    EVENT_NONE = 0,
+
     EVENT_ARM_FLAG_CHANGED = 1 << 0,
     EVENT_POWER_CHANGED = 1 << 1,
     EVENT_VTX_CHANGE = 1 << 2, // Triggers change on RX SPI VTX, or VTX send on TX
@@ -25,7 +27,9 @@ enum deviceEvent_t {
     EVENT_CONFIG_UID_CHANGED = 1 << 14,
     EVENT_CONFIG_POWER_COUNT_CHANGED = 1 << 15,
     EVENT_CONFIG_PWM_CHANGE = 1 << 16,
-    EVENT_CONFIG_SERIAL_CHANGE = 1 << 17
+    EVENT_CONFIG_SERIAL_CHANGE = 1 << 17,
+
+    EVENT_ALL = 0xFFFFFFFF
 };
 
 typedef struct {

@@ -117,4 +117,5 @@ device_t Button_device = {
     .start = start,
     .event = event,
     .timeout = timeout,
-    .subscribe = EVENT_ARM_FLAG_CHANGED | EVENT_CONNECTION_CHANGED};
+    .subscribe = EVENT_ARM_FLAG_CHANGED | EVENT_CONNECTION_CHANGED
+};

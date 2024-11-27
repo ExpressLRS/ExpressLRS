@@ -913,7 +913,7 @@ device_t LUA_device = {
   .start = start,
   .event = event,
   .timeout = timeout,
-  .subscribe = 0xFFFF // all events
+  .subscribe = EVENT_ALL
 };
 
 #endif

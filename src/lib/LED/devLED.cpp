@@ -226,4 +226,5 @@ device_t LED_device = {
     .start = start,
     .event = event,
     .timeout = timeout,
-    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE};
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE
+};
