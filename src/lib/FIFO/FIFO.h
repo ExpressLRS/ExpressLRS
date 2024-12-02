@@ -65,6 +65,8 @@ public:
         portENTER_CRITICAL(&mux);
     #elif defined(PLATFORM_ESP8266)
         noInterrupts();
+    #elif defined(PLATFORM_STM32)
+        noInterrupts();
     #else
     #endif
     }
@@ -77,6 +79,8 @@ public:
     #if defined(PLATFORM_ESP32)
         portEXIT_CRITICAL(&mux);
     #elif defined(PLATFORM_ESP8266)
+        interrupts();
+    #elif defined(PLATFORM_STM32)
         interrupts();
     #else
     #endif

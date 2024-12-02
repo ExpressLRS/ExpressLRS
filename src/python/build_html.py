@@ -33,7 +33,8 @@ def build_html(mainfile, var, out, env, isTX=False):
         extensions=[CoreExtension("@@")]
     )
     template = engine.get_template(mainfile)
-    has_sub_ghz = '-DRADIO_SX127X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
+    has_sub_ghz1 = '-DRADIO_SX127X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
+    has_sub_ghz2 = '-DRADIO_SX128X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
     if '-DRADIO_SX128X=1' in env['BUILD_FLAGS']:
         chip = 'SX128X'
     elif '-DRADIO_SX127X=1' in env['BUILD_FLAGS']:
@@ -48,7 +49,8 @@ def build_html(mainfile, var, out, env, isTX=False):
             'VERSION': get_version(env),
             'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
             'isTX': isTX,
-            'hasSubGHz': has_sub_ghz,
+            'lowGHz': has_sub_ghz1,
+            'HigGHz': has_sub_ghz2,
             'chip': chip,
             'is8285': is8285
         })

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "targets.h"
+
 typedef enum
 {
     GSENSOR_STATUS_FAIL = 0,

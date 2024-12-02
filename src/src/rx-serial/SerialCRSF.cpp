@@ -3,9 +3,11 @@
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
+#if defined(USE_MSP_WIFI)
 #include "msp2crsf.h"
 
 extern MSP2CROSSFIRE msp2crsf;
+#endif
 
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
@@ -14,6 +16,7 @@ extern void UpdateModelMatch(uint8_t model);
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
+    #if defined(USE_MSP_WIFI)
     while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesToSend)
     {
         msp2crsf.FIFOout.lock();
@@ -21,11 +24,10 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
         uint8_t OutData[OutPktLen];
         msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
         msp2crsf.FIFOout.unlock();
-        noInterrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
-        interrupts();
         bytesWritten += OutPktLen;
     }
+    #endif
     // Call the super class to send the current FIFO (using any left-over bytes)
     SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }

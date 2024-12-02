@@ -1,4 +1,4 @@
-#if defined(RADIO_LR1121)
+#if (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)) && defined(RADIO_LR1121)
 
 #include <ESPAsyncWebServer.h>
 

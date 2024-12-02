@@ -1,12 +1,16 @@
 #include "targets.h"
 
 #if defined(PLATFORM_ESP32) && defined(TARGET_RX)
+#include <Update.h>
+
 #include "devSerialUpdate.h"
 #include "common.h"
 #include "hwTimer.h"
 #include "POWERMGNT.h"
 #include "devVTXSPI.h"
 #include "devMSPVTX.h"
+
+#include "telemetry.h"
 
 extern void start_esp_upload();
 extern void stub_handle_rx_byte(char byte);
@@ -24,8 +28,12 @@ static int event()
     {
         running = false;
         hwTimer::stop();
+#ifdef HAS_VTX_SPI
         disableVTxSpi();
+#endif
+#ifdef HAS_MSP_VTX
         disableMspVtx();
+#endif
         POWERMGNT::setPower(MinPower);
         Radio.End();
         return DURATION_IMMEDIATELY;
@@ -50,6 +58,7 @@ static int timeout()
             stub_handle_rx_byte(buf[i]);
         }
     }
+    return DURATION_IMMEDIATELY;
 }
 
 device_t SerialUpdate_device = {

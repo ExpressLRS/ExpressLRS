@@ -1,3 +1,4 @@
+#ifdef HAS_THERMAL_LM75A
 #include <Wire.h>
 #include "lm75a.h"
 #include "logging.h"
@@ -58,3 +59,4 @@ void LM75A::WriteAccRegister(uint8_t reg, uint8_t *data, int size)
     Wire.write(data, size);
     Wire.endTransmission();
 }
+#endif

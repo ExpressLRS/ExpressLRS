@@ -45,9 +45,9 @@ static const struct
     {MCPWM_UNIT_1, MCPWM2A, MCPWM_TIMER_2, MCPWM_GEN_A},
     {MCPWM_UNIT_1, MCPWM2B, MCPWM_TIMER_2, MCPWM_GEN_B},
 };
+#endif
 
 static uint32_t mcpwm_frequencies[MCPWM_CHANNELS] = {0};
-#endif
 
 static struct
 {
@@ -97,11 +97,10 @@ static void ledcAttachPinEx(uint8_t pin, uint8_t chan, ledc_timer_t timer)
 
 pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
 {
+    int channel = -1;
     // 1. see if we can allocate a MCPWM channel at this frequency
 #if SOC_MCPWM_SUPPORTED
     // 1a. see if theres a MCPWM already using this frequency we can piggy-back on
-    int channel = -1;
-
     for (int i = 0; i < MCPWM_CHANNELS; i++)
     {
         if (mcpwm_frequencies[i] == frequency)
