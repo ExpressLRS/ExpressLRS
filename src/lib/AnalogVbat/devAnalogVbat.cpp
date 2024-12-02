@@ -1,5 +1,6 @@
 #include "devAnalogVbat.h"
 
+#if defined(USE_ANALOG_VBAT)
 #include <Arduino.h>
 #include "CRSF.h"
 #include "telemetry.h"
@@ -118,3 +119,5 @@ device_t AnalogVbat_device = {
     .event = nullptr,
     .timeout = timeout,
 };
+
+#endif /* if USE_ANALOG_VCC */

@@ -1,5 +1,4 @@
-#include "targets.h"
-
+#ifdef HAS_GSENSOR_STK8xxx
 #include <Wire.h>
 #include "stk8baxx.h"
 #include "logging.h"
@@ -261,3 +260,4 @@ void STK8xxx::STK8xxx_Getregister_data(float *X_DataOut, float *Y_DataOut, float
         *Z_DataOut = (float) z / STK8xxx_Get_Sensitivity();
 	}
 }
+#endif

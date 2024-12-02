@@ -98,21 +98,6 @@ static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * con
     v7->boostChannel = v6->boostChannel;
 }
 
-static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * const v8)
-{
-    v8->rate = v7->rate;
-    v8->tlm = v7->tlm;
-    v8->power = v7->power;
-    v8->switchMode = v7->switchMode;
-    v8->boostChannel = v7->boostChannel;
-    v8->dynamicPower = v7->dynamicPower;
-    v8->modelMatch = v7->modelMatch;
-    v8->txAntenna = v7->txAntenna;
-    v8->ptrStartChannel = v7->ptrStartChannel;
-    v8->ptrEnableChannel = v7->ptrEnableChannel;
-    v8->linkMode = v7->linkMode;
-}
-
 TxConfig::TxConfig() :
     m_model(m_config.model_config)
 {
@@ -204,7 +189,11 @@ void TxConfig::Load()
         itoa(i, model+5, 10);
         if (nvs_get_u32(handle, model, &value) == ESP_OK)
         {
-            if (version == 6)
+            if (version >= 7)
+            {
+                U32_to_Model(value, &m_config.model_config[i]);
+            }
+            else
             {
                 // Upgrade v6 to v7 directly writing to nvs instead of calling Commit() over and over
                 v6_model_config_t v6model;
@@ -212,21 +201,6 @@ void TxConfig::Load()
                 model_config_t * const newModel = &m_config.model_config[i];
                 ModelV6toV7(&v6model, newModel);
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
-            }
-            
-            if (version <= 7)
-            {
-                // Upgrade v7 to v8 directly writing to nvs instead of calling Commit() over and over
-                v7_model_config_t v7model;
-                U32_to_Model(value, &v7model);
-                model_config_t * const newModel = &m_config.model_config[i];
-                ModelV7toV8(&v7model, newModel);
-                nvs_set_u32(handle, model, Model_to_U32(newModel));
-            }
-
-            if (version == TX_CONFIG_VERSION)
-            {
-                U32_to_Model(value, &m_config.model_config[i]);
             }
         }
     } // for each model
@@ -236,7 +210,7 @@ void TxConfig::Load()
         Commit();
     }
 }
-#else  // ESP8266
+#else  // STM32/ESP8266
 void TxConfig::Load()
 {
     m_modified = 0;
@@ -270,12 +244,6 @@ void TxConfig::Load()
     if (version == 6)
     {
         UpgradeEepromV6ToV7();
-        version = 7;
-    }
-
-    if (version == 7)
-    {
-        UpgradeEepromV7ToV8();
     }
 }
 
@@ -326,25 +294,6 @@ void TxConfig::UpgradeEepromV6ToV7()
 
     // Full Commit now
     m_config.version = 7U | TX_CONFIG_MAGIC;
-    Commit();
-}
-
-void TxConfig::UpgradeEepromV7ToV8()
-{
-    v7_tx_config_t v7Config;
-
-    // Populate the prev version struct from eeprom
-    m_eeprom->Get(0, v7Config);
-
-    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
-    {
-        ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
-    }
-
-    m_modified = ALL_CHANGED;
-
-    // Full Commit now
-    m_config.version = 8U | TX_CONFIG_MAGIC;
     Commit();
 }
 #endif
@@ -705,12 +654,10 @@ TxConfig::SetDefaults(bool commit)
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         SetModelId(i);
-        #if defined(RADIO_SX127X)
-            SetRate(enumRatetoIndex(RATE_LORA_900_200HZ));
-        #elif defined(RADIO_LR1121)
-            SetRate(enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ));
+        #if defined(RADIO_SX127X) || defined(RADIO_LR1121)
+            SetRate(enumRatetoIndex(RATE_LORA_200HZ));
         #elif defined(RADIO_SX128X)
-            SetRate(enumRatetoIndex(RATE_LORA_2G4_250HZ));
+            SetRate(enumRatetoIndex(RATE_LORA_250HZ));
         #endif
         SetPower(POWERMGNT::getDefaultPower());
 #if defined(PLATFORM_ESP32)
@@ -724,7 +671,7 @@ TxConfig::SetDefaults(bool commit)
     }
 
 #if !defined(PLATFORM_ESP32)
-    // ESP8266 just needs one commit
+    // STM32/ESP8266 just needs one commit
     if (commit)
     {
         Commit();
@@ -797,7 +744,6 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
-    UpgradeEepromV9();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
@@ -842,11 +788,13 @@ void RxConfig::UpgradeEepromV4()
     {
         UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
         m_config.modelId = v4Config.modelId;
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
             PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -881,10 +829,12 @@ void RxConfig::UpgradeEepromV5()
         m_config.rateInitialIdx = v5Config.rateInitialIdx;
         m_config.modelId = v5Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -915,10 +865,12 @@ void RxConfig::UpgradeEepromV6()
         m_config.rateInitialIdx = v6Config.rateInitialIdx;
         m_config.modelId = v6Config.modelId;
 
+        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
+        #endif
     }
 }
 
@@ -944,28 +896,14 @@ void RxConfig::UpgradeEepromV7V8()
         m_config.serialProtocol = v7Config.serialProtocol;
         m_config.failsafeMode = v7Config.failsafeMode;
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
             if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
                 m_config.pwmChannels[ch].val.mode += 1;
         }
-    }
-}
-
-// ========================================================
-// V9 Upgrade
-
-void RxConfig::UpgradeEepromV9()
-{
-    v9_rx_config_t v9Config;
-    m_eeprom->Get(0, v9Config);
-
-    if ((v9Config.version & ~CONFIG_MAGIC_MASK) == 9)
-    {
-        m_config.powerOnCounter = v9Config.powerOnCounter;
-        m_config.forceTlmOff = v9Config.forceTlmOff;
-        m_config.rateInitialIdx = v9Config.rateInitialIdx;
+#endif
     }
 }
 
@@ -1134,10 +1072,11 @@ RxConfig::SetDefaults(bool commit)
     m_config.modelId = 0xff;
     m_config.power = POWERMGNT::getDefaultPower();
     if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
-        m_config.antennaMode = 2; // 2 is diversity
+        m_config.antennaMode = 1; // 2 is diversity
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-        m_config.antennaMode = 0; // 0 is diversity for dual radio
+        m_config.antennaMode = 1; // 0 is diversity for dual radio
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
@@ -1156,8 +1095,13 @@ RxConfig::SetDefaults(bool commit)
         SetPwmChannel(ch, 512, ch, false, mode, false);
     }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
+#endif
 
     m_config.teamraceChannel = AUX7; // CH11
+
+#if defined(RCVR_INVERT_TX)
+    m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
+#endif
 
     if (commit)
     {
@@ -1177,6 +1121,7 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
+#if defined(GPIO_PIN_PWM_OUTPUTS)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
 {
@@ -1210,6 +1155,7 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
     pwm->raw = raw;
     m_modified = true;
 }
+#endif
 
 void
 RxConfig::SetForceTlmOff(bool forceTlmOff)

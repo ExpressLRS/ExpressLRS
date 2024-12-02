@@ -22,9 +22,11 @@ private:
     int keyInProcess;
     uint32_t keyDownStart;
     bool isLongPressed;
+#if defined(JOY_ADC_VALUES)
     static uint16_t joyAdcValues[N_JOY_ADC_VALUES];
     uint16_t fuzzValues[N_JOY_ADC_VALUES];
     void calcFuzzValues();
+#endif
 
     int readKey();
 

@@ -1,10 +1,12 @@
+#ifdef HAS_THERMAL
 #include "thermal.h"
 #include "logging.h"
 
-#if defined(PLATFORM_ESP32)
+#ifdef HAS_THERMAL_LM75A
 #include "lm75a.h"
 LM75A lm75a;
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#endif
+#if defined(PLATFORM_ESP32_S3)
 #include "driver/temp_sensor.h"
 #endif
 
@@ -26,7 +28,7 @@ void Thermal::init()
     {
         status = lm75a.init();
     }
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
     if (status == -1)
     {
         temp_sensor_config_t temp_sensor = TSENS_CONFIG_DEFAULT();
@@ -64,7 +66,7 @@ uint8_t Thermal::read_temp()
         return lm75a.read_lm75a();
     }
 
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
     float result = 0;
     temp_sensor_read_celsius(&result);
     return static_cast<int>(result);
@@ -99,4 +101,5 @@ void Thermal::update_threshold(int index)
         lm75a.update_lm75a_threshold(high, low);
     }
 }
+
 #endif

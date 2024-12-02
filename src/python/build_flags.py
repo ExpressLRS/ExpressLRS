@@ -1,4 +1,5 @@
 Import("env")
+from genericpath import exists
 import os
 from random import randint
 import sys
@@ -6,6 +7,7 @@ import hashlib
 import fnmatch
 import time
 import re
+import melodyparser
 import elrs_helpers
 
 build_flags = env.get('BUILD_FLAGS', [])
@@ -74,6 +76,9 @@ def process_build_flag(define):
             define = "-DMY_UID=" + UIDbytes
             sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
             sys.stdout.flush()
+        if "MY_STARTUP_MELODY=" in define:
+            parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
+            define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
         if "HOME_WIFI_SSID=" in define:
             parts = re.search(r"(.*)=\w*\"(.*)\"$", define)
             if parts and parts.group(2):
@@ -181,6 +186,8 @@ sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
 
 if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
+elif fnmatch.filter(build_flags, '*PLATFORM_STM32*'):
+    sys.stdout.write("\u001b[32mBuilding for STM32 Platform\n")
 elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
     sys.stdout.write("\u001b[32mBuilding for ESP8266/ESP8285 Platform\n")
     if fnmatch.filter(build_flags, '-DAUTO_WIFI_ON_INTERVAL*'):
@@ -190,3 +197,13 @@ elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
 
 sys.stdout.flush()
 time.sleep(.5)
+
+# Set upload_protovol = 'custom' for STM32 MCUs
+#  otherwise firmware.bin is not generated
+stm = env.get('PIOPLATFORM', '') in ['ststm32']
+if stm:
+    env['UPLOAD_PROTOCOL'] = 'custom'
+    # -DFLASH_DISCRIM=xxxx can't be passed on the command line or it will every file to
+    # always be rebuilt, so put it in a header that options.cpp can include
+    print(f"#define FLASH_DISCRIM {json_flags['flash-discriminator']}",
+          file=open("include/flashdiscrim.h", "w"))

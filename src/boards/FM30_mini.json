@@ -1,0 +1,42 @@
+{
+    "comment": "STM32F373CC definition for use with 16MHz crystal (DIV2 prescaler)",
+    "build": {
+      "cpu": "cortex-m4",
+      "extra_flags": "-DSTM32F3 -DSTM32F373xC",
+      "f_cpu": "72000000L",
+      "ldscript": "variants/FM30_mini/ldscript.ld",
+      "mcu": "stm32f373cct6",
+      "product_line": "STM32F373xC",
+      "variants_dir": "variants",
+      "variant": "FM30_mini"
+    },
+    "connectivity": [
+      "can"
+    ],
+    "debug": {
+      "jlink_device": "STM32F373CC",
+      "openocd_target": "stm32f3x",
+      "svd_path": "STM32F30x.svd"
+    },
+    "frameworks": [
+      "cmsis",
+      "stm32cube",
+      "libopencm3",
+      "arduino"
+    ],
+    "name": "FM30_mini",
+    "upload": {
+      "maximum_ram_size": 32768,
+      "maximum_size": 262144,
+      "protocol": "stlink",
+      "protocols": [
+        "jlink",
+        "cmsis-dap",
+        "stlink",
+        "blackmagic"
+      ]
+    },
+    "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f373.html",
+    "vendor": "ST"
+  }
+  

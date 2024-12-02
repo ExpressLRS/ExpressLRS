@@ -21,7 +21,11 @@ bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
 
-#if defined(PLATFORM_ESP32)
+#if defined(GPIO_PIN_BACKPACK_EN)
+
+#ifndef PASSTHROUGH_BAUD
+#define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
+#endif
 
 #define GPIO_PIN_BOOT0 0
 
@@ -111,6 +115,9 @@ bool lastRecordingState = false;
         uplink->write(buf, bytes_read);
     }
 }
+#endif
+
+#if defined(GPIO_PIN_BACKPACK_EN)
 
 static int debouncedRead(int pin) {
     static const uint8_t min_matches = 100;
@@ -139,9 +146,11 @@ static int debouncedRead(int pin) {
     // We don't have a definitive state we could report.
     return -1;
 }
+#endif
 
 void checkBackpackUpdate()
 {
+#if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         if (debouncedRead(GPIO_PIN_BOOT0) == 0)
@@ -170,6 +179,7 @@ void checkBackpackUpdate()
             resync_pos = 0;
         }
     }
+#endif
 #endif
 }
 
@@ -202,9 +212,7 @@ void BackpackBinding()
     packet.makeCommand();
     packet.function = MSP_ELRS_BIND;
     for (unsigned b=0; b<UID_LEN; ++b)
-    {
         packet.addByte(UID[b]);
-    }
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
@@ -217,6 +225,7 @@ uint8_t GetDvrDelaySeconds(uint8_t index)
 
 static void AuxStateToMSPOut()
 {
+#if defined(USE_TX_BACKPACK)
     if (config.GetDvrAux() == 0)
     {
         // DVR AUX control is off
@@ -246,6 +255,7 @@ static void AuxStateToMSPOut()
     packet.addByte(delay >> 8); // delay byte 2
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+#endif // USE_TX_BACKPACK
 }
 
 void sendCRSFTelemetryToBackpack(uint8_t *data)
@@ -308,6 +318,7 @@ void sendConfigToBackpack()
 
 static void initialize()
 {
+#if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
@@ -319,6 +330,7 @@ static void initialize()
         delay(20);
         // Rely on event() to boot
     }
+#endif
     handset->setRCDataCallback(AuxStateToMSPOut);
 }
 
@@ -382,11 +394,13 @@ static int timeout()
 
 static int event()
 {
+#if defined(GPIO_PIN_BACKPACK_EN)
     if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         // EN should be HIGH to be active
-        digitalWrite(GPIO_PIN_BACKPACK_EN, (config.GetBackpackDisable() || connectionState == bleJoystick || connectionState == wifiUpdate) ? LOW : HIGH);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
+#endif
 
     return DURATION_IGNORE;
 }
@@ -397,4 +411,3 @@ device_t Backpack_device = {
     .event = event,
     .timeout = timeout
 };
-#endif

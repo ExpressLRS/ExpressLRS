@@ -1,0 +1,42 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F303xC=1 -DSTM32F3xx=1 -DSTM32F303=1",
+    "f_cpu": "72000000L",
+    "mcu": "stm32f303cct6",
+    "product_line": "STM32F303xC",
+    "variant": "STM32F303CC"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F303CC",
+    "openocd_target": "stm32f3x",
+    "svd_path": "STM32F30x.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "cmsis",
+    "mbed",
+    "stm32cube"
+  ],
+  "name": "STM32F303CC",
+  "upload": {
+    "maximum_ram_size": 40960,
+    "maximum_size": 262144,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "mbed"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f303cc.html",
+  "vendor": "ST"
+}

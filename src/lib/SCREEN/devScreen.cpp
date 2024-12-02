@@ -1,9 +1,6 @@
-#include "targets.h"
-
-#if defined(PLATFORM_ESP32)
+#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) || defined(HAS_TFT_SCREEN)
 
 #include "devScreen.h"
-
 #include "common.h"
 #include "logging.h"
 
@@ -17,13 +14,17 @@ FiniteStateMachine state_machine(entry_fsm);
 
 Display *display;
 
+#ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
 FiveWayButton fivewaybutton;
+#endif
 
+#ifdef HAS_GSENSOR
 #include "gsensor.h"
 extern Gsensor gsensor;
 static bool is_screen_flipped = false;
 static bool is_pre_screen_flipped = false;
+#endif
 
 #define SCREEN_DURATION 20
 
@@ -35,6 +36,7 @@ static bool jumpToChannelSelect = false;
 
 static int handle(void)
 {
+#ifdef HAS_GSENSOR
     is_screen_flipped = gsensor.isFlipped();
 
     if ((is_screen_flipped == true) && (is_pre_screen_flipped == false))
@@ -51,8 +53,10 @@ static int handle(void)
     {
         return 100; // no need to check as often if the screen is off!
     }
+#endif
     uint32_t now = millis();
 
+#if defined(PLATFORM_ESP32)
     if (state_machine.getParentState() != STATE_WIFI_TX && connectionState == wifiUpdate)
     {
         jumpToWifiRunning();
@@ -62,11 +66,14 @@ static int handle(void)
     {
         jumpToBleRunning();
     }
+#endif
 
+#ifdef HAS_FIVE_WAY_BUTTON
     if (!handset->IsArmed())
     {
         int key;
         bool isLongPressed;
+#if defined(JOY_ADC_VALUES) && defined(PLATFORM_ESP32)
         // if we are using analog joystick then we can't cancel because WiFi is using the ADC2 (i.e. channel >= 8)!
         if (connectionState == wifiUpdate && digitalPinToAnalogChannel(GPIO_PIN_JOYSTICK) >= 8)
         {
@@ -76,6 +83,9 @@ static int handle(void)
         {
             fivewaybutton.update(&key, &isLongPressed);
         }
+#else
+        fivewaybutton.update(&key, &isLongPressed);
+#endif
         fsm_event_t fsm_event;
         switch (key)
         {
@@ -126,6 +136,7 @@ static int handle(void)
         }
     }
     else
+#endif
     {
         state_machine.handleEvent(now, EVENT_TIMEOUT);
     }
@@ -135,9 +146,11 @@ static int handle(void)
 
 static void initialize()
 {
-    if (OPT_HAS_SCREEN)
+#ifdef HAS_FIVE_WAY_BUTTON
+    fivewaybutton.init();
+#endif
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
-        fivewaybutton.init();
         if (OPT_HAS_TFT_SCREEN)
         {
             display = new TFTDisplay();
@@ -148,21 +161,21 @@ static void initialize()
         }
         display->init();
         state_machine.start(millis(), getInitialState());
-
-        registerButtonFunction(ACTION_GOTO_VTX_BAND, [](){
-            jumpToBandSelect = true;
-            devicesTriggerEvent();
-        });
-        registerButtonFunction(ACTION_GOTO_VTX_CHANNEL, [](){
-            jumpToChannelSelect = true;
-            devicesTriggerEvent();
-        });
     }
+
+    registerButtonFunction(ACTION_GOTO_VTX_BAND, [](){
+        jumpToBandSelect = true;
+        devicesTriggerEvent();
+    });
+    registerButtonFunction(ACTION_GOTO_VTX_CHANNEL, [](){
+        jumpToChannelSelect = true;
+        devicesTriggerEvent();
+    });
 }
 
 static int start()
 {
-    if (OPT_HAS_SCREEN)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return DURATION_IMMEDIATELY;
     }
@@ -171,7 +184,7 @@ static int start()
 
 static int event()
 {
-    if (OPT_HAS_SCREEN)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return handle();
     }
@@ -180,7 +193,7 @@ static int event()
 
 static int timeout()
 {
-    if (OPT_HAS_SCREEN)
+    if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         return handle();
     }
