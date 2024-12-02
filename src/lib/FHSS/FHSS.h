@@ -155,6 +155,19 @@ static inline uint32_t FHSSgetNextFreq()
         return FHSSconfigDualBand->freq_start + (freq_spread_DualBand * FHSSsequence_DualBand[FHSSptr] / FREQ_SPREAD_SCALE);
     }
 }
+static inline uint32_t FHSSgetNextFreq2()
+{
+    FHSSptr = (FHSSptr + 1) % FHSSgetSequenceCount();
+
+    if (FHSSusePrimaryFreqBand)
+    {
+        return FHSSconfigDualBand->freq_start + (freq_spread_DualBand * FHSSsequence_DualBand[FHSSptr] / FREQ_SPREAD_SCALE);
+    }
+    else
+    {
+        return FHSSconfigDualBand->freq_start + (freq_spread_DualBand * FHSSsequence_DualBand[FHSSptr] / FREQ_SPREAD_SCALE);
+    }
+}
 
 static inline const char *FHSSgetRegulatoryDomain()
 {
@@ -193,6 +206,25 @@ static inline uint32_t FHSSgetGeminiFreq()
     {
         // When using Dual Band there is no need to calculate an offset frequency. Unlike Gemini with 2 frequencies in the same band.
         return FHSSconfigDualBand->freq_start + (FHSSsequence_DualBand[FHSSptr] * freq_spread_DualBand / FREQ_SPREAD_SCALE);
+    }
+    else
+    {
+        if (FHSSusePrimaryFreqBand)
+        {
+            return FHSSGeminiFreq(FHSSsequence[FHSSgetCurrIndex()]);
+        }
+        else
+        {
+            return FHSSGeminiFreq(FHSSsequence_DualBand[FHSSgetCurrIndex()]);
+        }
+    }
+}
+static inline uint32_t FHSSgetGeminiFreq2()
+{
+    if (FHSSuseDualBand)
+    {
+        // When using Dual Band there is no need to calculate an offset frequency. Unlike Gemini with 2 frequencies in the same band.
+        return FHSSconfig->freq_start + (freq_spread * FHSSsequence[FHSSptr] / FREQ_SPREAD_SCALE) - FreqCorrection;
     }
     else
     {

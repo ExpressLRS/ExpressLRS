@@ -261,6 +261,8 @@ static uint32_t BindingRateChangeTime;
 extern void setWifiUpdateMode();
 void reconfigureSerial();
 
+bool vova = false;
+
 uint8_t getLq()
 {
     return LQCalc.getLQ();
@@ -368,6 +370,8 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     //FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
     //FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
+    vova = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4;
+
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
 #if defined(RADIO_SX128X)
@@ -424,8 +428,17 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            if(vova)
+            {
+                Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+                Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            }
+            else
+            {
+                uint32_t freqRadio2 = FHSSgetNextFreq2();
+                Radio.SetFrequencyReg(FHSSgetGeminiFreq2(), SX12XX_Radio_1);
+                Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
+            }
         }
         else
         {
