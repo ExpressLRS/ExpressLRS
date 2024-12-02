@@ -13,7 +13,7 @@ rem -- N.B. ErskyTx Basic uses 0 based indexing into arrays in contrast to lua's
 rem -- Note: ErskyTx uses 400000 baud to talk to crossfire modules, and therefore ELRS.
 rem -- If you have a 2018 R9M module (with the ACCST logo on the back), you need the 
 rem -- resistor mod for reliable communuication:
-rem -- https://www.expresslrs.org/hardware/inverter-mod/
+rem -- https://github.com/AlessandroAU/ExpressLRS/wiki/Inverter-Mod-for-R9M-2018
 
 array byte rxBuf[64]
 array byte transmitBuffer[64]

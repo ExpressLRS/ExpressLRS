@@ -2,10 +2,10 @@
 
 .elrs-header {
     padding: 3em 0 3em 0 ;
-    background-color: #4686a0;
+    background-color: #ffffff;
     color: rgba(255, 255, 255, 0.75);
     background-attachment: fixed, fixed, fixed;
-    background-image: linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
+    background-image: linear-gradient(45deg, #cbcbcb 5%, #6b6b6b 30%, #000000);
     background-position: top left, center center, center center;
     background-size: auto, cover, cover;
     overflow: hidden;

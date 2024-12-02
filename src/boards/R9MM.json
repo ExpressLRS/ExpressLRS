@@ -1,0 +1,44 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m3",
+    "extra_flags": "-DSTM32F103xB",
+    "f_cpu": "72000000L",
+    "ldscript": "variants/R9MM/R9MM_ldscript.ld",
+    "mcu": "stm32f103rbt6",
+    "variants_dir": "variants",
+    "variant": "R9MM"
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F103RB",
+    "onboard_tools": [
+      "stlink"
+    ],
+    "openocd_board": "st_nucleo_f103rb",
+    "svd_path": "STM32F103xx.svd"
+  },
+  "frameworks": [
+    "arduino",
+    "mbed",
+    "libopencm3",
+    "stm32cube",
+    "zephyr"
+  ],
+  "name": "R9MM receiver",
+  "upload": {
+    "maximum_ram_size": 20480,
+    "maximum_size": 98304,
+    "protocol": "custom",
+    "protocols": [
+      "jlink",
+      "stlink",
+      "blackmagic",
+      "mbed"
+    ]
+  },
+  "url": "https://developer.mbed.org/platforms/ST-Nucleo-F103RB/",
+  "vendor": "ST"
+}

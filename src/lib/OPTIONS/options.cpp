@@ -15,20 +15,189 @@ const char version[] = {LATEST_VERSION, 0};
 #endif
 
 #if defined(TARGET_TX)
-const char *wifi_hostname = "elrs_tx";
-const char *wifi_ap_ssid = "ExpressLRS TX";
+const char *wifi_hostname = "roi_tx";
+const char *wifi_ap_ssid = "ROI_TX";
 #else
-const char *wifi_hostname = "elrs_rx";
-const char *wifi_ap_ssid = "ExpressLRS RX";
+const char *wifi_hostname = "roi_rx";
+const char *wifi_ap_ssid = "ROI_RX";
 #endif
-const char *wifi_ap_password = "expresslrs";
+const char *wifi_ap_password = "roiroiroi";
 const char *wifi_ap_address = "10.0.0.1";
 
-#if defined(UNIT_TEST)
-char *device_name = DEVICE_NAME;
-char *product_name = (char *)(target_name+4);
-firmware_options_t firmwareOptions;
+#if !defined(TARGET_UNIFIED_TX) && !defined(TARGET_UNIFIED_RX)
+
+#if defined(TARGET_RX)
+// This is created by the build_flags.py and used by STM32 (ESP gets it from json)
+#include "flashdiscrim.h"
+#endif
+
+const char device_name[] = DEVICE_NAME;
+const char *product_name = (const char *)(target_name+4);
+
+__attribute__ ((used)) static firmware_options_t flashedOptions = {
+    ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
+    ._version_ = 1,
+#if defined(Regulatory_Domain_ISM_2400)
+    .domain0 = 0,
+    .domain1 = 0,
+    .domain2 = 0,
 #else
+    #if defined(Regulatory_Domain_AU_915)
+    .domain0 = 0,
+    .domain1 = 0,
+    .domain2 = 0,
+    #elif defined(Regulatory_Domain_FCC_915)
+    .domain0 = 1,
+    .domain1 = 1,
+    .domain2 = 1,
+    #elif defined(Regulatory_Domain_EU_868)
+    .domain0 = 2,
+    .domain1 = 2,
+    .domain2 = 2,
+    #elif defined(Regulatory_Domain_IN_866)
+    .domain0 = 3,
+    .domain1 = 3,
+    .domain2 = 3,
+    #elif defined(Regulatory_Domain_AU_433)
+    .domain0 = 4,
+    .domain1 = 4,
+    .domain2 = 4,
+    #elif defined(Regulatory_Domain_EU_433)
+    .domain0 = 5,
+    .domain1 = 5,
+    .domain2 = 5,
+    #elif defined(Regulatory_Domain_US_433)
+    .domain0 = 6,
+    .domain1 = 6,
+    .domain2 = 6,
+    #elif defined(Regulatory_Domain_US_433_WIDE)
+    .domain0 = 7,
+    .domain1 = 7,
+    .domain2 = 7,
+    #else
+    #error No regulatory domain defined, please define one in user_defines.txt
+    #endif
+#endif
+#if defined(MY_UID)
+    .hasUID = true,
+    .uid = { MY_UID },
+#else
+    .hasUID = false,
+    .uid = {},
+#endif
+#if defined(FLASH_DISCRIM)
+    .flash_discriminator = FLASH_DISCRIM,
+#else
+    .flash_discriminator = 0,
+#endif
+#if defined(FAN_MIN_RUNTIME)
+    .fan_min_runtime = FAN_MIN_RUNTIME,
+#else
+    .fan_min_runtime = 30,
+#endif
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    #if defined(AUTO_WIFI_ON_INTERVAL)
+        .wifi_auto_on_interval = AUTO_WIFI_ON_INTERVAL * 1000,
+    #else
+        .wifi_auto_on_interval = -1,
+    #endif
+    #if defined(HOME_WIFI_SSID)
+        .home_wifi_ssid = {HOME_WIFI_SSID},
+    #else
+        .home_wifi_ssid = {},
+    #endif
+    #if defined(HOME_WIFI_PASSWORD)
+        .home_wifi_password = {HOME_WIFI_PASSWORD},
+    #else
+        .home_wifi_password = {},
+    #endif
+#endif
+#if defined(TARGET_RX)
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#elif defined(USE_SBUS_PROTOCOL) || defined(USE_DJI_RS_PRO_PROTOCOL)
+    .uart_baud = 100000,
+#elif defined(USE_SUMD_PROTOCOL)
+    .uart_baud = 115200,
+#elif defined(USE_HOTT_TLM_PROTOCOL)
+    .uart_baud = 19200,
+#elif defined(USE_MAVLINK_PROTOCOL)
+    .uart_baud = 460800,
+#elif defined(RCVR_UART_BAUD)
+    .uart_baud = RCVR_UART_BAUD,
+#else
+    .uart_baud = 420000,
+#endif
+    ._unused1 = false,
+#if defined(LOCK_ON_FIRST_CONNECTION)
+    .lock_on_first_connection = true,
+#else
+    .lock_on_first_connection = false,
+#endif
+    ._unused2 = false,
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
+#else
+    .is_airport = false,
+#endif
+#endif
+#if defined(TARGET_TX)
+#if defined(TLM_REPORT_INTERVAL_MS)
+    .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
+#else
+    .tlm_report_interval = 240U,
+#endif
+    ._unused1 = false,
+#if defined(UNLOCK_HIGHER_POWER)
+    .unlock_higher_power = true,
+#else
+    .unlock_higher_power = false,
+#endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .is_airport = true,
+#else
+    .is_airport = false,
+#endif
+#if defined(GPIO_PIN_BUZZER)
+    #if defined(DISABLE_ALL_BEEPS)
+    .buzzer_mode = buzzerQuiet,
+    .buzzer_melody = {},
+    #elif defined(JUST_BEEP_ONCE)
+    .buzzer_mode = buzzerOne,
+    .buzzer_melody = {},
+    #elif defined(DISABLE_STARTUP_BEEP)
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = {{400, 200}, {480, 200}},
+    #elif defined(MY_STARTUP_MELODY)
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = MY_STARTUP_MELODY_ARR,
+    #else
+    .buzzer_mode = buzzerTune,
+    .buzzer_melody = {{659, 300}, {659, 300}, {523, 100}, {659, 300}, {783, 550}, {392, 575}},
+    #endif
+#endif
+#if defined(USE_AIRPORT_AT_BAUD)
+    .uart_baud = USE_AIRPORT_AT_BAUD,
+#else
+    .uart_baud = 0,
+#endif
+#endif
+};
+
+/*
+ * This all seems rather convoluted, but it means that the compiler/linker optimisations
+ * don't create multiple copies of the UID. This code forces the firmwareOptions to be copied
+ * into RAM and all the other areas of code are forced to use the RAM copy.
+ */
+firmware_options_t firmwareOptions;
+bool options_init()
+{
+    firmwareOptions = flashedOptions;
+    return true;
+}
+
+#else // TARGET_UNIFIED_TX || TARGET_UNIFIED_RX
+
 #include <ArduinoJson.h>
 #include <StreamString.h>
 #if defined(PLATFORM_ESP8266)
@@ -74,7 +243,7 @@ void saveOptions(Stream &stream, bool customised)
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
         doc["wifi-password"] = firmwareOptions.home_wifi_password;
     }
-    #if defined(TARGET_TX)
+    #if defined(TARGET_UNIFIED_TX)
     doc["tlm-interval"] = firmwareOptions.tlm_report_interval;
     doc["fan-runtime"] = firmwareOptions.fan_min_runtime;
     doc["unlock-higher-power"] = firmwareOptions.unlock_higher_power;
@@ -84,7 +253,9 @@ void saveOptions(Stream &stream, bool customised)
     doc["lock-on-first-connection"] = firmwareOptions.lock_on_first_connection;
     #endif
     doc["is-airport"] = firmwareOptions.is_airport;
-    doc["domain"] = firmwareOptions.domain;
+    doc["domain0"] = firmwareOptions.domain0;
+    doc["domain1"] = firmwareOptions.domain1;
+    doc["domain2"] = firmwareOptions.domain2;
     doc["customised"] = customised;
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
@@ -175,7 +346,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
-    #if defined(TARGET_TX)
+    #if defined(TARGET_UNIFIED_TX)
     firmwareOptions.tlm_report_interval = doc["tlm-interval"] | 240U;
     firmwareOptions.fan_min_runtime = doc["fan-runtime"] | 30U;
     firmwareOptions.unlock_higher_power = doc["unlock-higher-power"] | false;
@@ -196,7 +367,9 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     #endif
     firmwareOptions.lock_on_first_connection = doc["lock-on-first-connection"] | true;
     #endif
-    firmwareOptions.domain = doc["domain"] | 0;
+    firmwareOptions.domain0 = doc["domain0"] | 0;
+    firmwareOptions.domain1 = doc["domain1"] | 0;
+    firmwareOptions.domain2 = doc["domain2"] | 0;
     firmwareOptions.flash_discriminator = doc["flash-discriminator"] | 0U;
 
     builtinOptions.clear();
@@ -210,7 +383,9 @@ void options_SetTrueDefaults()
 {
     JsonDocument doc;
     // The Regulatory Domain is retained, as there is no sensible default
-    doc["domain"] = firmwareOptions.domain;
+    doc["domain0"] = firmwareOptions.domain0;
+    doc["domain1"] = firmwareOptions.domain1;
+    doc["domain2"] = firmwareOptions.domain2;
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
     File options = SPIFFS.open("/options.json", "w");
@@ -238,7 +413,7 @@ static bool options_LoadProductAndDeviceName(EspFlashStream &strmFlash)
     }
     else
     {
-        #if defined(TARGET_RX)
+        #if defined(TARGET_UNIFIED_RX)
         strcpy(product_name, "Unified RX");
         strcpy(device_name, "Unified RX");
         #else
@@ -287,4 +462,5 @@ bool options_init()
 
     return hasHardware;
 }
+
 #endif

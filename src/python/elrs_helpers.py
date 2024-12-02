@@ -3,7 +3,7 @@ import re
 import subprocess
 
 def git_cmd(*args):
-    return subprocess.check_output(["git"] + list(args), stderr=subprocess.DEVNULL).decode("utf-8").rstrip('\r\n')
+    return subprocess.check_output(["git"] + list(args)).decode("utf-8").rstrip('\r\n')
 
 
 def get_git_version():

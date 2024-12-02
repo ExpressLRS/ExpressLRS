@@ -1,8 +1,11 @@
 #include "MAVLink.h"
-#include "ardupilot_protocol.h"
+#if !defined(PLATFORM_STM32)
+    #include "ardupilot_protocol.h"
+#endif
 
 void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset *handset)
 {
+#if !defined(PLATFORM_STM32)
     // Store the relative altitude for GPS altitude
     static int32_t relative_alt = 0;
 
@@ -104,10 +107,12 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
             }
         }
     }
+#endif
 }
 
 bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
 {
+#if !defined(PLATFORM_STM32)
     for (uint8_t i = 0; i < bufferSize; ++i)
     {
         uint8_t c = buffer[i];
@@ -122,11 +127,13 @@ bool isThisAMavPacket(uint8_t *buffer, uint16_t bufferSize)
             return true;
         }
     }
+#endif
     return false;
 }
 
 uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
 {
+#if !defined(PLATFORM_STM32)
     constexpr uint8_t ELRS_MODE_CHANGE = 0x8;
     mavlink_command_int_t commandMsg;
     commandMsg.target_system = 255;
@@ -138,4 +145,7 @@ uint16_t buildMAVLinkELRSModeChange(uint8_t mode, uint8_t *buffer)
     mavlink_msg_command_int_encode(255, MAV_COMP_ID_TELEMETRY_RADIO, &msg, &commandMsg);
     uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
     return len;
+#else
+    return 0;
+#endif
 }

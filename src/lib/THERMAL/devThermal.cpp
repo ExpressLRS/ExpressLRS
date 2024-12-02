@@ -1,12 +1,20 @@
 #include "targets.h"
 #include "devThermal.h"
 
-#if defined(PLATFORM_ESP32)
+#if defined(HAS_THERMAL) || defined(HAS_FAN)
+
 #include "config.h"
 #include "logging.h"
 
+#if defined(TARGET_RX)
+extern RxConfig config;
+#else
+extern TxConfig config;
+#endif
 #define THERMAL_DURATION 1000
 
+#if defined(HAS_THERMAL)
+#include "common.h"
 #include "thermal.h"
 
 Thermal thermal;
@@ -16,11 +24,31 @@ bool is_smart_fan_control = false;
 bool is_smart_fan_working = false;
 #endif
 
+#ifdef HAS_THERMAL_LM75A
+    #ifndef OPT_HAS_THERMAL_LM75A
+        #define OPT_HAS_THERMAL_LM75A true
+    #endif
+#else
+    #define OPT_HAS_THERMAL_LM75A true
+#endif
+
+#endif // HAS_THERMAL
+
 #include "POWERMGNT.h"
 
+#if defined(GPIO_PIN_FAN_PWM)
 constexpr uint8_t fanChannel = 0;
+#endif
+
+#if !defined(FAN_MIN_RUNTIME)
+    #define FAN_MIN_RUNTIME 30U // intervals (seconds)
+#endif
 
 #define FAN_MIN_CHANGETIME 10U  // intervals (seconds)
+
+#if !defined(TACHO_PULSES_PER_REV)
+#define TACHO_PULSES_PER_REV 4
+#endif
 
 static uint16_t currentRPM = 0;
 
@@ -29,6 +57,7 @@ uint32_t get_rpm();
 
 static void initialize()
 {
+#if defined(HAS_THERMAL)
 #if defined(PLATFORM_ESP32_S3)
     thermal.init();
 #else
@@ -36,6 +65,7 @@ static void initialize()
     {
         thermal.init();
     }
+#endif
 #endif
     if (GPIO_PIN_FAN_EN != UNDEF_PIN)
     {
@@ -45,7 +75,7 @@ static void initialize()
 
 static void timeoutThermal()
 {
-#if defined(TARGET_TX)
+#if defined(HAS_THERMAL)
 #if !defined(PLATFORM_ESP32_S3)
     if(OPT_HAS_THERMAL_LM75A)
 #endif
@@ -67,7 +97,8 @@ static void timeoutThermal()
 #endif
 }
 
-#if defined(TARGET_TX) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
+#ifndef TARGET_RX
 static void setFanSpeed()
 {
     const uint8_t defaultFanSpeeds[] = {
@@ -86,6 +117,7 @@ static void setFanSpeed()
     DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), speed);
 }
 #endif
+#endif
 
 /*
  * For enable-only fans:
@@ -98,6 +130,7 @@ static void setFanSpeed()
  */
 static void timeoutFan()
 {
+#if defined(HAS_FAN)
     static uint8_t fanStateDuration;
     static bool fanIsOn;
 #if defined(TARGET_RX)
@@ -109,7 +142,8 @@ static void timeoutFan()
     {
         if (fanShouldBeOn)
         {
-#if defined(TARGET_TX) && defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32)
+#ifndef TARGET_RX
             if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
                 static PowerLevels_e lastPower = MinPower;
@@ -126,6 +160,7 @@ static void timeoutFan()
             }
             else
 #endif
+#endif
             {
                 fanStateDuration = 0; // reset the timeout
             }
@@ -141,10 +176,12 @@ static void timeoutFan()
             {
                 digitalWrite(GPIO_PIN_FAN_EN, LOW);
             }
+#if defined(PLATFORM_ESP32)
             else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
                 ledcWrite(fanChannel, 0);
             }
+#endif
             fanStateDuration = 0;
             fanIsOn = false;
         }
@@ -164,6 +201,7 @@ static void timeoutFan()
                 digitalWrite(GPIO_PIN_FAN_EN, HIGH);
                 fanStateDuration = 0;
             }
+#if defined(PLATFORM_ESP32)
             else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
             {
                 // bump the fan to full power for one cycle in case
@@ -171,9 +209,11 @@ static void timeoutFan()
                 ledcWrite(fanChannel, 192);
                 fanStateDuration = FAN_MIN_CHANGETIME;
             }
+#endif
             fanIsOn = true;
         }
     }
+#endif
 }
 
 uint16_t getCurrentRPM()
@@ -181,26 +221,26 @@ uint16_t getCurrentRPM()
     return currentRPM;
 }
 
-#if !defined(PLATFORM_ESP32_C3)
 static void timeoutTacho()
 {
+#if defined(PLATFORM_ESP32)
     if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
     {
         currentRPM = get_rpm();
         DBGVLN("RPM %d", currentRPM);
     }
-}
 #endif
+}
 
 static int start()
 {
+#if defined(PLATFORM_ESP32)
     if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
     {
         ledcSetup(fanChannel, 25000, 8);
         ledcAttachPin(GPIO_PIN_FAN_PWM, fanChannel);
         ledcWrite(fanChannel, 0);
     }
-#if !defined(PLATFORM_ESP32_C3)
     if (GPIO_PIN_FAN_TACHO != UNDEF_PIN)
     {
         init_rpm_counter(GPIO_PIN_FAN_TACHO);
@@ -211,7 +251,7 @@ static int start()
 
 static int event()
 {
-#if defined(TARGET_TX)
+#if defined(HAS_THERMAL)
     if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
 #ifdef HAS_SMART_FAN
@@ -231,9 +271,7 @@ static int timeout()
 {
     timeoutThermal();
     timeoutFan();
-#if !defined(PLATFORM_ESP32_C3)
     timeoutTacho();
-#endif
     return THERMAL_DURATION;
 }
 
@@ -243,4 +281,5 @@ device_t Thermal_device = {
     .event = event,
     .timeout = timeout
 };
-#endif
+
+#endif // HAS_THERMAL || HAS_FAN

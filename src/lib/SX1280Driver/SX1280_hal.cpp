@@ -82,6 +82,15 @@ void SX1280Hal::init()
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(17500000);
+#elif defined(PLATFORM_STM32)
+    DBGLN("Config SPI");
+    SPIEx.setBitOrder(MSBFIRST);
+    SPIEx.setDataMode(SPI_MODE0);
+    SPIEx.setMOSI(GPIO_PIN_MOSI);
+    SPIEx.setMISO(GPIO_PIN_MISO);
+    SPIEx.setSCLK(GPIO_PIN_SCK);
+    SPIEx.begin();
+    SPIEx.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
 #endif
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm

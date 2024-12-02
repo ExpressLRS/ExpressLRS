@@ -40,7 +40,7 @@ void ICACHE_RAM_ATTR hwTimer::resume()
     {
         noInterrupts();
         timer0_attachInterrupt(hwTimer::callback);
-        // We want the timer to fire tock() ASAP after enabling
+        // The STM32 timer fires tock() ASAP after enabling, so mimic that behavior
         // tock() should always be the first event to maintain consistency
         isTick = false;
 #if defined(TARGET_TX)

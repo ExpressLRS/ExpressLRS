@@ -2,9 +2,8 @@
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 
-#define MAV_INPUT_BUF_LEN       1024
-#define MAV_OUTPUT_BUF_LEN      512
-#define MAV_PAYLOAD_SIZE_MAX    60
+#define MAV_INPUT_BUF_LEN   1024
+#define MAV_OUTPUT_BUF_LEN  512
 
 // Variables / constants
 extern FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
