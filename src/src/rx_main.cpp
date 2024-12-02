@@ -369,11 +369,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     hwTimer::updateInterval(interval);
 
     FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
-#if defined(M0139)
-    FHSSuseDualBand = true;
-#else
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
-#endif
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
@@ -2135,8 +2131,8 @@ void setup()
         // Setup Antenna mode to be 2 (Diversity)
         #if defined(M0139)
         #ifdef DUAL_RADIO
-        config.SetAntennaMode(2);
-        config.Commit();
+        //config.SetAntennaMode(0);
+        //config.Commit();
         #endif
         #endif
 

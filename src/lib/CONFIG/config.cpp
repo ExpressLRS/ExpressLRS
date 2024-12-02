@@ -720,8 +720,8 @@ void RxConfig::Load()
     m_eeprom->Get(0, m_config);
 
     uint32_t version = 0;
-    if ((m_config.version & CONFIG_MAGIC_MASK) == RX_CONFIG_MAGIC)
-        version = m_config.version & ~CONFIG_MAGIC_MASK;
+    // if ((m_config.version & CONFIG_MAGIC_MASK) == RX_CONFIG_MAGIC)
+    //    version = m_config.version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
     // If version is current, all done

@@ -359,11 +359,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   hwTimer::updateInterval(interval);
 
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
-#if defined(M0139)
-    FHSSuseDualBand = true;
-#else
-    FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
-#endif
+  FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
@@ -529,6 +525,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   // Sync spam only happens on slot 1 and 2 and can't be disabled
   if ((syncSpamCounter || (syncSpamCounterAfterRateChange && FHSSonSyncChannel())) && (NonceFHSSresult == 1 || NonceFHSSresult == 2))
   {
+    DBGLN("SYN");
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
     syncSlot = 0; // reset the sync slot in case the new rate (after the syncspam) has a lower FHSShopInterval
@@ -537,6 +534,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   // But only on the sync FHSS channel and with a timed delay between them
   else if ((!skipSync) && ((syncSlot / 2) <= NonceFHSSresult) && (now - SyncPacketLastSent > SyncInterval) && FHSSonSyncChannel())
   {
+    DBGLN("SYNC");
     otaPkt.std.type = PACKET_TYPE_SYNC;
     GenerateSyncPacketData(OtaIsFullRes ? &otaPkt.full.sync.sync : &otaPkt.std.sync);
     syncSlot = (syncSlot + 1) % (ExpressLRS_currAirRate_Modparams->FHSShopInterval * 2);
@@ -1395,6 +1393,13 @@ void setup()
     config.Load(); // Load the stored values from eeprom
 
     DBGLN("CFG Loaded");
+
+      #if defined(M0139)
+      #ifdef DUAL_RADIO
+      //config.SetAntennaMode(1);
+      //config.Commit();
+      #endif
+      #endif
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)

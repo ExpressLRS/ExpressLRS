@@ -32,6 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
+#ifndef TARGET_NATIVE
 
 #include <Arduino.h>
 #include "logging.h"
@@ -128,4 +129,5 @@ void ACTIVEInit( void ) {};
 void ACTIVEText( int channel, char *string ) {};
 void ACTIVEValue( int channel, int value ) {};
 void ACTIVEprintf( int channel, char *format, ... ) {};
+#endif
 #endif

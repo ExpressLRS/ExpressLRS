@@ -33,6 +33,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
+#ifndef TARGET_NATIVE
+
 #ifndef ACTIVE_DEBUG_H
 #define ACTIVE_DEBUG_H
 
@@ -49,4 +51,5 @@ void ACTIVEprintf( int channel, char *format, ... );
 #define ACTIVEStop()  ACTIVEText( 0 , "?cmd=stop" )
 #define ACTIVERestart()  ACTIVEText( 0 , "?cmd=restart" )
 
+#endif
 #endif

@@ -497,6 +497,15 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
         ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer);
 
     otaPktPtr->std.crcHigh = backupCrcHigh;
+
+    if(inCRC == calculatedCRC)
+    {
+        //DBGVLN("CRC PASSED");
+        return true;
+    } else
+    {
+        return false;
+    }
     
     return inCRC == calculatedCRC;
 }

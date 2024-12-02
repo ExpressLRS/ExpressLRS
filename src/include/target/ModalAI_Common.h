@@ -92,6 +92,8 @@ https://github.com/jaxxzer
 #if defined(DEV)
 #define DEBUG_LOG
 #define DEBUG_ACTIVE
+#define DEBUG_LOG_VERBOSE
+#define DEBUG_RX_SCOREBOARD
 #endif
 
 #endif // Header guard

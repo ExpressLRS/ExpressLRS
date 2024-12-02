@@ -194,6 +194,9 @@ extern UnpackChannelData_t OtaUnpackChannelData;
 void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *inputBuffer);
 void OtaUnpackAirportData(OTA_Packet_s const * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *outputBuffer);
 
+bool ValidatePacketCrcFull(OTA_Packet_s * const otaPktPtr);
+bool ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr);
+
 #if defined(DEBUG_RCVR_LINKSTATS)
 extern uint32_t debugRcvrLinkstatsPacketId;
 #endif
