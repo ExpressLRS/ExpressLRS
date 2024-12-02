@@ -841,7 +841,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
-    sendImmediateRC();
+    // sendImmediateRC();
 
     if (!didFHSS)
     {
@@ -2265,7 +2265,7 @@ void loop()
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
         {
-            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            //DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
             ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
         }
         LostConnection(true);

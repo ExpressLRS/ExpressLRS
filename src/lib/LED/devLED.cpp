@@ -315,5 +315,3 @@ device_t LED_device = {
     .event = event,
     .timeout = timeout
 };
-
-#endif
