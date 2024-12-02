@@ -582,11 +582,12 @@ static void recalculatePacketRateOptions(int minInterval)
     for (int i=0 ; i < RATE_MAX ; i++)
     {
         uint8_t rate = i;
-#if defined(RADIO_LR1121) // Janky fix to order menu correctly
-        rate = (rate + 4) % RATE_MAX;
-#endif
         rate = RATE_MAX - 1 - rate;
-        bool rateAllowed = get_elrs_airRateConfig(rate)->interval >= minInterval;
+        bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
+
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        rateAllowed &= isSupportedRFRate(rate);
+
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {

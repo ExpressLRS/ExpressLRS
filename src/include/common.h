@@ -317,3 +317,9 @@ bool isDualRadio();
 void EnterBindingModeSafely(); // defined in rx_main/tx_main
 void EnterUnbindMode();
 void UpdateUID(uint8_t * newID);
+
+#if defined(RADIO_LR1121)
+bool isSupportedRFRate(uint8_t index);
+#else
+inline bool isSupportedRFRate(uint8_t index) { return true; };
+#endif

@@ -43,6 +43,97 @@ def generateUID(phrase):
         uid = hashlib.md5(("-DMY_BINDING_PHRASE=\""+phrase+"\"").encode()).digest()[0:6]
     return uid
 
+def patch_uid(mm, pos, args):
+    if (args.phrase):
+        mm[pos] = 1
+        mm[pos+1:pos + 7] = generateUID(args.phrase)
+    pos += 7
+    return pos
+
+def patch_flash_discriminator(mm, pos, args):
+    return write32(mm, pos, args.flash_discriminator)
+
+def patch_wifi(mm, pos, args):
+    interval = None
+    if args.no_auto_wifi:
+        interval = -1
+    elif args.auto_wifi:
+        interval = args.auto_wifi * 1000
+    pos = write32(mm, pos, interval)
+    pos = writeString(mm, pos, args.ssid, 33)
+    pos = writeString(mm, pos, args.password, 65)
+    return pos
+
+def patch_rx_params(mm, pos, args):
+    pos = write32(mm, pos, args.rx_baud if args.airport_baud is None else args.airport_baud)
+    val = mm[pos]
+    val &= ~1   # unused1 - ex invert_tx
+    if args.lock_on_first_connection != None:
+        val &= ~2
+        val |= (args.lock_on_first_connection << 1)
+    val &= ~4   # unused2 - ex r9mm_mini_sbus
+    if args.airport_baud != None:
+        val |= ~8
+        val |= 0 if args.airport_baud == 0 else 8
+    mm[pos] = val
+    return pos + 1
+
+def patch_tx_params(mm, pos, args, options):
+    pos = write32(mm, pos, args.tlm_report)
+    val = mm[pos]
+    val &= ~1   # unused1 - ex uart_inverted
+    if args.unlock_higher_power != None:
+        val &= ~2
+        val |= (args.unlock_higher_power << 1)
+    if args.airport_baud != None:
+        val |= ~4
+        val |= 0 if args.airport_baud == 0 else 4
+    mm[pos] = val
+    pos += 1
+    if options.hasBuzzer:
+        pos = patch_buzzer(mm, pos, args)
+    pos = write32(mm, pos, 0 if args.airport_baud is None else args.airport_baud)
+    return pos
+
+def patch_buzzer(mm, pos, args):
+    melody = args.buzzer_melody
+    if args.buzzer_mode:
+        if args.buzzer_mode == BuzzerMode.quiet:
+            mm[pos] = 0
+        if args.buzzer_mode == BuzzerMode.one:
+            mm[pos] = 1
+        if args.buzzer_mode == BuzzerMode.beep:
+            mm[pos] = 2
+            melody = 'A4 20 B4 20|60|0'
+        if args.buzzer_mode == BuzzerMode.default:
+            mm[pos] = 2
+            melody = 'E5 40 E5 40 C5 120 E5 40 G5 22 G4 21|20|0'
+        if args.buzzer_mode == BuzzerMode.custom:
+            mm[pos] = 2
+            melody = args.buzzer_melody
+    mode = mm[pos]
+    pos += 1
+
+    mpos = 0
+    if mode == 2 and melody:
+        melodyArray = melodyparser.parseToArray(melody)
+        for element in melodyArray:
+            if mpos == 32*4:
+                print("Melody truncated at 32 tones")
+                break
+            mm[pos+mpos+0] = (int(element[0]) >> 0) & 0xFF
+            mm[pos+mpos+1] = (int(element[0]) >> 8) & 0xFF
+            mm[pos+mpos+2] = (int(element[1]) >> 0) & 0xFF
+            mm[pos+mpos+3] = (int(element[1]) >> 8) & 0xFF
+            mpos += 4
+        # If we are short, then add a terminating 0's
+        while(mpos < 32*4):
+            mm[pos+mpos] = 0
+            mpos += 1
+
+    pos += 32*4     # 32 notes x (2 bytes tone, 2 bytes duration)
+    return pos
+
 def FREQ_HZ_TO_REG_VAL_SX127X(freq):
     return int(freq/61.03515625)
 
@@ -66,6 +157,21 @@ def domain_number(domain):
         return 6
     elif domain == RegulatoryDomain.us_433_wide:
         return 7
+
+def patch_firmware(options, mm, pos, args):
+    if options.mcuType is MCUType.STM32:
+        if options.radioChip is RadioType.SX127X and args.domain:
+            mm[pos] = domain_number(args.domain)
+        pos += 1
+        pos = patch_uid(mm, pos, args)
+        pos = patch_flash_discriminator(mm, pos, args)
+        pos = write32(mm, pos, args.fan_min_runtime)
+        if options.deviceType is DeviceType.TX:
+            pos = patch_tx_params(mm, pos, args, options)
+        elif options.deviceType is DeviceType.RX:
+            pos = patch_rx_params(mm, pos, args)
+    else:
+        patch_unified(args, options)
 
 def patch_unified(args, options):
     json_flags = {}

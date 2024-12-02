@@ -230,22 +230,7 @@ static int timeout(devserial_ctx_t *ctx)
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 }
 
-void sendImmediateRC()
-{
-    if (*(serial0.io) != nullptr && (*(serial0.io))->sendImmediateRC() && connectionState != serialUpdate)
-    {
-        bool missed = serial0.frameMissed;
-        serial0.frameMissed = false;
-
-        // Verify there is new ChannelData and they should be sent on
-        bool sendChannels = confirmFrameAvailable(&serial0);
-
-        (*(serial0.io))->sendRCFrame(sendChannels, missed, ChannelData);
-    }
-}
-
-void handleSerialIO()
-{
+void handleSerialIO() {
     // still get telemetry and send link stats if there's no model match
     if (*(serial0.io) != nullptr)
     {

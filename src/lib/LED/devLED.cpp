@@ -54,6 +54,7 @@ static bool hasRGBLeds = false;
 #if defined(TARGET_TX)
 static bool hasGBLeds = false;
 #endif
+#endif
 
 static uint16_t updateLED()
 {
@@ -137,7 +138,7 @@ static int timeout()
     return updateLED();
 }
 
-#if !defined(TARGET_RX)
+#if defined(TARGET_TX)
 static void setPowerLEDs()
 {
     if (hasGBLeds)
