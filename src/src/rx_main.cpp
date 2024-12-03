@@ -841,7 +841,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
-    // sendImmediateRC();
+    sendImmediateRC();
 
     if (!didFHSS)
     {

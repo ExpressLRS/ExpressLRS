@@ -88,7 +88,7 @@ https://github.com/jaxxzer
 #define SYSCLK_FREQ_72MHz
 // #define GPIO_PIN_ANT_CTRL PB10 // Unused pin
 
-//#define DEV
+#define DEV
 #if defined(DEV)
 #define DEBUG_LOG
 #define DEBUG_ACTIVE
