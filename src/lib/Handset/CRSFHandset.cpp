@@ -832,7 +832,7 @@ uint32_t CRSFHandset::autobaud()
 }
 #else
 uint32_t CRSFHandset::autobaud() {
-#if defined(M0139)
+#if defined(HWIL_TESTING)
     return 400000;
 #else
     UARTcurrentBaudIdx = (UARTcurrentBaudIdx + 1) % ARRAY_SIZE(TxToHandsetBauds);

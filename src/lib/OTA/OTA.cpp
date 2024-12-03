@@ -500,7 +500,6 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 
     if(inCRC == calculatedCRC)
     {
-        //DBGVLN("CRC PASSED");
         return true;
     } else
     {

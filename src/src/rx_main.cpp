@@ -841,7 +841,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
-    sendImmediateRC();
+    // sendImmediateRC();
 
     if (!didFHSS)
     {
@@ -1420,7 +1420,7 @@ static void setupSerial()
     SERIAL_PROTOCOL_TX.setRx((PinName)NC);
     SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
 #endif /* TARGET_RX_GHOST_ATTO_V1 */
-    SERIAL_PROTOCOL_TX.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
+    SERIAL_PROTOCOL_TX.begin(serialBaud);
 #endif /* PLATFORM_STM32 */
 #if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
     if (invert)
