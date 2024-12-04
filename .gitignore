@@ -12,3 +12,4 @@ src/hardware
 *.bin
 RTT/
 src/artifacts
+!src/hardware/targets.json

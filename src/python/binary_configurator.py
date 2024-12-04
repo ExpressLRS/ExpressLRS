@@ -12,10 +12,21 @@ import shutil
 
 import firmware
 from firmware import DeviceType, FirmwareOptions, RadioType, MCUType, TXType
+import melodyparser
 import UnifiedConfiguration
 import binary_flash
 from binary_flash import UploadMethod
 from external import jmespath
+
+class BuzzerMode(Enum):
+    quiet = 'quiet'
+    one = 'one-beep'
+    beep = 'beep-tune'
+    default = 'default-tune'
+    custom = 'custom-tune'
+
+    def __str__(self):
+        return self.value
 
 class RegulatoryDomain(Enum):
     us_433 = 'us_433'
@@ -29,6 +40,34 @@ class RegulatoryDomain(Enum):
 
     def __str__(self):
         return self.value
+
+def write32(mm, pos, val):
+    if val != None:
+        mm[pos + 0] = (val >> 0) & 0xFF
+        mm[pos + 1] = (val >> 8) & 0xFF
+        mm[pos + 2] = (val >> 16) & 0xFF
+        mm[pos + 3] = (val >> 24) & 0xFF
+    return pos + 4
+
+def read32(mm, pos):
+    val = mm[pos + 0]
+    val += mm[pos + 1] << 8
+    val += mm[pos + 2] << 16
+    val += mm[pos + 3] << 24
+    return pos + 4, val
+
+def writeString(mm, pos, string, maxlen):
+    if string != None:
+        l = len(string)
+        if l > maxlen-1:
+            l = maxlen-1
+        mm[pos:pos+l] = string.encode()[0,l]
+        mm[pos+l] = 0
+    return pos + maxlen
+
+def readString(mm, pos, maxlen):
+    val = mm[pos:mm.find(b'\x00', pos)].decode()
+    return pos + maxlen, val
 
 def generateUID(phrase):
     uid = [
@@ -140,6 +179,13 @@ def FREQ_HZ_TO_REG_VAL_SX127X(freq):
 def FREQ_HZ_TO_REG_VAL_SX1280(freq):
     return int(freq/(52000000.0/pow(2,18)))
 
+def generate_domain(mm, pos, count, init, step):
+    pos = write32(mm, pos, count)
+    val = init
+    for x in range(count):
+        pos = write32(mm, pos, FREQ_HZ_TO_REG_VAL_SX127X(val))
+        val += step
+
 def domain_number(domain):
     if domain == RegulatoryDomain.au_915:
         return 0
@@ -186,6 +232,8 @@ def patch_unified(args, options):
 
     if args.tlm_report is not None:
         json_flags['tlm-interval'] = args.tlm_report
+    if args.unlock_higher_power is not None:
+        json_flags['unlock-higher-power'] = args.unlock_higher_power
     if args.fan_min_runtime is not None:
         json_flags['fan-runtime'] = args.fan_min_runtime
 
@@ -233,10 +281,6 @@ def ask_for_firmware(args):
         if args.target is not None:
             target = args.target
             config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
-            if config is None and args.fdir is not None:
-                with open(os.path.join(args.fdir, 'hardware/targets.json')) as f:
-                    targets = json.load(f)
-                    config = jmespath.search('.'.join(map(lambda s: f'"{s}"', args.target.split('.'))), targets)
         else:
             i = 0
             for k in jmespath.search(f'*.["{moduletype}_2400","{moduletype}_900","{moduletype}_dual"][].*[]', targets):
@@ -302,6 +346,12 @@ def main():
     # TX Params
     parser.add_argument('--tlm-report', type=int, const=240, nargs='?', action='store', help='The interval (in milliseconds) between telemetry packets')
     parser.add_argument('--fan-min-runtime', type=int, const=30, nargs='?', action='store', help='The minimum amount of time the fan should run for (in seconds) if it turns on')
+    parser.add_argument('--unlock-higher-power', dest='unlock_higher_power', action='store_true', help='DANGER: Unlocks the higher power on modules that do not normally have sufficient cooling e.g. 1W on R9M')
+    parser.add_argument('--no-unlock-higher-power', dest='unlock_higher_power', action='store_false', help='Set the max power level at the safe maximum level')
+    parser.set_defaults(unlock_higher_power=None)
+    # Buzzer
+    parser.add_argument('--buzzer-mode', type=BuzzerMode, choices=list(BuzzerMode), default=None, help='Which buzzer mode to use, if there is a buzzer')
+    parser.add_argument('--buzzer-melody', type=str, default=None, help='If the mode is "custom", then this is the tune')
     # Regulatory domain
     parser.add_argument('--domain', type=RegulatoryDomain, choices=list(RegulatoryDomain), default=None, help='For SX127X based devices, which regulatory domain is being used')
     # Unified target
@@ -339,6 +389,7 @@ def main():
                     file = file.replace('_RX', '_TX')
                 else:
                     print("Selected device cannot operate as 'RX-as-TX' of this type.")
+                    print("STM32 does not support RX as TX.")
                     print("ESP8285 only supports full-duplex internal RX as TX.")
                     exit(1)
             firmware_dir = '' if args.fdir is None else args.fdir + '/'
@@ -360,7 +411,9 @@ def main():
 
         pos = firmware.get_hardware(mm)
         options = FirmwareOptions(
-            MCUType.ESP32 if config['platform'].startswith('esp32') else MCUType.ESP8266,
+            False if config['platform'] == 'stm32' else True,
+            True if 'features' in config and 'buzzer' in config['features'] else False,
+            MCUType.STM32 if config['platform'] == 'stm32' else MCUType.ESP32 if config['platform'].startswith('esp32') else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
             RadioType.SX127X if '_900.' in args.target else RadioType.SX1280 if '_2400.' in args.target else RadioType.LR1121,
             config['lua_name'] if 'lua_name' in config else '',
@@ -368,7 +421,7 @@ def main():
             config['stlink']['offset'] if 'stlink' in config else 0,
             config['firmware']
         )
-        patch_unified(args, options)
+        patch_firmware(options, mm, pos, args)
         args.file.close()
 
         if options.mcuType == MCUType.ESP8266:
