@@ -355,8 +355,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         pwmModes[lastPos] = '\0';
     }
 
-    // Trigger an event to update the related fields to represent the selected channel
-    devicesTriggerEvent();
+    // update the related fields to represent the selected channel
+    const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
@@ -660,7 +663,8 @@ device_t LUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_ALL
 };
 
 #endif

@@ -13,16 +13,17 @@
 
 Handset *handset;
 
-static void initialize()
+static bool initialize()
 {
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
         handset = new AutoDetect();
-        return;
+        return true;
     }
 #endif
     handset = new CRSFHandset();
+    return true;
 }
 
 static int start()
@@ -51,5 +52,7 @@ device_t Handset_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout};
+    .timeout = timeout,
+    .subscribe = EVENT_POWER_CHANGED
+};
 #endif

@@ -19,14 +19,15 @@ extern bool busyTransmitting;
 static pdet_storage_t PdetMvScaled;
 static uint8_t lastTargetPowerdBm;
 
+static bool initialize()
+{
+    return GPIO_PIN_PA_PDET != UNDEF_PIN;
+}
+
 static int start()
 {
-    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
-    {
-        analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
+    return DURATION_IMMEDIATELY;
 }
 
 /**
@@ -40,7 +41,7 @@ static int start()
  */
 static int event()
 {
-    if (GPIO_PIN_PA_PDET == UNDEF_PIN || connectionState > connectionState_e::MODE_STATES)
+    if (connectionState > connectionState_e::MODE_STATES)
     {
         return DURATION_NEVER;
     }
@@ -85,9 +86,10 @@ static int timeout()
 }
 
 device_t PDET_device = {
-    .initialize = NULL,
+    .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED
 };
 #endif

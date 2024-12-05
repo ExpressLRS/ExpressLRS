@@ -142,35 +142,38 @@ static int debouncedRead(int pin) {
 
 void checkBackpackUpdate()
 {
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
         {
-            startPassthrough();
+            if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+            {
+                startPassthrough();
+            }
         }
-    }
 #if defined(PLATFORM_ESP32_S3)
-    // Start passthrough mode if an Espressif resync packet is detected on the USB port
-    static const uint8_t resync[] = {
-        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-    };
-    static int resync_pos = 0;
-    while(Serial.available())
-    {
-        int byte = Serial.read();
-        if (byte == resync[resync_pos])
+        // Start passthrough mode if an Espressif resync packet is detected on the USB port
+        static const uint8_t resync[] = {
+            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+        };
+        static int resync_pos = 0;
+        while(Serial.available())
         {
-            resync_pos++;
-            if (resync_pos == sizeof(resync)) startPassthrough();
+            int byte = Serial.read();
+            if (byte == resync[resync_pos])
+            {
+                resync_pos++;
+                if (resync_pos == sizeof(resync)) startPassthrough();
+            }
+            else
+            {
+                resync_pos = 0;
+            }
         }
-        else
-        {
-            resync_pos = 0;
-        }
-    }
 #endif
+    }
 }
 
 static void BackpackWiFiToMSPOut(uint16_t command)
@@ -306,29 +309,29 @@ void sendConfigToBackpack()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
-static void initialize()
+static bool initialize()
 {
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
-        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-        // Shut down the backpack via EN pin and hold it there until the first event()
-        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-        delay(20);
-        // Rely on event() to boot
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
+            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+            // Shut down the backpack via EN pin and hold it there until the first event()
+            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+            delay(20);
+            // Rely on event() to boot
+        }
+        handset->setRCDataCallback(AuxStateToMSPOut);
     }
-    handset->setRCDataCallback(AuxStateToMSPOut);
+    return OPT_USE_TX_BACKPACK;
 }
 
 static int start()
 {
-    if (OPT_USE_TX_BACKPACK)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
@@ -382,7 +385,7 @@ static int timeout()
 
 static int event()
 {
-    if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         // EN should be HIGH to be active
         digitalWrite(GPIO_PIN_BACKPACK_EN, (config.GetBackpackDisable() || connectionState == bleJoystick || connectionState == wifiUpdate) ? LOW : HIGH);
@@ -395,6 +398,7 @@ device_t Backpack_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MAIN_CHANGED
 };
 #endif

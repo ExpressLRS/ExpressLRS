@@ -35,7 +35,7 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     sendEepromWrite = true;
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_VTX_CHANGE);
 }
 
 void VtxPitmodeSwitchUpdate()
@@ -96,9 +96,10 @@ static void VtxConfigToMSPOut()
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    return true;
 }
 
 static int event()
@@ -174,5 +175,6 @@ device_t VTX_device = {
     .initialize = initialize,
     .start = NULL,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_VTX_CHANGE
 };

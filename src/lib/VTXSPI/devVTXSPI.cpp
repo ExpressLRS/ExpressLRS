@@ -343,14 +343,14 @@ void disableVTxSpi()
 }
 
 
-static void initialize()
+static bool initialize()
 {
     VpdSetPointArray25mW = VPD_VALUES_25MW;
     VpdSetPointArray100mW = VPD_VALUES_100MW;
     PwmArray25mW = PWM_VALUES_25MW;
     PwmArray100mW = PWM_VALUES_100MW;
 
-    if (GPIO_PIN_SPI_VTX_NSS != UNDEF_PIN)
+    if (OPT_HAS_VTX_SPI)
     {
         if (GPIO_PIN_SPI_VTX_SCK != UNDEF_PIN && GPIO_PIN_SPI_VTX_SCK != GPIO_PIN_SCK)
         {
@@ -390,15 +390,11 @@ static void initialize()
         #endif
         setPWM();
     }
+    return OPT_HAS_VTX_SPI;
 }
 
 static int start()
 {
-    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
-
 #if defined(VTX_OUTPUT_CALIBRATION)
     rtc6705SetFrequency(VpdFreqArray[calibFreqIndex]); // Set to the first calib frequency
     vtxSPIPitmodeCurrent = 0;
@@ -412,7 +408,7 @@ static int start()
 
 static int timeout()
 {
-    if ((GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN) || stopVtxMonitoring)
+    if (stopVtxMonitoring)
     {
         return DURATION_NEVER;
     }
