@@ -14,6 +14,6 @@
     #define DEVICE_NAME "ModalAI M0193"
 #endif
 
-#define M0139_PA // UNUSED
+#define HARDWARE_REV 0x6D313933 // m0184
 
 #endif // Header guard

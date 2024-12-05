@@ -14,4 +14,6 @@
     #define DEVICE_NAME "ModalAI M0184"
 #endif
 
+#define HARDWARE_REV 0x6D313834 // m0184
+
 #endif // Header guard

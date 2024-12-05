@@ -144,6 +144,9 @@ version_to_env()
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
+build_flags.append("-DMODALAI_VERSION=" + os.environ.get("MODALAI_VERSION", "0x00"))
+#v3.5.3(.0)
+build_flags.append("-DMODAL_ELRS_VER=" + os.environ.get("ELRS_VER", "0x03050300"))
 condense_flags()
 
 if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
