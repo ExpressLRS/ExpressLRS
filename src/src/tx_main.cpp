@@ -96,7 +96,6 @@ LQCALC<25> LQCalc;
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
 
-uint8_t MSPDataPackage[5];
 #define BindingSpamAmount 25
 static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
