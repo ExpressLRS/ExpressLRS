@@ -35,6 +35,7 @@
 #define MSP_ELRS_MAVLINK_TLM                0xFD
 
 #define MSP_ELRS_BACKPACK_CONFIG            0x30
+#define MSP_ELRS_BACKPACK_CONFIG_TLM_MODE   0x31
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_HEADER_CRC_LEN     4
