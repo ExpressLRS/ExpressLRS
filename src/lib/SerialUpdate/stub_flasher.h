@@ -22,7 +22,7 @@
 #define SECTORS_PER_BLOCK (FLASH_BLOCK_SIZE / FLASH_SECTOR_SIZE)
 
 /* 32-bit addressing is supported only by ESP32S3 */
-#if defined(ESP32S3)
+#if defined(PLATFORM_ESP32_S3)
 #define FLASH_MAX_SIZE 64*1024*1024
 #else
 #define FLASH_MAX_SIZE 16*1024*1024

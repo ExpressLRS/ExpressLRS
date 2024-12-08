@@ -8,6 +8,7 @@
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 #include "logging.h"
+#include "devButton.h"
 
 #include <BleGamepad.h>
 #include <NimBLEDevice.h>
@@ -66,9 +67,17 @@ void BluetoothJoystickBegin()
 
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);
+    gamepadConfig->setControllerType(CONTROLLER_TYPE_JOYSTICK); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
 
     DBGLN("Starting BLE Joystick!");
     bleGamepad->begin(gamepadConfig);
+}
+
+static void initialize()
+{
+  registerButtonFunction(ACTION_BLE_JOYSTICK, [](){
+    connectionState = bleJoystick;
+  });
 }
 
 static int timeout()
@@ -87,7 +96,7 @@ static int event()
 }
 
 device_t BLE_device = {
-  .initialize = NULL,
+  .initialize = initialize,
   .start = NULL,
   .event = event,
   .timeout = timeout

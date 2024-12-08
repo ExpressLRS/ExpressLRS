@@ -36,7 +36,7 @@ const char *product_name = (const char *)(target_name+4);
 
 __attribute__ ((used)) static firmware_options_t flashedOptions = {
     ._magic_ = {0xBE, 0xEF, 0xBA, 0xBE, 0xCA, 0xFE, 0xF0, 0x0D},
-    ._version_ = 1,
+    ._version_ = 3,
 #if defined(Regulatory_Domain_ISM_2400)
     .domain = 0,
 #else
@@ -72,6 +72,11 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
 #else
     .flash_discriminator = 0,
 #endif
+#if defined(FAN_MIN_RUNTIME)
+    .fan_min_runtime = FAN_MIN_RUNTIME,
+#else
+    .fan_min_runtime = 30,
+#endif
 #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     #if defined(AUTO_WIFI_ON_INTERVAL)
         .wifi_auto_on_interval = AUTO_WIFI_ON_INTERVAL * 1000,
@@ -98,6 +103,8 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .uart_baud = 115200,
 #elif defined(USE_HOTT_TLM_PROTOCOL)
     .uart_baud = 19200,
+#elif defined(USE_MAVLINK_PROTOCOL)
+    .uart_baud = 460800,
 #elif defined(RCVR_UART_BAUD)
     .uart_baud = RCVR_UART_BAUD,
 #else
@@ -121,11 +128,6 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .tlm_report_interval = TLM_REPORT_INTERVAL_MS,
 #else
     .tlm_report_interval = 240U,
-#endif
-#if defined(FAN_MIN_RUNTIME)
-    .fan_min_runtime = FAN_MIN_RUNTIME,
-#else
-    .fan_min_runtime = 30,
 #endif
     ._unused1 = false,
 #if defined(UNLOCK_HIGHER_POWER)
@@ -207,8 +209,13 @@ String& getOptions()
 
 void saveOptions(Stream &stream, bool customised)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
 
+    if (firmwareOptions.hasUID)
+    {
+        JsonArray uid = doc.createNestedArray("uid");
+        copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {
         doc["wifi-on-interval"] = firmwareOptions.wifi_auto_on_interval / 1000;
@@ -264,8 +271,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  */
 static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
-    DynamicJsonDocument flashDoc(1024);
-    DynamicJsonDocument spiffsDoc(1024);
+    JsonDocument flashDoc;
+    JsonDocument spiffsDoc;
     bool hasFlash = false;
     bool hasSpiffs = false;
 
@@ -293,7 +300,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         }
     }
 
-    DynamicJsonDocument &doc = flashDoc;
+    JsonDocument &doc = flashDoc;
     if (hasFlash && hasSpiffs)
     {
         if (flashDoc["flash-discriminator"] == spiffsDoc["flash-discriminator"])
@@ -315,7 +322,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
-    int32_t wifiInterval = doc["wifi-on-interval"] | 60;
+    int32_t wifiInterval = doc["wifi-on-interval"] | -1;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
@@ -352,7 +359,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 */
 void options_SetTrueDefaults()
 {
-    DynamicJsonDocument doc(128);
+    JsonDocument doc;
     // The Regulatory Domain is retained, as there is no sensible default
     doc["domain"] = firmwareOptions.domain;
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;

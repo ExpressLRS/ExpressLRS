@@ -32,6 +32,9 @@
 #define MSP_ELRS_POWER_CALI_SET             0x21
 
 #define MSP_ELRS_INIT_ENCRYPT               0x55
+#define MSP_ELRS_MAVLINK_TLM                0xFD
+
+#define MSP_ELRS_BACKPACK_CONFIG            0x30
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_HEADER_CRC_LEN     4

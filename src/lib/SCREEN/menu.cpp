@@ -8,6 +8,7 @@
 #include "POWERMGNT.h"
 #include "handset.h"
 #include "OTA.h"
+#include "deferred.h"
 
 #ifdef HAS_THERMAL
 #include "thermal.h"
@@ -26,7 +27,6 @@ extern void setWifiUpdateMode();
 extern void SetSyncSpam();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
-extern void deferExecution(uint32_t ms, std::function<void()> f);
 
 extern Display *display;
 
@@ -208,12 +208,26 @@ static void incrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + 1) % values_count + values_min;
+    if (state_machine.getParentState() == STATE_PACKET)
+    {
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval() || !isSupportedRFRate(values_index))
+        {
+            values_index = (values_index - values_min + 1) % values_count + values_min;
+        }
+    }
 }
 
 static void decrementValueIndex(bool init)
 {
     uint8_t values_count = values_max - values_min + 1;
     values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
+    if (state_machine.getParentState() == STATE_PACKET)
+    {
+        while (get_elrs_airRateConfig(values_index)->interval < handset->getMinPacketInterval() || !isSupportedRFRate(values_index))
+        {
+            values_index = (values_index - values_min + values_count - 1) % values_count + values_min;
+        }
+    }
 }
 
 static void saveValueIndex(bool init)
@@ -228,7 +242,7 @@ static void saveValueIndex(bool init)
             // If the switch mode is going to change, block the change while connected
             if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
             {
-                deferExecution(100, [actualRate, newSwitchMode](){
+                deferExecutionMillis(100, [actualRate, newSwitchMode](){
                     config.SetRate(actualRate);
                     config.SetSwitchMode(newSwitchMode);
                     OtaUpdateSerializers((OtaSwitchMode_e)newSwitchMode, ExpressLRS_currAirRate_Modparams->PayloadLength);
@@ -242,7 +256,7 @@ static void saveValueIndex(bool init)
             // the pack and unpack functions are matched
             if (connectionState == disconnected)
             {
-                deferExecution(100, [val](){
+                deferExecutionMillis(100, [val](){
                     config.SetSwitchMode(val);
                     OtaUpdateSerializers((OtaSwitchMode_e)val, ExpressLRS_currAirRate_Modparams->PayloadLength);
                     SetSyncSpam();
@@ -254,7 +268,7 @@ static void saveValueIndex(bool init)
             config.SetAntennaMode(values_index);
             break;
         case STATE_TELEMETRY:
-            deferExecution(100, [val](){
+            deferExecutionMillis(100, [val](){
                 config.SetTlm(val);
                 SetSyncSpam();
             });
@@ -339,7 +353,6 @@ static void executeBLE(bool init)
         }
     }
 }
-
 
 static void exitBLE(bool init)
 {
@@ -444,6 +457,11 @@ static void executeBind(bool init)
     }
 }
 
+// Linkstats
+static void displayLinkstats(bool init)
+{
+    display->displayLinkstats();
+}
 
 //-------------------------------------------------------------------
 
@@ -559,7 +577,7 @@ fsm_state_entry_t const wifi_update_menu_fsm[] = {
     {STATE_LAST}
 };
 fsm_state_event_t const wifi_menu_update_events[] = {MENU_EVENTS(wifi_update_menu_fsm)};
-fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, GOTO(STATE_WIFI_EXECUTE)}};
+fsm_state_event_t const wifi_ext_execute_events[] = {{EVENT_TIMEOUT, ACTION_POP}};
 fsm_state_entry_t const wifi_ext_menu_fsm[] = {
     {STATE_WIFI_EXECUTE, nullptr, executeWiFi, 1000, wifi_ext_execute_events, ARRAY_SIZE(wifi_ext_execute_events)},
     {STATE_LAST}
@@ -617,6 +635,19 @@ fsm_state_entry_t const main_menu_fsm[] = {
     {STATE_LAST}
 };
 
+// Linkstats FSM
+fsm_state_event_t const linkstats_confirm_events[] = {
+    {EVENT_TIMEOUT, GOTO(STATE_LINKSTATS)},
+    {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
+    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
+    {EVENT_UP, ACTION_POPALL},
+    {EVENT_DOWN, ACTION_POPALL}
+};
+fsm_state_entry_t const linkstats_menu_fsm[] = {
+    {STATE_LINKSTATS, nullptr, displayLinkstats, 1000, linkstats_confirm_events, ARRAY_SIZE(linkstats_confirm_events)},
+    {STATE_LAST}
+};
+
 // Entry FSM
 fsm_state_event_t const splash_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)}
@@ -624,10 +655,12 @@ fsm_state_event_t const splash_events[] = {
 fsm_state_event_t const idle_events[] = {
     {EVENT_TIMEOUT, GOTO(STATE_IDLE)},
     {EVENT_LONG_ENTER, PUSH(main_menu_fsm)},
-    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)}
+    {EVENT_LONG_RIGHT, PUSH(main_menu_fsm)},
+    {EVENT_UP, PUSH(linkstats_menu_fsm)},
+    {EVENT_DOWN, PUSH(linkstats_menu_fsm)}
 };
 fsm_state_entry_t const entry_fsm[] = {
-    {STATE_SPLASH, nullptr, displaySplashScreen, 5000, splash_events, ARRAY_SIZE(splash_events)},
+    {STATE_SPLASH, nullptr, displaySplashScreen, 3000, splash_events, ARRAY_SIZE(splash_events)},
     {STATE_IDLE, nullptr, displayIdleScreen, 100, idle_events, ARRAY_SIZE(idle_events)},
     {STATE_LAST}
 };
@@ -637,5 +670,11 @@ void jumpToWifiRunning()
 {
     state_machine.jumpTo(wifi_menu_fsm, STATE_WIFI_TX);
     state_machine.jumpTo(wifi_update_menu_fsm, STATE_WIFI_EXECUTE);
+}
+
+void jumpToBleRunning()
+{
+    state_machine.jumpTo(main_menu_fsm, STATE_JOYSTICK);
+    state_machine.jumpTo(ble_menu_fsm, STATE_BLE_EXECUTE);
 }
 #endif

@@ -10,8 +10,9 @@
 #include "devButton.h"
 #include "handset.h"
 
-#define PITMODE_OFF     0
-#define PITMODE_ON      1
+#define PITMODE_NOT_INITIALISED    -1
+#define PITMODE_OFF                 0
+#define PITMODE_ON                  1
 
 // Delay after disconnect to preserve the VTXSS_CONFIRMED status
 // Needs to be long enough to reconnect, but short enough to
@@ -19,7 +20,7 @@
 #define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
 
 extern Stream *TxBackpack;
-static uint8_t pitmodeAuxState = 0;
+static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
 
 static enum VtxSendState_e
@@ -33,23 +34,29 @@ static enum VtxSendState_e
 void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
+    sendEepromWrite = true;
     devicesTriggerEvent();
 }
 
 void VtxPitmodeSwitchUpdate()
 {
-    if (config.GetVtxPitmode() == PITMODE_OFF)
+    if (config.GetVtxPitmode() <= PITMODE_ON)
     {
+        pitmodeAuxState = config.GetVtxPitmode();
         return;
     }
 
     uint8_t auxInverted = config.GetVtxPitmode() % 2;
     uint8_t auxNumber = (config.GetVtxPitmode() / 2) + 3;
-    uint8_t currentPitmodeAuxState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+    uint8_t newPitmodeAuxState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
 
-    if (pitmodeAuxState != currentPitmodeAuxState)
+    if (pitmodeAuxState == PITMODE_NOT_INITIALISED)
     {
-        pitmodeAuxState = currentPitmodeAuxState;
+        pitmodeAuxState = newPitmodeAuxState;
+    }
+    else if (pitmodeAuxState != newPitmodeAuxState)
+    {
+        pitmodeAuxState = newPitmodeAuxState;
         sendEepromWrite = false;
         VtxTriggerSend();
     }
@@ -73,19 +80,12 @@ static void VtxConfigToMSPOut()
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_SET_VTX_CONFIG;
-    packet.addByte(vtxIdx);
-    packet.addByte(0);
-    if (config.GetVtxPower()) {
+    packet.addByte(vtxIdx);     // band/channel or frequency low byte
+    packet.addByte(0);          // frequency high byte, if frequency mode
+    if (config.GetVtxPower())
+    {
         packet.addByte(config.GetVtxPower());
-
-        if (config.GetVtxPitmode() == PITMODE_OFF || config.GetVtxPitmode() == PITMODE_ON)
-        {
-            packet.addByte(config.GetVtxPitmode());
-        }
-        else
-        {
-            packet.addByte(pitmodeAuxState);
-        }
+        packet.addByte(pitmodeAuxState);
     }
 
     CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);

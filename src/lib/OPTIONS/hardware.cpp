@@ -25,6 +25,8 @@ static const struct {
 } fields[] = {
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
+    {HARDWARE_serial1_rx, "serial1_rx", INT},
+    {HARDWARE_serial1_tx, "serial1_tx", INT},
     {HARDWARE_radio_busy, "radio_busy", INT},
     {HARDWARE_radio_busy_2, "radio_busy_2", INT},
     {HARDWARE_radio_dio0, "radio_dio0", INT},
@@ -41,6 +43,8 @@ static const struct {
     {HARDWARE_radio_sck, "radio_sck", INT},
     {HARDWARE_radio_dcdc, "radio_dcdc", BOOL},
     {HARDWARE_radio_rfo_hf, "radio_rfo_hf", BOOL},
+    {HARDWARE_radio_rfsw_ctrl, "radio_rfsw_ctrl", ARRAY},
+    {HARDWARE_radio_rfsw_ctrl_count, "radio_rfsw_ctrl", COUNT},
     {HARDWARE_ant_ctrl, "ant_ctrl", INT},
     {HARDWARE_ant_ctrl_compl, "ant_ctrl_compl", INT},
     {HARDWARE_power_enable, "power_enable", INT},
@@ -60,8 +64,10 @@ static const struct {
     {HARDWARE_power_pdet_slope, "power_pdet_slope", FLOAT},
     {HARDWARE_power_control, "power_control", INT},
     {HARDWARE_power_values, "power_values", ARRAY},
+    {HARDWARE_power_values_count, "power_values", COUNT},
     {HARDWARE_power_values2, "power_values2", ARRAY},
     {HARDWARE_power_values_dual, "power_values_dual", ARRAY},
+    {HARDWARE_power_values_dual_count, "power_values_dual", COUNT},
     {HARDWARE_joystick, "joystick", INT},
     {HARDWARE_joystick_values, "joystick_values", ARRAY},
     {HARDWARE_five_way1, "five_way1", INT},
@@ -221,7 +227,7 @@ bool hardware_init(EspFlashStream &strmFlash)
     builtinHardwareConfig.clear();
 
     Stream *strmSrc;
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     File file = SPIFFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;

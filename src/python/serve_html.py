@@ -7,7 +7,7 @@ A simple http server for testing/debugging the web-UI
 open http://localhost:8080/
 add the following query params for TX and/or 900Mhz testing
     isTX
-    sx127x
+    hasSubGHz
 """
 
 from external.bottle import route, run, response, request
@@ -17,7 +17,9 @@ from external.wheezy.template.loader import FileLoader
 
 net_counter = 0
 isTX = False
-sx127x = False
+hasSubGHz = False
+is8285 = True
+chip = 'LR1121'
 
 config = {
         "options": {
@@ -92,7 +94,7 @@ config = {
                     ]
                 },
                 {
-                    "color" : 224,
+                    #"color" : 224, # No color for you button 2
                     "action": [
                         {
                             "is-long-press": False,
@@ -111,7 +113,13 @@ config = {
     }
 
 def apply_template(mainfile):
-    global isTX, sx127x
+    global isTX, hasSubGHz, chip, is8285
+    if(isTX):
+        platform = 'Unified_ESP32_2400_TX'
+        is8285 = False
+    else:
+        platform = 'Unified_ESP8285_2400_RX'
+        is8285 = True
     engine = Engine(
         loader=FileLoader(["html"]),
         extensions=[CoreExtension("@@")]
@@ -119,18 +127,22 @@ def apply_template(mainfile):
     template = engine.get_template(mainfile)
     data = template.render({
             'VERSION': 'testing (xxxxxx)',
-            'PLATFORM': '',
+            'PLATFORM': platform,
             'isTX': isTX,
-            'sx127x': sx127x
+            'hasSubGHz': hasSubGHz,
+            'chip': chip,
+            'is8285': is8285
         })
     return data
 
 @route('/')
 def index():
-    global net_counter, isTX, sx127x
+    global net_counter, isTX, hasSubGHz, chip, is8285
     net_counter = 0
     isTX = 'isTX' in request.query
-    sx127x = 'sx127x' in request.query
+    hasSubGHz = 'hasSubGHz' in request.query
+    if 'chip' in request.query:
+        chip = request.query['chip']
     response.content_type = 'text/html; charset=latin9'
     return apply_template('index.html')
 
@@ -150,7 +162,7 @@ def mui():
     return apply_template('mui.js')
 
 @route('/hardware.html')
-def hradware_html():
+def hardware_html():
     response.content_type = 'text/html; charset=latin9'
     return apply_template('hardware.html')
 
@@ -158,6 +170,53 @@ def hradware_html():
 def hardware_js():
     response.content_type = 'text/javascript; charset=latin9'
     return apply_template('hardware.js')
+
+@route('/cw.html')
+def cw_html():
+    global chip
+    if 'chip' in request.query:
+        chip = request.query['chip']
+    response.content_type = 'text/html; charset=latin9'
+    return apply_template('cw.html')
+
+@route('/cw.js')
+def cw_js():
+    response.content_type = 'text/javascript; charset=latin9'
+    return apply_template('cw.js')
+
+@route('/cw')
+def cw():
+    response.content_type = 'application/json; charset=latin9'
+    return '{"radios": 2, "center": 915000000, "center2": 2440000000}'
+
+@route('/lr1121.html')
+def lr1121_html():
+    response.content_type = 'text/html; charset=latin9'
+    return apply_template('lr1121.html')
+
+@route('/lr1121.js')
+def lr1121_js():
+    response.content_type = 'text/javascript; charset=latin9'
+    return apply_template('lr1121.js')
+
+@route('/lr1121.json')
+def lr1121_json():
+    return {
+        "radio1": {
+            "hardware": 34,
+            "type": 3,
+            "firmware": 259
+        },
+        "radio2": {
+            "hardware": 34,
+            "type": 3,
+            "firmware": 257
+        }
+    }
+
+@route('/lr1121', method="POST")
+def lr1121_upload():
+    return '{ "status": "ok", "msg": "All good!" }'
 
 @route('/config')
 def options():

@@ -4,6 +4,8 @@ typedef enum {
     // Serial
     HARDWARE_serial_rx,
     HARDWARE_serial_tx,
+    HARDWARE_serial1_rx,
+    HARDWARE_serial1_tx,
 
     // Radio
     HARDWARE_radio_busy,
@@ -22,6 +24,8 @@ typedef enum {
     HARDWARE_radio_sck,
     HARDWARE_radio_dcdc,
     HARDWARE_radio_rfo_hf,
+    HARDWARE_radio_rfsw_ctrl,
+    HARDWARE_radio_rfsw_ctrl_count,
 
     // Radio Antenna
     HARDWARE_ant_ctrl,
@@ -47,8 +51,10 @@ typedef enum {
 
     HARDWARE_power_control,
     HARDWARE_power_values,
+    HARDWARE_power_values_count,
     HARDWARE_power_values2,
     HARDWARE_power_values_dual,
+    HARDWARE_power_values_dual_count,
 
     // Input
     HARDWARE_joystick,

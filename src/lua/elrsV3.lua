@@ -123,40 +123,35 @@ local function selectField(step)
 end
 
 local function fieldGetStrOrOpts(data, offset, last, isOpts)
-  if last then
-    while data[offset] ~= 0 do
-      offset = offset + 1
-    end
-    return last, offset + 1
-  end
-
   -- For isOpts: Split a table of byte values (string) with ; separator into a table
   -- Else just read a string until the first null byte
-  local r = isOpts and {}
+  local r = last or (isOpts and {})
   local opt = ''
-  local b = data[offset]
-  while b ~= 0 do
-    if r and b == 59 then -- ';'
-      r[#r+1] = opt
-      opt = ''
-    else
-      -- On firmwares that have constants defined for the arrow chars, use them in place of
-      -- the \xc0 \xc1 chars (which are OpenTX-en)
-      -- Use the table to convert the char, else use string.char if not in the table
-      opt = opt .. (({
-        [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
-        [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
-      })[b] or string.char(b))
-    end
+  local vcnt = 0
+  repeat
+    local b = data[offset]
     offset = offset + 1
-    b = data[offset]
-  end
 
-  if r then
-    r[#r+1] = opt
-    opt = r
-  end
-  return opt, offset + 1, collectgarbage("collect")
+    if not last then
+      if r and (b == 59 or b == 0) then -- ';'
+        r[#r+1] = opt
+        if opt ~= '' then
+          vcnt = vcnt + 1
+          opt = ''
+        end
+      elseif b ~= 0 then
+        -- On firmwares that have constants defined for the arrow chars, use them in place of
+        -- the \xc0 \xc1 chars (which are OpenTX-en)
+        -- Use the table to convert the char, else use string.char if not in the table
+        opt = opt .. (({
+          [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
+          [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
+        })[b] or string.char(b))
+      end
+    end
+  until b == 0
+
+  return (r or opt), offset, vcnt, collectgarbage("collect")
 end
 
 local function getDevice(name)
@@ -173,6 +168,14 @@ local function fieldGetValue(data, offset, size)
     result = bit32.lshift(result, 8) + data[offset + i]
   end
   return result
+end
+
+local function reloadCurField()
+  local field = getField(lineIndex)
+  fieldTimeout = 0
+  fieldChunk = 0
+  fieldData = nil
+  loadQ[#loadQ+1] = field.id
 end
 
 -- UINT8/INT8/UINT16/INT16 + FLOAT + TEXTSELECT
@@ -252,7 +255,13 @@ end
 
 -- TEXT SELECTION
 local function fieldTextSelLoad(field, data, offset)
-  field.values, offset = fieldGetStrOrOpts(data, offset, field.nc == nil and field.values, true)
+  local vcnt
+  local cached = field.nc == nil and field.values
+  field.values, offset, vcnt = fieldGetStrOrOpts(data, offset, cached, true)
+  -- 'Disable' the line if values only has one option in the list
+  if not cached then
+    field.grey = vcnt <= 1
+  end
   field.value = data[offset]
   -- min max and default (offset+1 to 3) are not used on selections
   -- units never uses cache
@@ -260,11 +269,11 @@ local function fieldTextSelLoad(field, data, offset)
   field.nc = nil -- use cache next time
 end
 
-local function fieldTextSelDisplay_color(field, y, attr)
+local function fieldTextSelDisplay_color(field, y, attr, color)
   local val = field.values[field.value+1] or "ERR"
-  lcd.drawText(COL2, y, val, attr)
+  lcd.drawText(COL2, y, val, attr + color)
   local strPix = lcd.sizeText and lcd.sizeText(val) or (10 * #val)
-  lcd.drawText(COL2 + strPix, y, field.unit, 0)
+  lcd.drawText(COL2 + strPix, y, field.unit, color)
 end
 
 local function fieldTextSelDisplay_bw(field, y, attr)
@@ -303,7 +312,7 @@ local function fieldFolderDeviceOpen(field)
 end
 
 local function fieldFolderDisplay(field,y ,attr)
-  lcd.drawText(COL1, y, "> " .. field.name, bit32.bor(attr, BOLD))
+  lcd.drawText(COL1, y, "> " .. field.name, attr + BOLD)
 end
 
 local function fieldCommandLoad(field, data, offset)
@@ -316,6 +325,8 @@ local function fieldCommandLoad(field, data, offset)
 end
 
 local function fieldCommandSave(field)
+  reloadCurField()
+
   if field.status ~= nil then
     if field.status < 4 then
       field.status = 1
@@ -328,7 +339,7 @@ local function fieldCommandSave(field)
 end
 
 local function fieldCommandDisplay(field, y, attr)
-    lcd.drawText(10, y, "[" .. field.name .. "]", bit32.bor(attr, BOLD))
+    lcd.drawText(10, y, "[" .. field.name .. "]", attr + BOLD)
 end
 
 local function fieldBackExec(field)
@@ -644,14 +655,6 @@ local function lcd_warn()
   lcd.drawText(LCD_W/2, textSize*5, "[OK]", BLINK + INVERS + CENTER)
 end
 
-local function reloadCurField()
-  local field = getField(lineIndex)
-  fieldTimeout = 0
-  fieldChunk = 0
-  fieldData = nil
-  loadQ[#loadQ+1] = field.id
-end
-
 local function reloadRelatedFields(field)
   -- Reload the parent folder to update the description
   if field.parent then
@@ -710,17 +713,14 @@ local function handleDevicePageEvent(event)
     else
       local field = getField(lineIndex)
       if field and field.name then
-        if field.type < 10 then
+        -- Editable fields
+        if not field.grey and field.type < 10 then
           edit = not edit
+          if not edit then
+            reloadRelatedFields(field)
+          end
         end
         if not edit then
-          if field.type < 10 then
-            -- Editable fields
-            reloadRelatedFields(field)
-          elseif field.type == 13 then
-            -- Command
-            reloadCurField()
-          end
           if functions[field.type+1].save then
             functions[field.type+1].save(field)
           end
@@ -762,11 +762,12 @@ local function runDevicePage(event)
         local attr = lineIndex == (pageOffset+y)
           and ((edit and BLINK or 0) + INVERS)
           or 0
+        local color = field.grey and COLOR_THEME_DISABLED or 0
         if field.type < 11 or field.type == 12 then -- if not folder, command, or back
-          lcd.drawText(COL1, y*textSize+textYoffset, field.name, 0)
+          lcd.drawText(COL1, y*textSize+textYoffset, field.name, color)
         end
         if functions[field.type+1].display then
-          functions[field.type+1].display(field, y*textSize+textYoffset, attr)
+          functions[field.type+1].display(field, y*textSize+textYoffset, attr, color)
         end
       end
     end
@@ -849,7 +850,11 @@ local function setLCDvar()
   if LCD_W == 480 then
     COL1 = 3
     COL2 = 240
-    maxLineIndex = 10
+    if LCD_H == 320 then
+      maxLineIndex = 12
+    else
+      maxLineIndex = 10
+    end
     textYoffset = 10
     textSize = 22 --textSize is text Height
   elseif LCD_W == 320 then
@@ -864,8 +869,12 @@ local function setLCDvar()
     else
       COL2 = 70
     end
+    if LCD_H == 96 then
+      maxLineIndex = 9
+    else
+      maxLineIndex = 6
+    end
     COL1 = 0
-    maxLineIndex = 6
     textYoffset = 3
     textSize = 8
   end
@@ -883,6 +892,42 @@ local function setMock()
   deviceIsELRS_TX = true
 end
 
+local function checkCrsfModule()
+  -- Loop through the modules and look for one set to CRSF (5)
+  for modIdx = 0, 1 do
+    local mod = model.getModule(modIdx)
+    if mod and (mod.Type == nil or mod.Type == 5) then
+      -- CRSF found
+      checkCrsfModule = nil
+      return 0
+    end
+  end
+
+  -- No CRSF module found, save an error message for run()
+  lcd.clear()
+  local y = 0
+  lcd.drawText(2, y, "  No ExpressLRS", MIDSIZE)
+  y = y + (textSize * 2) - 2
+  local msgs = {
+    " Enable a CRSF Internal",
+    "   or External module in",
+    "       Model settings",
+    "  If module is internal",
+    " also set Internal RF to",
+    " CRSF in SYS->Hardware",
+  }
+  for i, msg in ipairs(msgs) do
+    lcd.drawText(2, y, msg)
+    y = y + textSize
+    if i == 3 then
+      lcd.drawLine(0, y, LCD_W, y, SOLID, INVERS)
+      y = y + 2
+    end
+  end
+
+  return 0
+end
+
 -- Init
 local function init()
   setLCDvar()
@@ -893,10 +938,8 @@ end
 
 -- Main
 local function run(event, touchState)
-  if event == nil then
-    error("Cannot be run as a model script!")
-    return 2
-  end
+  if event == nil then return 2 end
+  if checkCrsfModule then return checkCrsfModule() end
 
   local forceRedraw = refreshNext()
 

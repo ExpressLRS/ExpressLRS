@@ -8,10 +8,7 @@ class LQCALC
 public:
     LQCALC(void)
     {
-        reset();
-        // count is reset here only once on construction to start LQ counting
-        // at 100% on first connect, but 0 out of N after a failsafe
-        count = 1;
+        reset100();
     }
 
     /* Set the bit for the current period to true and update the running LQ */
@@ -80,12 +77,19 @@ public:
     void reset()
     {
         // count is intentonally not zeroed here to start LQ counting up from 0
-        // after a failsafe, instead of down from 100
+        // after a failsafe, instead of down from 100. Use reset100() to start from 100
         LQ = 0;
         index = 0;
         LQmask = (1 << 0);
         for (uint8_t i = 0; i < (sizeof(LQArray)/sizeof(LQArray[0])); i++)
             LQArray[i] = 0;
+    }
+
+    /* Reset and start at 100% */
+    void reset100()
+    {
+        reset();
+        count = 1;
     }
 
     /*  Return true if the current period was add()ed */

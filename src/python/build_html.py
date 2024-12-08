@@ -33,11 +33,24 @@ def build_html(mainfile, var, out, env, isTX=False):
         extensions=[CoreExtension("@@")]
     )
     template = engine.get_template(mainfile)
+    has_sub_ghz = '-DRADIO_SX127X=1' in env['BUILD_FLAGS'] or '-DRADIO_LR1121=1' in env['BUILD_FLAGS']
+    if '-DRADIO_SX128X=1' in env['BUILD_FLAGS']:
+        chip = 'SX128X'
+    elif '-DRADIO_SX127X=1' in env['BUILD_FLAGS']:
+        chip = 'SX127X'
+    elif '-DRADIO_LR1121=1' in env['BUILD_FLAGS']:
+        chip = 'LR1121'
+    if 'ESP8285' in env['PIOENV']:
+        is8285 = True
+    else:
+        is8285 = False
     data = template.render({
             'VERSION': get_version(env),
             'PLATFORM': re.sub("_via_.*", "", env['PIOENV']),
             'isTX': isTX,
-            'sx127x': '-DRADIO_SX127X=1' in env['BUILD_FLAGS']
+            'hasSubGHz': has_sub_ghz,
+            'chip': chip,
+            'is8285': is8285
         })
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data)
@@ -62,6 +75,8 @@ def build_common(env, mainfile, isTX):
             build_html("hardware.js", "HARDWARE_JS", out, env)
             build_html("cw.html", "CW_HTML", out, env)
             build_html("cw.js", "CW_JS", out, env)
+            build_html("lr1121.html", "LR1121_HTML", out, env)
+            build_html("lr1121.js", "LR1121_JS", out, env)
 
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):

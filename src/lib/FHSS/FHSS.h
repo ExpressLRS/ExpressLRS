@@ -27,6 +27,7 @@ typedef struct {
     uint32_t    freq_start;
     uint32_t    freq_stop;
     uint32_t    freq_count;
+    uint32_t    freq_center;
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
@@ -52,6 +53,16 @@ extern const fhss_config_t *FHSSconfigDualBand;
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
 void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
+
+static inline uint32_t FHSSgetMinimumFreq(void)
+{
+    return FHSSconfig->freq_start;
+}
+
+static inline uint32_t FHSSgetMaximumFreq(void)
+{
+    return FHSSconfig->freq_stop;
+}
 
 // The number of frequencies for this regulatory domain
 static inline uint32_t FHSSgetChannelCount(void)

@@ -415,6 +415,95 @@ void test_stubborn_link_variable_size_per_call(void)
         doMultibyte = !doMultibyte;
     }
 }
+
+/***
+ * @brief: Make sure the packageIndex does not advance before the package is actually retreived with `GetCurrentPayload`
+*/
+void test_stubborn_link_premature_advance(void)
+{
+    uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
+    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.ResetState();
+    sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
+    uint8_t data[1];
+    uint8_t packageIndex;
+    bool confirmValue = true;
+
+    // Simulate ACKs coming in before the packet is sent
+    sender.ConfirmCurrentPayload(confirmValue);
+    sender.ConfirmCurrentPayload(confirmValue);
+    sender.ConfirmCurrentPayload(confirmValue);
+    sender.ConfirmCurrentPayload(confirmValue);
+
+    // Normal operation commences
+    packageIndex = sender.GetCurrentPayload(data, 1);
+    // packageIndex should still be the first package
+    TEST_ASSERT_EQUAL(1, packageIndex);
+
+    sender.ConfirmCurrentPayload(confirmValue);
+    packageIndex = sender.GetCurrentPayload(data, 1);
+    // packageIndex should now be the second package
+    TEST_ASSERT_EQUAL(2, packageIndex);
+}
+
+/***
+ * @brief: Make sure Receiver will fast-resync if it sees the sender has reset
+*/
+void test_stubborn_link_forlorn_receiver(void)
+{
+    uint8_t testSequence1[] = {1,2,3,4,5,6};
+    uint8_t testSequence2[] = {11,12,13,14,15,16,17,18,19,20};
+    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.ResetState();
+    sender.SetDataToTransmit(testSequence1, sizeof(testSequence1));
+    uint8_t packageIndex;
+
+    uint8_t dataOta[1];
+    uint8_t dataReceiver[64];
+    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.ResetState();
+    receiver.SetDataToReceive(dataReceiver, sizeof(dataReceiver));
+
+    // Start by sending part of the package, but use an odd number to make
+    // sure telemetry confirm is not going to match up
+    for(int i = 0; i < 3; i++)
+    {
+        packageIndex = sender.GetCurrentPayload(dataOta, sizeof(dataOta));
+        receiver.ReceiveData(packageIndex, dataOta, sizeof(dataOta));
+        sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+    }
+
+    // Simulate the Sender rebooting and starting a different send
+    // Note nothing is done to the receiver to help it figure it out
+    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.ResetState();
+    sender.SetDataToTransmit(testSequence2, sizeof(testSequence2));
+
+    int position = 0;
+    int lastPackageIndex = -1;
+    while (!receiver.HasFinishedData() && position < 10000)
+    {
+        packageIndex = sender.GetCurrentPayload(dataOta, sizeof(dataOta));
+        // If receiver is working properly, packageIndex should go 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
+        // If it is not working properly it will likely go 1, 2, 2, 2, 2, ... ELRS4_TELEMETRY_MAX_PACKAGES, 0, 0, 0, 0
+        // Count the positions where the packageIndex has moved on
+        if (lastPackageIndex != packageIndex)
+        {
+            ++position;
+        }
+        lastPackageIndex = packageIndex;
+
+        receiver.ReceiveData(packageIndex, dataOta, sizeof(dataOta));
+        sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
+
+    }
+    TEST_ASSERT_EQUAL(sizeof(testSequence2), position);
+    // The data that comes out the other side should be the second sequence, not the first
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(testSequence2, dataReceiver, sizeof(testSequence2));
+
+    receiver.Unlock();
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -433,6 +522,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_stubborn_link_multiple_packages);
     RUN_TEST(test_stubborn_link_resync_then_send);
     RUN_TEST(test_stubborn_link_variable_size_per_call);
+    RUN_TEST(test_stubborn_link_premature_advance);
+    RUN_TEST(test_stubborn_link_forlorn_receiver);
     UNITY_END();
 
     return 0;

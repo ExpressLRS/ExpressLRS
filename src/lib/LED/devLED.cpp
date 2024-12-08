@@ -51,7 +51,10 @@ static const uint8_t *_durations;
 static uint8_t _count;
 static uint8_t _counter = 0;
 static bool hasRGBLeds = false;
+
+#if defined(TARGET_TX)
 static bool hasGBLeds = false;
+#endif
 
 static uint16_t updateLED()
 {
@@ -141,6 +144,7 @@ static int timeout()
     return updateLED();
 }
 
+#if defined(TARGET_TX)
 static void setPowerLEDs()
 {
     if (hasGBLeds)
@@ -166,6 +170,7 @@ static void setPowerLEDs()
         }
     }
 }
+#endif
 
 static int event()
 {
@@ -295,6 +300,10 @@ static int event()
         {
             // technically nocrossfire is {10,100} but {20,100} is close enough
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
+        }
+        else if (GPIO_PIN_LED != UNDEF_PIN)
+        {
+            return flashLED(GPIO_PIN_LED, GPIO_LED_RED_INVERTED, LEDSEQ_RADIO_FAILED, sizeof(LEDSEQ_RADIO_FAILED));
         }
     case serialUpdate:
         if (GPIO_PIN_LED_RED != UNDEF_PIN)

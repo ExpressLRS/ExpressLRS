@@ -7,6 +7,7 @@
 #include "CRSFHandset.h"
 #include "config.h"
 #include "logging.h"
+#include "MAVLink.h"
 
 #define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
 
@@ -16,6 +17,7 @@ extern bool headTrackingEnabled;
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
 bool HTEnableFlagReadyToSend = false;
+bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
 
@@ -24,6 +26,8 @@ bool lastRecordingState = false;
 #ifndef PASSTHROUGH_BAUD
 #define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
 #endif
+
+#define GPIO_PIN_BOOT0 0
 
 #include "CRSF.h"
 #include "hwTimer.h"
@@ -113,12 +117,43 @@ bool lastRecordingState = false;
 }
 #endif
 
+#if defined(GPIO_PIN_BACKPACK_EN)
+
+static int debouncedRead(int pin) {
+    static const uint8_t min_matches = 100;
+
+    static int last_state = -1;
+    static uint8_t matches = 0;
+
+    int current_state;
+
+    current_state = digitalRead(pin);
+    if (current_state == last_state) {
+        matches = min(min_matches, (uint8_t)(matches + 1));
+    } else {
+        // We are bouncing. Reset the match counter.
+        matches = 0;
+        DBGLN("Bouncing!, current state: %d, last_state: %d, matches: %d", current_state, last_state, matches);
+    }
+
+    if (matches == min_matches) {
+        // We have a stable state and report it.
+        return current_state;
+    }
+
+    last_state = current_state;
+
+    // We don't have a definitive state we could report.
+    return -1;
+}
+#endif
+
 void checkBackpackUpdate()
 {
 #if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
-        if (!digitalRead(0))
+        if (debouncedRead(GPIO_PIN_BOOT0) == 0)
         {
             startPassthrough();
         }
@@ -223,11 +258,17 @@ static void AuxStateToMSPOut()
 #endif // USE_TX_BACKPACK
 }
 
-void crsfTelemToMSPOut(uint8_t *data)
+void sendCRSFTelemetryToBackpack(uint8_t *data)
 {
-    if (config.GetBackpackTlmEnabled() == 0)
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
     {
         // Backpack telem is off
+        return;
+    }
+
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+        // Tx is in MAVLink mode, don't forward CRSF telemetry
         return;
     }
 
@@ -251,12 +292,36 @@ void crsfTelemToMSPOut(uint8_t *data)
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
+void sendMAVLinkTelemetryToBackpack(uint8_t *data)
+{
+    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
+    {
+        // Backpack telem is off
+        return;
+    }
+
+    uint8_t count = data[1];
+    TxBackpack->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+}
+
+void sendConfigToBackpack()
+{
+    // Send any config values to the tx-backpack, as one key/value pair per MSP msg
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_CONFIG;
+    packet.addByte(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE); // Backpack tlm mode
+    packet.addByte(config.GetBackpackTlmMode());
+    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+}
+
 static void initialize()
 {
 #if defined(GPIO_PIN_BACKPACK_EN)
     if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
-        pinMode(0, INPUT); // setup so we can detect pinchange for passthrough mode
+        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
         pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
         pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
         // Shut down the backpack via EN pin and hold it there until the first event()
@@ -318,6 +383,12 @@ static int timeout()
         BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
 
+    if (BackpackTelemReadyToSend && connectionState < MODE_STATES)
+    {
+        BackpackTelemReadyToSend = false;
+        sendConfigToBackpack();
+    }
+
     return BACKPACK_TIMEOUT;
 }
 
@@ -330,6 +401,7 @@ static int event()
         digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
     }
 #endif
+
     return DURATION_IGNORE;
 }
 

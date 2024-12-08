@@ -24,7 +24,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     SX1280Driver();
-    bool Begin();
+    bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     void SetTxIdleMode() { SetMode(SX1280_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
@@ -41,7 +41,7 @@ public:
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX);
+    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX, uint32_t incomingTimeout = 0);
 
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
@@ -55,7 +55,7 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0xff;
+    static const uint8_t PWRPENDING_NONE = 0x7f;
 
     SX1280_RadioOperatingModes_t currOpmode;
     uint8_t packet_mode;
@@ -64,7 +64,7 @@ private:
     uint8_t pwrPending;
     SX1280_RadioOperatingModes_t fallBackMode;
 
-    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
+    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
 
     // LoRa functions

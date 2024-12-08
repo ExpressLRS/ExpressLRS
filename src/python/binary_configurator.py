@@ -11,7 +11,7 @@ from enum import Enum
 import shutil
 
 import firmware
-from firmware import DeviceType, FirmwareOptions, RadioType, MCUType
+from firmware import DeviceType, FirmwareOptions, RadioType, MCUType, TXType
 import melodyparser
 import UnifiedConfiguration
 import binary_flash
@@ -119,7 +119,6 @@ def patch_rx_params(mm, pos, args):
 
 def patch_tx_params(mm, pos, args, options):
     pos = write32(mm, pos, args.tlm_report)
-    pos = write32(mm, pos, args.fan_min_runtime)
     val = mm[pos]
     val &= ~1   # unused1 - ex uart_inverted
     if args.unlock_higher_power != None:
@@ -212,6 +211,7 @@ def patch_firmware(options, mm, pos, args):
         pos += 1
         pos = patch_uid(mm, pos, args)
         pos = patch_flash_discriminator(mm, pos, args)
+        pos = write32(mm, pos, args.fan_min_runtime)
         if options.deviceType is DeviceType.TX:
             pos = patch_tx_params(mm, pos, args, options)
         elif options.deviceType is DeviceType.RX:
@@ -261,7 +261,8 @@ def patch_unified(args, options):
         'tx' if options.deviceType is DeviceType.TX else 'rx',
         '2400' if options.radioChip is RadioType.SX1280 else '900' if options.radioChip is RadioType.SX127X else 'dual',
         '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
-        options.luaName
+        options.luaName,
+        args.rx_as_tx
     )
 
 def length_check(l, f):
@@ -365,6 +366,7 @@ def main():
     parser.add_argument("--confirm", action='store_true', default=False, help="Confirm upload if a mismatched target was previously uploaded")
     parser.add_argument("--tx", action='store_true', default=False, help="Flash a TX module, RX if not specified")
     parser.add_argument("--lbt", action='store_true', default=False, help="Use LBT firmware, default is FCC (only for 2.4GHz firmware)")
+    parser.add_argument('--rx-as-tx', type=TXType, choices=list(TXType), required=False, default=None, help="Flash an RX module with TX firmware, either internal (full-duplex) or external (half-duplex)")
     # Deprecated options, left for backward compatibility
     parser.add_argument('--uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
     parser.add_argument('--no-uart-inverted', action=deprecate_action, nargs=0, help='Deprecated')
@@ -382,6 +384,14 @@ def main():
         args.target, config = ask_for_firmware(args)
         try:
             file = config['firmware']
+            if args.rx_as_tx is not None:
+                if config['platform'].startswith('esp32') or config['platform'].startswith('esp8285') and args.rx_as_tx == TXType.internal:
+                    file = file.replace('_RX', '_TX')
+                else:
+                    print("Selected device cannot operate as 'RX-as-TX' of this type.")
+                    print("STM32 does not support RX as TX.")
+                    print("ESP8285 only supports full-duplex internal RX as TX.")
+                    exit(1)
             firmware_dir = '' if args.fdir is None else args.fdir + '/'
             srcdir = firmware_dir + ('LBT/' if args.lbt else 'FCC/') + file
             dst = 'firmware.bin'
@@ -423,6 +433,7 @@ def main():
         if args.flash:
             args.target = config.get('firmware')
             args.accept = config.get('prior_target_name')
+            args.platform = config.get('platform')
             return binary_flash.upload(options, args)
         elif 'upload_methods' in config and 'stock' in config['upload_methods']:
             shutil.copy(args.file.name, 'firmware.elrs')
