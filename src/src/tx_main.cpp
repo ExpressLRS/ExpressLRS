@@ -804,7 +804,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
   else
 #endif
-<<<<<<< HEAD
   {
 #ifdef USE_ENCRYPTION
     if (encryptionStateSend == ENCRYPTION_STATE_FULL)
