@@ -181,40 +181,5 @@ jobs:
           cd dist
           zip -r -9 ../firmware.zip ./firmware
 
-      - name: Upload firmware bundle to ExpressLRS artifactory
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
-          AWS_REGION: "auto"
-        run: |
-          if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
-            echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
-            exit 0
-          fi
-
-          aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null || ALLOW_UPLOAD=true
-          git describe --tags --exact-match HEAD && ALLOW_UPLOAD=true
-          if [ $ALLOW_UPLOAD ]; then
-            echo "Uploading firmware to artifactory"
-            aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
-
-            echo "Generating artifact index"
-            aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
-            echo '{' > index.json
-            echo '"branches": {' >> index.json
-            git branch --list --remotes --format '"%(refname:short)": "%(objectname)",' | grep origin/ | sed s/origin.// | grep -f /tmp/hashes | head -c-2 >> index.json
-            echo '' >> index.json
-            echo '},' >> index.json
-            echo '"tags": {' >> index.json
-            git tag --list --format '"%(refname:short)": "%(objectname)",' | grep -f /tmp/hashes | head -c-2 >> index.json
-            echo '' >> index.json
-            echo '}' >> index.json
-            echo '}' >> index.json
-
-            echo "Uploading artifact index"
-            aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json
-          else
-            echo "Not overwriting already existing artifact at $GITHUB_SHA"
-            exit 1
-          fi
+ 
+      # DELETED - name: Upload firmware bundle to ExpressLRS artifactory
