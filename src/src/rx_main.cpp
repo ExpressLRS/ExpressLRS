@@ -587,10 +587,13 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 #endif
 
+// TODO: Fix, radio 2 not working right so it always tries to send on radio 2 when rssi < 0 (and obviously fails)
+#if !defined(M0139)
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
+#endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
@@ -1100,7 +1103,9 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
     expresslrs_tlm_ratio_e TLMrateIn = (expresslrs_tlm_ratio_e)(otaSync->newTlmRatio + (uint8_t)TLM_RATIO_NO_TLM);
     uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
-    if (ExpressLRS_currTlmDenom != TlmDenom)
+    // TODO: TLM ratio 2 detected incorrectly at times and TLM 2 doesn't appear to work normally either
+    // TMP BUGFIX: Ignore TLM ratio 2
+    if (ExpressLRS_currTlmDenom != TlmDenom && TlmDenom != 2)
     {
         DBGLN("New TLMrate 1:%u", TlmDenom);
         ExpressLRS_currTlmDenom = TlmDenom;
