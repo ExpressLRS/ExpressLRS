@@ -698,10 +698,10 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
     updatePhaseLock();
     OtaNonce++;
 
-    if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    {
-        Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    }
+    // if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
+    // {
+    //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
+    // }
 
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
@@ -1120,7 +1120,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGLN("%u:%u | %u:%u", OtaNonce, otaSync->nonce, otaSync->fhssIndex, FHSSgetCurrIndex());
     if (connectionState == disconnected
         || OtaNonce != otaSync->nonce
-        || (FHSSgetCurrIndex() != otaSync->fhssIndex && !(FHSSgetCurrIndex() - otaSync->fhssIndex)) // If packet is processed late, FHSS will have advanced already and tentative connection will start
+        || (FHSSgetCurrIndex() != otaSync->fhssIndex && (FHSSgetCurrIndex() - otaSync->fhssIndex > 2)) // If packet is processed late, FHSS will have advanced already and tentative connection will start
         || connectionHasModelMatch != modelMatched)
     {
         FHSSsetCurrIndex(otaSync->fhssIndex);

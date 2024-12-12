@@ -1,4 +1,4 @@
-import binary_configurator
+#import binary_configurator
 
-if __name__ == '__main__':
-    binary_configurator.main()
+#if __name__ == '__main__':
+#    binary_configurator.main()

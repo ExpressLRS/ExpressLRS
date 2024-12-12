@@ -1,8 +1,6 @@
 #!/bin/bash
 
 MODALAI_VERSION="0"
-ENCRYPT=0
-ENCRYPT_KEY=""
 TARGETS_LIST=("m0184_rx" "m0184_tx" "m0184_hwil_tx" "m0184_hwil_rx" "m0193_rx" "m0193_tx" "m0193_hwil_tx" "m0193_hwil_rx")
 
 
@@ -21,11 +19,6 @@ while getopts "e:v:" opt; do
             print_usage
             exit 0
             ;;
-        "e")
-            ENCRYPT_KEY=${OPTARG}
-            ENCRYPT=1
-            echo "Using encryption"
-            ;;
         "v")
             MODALAI_VERSION=${OPTARG}
             echo "Using version #: $MODALAI_VERSION"
@@ -39,12 +32,7 @@ while getopts "e:v:" opt; do
 done
 
 for element in "${TARGETS_LIST[@]}"; do
-    TARGET_CMD=""
-    if [[ ENCRYPT ]] then
-        TARGET_CMD="-e ${ENCRYPT_KEY} -v ${MODALAI_VERSION} -t ${element}"
-    else
-        TARGET_CMD="-v ${MODALAI_VERSION} -t ${element}"
-    fi
+    TARGET_CMD="-v ${MODALAI_VERSION} -t ${element}"
 
     bash build.sh $TARGET_CMD
 done
