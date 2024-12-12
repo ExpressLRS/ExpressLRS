@@ -336,7 +336,7 @@ static void executeBLE(bool init)
 {
     if (init)
     {
-        connectionState = bleJoystick;
+        setConnectionState(bleJoystick);
         display->displayBLEStatus();
     }
     else
