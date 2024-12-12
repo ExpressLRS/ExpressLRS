@@ -116,11 +116,6 @@ static void setPowerLEDs()
 }
 #endif
 
-static int start()
-{
-    return DURATION_IMMEDIATELY;
-}
-
 static int event()
 {
     #if defined(TARGET_TX)
@@ -219,6 +214,11 @@ static int event()
     default:
         return DURATION_NEVER;
     }
+}
+
+static int start()
+{
+    return event();
 }
 
 device_t LED_device = {
