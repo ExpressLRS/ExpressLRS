@@ -86,3 +86,7 @@ private:
     bool crsfBaroSensorDetected;
     uint8_t modelMatchId;
 };
+
+//Added to be able to call serial bind as defined in rx_main without having to jump through hoops
+extern void onSerialBind(uint8_t* newUid6);
+extern bool  gettingSerialIn;

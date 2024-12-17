@@ -5,8 +5,10 @@ void SerialIO::setFailsafe(bool failsafe)
     this->failsafe = failsafe;
 }
 
+extern bool gettingSerialIn;
 void SerialIO::processSerialInput()
 {
+    gettingSerialIn = true;
     auto maxBytes = getMaxSerialReadSize();
     uint8_t buffer[maxBytes];
     auto size = min(_inputPort->available(), maxBytes);

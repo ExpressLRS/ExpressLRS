@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstring>
+#include "config.h"
 #include "telemetry.h"
 #include "logging.h"
 
@@ -236,9 +237,17 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
  * @brief: Check the CRSF frame for commands that should not be passed on
  * @return: true if packet was internal and should not be processed further
 */
+
+
 bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
 {
     const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
+
+    if (header->type == CRSF_FRAMETYPE_BIND)
+    {
+        onSerialBind(&package[3]);
+        return true;
+    }
 
     if (header->type == CRSF_FRAMETYPE_COMMAND)
     {

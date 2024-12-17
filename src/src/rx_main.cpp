@@ -170,6 +170,8 @@ SerialIO *serialIO = nullptr;
 #elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
     #define SERIAL_PROTOCOL_RX CrsfRxSerial
     HardwareSerial CrsfRxSerial(USART3);
+#elif defined(TARGET_DIY_900_RX_STM32)
+    #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #elif defined(TARGET_RX_FM30_MINI)
     #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
 #else
@@ -950,6 +952,18 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     }
 }
 
+
+//Handle binding as sent over Serial UART instead of over RF MSP packet
+void ICACHE_RAM_ATTR onSerialBind(uint8_t* newUid6)
+{
+    DBGLN("Binding over Serial UART called successfully");
+    for (unsigned i = 0; i < 6; i++)
+    {
+        UID[i] = newUid6[i];
+    }
+    config.SetUID(UID);
+}
+
 void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 {
     // Binding over MSP only contains 4 bytes due to packet size limitations, clear out any leading bytes
@@ -1405,7 +1419,7 @@ static void setupSerial()
 #if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
     Serial.setRx(GPIO_PIN_DEBUG_RX);
     Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(serialBaud); // Same baud as CRSF for simplicity
+    Serial.begin(115200); // Same baud as CRSF for simplicity
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -1723,7 +1737,7 @@ static void cycleRfMode(unsigned long now)
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
-        DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
+        DBGLN("Cycling RF mode:%u", ExpressLRS_currAirRate_Modparams->interval);
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -2114,9 +2128,7 @@ void setup()
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();
-
         setupBindingFromConfig();
-
         FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
         setupRadio();

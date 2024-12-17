@@ -304,6 +304,7 @@ extern uint8_t UID[UID_LEN];
 extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
 extern bool InBindingMode;
+extern bool gettingSerialIn;
 extern uint8_t ExpressLRS_currTlmDenom;
 extern connectionState_e connectionState;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;

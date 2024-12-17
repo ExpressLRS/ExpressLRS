@@ -228,8 +228,9 @@ static int timeout(devserial_ctx_t *ctx)
 
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 }
-
+extern bool gettingSerialIn;
 void handleSerialIO() {
+    gettingSerialIn = true;
     // still get telemetry and send link stats if there's no model match
     if (*(serial0.io) != nullptr)
     {

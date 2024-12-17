@@ -151,6 +151,7 @@ uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
 bool connectionHasModelMatch = false;
 bool teamraceHasModelMatch = true; // true if isTx or teamrace disabled or (enabled and channel in correct postion)
 bool InBindingMode = false;
+bool gettingSerialIn = false;
 uint8_t ExpressLRS_currTlmDenom = 1;
 connectionState_e connectionState = disconnected;
 expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams = nullptr;

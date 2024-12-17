@@ -71,6 +71,8 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 
+    CRSF_FRAMETYPE_BIND = 0x0C,
+
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
     CRSF_FRAMETYPE_COMMAND = 0x32,
@@ -317,6 +319,13 @@ typedef struct crsf_sensor_gps_s
     uint16_t altitude; // meter ­1000m offset
     uint8_t satellites_in_use; // counter
 } PACKED crsf_sensor_gps_t;
+
+//CRSF_FRAMETYPE_BIND
+//Added to allow MOBO to send bind uid to CRSF receiver
+typedef struct crsf_bind_s
+{
+    char bind_uid[4];
+} PACKED crsf_bind_t;
 
 // CRSF_FRAMETYPE_ATTITUDE
 typedef struct crsf_sensor_attitude_s

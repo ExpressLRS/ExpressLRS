@@ -164,7 +164,7 @@ static int _devicesUpdate(unsigned long now)
     }
     return smallest_delay;
 }
-
+extern bool gettingSerialIn;
 void devicesUpdate(unsigned long now)
 {
     _devicesUpdate(now);
