@@ -59,13 +59,13 @@ static void handlePress(uint8_t button, bool longPress, uint8_t count)
     }
 }
 
+static bool initialize()
+{
+    return GPIO_PIN_BUTTON != UNDEF_PIN || GPIO_PIN_BUTTON2 != UNDEF_PIN;
+}
+
 static int start()
 {
-    if (GPIO_PIN_BUTTON == UNDEF_PIN && GPIO_PIN_BUTTON2 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
-
     if (GPIO_PIN_BUTTON != UNDEF_PIN)
     {
         button1.init(GPIO_PIN_BUTTON);
@@ -84,10 +84,6 @@ static int start()
 
 static int event()
 {
-    if (GPIO_PIN_BUTTON == UNDEF_PIN && GPIO_PIN_BUTTON2 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
 #if defined(TARGET_TX)
     if (handset->IsArmed())
     {
@@ -117,8 +113,9 @@ static int timeout()
 }
 
 device_t Button_device = {
-    .initialize = nullptr,
+    .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_ARM_FLAG_CHANGED | EVENT_CONNECTION_CHANGED
 };
