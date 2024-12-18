@@ -8,6 +8,7 @@
 #include "logging.h"
 #include "msp.h"
 #include "msptypes.h"
+#include "telemetry.h"
 
 #define BACKPACK_TIMEOUT 20 // How often to check for backpack commands
 
@@ -254,13 +255,33 @@ static void injectBackpackPanTiltRollData()
         return;
     }
 
-    const uint8_t ptrStartChannel = config.GetPTRStartChannel();
-    // If enabled and this packet is less than 1 second old then use it
-    if ((millis() - lastPTRValidTimeMs) < 1000)
+    if (config.GetPTRStartChannel() == HT_START_EDGETX)
     {
-        ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
-        ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
-        ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+        static uint32_t lastPTRSentMs = 0;
+        if (lastPTRSentMs != lastPTRValidTimeMs)
+        {
+            lastPTRSentMs = lastPTRValidTimeMs;
+            rcPacket_t rcPacket = {
+                .channels = {
+                    .ch0 = ptrChannelData[0],
+                    .ch1 = ptrChannelData[1],
+                    .ch2 = ptrChannelData[2]
+                }
+            };
+            CRSF::SetHeaderAndCrc((uint8_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t)-2, CRSF_ADDRESS_CRSF_TRANSMITTER);
+            handset->sendTelemetryToTX((uint8_t *)&rcPacket);
+        }
+    }
+    else
+    {
+        const uint8_t ptrStartChannel = config.GetPTRStartChannel() - HT_START_AUX1;
+        // If enabled and this packet is less than 1 second old then use it
+        if (millis() - lastPTRValidTimeMs < 1000)
+        {
+            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
+            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
+            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+        }
     }
 }
 
