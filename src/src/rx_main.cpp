@@ -27,6 +27,7 @@
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
 #include "rx-serial/SerialDisplayport.h"
+#include "rx-serial/SerialGPS.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -1513,6 +1514,10 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_MSP_DISPLAYPORT:
             Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialDisplayport(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_GPS:        
+            Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
 }
