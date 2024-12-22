@@ -31,6 +31,8 @@
 #error Invalid radio configuration!
 #endif
 
+#define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
+
 extern char backpackVersion[];
 
 static char version_domain[20+1+6+1];
@@ -54,7 +56,22 @@ static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
 static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
-#define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
+#if defined(RADIO_LR1121)
+static char luastrRFBandsDual[] = "868/900MHz;2.4GHz;X-Band";
+static enum RFMode : uint8_t
+{
+    RF_MODE_900 = 0,
+    RF_MODE_2G4 = 1,
+    RF_MODE_DUAL = 2,
+} rfMode;
+
+static struct luaItem_selection luaRFBand = {
+    {"RF Band", CRSF_TEXT_SELECTION},
+    0, // value
+    luastrRFBandsDual,
+    STR_EMPTYSPACE
+};
+#endif
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -566,9 +583,26 @@ static void recalculatePacketRateOptions(int minInterval)
         rate = RATE_MAX - 1 - rate;
         bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
 
+#if defined(RADIO_LR1121)
         // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
         rateAllowed &= isSupportedRFRate(rate);
-
+        if (rateAllowed)
+        {
+            const auto radio_type = get_elrs_airRateConfig(rate)->radio_type;
+            if (rfMode == RF_MODE_900)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900;
+            }
+            if (rfMode == RF_MODE_2G4)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4;
+            }
+            if (rfMode == RF_MODE_DUAL)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
+            }
+        }
+#endif
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {
@@ -605,31 +639,71 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 static void registerLuaParameters()
 {
   if (HAS_RADIO) {
-    registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    if (arg < RATE_MAX)
+#if defined(RADIO_LR1121)
+    // Dual Band modes not supported for hardware with only a single LR1121
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN)
     {
-      uint8_t selectedRate = RATE_MAX - 1 - arg;
-      uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
-      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
-      // If the switch mode is going to change, block the change while connected
-      bool isDisconnected = connectionState == disconnected;
-      // Don't allow the switch mode to change if the TX is in mavlink mode
-      // Wide switchmode is not compatible with mavlink, and the switchmode is
-      // auto configuredwhen entering mavlink mode
-      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
+      *strrchr(luastrRFBandsDual, ';') = 0;
+    }
+
+    registerLUAParameter(&luaRFBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if (arg != rfMode)
       {
-        config.SetRate(actualRate);
-        config.SetSwitchMode(newSwitchMode);
-        if (actualRate != selectedRate)
+        // Choose the fastest supported packet rate in this RF band.
+        rfMode = static_cast<RFMode>(arg);
+        for (int i=0; i < RATE_MAX ; i++)
         {
-          setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
+          if (isSupportedRFRate(i))
+          {
+            const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
+            if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
+            {
+              config.SetRate(i);
+              break;
+            }
+            if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
+            {
+              config.SetRate(i);
+              break;
+            }
+            if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+            {
+              config.SetRate(i);
+              break;
+            }
+          }
+        }
+        recalculatePacketRateOptions(handset->getMinPacketInterval());
+      }
+    });
+#endif
+    registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if (arg < RATE_MAX)
+      {
+        uint8_t selectedRate = RATE_MAX - 1 - arg;
+        uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
+        uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+          (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+        // If the switch mode is going to change, block the change while connected
+        bool isDisconnected = connectionState == disconnected;
+        // Don't allow the switch mode to change if the TX is in mavlink mode
+        // Wide switch mode is not compatible with mavlink, and the switch mode is
+        // autoconfigured when entering mavlink mode
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
+        {
+          config.SetRate(actualRate);
+          config.SetSwitchMode(newSwitchMode);
+          if (actualRate != selectedRate)
+          {
+            setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
+          }
+        }
+        else
+        {
+          setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
         }
       }
-      else
-        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-    }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
@@ -832,6 +906,23 @@ static int event()
 
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+#if defined(RADIO_LR1121)
+  // calculate RFMode from current packet-rate
+  switch (get_elrs_airRateConfig(currentRate)->radio_type)
+  {
+    case RADIO_TYPE_LR1121_LORA_900:
+    case RADIO_TYPE_LR1121_GFSK_900:
+      rfMode = RF_MODE_900;
+      break;
+    case RADIO_TYPE_LR1121_LORA_DUAL:
+      rfMode = RF_MODE_DUAL;
+      break;
+    default:
+      rfMode = RF_MODE_2G4;
+      break;
+  }
+  setLuaTextSelectionValue(&luaRFBand, rfMode);
+#endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
 
