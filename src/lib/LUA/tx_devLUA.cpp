@@ -59,7 +59,7 @@ static const char luastrOffOn[] = "Off;On";
 static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
 #if defined(RADIO_LR1121)
-static char luastrRFBandsDual[] = "868/900MHz;2.4GHz;X-Band";
+static char luastrRFBands[32];
 static enum RFMode : uint8_t
 {
     RF_MODE_900 = 0,
@@ -70,7 +70,7 @@ static enum RFMode : uint8_t
 static struct luaItem_selection luaRFBand = {
     {"RF Band", CRSF_TEXT_SELECTION},
     0, // value
-    luastrRFBandsDual,
+    luastrRFBands,
     STR_EMPTYSPACE
 };
 #endif
@@ -642,10 +642,21 @@ static void registerLuaParameters()
 {
   if (HAS_RADIO) {
 #if defined(RADIO_LR1121)
-    // Dual Band modes not supported for hardware with only a single LR1121
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN)
+    // Copy the frequency part out of the domain to the display string
+    char *bands = luastrRFBands;
+    for (const char *domain = FHSSconfig->domain; *domain ; domain++)
     {
-      *strrchr(luastrRFBandsDual, ';') = 0;
+      if (isdigit(*domain))
+      {
+        *bands++ = *domain;
+      }
+    }
+    *bands = '\0';
+    strlcat(luastrRFBands, "MHz;2.4GHz", sizeof(luastrRFBands));
+    // Only double LR1121 supports Dual Band modes
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+      strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
     }
 
     registerLUAParameter(&luaRFBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
