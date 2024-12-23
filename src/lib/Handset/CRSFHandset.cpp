@@ -347,8 +347,8 @@ bool CRSFHandset::ProcessPacket()
         packetReceived = true;
     }
     // check for all extended frames that are a broadcast or a message to the FC
-    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-            (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
+    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING && 
+            (isValidCrsfAddress(SerialInBuffer[3]) || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
     {
         // Some types trigger telemburst to attempt a connection even with telm off
         // but for pings (which are sent when the user loads Lua) do not forward
