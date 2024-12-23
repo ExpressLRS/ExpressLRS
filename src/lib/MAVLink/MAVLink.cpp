@@ -3,12 +3,15 @@
 #include <math.h>
 #include <cmath>
 /*
- * TODO Workitems - IDs to forge for Yaapu:
- * 5005
- * 5006
  * 5007 - parameter frame_type is sent, no source for battery capacity yet
- * 500B
- * 500D
+ * Checks:
+ * - Battery Indication is OK but requires capacity override to be set, there is currently no battery capacity via mavlink, maybe fake value from percentage ??
+ * - Pitch OK, Roll, OKYaw OK,
+ * - AP Status: ARM bit OK, Failsafe bit OK, Throttle not checked, Flying Bit not checked,
+ * - GPS Indication is OK
+ * - Altitude and Speed Values are off-scale, wrong input scaling ?!
+ * - HOME values not checked
+ * - TODO: Check if radians as roll, pitch are correct in CRSF, it just looks wrong ?!
  */
 
 /*
@@ -190,6 +193,77 @@ static uint32_t format_home(float xpos, float ypos, float zpos)
 }
 
 /*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_velandyaw()
+ * This is the content of the 0x5005 Velocity and Yaw.
+ */
+static uint32_t format_velandyaw(float climb_mps, float groundspeed_mps, int16_t heading);
+static uint32_t format_velandyaw(float climb_mps, float groundspeed_mps, int16_t heading)
+{
+#define VELANDYAW_XYVEL_OFFSET      9
+#define VELANDYAW_YAW_LIMIT         0x7FF
+#define VELANDYAW_YAW_OFFSET        17
+    // vertical velocity in dm/s
+    uint32_t velandyaw = prep_number(roundf(climb_mps * 10), 2, 1);
+
+    // horizontal velocity in dm/s
+    velandyaw |= prep_number(roundf(groundspeed_mps * 10), 2, 1)<<VELANDYAW_XYVEL_OFFSET;
+
+    // idiotic scaling from int to int*5
+    velandyaw |= ((heading * 5) & VELANDYAW_YAW_LIMIT)<<VELANDYAW_YAW_OFFSET;
+    return velandyaw;
+}
+
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_attiandrng()
+ * This is the content of the 0x5006 Attitude and RangeFinder.
+ * We don't provide Rangefinder here.
+ */
+static uint32_t format_attiandrng(float pitch_rad, float roll_rad);
+static uint32_t format_attiandrng(float pitch_rad, float roll_rad)
+{
+#define ATTIANDRNG_ROLL_LIMIT       0x7FF
+#define ATTIANDRNG_PITCH_LIMIT      0x3FF
+#define ATTIANDRNG_PITCH_OFFSET     11
+#define ATTIANDRNG_RNGFND_OFFSET    21
+    uint32_t attiandrng = ((uint16_t)roundf((roll_rad * (180.0 / M_PI) * 100 + 18000) * 0.05f) & ATTIANDRNG_ROLL_LIMIT);
+    attiandrng |= ((uint16_t)roundf((pitch_rad * (180.0 / M_PI) * 100 + 9000) * 0.05f) & ATTIANDRNG_PITCH_LIMIT)<<ATTIANDRNG_PITCH_OFFSET;
+    return attiandrng;
+}
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_terrain()
+ * This is the content of the 0x500B terrain.
+ */
+static uint32_t format_terrain(float altitude_terrain);
+static uint32_t format_terrain(float altitude_terrain)
+{
+    uint32_t value = prep_number(roundf(altitude_terrain * 10), 3, 2);
+    return value;
+}
+
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_waypoint()
+ * This is the content of the 0x500B terrain.
+ */
+static uint32_t format_waypoint(uint8_t heading, uint16_t distance, uint16_t number);
+static uint32_t format_waypoint(uint8_t heading, uint16_t distance, uint16_t number)
+{
+#define WP_NUMBER_LIMIT             2047
+#define WP_DISTANCE_LIMIT           1023000
+#define WP_DISTANCE_OFFSET          11
+#define WP_BEARING_OFFSET           23
+#define MIN(a,b) ((a)<(b)?(a):(b))
+    uint32_t value = MIN(number, WP_NUMBER_LIMIT);
+    // distance to next waypoint
+    value |= prep_number(distance, 3, 2) << WP_DISTANCE_OFFSET;
+    // bearing encoded in 3 degrees increments
+    value |= ((uint8_t)roundf(heading * 0.666f)) << WP_BEARING_OFFSET;
+    return value;
+}
+
+/*
  * Helper function to send an ardupilot specific CRSF passthrough frame
  * with a single data item appid is the function that produces the data.
  */
@@ -240,14 +314,14 @@ static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity)
 
 /*
  * Helper function to send an ardupilot specific CRSF passthrough frame
- * broadcasting a parameter as (id, value)-tuple.
+ * broadcasting a parameter as (id, value)-tuple via 0x5007
  */
 static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value);
 static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value)
 {
 #define PARAM_ID_OFFSET             24
 #define PARAM_VALUE_LIMIT           0xFFFFFF
-    ap_send_crsf_passthrough_single(param_id, (param_id << PARAM_ID_OFFSET) | (param_value & PARAM_VALUE_LIMIT));
+    ap_send_crsf_passthrough_single(0x5007, (param_id << PARAM_ID_OFFSET) | (param_value & PARAM_VALUE_LIMIT));
 }
 
 
@@ -342,6 +416,9 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfatt);
+
+                // send the attitude message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5006, format_attiandrng(attitude.pitch, attitude.roll));
                 break;
             }
             case MAVLINK_MSG_ID_HEARTBEAT: {
@@ -377,6 +454,8 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 mavlink_msg_vfr_hud_decode(&msg, &vfr_hud);
                 // stash the throttle value
                 throttle = vfr_hud.throttle;
+                // send the velocity and yaw message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5005, format_velandyaw(vfr_hud.climb, vfr_hud.groundspeed, vfr_hud.heading));
                 break;
             }
             case MAVLINK_MSG_ID_HOME_POSITION: {
@@ -384,6 +463,18 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 mavlink_msg_home_position_decode(&msg, &home_pos);
                 // send the home message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(0x5004, format_home(home_pos.x, home_pos.y, home_pos.z));
+            }
+            case MAVLINK_MSG_ID_ALTITUDE: {
+                mavlink_altitude_t altitude_data;
+                mavlink_msg_altitude_decode(&msg, &altitude_data);
+                // send the terrain message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x500B, format_terrain(altitude_data.altitude_terrain));
+            }
+            case MAVLINK_MSG_ID_HIGH_LATENCY2: {
+                mavlink_high_latency2_t high_latency_data;
+                mavlink_msg_high_latency2_decode(&msg, &high_latency_data);
+                // send the waypoint message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x500D, format_waypoint(high_latency_data.target_heading, high_latency_data.target_distance, high_latency_data.wp_num));
             }
             }
         }
