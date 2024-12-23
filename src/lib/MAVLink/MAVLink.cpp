@@ -1,14 +1,9 @@
 #include "MAVLink.h"
 #include "ardupilot_protocol.h"
 #include <math.h>
-
+#include <cmath>
 /*
  * TODO Workitems - IDs to forge for Yaapu:
- * 5000 - done simple forwarding of STATUS_TEXT content
- * 5001 - done, bits ok, failsafe, armed, flightmode work
- * 5002 - GPS_RAW_INT contents
- * 5003
- * 5004
  * 5005
  * 5006
  * 5007 - parameter frame_type is sent, no source for battery capacity yet
@@ -17,8 +12,8 @@
  */
 
 /*
- * adapted from ardupilot's AP_Frsky_SPort::prep_number
- * this is a proprietary number format that must be known on a value basis between producer and consumer
+ * Adapted from Ardupilot's AP_Frsky_SPort::prep_number()
+ * This is a proprietary number format that must be known on a value basis between producer and consumer.
  */
 static uint16_t prep_number(int32_t number, uint8_t digits, uint8_t power);
 static uint16_t prep_number(int32_t number, uint8_t digits, uint8_t power)
@@ -89,7 +84,8 @@ static uint16_t prep_number(int32_t number, uint8_t digits, uint8_t power)
 }
 
 /*
- * adapted from ardupilot's AP_Frsky_SPort_Passthrough::calc_gps_status
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_gps_status()
+ * This is the content of the 0x5002 GPS_STATUS value.
  */
 static uint32_t format_gps_status(uint8_t fix_type, uint32_t alt, uint16_t eph, uint8_t satellites_visible);
 static uint32_t format_gps_status(uint8_t fix_type, uint32_t alt, uint16_t eph, uint8_t satellites_visible)
@@ -114,19 +110,17 @@ static uint32_t format_gps_status(uint8_t fix_type, uint32_t alt, uint16_t eph, 
 }
 
 /*
- * adapted from ardupilot's AP_Frsky_SPort_Passthrough::calc_ap_status
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_ap_status()
+ * This is the content of the 0x5001 AP_STATUS value.
+ * Note that we don't have certain values via Mavlink.
+ * - IMU Temperature
+ * - simple/super simple mode flags
+ * - specific failsafe flags
+ * - fence flags
  */
-uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle);
-uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle)
+static uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle);
+static uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle)
 {
-    /*
-     * Note that we don't have certain values via Mavlink.
-     * - IMU Temperature
-     * - simple/super simple mode flags
-     * - specific failsafe flags
-     * - fence flags
-     */
-
 #define AP_CONTROL_MODE_LIMIT       0x1F
 #define AP_FLYING_OFFSET            7
 #define AP_ARMED_OFFSET             8
@@ -149,11 +143,56 @@ uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t syste
     }
     // signed throttle [-100,100] scaled down to [-63,63] on 7 bits, MSB for sign + 6 bits for 0-63
     ap_status |= prep_number(throttle*0.63, 2, 0)<<AP_THROTTLE_OFFSET;
-
     return ap_status;
 }
 
 
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_batt()
+ * This is the content of the 0x5003 BATT1 value.
+ */
+static uint32_t format_batt1(uint16_t voltage_mv, uint16_t current_ca, uint32_t current_consumed);
+static uint32_t format_batt1(uint16_t voltage_mv, uint16_t current_ca, uint32_t current_consumed)
+{
+#define BATT_VOLTAGE_LIMIT          0x1FF
+#define BATT_CURRENT_OFFSET         9
+#define BATT_TOTALMAH_LIMIT         0x7FFF
+#define BATT_TOTALMAH_OFFSET        17
+    // battery voltage in decivolts, can have up to a 12S battery (4.25Vx12S = 51.0V)
+    uint32_t batt = (((uint16_t)roundf(voltage_mv * 0.01f)) & BATT_VOLTAGE_LIMIT);
+    // battery current draw in deciamps
+    batt |= prep_number(roundf(current_ca * 0.1f), 2, 1)<<BATT_CURRENT_OFFSET;
+    // battery current drawn since power on in mAh (limit to 32767 (0x7FFF) since value is stored on 15 bits)
+    batt |= ((current_consumed < BATT_TOTALMAH_LIMIT) ? (current_consumed & BATT_TOTALMAH_LIMIT) : BATT_TOTALMAH_LIMIT)<<BATT_TOTALMAH_OFFSET;
+    return batt;
+}
+
+
+/*
+ * Adapted from Ardupilot's AP_Frsky_SPort_Passthrough::calc_home()
+ * This is the content of the 0x5004 HOME value.
+ */
+static uint32_t format_home(float xpos, float ypos, float zpos);
+static uint32_t format_home(float xpos, float ypos, float zpos)
+{
+#define HOME_ALT_OFFSET             12
+#define HOME_BEARING_LIMIT          0x7F
+#define HOME_BEARING_OFFSET         25
+    // distance between vehicle and home_loc in meters
+    uint32_t home = prep_number(roundf(hypotf(xpos,ypos)), 3, 2);
+
+    // angle from front of vehicle to the direction of home_loc in 3 degree increments (just in case, limit to 127 (0x7F) since the value is stored on 7 bits)
+    home |= (((uint8_t)roundf(atanf(-ypos / xpos) * 0.00333f)) & HOME_BEARING_LIMIT)<<HOME_BEARING_OFFSET;
+    
+    // altitude between vehicle and home_loc
+    home |= prep_number(roundf(zpos * 0.1f), 3, 2)<<HOME_ALT_OFFSET;
+    return home;
+}
+
+/*
+ * Helper function to send an ardupilot specific CRSF passthrough frame
+ * with a single data item appid is the function that produces the data.
+ */
 static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data);
 static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data)
 {
@@ -174,6 +213,10 @@ static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data)
     return;
 }
 
+/*
+ * Helper function to send an ardupilot specific CRSF passthrough frame
+ * with a text payload.
+ */
 static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity);
 static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity)
 {
@@ -195,6 +238,10 @@ static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity)
 
 }
 
+/*
+ * Helper function to send an ardupilot specific CRSF passthrough frame
+ * broadcasting a parameter as (id, value)-tuple.
+ */
 static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value);
 static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value)
 {
@@ -243,6 +290,9 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfbatt.p.remaining = battery_status.battery_remaining;
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfbatt);
+
+                // send the batt1 message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5003, format_batt1(battery_status.voltages[0], battery_status.current_battery, battery_status.current_consumed));
                 break;
             }
             case MAVLINK_MSG_ID_GPS_RAW_INT: {
@@ -266,7 +316,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfgps);
 
-                // send the gps_status to Yaapu Telemetry Script
+                // send the gps_status message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(0x5002, format_gps_status(gps_int.fix_type, gps_int.alt, gps_int.eph, gps_int.satellites_visible));
                 break;
             }
@@ -309,24 +359,31 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
 
-                // send the ap_status to Yaapu Telemetry Script
+                // send the ap_status message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(0x5001, format_ap_status(heartbeat.base_mode, heartbeat.custom_mode, heartbeat.system_status, throttle));
-                // send the frame_type to Yaapu Telemetry Script
+                // send the frame_type parameter to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_parameter(1, heartbeat.type);
                 break;
             }
             case MAVLINK_MSG_ID_STATUSTEXT: {
                 mavlink_statustext_t statustext;
                 mavlink_msg_statustext_decode(&msg, &statustext);
-                // send status_text to Yaapu Telemetry Script
+                // send status_text message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_text(statustext.text, statustext.severity);
                 break;
             }
             case MAVLINK_MSG_ID_VFR_HUD: {
                 mavlink_vfr_hud_t vfr_hud;
                 mavlink_msg_vfr_hud_decode(&msg, &vfr_hud);
+                // stash the throttle value
                 throttle = vfr_hud.throttle;
                 break;
+            }
+            case MAVLINK_MSG_ID_HOME_POSITION: {
+                mavlink_home_position_t home_pos;
+                mavlink_msg_home_position_decode(&msg, &home_pos);
+                // send the home message to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5004, format_home(home_pos.x, home_pos.y, home_pos.z));
             }
             }
         }
