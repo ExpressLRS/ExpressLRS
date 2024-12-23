@@ -1,10 +1,216 @@
 #include "MAVLink.h"
 #include "ardupilot_protocol.h"
+#include <math.h>
+
+/*
+ * TODO Workitems - IDs to forge for Yaapu:
+ * 5000 - done simple forwarding of STATUS_TEXT content
+ * 5001 - done, bits ok, failsafe, armed, flightmode work
+ * 5002 - GPS_RAW_INT contents
+ * 5003
+ * 5004
+ * 5005
+ * 5006
+ * 5007 - parameter frame_type is sent, no source for battery capacity yet
+ * 500B
+ * 500D
+ */
+
+/*
+ * adapted from ardupilot's AP_Frsky_SPort::prep_number
+ * this is a proprietary number format that must be known on a value basis between producer and consumer
+ */
+static uint16_t prep_number(int32_t number, uint8_t digits, uint8_t power);
+static uint16_t prep_number(int32_t number, uint8_t digits, uint8_t power)
+{
+    uint16_t res = 0;
+    uint32_t abs_number = abs(number);
+
+    if ((digits == 2) && (power == 0)) { // number encoded on 7 bits, client side needs to know if expected range is 0,127 or -63,63
+        uint8_t max_value = number < 0 ? (0x1<<6)-1 : (0x1<<7)-1;
+        res = constrain(abs_number,0,max_value);
+        if (number < 0) {   // if number is negative, add sign bit in front
+            res |= 1U<<6;
+        }
+    } else if ((digits == 2) && (power == 1)) { // number encoded on 8 bits: 7 bits for digits + 1 for 10^power
+        if (abs_number < 100) {
+            res = abs_number<<1;
+        } else if (abs_number < 1270) {
+            res = ((uint8_t)roundf(abs_number * 0.1f)<<1)|0x1;
+        } else { // transmit max possible value (0x7F x 10^1 = 1270)
+            res = 0xFF;
+        }
+        if (number < 0) { // if number is negative, add sign bit in front
+            res |= 0x1<<8;
+        }
+    } else if ((digits == 2) && (power == 2)) { // number encoded on 9 bits: 7 bits for digits + 2 for 10^power
+        if (abs_number < 100) {
+            res = abs_number<<2;
+        } else if (abs_number < 1000) {
+            res = ((uint8_t)roundf(abs_number * 0.1f)<<2)|0x1;
+        } else if (abs_number < 10000) {
+            res = ((uint8_t)roundf(abs_number * 0.01f)<<2)|0x2;
+        } else if (abs_number < 127000) {
+            res = ((uint8_t)roundf(abs_number * 0.001f)<<2)|0x3;
+        } else { // transmit max possible value (0x7F x 10^3 = 127000)
+            res = 0x1FF;
+        }
+        if (number < 0) { // if number is negative, add sign bit in front
+            res |= 0x1<<9;
+        }
+    } else if ((digits == 3) && (power == 1)) { // number encoded on 11 bits: 10 bits for digits + 1 for 10^power
+        if (abs_number < 1000) {
+            res = abs_number<<1;
+        } else if (abs_number < 10240) {
+            res = ((uint16_t)roundf(abs_number * 0.1f)<<1)|0x1;
+        } else { // transmit max possible value (0x3FF x 10^1 = 10230)
+            res = 0x7FF;
+        }
+        if (number < 0) { // if number is negative, add sign bit in front
+            res |= 0x1<<11;
+        }
+    } else if ((digits == 3) && (power == 2)) { // number encoded on 12 bits: 10 bits for digits + 2 for 10^power
+        if (abs_number < 1000) {
+            res = abs_number<<2;
+        } else if (abs_number < 10000) {
+            res = ((uint16_t)roundf(abs_number * 0.1f)<<2)|0x1;
+        } else if (abs_number < 100000) {
+            res = ((uint16_t)roundf(abs_number * 0.01f)<<2)|0x2;
+        } else if (abs_number < 1024000) {
+            res = ((uint16_t)roundf(abs_number * 0.001f)<<2)|0x3;
+        } else { // transmit max possible value (0x3FF x 10^3 = 1023000)
+            res = 0xFFF;
+        }
+        if (number < 0) { // if number is negative, add sign bit in front
+            res |= 0x1<<12;
+        }
+    }
+    return res;
+}
+
+/*
+ * adapted from ardupilot's AP_Frsky_SPort_Passthrough::calc_gps_status
+ */
+static uint32_t format_gps_status(uint8_t fix_type, uint32_t alt, uint16_t eph, uint8_t satellites_visible);
+static uint32_t format_gps_status(uint8_t fix_type, uint32_t alt, uint16_t eph, uint8_t satellites_visible)
+{
+#define GPS_SATS_LIMIT              0xF
+#define GPS_STATUS_LIMIT            0x3
+#define GPS_STATUS_OFFSET           4
+#define GPS_HDOP_OFFSET             6
+#define GPS_ADVSTATUS_OFFSET        14
+#define GPS_ALTMSL_OFFSET           22
+    // number of GPS satellites visible (limit to 15 (0xF) since the value is stored on 4 bits)
+    uint32_t gps_status = (satellites_visible < GPS_SATS_LIMIT) ? satellites_visible : GPS_SATS_LIMIT;
+    // GPS receiver status (limit to 0-3 (0x3) since the value is stored on 2 bits: NO_GPS = 0, NO_FIX = 1, GPS_OK_FIX_2D = 2, GPS_OK_FIX_3D or GPS_OK_FIX_3D_DGPS or GPS_OK_FIX_3D_RTK_FLOAT or GPS_OK_FIX_3D_RTK_FIXED = 3)
+    gps_status |= ((fix_type < GPS_STATUS_LIMIT) ? fix_type : GPS_STATUS_LIMIT)<<GPS_STATUS_OFFSET;
+    // GPS horizontal dilution of precision in dm
+    gps_status |= prep_number(roundf(eph * 0.1f),2,1)<<GPS_HDOP_OFFSET;
+    // GPS receiver advanced status (0: no advanced fix, 1: GPS_OK_FIX_3D_DGPS, 2: GPS_OK_FIX_3D_RTK_FLOAT, 3: GPS_OK_FIX_3D_RTK_FIXED)
+    gps_status |= ((fix_type > GPS_STATUS_LIMIT) ? fix_type-GPS_STATUS_LIMIT : 0)<<GPS_ADVSTATUS_OFFSET;
+    // Altitude MSL in dm
+    gps_status |= prep_number(roundf(alt * 0.1f),2,2)<<GPS_ALTMSL_OFFSET;
+    return gps_status;
+}
+
+/*
+ * adapted from ardupilot's AP_Frsky_SPort_Passthrough::calc_ap_status
+ */
+uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle);
+uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t system_status, uint16_t throttle)
+{
+    /*
+     * Note that we don't have certain values via Mavlink.
+     * - IMU Temperature
+     * - simple/super simple mode flags
+     * - specific failsafe flags
+     * - fence flags
+     */
+
+#define AP_CONTROL_MODE_LIMIT       0x1F
+#define AP_FLYING_OFFSET            7
+#define AP_ARMED_OFFSET             8
+#define AP_FS_OFFSET                12
+#define AP_THROTTLE_OFFSET          19
+
+    // control/flight mode number (limit to 31 (0x1F) since the value is stored on 5 bits)
+    uint32_t ap_status = (uint8_t)((custom_mode+1) & AP_CONTROL_MODE_LIMIT);
+    // is_flying flag
+    if (system_status == MAV_STATE_ACTIVE) {
+        ap_status |= (1 << AP_FLYING_OFFSET);
+    }
+    // armed flag
+    if (base_mode & MAV_MODE_FLAG_SAFETY_ARMED) {
+        ap_status |= (1 << AP_ARMED_OFFSET);
+    }
+    // generic failsafe
+    if (system_status == MAV_STATE_CRITICAL) {
+        ap_status |= (1 << AP_FS_OFFSET);
+    }
+    // signed throttle [-100,100] scaled down to [-63,63] on 7 bits, MSB for sign + 6 bits for 0-63
+    ap_status |= prep_number(throttle*0.63, 2, 0)<<AP_THROTTLE_OFFSET;
+
+    return ap_status;
+}
+
+
+static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data);
+static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data)
+{
+#define CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH (0xF0)
+    struct PACKED ap_crsf_passthrough_single_t {
+        uint8_t sub_type;
+        uint16_t appid;
+        uint32_t data; // Little Endian
+    };
+    CRSF_MK_FRAME_T(ap_crsf_passthrough_single_t)
+    crsfpassthrough = {0};
+    crsfpassthrough.p.sub_type = CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH;
+    crsfpassthrough.p.appid = appid; // key TODO  htole32 ?
+    crsfpassthrough.p.data = data; // value TODO  htole32 ?
+
+    CRSF::SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    handset->sendTelemetryToTX((uint8_t *)&crsfpassthrough);
+    return;
+}
+
+static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity);
+static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity)
+{
+#define CRSF_AP_CUSTOM_TELEM_STATUS_TEXT (0xF1)
+    struct PACKED ap_crsf_status_text_t {
+        uint8_t sub_type;
+        uint8_t severity;
+        char text[50];  // identical to mavlink message
+    };
+    CRSF_MK_FRAME_T(ap_crsf_status_text_t)
+    crsftext = {0};
+    crsftext.p.sub_type = CRSF_AP_CUSTOM_TELEM_STATUS_TEXT;
+    crsftext.p.severity = severity;
+    memcpy(crsftext.p.text, text, sizeof(crsftext.p.text));
+    //TODO: Check optional snprintf(crsftext.p.text, sizeof(crsftext.p.text), "%s", text);
+
+    CRSF::SetHeaderAndCrc((uint8_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    handset->sendTelemetryToTX((uint8_t *)&crsftext);
+
+}
+
+static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value);
+static void ap_send_crsf_passthrough_parameter(uint8_t param_id, uint32_t param_value)
+{
+#define PARAM_ID_OFFSET             24
+#define PARAM_VALUE_LIMIT           0xFFFFFF
+    ap_send_crsf_passthrough_single(param_id, (param_id << PARAM_ID_OFFSET) | (param_value & PARAM_VALUE_LIMIT));
+}
+
 
 void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset *handset)
 {
     // Store the relative altitude for GPS altitude
     static int32_t relative_alt = 0;
+
+    // Store the throttle value for AP_STATUS concatenation
+    static uint32_t throttle = 0;
 
     for (uint8_t i = 0; i < count; i++)
     {
@@ -59,6 +265,9 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfgps.p.satellites_in_use = gps_int.satellites_visible;
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfgps);
+
+                // send the gps_status to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5002, format_gps_status(gps_int.fix_type, gps_int.alt, gps_int.eph, gps_int.satellites_visible));
                 break;
             }
             case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
@@ -99,6 +308,24 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 }
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
+
+                // send the ap_status to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_single(0x5001, format_ap_status(heartbeat.base_mode, heartbeat.custom_mode, heartbeat.system_status, throttle));
+                // send the frame_type to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_parameter(1, heartbeat.type);
+                break;
+            }
+            case MAVLINK_MSG_ID_STATUSTEXT: {
+                mavlink_statustext_t statustext;
+                mavlink_msg_statustext_decode(&msg, &statustext);
+                // send status_text to Yaapu Telemetry Script
+                ap_send_crsf_passthrough_text(statustext.text, statustext.severity);
+                break;
+            }
+            case MAVLINK_MSG_ID_VFR_HUD: {
+                mavlink_vfr_hud_t vfr_hud;
+                mavlink_msg_vfr_hud_decode(&msg, &vfr_hud);
+                throttle = vfr_hud.throttle;
                 break;
             }
             }
