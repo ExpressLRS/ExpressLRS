@@ -888,6 +888,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 static void UpdateConnectDisconnectStatus()
 {
+  static uint32_t disconnectTimeMs = 0;
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
   // Must be at least 512ms and +2 to account for any rounding down and partial millis()
@@ -909,13 +910,23 @@ static void UpdateConnectDisconnectStatus()
       apOutputBuffer.flush();
       uartInputBuffer.flush();
 
-      VtxTriggerSend();
+      // Only send the VTX admin command if the disconnect time has not been set,
+      // or the last disconnect time, or VTX send on connect is more than 1 second ago.
+      // This is a workaround for a Betaflight issue where the EEPROM save command will cause
+      // an ELRS SPI FC to drop and reestablish the connection and then send another VTX admin
+      // command and enter a loop!
+      if (disconnectTimeMs == 0 || disconnectTimeMs < now - 1000)
+      {
+        VtxTriggerSend();
+        disconnectTimeMs = now;
+      }
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
   else if (connectionState == connected ||
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
+    disconnectTimeMs = now;
     connectionState = disconnected;
     connectionHasModelMatch = true;
     CRSFHandset::ForwardDevicePings = false;
