@@ -14,10 +14,10 @@
 #define PITMODE_OFF                 0
 #define PITMODE_ON                  1
 
-// Delay after disconnect to preserve the VTXSS_CONFIRMED status
+// Delay after disconnect to preserve the VTXSS_DISCONNECTED status
 // Needs to be long enough to reconnect, but short enough to
 // reset between the user switching equipment
-#define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
+#define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
 
 extern Stream *TxBackpack;
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
@@ -28,7 +28,8 @@ static enum VtxSendState_e
   VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
   VTXSS_MODIFIED,  // Config is editied, should always be sent regardless of connect state
   VTXSS_SENDING1, VTXSS_SENDING2, VTXSS_SENDING3,  VTXSS_SENDINGDONE, // Send the config 3x
-  VTXSS_CONFIRMED  // Status of remote side is consistent with our config
+  VTXSS_CONFIRMED, // Status of remote side is consistent with our config
+  VTXSS_DISCONNECTED
 } VtxSendState;
 
 void VtxTriggerSend()
@@ -103,6 +104,13 @@ static void initialize()
 
 static int event()
 {
+    // 0 = VTX Admin disabled in the configuration
+    if (config.GetVtxBand() == 0)
+    {
+        VtxSendState = VTXSS_CONFIRMED;
+        return DURATION_NEVER;
+    }
+
     if (VtxSendState == VTXSS_MODIFIED ||
         (VtxSendState == VTXSS_UNKNOWN && connectionState == connected))
     {
@@ -110,20 +118,11 @@ static int event()
         return 1000;
     }
 
-    if (connectionState == disconnected)
+    if (connectionState == disconnected && VtxSendState != VTXSS_DISCONNECTED && VtxSendState != VTXSS_UNKNOWN)
     {
-        // If the VtxSend has completed, wait before going back to VTXSS_UNKNOWN
-        // to ignore a temporary disconnect after saving EEPROM
-        if (VtxSendState == VTXSS_CONFIRMED)
-        {
-            VtxSendState = VTXSS_CONFIRMED;
-            return VTX_DISCONNECT_DEBOUNCE_MS;
-        }
-        VtxSendState = VTXSS_UNKNOWN;
-    }
-    else if (VtxSendState == VTXSS_CONFIRMED && connectionState == connected)
-    {
-        return DURATION_NEVER;
+        CRSF::ResetMspQueue();
+        VtxSendState = VTXSS_DISCONNECTED;
+        return VTX_DISCONNECT_DEBOUNCE_MS;
     }
 
     return DURATION_IGNORE;
@@ -131,17 +130,13 @@ static int event()
 
 static int timeout()
 {
-    // 0 = off in the lua Band field
-    if (config.GetVtxBand() == 0)
+    if (VtxSendState == VTXSS_DISCONNECTED)
     {
-        VtxSendState = VTXSS_CONFIRMED;
-        return DURATION_NEVER;
+        VtxSendState = connectionState == disconnected ? VTXSS_UNKNOWN : VTXSS_CONFIRMED;
     }
 
-    // Can only get here in VTXSS_CONFIRMED state if still disconnected
-    if (VtxSendState == VTXSS_CONFIRMED)
+    if (VtxSendState == VTXSS_UNKNOWN || VtxSendState == VTXSS_MODIFIED || VtxSendState == VTXSS_CONFIRMED)
     {
-        VtxSendState = VTXSS_UNKNOWN;
         return DURATION_NEVER;
     }
 
@@ -149,22 +144,23 @@ static int timeout()
 
     VtxSendState = (VtxSendState_e)((int)VtxSendState + 1);
     if (VtxSendState < VTXSS_SENDINGDONE)
+    {
         return 500; // repeat send in 500ms
+    }
 
     if (connectionState == connected)
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
         if (sendEepromWrite)
+        {
             eepromWriteToMSPOut();
+        }
         sendEepromWrite = true;
     }
     else
     {
         VtxSendState = VTXSS_UNKNOWN;
-        // Never received a connection, clear the queue which now
-        // has multiple VTX config packets in it
-        CRSF::ResetMspQueue();
     }
 
     return DURATION_NEVER;
@@ -172,7 +168,7 @@ static int timeout()
 
 device_t VTX_device = {
     .initialize = initialize,
-    .start = NULL,
+    .start = nullptr,
     .event = event,
     .timeout = timeout
 };
