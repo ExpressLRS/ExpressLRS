@@ -655,7 +655,7 @@ void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode)
     SetMode(LR1121_MODE_RX, SX12XX_Radio_All);
 }
 
-bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
     return false;
 }

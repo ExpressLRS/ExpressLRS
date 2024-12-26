@@ -570,10 +570,10 @@ void ICACHE_RAM_ATTR SX1280Driver::GetStatus(SX12XX_Radio_Number_t radioNumber)
     DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
 }
 
-bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
     // Only need the highest bit of the 20-bit FEI to determine the direction
-    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, lastSuccessfulPacketRadio);
+    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, radioNumber);
     // fei & (1 << 19) and flip sign if IQinverted
     if (feiMsb & 0x08)
         return IQinverted;
