@@ -1,7 +1,5 @@
 #include "device.h"
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-
 #include "deferred.h"
 
 #include <AsyncJson.h>
@@ -80,7 +78,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#if defined(TARGET_RX)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
@@ -109,7 +107,7 @@ void setWifiUpdateMode()
   // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
   // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
-  connectionState = wifiUpdate;
+  setConnectionState(wifiUpdate);
 }
 
 /** Is this an IP? */
@@ -906,7 +904,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   }
 }
 
-static void initialize()
+static bool initialize()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -917,6 +915,7 @@ static void initialize()
   registerButtonFunction(ACTION_START_WIFI, [](){
     setWifiUpdateMode();
   });
+  return true;
 }
 
 static void startWiFi(unsigned long now)
@@ -1128,7 +1127,7 @@ static void startServices()
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   wifi2tcp.begin();
   #endif
 }
@@ -1237,7 +1236,7 @@ static void HandleWebUpdate()
 
 void HandleMSP2WIFI()
 {
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   // check is there is any data to write out
   if (crsf2msp.FIFOout.peekSize() > 0)
   {
@@ -1337,7 +1336,6 @@ device_t WIFI_device = {
   .initialize = initialize,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_CONNECTION_CHANGED
 };
-
-#endif

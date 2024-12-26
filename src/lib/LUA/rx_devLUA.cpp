@@ -62,23 +62,19 @@ static struct luaItem_int8 luaSourceSysId = {
   STR_EMPTYSPACE
 };
 
-#if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
     "mW"
 };
-#endif
 
-#if defined(GPIO_PIN_ANT_CTRL)
 static struct luaItem_selection luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna A;Antenna B;Diversity",
     STR_EMPTYSPACE
 };
-#endif
 
 static struct luaItem_folder luaTeamraceFolder = {
     {"Team Race", CRSF_FOLDER},
@@ -359,8 +355,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         pwmModes[lastPos] = '\0';
     }
 
-    // Trigger an event to update the related fields to represent the selected channel
-    devicesTriggerEvent();
+    // update the related fields to represent the selected channel
+    const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
@@ -474,8 +473,6 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
   sendLuaCommandResponse((struct luaItem_command *)item, newStep, msg);
 }
 
-#if defined(POWER_OUTPUT_VALUES)
-
 static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 {
   UNUSED(item);
@@ -488,8 +485,6 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
   config.SetPower(newPower);
   // POWERMGNT::setPower() will be called in updatePower() in the main loop
 }
-
-#endif // POWER_OUTPUT_VALUES
 
 static void registerLuaParameters()
 {
@@ -534,10 +529,11 @@ static void registerLuaParameters()
     });
   }
 
-#if defined(POWER_OUTPUT_VALUES)
-  luadevGeneratePowerOpts(&luaTlmPower);
-  registerLUAParameter(&luaTlmPower, &luaparamSetPower);
-#endif
+  if (MinPower != MaxPower)
+  {
+    luadevGeneratePowerOpts(&luaTlmPower);
+    registerLUAParameter(&luaTlmPower, &luaparamSetPower);
+  }
 
   // Teamrace
   registerLUAParameter(&luaTeamraceFolder);
@@ -600,11 +596,12 @@ static int event()
     setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
   }
 
-#if defined(POWER_OUTPUT_VALUES)
-  // The last item (for MatchTX) will be MaxPower - MinPower + 1
-  uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
-  setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
-#endif
+  if (MinPower != MaxPower)
+  {
+    // The last item (for MatchTX) will be MaxPower - MinPower + 1
+    uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
+    setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
+  }
 
   // Teamrace
   setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
@@ -666,7 +663,8 @@ device_t LUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_ALL
 };
 
 #endif

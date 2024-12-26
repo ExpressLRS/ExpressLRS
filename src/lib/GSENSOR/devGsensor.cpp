@@ -21,23 +21,18 @@ static int system_quiet_pre_state = GSENSOR_SYSTEM_STATE_MOVING;
 #define MULTIPLE_BUMP_INTERVAL 400U
 #define BUMP_COMMAND_IDLE_TIME 10000U
 
-static bool gSensorOk = false;
-
-static void initialize()
+static bool initialize()
 {
     if (OPT_HAS_GSENSOR)
     {
-        gSensorOk = gsensor.init();
+        return gsensor.init();
     }
+    return false;
 }
 
 static int start()
 {
-    if (OPT_HAS_GSENSOR && gSensorOk)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
