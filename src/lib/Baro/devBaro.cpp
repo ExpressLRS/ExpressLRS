@@ -1,6 +1,7 @@
+
 #include "devBaro.h"
 
-#if defined(HAS_BARO)
+#if defined(TARGET_RX)
 
 #include "CRSF.h"
 #include "logging.h"
@@ -23,7 +24,6 @@ extern bool i2c_enabled;
 static bool Baro_Detect()
 {
     // I2C Baros
-#if defined(USE_I2C)
     if (i2c_enabled)
     {
         if (SPL06::detect())
@@ -47,7 +47,6 @@ static bool Baro_Detect()
         // }
         // DBGLN("No baro detected");
     } // I2C
-#endif
     return false;
 }
 
@@ -118,16 +117,15 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     }
 }
 
+static bool initialize()
+{
+    return Baro_Detect();
+}
+
 static int start()
 {
-    if (Baro_Detect())
-    {
-        BaroReadState = brsUninitialized;
-        return BARO_STARTUP_INTERVAL;
-    }
-
-    BaroReadState = brsNoBaro;
-    return DURATION_NEVER;
+    BaroReadState = brsUninitialized;
+    return BARO_STARTUP_INTERVAL;
 }
 
 static int timeout()
@@ -189,10 +187,11 @@ static int timeout()
 }
 
 device_t Baro_device = {
-    .initialize = nullptr,
+    .initialize = initialize,
     .start = start,
     .event = nullptr,
     .timeout = timeout,
+    .subscribe = EVENT_NONE
 };
 
 #endif

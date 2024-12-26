@@ -21,11 +21,7 @@ bool BackpackTelemReadyToSend = false;
 
 bool lastRecordingState = false;
 
-#if defined(GPIO_PIN_BACKPACK_EN)
-
-#ifndef PASSTHROUGH_BAUD
-#define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
-#endif
+#if defined(PLATFORM_ESP32)
 
 #define GPIO_PIN_BOOT0 0
 
@@ -115,9 +111,6 @@ bool lastRecordingState = false;
         uplink->write(buf, bytes_read);
     }
 }
-#endif
-
-#if defined(GPIO_PIN_BACKPACK_EN)
 
 static int debouncedRead(int pin) {
     static const uint8_t min_matches = 100;
@@ -146,41 +139,41 @@ static int debouncedRead(int pin) {
     // We don't have a definitive state we could report.
     return -1;
 }
-#endif
 
 void checkBackpackUpdate()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
         {
-            startPassthrough();
+            if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+            {
+                startPassthrough();
+            }
         }
-    }
 #if defined(PLATFORM_ESP32_S3)
-    // Start passthrough mode if an Espressif resync packet is detected on the USB port
-    static const uint8_t resync[] = {
-        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-    };
-    static int resync_pos = 0;
-    while(Serial.available())
-    {
-        int byte = Serial.read();
-        if (byte == resync[resync_pos])
+        // Start passthrough mode if an Espressif resync packet is detected on the USB port
+        static const uint8_t resync[] = {
+            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+        };
+        static int resync_pos = 0;
+        while(Serial.available())
         {
-            resync_pos++;
-            if (resync_pos == sizeof(resync)) startPassthrough();
+            int byte = Serial.read();
+            if (byte == resync[resync_pos])
+            {
+                resync_pos++;
+                if (resync_pos == sizeof(resync)) startPassthrough();
+            }
+            else
+            {
+                resync_pos = 0;
+            }
         }
-        else
-        {
-            resync_pos = 0;
-        }
+#endif
     }
-#endif
-#endif
 }
 
 static void BackpackWiFiToMSPOut(uint16_t command)
@@ -212,7 +205,9 @@ void BackpackBinding()
     packet.makeCommand();
     packet.function = MSP_ELRS_BIND;
     for (unsigned b=0; b<UID_LEN; ++b)
+    {
         packet.addByte(UID[b]);
+    }
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
@@ -225,7 +220,6 @@ uint8_t GetDvrDelaySeconds(uint8_t index)
 
 static void AuxStateToMSPOut()
 {
-#if defined(USE_TX_BACKPACK)
     if (config.GetDvrAux() == 0)
     {
         // DVR AUX control is off
@@ -255,7 +249,6 @@ static void AuxStateToMSPOut()
     packet.addByte(delay >> 8); // delay byte 2
 
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
-#endif // USE_TX_BACKPACK
 }
 
 void sendCRSFTelemetryToBackpack(uint8_t *data)
@@ -316,31 +309,29 @@ void sendConfigToBackpack()
     MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
 }
 
-static void initialize()
+static bool initialize()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
-        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-        // Shut down the backpack via EN pin and hold it there until the first event()
-        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-        delay(20);
-        // Rely on event() to boot
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
+            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+            // Shut down the backpack via EN pin and hold it there until the first event()
+            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+            delay(20);
+            // Rely on event() to boot
+        }
+        handset->setRCDataCallback(AuxStateToMSPOut);
     }
-#endif
-    handset->setRCDataCallback(AuxStateToMSPOut);
+    return OPT_USE_TX_BACKPACK;
 }
 
 static int start()
 {
-    if (OPT_USE_TX_BACKPACK)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return DURATION_IMMEDIATELY;
 }
 
 static int timeout()
@@ -394,13 +385,11 @@ static int timeout()
 
 static int event()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         // EN should be HIGH to be active
         digitalWrite(GPIO_PIN_BACKPACK_EN, (config.GetBackpackDisable() || connectionState == bleJoystick || connectionState == wifiUpdate) ? LOW : HIGH);
     }
-#endif
 
     return DURATION_IGNORE;
 }
@@ -409,5 +398,7 @@ device_t Backpack_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MAIN_CHANGED
 };
+#endif

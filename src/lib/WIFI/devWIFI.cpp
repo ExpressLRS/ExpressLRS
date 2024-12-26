@@ -1,7 +1,5 @@
 #include "device.h"
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-
 #include "deferred.h"
 
 #include <AsyncJson.h>
@@ -40,8 +38,10 @@
 #include "logging.h"
 #include "options.h"
 #include "helpers.h"
-#include "devVTXSPI.h"
 #include "devButton.h"
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
+#include "devVTXSPI.h"
+#endif
 
 #include "WebContent.h"
 
@@ -52,7 +52,6 @@
 #endif
 
 #if defined(TARGET_TX)
-
 #include "wifiJoystick.h"
 
 extern TxConfig config;
@@ -79,7 +78,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#if defined(TARGET_RX)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
@@ -108,7 +107,7 @@ void setWifiUpdateMode()
   // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
   // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
-  connectionState = wifiUpdate;
+  setConnectionState(wifiUpdate);
 }
 
 /** Is this an IP? */
@@ -372,7 +371,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetBindStorage();
-    #if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
@@ -393,7 +391,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
-    #endif
     #endif
     json["config"]["product_name"] = product_name;
     json["config"]["lua_name"] = device_name;
@@ -533,7 +530,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
   JsonUidToConfig(json);
 
-  #if defined(GPIO_PIN_PWM_OUTPUTS)
   JsonArray pwm = json["pwm"].as<JsonArray>();
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
@@ -541,7 +537,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
   }
-  #endif
 
   config.Commit();
   request->send(200, "text/plain", "Configuration updated");
@@ -740,7 +735,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   force_update = force_update || request->hasArg("force");
   if (index == 0) {
-    #ifdef HAS_WIFI_JOYSTICK
+    #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
       WifiJoystick::StopJoystickService();
     #endif
 
@@ -809,7 +804,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
-#ifdef HAS_WIFI_JOYSTICK
+#if defined(TARGET_TX) && defined(PLATFORM_ESP32)
 static void WebUdpControl(AsyncWebServerRequest *request)
 {
   const String &action = request->arg("action");
@@ -875,8 +870,8 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
     SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 
-    bool setSubGHz = false;
 #if defined(RADIO_LR1121)
+    bool setSubGHz = false;
     setSubGHz = request->arg("subGHz").toInt() == 1;
 #endif
 
@@ -909,7 +904,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   }
 }
 
-static void initialize()
+static bool initialize()
 {
   wifiStarted = false;
   WiFi.disconnect(true);
@@ -920,6 +915,7 @@ static void initialize()
   registerButtonFunction(ACTION_START_WIFI, [](){
     setWifiUpdateMode();
   });
+  return true;
 }
 
 static void startWiFi(unsigned long now)
@@ -930,8 +926,7 @@ static void startWiFi(unsigned long now)
 
   if (connectionState < FAILURE_STATES) {
     hwTimer::stop();
-
-#ifdef HAS_VTX_SPI
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
     disableVTxSpi();
 #endif
 
@@ -973,7 +968,7 @@ static void startMDNS()
 
   String options = "-DAUTO_WIFI_ON_INTERVAL=" + (firmwareOptions.wifi_auto_on_interval == -1 ? "-1" : String(firmwareOptions.wifi_auto_on_interval / 1000));
 
-  #ifdef TARGET_TX
+  #if defined(TARGET_TX)
   if (firmwareOptions.unlock_higher_power)
   {
     options += " -DUNLOCK_HIGHER_POWER";
@@ -982,7 +977,7 @@ static void startMDNS()
   options += " -DFAN_MIN_RUNTIME=" + String(firmwareOptions.fan_min_runtime);
   #endif
 
-  #ifdef TARGET_RX
+  #if defined(TARGET_RX)
   if (firmwareOptions.lock_on_first_connection)
   {
     options += " -DLOCK_ON_FIRST_CONNECTION";
@@ -992,7 +987,7 @@ static void startMDNS()
 
   String instance = String(wifi_hostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  #ifdef PLATFORM_ESP8266
+  #if defined(PLATFORM_ESP8266)
     // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
     MDNS.setInstanceName(wifi_hostname);
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
@@ -1021,14 +1016,14 @@ static void startMDNS()
     MDNS.addServiceTxt("http", "tcp", "product", (const char *)product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", options.c_str());
-  #ifdef TARGET_TX
+  #if defined(TARGET_TX)
     MDNS.addServiceTxt("http", "tcp", "type", "tx");
   #else
     MDNS.addServiceTxt("http", "tcp", "type", "rx");
   #endif
   #endif
 
-  #ifdef HAS_WIFI_JOYSTICK
+  #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
     MDNS.addService("elrs", "udp", JOYSTICK_PORT);
     MDNS.addServiceTxt("elrs", "udp", "device", (const char *)device_name);
     MDNS.addServiceTxt("elrs", "udp", "version", String(JOYSTICK_VERSION).c_str());
@@ -1097,7 +1092,7 @@ static void startServices()
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
-  #ifdef HAS_WIFI_JOYSTICK
+  #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
     server.on("/udpcontrol", HTTP_POST, WebUdpControl);
   #endif
 
@@ -1126,13 +1121,13 @@ static void startServices()
 
   startMDNS();
 
-  #ifdef HAS_WIFI_JOYSTICK
+  #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
     WifiJoystick::StartJoystickService();
   #endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   wifi2tcp.begin();
   #endif
 }
@@ -1233,7 +1228,7 @@ static void HandleWebUpdate()
       MDNS.update();
     #endif
 
-    #ifdef HAS_WIFI_JOYSTICK
+    #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
       WifiJoystick::Loop(now);
     #endif
   }
@@ -1241,7 +1236,7 @@ static void HandleWebUpdate()
 
 void HandleMSP2WIFI()
 {
-  #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
+  #if defined(TARGET_RX)
   // check is there is any data to write out
   if (crsf2msp.FIFOout.peekSize() > 0)
   {
@@ -1341,7 +1336,6 @@ device_t WIFI_device = {
   .initialize = initialize,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_CONNECTION_CHANGED
 };
-
-#endif

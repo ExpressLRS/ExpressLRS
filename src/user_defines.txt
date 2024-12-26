@@ -45,12 +45,6 @@
 # If not defined, will default to 420000
 #-DRCVR_UART_BAUD=400000
 
-# Invert the TX pin in the receiver code to allow an inverted RX pin on the
-# FC to be used (usually labeled SBUS input or RXI). Inverted CRSF output.
-# RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will
-# not work, only via_Wifi. ESP8266/8285 targets only
-#-DRCVR_INVERT_TX
-
 #-DTLM_REPORT_INTERVAL_MS=240LU
 
 ### OTHER OPTIONS: ###
@@ -59,14 +53,6 @@
 #-DHOME_WIFI_SSID=""
 #-DHOME_WIFI_PASSWORD=""
 
-# Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
-# The device target should enable this automatically for devices that come with this, but can be added
-# to any device.
-#-DUSE_TX_BACKPACK
-
-
-#If commented out the LED is RGB otherwise GRB
-#-DWS2812_IS_GRB
 
 ### Debugging options ###
 
