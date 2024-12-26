@@ -241,9 +241,6 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
 
 void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per channel
 {
-    // for monitoring arming state
-    uint32_t prev_AUX1 = ChannelData[4];
-
     auto payload = (uint8_t const * const)&inBuffer.asRCPacket_t.channels;
     constexpr unsigned srcBits = 11;
     constexpr unsigned dstBits = 11;
@@ -268,13 +265,22 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
         bitsMerged -= srcBits;
     }
 
-    if (prev_AUX1 != ChannelData[4])
-    {
+    //
+    // sends channel data and also communicates commanded armed status in arming mode Switch.
+    // frame len 24 -> arming mode CH5: use channel 5 value
+    // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
+    //
+    armCmd = inBuffer.asUint8_t[1] == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
+
+    // monitoring arming state
+    if (lastArmCmd != armCmd) {
         #if defined(PLATFORM_ESP32)
-        devicesTriggerEvent();
+        devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);
         #endif
+        lastArmCmd = armCmd;
     }
 }
+
 
 bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
 {
@@ -536,10 +542,6 @@ void CRSFHandset::duplex_set_RX() const
 #elif defined(PLATFORM_ESP8266)
     // Enable loopback on UART0 to connect the RX pin to the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCLBE);
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, LOW ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    CRSFHandset::Port.enableHalfDuplexRx();
 #endif
 }
 
@@ -567,10 +569,6 @@ void CRSFHandset::duplex_set_TX() const
 #elif defined(PLATFORM_ESP8266)
     // Disable loopback to disconnect the RX pin from the TX pin (not done, connection is full duplex uninverted)
     //USC0(UART0) &= ~BIT(UCLBE);
-#elif defined(GPIO_PIN_BUFFER_OE) && (GPIO_PIN_BUFFER_OE != UNDEF_PIN)
-    digitalWrite(GPIO_PIN_BUFFER_OE, HIGH ^ GPIO_PIN_BUFFER_OE_INVERTED);
-#elif (GPIO_PIN_RCSIGNAL_TX == GPIO_PIN_RCSIGNAL_RX)
-    // writing to the port switches the mode
 #endif
 }
 
@@ -737,12 +735,8 @@ bool CRSFHandset::UARTwdt()
                 adjustMaxPacketSize();
 
                 SerialOutFIFO.flush();
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
                 CRSFHandset::Port.flush();
                 CRSFHandset::Port.updateBaudRate(UARTrequestedBaud);
-#else
-                CRSFHandset::Port.begin(UARTrequestedBaud);
-#endif
                 if (halfDuplex)
                 {
                     duplex_set_RX();

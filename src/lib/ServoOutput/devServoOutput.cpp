@@ -140,11 +140,11 @@ static void servosUpdate(unsigned long now)
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     if (!OPT_HAS_SERVO_OUTPUT)
     {
-        return;
+        return false;
     }
 
 #if defined(PLATFORM_ESP32)
@@ -155,7 +155,7 @@ static void initialize()
         pwmChannelValues[ch] = UINT16_MAX;
         pwmChannels[ch] = -1;
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+#if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == U0RXD_GPIO_NUM || pin == U0TXD_GPIO_NUM)
         {
@@ -200,6 +200,7 @@ static void initialize()
             digitalWrite(pin, LOW);
         }
     }
+    return true;
 }
 
 static int start()
@@ -225,7 +226,7 @@ static int start()
 
 static int event()
 {
-    if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
+    if (connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX,
         // so it is safe to shut down when disconnected
@@ -265,4 +266,5 @@ device_t ServoOut_device = {
     .start = start,
     .event = event,
     .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED
 };

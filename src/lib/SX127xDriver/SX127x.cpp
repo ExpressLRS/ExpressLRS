@@ -7,14 +7,6 @@ SX127xDriver *SX127xDriver::instance = NULL;
 
 RFAMP_hal RFAMP;
 
-#ifdef USE_SX1276_RFO_HF
-  #ifndef OPT_USE_SX1276_RFO_HF
-    #define OPT_USE_SX1276_RFO_HF true
-  #endif
-#else
-  #define OPT_USE_SX1276_RFO_HF false
-#endif
-
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
      21, 23, 26, 29, 30, 31, 33, 34,

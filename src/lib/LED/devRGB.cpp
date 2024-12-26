@@ -299,7 +299,6 @@ static int blinkyUpdate() {
     if ((int)blinkyColor.h + hueStepValue > 255) {
         if ((int)blinkyColor.v - lightnessStep < 0) {
             blinkyState = NORMAL;
-            #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
             if (pixelCount != 1)
             {
                 if (OPT_WS2812_IS_GRB)
@@ -322,7 +321,6 @@ static int blinkyUpdate() {
             {
                 striprgb->Show();
             }
-            #endif
             return NORMAL_UPDATE_INTERVAL;
         }
         blinkyColor.v -= lightnessStep;
@@ -332,7 +330,7 @@ static int blinkyUpdate() {
     return 3000/(256/hueStepValue);
 }
 
-static void initialize()
+static bool initialize()
 {
     if (GPIO_PIN_LED_WS2812 != UNDEF_PIN)
     {
@@ -382,14 +380,11 @@ static void initialize()
         blinkyColor.s = 255;
         blinkyColor.v = 128;
     }
+    return GPIO_PIN_LED_WS2812 != UNDEF_PIN;
 }
 
 static int start()
 {
-    if (GPIO_PIN_LED_WS2812 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     blinkyState = STARTUP;
     #if defined(PLATFORM_ESP32)
     // Only do the blinkies if it was NOT a software reboot
@@ -406,10 +401,6 @@ static int start()
 
 static int timeout()
 {
-    if (GPIO_PIN_LED_WS2812 == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     if (blinkyState == STARTUP && connectionState < FAILURE_STATES)
     {
         return blinkyUpdate();
@@ -475,5 +466,6 @@ device_t RGB_device = {
     .initialize = initialize,
     .start = start,
     .event = timeout,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_ENTER_BIND_MODE | EVENT_EXIT_BIND_MODE
 };

@@ -21,7 +21,7 @@ public:
     void End() override;
 
 #ifdef CRSF_TX_MODULE
-    bool IsArmed() override { return CRSF_to_BIT(ChannelData[4]); } // AUX1
+    bool IsArmed() override { return armCmd; } // AUX1/CH5 (CH5 mode) or extra byte in RC channels message (Switch mode)
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
@@ -72,6 +72,9 @@ private:
 
     static uint8_t UARTcurrentBaudIdx;
     static uint32_t UARTrequestedBaud;
+
+    bool armCmd = false;           // Arm command from handset either via ch5 or arm message
+    bool lastArmCmd = false;
 
 #if defined(PLATFORM_ESP32)
     bool UARTinverted = false;

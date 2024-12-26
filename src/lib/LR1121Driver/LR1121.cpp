@@ -17,25 +17,6 @@ static uint32_t endTX;
 // RxTimeout is expressed in periods of the 32.768kHz RTC
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 1000000000 / 32768 // TODO check for LR1121
 
-#ifdef USE_HARDWARE_DCDC
-    #ifndef OPT_USE_HARDWARE_DCDC
-        #define OPT_USE_HARDWARE_DCDC true
-    #endif
-#else
-    #define OPT_USE_HARDWARE_DCDC false
-#endif
-
-// This define refers to the High Frequency output on the SX1276.  But has been reused/repurposed for the LR1121.
-// In ELRS V4 it should be changed to USE_RADIO_RFO_LP and refer to using the Low Power radio frequency output
-// of both the SX1276 and LR1121.
-#ifdef USE_SX1276_RFO_HF
-  #ifndef OPT_USE_SX1276_RFO_HF
-    #define OPT_USE_SX1276_RFO_HF true
-  #endif
-#else
-  #define OPT_USE_SX1276_RFO_HF false
-#endif
-
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
@@ -111,14 +92,12 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     SetDioAsRfSwitch();
     SetDioIrqParams();
 
-#if defined(USE_HARDWARE_DCDC)
     if (OPT_USE_HARDWARE_DCDC)
     {
         // 5.1.1 SetRegMode
         uint8_t RegMode[1] = {1};
         hal.WriteCommand(LR11XX_SYSTEM_SET_REGMODE_OC, RegMode, sizeof(RegMode), SX12XX_Radio_All); // Enable DCDC converter instead of LDO
     }
-#endif
 
     // 2.1.3.1 CalibImage
     uint8_t CalImagebuf[2];
