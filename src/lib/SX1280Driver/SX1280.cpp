@@ -468,7 +468,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
     
@@ -514,7 +514,16 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
     RFAMP.TXenable(radioNumber); // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
+    if (sendGeminiBuffer)
+    {
+        hal.WriteBuffer(0x00, data, size, SX12XX_Radio_1);
+        hal.WriteBuffer(0x00, dataGemini, size, SX12XX_Radio_2);
+    }
+    else
+    {
+        hal.WriteBuffer(0x00, data, size, radioNumber);
+    }
+    
     instance->SetMode(SX1280_MODE_TX, radioNumber);
 
 #ifdef DEBUG_SX1280_OTA_TIMING

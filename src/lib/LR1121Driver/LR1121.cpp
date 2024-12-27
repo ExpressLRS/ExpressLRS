@@ -553,7 +553,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
 
@@ -601,15 +601,35 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     if (useFEC)
     {
         uint8_t FECBuffer[PayloadLength] = {0};
-        FECEncode(data, FECBuffer);
 
         // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+        if (sendGeminiBuffer)
+        {
+            FECEncode(data, FECBuffer);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, SX12XX_Radio_1);
+
+            uint8_t FECBufferGemini[PayloadLength] = {0};
+            FECEncode(dataGemini, FECBufferGemini);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBufferGemini, PayloadLength, SX12XX_Radio_2);
+        }
+        else
+        {
+            FECEncode(data, FECBuffer);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+        }
     }
     else
     {
         // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+        if (sendGeminiBuffer)
+        {
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, SX12XX_Radio_1);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, dataGemini, size, SX12XX_Radio_2);
+        }
+        else
+        {
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+        }
     }
 
     SetMode(LR1121_MODE_TX, radioNumber);
