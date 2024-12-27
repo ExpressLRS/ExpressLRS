@@ -37,7 +37,7 @@ public:
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
-    bool GetFrequencyErrorbool();
+    bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);

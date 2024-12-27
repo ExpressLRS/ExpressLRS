@@ -36,7 +36,7 @@ public:
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
 
-    bool GetFrequencyErrorbool();
+    bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
     // bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
     bool FrequencyErrorAvailable() const { return false; }
 
