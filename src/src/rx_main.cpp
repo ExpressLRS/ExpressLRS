@@ -471,12 +471,14 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         otaPkt.std.type = PACKET_TYPE_LINKSTATS;
 
         OTA_LinkStats_s * ls;
-        ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
 
         // Include some advanced telemetry in the extra space
         // Note the use of `ul_link_stats.payload` vs just `payload`
         if (OtaIsFullRes)
         {
+            ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
+            otaPkt.full.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
+
             otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 
             if (geminiMode)
@@ -502,6 +504,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         else
         {
             ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
+            otaPkt.std.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
             LinkStatsToOta(ls);
         }
 

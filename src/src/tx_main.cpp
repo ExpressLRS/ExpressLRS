@@ -205,6 +205,12 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
 
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
+        {
+            config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
+        }    
+
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
         {
             if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
@@ -301,6 +307,12 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     {
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
+
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
+        {
+            config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
+        }
         break;
 
       case PACKET_TYPE_DATA:
