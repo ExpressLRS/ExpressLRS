@@ -603,7 +603,6 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, bool sendG
         uint8_t FECBuffer[PayloadLength] = {0};
 
         // 3.7.4 WriteBuffer8
-        // hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
         if (sendGeminiBuffer)
         {
             FECEncode(data, FECBuffer);
@@ -622,7 +621,6 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, bool sendG
     else
     {
         // 3.7.4 WriteBuffer8
-        // hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
         if (sendGeminiBuffer)
         {
             hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, SX12XX_Radio_1);
