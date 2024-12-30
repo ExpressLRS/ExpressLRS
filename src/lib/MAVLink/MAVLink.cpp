@@ -33,7 +33,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfbatt.p.voltage = htobe16(battery_status.voltages[0] / 100);
                 // cA -> mA*100
                 crsfbatt.p.current = htobe16(battery_status.current_battery / 10);
-                crsfbatt.p.capacity = htobe32(battery_status.current_consumed) & 0x0FFF;
+                crsfbatt.p.capacity = htobe32(battery_status.current_consumed & 0x0FFF);
                 crsfbatt.p.remaining = battery_status.battery_remaining;
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfbatt);
@@ -91,9 +91,9 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 CRSF_MK_FRAME_T(crsf_flight_mode_t)
                 crsffm = {0};
                 ap_flight_mode_name4(crsffm.p.flight_mode, ap_vehicle_from_mavtype(heartbeat.type), heartbeat.custom_mode);
-                // if we have a good flight mode, and we're armed, suffix the flight mode with a * - see Ardupilot's AP_CRSF_Telem::calc_flight_mode()
+                // if we have a good flight mode, and we're not armed, suffix the flight mode with a * - see Ardupilot's AP_CRSF_Telem::calc_flight_mode() and CRSF_FM_DISARM_STAR option
                 size_t len = strnlen(crsffm.p.flight_mode, sizeof(crsffm.p.flight_mode));
-                if (len > 0 && (len + 1 < sizeof(crsffm.p.flight_mode)) && (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED)) {
+                if (len > 0 && (len + 1 < sizeof(crsffm.p.flight_mode)) && !(heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED)) {
                     crsffm.p.flight_mode[len] = '*';
                     crsffm.p.flight_mode[len + 1] = '\0';
                 }
