@@ -2,15 +2,15 @@
 
 typedef struct {
     // Latitude in decimal degrees
-    float lat;
+    uint32_t lat;
     // Longitude in decimal degrees
-    float lon;
+    uint32_t lon;
     // Altitude in meters
-    float alt;
+    uint32_t alt;
     // Speed in km/h
-    float speed;
+    uint32_t speed;
     // Heading in degrees, positive. 0 is north.
-    float heading;
+    uint32_t heading;
     // Number of satellites
     uint8_t satellites;
 } GpsData;
