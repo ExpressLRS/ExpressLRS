@@ -9,16 +9,22 @@
 #include "telemetry_protocol.h"
 #include "FIFO.h"
 
+#if TARGET_RX 
+extern bool isArmed;
+#endif
+
 #define OTA4_PACKET_SIZE     8U
 #define OTA4_CRC_CALC_LEN    offsetof(OTA_Packet4_s, crcLow)
 #define OTA8_PACKET_SIZE     13U
 #define OTA8_CRC_CALC_LEN    offsetof(OTA_Packet8_s, crc)
 
-// Packet header types (ota.std.type)
-#define PACKET_TYPE_RCDATA  0b00
-#define PACKET_TYPE_MSPDATA 0b01
-#define PACKET_TYPE_TLM     0b11
-#define PACKET_TYPE_SYNC    0b10
+// Packet header types
+#define PACKET_TYPE_DATA        0b01
+// Uplink only header types
+#define PACKET_TYPE_RCDATA      0b00
+#define PACKET_TYPE_SYNC        0b10
+// Downlink only header types
+#define PACKET_TYPE_LINKSTATS   0b00
 
 // Mask used to XOR the ModelId into the SYNC packet for ModelMatch
 #define MODELMATCH_MASK 0x3f
@@ -26,10 +32,12 @@
 typedef struct {
     uint8_t fhssIndex;
     uint8_t nonce;
+    uint8_t rfRateEnum;
     uint8_t switchEncMode:1,
             newTlmRatio:3,
-            rateIndex:4;
-    uint8_t UID3;
+            geminiMode:1,
+            otaProtocol:2,
+            free:1;
     uint8_t UID4;
     uint8_t UID5;
 } PACKED OTA_Sync_s;
@@ -40,7 +48,7 @@ typedef struct {
     uint8_t uplink_RSSI_2:7,
             modelMatch:1;
     uint8_t lq:7,
-            mspConfirm:1;
+            tlmConfirm:1;
     int8_t SNR;
 } PACKED OTA_LinkStats_s;
 
@@ -58,7 +66,7 @@ typedef struct {
         struct {
             OTA_Channels_4x10 ch;
             uint8_t switches:7,
-                    ch4:1;
+                    isArmed:1;
         } rc;
         struct {
             uint32_t packetNum; // LittleEndian
@@ -67,27 +75,29 @@ typedef struct {
         /** PACKET_TYPE_MSP **/
         struct {
             uint8_t packageIndex:7,
-                    tlmFlag:1;
+                    tlmConfirm:1;
             uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
         OTA_Sync_s sync;
         /** PACKET_TYPE_TLM **/
         struct {
-            uint8_t type:ELRS4_TELEMETRY_SHIFT,
-                    packageIndex:(8 - ELRS4_TELEMETRY_SHIFT);
+            uint8_t free:1,
+                    tlmConfirm: 1,
+                    packageIndex:6;
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t free;
+                    uint8_t trueDiversityAvailable:1,
+                            free:7;
                 } PACKED ul_link_stats;
                 uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
             };
         } tlm_dl; // PACKET_TYPE_TLM
         /** PACKET_TYPE_AIRPORT **/
         struct {
-            uint8_t type:ELRS4_TELEMETRY_SHIFT,
-                    count:(8 - ELRS4_TELEMETRY_SHIFT);
+            uint8_t free:2,
+                    count:6;
             uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;
     };
@@ -103,11 +113,11 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     telemetryStatus: 1,
-                    uplinkPower: 3, // CRSF_power_level - 1 (1-8 is 0-7 in the air)
-                    isHighAux: 1, // true if chHigh are AUX6-9
-                    ch4: 1;   // AUX1, included up here so ch0 starts on a byte boundary
-            OTA_Channels_4x10 chLow;  // CH0-CH3
-            OTA_Channels_4x10 chHigh; // AUX2-5 or AUX6-9
+                    uplinkPower: 3,     // CRSF_power_level - 1 (1-8 is 0-7 in the air)
+                    isHighAux: 1,       // true if chHigh are AUX6-9
+                    isArmed: 1;         // Arm
+            OTA_Channels_4x10 chLow;    // CH0-CH3
+            OTA_Channels_4x10 chHigh;   // AUX2-5 or AUX6-9
         } PACKED rc;
         struct {
             uint8_t packetType; // actually struct rc's first byte
@@ -118,7 +128,7 @@ typedef struct {
         struct {
             uint8_t packetType: 2,
                     packageIndex: 5,
-                    tlmFlag: 1;
+                    tlmConfirm: 1;
             uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
         } msp_ul;
         /** PACKET_TYPE_SYNC **/
@@ -130,20 +140,22 @@ typedef struct {
         /** PACKET_TYPE_TLM **/
         struct {
             uint8_t packetType: 2,
-                    containsLinkStats: 1,
+                    tlmConfirm: 1,
                     packageIndex: 5;
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
-                } PACKED ul_link_stats; // containsLinkStats == true
+                    uint8_t trueDiversityAvailable:1,
+                            free:7;
+                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s) - 1];
+                } PACKED ul_link_stats;
                 uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL]; // containsLinkStats == false
             };
         } PACKED tlm_dl;
         /** PACKET_TYPE_AIRPORT **/
         struct {
             uint8_t packetType: 2,
-                    containsLinkStats: 1,
+                    free: 1,
                     count: 5;
             uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
         } PACKED airport;

@@ -3,33 +3,6 @@
 #include "targets.h"
 #include "menu.h"
 
-#ifndef USE_OLED_I2C
-#define OPT_USE_OLED_I2C false
-#elif !defined(OPT_USE_OLED_I2C)
-#define OPT_USE_OLED_I2C true
-#endif
-#ifndef USE_OLED_SPI
-#define OPT_USE_OLED_SPI false
-#elif !defined(OPT_USE_OLED_SPI)
-#define OPT_USE_OLED_SPI true
-#endif
-#ifndef USE_OLED_SPI_SMALL
-#define OPT_USE_OLED_SPI_SMALL false
-#elif !defined(OPT_USE_OLED_SPI_SMALL)
-#define OPT_USE_OLED_SPI_SMALL true
-#endif
-#ifndef OLED_REVERSED
-#define OPT_OLED_REVERSED false
-#elif !defined(OPT_OLED_REVERSED)
-#define OPT_OLED_REVERSED true
-#endif
-#ifndef HAS_TFT_SCREEN
-#define OPT_HAS_TFT_SCREEN false
-#elif !defined(OPT_HAS_TFT_SCREEN)
-#define OPT_HAS_TFT_SCREEN true
-#endif
-
-
 #define CHANGED_TEMP bit(0)
 #define CHANGED_RATE bit(1)
 #define CHANGED_POWER bit(2)

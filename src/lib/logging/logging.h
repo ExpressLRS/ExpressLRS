@@ -48,7 +48,7 @@ void debugFreeInitLogger();
 #define debugFreeInitLogger()
 #endif
 
-#if defined(CRITICAL_FLASH) || ((defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
+#if defined(DEBUG_RCVR_LINKSTATS) && !defined(DEBUG_LOG)
   #define ERRLN(msg, ...)
 #else
   #define ERRLN(msg, ...) IFNE(__VA_ARGS__)({ \
@@ -58,7 +58,7 @@ void debugFreeInitLogger();
   },LOGGING_UART.println("ERROR: " msg))
 #endif
 
-#if defined(DEBUG_LOG) && !defined(CRITICAL_FLASH)
+#if defined(DEBUG_LOG)
   #define DBGCR   LOGGING_UART.println()
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM

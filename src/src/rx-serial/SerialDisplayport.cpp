@@ -16,7 +16,7 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 
 #include "SerialDisplayport.h"
 #include "crsf_protocol.h"
-#include "options.h"
+#include "OTA.h"
 
 void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, Stream * _stream)
 {

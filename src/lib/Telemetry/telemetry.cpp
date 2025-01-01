@@ -3,21 +3,18 @@
 #include "telemetry.h"
 #include "logging.h"
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
 extern TCPSOCKET wifi2tcp;
 #endif
 
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+#if defined(TARGET_RX) || defined(UNIT_TEST)
 #include "devMSPVTX.h"
-#endif
 
 #if defined(UNIT_TEST)
 #include <iostream>
 using namespace std;
 #endif
-
-#if CRSF_RX_MODULE
 
 #include "crsf2msp.h"
 
@@ -309,17 +306,17 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
 
-            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
-                // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-                if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
-                {
-                    DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    crsf2msp.parse(package);
-                }
-                else // if no TCP client we just want to forward MSP over the link
-            #endif
+#if defined(TARGET_RX)
+            // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
+            if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
             {
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+                DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
+                crsf2msp.parse(package);
+            }
+            else // if no TCP client we just want to forward MSP over the link
+#endif
+            {
+#if defined(PLATFORM_ESP32)
                 if (header->type == CRSF_FRAMETYPE_MSP_RESP)
                 {
                     mspVtxProcessPacket(package);

@@ -20,9 +20,11 @@
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm)"
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
-    "K1000 Full Low Band;DK500 2.4G;200 Full Low Band;250 Low Band;X100 Full;X150;" \
-    "50 2.4G;100 Full 2.4G;150 2.4G;250 2.4G;333 Full 2.4G;500 2.4G;" \
-    "50 Low Band;100 Low Band;100 Full Low Band;200 Low Band"
+    "100Hz Full(-112dBm);150Hz(-112dBm);" \
+    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+    "DK250(-103dBm);DK500(-103dBm);K1000(-103dBm);" \
+    "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm);200Hz Full(-111dBm);250Hz(-111dBm);" \
+    "K1000 Full(-101dBm)"
 #elif defined(RADIO_SX128X)
 #define STR_LUA_PACKETRATES \
     "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
@@ -30,6 +32,8 @@
 #else
 #error Invalid radio configuration!
 #endif
+
+#define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
 
@@ -54,7 +58,22 @@ static const char luastrHeadTrackingStart[] = STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
 static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
-#define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
+#if defined(RADIO_LR1121)
+static char luastrRFBands[32];
+static enum RFMode : uint8_t
+{
+    RF_MODE_900 = 0,
+    RF_MODE_2G4 = 1,
+    RF_MODE_DUAL = 2,
+} rfMode;
+
+static struct luaItem_selection luaRFBand = {
+    {"RF Band", CRSF_TEXT_SELECTION},
+    0, // value
+    luastrRFBands,
+    STR_EMPTYSPACE
+};
+#endif
 
 static struct luaItem_selection luaAirRate = {
     {"Packet Rate", CRSF_TEXT_SELECTION},
@@ -89,14 +108,12 @@ static struct luaItem_selection luaDynamicPower = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_FAN_EN) || defined(GPIO_PIN_FAN_PWM)
 static struct luaItem_selection luaFanThreshold = {
     {"Fan Thresh", CRSF_TEXT_SELECTION},
     0, // value
     "10mW;25mW;50mW;100mW;250mW;500mW;1000mW;2000mW;Never",
     STR_EMPTYSPACE // units embedded so it won't display "NevermW"
 };
-#endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
@@ -114,14 +131,12 @@ static struct luaItem_selection luaSwitch = {
     STR_EMPTYSPACE
 };
 
-#if defined(GPIO_PIN_NSS_2)
-  static struct luaItem_selection luaAntenna = {
-      {"Antenna Mode", CRSF_TEXT_SELECTION},
-      0, // value
-      antennamodeOpts,
-      STR_EMPTYSPACE
-  };
-#endif
+static struct luaItem_selection luaAntenna = {
+    {"Antenna Mode", CRSF_TEXT_SELECTION},
+    0, // value
+    antennamodeOpts,
+    STR_EMPTYSPACE
+};
 
 static struct luaItem_selection luaLinkMode = {
     {"Link Mode", CRSF_TEXT_SELECTION},
@@ -158,13 +173,11 @@ static struct luaItem_folder luaWiFiFolder = {
     {"WiFi Connectivity", CRSF_FOLDER}
 };
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static struct luaItem_command luaWebUpdate = {
     {"Enable WiFi", CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
-#endif
 
 static struct luaItem_command luaRxWebUpdate = {
     {"Enable Rx WiFi", CRSF_COMMAND},
@@ -239,13 +252,11 @@ static struct luaItem_folder luaBackpackFolder = {
     {"Backpack", CRSF_FOLDER},
 };
 
-#if defined(GPIO_PIN_BACKPACK_EN)
 static struct luaItem_selection luaBackpackEnable = {
     {"Backpack", CRSF_TEXT_SELECTION},
     0, // value
     luastrOffOn,
     STR_EMPTYSPACE};
-#endif
 
 static struct luaItem_selection luaDvrAux = {
     {"DVR Rec", CRSF_TEXT_SELECTION},
@@ -290,7 +301,6 @@ static struct luaItem_string luaBackpackVersion = {
 //---------------------------- BACKPACK ------------------
 
 static char luaBadGoodString[10];
-static int event();
 
 extern TxConfig config;
 extern void VtxTriggerSend();
@@ -299,14 +309,10 @@ extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern void SetSyncSpam();
 extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
-#if defined(USE_TX_BACKPACK)
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-#endif
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
-#endif
 
 static void luadevUpdateModelID() {
   itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
@@ -381,10 +387,9 @@ static void luadevUpdateBackpackOpts()
   }
 }
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
 static void setBleJoystickMode()
 {
-  connectionState = bleJoystick;
+  setConnectionState(bleJoystick);
 }
 
 static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
@@ -437,7 +442,6 @@ static void luahandWifiBle(struct luaPropertiesCommon *item, uint8_t arg)
       break;
   }
 }
-#endif
 
 static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
 {
@@ -459,7 +463,6 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       RxWiFiReadyToSend = true;
     }
-#if defined(USE_TX_BACKPACK)
     else if ((void *)item == (void *)&luaTxBackpackUpdate && OPT_USE_TX_BACKPACK)
     {
       TxBackpackWiFiReadyToSend = true;
@@ -468,7 +471,6 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     {
       VRxBackpackWiFiReadyToSend = true;
     }
-#endif
     sendLuaCommandResponse((struct luaItem_command *)item, lcsExecuting, msg);
   } /* if doExecute */
   else if(arg == lcsCancel || ((millis() - lastLcsPoll)> 2000))
@@ -582,6 +584,27 @@ static void recalculatePacketRateOptions(int minInterval)
         uint8_t rate = i;
         rate = RATE_MAX - 1 - rate;
         bool rateAllowed = (get_elrs_airRateConfig(rate)->interval * get_elrs_airRateConfig(rate)->numOfSends) >= minInterval;
+
+#if defined(RADIO_LR1121)
+        // Skip unsupported modes for hardware with only a single LR1121 or with a single RF path
+        rateAllowed &= isSupportedRFRate(rate);
+        if (rateAllowed)
+        {
+            const auto radio_type = get_elrs_airRateConfig(rate)->radio_type;
+            if (rfMode == RF_MODE_900)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900;
+            }
+            if (rfMode == RF_MODE_2G4)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4;
+            }
+            if (rfMode == RF_MODE_DUAL)
+            {
+                rateAllowed = radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
+            }
+        }
+#endif
         const char *semi = strchrnul(pos, ';');
         if (rateAllowed)
         {
@@ -618,31 +641,82 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 static void registerLuaParameters()
 {
   if (HAS_RADIO) {
-    registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
-    if (arg < RATE_MAX)
+#if defined(RADIO_LR1121)
+    // Copy the frequency part out of the domain to the display string
+    char *bands = luastrRFBands;
+    for (const char *domain = FHSSconfig->domain; *domain ; domain++)
     {
-      uint8_t selectedRate = RATE_MAX - 1 - arg;
-      uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
-      uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-        (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
-      // If the switch mode is going to change, block the change while connected
-      bool isDisconnected = connectionState == disconnected;
-      // Don't allow the switch mode to change if the TX is in mavlink mode
-      // Wide switchmode is not compatible with mavlink, and the switchmode is
-      // auto configuredwhen entering mavlink mode
-      bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-      if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
+      if (isdigit(*domain))
       {
-        config.SetRate(actualRate);
-        config.SetSwitchMode(newSwitchMode);
-        if (actualRate != selectedRate)
+        *bands++ = *domain;
+      }
+    }
+    *bands = '\0';
+    strlcat(luastrRFBands, "MHz;2.4GHz", sizeof(luastrRFBands));
+    // Only double LR1121 supports Dual Band modes
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+      strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
+    }
+
+    registerLUAParameter(&luaRFBand, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if (arg != rfMode)
+      {
+        // Choose the fastest supported packet rate in this RF band.
+        rfMode = static_cast<RFMode>(arg);
+        for (int i=0; i < RATE_MAX ; i++)
         {
-          setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
+          if (isSupportedRFRate(i))
+          {
+            const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
+            if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
+            {
+              config.SetRate(i);
+              break;
+            }
+            if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
+            {
+              config.SetRate(i);
+              break;
+            }
+            if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+            {
+              config.SetRate(i);
+              break;
+            }
+          }
+        }
+        recalculatePacketRateOptions(handset->getMinPacketInterval());
+      }
+    });
+#endif
+    registerLUAParameter(&luaAirRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
+      if (arg < RATE_MAX)
+      {
+        uint8_t selectedRate = RATE_MAX - 1 - arg;
+        uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
+        uint8_t newSwitchMode = adjustSwitchModeForAirRate(
+          (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+        // If the switch mode is going to change, block the change while connected
+        bool isDisconnected = connectionState == disconnected;
+        // Don't allow the switch mode to change if the TX is in mavlink mode
+        // Wide switch mode is not compatible with mavlink, and the switch mode is
+        // autoconfigured when entering mavlink mode
+        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+        if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
+        {
+          config.SetRate(actualRate);
+          config.SetSwitchMode(newSwitchMode);
+          if (actualRate != selectedRate)
+          {
+            setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
+          }
+        }
+        else
+        {
+          setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
         }
       }
-      else
-        setLuaWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-    }
     });
     registerLUAParameter(&luaTlmRate, [](struct luaPropertiesCommon *item, uint8_t arg) {
       expresslrs_tlm_ratio_e eRatio = (expresslrs_tlm_ratio_e)arg;
@@ -759,14 +833,8 @@ static void registerLuaParameters()
   }
 
   // WIFI folder
-  #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
   registerLUAParameter(&luaWiFiFolder);
   registerLUAParameter(&luaWebUpdate, &luahandWifiBle, luaWiFiFolder.common.id);
-  #else
-  if (HAS_RADIO || OPT_USE_TX_BACKPACK) {
-    registerLUAParameter(&luaWiFiFolder);
-  }
-  #endif
   if (HAS_RADIO) {
     registerLUAParameter(&luaRxWebUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
 
@@ -775,7 +843,6 @@ static void registerLuaParameters()
       registerLUAParameter(&luaVRxBackpackUpdate, &luahandSimpleSendCmd, luaWiFiFolder.common.id);
       // Backpack folder
       registerLUAParameter(&luaBackpackFolder);
-      #if defined(GPIO_PIN_BACKPACK_EN)
       if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
       {
         registerLUAParameter(
@@ -784,7 +851,6 @@ static void registerLuaParameters()
                 config.SetBackpackDisable(arg == 0);
             }, luaBackpackFolder.common.id);
       }
-      #endif
       registerLUAParameter(
           &luaDvrAux, [](luaPropertiesCommon *item, uint8_t arg) {
               if (config.GetBackpackDisable() == false)
@@ -853,6 +919,23 @@ static int event()
 
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+#if defined(RADIO_LR1121)
+  // calculate RFMode from current packet-rate
+  switch (get_elrs_airRateConfig(currentRate)->radio_type)
+  {
+    case RADIO_TYPE_LR1121_LORA_900:
+    case RADIO_TYPE_LR1121_GFSK_900:
+      rfMode = RF_MODE_900;
+      break;
+    case RADIO_TYPE_LR1121_LORA_DUAL:
+      rfMode = RF_MODE_DUAL;
+      break;
+    default:
+      rfMode = RF_MODE_2G4;
+      break;
+  }
+  setLuaTextSelectionValue(&luaRFBand, rfMode);
+#endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());
   setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
 
@@ -891,9 +974,7 @@ static int event()
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
-#if defined(GPIO_PIN_BACKPACK_EN)
     setLuaTextSelectionValue(&luaBackpackEnable, config.GetBackpackDisable() ? 0 : 1);
-#endif
     setLuaTextSelectionValue(&luaDvrAux, config.GetBackpackDisable() ? 0 : config.GetDvrAux());
     setLuaTextSelectionValue(&luaDvrStartDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStartDelay());
     setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
@@ -932,10 +1013,11 @@ static int start()
 }
 
 device_t LUA_device = {
-  .initialize = NULL,
+  .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_ALL
 };
 
 #endif

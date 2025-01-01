@@ -1,4 +1,6 @@
 #include "targets.h"
+
+#if defined(PLATFORM_ESP32) || defined(UNIT_TEST)
 #include "common.h"
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
@@ -12,8 +14,6 @@
  * Based on OpenVTX implementation - https://github.com/OpenVTx/OpenVTx/blob/master/src/src/mspVtx.c
  * Original author: Jye Smith.
 **/
-
-#ifdef HAS_MSP_VTX
 
 #define FC_QUERY_PERIOD_MS      200 // poll every 200ms
 #define MSP_VTX_FUNCTION_OFFSET 7
@@ -40,6 +40,7 @@ static uint8_t checkingIndex = 0;
 static uint8_t pitMode = 0;
 static uint8_t power = 0;
 static uint8_t channel = 0;
+static uint8_t lastState = STOP_MSPVTX;
 static uint8_t mspState = STOP_MSPVTX;
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
@@ -234,6 +235,7 @@ void mspVtxProcessPacket(uint8_t *packet)
             if (vtxConfigPacket->bands == getFreqTableBands() && vtxConfigPacket->channels == getFreqTableChannels() && vtxConfigPacket->powerLevels == NUM_POWER_LEVELS)
             {
                mspState = CHECK_POWER_LEVELS;
+               devicesTriggerEvent(EVENT_VTX_CHANGE);
                break;
             }
             clearVtxTable();
@@ -241,6 +243,7 @@ void mspVtxProcessPacket(uint8_t *packet)
         case SET_RCE_PIT_MODE:
             setRcePitMode = false;
             mspState = SEND_EEPROM_WRITE;
+            devicesTriggerEvent(EVENT_VTX_CHANGE);
         case MONITORING:
             pitMode = vtxConfigPacket->pitmode;
 
@@ -273,6 +276,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                     {
                         checkingIndex = 0;
                         mspState = CHECK_BANDS;
+                        devicesTriggerEvent(EVENT_VTX_CHANGE);
                     }
                     break;
                 }
@@ -301,6 +305,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                             vtxSPIPitmode = pitMode;
                             vtxSPIPowerIdx = power;
                             vtxSPIFrequency = getFreqByIdx(channel);
+                            devicesTriggerEvent(EVENT_VTX_CHANGE);
                         }
                         break;
                     }
@@ -318,6 +323,7 @@ void mspVtxProcessPacket(uint8_t *packet)
 
     case MSP_EEPROM_WRITE:
         mspState = MONITORING;
+        devicesTriggerEvent(EVENT_VTX_CHANGE);
         break;
     }
 }
@@ -353,27 +359,36 @@ void disableMspVtx(void)
     mspState = STOP_MSPVTX;
 }
 
-static void initialize()
+static bool initialize()
 {
-    if (OPT_HAS_VTX_SPI)
-    {
-        mspState = GET_VTX_TABLE_SIZE;
-    }
+    return OPT_HAS_VTX_SPI;
 }
 
-static int event(void)
+static int start()
 {
-    if (GPIO_PIN_SPI_VTX_NSS == UNDEF_PIN)
+    mspState = GET_VTX_TABLE_SIZE;
+    return DURATION_IMMEDIATELY;
+}
+
+static int event()
+{
+    if (mspState == STOP_MSPVTX)
     {
         return DURATION_NEVER;
     }
-    return DURATION_IMMEDIATELY;
+    if (lastState == STOP_MSPVTX)
+    {
+        lastState = mspState;
+        return DURATION_IMMEDIATELY;
+    }
+    return DURATION_IGNORE;
 }
 
 static int timeout(void)
 {
     if (mspState == STOP_MSPVTX || (mspState != MONITORING && millis() > MSP_VTX_TIMEOUT_NO_CONNECTION))
     {
+        mspState = STOP_MSPVTX;
         return DURATION_NEVER;
     }
 
@@ -389,9 +404,9 @@ static int timeout(void)
 
 device_t MSPVTx_device = {
     .initialize = initialize,
-    .start = nullptr,
+    .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_VTX_CHANGE
 };
-
 #endif
