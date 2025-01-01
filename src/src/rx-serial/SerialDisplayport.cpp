@@ -38,7 +38,7 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
 
 uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
-    bool armed = getArmedState(channelData);
+    bool armed = getArmedState();
 
     // Send extended status MSP
     msp_status_DJI_t status_DJI;
@@ -72,7 +72,7 @@ void SerialDisplayport::processBytes(uint8_t *bytes, u_int16_t size)
     }
 }
 
-bool SerialDisplayport::getArmedState(uint32_t *channelData)
+bool SerialDisplayport::getArmedState()
 {
     if (firmwareOptions.dji_permanently_armed)
     {
@@ -97,7 +97,7 @@ bool SerialDisplayport::getArmedState(uint32_t *channelData)
     {
         // If we are not using permanent arming then we don't need to wait for the air-unit to be connected
         // The arm channel will provide the required state change to arm the O3
-        return channelData[4] > CRSF_CHANNEL_VALUE_MID;
+        return isArmed;
     }
 }
 

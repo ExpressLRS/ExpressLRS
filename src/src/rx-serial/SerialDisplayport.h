@@ -52,7 +52,7 @@ public:
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override;
     void send(uint8_t messageID, void * payload, uint8_t size, Stream * _stream);
-    bool getArmedState(uint32_t *channelData);
+    bool getArmedState();
 
     uint8_t m_receivedBytes;
     uint32_t m_receivedTimestamp;
