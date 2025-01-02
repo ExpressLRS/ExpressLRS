@@ -21,7 +21,11 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
+#if defined(PLATFORM_STM32)
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro",
+#else
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink",
+#endif
     STR_EMPTYSPACE
 };
 
@@ -41,6 +45,7 @@ static struct luaItem_selection luaSBUSFailsafeMode = {
     STR_EMPTYSPACE
 };
 
+#if !defined(PLATFORM_STM32)
 static struct luaItem_int8 luaTargetSysId = {
   {"Target SysID", CRSF_UINT8},
   {
@@ -63,6 +68,7 @@ static struct luaItem_int8 luaSourceSysId = {
   },
   STR_EMPTYSPACE
 };
+#endif
 
 #if defined(POWER_OUTPUT_VALUES)
 static struct luaItem_selection luaTlmPower = {
@@ -538,12 +544,14 @@ static void registerLuaParameters()
     config.SetFailsafeMode((eFailsafeMode)arg);
   });
 
+#if !defined(PLATFORM_STM32)
   registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetTargetSysId((uint8_t)arg);
   });
   registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
     config.SetSourceSysId((uint8_t)arg);
   });
+#endif
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
@@ -666,6 +674,7 @@ static int event()
   setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
+#if !defined(PLATFORM_STM32)
   if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
   {
     setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
@@ -678,6 +687,7 @@ static int event()
     LUA_FIELD_HIDE(luaSourceSysId)
     LUA_FIELD_HIDE(luaTargetSysId)
   }
+#endif
 
   return DURATION_IMMEDIATELY;
 }
