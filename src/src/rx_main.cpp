@@ -1684,7 +1684,7 @@ static void setupRadio()
         return;
     }
 
-    DynamicPower_UpdateRx(true);
+    DynamicPower_UpdateRx(true);  // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (config.GetPower() > PWR_10mW);
