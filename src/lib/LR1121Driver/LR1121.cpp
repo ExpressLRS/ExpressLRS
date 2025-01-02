@@ -383,6 +383,8 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t Txbuf[2] = {power, LR11XX_RADIO_RAMP_48_US};
+    
+    // 9.5.2 SetTxParams
     hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
 }
 
@@ -391,7 +393,6 @@ void ICACHE_RAM_ATTR LR1121Driver::SetPaConfig(bool isSubGHz, SX12XX_Radio_Numbe
     uint8_t Pabuf[4] = {0};
 
     // 9.5.1 SetPaConfig
-    // 9.5.2 SetTxParams
     if (isSubGHz)
     {
         // 900M low power RF Amp
