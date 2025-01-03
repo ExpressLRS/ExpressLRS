@@ -908,8 +908,6 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
-
-      VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
