@@ -14,9 +14,12 @@
 #define PITMODE_OFF                 0
 #define PITMODE_ON                  1
 
-// Delay after disconnect to preserve the VTXSS_DISCONNECTED status
+// Period after a disconnect to wait in the VTXSS_DEBUOUNCING state so if
+// we get a connection we don't resend the VTX commands.
 // Needs to be long enough to reconnect, but short enough to
-// reset between the user switching equipment
+// reset between the user switching equipment. This is so we don't get into
+// a loop of connect -> send -> write eeprom -> disconnect -> ...
+// See https://github.com/ExpressLRS/ExpressLRS/issues/2976
 #define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
 
 extern Stream *TxBackpack;
@@ -26,10 +29,10 @@ static bool sendEepromWrite = true;
 static enum VtxSendState_e
 {
   VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
-  VTXSS_MODIFIED,  // Config is editied, should always be sent regardless of connect state
+  VTXSS_MODIFIED,  // Config is edited, should always be sent regardless of connect state
   VTXSS_SENDING1, VTXSS_SENDING2, VTXSS_SENDING3,  VTXSS_SENDINGDONE, // Send the config 3x
   VTXSS_CONFIRMED, // Status of remote side is consistent with our config
-  VTXSS_DISCONNECTED
+  VTXSS_DEBOUNCING // After a disconnect, go to debouncing state so a reconnect during the debounce period won't re-send the VTX command and eeprom write and get another disconnect
 } VtxSendState;
 
 void VtxTriggerSend()
@@ -118,10 +121,10 @@ static int event()
         return 1000;
     }
 
-    if (connectionState == disconnected && VtxSendState != VTXSS_DISCONNECTED && VtxSendState != VTXSS_UNKNOWN)
+    if (connectionState == disconnected && VtxSendState != VTXSS_DEBOUNCING && VtxSendState != VTXSS_UNKNOWN)
     {
         CRSF::ResetMspQueue();
-        VtxSendState = VTXSS_DISCONNECTED;
+        VtxSendState = VTXSS_DEBOUNCING;
         return VTX_DISCONNECT_DEBOUNCE_MS;
     }
 
@@ -130,7 +133,7 @@ static int event()
 
 static int timeout()
 {
-    if (VtxSendState == VTXSS_DISCONNECTED)
+    if (VtxSendState == VTXSS_DEBOUNCING)
     {
         VtxSendState = connectionState == disconnected ? VTXSS_UNKNOWN : VTXSS_CONFIRMED;
     }
