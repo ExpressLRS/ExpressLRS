@@ -61,8 +61,9 @@ void VtxPitmodeSwitchUpdate()
     else if (pitmodeAuxState != newPitmodeAuxState)
     {
         pitmodeAuxState = newPitmodeAuxState;
-        sendEepromWrite = false;
         VtxTriggerSend();
+        // No forced EEPROM saving of Pit Mode
+        sendEepromWrite = false;
     }
 }
 
@@ -123,7 +124,6 @@ static int event()
 
     if (connectionState == disconnected && VtxSendState != VTXSS_DEBOUNCING && VtxSendState != VTXSS_UNKNOWN)
     {
-        CRSF::ResetMspQueue();
         VtxSendState = VTXSS_DEBOUNCING;
         return VTX_DISCONNECT_DEBOUNCE_MS;
     }
@@ -135,7 +135,17 @@ static int timeout()
 {
     if (VtxSendState == VTXSS_DEBOUNCING)
     {
-        VtxSendState = connectionState == disconnected ? VTXSS_UNKNOWN : VTXSS_CONFIRMED;
+        if (connectionState == disconnected)
+        {
+            // Still disconnected after the debounce, assume this is a new connection on next connect
+            VtxSendState = VTXSS_UNKNOWN;
+            sendEepromWrite = true;
+        }
+        else
+        {
+            // Reconnect within the debounce, move back to CONFIRMED
+            VtxSendState = VTXSS_CONFIRMED;
+        }
     }
 
     if (VtxSendState == VTXSS_UNKNOWN || VtxSendState == VTXSS_MODIFIED || VtxSendState == VTXSS_CONFIRMED)
@@ -163,6 +173,7 @@ static int timeout()
     }
     else
     {
+        CRSF::ResetMspQueue();
         VtxSendState = VTXSS_UNKNOWN;
     }
 
