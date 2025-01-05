@@ -17,10 +17,7 @@ typedef struct {
 
 class SerialGPS : public SerialIO {
 public:
-    explicit SerialGPS(Stream &out, Stream &in) : SerialIO(&out, &in)
-    {
-
-    }
+    explicit SerialGPS(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     virtual ~SerialGPS() {}
 
     void queueLinkStatisticsPacket() override {}
