@@ -907,6 +907,8 @@ static int event()
   setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setLuaUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  // Pit mode can only be sent as part of the power byte
+  LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
