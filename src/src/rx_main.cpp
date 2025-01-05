@@ -1355,6 +1355,10 @@ static void setupSerial()
         hottTlmSerial = true;
         serialBaud = 19200;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1414,6 +1418,10 @@ static void setupSerial()
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
         serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (hottTlmSerial)
     {

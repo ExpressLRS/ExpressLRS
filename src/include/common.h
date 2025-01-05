@@ -240,6 +240,7 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_HOTT_TLM,
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
+    PROTOCOL_GPS
 };
 
 #if defined(PLATFORM_ESP32)
