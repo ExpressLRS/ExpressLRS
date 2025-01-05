@@ -54,8 +54,8 @@ public:
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
-    bool GetFrequencyErrorbool();
-    void SetPPMoffsetReg(int32_t offset);
+    bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
+    void SetPPMoffsetReg(int32_t offset, SX12XX_Radio_Number_t radioNumber);
 
     ////////////////////////////////////////////////////
 
@@ -72,9 +72,10 @@ public:
     int8_t GetLastPacketSNRRaw(SX12XX_Radio_Number_t radioNumber);
     int8_t GetCurrRSSI(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
+    void CheckForSecondPacket();
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
+    void TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 
