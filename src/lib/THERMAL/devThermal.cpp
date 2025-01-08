@@ -27,20 +27,25 @@ static uint16_t currentRPM = 0;
 void init_rpm_counter(int pin);
 uint32_t get_rpm();
 
-static void initialize()
+static bool initialize()
 {
+    bool enabled = false;
 #if defined(PLATFORM_ESP32_S3)
     thermal.init();
+    enabled = true;
 #else
     if (OPT_HAS_THERMAL_LM75A && GPIO_PIN_SCL != UNDEF_PIN && GPIO_PIN_SDA != UNDEF_PIN)
     {
         thermal.init();
+        enabled = true;
     }
 #endif
     if (GPIO_PIN_FAN_EN != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+        enabled = true;
     }
+    return enabled;
 }
 
 static void timeoutThermal()
