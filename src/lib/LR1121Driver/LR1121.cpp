@@ -134,7 +134,6 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
     Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, false, 0, 0, radioNumber);
-    CommitOutputPower();
     hal.WriteCommand(LR11XX_RADIO_SET_TX_CW_OC, radioNumber);
 }
 
@@ -205,9 +204,10 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetFrequencyHz(regfreq, radioNumber);
 
-    pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-    
     ClearIrqStatus(radioNumber);
+
+    SetPaConfig(isSubGHz, radioNumber); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
+    CommitOutputPower();
 }
 
 void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber)
@@ -382,11 +382,17 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 
 void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t Pabuf[4] = {0};
     uint8_t Txbuf[2] = {power, LR11XX_RADIO_RAMP_48_US};
+    
+    // 9.5.2 SetTxParams
+    hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
+}
+
+void ICACHE_RAM_ATTR LR1121Driver::SetPaConfig(bool isSubGHz, SX12XX_Radio_Number_t radioNumber)
+{
+    uint8_t Pabuf[4] = {0};
 
     // 9.5.1 SetPaConfig
-    // 9.5.2 SetTxParams
     if (isSubGHz)
     {
         // 900M low power RF Amp
@@ -421,7 +427,6 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
     }
 
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), radioNumber);
-    hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
 }
 
 void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
