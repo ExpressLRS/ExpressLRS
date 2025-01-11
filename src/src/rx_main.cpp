@@ -1255,10 +1255,12 @@ void MspReceiveComplete()
         });
 #endif
         break;
+#if !defined(PLATFORM_STM32)
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
         break;
+#endif
     default:
         //handle received CRSF package
         crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
@@ -1315,9 +1317,8 @@ static void setupSerial()
 {
     bool sbusSerialOutput = false;
 	bool sumdSerialOutput = false;
-    bool mavlinkSerialOutput = false;
-
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
 #endif
 
@@ -1353,12 +1354,12 @@ static void setupSerial()
         sumdSerialOutput = true;
         serialBaud = 115200;
     }
+#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
         mavlinkSerialOutput = true;
         serialBaud = 460800;
     }
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
         hottTlmSerial = true;
@@ -1468,11 +1469,11 @@ static void setupSerial()
     {
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (mavlinkSerialOutput)
     {
         serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (hottTlmSerial)
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -2259,6 +2260,7 @@ void loop()
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
 
+#if !defined(PLATFORM_STM32)
     uint16_t count = mavlinkInputBuffer.size();
     if (count > 0 && !TelemetrySender.IsActive())
     {
@@ -2272,6 +2274,7 @@ void loop()
         nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
         TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
+#endif
 
     updateTelemetryBurst();
     updateBindingMode(now);
