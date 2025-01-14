@@ -88,19 +88,8 @@ bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
   ConfigLoraDefaults();
   // Force the next power update, and use the defaults for RFO_HF or PA_BOOST
   pwrCurrent = PWRPENDING_NONE;
-#if defined(TARGET_UNIFIED_RX) || defined(TARGET_UNIFIED_TX)
-  if (POWER_OUTPUT_VALUES2 == nullptr)
-#endif
-  {
-    if (OPT_USE_SX1276_RFO_HF)
-    {
-      SetOutputPower(SX127X_MAX_OUTPUT_POWER_RFO_HF);
-    }
-    else
-    {
-      SetOutputPower(SX127X_MAX_OUTPUT_POWER);
-    }
-  }
+  SetOutputPower(SX127X_MAX_OUTPUT_POWER);
+  
   CommitOutputPower();
 
   return true;
@@ -282,14 +271,8 @@ void SX127xDriver::SetOutputPower(uint8_t Power)
   uint8_t pwrNew;
   Power &= SX127X_PA_POWER_MASK;
 
-  if (OPT_USE_SX1276_RFO_HF)
-  {
-    pwrNew = SX127X_PA_SELECT_RFO | Power;
-  }
-  else
-  {
-    pwrNew = SX127X_PA_SELECT_BOOST | Power;
-  }
+  pwrNew = SX127X_PA_SELECT_BOOST | Power;
+
 
   if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
   {
