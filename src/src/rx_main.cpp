@@ -1736,6 +1736,8 @@ static void cycleRfMode(unsigned long now)
         RFmodeLastCycled = now;
         LastSyncPacket = now;           // reset this variable
         SendLinkStatstoFCForcedSends = 2;
+		config.SetRateInitialIdx(scanIndex % RATE_MAX);
+        config.Commit();             //修复上电时的快速连接问题"Fix the quick connection problem during power-on"
         SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
         LQCalc.reset100();
         LQCalcDVDA.reset100();
