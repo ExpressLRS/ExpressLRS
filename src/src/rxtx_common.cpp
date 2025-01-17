@@ -28,6 +28,17 @@ boolean i2c_enabled = false;
 static void setupWire()
 {
 #if defined(USE_I2C)
+
+#if defined(PLATFORM_STM32)
+    if(GPIO_PIN_SDA != UNDEF_PIN && GPIO_PIN_SCL != UNDEF_PIN)
+    {
+        // Wire::begin() passing ints is ambiguously overloaded, use the set functions
+        // which themselves might get the PinName overloads
+        Wire.setSCL(GPIO_PIN_SCL);
+        Wire.setSDA(GPIO_PIN_SDA);
+        Wire.begin();
+    }
+#else
     int gpio_scl = GPIO_PIN_SCL;
     int gpio_sda = GPIO_PIN_SDA;
 
@@ -63,6 +74,7 @@ static void setupWire()
         Wire.setClock(400000);
         i2c_enabled = true;
     }
+#endif
 #endif
 }
 

@@ -9,9 +9,9 @@ https://github.com/jaxxzer
 #if !defined(TARGET_R9SLIM_RX)
     // TODO
     // EEPROM not working with TX
-    //#define TARGET_USE_EEPROM               1
-    //#define TARGET_EEPROM_ADDR              0x50
-    #define STM32_USE_FLASH
+    #define TARGET_USE_EEPROM               1
+    #define TARGET_EEPROM_ADDR              0x50
+    // #define STM32_USE_FLASH
 #endif
 
 #define GPIO_PIN_SDA            PB7  // EEPROM

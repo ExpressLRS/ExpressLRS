@@ -1302,9 +1302,20 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+// Random number generation for UIDs
+#define PRNG_A 1103515245
+#define PRNG_C 12345
+#define PRNG_M 2147483648
+
+static uint32_t psuedo_rand(uint32_t seed) {
+    seed = (PRNG_A * seed + PRNG_C) % PRNG_M;
+    return seed;
+}
+
 static void setupBindingFromConfig()
 {
-  if (firmwareOptions.hasUID)
+  // ModalAI: Make sure the UID is valid too
+  if (firmwareOptions.hasUID && UID_IS_BOUND(firmwareOptions.uid))
   {
     memcpy(UID, firmwareOptions.uid, UID_LEN);
   }
@@ -1313,7 +1324,16 @@ static void setupBindingFromConfig()
 #if defined(PLATFORM_ESP32)
     esp_read_mac(UID, ESP_MAC_WIFI_STA);
 #elif defined(PLATFORM_STM32)
-    memset(UID, 0, UID_LEN); // TODO: Randomize UID
+    // ModalAI: Deterministic Pseudo-random ID
+    // Seed is based on the lower 32 bits of the UUID register
+    uint32_t uid_seed = *(uint32_t *)UID_BASE;
+    for(int i = 0; i < UID_LEN; i++)
+    {
+      // Generate a random UID
+      UID[i] = (uint8_t) psuedo_rand(uid_seed + i);
+    }
+    // TODO: Save random ID to EEPROM
+    // Modify flashedOptions to make
 #else
     wifi_get_macaddr(STATION_IF, UID);
 #endif
@@ -1407,6 +1427,8 @@ void setup()
       //config.Commit();
       #endif
       #endif
+
+    // TODO: if no UID assigned, or UID == 0.0.0.0.0.0, assign a new random ID
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
