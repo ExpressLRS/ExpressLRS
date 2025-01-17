@@ -206,7 +206,7 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     } 
     else{
         SPI_1.transfer(buf, numBytes + 1);
-        // SPI_2.transfer(buf, numBytes + 1);
+        SPI_2.transfer(buf, numBytes + 1);
     }
 #endif
     resetNss(HIGH);

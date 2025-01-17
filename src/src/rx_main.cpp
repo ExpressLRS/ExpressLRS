@@ -2161,8 +2161,8 @@ void setup()
         // Setup Antenna mode to be 2 (Diversity)
         #if defined(M0139)
         #ifdef DUAL_RADIO
-        //config.SetAntennaMode(0);
-        //config.Commit();
+        config.SetAntennaMode(0);
+        config.Commit();
         #endif
         #endif
 
