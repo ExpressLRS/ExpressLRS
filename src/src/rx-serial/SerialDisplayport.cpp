@@ -22,7 +22,7 @@ void SerialDisplayport::send(uint8_t messageID, void * payload, uint8_t size, St
 {
     _stream->write('$');
     _stream->write('M');
-    _stream->write('<');
+    _stream->write('>');
     _stream->write(size);
     _stream->write(messageID);
     uint8_t checksum = size ^ messageID;
@@ -40,23 +40,24 @@ uint32_t SerialDisplayport::sendRCFrame(bool frameAvailable, bool frameMissed, u
 {
     bool armed = getArmedState();
 
-    // Send extended status MSP
-    msp_status_DJI_t status_DJI;
-    status_DJI.cycleTime = 0x0080;
-    status_DJI.i2cErrorCounter = 0;
-    status_DJI.sensor = 0x23;
-    status_DJI.flightModeFlags = armed ? 0x3 : 0x2;
-    status_DJI.configProfileIndex = 0;
-    status_DJI.averageSystemLoadPercent = 7;
-    status_DJI.accCalibrationAxisFlags = 0;
-    status_DJI.DJI_ARMING_DISABLE_FLAGS_COUNT = 20;
-    status_DJI.djiPackArmingDisabledFlags = (1 << 24);
-    status_DJI.armingFlags = 0x0303;
-    send(MSP_STATUS_EX, &status_DJI, sizeof(status_DJI), _outputPort);
+    msp_status_t status;
+    status.task_delta_time = 0;
+    status.i2c_error_count = 0;
+    status.sensor_status = 0;
+    status.flight_mode_flags = armed ? 0x1 : 0x0;
+    status.pid_profile = 0;
+    status.system_load = 0;
+    status.gyro_cycle_time = 0;
+    status.box_mode_flags = 0;
+    status.arming_disable_flags_count = 1;
+    status.arming_disable_flags = armed ? 0x0 : 0x1;
+    status.extra_flags = 0;
 
     // Send status MSP
-    status_DJI.armingFlags = 0x0000;
-    send(MSP_STATUS, &status_DJI, sizeof(status_DJI), _outputPort);
+    send(MSP_STATUS, &status, sizeof(status), _outputPort);
+
+    // Send extended status MSP
+    send(MSP_STATUS_EX, &status, sizeof(status), _outputPort);
 
     return MSP_MSG_PERIOD_MS;   // Send MSP msgs to DJI at 10Hz
 }
