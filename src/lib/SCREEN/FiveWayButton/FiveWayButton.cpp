@@ -1,22 +1,7 @@
-#ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
 
-#if defined(GPIO_PIN_JOYSTICK)
-#if !defined(JOY_ADC_VALUES)
-    #error "GPIO_PIN_JOYSTICK requires JOY_ADC_VALUES defined too"
-#endif
-#endif
-
-#if defined(JOY_ADC_VALUES)
-#if !defined(GPIO_PIN_JOYSTICK)
-    #error "JOY_ADC_VALUES requires GPIO_PIN_JOYSTICK defined too"
-#endif
-
-#if defined(TARGET_UNIFIED_TX)
+#if defined(PLATFORM_ESP32)
 uint16_t FiveWayButton::joyAdcValues[] = {0};
-#else
-uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
-#endif
 
 /**
  * @brief Calculate fuzz: half the distance to the next nearest neighbor for each joystick position.
@@ -36,9 +21,7 @@ uint16_t FiveWayButton::joyAdcValues[] = JOY_ADC_VALUES;
  */
 void FiveWayButton::calcFuzzValues()
 {
-#if defined(TARGET_UNIFIED_TX)
     memcpy(FiveWayButton::joyAdcValues, JOY_ADC_VALUES, sizeof(FiveWayButton::joyAdcValues));
-#endif
     for (unsigned int i = 0; i < N_JOY_ADC_VALUES; i++)
     {
         uint16_t closestDist = 0xffff;
@@ -61,11 +44,9 @@ void FiveWayButton::calcFuzzValues()
         //DBG("joy%u=%u f=%u, ", i, ival, fuzzValues[i]);
     } // for i
 }
-#endif
 
 int FiveWayButton::readKey()
 {
-#if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
         uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
@@ -81,7 +62,6 @@ int FiveWayButton::readKey()
         return INPUT_KEY_NO_PRESS;
     }
     else
-#endif
     {
         return digitalRead(GPIO_PIN_FIVE_WAY_INPUT1) << 2 |
             digitalRead(GPIO_PIN_FIVE_WAY_INPUT2) << 1 |
@@ -102,13 +82,11 @@ void FiveWayButton::init()
     keyInProcess = INPUT_KEY_NO_PRESS;
     keyDownStart = 0;
 
-#if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
         calcFuzzValues();
     }
     else
-#endif
     {
         pinMode(GPIO_PIN_FIVE_WAY_INPUT1, INPUT_PULLUP);
         pinMode(GPIO_PIN_FIVE_WAY_INPUT2, INPUT_PULLUP);
@@ -166,5 +144,4 @@ void FiveWayButton::update(int *keyValue, bool *keyLongPressed)
 
     keyInProcess = newKey;
 }
-
 #endif

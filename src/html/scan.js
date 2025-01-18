@@ -453,7 +453,6 @@ function updateConfig(data, options) {
   } else {
     _('button-tab').style.display = 'none';
   }
-  if (data['has-highpower'] === true) _('has-highpower').style.display = 'block';
 @@end
 }
 

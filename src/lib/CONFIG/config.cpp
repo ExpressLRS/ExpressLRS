@@ -1,6 +1,7 @@
 #include "config.h"
 #include "config_legacy.h"
 #include "common.h"
+#include "device.h"
 #include "POWERMGNT.h"
 #include "OTA.h"
 #include "helpers.h"
@@ -8,13 +9,7 @@
 
 #if defined(TARGET_TX)
 
-#define MODEL_CHANGED       bit(1)
-#define VTX_CHANGED         bit(2)
-#define MAIN_CHANGED        bit(3) // catch-all for global config item
-#define FAN_CHANGED         bit(4)
-#define MOTION_CHANGED      bit(5)
-#define BUTTON_CHANGED      bit(6)
-#define ALL_CHANGED         (MODEL_CHANGED | VTX_CHANGED | MAIN_CHANGED | FAN_CHANGED | MOTION_CHANGED | BUTTON_CHANGED)
+#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -98,6 +93,21 @@ static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * con
     v7->boostChannel = v6->boostChannel;
 }
 
+static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * const v8)
+{
+    v8->rate = v7->rate;
+    v8->tlm = v7->tlm;
+    v8->power = v7->power;
+    v8->switchMode = v7->switchMode;
+    v8->boostChannel = v7->boostChannel;
+    v8->dynamicPower = v7->dynamicPower;
+    v8->modelMatch = v7->modelMatch;
+    v8->txAntenna = v7->txAntenna;
+    v8->ptrStartChannel = v7->ptrStartChannel;
+    v8->ptrEnableChannel = v7->ptrEnableChannel;
+    v8->linkMode = v7->linkMode;
+}
+
 TxConfig::TxConfig() :
     m_model(m_config.model_config)
 {
@@ -167,7 +177,7 @@ void TxConfig::Load()
     else
     {
         // Need to write the dvr defaults
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 
     if (version >= 7) {
@@ -189,11 +199,7 @@ void TxConfig::Load()
         itoa(i, model+5, 10);
         if (nvs_get_u32(handle, model, &value) == ESP_OK)
         {
-            if (version >= 7)
-            {
-                U32_to_Model(value, &m_config.model_config[i]);
-            }
-            else
+            if (version == 6)
             {
                 // Upgrade v6 to v7 directly writing to nvs instead of calling Commit() over and over
                 v6_model_config_t v6model;
@@ -201,6 +207,21 @@ void TxConfig::Load()
                 model_config_t * const newModel = &m_config.model_config[i];
                 ModelV6toV7(&v6model, newModel);
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
+            }
+            
+            if (version <= 7)
+            {
+                // Upgrade v7 to v8 directly writing to nvs instead of calling Commit() over and over
+                v7_model_config_t v7model;
+                U32_to_Model(value, &v7model);
+                model_config_t * const newModel = &m_config.model_config[i];
+                ModelV7toV8(&v7model, newModel);
+                nvs_set_u32(handle, model, Model_to_U32(newModel));
+            }
+
+            if (version == TX_CONFIG_VERSION)
+            {
+                U32_to_Model(value, &m_config.model_config[i]);
             }
         }
     } // for each model
@@ -244,6 +265,12 @@ void TxConfig::Load()
     if (version == 6)
     {
         UpgradeEepromV6ToV7();
+        version = 7;
+    }
+
+    if (version == 7)
+    {
+        UpgradeEepromV7ToV8();
     }
 }
 
@@ -296,26 +323,45 @@ void TxConfig::UpgradeEepromV6ToV7()
     m_config.version = 7U | TX_CONFIG_MAGIC;
     Commit();
 }
+
+void TxConfig::UpgradeEepromV7ToV8()
+{
+    v7_tx_config_t v7Config;
+
+    // Populate the prev version struct from eeprom
+    m_eeprom->Get(0, v7Config);
+
+    for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
+    {
+        ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
+    }
+
+    m_modified = ALL_CHANGED;
+
+    // Full Commit now
+    m_config.version = 8U | TX_CONFIG_MAGIC;
+    Commit();
+}
 #endif
 
-void
+uint32_t
 TxConfig::Commit()
 {
     if (!m_modified)
     {
         // No changes
-        return;
+        return 0;
     }
 #if defined(PLATFORM_ESP32)
     // Write parts to NVS
-    if (m_modified & MODEL_CHANGED)
+    if (m_modified & EVENT_CONFIG_MODEL_CHANGED)
     {
         uint32_t value = Model_to_U32(m_model);
         char model[10] = "model";
         itoa(m_modelId, model+5, 10);
         nvs_set_u32(handle, model, value);
     }
-    if (m_modified & VTX_CHANGED)
+    if (m_modified & EVENT_CONFIG_VTX_CHANGED)
     {
         uint32_t value =
             m_config.vtxBand << 24 |
@@ -324,27 +370,26 @@ TxConfig::Commit()
             m_config.vtxPitmode;
         nvs_set_u32(handle, "vtx", value);
     }
-    if (m_modified & FAN_CHANGED)
+    if (m_modified & EVENT_CONFIG_FAN_CHANGED)
     {
         uint32_t value = m_config.fanMode;
         nvs_set_u32(handle, "fan", value);
+        nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
     }
-    if (m_modified & MOTION_CHANGED)
+    if (m_modified & EVENT_CONFIG_MOTION_CHANGED)
     {
         uint32_t value = m_config.motionMode;
         nvs_set_u32(handle, "motion", value);
     }
-    if (m_modified & MAIN_CHANGED)
+    if (m_modified & EVENT_CONFIG_MAIN_CHANGED)
     {
-        nvs_set_u8(handle, "fanthresh", m_config.powerFanThreshold);
-
         nvs_set_u8(handle, "backpackdisable", m_config.backpackDisable);
         nvs_set_u8(handle, "backpacktlmen", m_config.backpackTlmMode);
         nvs_set_u8(handle, "dvraux", m_config.dvrAux);
         nvs_set_u8(handle, "dvrstartdelay", m_config.dvrStartDelay);
         nvs_set_u8(handle, "dvrstopdelay", m_config.dvrStopDelay);
     }
-    if (m_modified & BUTTON_CHANGED)
+    if (m_modified & EVENT_CONFIG_BUTTON_CHANGED)
     {
         nvs_set_u32(handle, "button1", m_config.buttonColors[0].raw);
         nvs_set_u32(handle, "button2", m_config.buttonColors[1].raw);
@@ -356,7 +401,9 @@ TxConfig::Commit()
     m_eeprom->Put(0, m_config);
     m_eeprom->Commit();
 #endif
+    uint32_t changes = m_modified;
     m_modified = 0;
+    return changes;
 }
 
 // Setters
@@ -366,7 +413,7 @@ TxConfig::SetRate(uint8_t rate)
     if (GetRate() != rate)
     {
         m_model->rate = rate;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -376,7 +423,7 @@ TxConfig::SetTlm(uint8_t tlm)
     if (GetTlm() != tlm)
     {
         m_model->tlm = tlm;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -386,7 +433,7 @@ TxConfig::SetPower(uint8_t power)
     if (GetPower() != power)
     {
         m_model->power = power;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -396,7 +443,7 @@ TxConfig::SetDynamicPower(bool dynamicPower)
     if (GetDynamicPower() != dynamicPower)
     {
         m_model->dynamicPower = dynamicPower;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -406,7 +453,7 @@ TxConfig::SetBoostChannel(uint8_t boostChannel)
     if (GetBoostChannel() != boostChannel)
     {
         m_model->boostChannel = boostChannel;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -416,7 +463,7 @@ TxConfig::SetSwitchMode(uint8_t switchMode)
     if (GetSwitchMode() != switchMode)
     {
         m_model->switchMode = switchMode;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -426,7 +473,7 @@ TxConfig::SetAntennaMode(uint8_t txAntenna)
     if (GetAntennaMode() != txAntenna)
     {
         m_model->txAntenna = txAntenna;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -442,7 +489,7 @@ TxConfig::SetLinkMode(uint8_t linkMode)
             m_model->tlm = TLM_RATIO_1_2;
             m_model->switchMode = smHybridOr16ch; // Force Hybrid / 16ch/2 switch modes for mavlink
         }
-        m_modified |= MODEL_CHANGED | MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -452,7 +499,7 @@ TxConfig::SetModelMatch(bool modelMatch)
     if (GetModelMatch() != modelMatch)
     {
         m_model->modelMatch = modelMatch;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -462,7 +509,7 @@ TxConfig::SetVtxBand(uint8_t vtxBand)
     if (m_config.vtxBand != vtxBand)
     {
         m_config.vtxBand = vtxBand;
-        m_modified |= VTX_CHANGED;
+        m_modified |= EVENT_CONFIG_VTX_CHANGED;
     }
 }
 
@@ -472,7 +519,7 @@ TxConfig::SetVtxChannel(uint8_t vtxChannel)
     if (m_config.vtxChannel != vtxChannel)
     {
         m_config.vtxChannel = vtxChannel;
-        m_modified |= VTX_CHANGED;
+        m_modified |= EVENT_CONFIG_VTX_CHANGED;
     }
 }
 
@@ -482,7 +529,7 @@ TxConfig::SetVtxPower(uint8_t vtxPower)
     if (m_config.vtxPower != vtxPower)
     {
         m_config.vtxPower = vtxPower;
-        m_modified |= VTX_CHANGED;
+        m_modified |= EVENT_CONFIG_VTX_CHANGED;
     }
 }
 
@@ -492,7 +539,7 @@ TxConfig::SetVtxPitmode(uint8_t vtxPitmode)
     if (m_config.vtxPitmode != vtxPitmode)
     {
         m_config.vtxPitmode = vtxPitmode;
-        m_modified |= VTX_CHANGED;
+        m_modified |= EVENT_CONFIG_VTX_CHANGED;
     }
 }
 
@@ -502,7 +549,7 @@ TxConfig::SetPowerFanThreshold(uint8_t powerFanThreshold)
     if (m_config.powerFanThreshold != powerFanThreshold)
     {
         m_config.powerFanThreshold = powerFanThreshold;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_FAN_CHANGED;
     }
 }
 
@@ -521,7 +568,7 @@ TxConfig::SetFanMode(uint8_t fanMode)
     if (m_config.fanMode != fanMode)
     {
         m_config.fanMode = fanMode;
-        m_modified |= FAN_CHANGED;
+        m_modified |= EVENT_CONFIG_FAN_CHANGED;
     }
 }
 
@@ -531,7 +578,7 @@ TxConfig::SetMotionMode(uint8_t motionMode)
     if (m_config.motionMode != motionMode)
     {
         m_config.motionMode = motionMode;
-        m_modified |= MOTION_CHANGED;
+        m_modified |= EVENT_CONFIG_MOTION_CHANGED;
     }
 }
 
@@ -541,7 +588,7 @@ TxConfig::SetDvrAux(uint8_t dvrAux)
     if (GetDvrAux() != dvrAux)
     {
         m_config.dvrAux = dvrAux;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -551,7 +598,7 @@ TxConfig::SetDvrStartDelay(uint8_t dvrStartDelay)
     if (GetDvrStartDelay() != dvrStartDelay)
     {
         m_config.dvrStartDelay = dvrStartDelay;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -561,7 +608,7 @@ TxConfig::SetDvrStopDelay(uint8_t dvrStopDelay)
     if (GetDvrStopDelay() != dvrStopDelay)
     {
         m_config.dvrStopDelay = dvrStopDelay;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -571,7 +618,7 @@ TxConfig::SetBackpackDisable(bool backpackDisable)
     if (m_config.backpackDisable != backpackDisable)
     {
         m_config.backpackDisable = backpackDisable;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -581,7 +628,7 @@ TxConfig::SetBackpackTlmMode(uint8_t mode)
     if (m_config.backpackTlmMode != mode)
     {
         m_config.backpackTlmMode = mode;
-        m_modified |= MAIN_CHANGED;
+        m_modified |= EVENT_CONFIG_MAIN_CHANGED;
     }
 }
 
@@ -590,7 +637,7 @@ TxConfig::SetButtonActions(uint8_t button, tx_button_color_t *action)
 {
     if (m_config.buttonColors[button].raw != action->raw) {
         m_config.buttonColors[button].raw = action->raw;
-        m_modified |= BUTTON_CHANGED;
+        m_modified |= EVENT_CONFIG_BUTTON_CHANGED;
     }
 }
 
@@ -599,7 +646,7 @@ TxConfig::SetPTRStartChannel(uint8_t ptrStartChannel)
 {
     if (ptrStartChannel != m_model->ptrStartChannel) {
         m_model->ptrStartChannel = ptrStartChannel;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -608,7 +655,7 @@ TxConfig::SetPTREnableChannel(uint8_t ptrEnableChannel)
 {
     if (ptrEnableChannel != m_model->ptrEnableChannel) {
         m_model->ptrEnableChannel = ptrEnableChannel;
-        m_modified |= MODEL_CHANGED;
+        m_modified |= EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -654,17 +701,19 @@ TxConfig::SetDefaults(bool commit)
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         SetModelId(i);
-        #if defined(RADIO_SX127X) || defined(RADIO_LR1121)
-            SetRate(enumRatetoIndex(RATE_LORA_200HZ));
+        #if defined(RADIO_SX127X)
+            SetRate(enumRatetoIndex(RATE_LORA_900_200HZ));
+        #elif defined(RADIO_LR1121)
+            SetRate(enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ));
         #elif defined(RADIO_SX128X)
-            SetRate(enumRatetoIndex(RATE_LORA_250HZ));
+            SetRate(enumRatetoIndex(RATE_LORA_2G4_250HZ));
         #endif
         SetPower(POWERMGNT::getDefaultPower());
 #if defined(PLATFORM_ESP32)
         // ESP32 nvs needs to commit every model
         if (commit)
         {
-            m_modified |= MODEL_CHANGED;
+            m_modified |= EVENT_CONFIG_MODEL_CHANGED;
             Commit();
         }
 #endif
@@ -715,7 +764,7 @@ RxConfig::RxConfig()
 
 void RxConfig::Load()
 {
-    m_modified = false;
+    m_modified = 0;
     m_eeprom->Get(0, m_config);
 
     uint32_t version = 0;
@@ -744,8 +793,9 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
+    UpgradeEepromV9();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
-    m_modified = true;
+    m_modified = EVENT_CONFIG_MODEL_CHANGED; // anything to force write
     Commit();
 }
 
@@ -764,7 +814,7 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
     // Reset the power on counter because this is following a flash, may have taken a few boots to flash
     m_config.powerOnCounter = 0;
     // SetUID should set this but just in case that gets removed, flash_discriminator needs to be saved
-    m_modified = true;
+    m_modified = EVENT_CONFIG_UID_CHANGED;
 
     Commit();
 }
@@ -788,13 +838,11 @@ void RxConfig::UpgradeEepromV4()
     {
         UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
         m_config.modelId = v4Config.modelId;
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         // OG PWMP had only 8 channels
         for (unsigned ch=0; ch<8; ++ch)
         {
             PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -829,12 +877,10 @@ void RxConfig::UpgradeEepromV5()
         m_config.rateInitialIdx = v5Config.rateInitialIdx;
         m_config.modelId = v5Config.modelId;
 
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -865,12 +911,10 @@ void RxConfig::UpgradeEepromV6()
         m_config.rateInitialIdx = v6Config.rateInitialIdx;
         m_config.modelId = v6Config.modelId;
 
-        #if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
         }
-        #endif
     }
 }
 
@@ -896,14 +940,28 @@ void RxConfig::UpgradeEepromV7V8()
         m_config.serialProtocol = v7Config.serialProtocol;
         m_config.failsafeMode = v7Config.failsafeMode;
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
         for (unsigned ch=0; ch<16; ++ch)
         {
             m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
             if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
                 m_config.pwmChannels[ch].val.mode += 1;
         }
-#endif
+    }
+}
+
+// ========================================================
+// V9 Upgrade
+
+void RxConfig::UpgradeEepromV9()
+{
+    v9_rx_config_t v9Config;
+    m_eeprom->Get(0, v9Config);
+
+    if ((v9Config.version & ~CONFIG_MAGIC_MASK) == 9)
+    {
+        m_config.powerOnCounter = v9Config.powerOnCounter;
+        m_config.forceTlmOff = v9Config.forceTlmOff;
+        m_config.rateInitialIdx = v9Config.rateInitialIdx;
     }
 }
 
@@ -971,7 +1029,7 @@ RxConfig::GetPowerOnCounter() const
 }
 #endif
 
-void
+uint32_t
 RxConfig::Commit()
 {
 #if defined(PLATFORM_ESP8266)
@@ -984,14 +1042,16 @@ RxConfig::Commit()
     if (!m_modified)
     {
         // No changes
-        return;
+        return 0;
     }
 
     // Write the struct to eeprom
     m_eeprom->Put(0, m_config);
     m_eeprom->Commit();
 
-    m_modified = false;
+    uint32_t changes = m_modified;
+    m_modified = 0;
+    return changes;
 }
 
 // Setters
@@ -1002,7 +1062,7 @@ RxConfig::SetUID(uint8_t* uid)
     {
         m_config.uid[i] = uid[i];
     }
-    m_modified = true;
+    m_modified = EVENT_CONFIG_UID_CHANGED;
 }
 
 void
@@ -1024,7 +1084,7 @@ RxConfig::SetPowerOnCounter(uint8_t powerOnCounter)
     if (m_config.powerOnCounter != powerOnCounter)
     {
         m_config.powerOnCounter = powerOnCounter;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_POWER_COUNT_CHANGED;
     }
 #endif
 }
@@ -1035,7 +1095,7 @@ RxConfig::SetModelId(uint8_t modelId)
     if (m_config.modelId != modelId)
     {
         m_config.modelId = modelId;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1045,7 +1105,7 @@ RxConfig::SetPower(uint8_t power)
     if (m_config.power != power)
     {
         m_config.power = power;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1058,7 +1118,7 @@ RxConfig::SetAntennaMode(uint8_t antennaMode)
     if (m_config.antennaMode != antennaMode)
     {
         m_config.antennaMode = antennaMode;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1076,7 +1136,6 @@ RxConfig::SetDefaults(bool commit)
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         m_config.antennaMode = 0; // 0 is diversity for dual radio
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
     for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
@@ -1095,19 +1154,14 @@ RxConfig::SetDefaults(bool commit)
         SetPwmChannel(ch, 512, ch, false, mode, false);
     }
     SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
-#endif
 
     m_config.teamraceChannel = AUX7; // CH11
-
-#if defined(RCVR_INVERT_TX)
-    m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
-#endif
 
     if (commit)
     {
         // Prevent rebinding to the flashed UID on first boot
         m_config.flash_discriminator = firmwareOptions.flash_discriminator;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
         Commit();
     }
 }
@@ -1121,7 +1175,6 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
     }
 }
 
-#if defined(GPIO_PIN_PWM_OUTPUTS)
 void
 RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched)
 {
@@ -1139,7 +1192,7 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
         return;
 
     pwm->raw = newConfig.raw;
-    m_modified = true;
+    m_modified = EVENT_CONFIG_PWM_CHANGE;
 }
 
 void
@@ -1153,9 +1206,8 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
         return;
 
     pwm->raw = raw;
-    m_modified = true;
+    m_modified = EVENT_CONFIG_PWM_CHANGE;
 }
-#endif
 
 void
 RxConfig::SetForceTlmOff(bool forceTlmOff)
@@ -1163,7 +1215,7 @@ RxConfig::SetForceTlmOff(bool forceTlmOff)
     if (m_config.forceTlmOff != forceTlmOff)
     {
         m_config.forceTlmOff = forceTlmOff;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1173,7 +1225,7 @@ RxConfig::SetRateInitialIdx(uint8_t rateInitialIdx)
     if (m_config.rateInitialIdx != rateInitialIdx)
     {
         m_config.rateInitialIdx = rateInitialIdx;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1182,7 +1234,7 @@ void RxConfig::SetSerialProtocol(eSerialProtocol serialProtocol)
     if (m_config.serialProtocol != serialProtocol)
     {
         m_config.serialProtocol = serialProtocol;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_SERIAL_CHANGE;
     }
 }
 
@@ -1192,7 +1244,7 @@ void RxConfig::SetSerial1Protocol(eSerial1Protocol serialProtocol)
     if (m_config.serial1Protocol != serialProtocol)
     {
         m_config.serial1Protocol = serialProtocol;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_SERIAL_CHANGE;
     }
 }
 #endif
@@ -1202,7 +1254,7 @@ void RxConfig::SetTeamraceChannel(uint8_t teamraceChannel)
     if (m_config.teamraceChannel != teamraceChannel)
     {
         m_config.teamraceChannel = teamraceChannel;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1211,7 +1263,7 @@ void RxConfig::SetTeamracePosition(uint8_t teamracePosition)
     if (m_config.teamracePosition != teamracePosition)
     {
         m_config.teamracePosition = teamracePosition;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1220,7 +1272,7 @@ void RxConfig::SetFailsafeMode(eFailsafeMode failsafeMode)
     if (m_config.failsafeMode != failsafeMode)
     {
         m_config.failsafeMode = failsafeMode;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1231,7 +1283,7 @@ void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
         // If switching away from returnable, revert
         ReturnLoan();
         m_config.bindStorage = value;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1240,7 +1292,7 @@ void RxConfig::SetTargetSysId(uint8_t value)
     if (m_config.targetSysId != value)
     {
         m_config.targetSysId = value;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 void RxConfig::SetSourceSysId(uint8_t value)
@@ -1248,7 +1300,7 @@ void RxConfig::SetSourceSysId(uint8_t value)
     if (m_config.sourceSysId != value)
     {
         m_config.sourceSysId = value;
-        m_modified = true;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
 }
 
@@ -1263,7 +1315,7 @@ void RxConfig::ReturnLoan()
         else
             memset(m_config.uid, 0, UID_LEN);
 
-        m_modified = true;
+        m_modified = EVENT_CONFIG_UID_CHANGED;
     }
 }
 

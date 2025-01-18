@@ -17,25 +17,6 @@ static uint32_t endTX;
 // RxTimeout is expressed in periods of the 32.768kHz RTC
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 1000000000 / 32768 // TODO check for LR1121
 
-#ifdef USE_HARDWARE_DCDC
-    #ifndef OPT_USE_HARDWARE_DCDC
-        #define OPT_USE_HARDWARE_DCDC true
-    #endif
-#else
-    #define OPT_USE_HARDWARE_DCDC false
-#endif
-
-// This define refers to the High Frequency output on the SX1276.  But has been reused/repruposed for the LR1121.
-// In ELRS V4 it should be changed to USE_RADIO_RFO_LP and refer to using the Low Power radio frequency output
-// of both the SX1276 and LR1121.
-#ifdef USE_SX1276_RFO_HF
-  #ifndef OPT_USE_SX1276_RFO_HF
-    #define OPT_USE_SX1276_RFO_HF true
-  #endif
-#else
-  #define OPT_USE_SX1276_RFO_HF false
-#endif
-
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
@@ -95,7 +76,7 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 
 /*
 Do not enable for dual radio TX.
-When AUTOFS is set and tlm received by only 1 of the 2 radios,  that radio will go into FS mode and the other
+When AUTOFS is set and tlm received by only 1 of the 2 radios, that radio will go into FS mode and the other
 into Standby mode.  After the following SPI command for tx mode, busy will go high for differing periods of time because 1 is
 transitioning from FS mode and the other from Standby mode. This causes the tx done dio of the 2 radios to occur at very different times.
 */
@@ -107,18 +88,16 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     // 7.2.12 SetRxBoosted
     uint8_t abuf[1] = {1};
     hal.WriteCommand(LR11XX_RADIO_SET_RX_BOOSTED_OC, abuf, sizeof(abuf), SX12XX_Radio_All);
-    
+
     SetDioAsRfSwitch();
     SetDioIrqParams();
 
-#if defined(USE_HARDWARE_DCDC)
     if (OPT_USE_HARDWARE_DCDC)
     {
         // 5.1.1 SetRegMode
-        uint8_t RegMode[1] = {1};    
+        uint8_t RegMode[1] = {1};
         hal.WriteCommand(LR11XX_SYSTEM_SET_REGMODE_OC, RegMode, sizeof(RegMode), SX12XX_Radio_All); // Enable DCDC converter instead of LDO
     }
-#endif
 
     // 2.1.3.1 CalibImage
     uint8_t CalImagebuf[2];
@@ -144,12 +123,12 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           SX12XX_Radio_Number_t radioNumber)
 {
     PayloadLength = _PayloadLength;
-    
+
     bool isSubGHz = regfreq < 1000000000;
 
     if (radioNumber & SX12XX_Radio_1)
         radio1isSubGHz = isSubGHz;
-    
+
     if (radioNumber & SX12XX_Radio_2)
         radio2isSubGHz = isSubGHz;
 
@@ -165,11 +144,12 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
     useFSK = setFSKModulation;
-    
+
     // 8.1.1 SetPacketType
     uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
+    useFEC = false;
     if (useFSK)
     {
         DBGLN("Config FSK");
@@ -179,7 +159,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
         // Increase packet length for FEC used only on 1000Hz 2.5GHz.
-        useFEC = false;
         if (!isSubGHz)
         {
             useFEC = true;
@@ -206,7 +185,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     SetFrequencyHz(regfreq, radioNumber);
 
     pwrForceUpdate = true; // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
-    
+
     ClearIrqStatus(radioNumber);
 }
 
@@ -224,7 +203,7 @@ void LR1121Driver::ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fd
     buf[7] = Fdev >> 16;
     buf[8] = Fdev >> 8;
     buf[9] = Fdev >> 0;
-    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
+    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);
 }
 
 void LR1121Driver::SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber)
@@ -292,9 +271,9 @@ void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
 void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber)
 {
     // 8.3.1 SetModulationParams
-    // - SF6 can be made compatible with the SX127x family in implicit mode via a register setting1.
+    // - SF6 can be made compatible with the SX127x family in implicit mode via a register setting.
     // - Set bit 18 of register at address 0xf20414 to 1
-    // - Set bit 23 of register at address 0xf20414 to 0.  This information is from Semecth in an email.
+    // - Set bit 23 of register at address 0xf20414 to 0.  This information is from Semtech in an email.
     // 3.7.3 WriteRegMemMask32
 
     if ((lr11xx_radio_lora_sf_t)sf == LR11XX_RADIO_LORA_SF6)
@@ -309,7 +288,7 @@ void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radio
         wrbuf[4] = 0x00; // MSB
         wrbuf[5] = 0b10000100; // bit18=1 and bit23=0
         wrbuf[6] = 0x00;
-        wrbuf[7] = 0x00; 
+        wrbuf[7] = 0x00;
         // Data
         wrbuf[8] = 0x00; // MSB
         wrbuf[9] = 0b00000100; // bit18=1 and bit23=0
@@ -361,7 +340,7 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
         pwrPendingLF = PWRPENDING_NONE;
         pwrForceUpdate = true;
     }
-    
+
     if (pwrPendingHF != PWRPENDING_NONE)
     {
         pwrCurrentHF = pwrPendingHF;
@@ -394,7 +373,7 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         // -17dBm (0xEF) to +14dBm (0x0E) by steps of 1dB if the low power PA is selected
         if (OPT_USE_SX1276_RFO_HF)
         {
-            Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the high power PA
+            Pabuf[0] = LR11XX_RADIO_PA_SEL_LP; // PaSel - 0x01: Selects the low power PA
             Pabuf[1] = LR11XX_RADIO_PA_REG_SUPPLY_VREG; // RegPaSupply - 0x01: Powers the PA from VBAT. The user must use RegPaSupply = 0x01 whenever TxPower > 14
             Pabuf[2] = 0x07; // PaDutyCycle
         }
@@ -410,7 +389,7 @@ void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz
         }
     }
     // 2.4G RF Amp
-    // Table 9-3: Optimized Settings for HF PA with the Same Matching Network
+    // Table 9-3: Optimized Settings for HF PA with Same Matching Network
     // -18dBm (0xEE) to +13dBm (0x0D) by steps of 1dB if the high frequency PA is selected
     else
     {
@@ -488,7 +467,7 @@ void LR1121Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12X
     buf[1] = bw;
     buf[2] = cr;
     buf[3] = 0x00; // 0x00: LowDataRateOptimize off
-    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);    
+    hal.WriteCommand(LR11XX_RADIO_SET_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber);
 
     if (radioNumber & SX12XX_Radio_1 && radio1isSubGHz)
         CorrectRegisterForSF6(sf, SX12XX_Radio_1);
@@ -574,10 +553,10 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
-    
+
     // //catch TX timeout
     // if (currOpmode == SX1280_MODE_TX)
     // {
@@ -622,15 +601,35 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     if (useFEC)
     {
         uint8_t FECBuffer[PayloadLength] = {0};
-        FECEncode(data, FECBuffer);
 
         // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+        if (sendGeminiBuffer)
+        {
+            FECEncode(data, FECBuffer);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, SX12XX_Radio_1);
+
+            uint8_t FECBufferGemini[PayloadLength] = {0};
+            FECEncode(dataGemini, FECBufferGemini);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBufferGemini, PayloadLength, SX12XX_Radio_2);
+        }
+        else
+        {
+            FECEncode(data, FECBuffer);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+        }
     }
     else
     {
         // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+        if (sendGeminiBuffer)
+        {
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, SX12XX_Radio_1);
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, dataGemini, size, SX12XX_Radio_2);
+        }
+        else
+        {
+            hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+        }
     }
 
     SetMode(LR1121_MODE_TX, radioNumber);
@@ -676,7 +675,7 @@ void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode)
     SetMode(LR1121_MODE_RX, SX12XX_Radio_All);
 }
 
-bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
     return false;
 }
@@ -690,20 +689,20 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
     return -(int8_t)(status[1] / 2);
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
+void ICACHE_RAM_ATTR LR1121Driver::CheckForSecondPacket()
 {
     SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    bool gotRadio[2] = {false, false}; // one-radio default.
     uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
     // processingRadio always passed the sanity check here
     gotRadio[processingRadioIdx] = true;
+    gotRadio[secondRadioIdx] = false;
+
+    hasSecondRadioGotData = false;
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        bool isSecondRadioGotData = false;
-
         uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
@@ -720,44 +719,42 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             inbuf[0] = RxStartBufferPointer;
             inbuf[1] = PayloadLengthRX;
 
-            WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[PayloadLengthRX + 1] = {0};
+            WORD_ALIGNED_ATTR uint8_t TempRXdataBufferSecond[PayloadLengthRX + 1] = {0};
 
             hal.WriteCommand(LR11XX_REGMEM_READ_BUFFER8_OC, inbuf, sizeof(inbuf), radio[secondRadioIdx]);
-            hal.ReadCommand(RXdataBuffer_second, sizeof(RXdataBuffer_second), radio[secondRadioIdx]);
+            hal.ReadCommand(TempRXdataBufferSecond, sizeof(TempRXdataBufferSecond), radio[secondRadioIdx]);
 
             if (useFEC)
             {
-                uint8_t decodedRXdataBuffer_second[8];
-                FECDecode(RXdataBuffer_second + 1, decodedRXdataBuffer_second);
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, decodedRXdataBuffer_second, 8) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
+                FECDecode(TempRXdataBufferSecond + 1, RXdataBufferSecond);
             }
             else
             {
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, RXdataBuffer_second + 1, PayloadLength) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
+                memcpy(RXdataBufferSecond, TempRXdataBufferSecond + 1, PayloadLength);
             }
-        }
 
-        // second radio received the same packet to the processing radio
-        gotRadio[secondRadioIdx] = isSecondRadioGotData;
-        #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        if(!isSecondRadioGotData)
-        {
-            instance->rxSignalStats[secondRadioIdx].fail_count++;
+            hasSecondRadioGotData = true;
         }
-        #endif
     }
+}
+
+void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
+{
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+    uint8_t secondRadioIdx = !processingRadioIdx;
 
     uint8_t status[3];
     int8_t rssi[2];
     int8_t snr[2];
+
+    gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    if(!hasSecondRadioGotData)
+    {
+        instance->rxSignalStats[secondRadioIdx].fail_count++;
+    }
+    #endif
 
     // Get both radios ready at the same time to return packet stats
     hal.WriteCommand(LR11XX_RADIO_GET_PKT_STATUS_OC, instance->processingPacketRadio | (gotRadio[secondRadioIdx] ? radio[secondRadioIdx] : 0));
@@ -770,7 +767,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             // 8.5.7 GetPacketStatus (FSK)
             memset(status, 0, sizeof(status));
             hal.ReadCommand(status, sizeof(status), radio[i]);
-            
+
             // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
             rssi[i] = -(int8_t)(status[useFSK ? 2 : 1] / 2);
 

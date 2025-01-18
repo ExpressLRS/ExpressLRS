@@ -67,16 +67,18 @@ void BluetoothJoystickBegin()
 
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);
+    gamepadConfig->setControllerType(CONTROLLER_TYPE_JOYSTICK); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
 
     DBGLN("Starting BLE Joystick!");
     bleGamepad->begin(gamepadConfig);
 }
 
-static void initialize()
+static bool initialize()
 {
   registerButtonFunction(ACTION_BLE_JOYSTICK, [](){
-    connectionState = bleJoystick;
+    setConnectionState(bleJoystick);
   });
+  return true;
 }
 
 static int timeout()
@@ -96,9 +98,10 @@ static int event()
 
 device_t BLE_device = {
   .initialize = initialize,
-  .start = NULL,
+  .start = nullptr,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_CONNECTION_CHANGED
 };
 
 #endif

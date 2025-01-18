@@ -48,14 +48,6 @@ static uint32_t endTX;
 #define RX_TIMEOUT_PERIOD_BASE SX1280_RADIO_TICK_SIZE_0015_US
 #define RX_TIMEOUT_PERIOD_BASE_NANOS 15625
 
-#ifdef USE_HARDWARE_DCDC
-    #ifndef OPT_USE_HARDWARE_DCDC
-        #define OPT_USE_HARDWARE_DCDC true
-    #endif
-#else
-    #define OPT_USE_HARDWARE_DCDC false
-#endif
-
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
@@ -135,12 +127,10 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
     pwrCurrent = PWRPENDING_NONE;
     SetOutputPower(SX1280_POWER_MIN);
     CommitOutputPower();
-#if defined(USE_HARDWARE_DCDC)
     if (OPT_USE_HARDWARE_DCDC)
     {
         hal.WriteCommand(SX1280_RADIO_SET_REGULATORMODE, SX1280_USE_DCDC, SX12XX_Radio_All);        // Enable DCDC converter instead of LDO
     }
-#endif
 
     return true;
 }
@@ -478,7 +468,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
     
@@ -524,7 +514,16 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     }
 
     RFAMP.TXenable(radioNumber); // do first to allow PA stablise
-    hal.WriteBuffer(0x00, data, size, radioNumber); //todo fix offset to equal fifo addr
+    if (sendGeminiBuffer)
+    {
+        hal.WriteBuffer(0x00, data, size, SX12XX_Radio_1);
+        hal.WriteBuffer(0x00, dataGemini, size, SX12XX_Radio_2);
+    }
+    else
+    {
+        hal.WriteBuffer(0x00, data, size, radioNumber);
+    }
+    
     instance->SetMode(SX1280_MODE_TX, radioNumber);
 
 #ifdef DEBUG_SX1280_OTA_TIMING
@@ -580,10 +579,10 @@ void ICACHE_RAM_ATTR SX1280Driver::GetStatus(SX12XX_Radio_Number_t radioNumber)
     DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
 }
 
-bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
     // Only need the highest bit of the 20-bit FEI to determine the direction
-    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, lastSuccessfulPacketRadio);
+    uint8_t feiMsb = hal.ReadRegister(SX1280_REG_LR_ESTIMATED_FREQUENCY_ERROR_MSB, radioNumber);
     // fei & (1 << 19) and flip sign if IQinverted
     if (feiMsb & 0x08)
         return IQinverted;
@@ -599,24 +598,22 @@ int8_t ICACHE_RAM_ATTR SX1280Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
     return -(int8_t)(status / 2);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
+void ICACHE_RAM_ATTR SX1280Driver::CheckForSecondPacket()
 {
     SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    bool gotRadio[2] = {false, false}; // one-radio default.
     uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
     uint8_t secondRadioIdx = !processingRadioIdx;
 
     // processingRadio always passed the sanity check here
     gotRadio[processingRadioIdx] = true;
+    gotRadio[secondRadioIdx] = false;
 
-    // if it's a dual radio, and if it's the first IRQ
-    // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
-    if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+    hasSecondRadioGotData = false;
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        bool isSecondRadioGotData = false;
-
         uint16_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
-        if(secondIrqStatus&SX1280_IRQ_RX_DONE)
+        if(secondIrqStatus & SX1280_IRQ_RX_DONE)
         {
             rx_status second_rx_fail = SX12XX_RX_OK;
             if (packet_mode == SX1280_PACKET_TYPE_FLRC)
@@ -628,30 +625,30 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
             if (second_rx_fail == SX12XX_RX_OK)
             {
                 uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
-                WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
-                hal.ReadBuffer (FIFOaddr, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
-
-                // if the second packet is same to the first, it's valid
-                if(memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
-                {
-                    isSecondRadioGotData = true;
-                }
+                hal.ReadBuffer (FIFOaddr, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
+                hasSecondRadioGotData = true;
             }
         }
-
-        // second radio received the same packet to the processing radio
-        gotRadio[secondRadioIdx] = isSecondRadioGotData;
-        #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        if(!isSecondRadioGotData)
-        {
-            instance->rxSignalStats[secondRadioIdx].fail_count++;
-        }
-        #endif
     }
+}
+
+void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
+{
+    SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+    uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+    uint8_t secondRadioIdx = !processingRadioIdx;
 
     uint8_t status[2];
     int8_t rssi[2];
     int8_t snr[2];
+
+    gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+    #if defined(DEBUG_RCVR_SIGNAL_STATS)
+    if(!hasSecondRadioGotData)
+    {
+        instance->rxSignalStats[secondRadioIdx].fail_count++;
+    }
+    #endif
 
     for(uint8_t i=0;i<2;i++)
     {
@@ -756,7 +753,6 @@ void ICACHE_RAM_ATTR SX1280Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
     else if (irqStatus == SX1280_IRQ_RADIO_NONE)
     {

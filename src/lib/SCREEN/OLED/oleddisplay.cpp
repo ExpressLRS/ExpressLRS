@@ -1,4 +1,4 @@
-#if defined(USE_OLED_SPI) || defined(USE_OLED_SPI_SMALL) || defined(USE_OLED_I2C) // This code will not be used if the hardware does not have a OLED display. Maybe a better way to blacklist it in platformio.ini?
+#if defined(PLATFORM_ESP32)
 
 #include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
@@ -10,10 +10,8 @@
 #include "common.h"
 #include "CRSF.h"
 
-#if defined(PLATFORM_ESP32)
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
-#endif
 
 // OLED specific header files.
 U8G2 *u8g2;
@@ -27,12 +25,12 @@ static void drawCentered(u8g2_int_t y, const char *str)
 
 void OLEDDisplay::init()
 {
-    if (OPT_USE_OLED_SPI_SMALL)
-        u8g2 = new U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-    else if (OPT_USE_OLED_SPI)
-        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_MOSI, GPIO_PIN_OLED_CS, GPIO_PIN_OLED_DC, GPIO_PIN_OLED_RST);
-    else if (OPT_USE_OLED_I2C)
-        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(OPT_OLED_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_OLED_RST, GPIO_PIN_OLED_SCK, GPIO_PIN_OLED_SDA);
+    if (OPT_HAS_OLED_SPI_SMALL)
+        u8g2 = new U8G2_SSD1306_128X32_UNIVISION_F_4W_SW_SPI(OPT_SCREEN_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_MOSI, GPIO_PIN_SCREEN_CS, GPIO_PIN_SCREEN_DC, GPIO_PIN_SCREEN_RST);
+    else if (OPT_HAS_OLED_SPI)
+        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_4W_SW_SPI(OPT_SCREEN_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_MOSI, GPIO_PIN_SCREEN_CS, GPIO_PIN_SCREEN_DC, GPIO_PIN_SCREEN_RST);
+    else if (OPT_HAS_OLED_I2C)
+        u8g2 = new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(OPT_SCREEN_REVERSED ? U8G2_R2 : U8G2_R0, GPIO_PIN_SCREEN_RST, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_SDA);
 
     u8g2->begin();
     u8g2->clearBuffer();
@@ -40,12 +38,10 @@ void OLEDDisplay::init()
 
 void OLEDDisplay::doScreenBackLight(screen_backlight_t state)
 {
-    #ifdef GPIO_PIN_OLED_BL
-    if (GPIO_PIN_OLED_BL != UNDEF_PIN)
+    if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
     {
-        digitalWrite(GPIO_PIN_OLED_BL, state);
+        digitalWrite(GPIO_PIN_SCREEN_BL, state);
     }
-    #endif
     if (state == SCREEN_BACKLIGHT_OFF)
     {
         u8g2->clearDisplay();
@@ -65,8 +61,7 @@ void OLEDDisplay::printScreenshot()
 void OLEDDisplay::displaySplashScreen()
 {
     u8g2->clearBuffer();
-#ifdef USE_OLED_SPI_SMALL
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         auto constexpr sz = 128 * 32 / 8;
         uint8_t image[sz];
@@ -76,7 +71,6 @@ void OLEDDisplay::displaySplashScreen()
         }
     }
     else
-#endif
     {
         auto constexpr sz = 128 * 64 / 8;
         uint8_t image[sz];
@@ -113,7 +107,7 @@ void OLEDDisplay::displayIdleScreen(uint8_t changed, uint8_t rate_index, uint8_t
         drawCentered(15, "NO");
         drawCentered(32, "HANDSET");
     }
-    else if (OPT_USE_OLED_SPI_SMALL)
+    else if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0, 15, getValue(STATE_PACKET, rate_index));
         u8g2->drawStr(70, 15, getValue(STATE_TELEMETRY_CURR, ratio_index));
@@ -138,7 +132,7 @@ void OLEDDisplay::displayMainMenu(menu_item_t menu)
 {
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, main_menu_strings[menu][0]);
         u8g2->drawStr(0,32, main_menu_strings[menu][1]);
@@ -159,7 +153,7 @@ void OLEDDisplay::displayValue(menu_item_t menu, uint8_t value_index)
     String val = String(getValue(menu, value_index));
     val.replace("!+", "\u2191");
     val.replace("!-", "\u2193");
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, val.c_str());
         u8g2->setFont(u8g2_font_profont10_mr);
@@ -182,7 +176,7 @@ void OLEDDisplay::displayBLEConfirm()
     u8g2->clearBuffer();
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15, "START BLUETOOTH");
@@ -203,7 +197,7 @@ void OLEDDisplay::displayBLEStatus()
     // TODO: Add a fancy joystick symbol like the cool TFT peeps
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, "BLUETOOTH");
         u8g2->drawStr(70,15, "GAMEPAD");
@@ -224,7 +218,7 @@ void OLEDDisplay::displayWiFiConfirm()
     u8g2->clearBuffer();
 
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15, "ENTER WIFI");
@@ -241,12 +235,11 @@ void OLEDDisplay::displayWiFiConfirm()
 void OLEDDisplay::displayWiFiStatus()
 {
     u8g2->clearBuffer();
-#if defined(PLATFORM_ESP32)
     // TODO: Add a fancy wifi symbol like the cool TFT peeps
 
     u8g2->setFont(u8g2_font_t0_17_mr);
     if (wifiMode == WIFI_STA) {
-        if (OPT_USE_OLED_SPI_SMALL)
+        if (OPT_HAS_OLED_SPI_SMALL)
         {
             u8g2->drawStr(0,15, "open http://");
             u8g2->drawStr(70,15, (String(wifi_hostname)+".local").c_str());
@@ -261,7 +254,7 @@ void OLEDDisplay::displayWiFiStatus()
     }
     else
     {
-        if (OPT_USE_OLED_SPI_SMALL)
+        if (OPT_HAS_OLED_SPI_SMALL)
         {
             u8g2->drawStr(0,15, wifi_ap_ssid);
             u8g2->drawStr(70,15, wifi_ap_password);
@@ -274,7 +267,6 @@ void OLEDDisplay::displayWiFiStatus()
             u8g2->drawStr(0,63, wifi_ap_address);
         }
     }
-#endif
     u8g2->sendBuffer();
 }
 
@@ -283,7 +275,7 @@ void OLEDDisplay::displayBindConfirm()
     // TODO: Put bind image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->drawStr(0,15, "PRESS TO");
         u8g2->drawStr(70,15 , "SEND BIND");
@@ -302,7 +294,7 @@ void OLEDDisplay::displayBindStatus()
     // TODO: Put bind image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         drawCentered(15, "BINDING...");
     }
@@ -318,7 +310,7 @@ void OLEDDisplay::displayRunning()
     // TODO: Put wifi image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         drawCentered(15, "RUNNING...");
     }
@@ -334,7 +326,7 @@ void OLEDDisplay::displaySending()
     // TODO: Put wifi image?
     u8g2->clearBuffer();
     u8g2->setFont(u8g2_font_t0_17_mr);
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
         drawCentered(15, "SENDING...");
     }
@@ -387,7 +379,7 @@ void OLEDDisplay::displayLinkstats()
         u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
     }
 
-    if (!OPT_USE_OLED_SPI_SMALL)
+    if (!OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
         u8g2->print((int8_t)CRSF::LinkStatistics.uplink_SNR);
@@ -403,7 +395,7 @@ void OLEDDisplay::displayLinkstats()
 // helpers
 static void helperDrawImage(menu_item_t menu)
 {
-    if (OPT_USE_OLED_SPI_SMALL)
+    if (OPT_HAS_OLED_SPI_SMALL)
     {
 
         // Adjust these to move them around on the screen

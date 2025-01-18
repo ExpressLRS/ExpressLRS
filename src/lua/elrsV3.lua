@@ -896,7 +896,7 @@ local function checkCrsfModule()
   -- Loop through the modules and look for one set to CRSF (5)
   for modIdx = 0, 1 do
     local mod = model.getModule(modIdx)
-    if mod and mod.Type == 5 then
+    if mod and (mod.Type == nil or mod.Type == 5) then
       -- CRSF found
       checkCrsfModule = nil
       return 0

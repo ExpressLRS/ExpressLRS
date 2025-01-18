@@ -1,5 +1,4 @@
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-
+#if !defined(UNIT_TEST)
 #include "options.h"
 #include "helpers.h"
 #include "logging.h"
@@ -33,7 +32,6 @@ static const struct {
     {HARDWARE_radio_dio0_2, "radio_dio0_2", INT},
     {HARDWARE_radio_dio1, "radio_dio1", INT},
     {HARDWARE_radio_dio1_2, "radio_dio1_2", INT},
-    {HARDWARE_radio_dio2, "radio_dio2", INT},
     {HARDWARE_radio_miso, "radio_miso", INT},
     {HARDWARE_radio_mosi, "radio_mosi", INT},
     {HARDWARE_radio_nss, "radio_nss", INT},
@@ -48,7 +46,6 @@ static const struct {
     {HARDWARE_ant_ctrl, "ant_ctrl", INT},
     {HARDWARE_ant_ctrl_compl, "ant_ctrl_compl", INT},
     {HARDWARE_power_enable, "power_enable", INT},
-    {HARDWARE_power_apc1, "power_apc1", INT},
     {HARDWARE_power_apc2, "power_apc2", INT},
     {HARDWARE_power_rxen, "power_rxen", INT},
     {HARDWARE_power_txen, "power_txen", INT},
@@ -64,8 +61,10 @@ static const struct {
     {HARDWARE_power_pdet_slope, "power_pdet_slope", FLOAT},
     {HARDWARE_power_control, "power_control", INT},
     {HARDWARE_power_values, "power_values", ARRAY},
+    {HARDWARE_power_values_count, "power_values", COUNT},
     {HARDWARE_power_values2, "power_values2", ARRAY},
     {HARDWARE_power_values_dual, "power_values_dual", ARRAY},
+    {HARDWARE_power_values_dual_count, "power_values_dual", COUNT},
     {HARDWARE_joystick, "joystick", INT},
     {HARDWARE_joystick_values, "joystick_values", ARRAY},
     {HARDWARE_five_way1, "five_way1", INT},
@@ -283,5 +282,4 @@ const uint16_t* hardware_u16_array(nameType name)
 {
     return (uint16_t *)hardware[name].array_value;
 }
-
 #endif
