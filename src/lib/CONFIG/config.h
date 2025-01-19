@@ -134,6 +134,7 @@ public:
     model_config_t const &GetModelConfig(uint8_t model) const { return m_config.model_config[model]; }
     uint8_t GetPTRStartChannel() const { return m_model->ptrStartChannel; }
     uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }
+    uint8_t  GetModelId() const { return m_modelId; }
 
     // Setters
     void SetRate(uint8_t rate);
