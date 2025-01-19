@@ -221,7 +221,7 @@ void RandRSSI(uint8_t *outrnd, size_t len)
     for (uint8_t bit = 0; bit < 8; bit++)
     {
         Radio.SetMode(SX127x_OPMODE_CAD, SX12XX_Radio_1);
-        rnd |= ( Radio.GetCurrRSSI(SX12XX_Radio_2) & 0x01 ) << bit;
+        rnd |= ( Radio.GetCurrRSSI(SX12XX_Radio_1) & 0x01 ) << bit;
         delay(1);
     }
     outrnd[i] = rnd;
