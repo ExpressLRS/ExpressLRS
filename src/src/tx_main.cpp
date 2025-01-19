@@ -272,6 +272,8 @@ void GetRandomBytes(uint8_t *outrnd, size_t len)
 #endif
 }
 
+/*
+Not used because it may return 0 on some hardware - kept for future reference if needed.
 uint32_t GetRandom32t()
 {
   uint32_t rnd = 0;
@@ -293,6 +295,7 @@ uint32_t GetRandom32t()
   }
   return rnd;
 }
+*/
 
 
 bool InitCrypto()
