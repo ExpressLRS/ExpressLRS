@@ -119,6 +119,9 @@ device_affinity_t ui_devices[] = {
 #ifdef HAS_SCREEN
   {&Screen_device, 0},
 #endif
+#ifdef HAS_FIVE_WAY_BUTTON
+  {&Joystick_device, 1},
+#endif
 #ifdef HAS_GSENSOR
   {&Gsensor_device, 0},
 #endif

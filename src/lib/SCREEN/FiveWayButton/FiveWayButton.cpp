@@ -1,5 +1,8 @@
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
+#include "device.h"
+
+#define JOYSTICK_SAMPLING_PERIOD 20 // milliseconds
 
 #if defined(GPIO_PIN_JOYSTICK)
 #if !defined(JOY_ADC_VALUES)
@@ -68,8 +71,7 @@ int FiveWayButton::readKey()
 #if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
-        uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
-
+        const uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
         constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
             {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};
         for (unsigned int i=0; i<N_JOY_ADC_VALUES - 1; ++i)
@@ -116,11 +118,15 @@ void FiveWayButton::init()
     }
 }
 
+void FiveWayButton::sample()
+{
+    key = readKey();
+}
+
 void FiveWayButton::update(int *keyValue, bool *keyLongPressed)
 {
     *keyValue = INPUT_KEY_NO_PRESS;
-
-    int newKey = readKey();
+    int newKey = key;
     uint32_t now = millis();
     if (keyInProcess == INPUT_KEY_NO_PRESS)
     {
@@ -167,4 +173,28 @@ void FiveWayButton::update(int *keyValue, bool *keyLongPressed)
     keyInProcess = newKey;
 }
 
+FiveWayButton fivewaybutton;
+
+static void initialize()
+{
+    fivewaybutton.init();
+}
+
+static int start()
+{
+    return DURATION_IMMEDIATELY;
+}
+
+static int timeout()
+{
+    fivewaybutton.sample();
+    return JOYSTICK_SAMPLING_PERIOD;
+}
+
+device_t Joystick_device = {
+    .initialize = initialize,
+    .start = start,
+    .event = nullptr,
+    .timeout = timeout,
+};
 #endif

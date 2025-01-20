@@ -22,6 +22,8 @@ private:
     int keyInProcess;
     uint32_t keyDownStart;
     bool isLongPressed;
+    volatile int key = INPUT_KEY_NO_PRESS;
+
 #if defined(JOY_ADC_VALUES)
     static uint16_t joyAdcValues[N_JOY_ADC_VALUES];
     uint16_t fuzzValues[N_JOY_ADC_VALUES];
@@ -34,7 +36,10 @@ public:
     FiveWayButton();
     void init();
     void update(int *keyValue, bool *keyLongPressed);
+    void sample();
 
     static constexpr uint32_t KEY_DEBOUNCE_MS = 25;
     static constexpr uint32_t KEY_LONG_PRESS_MS = 1000;
 };
+
+extern FiveWayButton fivewaybutton;

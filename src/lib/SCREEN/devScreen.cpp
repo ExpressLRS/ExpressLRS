@@ -16,7 +16,6 @@ Display *display;
 
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton/FiveWayButton.h"
-FiveWayButton fivewaybutton;
 #endif
 
 #ifdef HAS_GSENSOR
@@ -146,9 +145,6 @@ static int handle(void)
 
 static void initialize()
 {
-#ifdef HAS_FIVE_WAY_BUTTON
-    fivewaybutton.init();
-#endif
     if (OPT_USE_OLED_I2C || OPT_USE_OLED_SPI || OPT_USE_OLED_SPI_SMALL || OPT_HAS_TFT_SCREEN)
     {
         if (OPT_HAS_TFT_SCREEN)
