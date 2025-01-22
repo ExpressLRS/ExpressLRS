@@ -11,7 +11,8 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-#-DMY_BINDING_PHRASE="emkz9h7a0rau6irz"
+-DMY_BINDING_PHRASE="highhighhigh"
+#-DMY_BINDING_PHRASE="lowlowlow"
 #-DMY_BINDING_PHRASE="emkz9h7a0rau6irz"
 #-DMY_BINDING_PHRASE="kjujjnc9nydouenx"
 ### REGULATORY DOMAIN: ###

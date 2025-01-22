@@ -1653,14 +1653,14 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
-    
+    if (config.GetIsBound()){
     memcpy(UID, config.GetUID(), UID_LEN);
     startFrequency = config.GetStartFrequency();
     midFrequency = config.GetMidFrequency();
     endFrequency = config.GetEndFrequency();
     numChannels = config.GetNumChannels();
+    }
     
-
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
@@ -1886,7 +1886,7 @@ static void updateBindingMode(unsigned long now)
         webserverPreventAutoStart = true;
 #endif
         DBGLN("Power on counter >=3, enter binding mode");
-        EnterBindingMode();
+        //EnterBindingMode();
     }
 
     // If the eeprom is indicating that we're not bound, enter binding
@@ -2191,7 +2191,7 @@ void setup()
     }
 
 #if defined(HAS_BUTTON)
-    registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
+    //registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
 #endif
 
@@ -2257,7 +2257,7 @@ void loop()
         RFmodeLastCycled = now;
         LastSyncPacket = now;
     }
-
+ 
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR

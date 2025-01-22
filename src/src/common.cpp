@@ -147,7 +147,7 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate)
 }
 
 // Connection state information
-uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
+uint8_t UID[UID_LEN] = {1};  // "bind phrase" ID
 uint8_t bindPhrase[PHRASE_LEN] = {0}; // "bind phrase" ID
 bool connectionHasModelMatch = false;
 bool teamraceHasModelMatch = true; // true if isTx or teamrace disabled or (enabled and channel in correct postion)

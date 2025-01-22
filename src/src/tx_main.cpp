@@ -1406,17 +1406,23 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
-    
-    memcpy(UID, config.GetUID(), UID_LEN);
-    memcpy(bindPhrase, config.GetBindPhrase(), PHRASE_LEN);
-    startFrequency = config.GetStartFrequency();
-    midFrequency = config.GetMidFrequency();
-    endFrequency = config.GetEndFrequency();
-    numChannels = config.GetNumChannels();
+    if (firmwareOptions.hasUID)
+    {
+        memcpy(UID, firmwareOptions.uid, UID_LEN);
+    }
 
-    memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
-    
+    if(config.GetUID()[0] != 0) {
+      memcpy(UID,config.GetUID(),UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    }
+    if(config.GetBindPhrase()[0] != 0) {
+      memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+      memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+    }
+    if(config.GetStartFrequency() != 0) startFrequency = config.GetStartFrequency();
+    if(config.GetMidFrequency()!= 0) midFrequency = config.GetMidFrequency();
+    if(config.GetEndFrequency()!= 0) endFrequency = config.GetEndFrequency();
+    if(config.GetNumChannels()!= 0) numChannels = config.GetNumChannels();
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());

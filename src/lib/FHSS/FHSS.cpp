@@ -41,9 +41,9 @@ uint32_t midFrequency=915000000;
 uint32_t endFrequency=freqHzToRegVal(926900000);
 uint8_t numChannels=40;
 
-// uint32_t startFrequency=freqHzToRegVal(920000000);
-// uint32_t midFrequency=970000000;
-// uint32_t endFrequency=freqHzToRegVal(1020000000);
+// uint32_t startFrequency=freqHzToRegVal(735000000);
+// uint32_t midFrequency=785000000;
+// uint32_t endFrequency=freqHzToRegVal(835000000);
 // uint8_t numChannels=20;
 
 

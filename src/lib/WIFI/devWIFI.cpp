@@ -893,7 +893,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
 #if defined(RADIO_LR1121)
-    Radio.startCWTest(setSubGHz ? midFrequency : midFrequency, radio);
+    Radio.startCWTest(setSubGHz ? midFrequency: midFrequency, radio);
 #else
     Radio.startCWTest(midFrequency, radio);
 #if defined(RADIO_SX127X)

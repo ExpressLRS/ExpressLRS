@@ -31,10 +31,7 @@ static constexpr struct {
     uint8_t count;
     action_e action;
 } button_actions[] = {
-    // half second durations + 1 (i.e. 2=1.5s)
-    {true, 2, ACTION_BIND},             // 1.5s
-    {true, 9, ACTION_START_WIFI},       // 5.0s
-    {true, 23, ACTION_RESET_REBOOT}     // 12.0s
+    {true, 2, ACTION_RESET_REBOOT}     // 12.0s
 };
 #endif
 
