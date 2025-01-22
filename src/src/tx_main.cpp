@@ -10,6 +10,7 @@
 #include "stubborn_sender.h"
 
 #include "devHandset.h"
+#include "devADC.h"
 #include "devLED.h"
 #include "devScreen.h"
 #include "devBuzzer.h"
@@ -101,6 +102,7 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
+  {&ADC_device, 1},
 #if defined(USE_TX_BACKPACK)
   {&Backpack_device, 0},
 #endif
