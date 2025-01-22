@@ -1,4 +1,5 @@
 #include "targets.h"
+#if defined(TARGET_TX)
 #include "devADC.h"
 
 #define ADC_READING_PERIOD_MS 20
@@ -12,10 +13,12 @@ int getADCReading(adc_reading reading)
 
 static int start()
 {
+#if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
         return DURATION_IMMEDIATELY;
     }
+#endif
     return DURATION_NEVER;
 }
 
@@ -36,10 +39,12 @@ static int timeout()
 
     // If we reach this point we are assured that the main loop has just transitioned from
     // transmitting to not transmitting, so it's safe to read the ADC
+#if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
         analogReadings[ADC_JOYSTICK] = analogRead(GPIO_PIN_JOYSTICK);
     }
+#endif
     fullWait = true;
     return ADC_READING_PERIOD_MS;
 }
@@ -50,3 +55,4 @@ device_t ADC_device = {
     .event = nullptr,
     .timeout = timeout,
 };
+#endif
