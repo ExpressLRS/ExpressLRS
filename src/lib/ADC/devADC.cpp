@@ -22,14 +22,25 @@ static int start()
 static int timeout()
 {
     extern volatile bool busyTransmitting;
-    if (busyTransmitting)
-    {
-        return DURATION_IMMEDIATELY;
-    }
+    static bool fullWait = true;
+
+    // if called because of a full-timeout and the main loop is NOT transmitting then we will
+    // leave the fullWait flag true and return with an immediate timeout so we can wait for
+    // the main loop to be transmitting, which will pop us into the next state.
+    if (fullWait && !busyTransmitting) return DURATION_IMMEDIATELY;
+    fullWait = false;
+
+    // If the main loop is transmitting then return with an immediate timeout until it transitions
+    // to not transmitting
+    if (busyTransmitting) return DURATION_IMMEDIATELY;
+
+    // If we reach this point we are assured that the main loop has just transitioned from
+    // transmitting to not transmitting, so it's safe to read the ADC
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
         analogReadings[ADC_JOYSTICK] = analogRead(GPIO_PIN_JOYSTICK);
     }
+    fullWait = true;
     return ADC_READING_PERIOD_MS;
 }
 
