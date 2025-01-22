@@ -245,7 +245,7 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
 
     if (header->type == CRSF_FRAMETYPE_BIND)
     {
-        onSerialBind(&package[3]);
+        onRXSerialBind(&package[3]);
         return true;
     }
 

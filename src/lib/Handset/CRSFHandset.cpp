@@ -320,6 +320,12 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
     const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
     const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
 
+    // if (header->type == CRSF_FRAMETYPE_BIND)
+    // {
+    //     onTXSerialBind(&package[3]);
+    //     return true;
+    // }
+
     // Enter Binding Mode
     if (packetType == CRSF_FRAMETYPE_COMMAND
         && header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs

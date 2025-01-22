@@ -81,6 +81,12 @@ typedef enum {
 } telem_mode_t;
 
 typedef struct {
+    uint8_t         uid[6];
+    uint8_t         bind_phrase[12];
+    uint32_t        start_frequency;
+    uint32_t        end_frequency;
+    uint32_t        mid_frequency;
+    uint8_t         num_channels;
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
     uint8_t         vtxChannel; // 0=Ch1 -> 7=Ch8
@@ -108,6 +114,12 @@ public:
     void Commit();
 
     // Getters
+    const uint8_t* GetUID() const { return m_config.uid; }
+    const uint8_t* GetBindPhrase() const { return m_config.bind_phrase; }
+    const uint32_t GetStartFrequency() const { return m_config.start_frequency; }
+    const uint32_t GetEndFrequency() const { return m_config.end_frequency; }
+    const uint32_t GetMidFrequency() const { return m_config.mid_frequency; }
+    const uint8_t GetNumChannels() const { return m_config.num_channels; }
     uint8_t GetRate() const { return m_model->rate; }
     uint8_t GetTlm() const { return m_model->tlm; }
     uint8_t GetPower() const { return m_model->power; }
@@ -136,6 +148,12 @@ public:
     uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }
 
     // Setters
+    void SetUID(const uint8_t *uid);
+    void SetStartFrequency(uint32_t start);
+    void SetEndFrequency(uint32_t end);
+    void SetMidFrequency(uint32_t mid);
+    void SetNumChannels(uint8_t num);
+    void SetBindPhrase(const uint8_t *bindPhrase);
     void SetRate(uint8_t rate);
     void SetTlm(uint8_t tlm);
     void SetPower(uint8_t power);
@@ -213,6 +231,10 @@ typedef union {
 typedef struct __attribute__((packed)) {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
+    uint32_t start_frequency;
+    uint32_t end_frequency;
+    uint32_t mid_frequency;
+    uint8_t num_channels;
     uint8_t     unused_padding;
     uint8_t     serial1Protocol:4,  // secondary serial protocol
                 serial1Protocol_unused:4;
@@ -250,6 +272,11 @@ public:
     // Getters
     bool     GetIsBound() const;
     const uint8_t* GetUID() const { return m_config.uid; }
+    const uint32_t GetStartFrequency() const { return m_config.start_frequency; }
+    const uint32_t GetEndFrequency() const { return m_config.end_frequency; }
+    const uint32_t GetMidFrequency() const { return m_config.mid_frequency; }
+    const uint8_t GetNumChannels() const { return m_config.num_channels; }
+
 #if defined(PLATFORM_ESP8266)
     uint8_t  GetPowerOnCounter() const;
 #else
@@ -278,6 +305,10 @@ public:
 
     // Setters
     void SetUID(uint8_t* uid);
+    void SetStartFrequency(uint32_t start);
+    void SetEndFrequency(uint32_t end);
+    void SetMidFrequency(uint32_t mid);
+    void SetNumChannels(uint8_t num);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);

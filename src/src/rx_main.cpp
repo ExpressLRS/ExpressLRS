@@ -953,16 +953,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
 }
 
 
-//Handle binding as sent over Serial UART instead of over RF MSP packet
-void ICACHE_RAM_ATTR onSerialBind(uint8_t* newUid6)
-{
-    DBGLN("Binding over Serial UART called successfully");
-    for (unsigned i = 0; i < 6; i++)
-    {
-        UID[i] = newUid6[i];
-    }
-    config.SetUID(UID);
-}
+
 
 void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 {
@@ -1101,7 +1092,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
 
     // modelId = 0xff indicates modelMatch is disabled, the XOR does nothing in that case
     uint8_t modelXor = (~config.GetModelId()) & MODELMATCH_MASK;
-    bool modelMatched = otaSync->UID5 == (UID[5] ^ modelXor);
+    bool modelMatched = true;//otaSync->UID5 == (UID[5] ^ modelXor);
     DBGVLN("MM %u=%u %d", otaSync->UID5, UID[5], modelMatched);
 
     if (connectionState == disconnected
@@ -1662,10 +1653,13 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
-    if (config.GetIsBound())
-    {
-        memcpy(UID, config.GetUID(), UID_LEN);
-    }
+    
+    memcpy(UID, config.GetUID(), UID_LEN);
+    startFrequency = config.GetStartFrequency();
+    midFrequency = config.GetMidFrequency();
+    endFrequency = config.GetEndFrequency();
+    numChannels = config.GetNumChannels();
+    
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
@@ -1702,6 +1696,58 @@ static void setupRadio()
     // Start slow on the selected rate to give it the best chance
     // to connect before beginning rate cycling
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
+}
+
+//Handle binding as sent over Serial UART instead of over RF MSP packet
+void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
+{
+    bool anyChange = false;
+    uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
+    uint8_t tempNumChannels;
+    DBGLN("Binding over Serial UART called successfully");
+    bool uidChange = false;
+    for (unsigned i = 0; i < 6; i++)
+    {
+        if(UID[i] != newConfigPacket[i])
+        {
+            uidChange = true;
+            break;
+        }
+    }
+    if(uidChange){
+        config.SetUID(newConfigPacket);
+        anyChange=true;
+    }
+    tempStartFrequency = freqHzToRegVal((newConfigPacket[6] << 24) | (newConfigPacket[7] << 16) | (newConfigPacket[8] << 8) | newConfigPacket[9]);
+    if (tempStartFrequency != config.GetStartFrequency())
+    {
+        config.SetStartFrequency(tempStartFrequency);
+        anyChange=true;
+    }
+    tempMidFrequency = (newConfigPacket[10] << 24) | (newConfigPacket[11] << 16) | (newConfigPacket[12] << 8) | newConfigPacket[13];
+    if (tempMidFrequency != config.GetMidFrequency())
+    {
+        config.SetMidFrequency(tempMidFrequency);
+        anyChange=true;
+    }
+    tempEndFrequency = freqHzToRegVal((newConfigPacket[14] << 24) | (newConfigPacket[15] << 16) | (newConfigPacket[16] << 8) | newConfigPacket[17]);
+    if (tempEndFrequency != config.GetEndFrequency())
+    {
+        config.SetEndFrequency(tempEndFrequency);
+        anyChange=true;
+    }
+    tempNumChannels = newConfigPacket[18];
+    if (tempNumChannels != config.GetNumChannels())
+    {
+        config.SetNumChannels(tempNumChannels);
+        anyChange=true;
+    }
+    if(anyChange)
+    {
+        config.Commit();
+        HAL_NVIC_SystemReset();
+    }
+
 }
 
 static void updateTelemetryBurst()

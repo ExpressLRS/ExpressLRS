@@ -366,10 +366,13 @@ typedef struct crsfPayloadLinkstatistics_s
     int8_t uplink_SNR;
     uint8_t active_antenna;
     uint8_t rf_Mode;
+    uint8_t tlm_Ratio;
     uint8_t uplink_TX_Power;
     uint8_t downlink_RSSI_1;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
+    uint8_t uid[6];
+    uint8_t bind_phrase[12];
 } PACKED crsfLinkStatistics_t;
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t

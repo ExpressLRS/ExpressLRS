@@ -893,18 +893,18 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
 #if defined(RADIO_LR1121)
-    Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
+    Radio.startCWTest(setSubGHz ? midFrequency : midFrequency, radio);
 #else
-    Radio.startCWTest(FHSSconfig->freq_center, radio);
+    Radio.startCWTest(midFrequency, radio);
 #if defined(RADIO_SX127X)
     deferExecutionMillis(50, [radio](){ Radio.cwRepeat(radio); });
 #endif
 #endif
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
-    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
+    request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ midFrequency +
 #if defined(RADIO_LR1121)
-            ", \"center2\": "+ FHSSconfigDualBand->freq_center +
+            ", \"center2\": "+ midFrequency +
 #endif
             "}");
   }

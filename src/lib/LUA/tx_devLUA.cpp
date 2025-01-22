@@ -854,7 +854,7 @@ static void registerLuaParameters()
     strlcpy(version_domain, version, 18);
     strlcat(version_domain, "... ", sizeof(version_domain));
   }
-  strlcat(version_domain, FHSSconfig->domain, sizeof(version_domain));
+  strlcat(version_domain, "TRAMVAY", sizeof(version_domain));
   registerLUAParameter(&luaELRSversion);
   registerLUAParameter(NULL);
 }

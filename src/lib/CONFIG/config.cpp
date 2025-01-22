@@ -360,6 +360,42 @@ TxConfig::Commit()
 }
 
 // Setters
+void TxConfig::SetUID(const uint8_t* uid)
+{
+    memcpy(m_config.uid, uid, 6);
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetBindPhrase(const uint8_t *bindPhrase)
+{
+    memcpy(m_config.bind_phrase, bindPhrase, 12);
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetStartFrequency(uint32_t start)
+{
+    m_config.start_frequency = start;
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetEndFrequency(uint32_t end)
+{
+    m_config.end_frequency = end;
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetMidFrequency(uint32_t mid)
+{
+    m_config.mid_frequency = mid;
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetNumChannels(uint8_t num)
+{
+    m_config.num_channels = num;
+    m_modified |= MAIN_CHANGED;
+}
+
 void
 TxConfig::SetRate(uint8_t rate)
 {
@@ -1002,6 +1038,26 @@ RxConfig::SetUID(uint8_t* uid)
     {
         m_config.uid[i] = uid[i];
     }
+    m_modified = true;
+}
+
+void RxConfig::SetStartFrequency(uint32_t start){
+    m_config.start_frequency = start;
+    m_modified = true;
+}
+
+void RxConfig::SetEndFrequency(uint32_t end){
+    m_config.end_frequency = end;
+    m_modified = true;
+}
+
+void RxConfig::SetMidFrequency(uint32_t mid){
+    m_config.mid_frequency = mid;
+    m_modified = true;
+}
+
+void RxConfig::SetNumChannels(uint8_t num){
+    m_config.num_channels = num;
     m_modified = true;
 }
 

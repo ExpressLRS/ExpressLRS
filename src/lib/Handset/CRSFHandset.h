@@ -88,6 +88,8 @@ private:
     bool UARTwdt();
     uint32_t autobaud();
     void flush_port_input();
+
+   // extern void onTXSerialBind(uint8_t* newConfigPacket);
 #endif
 };
 

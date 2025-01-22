@@ -161,6 +161,71 @@ void switchDiversityAntennas()
   }
 }
 
+void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
+{
+    bool anyChange = false;
+    uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
+    uint8_t tempNumChannels;
+    DBGLN("Binding over Serial UART called successfully");
+    bool uidChange = false;
+    bool phraseChange = false;
+    for (unsigned i = 0; i < 6; i++)
+    {
+        if(UID[i] != newConfigPacket[i])
+        {
+            uidChange = true;
+            break;
+        }
+    }
+    if(uidChange){
+        config.SetUID(newConfigPacket);
+        anyChange=true;
+    }
+    tempStartFrequency = freqHzToRegVal((newConfigPacket[6] << 24) | (newConfigPacket[7] << 16) | (newConfigPacket[8] << 8) | newConfigPacket[9]);
+    if (tempStartFrequency != config.GetStartFrequency())
+    {
+        config.SetStartFrequency(tempStartFrequency);
+        anyChange=true;
+    }
+    tempMidFrequency = (newConfigPacket[10] << 24) | (newConfigPacket[11] << 16) | (newConfigPacket[12] << 8) | newConfigPacket[13];
+    if (tempMidFrequency != config.GetMidFrequency())
+    {
+        config.SetMidFrequency(tempMidFrequency);
+        anyChange=true;
+    }
+    tempEndFrequency = freqHzToRegVal((newConfigPacket[14] << 24) | (newConfigPacket[15] << 16) | (newConfigPacket[16] << 8) | newConfigPacket[17]);
+    if (tempEndFrequency != config.GetEndFrequency())
+    {
+        config.SetEndFrequency(tempEndFrequency);
+        anyChange=true;
+    }
+    tempNumChannels = newConfigPacket[18];
+    if (tempNumChannels != config.GetNumChannels())
+    {
+        config.SetNumChannels(tempNumChannels);
+        anyChange=true;
+    }
+    for(uint8_t idx = 0; idx < 12; idx++){
+      if(newConfigPacket[19+idx]!= bindPhrase[idx]){
+        phraseChange=true;
+      }
+    }
+    if(phraseChange){
+      config.SetBindPhrase(newConfigPacket+19);
+      anyChange=true;
+    }
+    if(anyChange)
+    {
+        config.Commit();
+        #if defined(PLATFORM_STM32)
+        HAL_NVIC_SystemReset();
+        #else
+        ESP.restart();
+        #endif
+    }
+
+}
+
 void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 {
   int8_t snrScaled = ls->SNR;
@@ -302,7 +367,7 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
       LastTLMpacketRecvMillis = SyncPacketLastSent;
     ExpressLRS_currTlmDenom = newTlmDenom;
   }
-
+  CRSF::LinkStatistics.tlm_Ratio = (expresslrs_tlm_ratio_e)config.GetTlm();
   return retVal;
 }
 
@@ -1142,6 +1207,7 @@ static void HandleUARTin()
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
+        
 
         // Lets check if the data is Mav and auto change LinkMode
         // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
@@ -1335,32 +1401,28 @@ bool setupHardwareFromOptions()
   return true;
 }
 
+//Changed this to match how TX stores UID
 static void setupBindingFromConfig()
 {
-  if (firmwareOptions.hasUID)
-  {
-      memcpy(UID, firmwareOptions.uid, UID_LEN);
-  }
-  else
-  {
-#ifdef PLATFORM_ESP32
-    esp_read_mac(UID, ESP_MAC_WIFI_STA);
-#elif PLATFORM_STM32
-    UID[0] = (uint8_t)HAL_GetUIDw0();
-    UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
-    UID[2] = (uint8_t)HAL_GetUIDw1();
-    UID[3] = (uint8_t)(HAL_GetUIDw1() >> 8);
-    UID[4] = (uint8_t)HAL_GetUIDw2();
-    UID[5] = (uint8_t)(HAL_GetUIDw2() >> 8);
-#endif
-  }
+    // VolatileBind's only function is to prevent loading the stored UID into RAM
+    // which makes the RX boot into bind mode every time
+    
+    memcpy(UID, config.GetUID(), UID_LEN);
+    memcpy(bindPhrase, config.GetBindPhrase(), PHRASE_LEN);
+    startFrequency = config.GetStartFrequency();
+    midFrequency = config.GetMidFrequency();
+    endFrequency = config.GetEndFrequency();
+    numChannels = config.GetNumChannels();
 
-  DBGLN("UID=(%d, %d, %d, %d, %d, %d)",
-    UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+    memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+    
 
-  OtaUpdateCrcInitFromUid();
+    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+        UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
+
+    OtaUpdateCrcInitFromUid();
 }
-
 
 static void cyclePower()
 {
@@ -1403,6 +1465,7 @@ void setup()
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
+    config.SetDynamicPower(0); // Disable dynamic power by default
 
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)

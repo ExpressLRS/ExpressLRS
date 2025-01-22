@@ -88,5 +88,5 @@ private:
 };
 
 //Added to be able to call serial bind as defined in rx_main without having to jump through hoops
-extern void onSerialBind(uint8_t* newUid6);
+extern void onRXSerialBind(uint8_t* newConfigPacket);
 extern bool  gettingSerialIn;

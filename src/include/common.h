@@ -19,6 +19,7 @@
 // It should be incremented when the OTA packet structure is modified.
 #define OTA_VERSION_ID      3
 #define UID_LEN             6
+#define PHRASE_LEN          12
 
 typedef enum : uint8_t
 {
@@ -301,6 +302,7 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
 uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
 extern uint8_t UID[UID_LEN];
+extern uint8_t bindPhrase[PHRASE_LEN];
 extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
 extern bool InBindingMode;

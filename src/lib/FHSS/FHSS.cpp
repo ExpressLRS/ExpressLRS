@@ -2,49 +2,9 @@
 #include "logging.h"
 #include "options.h"
 #include <string.h>
-
-#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
-
-#if defined(RADIO_LR1121)
-#include "LR1121Driver.h"
-#else
 #include "SX127xDriver.h"
-#endif
 
-const fhss_config_t domains[] = {
-    {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000},
-    {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000},
-    {"EU868",  FREQ_HZ_TO_REG_VAL(865275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000},
-    {"IN866",  FREQ_HZ_TO_REG_VAL(865375000), FREQ_HZ_TO_REG_VAL(866950000), 4, 866000000},
-    {"AU433",  FREQ_HZ_TO_REG_VAL(433420000), FREQ_HZ_TO_REG_VAL(434420000), 3, 434000000},
-    {"EU433",  FREQ_HZ_TO_REG_VAL(433100000), FREQ_HZ_TO_REG_VAL(434450000), 3, 434000000},
-    {"US433",  FREQ_HZ_TO_REG_VAL(433250000), FREQ_HZ_TO_REG_VAL(438000000), 8, 434000000},
-    {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000},
-};
 
-#if defined(RADIO_LR1121)
-const fhss_config_t domainsDualBand[] = {
-    {"ISM2G4", FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
-};
-#endif
-
-#elif defined(RADIO_SX128X)
-#include "SX1280Driver.h"
-
-const fhss_config_t domains[] = {
-    {
-    #if defined(Regulatory_Domain_EU_CE_2400)
-        "CE_LBT",
-    #elif defined(Regulatory_Domain_ISM_2400)
-        "ISM2G4",
-    #endif
-    FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
-};
-#endif
-
-// Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
-const fhss_config_t *FHSSconfig;
-const fhss_config_t *FHSSconfigDualBand;
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
@@ -72,33 +32,28 @@ bool FHSSuseDualBand = false;
 uint16_t primaryBandCount;
 uint16_t secondaryBandCount;
 
+uint32_t freqHzToRegVal(double freq) {
+    return static_cast<uint32_t>(freq /FREQ_STEP);
+}
+
+uint32_t startFrequency=freqHzToRegVal(903500000);
+uint32_t midFrequency=915000000;
+uint32_t endFrequency=freqHzToRegVal(926900000);
+uint8_t numChannels=40;
+
+// uint32_t startFrequency=freqHzToRegVal(920000000);
+// uint32_t midFrequency=970000000;
+// uint32_t endFrequency=freqHzToRegVal(1020000000);
+// uint8_t numChannels=20;
+
+
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
-    FHSSconfig = &domains[firmwareOptions.domain];
-    sync_channel = (FHSSconfig->freq_count / 2) + 1;
-    freq_spread = (FHSSconfig->freq_stop - FHSSconfig->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfig->freq_count - 1);
-    primaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfig->freq_count) * FHSSconfig->freq_count;
+    sync_channel = (numChannels / 2) + 1;
+    freq_spread = (endFrequency- startFrequency) * FREQ_SPREAD_SCALE / (numChannels - 1);
+    primaryBandCount = (FHSS_SEQUENCE_LEN / numChannels) * numChannels;
 
-    DBGLN("Setting %s Mode", FHSSconfig->domain);
-    DBGLN("Number of FHSS frequencies = %u", FHSSconfig->freq_count);
-    DBGLN("Sync channel = %u", sync_channel);
-
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
-
-#if defined(RADIO_LR1121)
-    FHSSconfigDualBand = &domainsDualBand[0];
-    sync_channel_DualBand = (FHSSconfigDualBand->freq_count / 2) + 1;
-    freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
-    secondaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
-
-    DBGLN("Setting Dual Band %s Mode", FHSSconfigDualBand->domain);
-    DBGLN("Number of FHSS frequencies = %u", FHSSconfigDualBand->freq_count);
-    DBGLN("Sync channel Dual Band = %u", sync_channel_DualBand);
-
-    FHSSusePrimaryFreqBand = false;
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
-    FHSSusePrimaryFreqBand = true;
-#endif
+    FHSSrandomiseFHSSsequenceBuild(seed, numChannels, sync_channel, FHSSsequence);
 }
 
 /**
@@ -159,5 +114,5 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 
 bool isDomain868()
 {
-    return strcmp(FHSSconfig->domain, "EU868") == 0;
+    return false;
 }
