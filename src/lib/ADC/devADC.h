@@ -5,6 +5,7 @@
 
 enum adc_reading {
     ADC_JOYSTICK,
+    ADC_PA_PDET,
     ADC_MAX_DEVICES
 };
 

@@ -45,6 +45,12 @@ static int timeout()
         analogReadings[ADC_JOYSTICK] = analogRead(GPIO_PIN_JOYSTICK);
     }
 #endif
+#if defined(GPIO_PIN_PA_PDET)
+    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
+    {
+        analogReadings[ADC_PA_PDET] = analogReadMilliVolts(GPIO_PIN_PA_PDET);
+    }
+#endif
     fullWait = true;
     return ADC_READING_PERIOD_MS;
 }
