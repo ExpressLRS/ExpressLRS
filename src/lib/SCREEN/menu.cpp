@@ -239,12 +239,15 @@ static void saveValueIndex(bool init)
             uint8_t actualRate = adjustPacketRateForBaud(val);
             uint8_t newSwitchMode = adjustSwitchModeForAirRate(
                 (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+            // Force Gemini when using dual band modes.
+            uint8_t newAntennaMode = get_elrs_airRateConfig(actualRate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
             // If the switch mode is going to change, block the change while connected
             if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
             {
-                deferExecutionMillis(100, [actualRate, newSwitchMode](){
+                deferExecutionMillis(100, [actualRate, newSwitchMode, newAntennaMode](){
                     config.SetRate(actualRate);
                     config.SetSwitchMode(newSwitchMode);
+                    config.SetAntennaMode(newAntennaMode);
                     OtaUpdateSerializers((OtaSwitchMode_e)newSwitchMode, ExpressLRS_currAirRate_Modparams->PayloadLength);
                     SetSyncSpam();
                 });
@@ -264,9 +267,12 @@ static void saveValueIndex(bool init)
             }
             break;
         }
-        case STATE_ANTENNA:
-            config.SetAntennaMode(values_index);
+        case STATE_ANTENNA: {
+            // Force Gemini when using dual band modes.
+            int newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : values_index;
+            config.SetAntennaMode(newAntennaMode);
             break;
+        }
         case STATE_TELEMETRY:
             deferExecutionMillis(100, [val](){
                 config.SetTlm(val);
