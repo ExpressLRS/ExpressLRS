@@ -3,6 +3,7 @@
 #include "device.h"
 #include "logging.h"
 #include "POWERMGNT.h"
+#include "devADC.h"
 
 #if defined(GPIO_PIN_PA_PDET)
 
@@ -21,7 +22,6 @@ typedef uint32_t pdet_storage_t;
 #define PDET_MV_DESCALE(x)        ((pdet_storage_t)((x) / 10U))
 #define PDET_HYSTERESIS_DBMSCALED PDET_DBM_SCALE(0.7)
 #define PDET_SAMPLE_PERIODMS      1000
-#define PDET_BUSY_PERIODMS        999 // 999 to shift the next measurement time into a transmission period.
 
 extern bool busyTransmitting;
 static pdet_storage_t PdetMvScaled;
@@ -57,11 +57,7 @@ static int event()
 
 static int timeout()
 {
-    if (!busyTransmitting) return DURATION_IMMEDIATELY;
-
-    pdet_storage_t newPdetScaled = PDET_MV_SCALE(analogReadMilliVolts(GPIO_PIN_PA_PDET));
-
-    if (!busyTransmitting) return PDET_BUSY_PERIODMS; // Check transmission did not stop during Pdet measurement.
+    pdet_storage_t newPdetScaled = PDET_MV_SCALE(getADCReading(ADC_PA_PDET));
 
     uint8_t targetPowerDbm = POWERMGNT::getPowerIndBm();
     if (PdetMvScaled == 0 || lastTargetPowerdBm != targetPowerDbm)
