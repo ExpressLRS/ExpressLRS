@@ -163,13 +163,13 @@ void SX127xDriver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 
 void SX127xDriver::ConfigLoraDefaults()
 {
+  hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, SX12XX_Radio_All);
+  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa, SX12XX_Radio_All); //must be written in sleep mode
 #if defined(M0139)
-  uint8_t tcxo = hal.readRegister(SX1276_REG_TCXO, SX12XX_Radio_All);
+  uint8_t tcxo = hal.readRegister(SX1276_REG_TCXO, SX12XX_Radio_1);
   tcxo |= SX1276_REG_TCXO_ON;
   hal.writeRegister(SX1276_REG_TCXO, tcxo, SX12XX_Radio_All);
 #endif
-  hal.writeRegister(SX127X_REG_OP_MODE, SX127x_OPMODE_SLEEP, SX12XX_Radio_All);
-  hal.writeRegister(SX127X_REG_OP_MODE, ModFSKorLoRa, SX12XX_Radio_All); //must be written in sleep mode
   SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All);
 
   hal.writeRegister(SX127X_REG_PAYLOAD_LENGTH, PayloadLength, SX12XX_Radio_All);
@@ -546,7 +546,8 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
       }
     }
 
-    gotRadio[secondRadioIdx] = isSecondRadioGotData;
+    // gotRadio[secondRadioIdx] = isSecondRadioGotData;
+    gotRadio[secondRadioIdx] = true;
     #if defined(DEBUG_RCVR_SIGNAL_STATS)
     // second radio received the same packet to the processing radio
     if(!isSecondRadioGotData)

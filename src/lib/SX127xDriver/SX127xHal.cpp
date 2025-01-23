@@ -196,20 +196,19 @@ void ICACHE_RAM_ATTR SX127xHal::readRegister(uint8_t reg, uint8_t *data, uint8_t
     buf[0] = reg | SPI_READ;
 
 #ifdef M0139
-    setNss(radioNumber, LOW);
-    if (radioNumber == SX12XX_Radio_1){
+    if (radioNumber & SX12XX_Radio_1){
+        setNss(SX12XX_Radio_1, LOW);
         SPI_1.transfer(buf, numBytes + 1);
+        resetNss(HIGH);
     }
 #ifdef DUAL_RADIO
-    else if (radioNumber == SX12XX_Radio_2){
+    // Doesn't read from both, just one
+    else if (radioNumber & SX12XX_Radio_2){
+        setNss(SX12XX_Radio_2, LOW);
         SPI_2.transfer(buf, numBytes + 1);
+        resetNss(HIGH);
     } 
-    else{
-        SPI_1.transfer(buf, numBytes + 1);
-//        SPI_2.transfer(buf, numBytes + 1);
-    }
 #endif
-    resetNss(HIGH);
 #else
     SPIEx.read(radioNumber, buf, numBytes + 1);
 #endif
@@ -242,24 +241,27 @@ void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t data, SX12XX_
 void ICACHE_RAM_ATTR SX127xHal::writeRegister(uint8_t reg, uint8_t *data, uint8_t numBytes, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[WORD_PADDED(numBytes + 1)];
+    WORD_ALIGNED_ATTR uint8_t buf2[WORD_PADDED(numBytes + 1)];
     buf[0] = reg | SPI_WRITE;
     memcpy(buf + 1, data, numBytes);
+    if(radioNumber & SX12XX_Radio_2)
+    {
+        memcpy(buf2, buf, WORD_PADDED(numBytes + 1));
+    }
 
 #ifdef M0139
-    setNss(radioNumber, LOW);
-    if (radioNumber == SX12XX_Radio_1){
+    if (radioNumber & SX12XX_Radio_1){
+        setNss(SX12XX_Radio_1, LOW);
         SPI_1.transfer(buf, numBytes + 1);
+        resetNss(HIGH);
     }
 #ifdef DUAL_RADIO
-    else if (radioNumber == SX12XX_Radio_2){
-        SPI_2.transfer(buf, numBytes + 1);
-    } 
-    else{
-        SPI_1.transfer(buf, numBytes + 1);
-        SPI_2.transfer(buf, numBytes + 1);
+    if (radioNumber & SX12XX_Radio_2){
+        setNss(SX12XX_Radio_2, LOW);
+        SPI_2.transfer(buf2, numBytes + 1);
+        resetNss(HIGH);
     }
 #endif
-    resetNss(HIGH);
 #else
     SPIEx.write(radioNumber, buf, numBytes + 1);
 #endif

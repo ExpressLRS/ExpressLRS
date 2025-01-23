@@ -430,14 +430,15 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            uint32_t freq = FHSSgetNextFreq();
+            Radio.SetFrequencyReg(freq, SX12XX_Radio_1);
+            Radio.SetFrequencyReg(freq, SX12XX_Radio_2);
         }
         else
         {
             // Write radio1 first. This optimises the SPI traffic order.
             uint32_t freqRadio2 = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_1);
             Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
         }
     }
@@ -2161,8 +2162,8 @@ void setup()
         // Setup Antenna mode to be 2 (Diversity)
         #if defined(M0139)
         #ifdef DUAL_RADIO
-//        config.SetAntennaMode(0);
-//        config.Commit();
+        config.SetAntennaMode(2);
+        config.Commit();
         #endif
         #endif
 
