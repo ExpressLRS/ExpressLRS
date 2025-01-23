@@ -139,6 +139,7 @@ void luaRegisterDevicePingCallback(void (*callback)());
 
 #define LUA_FIELD_HIDE(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type | CRSF_FIELD_HIDDEN); }
 #define LUA_FIELD_SHOW(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type & ~CRSF_FIELD_HIDDEN); }
+#define LUA_FIELD_VISIBLE(fld, cond) { if (cond) LUA_FIELD_SHOW(fld) else LUA_FIELD_HIDE(fld) }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
