@@ -27,18 +27,18 @@ static int timeout()
     extern volatile bool busyTransmitting;
     static bool fullWait = true;
 
-    // if called because of a full-timeout and the main loop is NOT transmitting then we will
+    // if called because of a full-timeout and the main loop is transmitting then we will
     // leave the fullWait flag true and return with an immediate timeout so we can wait for
-    // the main loop to be transmitting, which will pop us into the next state.
-    if (fullWait && !busyTransmitting) return DURATION_IMMEDIATELY;
+    // the main loop to finish transmitting, which will pop us into the next state.
+    if (fullWait && busyTransmitting) return DURATION_IMMEDIATELY;
     fullWait = false;
 
-    // If the main loop is transmitting then return with an immediate timeout until it transitions
-    // to not transmitting
-    if (busyTransmitting) return DURATION_IMMEDIATELY;
+    // If the main loop is NOT transmitting then return with an immediate timeout until it transitions
+    // to transmitting
+    if (!busyTransmitting) return DURATION_IMMEDIATELY;
 
     // If we reach this point we are assured that the main loop has just transitioned from
-    // transmitting to not transmitting, so it's safe to read the ADC
+    // not transmitting to transmitting, so it's safe to read the ADC
 #if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
