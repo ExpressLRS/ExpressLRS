@@ -1764,6 +1764,11 @@ static void EnterBindingMode()
         return;
     }
 
+    // never enter binding mode if binding is supposed to only be administered through the web UI
+    if (config.GetBindStorage() == BINDSTORAGE_ADMINISTERED) {
+        return;
+    }
+
     // Binding uses a CRCInit=0, 50Hz, and InvertIQ
     OtaCrcInitializer = 0;
     InBindingMode = true;
