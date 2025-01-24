@@ -358,6 +358,20 @@ typedef struct crsf_sensor_flight_mode_s
  * Uplink is the connection from the ground to the UAV and downlink the opposite direction.
  */
 
+// typedef struct crsfPayloadLinkstatistics_s
+// {
+//     uint8_t uplink_RSSI_1;
+//     uint8_t uplink_RSSI_2;
+//     uint8_t uplink_Link_quality;
+//     int8_t uplink_SNR;
+//     uint8_t active_antenna;
+//     uint8_t rf_Mode;
+//     uint8_t uplink_TX_Power;
+//     uint8_t downlink_RSSI_1;
+//     uint8_t downlink_Link_quality;
+//     int8_t downlink_SNR;
+// } PACKED crsfLinkStatistics_t;
+
 typedef struct crsfPayloadLinkstatistics_s
 {
     uint8_t uplink_RSSI_1;

@@ -46,6 +46,12 @@ uint8_t numChannels=40;
 // uint32_t endFrequency=freqHzToRegVal(835000000);
 // uint8_t numChannels=20;
 
+// uint32_t startFrequency=freqHzToRegVal(735000000);
+// uint32_t midFrequency=900000000;
+// uint32_t endFrequency=freqHzToRegVal(1025000000);
+// uint8_t numChannels=200;
+
+
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
