@@ -71,7 +71,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 
-    CRSF_FRAMETYPE_BIND = 0x0C,
+    CRSF_FRAMETYPE_TX_BIND = 0x0D,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
@@ -385,6 +385,9 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t downlink_RSSI_1;
     uint8_t downlink_Link_quality;
     int8_t downlink_SNR;
+    uint16_t freq_low;
+    uint16_t freq_high;
+    uint8_t num_channels;
     uint8_t uid[6];
     uint8_t bind_phrase[12];
 } PACKED crsfLinkStatistics_t;

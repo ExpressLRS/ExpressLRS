@@ -320,7 +320,7 @@ bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
     const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
     const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
 
-    if (header->type == CRSF_FRAMETYPE_BIND)
+    if (header->type == CRSF_FRAMETYPE_TX_BIND)
     {
         onTXSerialBind(&package[3]);
         return true;

@@ -46,6 +46,14 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
     uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
     uint8_t RegL = (voltReg & 0b00001111) << 4;
 
+    Wire.beginTransmission(POWER_OUTPUT_DAC2);
+    Wire.write(RegH);
+    Wire.write(RegL);
+    Wire.endTransmission();
+
+    RegH = ((208 & 0b11110000) >> 4) + (0b0000 << 4);
+    RegL = (208 & 0b00001111) << 4;
+
     Wire.beginTransmission(POWER_OUTPUT_DAC);
     Wire.write(RegH);
     Wire.write(RegL);
@@ -55,7 +63,6 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
 void DAC::setPower(uint32_t milliVolts)
 {
     uint8_t ScaledVolts = map(milliVolts, 0, DAC_REF_VCC, 0, 255);
-    ScaledVolts = 208;
     setVoltageRegDirect(ScaledVolts);
     DBGLN("DAC::setPower(%umV)", milliVolts);
 }

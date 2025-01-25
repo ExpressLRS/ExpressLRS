@@ -36,21 +36,21 @@ uint32_t freqHzToRegVal(double freq) {
     return static_cast<uint32_t>(freq /FREQ_STEP);
 }
 
-uint32_t startFrequency=freqHzToRegVal(903500000);
+// uint16_t startBase = 9035;
+// uint16_t endBase = 9269;
+//uint8_t numChannels=40;
+
+// uint16_t startBase = 7350;
+// uint16_t endBase = 8350;
+//uint8_t numChannels=20;
+
+uint16_t startBase = 7350;
+uint16_t endBase = 1025;
+uint8_t numChannels=200;
+
+uint32_t startFrequency=freqHzToRegVal(startBase*100000);
+uint32_t endFrequency=freqHzToRegVal(endBase*100000);
 uint32_t midFrequency=915000000;
-uint32_t endFrequency=freqHzToRegVal(926900000);
-uint8_t numChannels=40;
-
-// uint32_t startFrequency=freqHzToRegVal(735000000);
-// uint32_t midFrequency=785000000;
-// uint32_t endFrequency=freqHzToRegVal(835000000);
-// uint8_t numChannels=20;
-
-// uint32_t startFrequency=freqHzToRegVal(735000000);
-// uint32_t midFrequency=900000000;
-// uint32_t endFrequency=freqHzToRegVal(1025000000);
-// uint8_t numChannels=200;
-
 
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)

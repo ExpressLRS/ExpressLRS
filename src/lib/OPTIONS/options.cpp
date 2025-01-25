@@ -67,6 +67,13 @@ __attribute__ ((used)) static firmware_options_t flashedOptions = {
     .hasUID = false,
     .uid = {},
 #endif
+#if defined(MY_BIND_PHRASE)
+    .hasBindPhrase = true,
+    .bind_phrase = { MY_BIND_PHRASE },
+#else
+    .hasBindPhrase = false,
+    .bind_phrase = {},
+#endif
 #if defined(FLASH_DISCRIM)
     .flash_discriminator = FLASH_DISCRIM,
 #else
@@ -215,6 +222,11 @@ void saveOptions(Stream &stream, bool customised)
     {
         JsonArray uid = doc.createNestedArray("uid");
         copyArray(firmwareOptions.uid, sizeof(firmwareOptions.uid), uid);
+    }
+    if (firmwareOptions.hasBindPhrase)
+    {
+        JsonArray bind_phrase = doc.createNestedArray("bind_phrase");
+        copyArray(firmwareOptions.bind_phrase, sizeof(firmwareOptions.bind_phrase), bind_phrase);
     }
     if (firmwareOptions.wifi_auto_on_interval != -1)
     {

@@ -50,7 +50,8 @@ extern uint8_t FHSSsequence_DualBand[];
 extern uint_fast8_t sync_channel_DualBand;
 extern const fhss_config_t *FHSSconfigDualBand;
 
-
+extern uint16_t startBase;
+extern uint16_t endBase;
 extern uint32_t startFrequency;
 extern uint32_t midFrequency;
 extern uint32_t endFrequency;

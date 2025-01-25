@@ -24,6 +24,8 @@ typedef struct _options {
     uint8_t     domain;         // depends on radio chip
     uint8_t     hasUID;
     uint8_t     uid[6];         // MY_UID derived from MY_BINDING_PHRASE
+    uint8_t     hasBindPhrase;
+    uint8_t     bind_phrase[12];
     uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
                                         // the SPIFSS settings are obsolete and the flashed settings should be used in preference
     uint32_t    fan_min_runtime;

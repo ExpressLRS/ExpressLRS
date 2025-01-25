@@ -41,6 +41,7 @@ def process_json_flag(define):
         if parts.group(1) == "MY_BINDING_PHRASE":
             print("BINDING PHRASE")
             print([x for x in hashlib.md5(define.encode()).digest()[0:6]])
+            json_flags['bind_phrase']=[x for x in define]
             json_flags['uid'] = [x for x in hashlib.md5(define.encode()).digest()[0:6]]
         if parts.group(1) == "HOME_WIFI_SSID":
             json_flags['wifi-ssid'] = dequote(parts.group(2))
@@ -72,6 +73,8 @@ def process_json_flag(define):
 
 def process_build_flag(define):
     if define.startswith("-D") or define.startswith("!-D"):
+        if "MY_BIND_PHRASE" in define:
+            define = "-DMY_BIND_PHRASE=" + ",".join(map(lambda x: str(ord(x)).zfill(3), define.split('=', 1)[1].replace('"', '').ljust(12, '\0')))
         if "MY_BINDING_PHRASE" in define:
             bindingPhraseHash = hashlib.md5(define.encode()).digest()
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
@@ -143,6 +146,7 @@ json_flags['wifi-on-interval'] = -1
 process_flags("user_defines.txt")
 process_flags("super_defines.txt") # allow secret super_defines to override user_defines
 version_to_env()
+#build_flags.append("-DMY_BIND_PHRASE=" + "highhighhigh")
 build_flags.append("-DLATEST_COMMIT=" + get_git_sha())
 build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))

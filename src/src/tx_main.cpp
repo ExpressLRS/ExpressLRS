@@ -164,9 +164,9 @@ void switchDiversityAntennas()
 void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
 {
     bool anyChange = false;
-    uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
+    uint16_t tempStartBase, tempEndBase;
     uint8_t tempNumChannels;
-    DBGLN("Binding over Serial UART called successfully");
+
     bool uidChange = false;
     bool phraseChange = false;
     for (unsigned i = 0; i < 6; i++)
@@ -177,41 +177,39 @@ void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
             break;
         }
     }
-    if(uidChange){
-        config.SetUID(newConfigPacket);
-        anyChange=true;
+    for(uint8_t idx = 6; idx < 19; idx++){
+      if(newConfigPacket[idx]!= bindPhrase[idx]){
+        phraseChange=true;
+      }
     }
-    tempStartFrequency = freqHzToRegVal((newConfigPacket[6] << 24) | (newConfigPacket[7] << 16) | (newConfigPacket[8] << 8) | newConfigPacket[9]);
-    if (tempStartFrequency != config.GetStartFrequency())
+    
+    tempStartBase = newConfigPacket[19] << 8 | newConfigPacket[20];
+    if (tempStartBase != config.GetStartFrequency())
     {
-        config.SetStartFrequency(tempStartFrequency);
+        config.SetStartFrequency(tempStartBase);
         anyChange=true;
     }
-    tempMidFrequency = (newConfigPacket[10] << 24) | (newConfigPacket[11] << 16) | (newConfigPacket[12] << 8) | newConfigPacket[13];
-    if (tempMidFrequency != config.GetMidFrequency())
+
+    tempEndBase = newConfigPacket[21] << 8 | newConfigPacket[22];
+    if (tempEndBase != config.GetEndFrequency())
     {
-        config.SetMidFrequency(tempMidFrequency);
+        config.SetEndFrequency(tempEndBase);
         anyChange=true;
     }
-    tempEndFrequency = freqHzToRegVal((newConfigPacket[14] << 24) | (newConfigPacket[15] << 16) | (newConfigPacket[16] << 8) | newConfigPacket[17]);
-    if (tempEndFrequency != config.GetEndFrequency())
-    {
-        config.SetEndFrequency(tempEndFrequency);
-        anyChange=true;
-    }
-    tempNumChannels = newConfigPacket[18];
+    tempNumChannels = newConfigPacket[23];
     if (tempNumChannels != config.GetNumChannels())
     {
         config.SetNumChannels(tempNumChannels);
         anyChange=true;
     }
-    for(uint8_t idx = 0; idx < 12; idx++){
-      if(newConfigPacket[19+idx]!= bindPhrase[idx]){
-        phraseChange=true;
-      }
+
+    if(uidChange){
+        config.SetUID(newConfigPacket);
+        anyChange=true;
     }
+    
     if(phraseChange){
-      config.SetBindPhrase(newConfigPacket+19);
+      config.SetBindPhrase(newConfigPacket+6);
       anyChange=true;
     }
     if(anyChange)
@@ -1406,9 +1404,46 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
+    if(config.GetStartFrequency() == 0){
+      config.SetStartFrequency(startBase);
+      CRSF::LinkStatistics.freq_low = startBase;
+    }
+    else {
+      CRSF::LinkStatistics.freq_low = config.GetStartFrequency();
+      startBase = config.GetStartFrequency();
+      startFrequency = freqHzToRegVal(startBase*100000);
+    }
+    if(config.GetEndFrequency() == 0){
+      config.SetEndFrequency(endBase);
+      CRSF::LinkStatistics.freq_high = endBase;
+    }
+    else {
+      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();
+      endBase = config.GetEndFrequency();
+      endFrequency = freqHzToRegVal(endBase*100000);
+      
+    }
+    if(config.GetNumChannels() == 0){
+      config.SetNumChannels(numChannels);
+      CRSF::LinkStatistics.num_channels = numChannels;
+    }
+    else {
+      CRSF::LinkStatistics.num_channels = config.GetNumChannels();
+      numChannels=config.GetNumChannels(); 
+    }
+
     if (firmwareOptions.hasUID)
     {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
+        memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
+        config.SetUID(firmwareOptions.uid);
+    }
+
+    if (firmwareOptions.hasBindPhrase)
+    {
+        memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+        memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+        config.SetBindPhrase(firmwareOptions.bind_phrase);
     }
 
     if(config.GetUID()[0] != 0) {
@@ -1419,10 +1454,6 @@ static void setupBindingFromConfig()
       memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
       memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
     }
-    if(config.GetStartFrequency() != 0) startFrequency = config.GetStartFrequency();
-    if(config.GetMidFrequency()!= 0) midFrequency = config.GetMidFrequency();
-    if(config.GetEndFrequency()!= 0) endFrequency = config.GetEndFrequency();
-    if(config.GetNumChannels()!= 0) numChannels = config.GetNumChannels();
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
@@ -1582,7 +1613,7 @@ void loop()
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
+  if (
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];

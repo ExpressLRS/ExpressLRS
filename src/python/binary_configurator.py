@@ -89,6 +89,13 @@ def patch_uid(mm, pos, args):
     pos += 7
     return pos
 
+def patch_uid(mm, pos, args):
+    if (args.phrase):
+        mm[pos] = 1
+        mm[pos+1:pos + 13] = args.phrase
+    pos += 7
+    return pos
+
 def patch_flash_discriminator(mm, pos, args):
     return write32(mm, pos, args.flash_discriminator)
 
@@ -211,6 +218,7 @@ def patch_firmware(options, mm, pos, args):
             mm[pos] = domain_number(args.domain)
         pos += 1
         pos = patch_uid(mm, pos, args)
+        pos = patch_bind_phrase(mm, pos, args)
         pos = patch_flash_discriminator(mm, pos, args)
         if options.deviceType is DeviceType.TX:
             pos = patch_tx_params(mm, pos, args, options)
