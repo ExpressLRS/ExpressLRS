@@ -430,15 +430,14 @@ bool ICACHE_RAM_ATTR HandleFHSS()
     {
         if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
-            uint32_t freq = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(freq, SX12XX_Radio_1);
-            Radio.SetFrequencyReg(freq, SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
         }
         else
         {
             // Write radio1 first. This optimises the SPI traffic order.
             uint32_t freqRadio2 = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_1);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
         }
     }
@@ -589,12 +588,12 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 #endif
 
 // TODO: Fix, radio 2 not working right so it always tries to send on radio 2 when rssi < 0 (and obviously fails)
-#if !defined(M0139)
+// #if !defined(M0139)
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
-#endif
+// #endif
 
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
@@ -1106,7 +1105,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
     // TODO: TLM ratio 2 detected incorrectly at times and TLM 2 doesn't appear to work normally either
     // TMP BUGFIX: Ignore TLM ratio 2
-    if (ExpressLRS_currTlmDenom != TlmDenom && TlmDenom != 2)
+    if (ExpressLRS_currTlmDenom != TlmDenom)
     {
         DBGLN("New TLMrate 1:%u", TlmDenom);
         ExpressLRS_currTlmDenom = TlmDenom;

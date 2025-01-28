@@ -861,7 +861,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
   busyTransmitting = false;
 }
 
-static void UpdateConnectDisconnectStatus()
+void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
   constexpr unsigned RX_LOSS_CNT = 5;
@@ -870,8 +870,8 @@ static void UpdateConnectDisconnectStatus()
     (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
     ) + 2U;
   // Capture the last before now so it will always be <= now
-  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
-  const uint32_t now = millis();
+  volatile uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  volatile uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
     if (connectionState != connected)
@@ -883,7 +883,7 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
-
+ 
       VtxTriggerSend();
     }
   }
@@ -892,6 +892,7 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
+    DBGLN("Disconnected | %d | %d", now - lastTlmMillis, msConnectionLostTimeout);
     connectionHasModelMatch = true;
     CRSFHandset::ForwardDevicePings = false;
   }
@@ -1388,10 +1389,6 @@ void setup()
 
   #endif
 
-  //DBGLN("TIM1: %p, TIM2: %p, TIM3: %p, TIM4: %p", TIM1, TIM2, TIM3, TIM4);
-  //DBGLN("TIM1: %d, TIM2: %d, TIM3: %d, TIM4: %d", TIMER1_INDEX, TIMER2_INDEX, TIMER3_INDEX, TIMER4_INDEX);
-  // DBGLN("TIMER_SERIAL: %p, TIM1: %p", TIMER_SERIAL, TIM1);
-
   if (setupHardwareFromOptions())
   {
     setupTarget();
@@ -1411,20 +1408,22 @@ void setup()
 
     DBGLN("ExpressLRS TX Module Booted...");
 
-    DBGLN("DBG Test");
+  #ifdef M0139
+    __enable_irq();
+  #endif
 
     eeprom.Begin(); // Init the eeprom
-    DBGLN("DBG Test2");
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
-    DBGLN("DBG Test3");
     config.Load(); // Load the stored values from eeprom
 
     DBGLN("CFG Loaded");
 
       #if defined(M0139)
       #ifdef DUAL_RADIO
-      //config.SetAntennaMode(1);
-      //config.Commit();
+      config.SetAntennaMode(TX_RADIO_MODE_GEMINI);
+      // config.SetAntennaMode(TX_RADIO_MODE_ANT_1);
+      config.SetRate(RATE_LORA_50HZ);
+      config.Commit();
       #endif
       #endif
 

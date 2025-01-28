@@ -59,7 +59,7 @@ void SendACTIVEPacket( unsigned char *data, int length )   // This routine is us
         USART2->DR = value;
     }
     while(!(USART2->SR & USART_SR_TC)) {}; // Wait for tx to finish
-    USART2->CR1 &= ~USART_CR1_TE;
+    //USART2->CR1 &= ~USART_CR1_TE;
 } 
 
 #define MAX_ACTIVE_LENGTH 255 
