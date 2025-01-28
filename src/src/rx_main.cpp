@@ -1649,23 +1649,76 @@ static void setupTarget()
     setupTargetCommon();
 }
 
-static void setupBindingFromConfig()
-{
-    // VolatileBind's only function is to prevent loading the stored UID into RAM
-    // which makes the RX boot into bind mode every time
-    if (config.GetIsBound()){
-    memcpy(UID, config.GetUID(), UID_LEN);
-    startFrequency = config.GetStartFrequency();
-    midFrequency = config.GetMidFrequency();
-    endFrequency = config.GetEndFrequency();
-    numChannels = config.GetNumChannels();
-    }
+// static void setupBindingFromConfig()
+// {
+//     // VolatileBind's only function is to prevent loading the stored UID into RAM
+//     // which makes the RX boot into bind mode every time
+//     if (config.GetIsBound()){
+//     memcpy(UID, config.GetUID(), UID_LEN);
+//     startFrequency = config.GetStartFrequency();
+//     midFrequency = config.GetMidFrequency();
+//     endFrequency = config.GetEndFrequency();
+//     numChannels = config.GetNumChannels();
+//     }
     
-    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-        UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
+//     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+//         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
-    OtaUpdateCrcInitFromUid();
+//     OtaUpdateCrcInitFromUid();
+// }
+
+//Handle binding as sent over Serial UART instead of over RF MSP packet
+void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
+{
+    bool anyChange = false;
+    uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
+    uint8_t tempNumChannels;
+    DBGLN("Binding over Serial UART called successfully");
+    bool uidChange = false;
+    for (unsigned i = 0; i < 6; i++)
+    {
+        if(UID[i] != newConfigPacket[i])
+        {
+            uidChange = true;
+            break;
+        }
+    }
+    if(uidChange){
+        config.SetUID(newConfigPacket);
+        anyChange=true;
+    }
+    tempStartFrequency = (newConfigPacket[6] << 8) | (newConfigPacket[7]);
+    if (tempStartFrequency != config.GetStartFrequency())
+    {
+        config.SetStartFrequency(tempStartFrequency);
+        anyChange=true;
+    }
+    tempMidFrequency = (newConfigPacket[8] << 8) | (newConfigPacket[9]);
+    if (tempMidFrequency != config.GetMidFrequency())
+    {
+        config.SetMidFrequency(tempMidFrequency);
+        anyChange=true;
+    }
+    tempEndFrequency = (newConfigPacket[10] << 8) | (newConfigPacket[11]);
+    if (tempEndFrequency != config.GetEndFrequency())
+    {
+        config.SetEndFrequency(tempEndFrequency);
+        anyChange=true;
+    }
+    tempNumChannels = newConfigPacket[12];
+    if (tempNumChannels != config.GetNumChannels())
+    {
+        config.SetNumChannels(tempNumChannels);
+        anyChange=true;
+    }
+    if(anyChange)
+    {
+        config.Commit();
+        HAL_NVIC_SystemReset();
+    }
+
 }
+
 
 static void setupRadio()
 {
@@ -1698,58 +1751,52 @@ static void setupRadio()
     RFmodeCycleMultiplier = RFmodeCycleMultiplierSlow / 2;
 }
 
-//Handle binding as sent over Serial UART instead of over RF MSP packet
-void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
+static void setupBindingFromConfig()
 {
-    bool anyChange = false;
-    uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
-    uint8_t tempNumChannels;
-    DBGLN("Binding over Serial UART called successfully");
-    bool uidChange = false;
-    for (unsigned i = 0; i < 6; i++)
-    {
-        if(UID[i] != newConfigPacket[i])
-        {
-            uidChange = true;
-            break;
-        }
+    // VolatileBind's only function is to prevent loading the stored UID into RAM
+    // which makes the RX boot into bind mode every time
+    if(config.GetStartFrequency() == 0){
+      config.SetStartFrequency(startBase);
+      CRSF::LinkStatistics.freq_low = startBase;
     }
-    if(uidChange){
-        config.SetUID(newConfigPacket);
-        anyChange=true;
+    else {
+      CRSF::LinkStatistics.freq_low = config.GetStartFrequency();
+      startBase = config.GetStartFrequency();
+      startFrequency = freqHzToRegVal(startBase*100000);
     }
-    tempStartFrequency = freqHzToRegVal((newConfigPacket[6] << 24) | (newConfigPacket[7] << 16) | (newConfigPacket[8] << 8) | newConfigPacket[9]);
-    if (tempStartFrequency != config.GetStartFrequency())
-    {
-        config.SetStartFrequency(tempStartFrequency);
-        anyChange=true;
+    if(config.GetEndFrequency() == 0){
+      config.SetEndFrequency(endBase);
+      CRSF::LinkStatistics.freq_high = endBase;
     }
-    tempMidFrequency = (newConfigPacket[10] << 24) | (newConfigPacket[11] << 16) | (newConfigPacket[12] << 8) | newConfigPacket[13];
-    if (tempMidFrequency != config.GetMidFrequency())
-    {
-        config.SetMidFrequency(tempMidFrequency);
-        anyChange=true;
+    else {
+      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();
+      endBase = config.GetEndFrequency();
+      endFrequency = freqHzToRegVal(endBase*100000);
+      
     }
-    tempEndFrequency = freqHzToRegVal((newConfigPacket[14] << 24) | (newConfigPacket[15] << 16) | (newConfigPacket[16] << 8) | newConfigPacket[17]);
-    if (tempEndFrequency != config.GetEndFrequency())
-    {
-        config.SetEndFrequency(tempEndFrequency);
-        anyChange=true;
+    if(config.GetNumChannels() == 0){
+      config.SetNumChannels(numChannels);
+      CRSF::LinkStatistics.num_channels = numChannels;
     }
-    tempNumChannels = newConfigPacket[18];
-    if (tempNumChannels != config.GetNumChannels())
-    {
-        config.SetNumChannels(tempNumChannels);
-        anyChange=true;
-    }
-    if(anyChange)
-    {
-        config.Commit();
-        HAL_NVIC_SystemReset();
+    else {
+      CRSF::LinkStatistics.num_channels = config.GetNumChannels();
+      numChannels=config.GetNumChannels(); 
     }
 
+    if(config.GetUID()[0] != 0) {
+      memcpy(UID,config.GetUID(),UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    }
+    // if(config.GetBindPhrase()[0] != 0) {
+    //   memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    //   memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+    // }
+
+    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+        UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
+
+    OtaUpdateCrcInitFromUid();
 }
-
 static void updateTelemetryBurst()
 {
     if (telemBurstValid)

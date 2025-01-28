@@ -178,7 +178,7 @@ void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
         }
     }
     for(uint8_t idx = 6; idx < 19; idx++){
-      if(newConfigPacket[idx]!= bindPhrase[idx]){
+      if(newConfigPacket[idx]!= bindPhrase[idx-6]){
         phraseChange=true;
       }
     }
@@ -1503,7 +1503,7 @@ void setup()
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
     config.SetDynamicPower(0); // Disable dynamic power by default
-
+    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];

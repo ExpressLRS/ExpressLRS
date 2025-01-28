@@ -159,11 +159,11 @@ void ICACHE_RAM_ATTR RFAMP_hal::TXenable(SX12XX_Radio_Number_t radioNumber)
     {
         if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
+            digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
         }
         if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
+            digitalWrite(GPIO_PIN_TX_ENABLE_2, HIGH);
         }
         tx1_enabled = true;
         tx2_enabled = false;
@@ -172,11 +172,11 @@ void ICACHE_RAM_ATTR RFAMP_hal::TXenable(SX12XX_Radio_Number_t radioNumber)
     {
         if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+            digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
         }
         if (GPIO_PIN_TX_ENABLE_2 != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE_2, HIGH);
+            digitalWrite(GPIO_PIN_TX_ENABLE_2, LOW);
         }
         tx1_enabled = false;
         tx2_enabled = true;
@@ -203,7 +203,7 @@ void ICACHE_RAM_ATTR RFAMP_hal::RXenable()
 
         if (tx1_enabled && GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+            digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
             tx1_enabled = false;
         }
 
@@ -255,7 +255,7 @@ void ICACHE_RAM_ATTR RFAMP_hal::TXRXdisable()
         }
         if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         {
-            digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
+            digitalWrite(GPIO_PIN_TX_ENABLE, HIGH);
         }
         tx1_enabled = false;
     }
