@@ -95,6 +95,28 @@ expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {9, -115, 10798, 4000, 2500,  0, 5000, SNR_SCALE(-1), SNR_SCALE(6.5)}};
 #endif
 
+// TODO: remove
+#ifdef FORCE_RATE_MAX
+expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
+{
+    if (FORCE_RATE_MAX <= index)
+    {
+        // Set to last usable entry in the array
+        index = FORCE_RATE_MAX - 1;
+    }
+    return &ExpressLRS_AirRateConfig[index];
+}
+
+expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index)
+{
+    if (FORCE_RATE_MAX <= index)
+    {
+        // Set to last usable entry in the array
+        index = FORCE_RATE_MAX - 1;
+    }
+    return &ExpressLRS_AirRateRFperf[index];
+}
+#else
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index)
 {
     if (RATE_MAX <= index)
@@ -114,6 +136,7 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index)
     }
     return &ExpressLRS_AirRateRFperf[index];
 }
+#endif
 
 uint8_t get_elrs_HandsetRate_max(uint8_t rateIndex, uint32_t minInterval)
 {

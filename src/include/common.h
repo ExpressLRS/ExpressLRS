@@ -296,8 +296,7 @@ extern SX1280Driver Radio;
 
 // TODO: Fix m0193 tx at higher rates
 #if defined(M0139) && defined(TARGET_TX)
-#undef RATE_MAX
-#define RATE_MAX 2
+#define FORCE_RATE_MAX 3
 #endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
