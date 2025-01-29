@@ -123,15 +123,27 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
+
 static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
+  uint8_t *childParameters;
   if(p1->dyn_name != NULL){
-    return (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
+    childParameters = (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
   } else {
-    return (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
+    childParameters = (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
   }
+  for (int i=1;i<=lastLuaField;i++)
+  {
+    if (paramDefinitions[i]->parent == p1->common.id)
+    {
+      *childParameters++ = i;
+    }
+  }
+  *childParameters = 0xFF;
+  return childParameters;
 }
+
 static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
@@ -173,17 +185,14 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_UINT16:
       dataEnd = luaInt16StructToArray(luaData, chunkStart);
       break;
-    case CRSF_STRING: // fallthough
+    case CRSF_STRING: // fallthrough
     case CRSF_INFO:
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
       // re-fetch the lua data name, because luaFolderStructToArray will decide whether
-      //to return the fixed name or dynamic name.
-      chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
-      // subtract 1 because dataSize expects the end to not include the null
-      // which is already accounted for in chunkStart
-      dataEnd = chunkStart - 1;
+      // to return the fixed name or dynamic name.
+      dataEnd = luaFolderStructToArray(luaData, &chunkBuffer[4]);
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
@@ -319,23 +328,17 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
 {
   if (definition == nullptr)
   {
-    static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
     static struct luaItem_folder luaAgentLite = {
-        {(const char *)agentLiteFolder, CRSF_FOLDER},
+        .common = {
+          .name = "HooJ",
+          .type = CRSF_FOLDER,
+          .id = 0,
+          .parent = 0
+        },
     };
 
     paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
-    paramCallbacks[0] = 0;
-    uint8_t *pos = agentLiteFolder + 4;
-    for (int i=1;i<=lastLuaField;i++)
-    {
-      if (paramDefinitions[i]->parent == 0)
-      {
-        *pos++ = i;
-      }
-    }
-    *pos++ = 0xFF;
-    *pos++ = 0;
+    paramCallbacks[0] = nullptr;
     return;
   }
 
@@ -436,7 +439,7 @@ void sendLuaDevicePacket(void)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
-  // does append header + crc again so substract size from length
+  // does append header + crc again so subtract size from length
 #ifdef TARGET_TX
   CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
 #else
