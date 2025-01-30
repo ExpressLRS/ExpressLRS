@@ -213,6 +213,13 @@ enum eServoOutputFailsafeMode : uint8_t
     PWMFAILSAFE_LAST_POSITION, // continue to pulse last used value
 };
 
+enum eServoMapMode : uint8_t
+{
+    mapModeOff = 0,         // 0: Mapping unused (default)
+    mapModeStepDown,        // 1: Maps all values <= input values to the output value
+    mapModeLinInterp,       // 2: Maps linearly between these points (0 = 0 and max = max is added implicitly)
+};
+
 enum eSerialProtocol : uint8_t
 {
     PROTOCOL_CRSF,
@@ -293,11 +300,6 @@ extern LR1121Driver Radio;
 extern SX1280Driver Radio;
 #endif
 #endif // UNIT_TEST
-
-// TODO: Fix m0193 tx at higher rates
-#if defined(M0139) && defined(TARGET_TX)
-#define FORCE_RATE_MAX 3
-#endif
 
 expresslrs_mod_settings_s *get_elrs_airRateConfig(uint8_t index);
 expresslrs_rf_pref_params_s *get_elrs_RFperfParams(uint8_t index);
