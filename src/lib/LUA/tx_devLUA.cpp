@@ -21,13 +21,13 @@
 #elif defined(RADIO_LR1121)
 #define STR_LUA_PACKETRATES \
     "100Hz Full(-112dBm);150Hz(-112dBm);" \
-    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+    "85Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
     "DK250(-103dBm);DK500(-103dBm);K1000(-103dBm);" \
     "D50Hz(-112dBm);25Hz(-123dBm);50Hz(-120dBm);100Hz(-117dBm);100Hz Full(-112dBm);200Hz(-112dBm);200Hz Full(-111dBm);250Hz(-111dBm);" \
     "K1000 Full(-101dBm)"
 #elif defined(RADIO_SX128X)
 #define STR_LUA_PACKETRATES \
-    "50Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
+    "85Hz(-115dBm);100Hz Full(-112dBm);150Hz(-112dBm);250Hz(-108dBm);333Hz Full(-105dBm);500Hz(-105dBm);" \
     "D250(-104dBm);D500(-104dBm);F500(-104dBm);F1000(-104dBm)"
 #else
 #error Invalid radio configuration!
