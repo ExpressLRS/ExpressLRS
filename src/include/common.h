@@ -96,7 +96,7 @@ typedef enum : uint8_t
     RATE_FSK_900_1000HZ_8CH,
 
     RATE_LORA_2G4_25HZ = 20,
-    RATE_LORA_2G4_85HZ,
+    RATE_LORA_2G4_72HZ,
     RATE_LORA_2G4_100HZ,
     RATE_LORA_2G4_100HZ_8CH,
     RATE_LORA_2G4_150HZ,
@@ -300,13 +300,13 @@ extern SX127xDriver Radio;
 #elif defined(RADIO_LR1121)
 #define RATE_MAX 20
 #define RATE_BINDING RATE_LORA_900_50HZ
-#define RATE_DUALBAND_BINDING RATE_LORA_2G4_85HZ
+#define RATE_DUALBAND_BINDING RATE_LORA_2G4_72HZ
 
 extern LR1121Driver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_BINDING RATE_LORA_2G4_85HZ
+#define RATE_BINDING RATE_LORA_2G4_72HZ
 
 extern SX1280Driver Radio;
 #endif
