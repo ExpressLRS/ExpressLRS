@@ -608,7 +608,6 @@ static void registerLuaParameters()
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
-  registerLUAParameter(nullptr);
 }
 
 static void updateBindModeLabel()

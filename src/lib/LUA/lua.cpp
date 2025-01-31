@@ -28,8 +28,18 @@ static uint8_t parameterIndex;
 static uint8_t parameterArg;
 static volatile bool UpdateParamReq = false;
 
-static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
-static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
+static luaItem_folder luaAgentLite = {
+    .common = {
+        .name = "HooJ",
+        .type = CRSF_FOLDER,
+        .id = 0,
+        .parent = 0
+      },
+  };
+
+static luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {(luaPropertiesCommon *)&luaAgentLite, nullptr}; // array of luaItem_*
+static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {nullptr};
+
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
@@ -326,23 +336,7 @@ void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
 
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
-  if (definition == nullptr)
-  {
-    static struct luaItem_folder luaAgentLite = {
-        .common = {
-          .name = "HooJ",
-          .type = CRSF_FOLDER,
-          .id = 0,
-          .parent = 0
-        },
-    };
-
-    paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
-    paramCallbacks[0] = nullptr;
-    return;
-  }
-
-  struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
+  luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
