@@ -1649,23 +1649,6 @@ static void setupTarget()
     setupTargetCommon();
 }
 
-// static void setupBindingFromConfig()
-// {
-//     // VolatileBind's only function is to prevent loading the stored UID into RAM
-//     // which makes the RX boot into bind mode every time
-//     if (config.GetIsBound()){
-//     memcpy(UID, config.GetUID(), UID_LEN);
-//     startFrequency = config.GetStartFrequency();
-//     midFrequency = config.GetMidFrequency();
-//     endFrequency = config.GetEndFrequency();
-//     numChannels = config.GetNumChannels();
-//     }
-    
-//     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-//         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
-
-//     OtaUpdateCrcInitFromUid();
-// }
 
 //Handle binding as sent over Serial UART instead of over RF MSP packet
 void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)

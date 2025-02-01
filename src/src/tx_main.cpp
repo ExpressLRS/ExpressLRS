@@ -177,26 +177,26 @@ void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
             break;
         }
     }
-    for(uint8_t idx = 6; idx < 19; idx++){
+    for(uint8_t idx = 6; idx < 18; idx++){
       if(newConfigPacket[idx]!= bindPhrase[idx-6]){
         phraseChange=true;
       }
     }
     
-    tempStartBase = newConfigPacket[19] << 8 | newConfigPacket[20];
+    tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
     if (tempStartBase != config.GetStartFrequency())
     {
         config.SetStartFrequency(tempStartBase);
         anyChange=true;
     }
 
-    tempEndBase = newConfigPacket[21] << 8 | newConfigPacket[22];
+    tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
     if (tempEndBase != config.GetEndFrequency())
     {
         config.SetEndFrequency(tempEndBase);
         anyChange=true;
     }
-    tempNumChannels = newConfigPacket[23];
+    tempNumChannels = newConfigPacket[22];
     if (tempNumChannels != config.GetNumChannels())
     {
         config.SetNumChannels(tempNumChannels);
@@ -470,7 +470,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-  CRSF::LinkStatistics.rf_Mode = ModParams->enum_rate;
+  CRSF::LinkStatistics.rf_Mode = config.GetRate();
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
@@ -808,7 +808,8 @@ void ResetPower()
   }
   else
   {
-    POWERMGNT::setPower((PowerLevels_e)config.GetPower());
+    POWERMGNT::setPower(PWR_1000mW);
+    //POWERMGNT::setPower((PowerLevels_e)config.GetPower());
   }
   // TLM interval is set on the next SYNC packet
 #if defined(Regulatory_Domain_EU_CE_2400)
@@ -1461,22 +1462,22 @@ static void setupBindingFromConfig()
     OtaUpdateCrcInitFromUid();
 }
 
-static void cyclePower()
-{
-  // Only change power if we are running normally
-  if (connectionState < MODE_STATES)
-  {
-    PowerLevels_e curr = POWERMGNT::currPower();
-    if (curr == POWERMGNT::getMaxPower())
-    {
-      POWERMGNT::setPower(POWERMGNT::getMinPower());
-    }
-    else
-    {
-      POWERMGNT::incPower();
-    }
-  }
-}
+// static void cyclePower()
+// {
+//   // Only change power if we are running normally
+//   if (connectionState < MODE_STATES)
+//   {
+//     PowerLevels_e curr = POWERMGNT::currPower();
+//     if (curr == POWERMGNT::getMaxPower())
+//     {
+//       POWERMGNT::setPower(POWERMGNT::getMinPower());
+//     }
+//     else
+//     {
+//       POWERMGNT::incPower();
+//     }
+//   }
+// }
 
 void setup()
 {
@@ -1553,7 +1554,7 @@ void setup()
 
 #if defined(HAS_BUTTON)
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
-  registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
+  // registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
 #endif
 
   devicesStart();
