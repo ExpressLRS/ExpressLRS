@@ -161,68 +161,6 @@ void switchDiversityAntennas()
   }
 }
 
-void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
-{
-    bool anyChange = false;
-    uint16_t tempStartBase, tempEndBase;
-    uint8_t tempNumChannels;
-
-    bool uidChange = false;
-    bool phraseChange = false;
-    for (unsigned i = 0; i < 6; i++)
-    {
-        if(UID[i] != newConfigPacket[i])
-        {
-            uidChange = true;
-            break;
-        }
-    }
-    for(uint8_t idx = 6; idx < 18; idx++){
-      if(newConfigPacket[idx]!= bindPhrase[idx-6]){
-        phraseChange=true;
-      }
-    }
-    
-    tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
-    if (tempStartBase != config.GetStartFrequency())
-    {
-        config.SetStartFrequency(tempStartBase);
-        anyChange=true;
-    }
-
-    tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
-    if (tempEndBase != config.GetEndFrequency())
-    {
-        config.SetEndFrequency(tempEndBase);
-        anyChange=true;
-    }
-    tempNumChannels = newConfigPacket[22];
-    if (tempNumChannels != config.GetNumChannels())
-    {
-        config.SetNumChannels(tempNumChannels);
-        anyChange=true;
-    }
-
-    if(uidChange){
-        config.SetUID(newConfigPacket);
-        anyChange=true;
-    }
-    
-    if(phraseChange){
-      config.SetBindPhrase(newConfigPacket+6);
-      anyChange=true;
-    }
-    if(anyChange)
-    {
-        config.Commit();
-        #if defined(PLATFORM_STM32)
-        HAL_NVIC_SystemReset();
-        #else
-        ESP.restart();
-        #endif
-    }
-
-}
 
 void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 {
@@ -843,13 +781,13 @@ void ModelUpdateReq()
     connectionState = disconnected;
   }
 }
-
+bool bigChange = false;
 static void ConfigChangeCommit()
 {
   // Adjust the air rate based on teh current baud rate
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
-
+  FHSSrandomiseFHSSsequence(uidMacSeedGet());
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
@@ -859,6 +797,13 @@ static void ConfigChangeCommit()
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
   devicesTriggerEvent();
+  if(bigChange) {    
+    #if defined(PLATFORM_STM32)
+    HAL_NVIC_SystemReset();
+    #else
+    ESP.restart();
+    #endif
+  }
 }
 
 static void CheckConfigChangePending()
@@ -902,6 +847,25 @@ static void CheckConfigChangePending()
     }
     ConfigChangeCommit();
   }
+}
+
+
+void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
+{
+    uint16_t tempStartBase, tempEndBase;
+    uint8_t tempNumChannels;
+    config.SetUID(newConfigPacket);
+    config.SetBindPhrase(newConfigPacket+6);
+    tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
+    config.SetStartFrequency(tempStartBase);
+
+    tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
+    config.SetEndFrequency(tempEndBase);
+
+    tempNumChannels = newConfigPacket[22];
+    config.SetNumChannels(tempNumChannels);
+    
+    bigChange=true;
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -1433,28 +1397,26 @@ static void setupBindingFromConfig()
       numChannels=config.GetNumChannels(); 
     }
 
-    if (firmwareOptions.hasUID)
-    {
-        memcpy(UID, firmwareOptions.uid, UID_LEN);
-        memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
-        config.SetUID(firmwareOptions.uid);
-    }
+  
+    memcpy(UID,config.GetUID(),UID_LEN);
+    memcpy(CRSF::LinkStatistics.uid, config.GetUID(), UID_LEN);
+    
+    // else if (firmwareOptions.hasUID)
+    // {
+    //     memcpy(UID, firmwareOptions.uid, UID_LEN);
+    //     memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
+    //     config.SetUID(firmwareOptions.uid);
+    // }
 
-    if (firmwareOptions.hasBindPhrase)
-    {
-        memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        config.SetBindPhrase(firmwareOptions.bind_phrase);
-    }
-
-    if(config.GetUID()[0] != 0) {
-      memcpy(UID,config.GetUID(),UID_LEN);
-      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    }
-    if(config.GetBindPhrase()[0] != 0) {
-      memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-      memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
-    }
+    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+    
+    // else if (firmwareOptions.hasBindPhrase)
+    // {
+    //     memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    //     memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    //     config.SetBindPhrase(firmwareOptions.bind_phrase);
+    // }
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());

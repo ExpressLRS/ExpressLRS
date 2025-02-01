@@ -243,11 +243,11 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
 {
     const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
 
-    if (header->type == CRSF_FRAMETYPE_BIND)
-    {
-        onRXSerialBind(&package[3]);
-        return true;
-    }
+    // if (header->type == CRSF_FRAMETYPE_BIND)
+    // {
+    //     onRXSerialBind(&package[3]);
+    //     return true;
+    // }
 
     if (header->type == CRSF_FRAMETYPE_COMMAND)
     {

@@ -226,25 +226,25 @@ void TxConfig::Load()
         return;
 
     // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
-    if (version < 5 || version > TX_CONFIG_VERSION)
-    {
-        SetDefaults(true);
-        return;
-    }
+    // if (version < 5 || version > TX_CONFIG_VERSION)
+    // {
+    //     SetDefaults(true);
+    //     return;
+    // }
 
     // Upgrade EEPROM, starting with defaults
-    SetDefaults(false);
+    // SetDefaults(false);
 
-    if (version == 5)
-    {
-        UpgradeEepromV5ToV6();
-        version = 6;
-    }
+    // if (version == 5)
+    // {
+    //     UpgradeEepromV5ToV6();
+    //     version = 6;
+    // }
 
-    if (version == 6)
-    {
-        UpgradeEepromV6ToV7();
-    }
+    // if (version == 6)
+    // {
+    //     UpgradeEepromV6ToV7();
+    // }
 }
 
 void TxConfig::UpgradeEepromV5ToV6()

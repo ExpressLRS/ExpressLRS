@@ -81,11 +81,10 @@ typedef enum {
 } telem_mode_t;
 
 typedef struct {
-    uint8_t         uid[6];
+    uint8_t         uid[UID_LEN];
     uint8_t         bind_phrase[12];
     uint32_t        start_frequency;
     uint32_t        end_frequency;
-    uint32_t        mid_frequency;
     uint8_t         num_channels;
     uint32_t        version;
     uint8_t         vtxBand;    // 0=Off, else band number
