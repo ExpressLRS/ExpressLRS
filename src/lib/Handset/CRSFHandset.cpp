@@ -3,6 +3,7 @@
 #include "FIFO.h"
 #include "logging.h"
 #include "helpers.h"
+#include "random.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "device.h"
@@ -153,7 +154,7 @@ void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
 {
     // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
     constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
-
+    CRSF::LinkStatistics.randomUpdate= random(0, 255);
     buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;

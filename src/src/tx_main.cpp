@@ -1580,7 +1580,6 @@ void loop()
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
-
     CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
     handset->sendTelemetryToTX(linkStatisticsFrame);
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
