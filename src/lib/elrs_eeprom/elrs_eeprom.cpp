@@ -2,8 +2,6 @@
 #include "targets.h"
 #include "logging.h"
 
-#define STM32_USE_FLASH
-
 #if !defined(TARGET_NATIVE)
 #if defined(PLATFORM_STM32)
     #if defined(TARGET_USE_EEPROM) && defined(USE_I2C)

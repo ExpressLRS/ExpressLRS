@@ -48,7 +48,7 @@
 #define MinPower                        PWR_10mW
 #define HighPower                       PWR_2000mW
 #define MaxPower                        PWR_2000mW
-#define DefaultPower                    PWR_2000mW
+#define DefaultPower                    PWR_1000mW
 
 
 #define POWER_OUTPUT_VALUES         {720,875,1000,1140,1390,1730,2100,2600}

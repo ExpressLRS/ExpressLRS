@@ -877,11 +877,6 @@ void SetSyncSpam()
 
 void onTXSerialBind(uint8_t* newConfigPacket)
 {
-    // uint16_t tempStartBase, tempEndBase;
-    // uint8_t tempNumChannels;
-    // memcpy(UID, newConfigPacket, 6);
-    // memcpy(bindPhrase, newConfigPacket+6, 12);
-
     if(newConfigPacket[0]!=0){
     memcpy(tempUID, newConfigPacket, 6);
     config.SetUID(newConfigPacket);
@@ -892,21 +887,6 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     config.SetBindPhrase( ((uint8_t*)newConfigPacket)+6);
     bigChange=true;
     }
-
-    // tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
-    // config.SetStartFrequency(tempStartBase);
-
-    // tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
-    // config.SetEndFrequency(tempEndBase);
-
-    // tempNumChannels = newConfigPacket[22];
-    // config.SetNumChannels(tempNumChannels);
-    
-    // if(bigChange)
-    // {
-    //     config.Commit();
-    //     HAL_NVIC_SystemReset();
-    // }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -1439,30 +1419,28 @@ static void setupBindingFromConfig()
     OtaUpdateCrcInitFromUid();
 }
 
-// static void cyclePower()
-// {
-//   // Only change power if we are running normally
-//   if (connectionState < MODE_STATES)
-//   {
-//     PowerLevels_e curr = POWERMGNT::currPower();
-//     if (curr == POWERMGNT::getMaxPower())
-//     {
-//       POWERMGNT::setPower(POWERMGNT::getMinPower());
-//     }
-//     else
-//     {
-//       POWERMGNT::incPower();
-//     }
-//   }
-// }
+static void cyclePower()
+{
+  // Only change power if we are running normally
+  if (connectionState < MODE_STATES)
+  {
+    PowerLevels_e curr = POWERMGNT::currPower();
+    if (curr == POWERMGNT::getMaxPower())
+    {
+      POWERMGNT::setPower(POWERMGNT::getMinPower());
+    }
+    else
+    {
+      POWERMGNT::incPower();
+    }
+  }
+}
 
 void setup()
 {
-  setupHardwareFromOptions();
-  if (true)
+  if (setupHardwareFromOptions())
   {
-    //setupTarget();
-    setupSerial();
+    setupTarget();
     // Register the devices with the framework
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
     // Initialise the devices
@@ -1472,9 +1450,6 @@ void setup()
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
-    config.SetDynamicPower(0); // Disable dynamic power by default
-    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
-    
     setupBindingFromConfig();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
@@ -1485,6 +1460,8 @@ void setup()
 
     DBGLN("ExpressLRS TX Module Booted...");
 
+    config.SetDynamicPower(0); // Disable dynamic power by default
+    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
