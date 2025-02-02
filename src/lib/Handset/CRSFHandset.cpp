@@ -482,7 +482,6 @@ void CRSFHandset::handleInput()
     if (header->type == CRSF_FRAMETYPE_TX_BIND)
     {
         onTXSerialBind(&SerialInBuffer[3]);
-        return;
     }
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {

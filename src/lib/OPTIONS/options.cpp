@@ -334,6 +334,15 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     {
         firmwareOptions.hasUID = false;
     }
+    if (doc["bind_phrase"].is<JsonArray>())
+    {
+        copyArray(doc["bind_phrase"], firmwareOptions.bind_phrase, sizeof(firmwareOptions.bind_phrase));
+        firmwareOptions.hasBindPhrase = true;
+    }
+    else
+    {
+        firmwareOptions.hasBindPhrase = false;
+    }
     int32_t wifiInterval = doc["wifi-on-interval"] | -1;
     firmwareOptions.wifi_auto_on_interval = wifiInterval == -1 ? -1 : wifiInterval * 1000;
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));

@@ -505,10 +505,10 @@ static void JsonUidToConfig(JsonVariant &json)
 
   if (memcmp(newUid, config.GetUID(), UID_LEN) != 0)
   {
-    config.SetUID(newUid);
-    config.Commit();
-    // Also copy it to the global UID in case the page is reloaded
-    memcpy(UID, newUid, UID_LEN);
+    // config.SetUID(newUid);
+    // config.Commit();
+    // // Also copy it to the global UID in case the page is reloaded
+    // memcpy(UID, newUid, UID_LEN);
   }
 }
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)

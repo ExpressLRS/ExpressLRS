@@ -782,15 +782,31 @@ void ModelUpdateReq()
   }
 }
 bool bigChange = false;
+uint8_t prevRate = 0;
+uint8_t currRate = 0;
+uint8_t tempUID[6]={0};
+uint8_t tempBindPhrase[12]={0};
+
 static void ConfigChangeCommit()
 {
   // Adjust the air rate based on teh current baud rate
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
-  FHSSrandomiseFHSSsequence(uidMacSeedGet());
+  if(bigChange){
+    memcpy(UID, tempUID, 6);
+    memcpy(bindPhrase, tempBindPhrase, 12);
+    config.SetUID(UID);
+    config.SetBindPhrase(bindPhrase);
+    memcpy(CRSF::LinkStatistics.uid, tempUID, UID_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, tempBindPhrase, PHRASE_LEN);
+  }
+  
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
+  if(bigChange){
+    OtaUpdateCrcInitFromUid();
+  }
   ChangeRadioParams();
   // Clear the commitInProgress flag so normal processing resumes
   commitInProgress = false;
@@ -814,7 +830,7 @@ static void CheckConfigChangePending()
     if (syncSpamCounter > 0)
       return;
 
-#if !defined(PLATFORM_STM32) || defined(TARGET_USE_EEPROM)
+#if !defined(PLATFORM_STM32) //|| defined(TARGET_USE_EEPROM)
     while (busyTransmitting); // wait until no longer transmitting
 #else
     // The code expects to enter here shortly after the tock ISR has started sending the last
@@ -849,23 +865,48 @@ static void CheckConfigChangePending()
   }
 }
 
-
-void ICACHE_RAM_ATTR onTXSerialBind(uint8_t* newConfigPacket)
+void SetSyncSpam()
 {
-    uint16_t tempStartBase, tempEndBase;
-    uint8_t tempNumChannels;
+  // Send sync spam if a UI device has requested to and the config has changed
+  if (config.IsModified())
+  {
+    syncSpamCounter = syncSpamAmount;
+    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
+  }
+}
+
+void onTXSerialBind(uint8_t* newConfigPacket)
+{
+    // uint16_t tempStartBase, tempEndBase;
+    // uint8_t tempNumChannels;
+    // memcpy(UID, newConfigPacket, 6);
+    // memcpy(bindPhrase, newConfigPacket+6, 12);
+
+    if(newConfigPacket[0]!=0){
+    memcpy(tempUID, newConfigPacket, 6);
     config.SetUID(newConfigPacket);
-    config.SetBindPhrase(newConfigPacket+6);
-    tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
-    config.SetStartFrequency(tempStartBase);
-
-    tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
-    config.SetEndFrequency(tempEndBase);
-
-    tempNumChannels = newConfigPacket[22];
-    config.SetNumChannels(tempNumChannels);
-    
     bigChange=true;
+    }
+    if(newConfigPacket[6]!=0){
+    memcpy(tempBindPhrase, newConfigPacket+6, 12);
+    config.SetBindPhrase( ((uint8_t*)newConfigPacket)+6);
+    bigChange=true;
+    }
+
+    // tempStartBase = newConfigPacket[18] << 8 | newConfigPacket[19];
+    // config.SetStartFrequency(tempStartBase);
+
+    // tempEndBase = newConfigPacket[20] << 8 | newConfigPacket[21];
+    // config.SetEndFrequency(tempEndBase);
+
+    // tempNumChannels = newConfigPacket[22];
+    // config.SetNumChannels(tempNumChannels);
+    
+    // if(bigChange)
+    // {
+    //     config.Commit();
+    //     HAL_NVIC_SystemReset();
+    // }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -947,15 +988,6 @@ static void UpdateConnectDisconnectStatus()
   }
 }
 
-void SetSyncSpam()
-{
-  // Send sync spam if a UI device has requested to and the config has changed
-  if (config.IsModified())
-  {
-    syncSpamCounter = syncSpamAmount;
-    syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
-  }
-}
 
 static void SendRxWiFiOverMSP()
 {
@@ -1174,14 +1206,14 @@ static void HandleUARTin()
 
         // Lets check if the data is Mav and auto change LinkMode
         // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
-        if (connectionState == noCrossfire)
-        {
-          if (isThisAMavPacket(buf, size))
-          {
-            config.SetLinkMode(TX_MAVLINK_MODE);
-            UARTconnected();
-          }
-        }
+        // if (connectionState == noCrossfire)
+        // {
+        //   if (isThisAMavPacket(buf, size))
+        //   {
+        //     config.SetLinkMode(TX_MAVLINK_MODE);
+        //     UARTconnected();
+        //   }
+        // }
       }
     }
   }
@@ -1355,7 +1387,7 @@ bool setupHardwareFromOptions()
     devicesInit();
 
     connectionState = hardwareUndefined;
-    return false;
+    return true;
   }
 #else
   options_init();
@@ -1369,54 +1401,37 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
-    if(config.GetStartFrequency() == 0){
+
       config.SetStartFrequency(startBase);
       CRSF::LinkStatistics.freq_low = startBase;
-    }
-    else {
-      CRSF::LinkStatistics.freq_low = config.GetStartFrequency();
-      startBase = config.GetStartFrequency();
-      startFrequency = freqHzToRegVal(startBase*100000);
-    }
-    if(config.GetEndFrequency() == 0){
+
       config.SetEndFrequency(endBase);
       CRSF::LinkStatistics.freq_high = endBase;
-    }
-    else {
-      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();
-      endBase = config.GetEndFrequency();
-      endFrequency = freqHzToRegVal(endBase*100000);
-      
-    }
-    if(config.GetNumChannels() == 0){
+  
       config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
+
+    if(config.GetUID()[0] != 0) {
+      memcpy(UID,config.GetUID(),UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
-    else {
-      CRSF::LinkStatistics.num_channels = config.GetNumChannels();
-      numChannels=config.GetNumChannels(); 
+    else
+    {
+        memcpy(UID, firmwareOptions.uid, UID_LEN);
+        memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
+        config.SetBindPhrase(firmwareOptions.uid);
     }
 
-  
-    memcpy(UID,config.GetUID(),UID_LEN);
-    memcpy(CRSF::LinkStatistics.uid, config.GetUID(), UID_LEN);
-    
-    // else if (firmwareOptions.hasUID)
-    // {
-    //     memcpy(UID, firmwareOptions.uid, UID_LEN);
-    //     memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
-    //     config.SetUID(firmwareOptions.uid);
-    // }
-
+    if(config.GetBindPhrase()[0]!=0){
     memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
     memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
-    
-    // else if (firmwareOptions.hasBindPhrase)
-    // {
-    //     memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-    //     memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-    //     config.SetBindPhrase(firmwareOptions.bind_phrase);
-    // }
+    }
+    else
+    {
+        memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+        memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+        config.SetBindPhrase(firmwareOptions.bind_phrase);
+    }
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
@@ -1443,15 +1458,23 @@ static void setupBindingFromConfig()
 
 void setup()
 {
-  if (setupHardwareFromOptions())
+  setupHardwareFromOptions();
+  if (true)
   {
-    setupTarget();
+    //setupTarget();
+    setupSerial();
     // Register the devices with the framework
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
     // Initialise the devices
     devicesInit();
     DBGLN("Initialised devices");
 
+    eeprom.Begin(); // Init the eeprom
+    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
+    config.Load(); // Load the stored values from eeprom
+    config.SetDynamicPower(0); // Disable dynamic power by default
+    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
+    
     setupBindingFromConfig();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
@@ -1462,11 +1485,6 @@ void setup()
 
     DBGLN("ExpressLRS TX Module Booted...");
 
-    eeprom.Begin(); // Init the eeprom
-    config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
-    config.Load(); // Load the stored values from eeprom
-    config.SetDynamicPower(0); // Disable dynamic power by default
-    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];

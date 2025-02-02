@@ -74,7 +74,7 @@ def process_json_flag(define):
 def process_build_flag(define):
     if define.startswith("-D") or define.startswith("!-D"):
         if "MY_BIND_PHRASE" in define:
-            define = "-DMY_BIND_PHRASE=" + ",".join(map(lambda x: str(ord(x)).zfill(3), define.split('=', 1)[1].replace('"', '').ljust(12, '\0')))
+            define = "-DMY_BIND_PHRASE=" + ",".join(map(lambda x: str(ord(x)), define.split('=', 1)[1].replace('"', '').ljust(12, '\0')))
         if "MY_BINDING_PHRASE" in define:
             bindingPhraseHash = hashlib.md5(define.encode()).digest()
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
