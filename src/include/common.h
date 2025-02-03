@@ -19,7 +19,7 @@
 // It should be incremented when the OTA packet structure is modified.
 #define OTA_VERSION_ID      3
 #define UID_LEN             6
-#define PHRASE_LEN          12
+#define PHRASE_LEN          16
 
 typedef enum : uint8_t
 {

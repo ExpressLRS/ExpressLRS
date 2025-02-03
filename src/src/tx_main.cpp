@@ -785,7 +785,7 @@ bool bigChange = false;
 uint8_t prevRate = 0;
 uint8_t currRate = 0;
 uint8_t tempUID[6]={0};
-uint8_t tempBindPhrase[12]={0};
+uint8_t tempBindPhrase[16]={0};
 
 static void ConfigChangeCommit()
 {
@@ -793,8 +793,8 @@ static void ConfigChangeCommit()
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
   if(bigChange){
-    memcpy(UID, tempUID, 6);
-    memcpy(bindPhrase, tempBindPhrase, 12);
+    memcpy(UID, tempUID, UID_LEN);
+    memcpy(bindPhrase, tempBindPhrase, PHRASE_LEN);
     config.SetUID(UID);
     config.SetBindPhrase(bindPhrase);
     memcpy(CRSF::LinkStatistics.uid, tempUID, UID_LEN);
@@ -878,13 +878,13 @@ void SetSyncSpam()
 void onTXSerialBind(uint8_t* newConfigPacket)
 {
     if(newConfigPacket[0]!=0){
-    memcpy(tempUID, newConfigPacket, 6);
+    memcpy(tempUID, newConfigPacket, UID_LEN);
     config.SetUID(newConfigPacket);
     bigChange=true;
     }
-    if(newConfigPacket[6]!=0){
-    memcpy(tempBindPhrase, newConfigPacket+6, 12);
-    config.SetBindPhrase( ((uint8_t*)newConfigPacket)+6);
+    if(newConfigPacket[UID_LEN]!=0){
+    memcpy(tempBindPhrase, newConfigPacket+6, PHRASE_LEN);
+    config.SetBindPhrase( ((uint8_t*)newConfigPacket)+UID_LEN);
     bigChange=true;
     }
 }
@@ -1391,27 +1391,27 @@ static void setupBindingFromConfig()
       config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    if(config.GetUID()[0] != 0) {
-      memcpy(UID,config.GetUID(),UID_LEN);
-      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    }
-    else
-    {
+    // if(config.GetUID()[0] != 0) {
+    //   memcpy(UID,config.GetUID(),UID_LEN);
+    //   memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    // }
+    // else
+    // {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
         memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
         config.SetBindPhrase(firmwareOptions.uid);
-    }
+    // }
 
-    if(config.GetBindPhrase()[0]!=0){
-    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
-    }
-    else
-    {
+    // if(config.GetBindPhrase()[0]!=0){
+    // memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    // memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    // }
+    // else
+    // {
         memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
+        memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         config.SetBindPhrase(firmwareOptions.bind_phrase);
-    }
+    // }
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
@@ -1461,6 +1461,9 @@ void setup()
     DBGLN("ExpressLRS TX Module Booted...");
 
     config.SetDynamicPower(0); // Disable dynamic power by default
+    //FORCE TO 25HZ
+    config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
+    // config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
