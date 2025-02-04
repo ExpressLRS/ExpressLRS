@@ -81,8 +81,8 @@ typedef enum {
 } telem_mode_t;
 
 typedef struct {
-    uint8_t         uid[UID_LEN];
-    uint8_t         bind_phrase[PHRASE_LEN];
+    uint8_t         uid[6];
+    uint8_t         bind_phrase[12];
     uint32_t        start_frequency;
     uint32_t        end_frequency;
     uint32_t        mid_frequency;
@@ -114,8 +114,8 @@ public:
     void Commit();
 
     // Getters
-    uint8_t* GetUID() { return m_config.uid; }
-    uint8_t* GetBindPhrase() { return m_config.bind_phrase; }
+    const uint8_t* GetUID() const { return m_config.uid; }
+    const uint8_t* GetBindPhrase() const { return m_config.bind_phrase; }
     const uint32_t GetStartFrequency() const { return m_config.start_frequency; }
     const uint32_t GetEndFrequency() const { return m_config.end_frequency; }
     const uint32_t GetMidFrequency() const { return m_config.mid_frequency; }
@@ -148,12 +148,12 @@ public:
     uint8_t GetPTREnableChannel() const { return m_model->ptrEnableChannel; }
 
     // Setters
-    void SetUID(uint8_t *uid);
+    void SetUID(const uint8_t *uid);
     void SetStartFrequency(uint32_t start);
     void SetEndFrequency(uint32_t end);
     void SetMidFrequency(uint32_t mid);
     void SetNumChannels(uint8_t num);
-    void SetBindPhrase(uint8_t *bindPhrase);
+    void SetBindPhrase(const uint8_t *bindPhrase);
     void SetRate(uint8_t rate);
     void SetTlm(uint8_t tlm);
     void SetPower(uint8_t power);

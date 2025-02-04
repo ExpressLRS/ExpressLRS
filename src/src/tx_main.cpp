@@ -883,10 +883,18 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     bigChange=true;
     }
     if(newConfigPacket[UID_LEN]!=0){
-    memcpy(tempBindPhrase, newConfigPacket+6, PHRASE_LEN);
-    config.SetBindPhrase( ((uint8_t*)newConfigPacket)+UID_LEN);
+    memcpy(tempBindPhrase, newConfigPacket+UID_LEN, PHRASE_LEN);
+    config.SetBindPhrase(newConfigPacket+UID_LEN);
     bigChange=true;
     }
+}
+
+void onVTXConfig(uint8_t* newVideoPacket){
+  if(newVideoPacket[0]!=0 && newVideoPacket[1]<8 && newVideoPacket[2]<8){
+    config.SetVtxBand(newVideoPacket[0]);
+    config.SetVtxChannel(newVideoPacket[1]);
+    VtxTriggerSend();
+  }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -1391,27 +1399,28 @@ static void setupBindingFromConfig()
       config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    // if(config.GetUID()[0] != 0) {
-    //   memcpy(UID,config.GetUID(),UID_LEN);
-    //   memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    // }
-    // else
-    // {
+    if(config.GetUID()[0] != 0) {
+      memcpy(UID,config.GetUID(),UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    }
+    else
+    {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
         memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
         config.SetBindPhrase(firmwareOptions.uid);
-    // }
+    }
 
-    // if(config.GetBindPhrase()[0]!=0){
-    // memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    // memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-    // }
-    // else
-    // {
+    if(config.GetBindPhrase()[0]!=0){
+    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    }
+    else
+    {
         memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         config.SetBindPhrase(firmwareOptions.bind_phrase);
-    // }
+    }
+
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
@@ -1450,6 +1459,7 @@ void setup()
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
+
     setupBindingFromConfig();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
@@ -1464,6 +1474,9 @@ void setup()
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
+    //HARD CODE TO R1
+    config.SetVTXBand(3);
+    config.SetVTXChannel(1);
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
