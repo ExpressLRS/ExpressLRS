@@ -1422,8 +1422,8 @@ static void setupBindingFromConfig()
     // }
 
 
-    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-        UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
+    // DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+    //     UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
 }

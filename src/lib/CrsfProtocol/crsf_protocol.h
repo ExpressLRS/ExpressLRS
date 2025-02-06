@@ -391,7 +391,6 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t num_channels;
     uint8_t uid[6];
     uint8_t bind_phrase[16];
-    uint8_t randomUpdate;
 } PACKED crsfLinkStatistics_t;
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
