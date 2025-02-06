@@ -483,7 +483,7 @@ void CRSFHandset::handleInput()
     {
         onTXSerialBind(&SerialInBuffer[3]);
     }
-    else if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
+    if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
     {
         onVTXConfig(&SerialInBuffer[3]);
     }

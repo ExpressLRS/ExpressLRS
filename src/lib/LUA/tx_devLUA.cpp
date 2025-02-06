@@ -462,7 +462,7 @@ static void luahandSimpleSendCmd(struct luaPropertiesCommon *item, uint8_t arg)
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
-      VtxTriggerSend();
+      //VtxTriggerSend();
     }
     else if ((void *)item == (void *)&luaRxWebUpdate)
     {

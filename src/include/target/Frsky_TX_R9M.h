@@ -43,8 +43,8 @@
 #define GPIO_PIN_DIO1                   PA1  //Not Needed, HEARTBEAT pin
 
 // Power Output
-#define POWER_OUTPUT_DAC                0b0001101
-#define POWER_OUTPUT_DAC2               0b0001110
+#define POWER_OUTPUT_DAC2                0b0001101
+#define POWER_OUTPUT_DAC               0b0001110
 #define MinPower                        PWR_10mW
 #define HighPower                       PWR_2000mW
 #define MaxPower                        PWR_2000mW

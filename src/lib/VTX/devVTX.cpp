@@ -58,7 +58,7 @@ void VtxPitmodeSwitchUpdate()
     {
         pitmodeAuxState = newPitmodeAuxState;
         sendEepromWrite = false;
-        VtxTriggerSend();
+        // VtxTriggerSend();
     }
 }
 
@@ -98,7 +98,7 @@ static void VtxConfigToMSPOut()
 
 static void initialize()
 {
-    registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    // registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
 }
 
 static int event()

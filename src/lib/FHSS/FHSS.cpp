@@ -36,9 +36,13 @@ uint32_t freqHzToRegVal(double freq) {
     return static_cast<uint32_t>(freq /FREQ_STEP);
 }
 
-uint16_t startBase = 9035;
-uint16_t endBase = 9269;
-uint8_t numChannels=40;
+// uint16_t startBase = 9035;
+// uint16_t endBase = 9269;
+// uint8_t numChannels=40;
+
+uint16_t startBase = 7850;
+uint16_t endBase = 8350;
+uint8_t numChannels=20;
 
 uint32_t startFrequency=freqHzToRegVal(startBase*100000);
 uint32_t endFrequency=freqHzToRegVal(endBase*100000);

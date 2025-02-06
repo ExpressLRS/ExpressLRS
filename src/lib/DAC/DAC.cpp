@@ -43,8 +43,8 @@ void DAC::resume()
 void DAC::setVoltageRegDirect(uint8_t voltReg)
 {
     m_currVoltageRegVal = voltReg;
-    uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
-    uint8_t RegL = (voltReg & 0b00001111) << 4;
+    uint8_t RegH = ((208& 0b11110000) >> 4) + (0b0000 << 4);
+    uint8_t RegL = (208 & 0b00001111) << 4;
 
     Wire.beginTransmission(POWER_OUTPUT_DAC2);
     Wire.write(RegH);

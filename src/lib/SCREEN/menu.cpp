@@ -314,7 +314,7 @@ static void executeSendVTX(bool init)
 {
     if (init)
     {
-        VtxTriggerSend();
+       // VtxTriggerSend();
         display->displaySending();
     }
     else

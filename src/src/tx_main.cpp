@@ -890,11 +890,11 @@ void onTXSerialBind(uint8_t* newConfigPacket)
 }
 
 void onVTXConfig(uint8_t* newVideoPacket){
-  if(newVideoPacket[0]!=0 && newVideoPacket[1]<8 && newVideoPacket[2]<8){
-    config.SetVtxBand(newVideoPacket[0]);
-    config.SetVtxChannel(newVideoPacket[1]);
-    VtxTriggerSend();
-  }
+  // if(newVideoPacket[0]!=0 && newVideoPacket[0]<64){
+  //   config.SetVtxBand(newVideoPacket[0]/ 8 + 1);
+  //   config.SetVtxChannel(newVideoPacket[0] % 8);
+  //   VtxTriggerSend();
+  // }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -943,7 +943,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 static void UpdateConnectDisconnectStatus()
 {
   // Number of telemetry packets which can be lost in a row before going to disconnected state
-  constexpr unsigned RX_LOSS_CNT = 5;
+  constexpr unsigned RX_LOSS_CNT = 20;
   // Must be at least 512ms and +2 to account for any rounding down and partial millis()
   const uint32_t msConnectionLostTimeout = std::max((uint32_t)512U,
     (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
@@ -963,7 +963,7 @@ static void UpdateConnectDisconnectStatus()
       apOutputBuffer.flush();
       uartInputBuffer.flush();
 
-      VtxTriggerSend();
+      // VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -1118,7 +1118,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
       return; // Packets containing frequency in MHz are not yet supported.
     }
 
-    VtxTriggerSend();
+    // VtxTriggerSend();
   }
   else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
   {
@@ -1390,36 +1390,36 @@ static void setupBindingFromConfig()
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
 
-      config.SetStartFrequency(startBase);
+      // config.SetStartFrequency(startBase);
       CRSF::LinkStatistics.freq_low = startBase;
 
-      config.SetEndFrequency(endBase);
+      // config.SetEndFrequency(endBase);
       CRSF::LinkStatistics.freq_high = endBase;
   
-      config.SetNumChannels(numChannels);
+      // config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    if(config.GetUID()[0] != 0) {
-      memcpy(UID,config.GetUID(),UID_LEN);
-      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    }
-    else
-    {
+    // if(config.GetUID()[0] != 0) {
+    //   memcpy(UID,config.GetUID(),UID_LEN);
+    //   memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    // }
+    // else
+    // {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
         memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
         config.SetBindPhrase(firmwareOptions.uid);
-    }
+    // }
 
-    if(config.GetBindPhrase()[0]!=0){
-    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-    }
-    else
-    {
+    // if(config.GetBindPhrase()[0]!=0){
+    // memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    // memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    // }
+    // else
+    // {
         memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         config.SetBindPhrase(firmwareOptions.bind_phrase);
-    }
+    // }
 
 
     DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
@@ -1473,10 +1473,11 @@ void setup()
     config.SetDynamicPower(0); // Disable dynamic power by default
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
+    config.SetTlm(TLM_RATIO_1_16);
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     //HARD CODE TO R1
-    config.SetVTXBand(3);
-    config.SetVTXChannel(1);
+    // config.SetVtxBand(5);
+    // config.SetVtxChannel(1);
     Radio.currFreq = FHSSgetInitialFreq(); //set frequency first or an error will occur!!!
     #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
