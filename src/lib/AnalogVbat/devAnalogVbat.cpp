@@ -103,7 +103,7 @@ static int timeout()
     // in normal mode only the final value is adjusted to save CPU cycles
     if (vbatAdcUnitCharacterics)
         adc = esp_adc_cal_raw_to_voltage(adc, vbatAdcUnitCharacterics);
-    DBGLN("$ADC,%u", adc);
+    //DBGLN("$ADC,%u", adc);
 #endif
 
     unsigned int idx = vbatSmooth.add(adc);

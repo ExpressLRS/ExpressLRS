@@ -36,13 +36,23 @@ uint32_t freqHzToRegVal(double freq) {
     return static_cast<uint32_t>(freq /FREQ_STEP);
 }
 
-uint16_t startBase = 9035;
-uint16_t endBase = 9269;
-uint8_t numChannels=40;
+double freqRegValToMHz(uint32_t reg_val) {
+    return (static_cast<double>(reg_val + FreqCorrection) * FREQ_STEP) / 1000000.0;
+}
 
-// uint16_t startBase = 7850;
-// uint16_t endBase = 8350;
-// uint8_t numChannels=20;
+// static inline uint32_t FHSSgetNextFreq()
+// {
+//     FHSSptr = (FHSSptr + 1) % FHSSgetSequenceCount();
+//     return startFrequency + (freq_spread * FHSSsequence[FHSSptr] / FREQ_SPREAD_SCALE) - FreqCorrection;
+// }
+
+// uint16_t startBase = 9035;
+// uint16_t endBase = 9269;
+// uint8_t numChannels=40;
+
+uint16_t startBase = 7850;
+uint16_t endBase = 8350;
+uint8_t numChannels=20;
 
 uint32_t startFrequency=freqHzToRegVal(startBase*100000);
 uint32_t endFrequency=freqHzToRegVal(endBase*100000);

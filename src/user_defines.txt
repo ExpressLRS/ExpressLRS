@@ -11,8 +11,8 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
--DMY_BIND_PHRASE="hightest"
--DMY_BINDING_PHRASE="hightest"
+-DMY_BIND_PHRASE="lowtest"
+-DMY_BINDING_PHRASE="lowtest"
 ### REGULATORY DOMAIN: ###
 
 # Domain is used to define correct frequency band for 900MHz hardware.
@@ -81,7 +81,7 @@
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
--DDEBUG_LOG
+#-DDEBUG_LOG
 
 # For an ESP32S3 MCU, there are two options:
 # 1 - Pull-up on GPIO3, USB for JTAG (on MI_02), debug logging uses main UART.
@@ -108,7 +108,7 @@
 #-DDEBUG_RCVR_LINKSTATS
 
 # This debug option reports dual radio RSSI&SNR, which is useful for validating a TD receiver
-#-DDEBUG_RCVR_SIGNAL_STATS
+-DDEBUG_RCVR_SIGNAL_STATS
 
 # Enable reporting of RF FreqCorrection in RX's SNR LinkStatistics, also decreases packet rate
 # on Team2.4 for the additional time needed to include the packet header / enable FreqCorrection

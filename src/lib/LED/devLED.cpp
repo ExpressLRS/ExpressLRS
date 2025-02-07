@@ -305,6 +305,7 @@ static int event()
         {
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_UPDATE, sizeof(LEDSEQ_UPDATE));
         }
+
     default:
         return DURATION_NEVER;
     }

@@ -63,6 +63,7 @@ void FHSSrandomiseFHSSsequence(uint32_t seed);
 void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
 
 uint32_t freqHzToRegVal(double freq);
+double freqRegValToMHz(uint32_t reg_val);
 
 static inline uint32_t FHSSgetMinimumFreq(void)
 {

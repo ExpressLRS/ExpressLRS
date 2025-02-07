@@ -6,8 +6,8 @@
 //
 // #define STM32_USE_FLASH
 //#define USE_I2C
-#define TARGET_USE_EEPROM               1
-#define TARGET_EEPROM_ADDR              0x50
+// #define TARGET_USE_EEPROM               1
+// #define TARGET_EEPROM_ADDR              0x50
 // #define TARGET_EEPROM_400K
 
 // GPIO pin definitions
@@ -21,7 +21,6 @@
 #define GPIO_PIN_SCK                    PB13
 #define GPIO_PIN_RST                    PC14
 #define GPIO_PIN_RX_ENABLE              GPIO_PIN_RFswitch_CONTROL
-#define GPIO_PIN_TX_ENABLE              GPIO_PIN_RFamp_APC1
 #define GPIO_PIN_SDA                    PB7
 #define GPIO_PIN_SCL                    PB6
 #define GPIO_PIN_RCSIGNAL_RX            PB11 // not yet confirmed

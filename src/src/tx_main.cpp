@@ -192,20 +192,20 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
-    DBGLN("TLM HW CRC error");
+    //DBGLN("TLM HW CRC error");
     return false;
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
-    DBGLN("TLM crc error");
+    //DBGLN("TLM crc error");
     return false;
   }
 
   if (otaPktPtr->std.type != PACKET_TYPE_TLM)
   {
-    DBGLN("TLM type error %d", otaPktPtr->std.type);
+    //DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
   }
 
@@ -361,7 +361,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
-  DBGLN("set rate %u", index);
+  //DBGLN("set rate %u", index);
   uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
@@ -421,27 +421,19 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    // Gemini mode
-    // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
-    if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
-    {
-        // Optimises the SPI traffic order.
-        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
-        {
-            uint32_t freqRadio = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
-            Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1);
-        }
-        else
-        {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
-        }
+    double video_channel = 5658;
+    uint32_t nextFreq = FHSSgetNextFreq();
+    double freq_val = freqRegValToMHz(nextFreq);
+    double harmonic = freq_val * 7;
+    double diff = abs(harmonic - video_channel);
+    if(true){
+      Radio.SetFrequencyReg(nextFreq);
+       DBGLN("FREQUENCY %u --- HARMONIC: %u -- DIFF: %u", static_cast<uint32_t>(freq_val), static_cast<uint32_t>(harmonic),static_cast<uint32_t>(diff));
     }
-    else
-    {
-      Radio.SetFrequencyReg(FHSSgetNextFreq());
+    else {
+      
     }
+
   }
 }
 
@@ -957,7 +949,7 @@ static void UpdateConnectDisconnectStatus()
     {
       connectionState = connected;
       CRSFHandset::ForwardDevicePings = true;
-      DBGLN("got downlink conn");
+      //DBGLN("got downlink conn");
 
       apInputBuffer.flush();
       apOutputBuffer.flush();
@@ -1002,7 +994,7 @@ void OnPowerGetCalibration(mspPacket_t *packet)
   UNUSED(index);
   int8_t values[PWR_COUNT] = {0};
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power get calibration value %d",  values[index]);
+  //DBGLN("power get calibration value %d",  values[index]);
 }
 
 void OnPowerSetCalibration(mspPacket_t *packet)
@@ -1012,7 +1004,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 
   if((index < 0) || (index > PWR_COUNT))
   {
-    DBGLN("calibration error index %d out of range", index);
+    //DBGLN("calibration error index %d out of range", index);
     return;
   }
   hwTimer::stop();
@@ -1022,7 +1014,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
   values[index] = value;
   POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power calibration done %d, %d", index, value);
+  //DBGLN("power calibration done %d, %d", index, value);
   hwTimer::resume();
 }
 #endif
@@ -1060,7 +1052,7 @@ static void EnterBindingMode()
   // Start transmitting again
   hwTimer::resume();
 
-  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+  //DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 }
 
 static void ExitBindingMode()
@@ -1076,7 +1068,7 @@ static void ExitBindingMode()
 
   SetRFLinkRate(config.GetRate()); //return to original rate
 
-  DBGLN("Exiting binding mode");
+  //DBGLN("Exiting binding mode");
 }
 
 void EnterBindingModeSafely()
@@ -1240,86 +1232,13 @@ static void HandleUARTin()
 }
 
 static void setupSerial()
-{  /*
-   * Setup the logging/backpack serial port, and the USB serial port.
-   * This is always done because we need a place to send data even if there is no backpack!
-   */
-
-// Setup TxBackpack
-#if defined(PLATFORM_ESP32)
-  Stream *serialPort;
-  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  {
-    serialPort = new HardwareSerial(2);
-    ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
-  }
-  else
-  {
-    serialPort = new NullStream();
-  }
-#elif defined(PLATFORM_ESP8266)
-  Stream *serialPort;
-  if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  {
-    serialPort = new HardwareSerial(1);
-    ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
-  }
-  else
-  {
-    serialPort = new NullStream();
-  }
-#elif defined(TARGET_TX_FM30)
-  #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
-    USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
-    serialPort->begin();
-  #else
-    Stream *serialPort = new NullStream();
-  #endif
-#elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-  HardwareSerial *serialPort = new HardwareSerial(2);
-  #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-    serialPort->setRx(GPIO_PIN_DEBUG_RX);
-  #endif
-  #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-    serialPort->setTx(GPIO_PIN_DEBUG_TX);
-  #endif
-  serialPort->begin(BACKPACK_LOGGING_BAUD);
-#else
-  Stream *serialPort = new NullStream();
-#endif
-  TxBackpack = serialPort;
-
-#if defined(PLATFORM_ESP32_S3)
-  Serial.begin(460800);
-#endif
-
-// Setup TxUSB
-#if defined(PLATFORM_ESP32_S3)
-  USBSerial.begin(firmwareOptions.uart_baud);
-  TxUSB = &USBSerial;
-#elif defined(PLATFORM_ESP32)
-  if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
-  {
-    // The backpack is already assigned on UART0 (pins 3, 1)
-    // This is also USB on modules that use DIPs
-    // Set TxUSB to TxBackpack so that data goes to the same place
-    TxUSB = TxBackpack;
-  }
-  else if (GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM)
-  {
-    // This is an internal module, or an external module configured with a relay.  Do not setup TxUSB.
-    TxUSB = new NullStream();
-  }
-  else
-  {
-    // The backpack is on a separate UART to UART0
-    // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
-    TxUSB = new HardwareSerial(1);
-    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, 3, 1);
-  }
-#else
+{ 
+  Serial.setRx(GPIO_PIN_DEBUG_RX);
+  Serial.setTx(GPIO_PIN_DEBUG_TX);
+  Serial.begin(115200); // Same baud as CRSF for simplicity
   TxUSB = new NullStream();
-#endif
+  Stream *serialPort = new NullStream();
+  TxBackpack = serialPort;
 }
 
 /**
@@ -1328,36 +1247,6 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
-#if defined(TARGET_TX_FM30)
-  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
-  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
-  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
-  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
-  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
-  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
-  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
-  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
-  HardwareSerial *uart2 = new HardwareSerial(USART2);
-  uart2->begin(57600);
-  CRSFHandset::PortSecondary = uart2;
-#endif
-
-#if defined(TARGET_TX_FM30_MINI)
-  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
-  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
-
-  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
-  {
-    pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
-  }
-  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-  {
-    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
-  }
-
   setupSerial();
   setupTargetCommon();
 }
@@ -1454,7 +1343,7 @@ void setup()
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
     // Initialise the devices
     devicesInit();
-    DBGLN("Initialised devices");
+    //DBGLN("Initialised devices");
 
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -1462,19 +1351,19 @@ void setup()
 
     setupBindingFromConfig();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
+    config.SetDynamicPower(0); // Disable dynamic power by default
+    //FORCE TO 25HZ
+    config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
+    config.SetTlm(TLM_RATIO_1_16);
+    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
 
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
 
-    DBGLN("ExpressLRS TX Module Booted...");
+    //DBGLN("ExpressLRS TX Module Booted...");
 
-    config.SetDynamicPower(0); // Disable dynamic power by default
-    //FORCE TO 25HZ
-    config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
-    config.SetTlm(TLM_RATIO_1_16);
-    config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
     //HARD CODE TO R1
     // config.SetVtxBand(5);
     // config.SetVtxChannel(1);
