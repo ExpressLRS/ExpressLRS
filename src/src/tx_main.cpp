@@ -1288,27 +1288,27 @@ static void setupBindingFromConfig()
       // config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    // if(config.GetUID()[0] != 0) {
-    //   memcpy(UID,config.GetUID(),UID_LEN);
-    //   memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
-    // }
-    // else
-    // {
+    if(config.GetUID()[0] != 0) {
+      memcpy(UID,config.GetUID(),UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
+    }
+    else
+    {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
         memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
         config.SetBindPhrase(firmwareOptions.uid);
-    // }
+    }
 
-    // if(config.GetBindPhrase()[0]!=0){
-    // memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    // memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-    // }
-    // else
-    // {
+    if(config.GetBindPhrase()[0]!=0){
+    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    }
+    else
+    {
         memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         config.SetBindPhrase(firmwareOptions.bind_phrase);
-    // }
+    }
 
 
     // DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
