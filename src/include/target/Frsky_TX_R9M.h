@@ -1,4 +1,3 @@
-
 #if !defined(DEVICE_NAME)
     #define DEVICE_NAME "NEROS ELRS TX"
 #endif
@@ -6,8 +5,8 @@
 //
 // #define STM32_USE_FLASH
 //#define USE_I2C
-// #define TARGET_USE_EEPROM               1
-// #define TARGET_EEPROM_ADDR              0x50
+#define TARGET_USE_EEPROM               1
+#define TARGET_EEPROM_ADDR              0x50
 // #define TARGET_EEPROM_400K
 
 // GPIO pin definitions
@@ -21,6 +20,7 @@
 #define GPIO_PIN_SCK                    PB13
 #define GPIO_PIN_RST                    PC14
 #define GPIO_PIN_RX_ENABLE              GPIO_PIN_RFswitch_CONTROL
+#define GPIO_PIN_TX_ENABLE              GPIO_PIN_RFamp_APC1
 #define GPIO_PIN_SDA                    PB7
 #define GPIO_PIN_SCL                    PB6
 #define GPIO_PIN_RCSIGNAL_RX            PB11 // not yet confirmed
@@ -42,8 +42,8 @@
 #define GPIO_PIN_DIO1                   PA1  //Not Needed, HEARTBEAT pin
 
 // Power Output
-#define POWER_OUTPUT_DAC2                0b0001101
-#define POWER_OUTPUT_DAC               0b0001110
+#define POWER_OUTPUT_DAC2               0b0001101
+#define POWER_OUTPUT_DAC                0b0001110
 #define MinPower                        PWR_10mW
 #define HighPower                       PWR_2000mW
 #define MaxPower                        PWR_2000mW

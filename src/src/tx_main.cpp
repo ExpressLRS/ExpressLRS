@@ -1232,13 +1232,86 @@ static void HandleUARTin()
 }
 
 static void setupSerial()
-{ 
-  Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.setTx(GPIO_PIN_DEBUG_TX);
-  Serial.begin(115200); // Same baud as CRSF for simplicity
-  TxUSB = new NullStream();
+{  /*
+   * Setup the logging/backpack serial port, and the USB serial port.
+   * This is always done because we need a place to send data even if there is no backpack!
+   */
+
+// Setup TxBackpack
+#if defined(PLATFORM_ESP32)
+  Stream *serialPort;
+  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  {
+    serialPort = new HardwareSerial(2);
+    ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
+  }
+  else
+  {
+    serialPort = new NullStream();
+  }
+#elif defined(PLATFORM_ESP8266)
+  Stream *serialPort;
+  if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  {
+    serialPort = new HardwareSerial(1);
+    ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
+  }
+  else
+  {
+    serialPort = new NullStream();
+  }
+#elif defined(TARGET_TX_FM30)
+  #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
+    USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
+    serialPort->begin();
+  #else
+    Stream *serialPort = new NullStream();
+  #endif
+#elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+  HardwareSerial *serialPort = new HardwareSerial(2);
+  #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
+    serialPort->setRx(GPIO_PIN_DEBUG_RX);
+  #endif
+  #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
+    serialPort->setTx(GPIO_PIN_DEBUG_TX);
+  #endif
+  serialPort->begin(BACKPACK_LOGGING_BAUD);
+#else
   Stream *serialPort = new NullStream();
+#endif
   TxBackpack = serialPort;
+
+#if defined(PLATFORM_ESP32_S3)
+  Serial.begin(460800);
+#endif
+
+// Setup TxUSB
+#if defined(PLATFORM_ESP32_S3)
+  USBSerial.begin(firmwareOptions.uart_baud);
+  TxUSB = &USBSerial;
+#elif defined(PLATFORM_ESP32)
+  if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
+  {
+    // The backpack is already assigned on UART0 (pins 3, 1)
+    // This is also USB on modules that use DIPs
+    // Set TxUSB to TxBackpack so that data goes to the same place
+    TxUSB = TxBackpack;
+  }
+  else if (GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM)
+  {
+    // This is an internal module, or an external module configured with a relay.  Do not setup TxUSB.
+    TxUSB = new NullStream();
+  }
+  else
+  {
+    // The backpack is on a separate UART to UART0
+    // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
+    TxUSB = new HardwareSerial(1);
+    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, 3, 1);
+  }
+#else
+  TxUSB = new NullStream();
+#endif
 }
 
 /**
@@ -1247,9 +1320,40 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
+#if defined(TARGET_TX_FM30)
+  pinMode(GPIO_PIN_UART3RX_INVERT, OUTPUT); // RX3 inverter (from radio)
+  digitalWrite(GPIO_PIN_UART3RX_INVERT, LOW); // RX3 not inverted
+  pinMode(GPIO_PIN_BLUETOOTH_EN, OUTPUT); // Bluetooth enable (disabled)
+  digitalWrite(GPIO_PIN_BLUETOOTH_EN, HIGH);
+  pinMode(GPIO_PIN_UART1RX_INVERT, OUTPUT); // RX1 inverter (TX handled in CRSF)
+  digitalWrite(GPIO_PIN_UART1RX_INVERT, HIGH);
+  pinMode(GPIO_PIN_ANT_CTRL_FIXED, OUTPUT);
+  digitalWrite(GPIO_PIN_ANT_CTRL_FIXED, LOW); // LEFT antenna
+  HardwareSerial *uart2 = new HardwareSerial(USART2);
+  uart2->begin(57600);
+  CRSFHandset::PortSecondary = uart2;
+#endif
+
+#if defined(TARGET_TX_FM30_MINI)
+  pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT); // TX1 inverter used for debug
+  digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
+#endif
+
+  if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
+  {
+    pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
+  }
+  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
+  {
+    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
+    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
+  }
+
   setupSerial();
   setupTargetCommon();
 }
+
 
 bool setupHardwareFromOptions()
 {
@@ -1279,7 +1383,7 @@ static void setupBindingFromConfig()
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
 
-      // config.SetStartFrequency(startBase);
+      config.SetStartFrequency(startBase);
       CRSF::LinkStatistics.freq_low = startBase;
 
       // config.SetEndFrequency(endBase);
