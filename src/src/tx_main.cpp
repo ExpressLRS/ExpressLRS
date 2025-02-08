@@ -32,7 +32,6 @@
 
 //// CONSTANTS ////
 #define MSP_PACKET_SEND_INTERVAL 10LU
-
 /// define some libs to use ///
 MSP msp;
 ELRS_EEPROM eeprom;
@@ -1392,7 +1391,7 @@ static void setupBindingFromConfig()
       // config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    if(config.GetUID()[0] != 0) {
+    if(config.GetUID()[0] != 255) {
       memcpy(UID,config.GetUID(),UID_LEN);
       memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
@@ -1400,18 +1399,18 @@ static void setupBindingFromConfig()
     {
         memcpy(UID, firmwareOptions.uid, UID_LEN);
         memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
-        config.SetBindPhrase(firmwareOptions.uid);
+        config.SetUID(UID);
     }
 
-    if(config.GetBindPhrase()[0]!=0){
+    if(config.GetBindPhrase()[0]!=255){
     memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+    memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
     }
     else
     {
         memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
         memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        config.SetBindPhrase(firmwareOptions.bind_phrase);
+        config.SetBindPhrase(bindPhrase);
     }
 
 

@@ -11,8 +11,8 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
--DMY_BIND_PHRASE="kjujjnc9nydouenx"
--DMY_BINDING_PHRASE="kjujjnc9nydouenx"
+-DMY_BIND_PHRASE="lowtest"
+-DMY_BINDING_PHRASE="lowtest"
 ### REGULATORY DOMAIN: ###
 
 # Domain is used to define correct frequency band for 900MHz hardware.

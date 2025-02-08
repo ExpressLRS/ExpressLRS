@@ -81,8 +81,8 @@ typedef enum {
 } telem_mode_t;
 
 typedef struct {
-    uint8_t         uid[6];
-    uint8_t         bind_phrase[12];
+    uint8_t         uid[6]={0};
+    uint8_t         bind_phrase[16]={0};
     uint32_t        start_frequency;
     uint32_t        end_frequency;
     uint32_t        mid_frequency;
