@@ -35,6 +35,8 @@ https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/
 We have both a [Discord Server](https://discord.gg/expresslrs) and [Facebook Group](https://www.facebook.com/groups/636441730280366), which have great support for new users and constant ongoing development discussion
 
 ## Features
+us
+
 
 ExpressLRS has the following features:
 
