@@ -1391,7 +1391,7 @@ static void setupBindingFromConfig()
       // config.SetNumChannels(numChannels);
       CRSF::LinkStatistics.num_channels = numChannels;
 
-    if(config.GetUID()[0] != 255) {
+    if(config.GetUID()[0] != 0) {
       memcpy(UID,config.GetUID(),UID_LEN);
       memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
@@ -1402,7 +1402,7 @@ static void setupBindingFromConfig()
         config.SetUID(UID);
     }
 
-    if(config.GetBindPhrase()[0]!=255){
+    if(config.GetBindPhrase()[0]!=0){
     memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
     memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
     }
@@ -1579,7 +1579,7 @@ void loop()
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if (
+  if ((!handset->IsArmed()) &&
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
