@@ -1037,13 +1037,36 @@ RxConfig::Commit()
 }
 
 // Setters
-void
-RxConfig::SetUID(uint8_t* uid)
+void RxConfig::SetUID(uint8_t* uid)
 {
-    for (uint8_t i = 0; i < UID_LEN; ++i)
+    for (uint8_t i = 0; i < UID_LEN; i++)
     {
         m_config.uid[i] = uid[i];
     }
+    m_modified = true;
+}
+
+void RxConfig::SetStartFrequency(uint32_t start)
+{
+    m_config.start_frequency = start;
+    m_modified = true;
+}
+
+void RxConfig::SetEndFrequency(uint32_t end)
+{
+    m_config.end_frequency = end;
+    m_modified = true;
+}
+
+void RxConfig::SetMidFrequency(uint32_t mid)
+{
+    m_config.mid_frequency = mid;
+    m_modified = true;
+}
+
+void RxConfig::SetNumChannels(uint8_t num)
+{
+    m_config.num_channels = num;
     m_modified = true;
 }
 

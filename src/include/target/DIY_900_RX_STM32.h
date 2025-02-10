@@ -6,9 +6,8 @@
 
 //#define USE_SX1276_RFO_HF false // disable PA Boost.
 
-//Low - Mods on FHSS.CPP and user_define.txt
-#define GPIO_PIN_RX_ENABLE PB2 // Low band.
-//High  - Mods on FHSS.CPP and user_define.txt
+//SETTING AS UNUSED PIN TO KEEP HAPPY
+#define GPIO_PIN_RX_ENABLE PB12
 #define GPIO_PIN_TX_ENABLE PB3 
 
 // GPIO pin definitions
