@@ -56,7 +56,7 @@ bool Gsensor::init()
     }
     else
     {
-        DBGLN("Gsensor OK with chipid = %x!", id);
+        //DBGLN("Gsensor OK with chipid = %x!", id);
         gensor_status = GSENSOR_STATUS_NORMAL;
     }
 

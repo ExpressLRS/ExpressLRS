@@ -28,24 +28,24 @@ static bool Baro_Detect()
     {
         if (SPL06::detect())
         {
-            DBGLN("Detected baro: SPL06");
+            //DBGLN("Detected baro: SPL06");
             baro = new SPL06();
             return true;
         }
         if (BMP280::detect())
         {
-            DBGLN("Detected baro: BMP280");
+            //DBGLN("Detected baro: BMP280");
             baro = new BMP280();
             return true;
         }
         // Untested
         // if (BMP085::detect())
         // {
-        //     DBGLN("Detected baro: BMP085");
+        //     //DBGLN("Detected baro: BMP085");
         //     baro = new BMP085();
         //     return true;
         // }
-        // DBGLN("No baro detected");
+        // //DBGLN("No baro detected");
     } // I2C
 #endif
     return false;
@@ -79,7 +79,7 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     uint32_t dT_ms = now - last_publish_ms;
     last_publish_ms = now;
 
-    //DBGLN("%udPa %dcm", pressuredPa, altitude_cm);
+    ////DBGLN("%udPa %dcm", pressuredPa, altitude_cm);
 
     if (baro->getAltitudeHome() == BaroBase::ALTITUDE_INVALID)
     {
@@ -108,7 +108,7 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     int16_t vspd = altitude_diff_cm * 1000 / (int32_t)dT_ms;
     verticalspd_smoothed = (verticalspd_smoothed * 3 + vspd) / 4; // Simple smoothing
     crsfBaro.p.verticalspd = htobe16(verticalspd_smoothed);
-    //DBGLN("diff=%d smooth=%d dT=%u", altitude_diff_cm, verticalspd_smoothed, dT_ms);
+    ////DBGLN("diff=%d smooth=%d dT=%u", altitude_diff_cm, verticalspd_smoothed, dT_ms);
 
     // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet
     if (!telemetry.GetCrsfBaroSensorDetected())

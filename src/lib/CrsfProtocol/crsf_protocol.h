@@ -72,7 +72,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
     CRSF_FRAMETYPE_BIND = 0x0C,
     CRSF_FRAMETYPE_TX_BIND = 0x0D,
-    CRSF_FRAMETYPE_VTX_CONFIG = 0x3D,
+    CRSF_FRAMETYPE_VTX_CONFIG = 0x30,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
@@ -391,6 +391,7 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t num_channels;
     uint8_t uid[6];
     uint8_t bind_phrase[16];
+    uint8_t vtx_channel;
 } PACKED crsfLinkStatistics_t;
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t

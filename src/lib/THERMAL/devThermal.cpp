@@ -114,7 +114,7 @@ static void setFanSpeed()
 
     uint32_t speed = GPIO_PIN_FAN_SPEEDS == nullptr ? defaultFanSpeeds[POWERMGNT::currPower()] : GPIO_PIN_FAN_SPEEDS[POWERMGNT::currPower()-POWERMGNT::getMinPower()];
     ledcWrite(fanChannel, speed);
-    DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), speed);
+    //DBGLN("Fan speed: %d (power) -> %u (pwm)", POWERMGNT::currPower(), speed);
 }
 #endif
 #endif

@@ -282,7 +282,7 @@ static void SetVpdSetPoint()
     }
 
     setPWM();
-    DBGLN("VTX: Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
+    //DBGLN("VTX: Setting new VPD setpoint: %d, initial PWM: %d", VpdSetPoint, vtxSPIPWM);
 }
 
 static void checkOutputPower()
@@ -308,7 +308,7 @@ static void checkOutputPower()
             VTxOutputDecrease();
         }
 
-        //DBGLN("VTX: VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
+        ////DBGLN("VTX: VPD setpoint=%d, raw=%d, filtered=%d, PWM=%d", VpdSetPoint, VpdReading, Vpd, vtxSPIPWM);
     }
 }
 
@@ -323,7 +323,7 @@ static int gatherOutputCalibrationData()
     {
         sampleCount++;
         checkOutputPower();
-        DBGLN("VTX Freq=%d, VPD setpoint=%d, VPD=%d, PWM=%d, sample=%d", VpdFreqArray[calibFreqIndex], VpdSetPoint, Vpd, vtxSPIPWM, sampleCount);
+        //DBGLN("VTX Freq=%d, VPD setpoint=%d, VPD=%d, PWM=%d, sample=%d", VpdFreqArray[calibFreqIndex], VpdSetPoint, Vpd, vtxSPIPWM, sampleCount);
         if (sampleCount >= CALIB_SAMPLES)
         {
             VpdSetPoint += VPD_BUFFER;
@@ -442,7 +442,7 @@ static int timeout()
         vtxSPIFrequencyCurrent = vtxSPIFrequency;
         vtxPowerAmpEnable = true;
 
-        DBGLN("VTX: Set frequency: %d", vtxSPIFrequency);
+        //DBGLN("VTX: Set frequency: %d", vtxSPIFrequency);
 
         return RTC6705_PLL_SETTLE_TIME_MS;
     }
@@ -450,7 +450,7 @@ static int timeout()
     // Note: it's important that the PA is handled after the frequency.
     if (vtxPowerAmpEnableCurrent != vtxPowerAmpEnable)
     {
-        DBGLN("VTX: Changing internal PA, old: %d, new: %d", vtxPowerAmpEnableCurrent, vtxPowerAmpEnable);
+        //DBGLN("VTX: Changing internal PA, old: %d, new: %d", vtxPowerAmpEnableCurrent, vtxPowerAmpEnable);
         if (vtxPowerAmpEnable)
         {
             rtc6705PowerAmpOn();
@@ -462,14 +462,14 @@ static int timeout()
 
     if (vtxSPIPowerIdxCurrent != vtxSPIPowerIdx)
     {
-        DBGLN("VTX: Set power: %d", vtxSPIPowerIdx);
+        //DBGLN("VTX: Set power: %d", vtxSPIPowerIdx);
         SetVpdSetPoint();
         vtxSPIPowerIdxCurrent = vtxSPIPowerIdx;
     }
 
     if (vtxSPIPitmodeCurrent != vtxSPIPitmode)
     {
-        DBGLN("VTX: Set PIT mode: %d", vtxSPIPitmode);
+        //DBGLN("VTX: Set PIT mode: %d", vtxSPIPitmode);
         vtxSPIPitmodeCurrent = vtxSPIPitmode;
     }
 

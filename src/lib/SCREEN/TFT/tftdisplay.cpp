@@ -146,7 +146,7 @@ void TFTDisplay::doScreenBackLight(screen_backlight_t state)
 
 void TFTDisplay::printScreenshot()
 {
-    DBGLN("Unimplemented");
+    //DBGLN("Unimplemented");
 }
 
 static void displayFontCenter(uint32_t font_start_x, uint32_t font_end_x, uint32_t font_start_y,

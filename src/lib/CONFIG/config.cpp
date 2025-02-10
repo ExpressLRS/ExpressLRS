@@ -122,7 +122,7 @@ void TxConfig::Load()
     uint32_t version = 0;
     if (nvs_get_u32(handle, "tx_version", &version) == ESP_OK && ((version & CONFIG_MAGIC_MASK) == TX_CONFIG_MAGIC))
         version = version & ~CONFIG_MAGIC_MASK;
-    DBGLN("Config version %u", version);
+    //DBGLN("Config version %u", version);
 
     // Can't upgrade from version <5, or when flashing a previous version, just use defaults.
     if (version < 5 || version > TX_CONFIG_VERSION)
@@ -219,7 +219,7 @@ void TxConfig::Load()
     uint32_t version = 0;
     if ((m_config.version & CONFIG_MAGIC_MASK) == TX_CONFIG_MAGIC)
         version = m_config.version & ~CONFIG_MAGIC_MASK;
-    DBGLN("Config version %u", version);
+    //DBGLN("Config version %u", version);
 
     // If version is current, all done
     if (version == TX_CONFIG_VERSION)
@@ -763,7 +763,7 @@ void RxConfig::Load()
     uint32_t version = 0;
     if ((m_config.version & CONFIG_MAGIC_MASK) == RX_CONFIG_MAGIC)
         version = m_config.version & ~CONFIG_MAGIC_MASK;
-    DBGLN("Config version %u", version);
+    //DBGLN("Config version %u", version);
 
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)

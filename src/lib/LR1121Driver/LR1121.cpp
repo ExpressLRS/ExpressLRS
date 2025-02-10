@@ -66,13 +66,13 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_1);
     hal.ReadCommand(version, sizeof(version), SX12XX_Radio_1);
 
-    DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version[2]);
+    //DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version[2]);
     if (version[2] != 0x03)
     {
-    DBGLN("LR1121 #1 failed to be detected.");
+    //DBGLN("LR1121 #1 failed to be detected.");
         return false;
     }
-    DBGLN("LR1121 #1 Ready");
+    //DBGLN("LR1121 #1 Ready");
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
@@ -81,13 +81,13 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
         hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_2);
         hal.ReadCommand(version, sizeof(version), SX12XX_Radio_2);
 
-        DBGLN("Read LR1121 #2 Use Case (0x03 = LR1121): %d", version[2]);
+        //DBGLN("Read LR1121 #2 Use Case (0x03 = LR1121): %d", version[2]);
         if (version[2] != 0x03)
         {
-        DBGLN("LR1121 #2 failed to be detected.");
+        //DBGLN("LR1121 #2 failed to be detected.");
             return false;
         }
-        DBGLN("LR1121 #2 Ready");
+        //DBGLN("LR1121 #2 Ready");
     }
 
     //Clear Errors
@@ -173,7 +173,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     useFEC = false;
     if (useFSK)
     {
-        DBGLN("Config FSK");
+        //DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
         uint8_t bwf = sf;
         uint32_t fdev = (uint32_t)cr * 1000;
@@ -191,7 +191,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     }
     else
     {
-        DBGLN("Config LoRa");
+        //DBGLN("Config LoRa");
         ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
     #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR1121?
@@ -568,7 +568,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
 {
 #ifdef DEBUG_LR1121_OTA_TIMING
     endTX = micros();
-    DBGLN("TOA: %d", endTX - beginTX);
+    //DBGLN("TOA: %d", endTX - beginTX);
 #endif
     CommitOutputPower();
     TXdoneCallback();
@@ -581,7 +581,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     // //catch TX timeout
     // if (currOpmode == SX1280_MODE_TX)
     // {
-    //     DBGLN("Timeout!");
+    //     //DBGLN("Timeout!");
     //     SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
     //     ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX12XX_Radio_All);
     //     TXnbISR();

@@ -56,7 +56,7 @@ static void setupWire()
 #endif
     if(gpio_sda != UNDEF_PIN && gpio_scl != UNDEF_PIN)
     {
-        DBGLN("Starting wire on SCL %d, SDA %d", gpio_scl, gpio_sda);
+        //DBGLN("Starting wire on SCL %d, SDA %d", gpio_scl, gpio_sda);
 #if defined(PLATFORM_STM32)
         // Wire::begin() passing ints is ambiguously overloaded, use the set functions
         // which themselves might get the PinName overloads
@@ -93,7 +93,7 @@ void deferExecutionMicros(unsigned long us, std::function<void()> f)
     }
 
     // Bail out, there are no slots available!
-    DBGLN("No more deferred function slots available!");
+    //DBGLN("No more deferred function slots available!");
 }
 
 void executeDeferredFunction(unsigned long now)

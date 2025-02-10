@@ -68,7 +68,7 @@ void BluetoothJoystickBegin()
     BleGamepadConfiguration *gamepadConfig = new BleGamepadConfiguration();
     gamepadConfig->setAutoReport(false);
 
-    DBGLN("Starting BLE Joystick!");
+    //DBGLN("Starting BLE Joystick!");
     bleGamepad->begin(gamepadConfig);
 }
 

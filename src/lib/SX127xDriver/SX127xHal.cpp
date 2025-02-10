@@ -26,7 +26,7 @@ void SX127xHal::end()
 
 void SX127xHal::init()
 {
-    DBGLN("Hal Init");
+    //DBGLN("Hal Init");
 
     pinMode(GPIO_PIN_DIO0, INPUT);
     if (GPIO_PIN_DIO0_2 != UNDEF_PIN)
@@ -50,14 +50,14 @@ void SX127xHal::init()
     }
     spiEnableSSPins(SPIEx.bus(), SX12XX_Radio_All);
 #elif defined(PLATFORM_ESP8266)
-    DBGLN("PLATFORM_ESP8266");
+    //DBGLN("PLATFORM_ESP8266");
     SPIEx.begin();
     SPIEx.setHwCs(true);
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(10000000);
 #elif defined(PLATFORM_STM32)
-    DBGLN("Config SPI");
+    //DBGLN("Config SPI");
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setMOSI(GPIO_PIN_MOSI);
@@ -76,7 +76,7 @@ void SX127xHal::init()
 
 void SX127xHal::reset(void)
 {
-    DBGLN("SX127x Reset");
+    //DBGLN("SX127x Reset");
 
     if (GPIO_PIN_RST != UNDEF_PIN)
     {
@@ -95,7 +95,7 @@ void SX127xHal::reset(void)
         }
     }
 
-    DBGLN("SX127x Ready!");
+    //DBGLN("SX127x Ready!");
 }
 
 uint8_t ICACHE_RAM_ATTR SX127xHal::readRegisterBits(uint8_t reg, uint8_t mask, SX12XX_Radio_Number_t radioNumber)

@@ -22,7 +22,7 @@ void TCPSOCKET::handle()
 {
     if (TCPclient == NULL)
     {
-        //DBGLN("no client");
+        ////DBGLN("no client");
         return; // nothing to do
     }
 
@@ -30,7 +30,7 @@ void TCPSOCKET::handle()
     if (millis() - clientTimeoutLastData > clientTimeoutPeriod)
     {
         TCPclient = NULL;
-        DBGLN("TCP client timeout");
+        //DBGLN("TCP client timeout");
         return;
     }
 
@@ -45,11 +45,11 @@ void TCPSOCKET::handle()
             FIFOout.popBytes(data, len);
             TCPclient->write((const char *)data, len);
             TCPclient->send();
-            DBGLN("TCP OUT SENT: Sent!: len: %d", len);
+            //DBGLN("TCP OUT SENT: Sent!: len: %d", len);
         }
         else
         {
-            DBGLN("TCP OUT SENT: Have data but TCP not ready!: len: %d", len);
+            //DBGLN("TCP OUT SENT: Have data but TCP not ready!: len: %d", len);
         }
     }
 }
@@ -65,12 +65,12 @@ bool TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it
     {
         FIFOout.pushSize(len);
         FIFOout.pushBytes(data, len);
-        DBGLN("TCP OUT QUE: queued %d bytes", len);
+        //DBGLN("TCP OUT QUE: queued %d bytes", len);
         return true;
     }
     else
     {
-        DBGLN("TCP OUT QUE: No space in FIFOout! len: %d", len);
+        //DBGLN("TCP OUT QUE: No space in FIFOout! len: %d", len);
         return false;
     }
 }
@@ -97,22 +97,22 @@ void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t 
     {
         instance->FIFOin.pushSize(len);
         instance->FIFOin.pushBytes((uint8_t *)data, len);
-        DBGLN("TCP IN: queued %d bytes", len);
+        //DBGLN("TCP IN: queued %d bytes", len);
     }
     else
     {
-        DBGLN("TCP IN: buffer full! wanted: %d, free: %d", (len + 2), instance->FIFOin.free());
+        //DBGLN("TCP IN: buffer full! wanted: %d, free: %d", (len + 2), instance->FIFOin.free());
     }
 }
 
 void TCPSOCKET::handleError(void *arg, AsyncClient *client, int8_t error)
 {
-    DBGLN("\n connection error %s from client %s \n", client->errorToString(error), client->remoteIP().toString().c_str());
+    //DBGLN("\n connection error %s from client %s \n", client->errorToString(error), client->remoteIP().toString().c_str());
 }
 
 void TCPSOCKET::handleDisconnect(void *arg, AsyncClient *client)
 {
-    DBGLN("\n client %s disconnected \n", client->remoteIP().toString().c_str());
+    //DBGLN("\n client %s disconnected \n", client->remoteIP().toString().c_str());
     instance->TCPclient = NULL;
     instance->FIFOin.flush();
     instance->FIFOout.flush();
@@ -120,7 +120,7 @@ void TCPSOCKET::handleDisconnect(void *arg, AsyncClient *client)
 
 void TCPSOCKET::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
-    DBGLN("\n client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
+    //DBGLN("\n client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
 }
 
 bool TCPSOCKET::hasClient()
@@ -130,7 +130,7 @@ bool TCPSOCKET::hasClient()
 
 void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
 {
-    DBGLN("\n new client has been connected to server, ip: %s", client->remoteIP().toString().c_str());
+    //DBGLN("\n new client has been connected to server, ip: %s", client->remoteIP().toString().c_str());
 
     instance->TCPclient = client;
     instance->clientTimeoutLastData = millis();

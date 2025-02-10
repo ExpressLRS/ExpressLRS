@@ -26,7 +26,7 @@ void LR1121Hal::end()
 
 void LR1121Hal::init()
 {
-    DBGLN("Hal Init");
+    //DBGLN("Hal Init");
 
     pinMode(GPIO_PIN_BUSY, INPUT);
     if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
@@ -61,14 +61,14 @@ void LR1121Hal::init()
     }
     spiEnableSSPins(SPIEx.bus(), SX12XX_Radio_All);
 #elif defined(PLATFORM_ESP8266)
-    DBGLN("PLATFORM_ESP8266");
+    //DBGLN("PLATFORM_ESP8266");
     SPIEx.begin();
     SPIEx.setHwCs(true);
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setFrequency(17500000);
 #elif defined(PLATFORM_STM32)
-    DBGLN("Config SPI");
+    //DBGLN("Config SPI");
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
     SPIEx.setMOSI(GPIO_PIN_MOSI);
@@ -87,7 +87,7 @@ void LR1121Hal::init()
 
 void LR1121Hal::reset(bool bootloader)
 {
-    DBGLN("LR1121 Reset");
+    //DBGLN("LR1121 Reset");
 
     if (GPIO_PIN_RST != UNDEF_PIN)
     {

@@ -74,7 +74,7 @@ void AutoDetect::handleInput()
             input_detect++;
             if (input_detect > 100)
             {
-                DBGLN("PPM signal detected");
+                //DBGLN("PPM signal detected");
                 rmt_driver_uninstall(PPM_RMT_CHANNEL);
                 startPPM();
             }
@@ -84,7 +84,7 @@ void AutoDetect::handleInput()
             input_detect--;
             if (input_detect < -100)
             {
-                DBGLN("Serial signal detected");
+                //DBGLN("Serial signal detected");
                 rmt_driver_uninstall(PPM_RMT_CHANNEL);
                 startCRSF();
             }
@@ -94,7 +94,7 @@ void AutoDetect::handleInput()
     {
         if (now - 1000 > lastDetect && input_detect != 0)
         {
-            DBGLN("No signal detected");
+            //DBGLN("No signal detected");
             input_detect = 0;
         }
     }

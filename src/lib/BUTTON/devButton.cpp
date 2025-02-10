@@ -53,7 +53,7 @@ size_t button_GetActionCnt()
 
 static void handlePress(uint8_t button, bool longPress, uint8_t count)
 {
-    DBGLN("handlePress(%u, %u, %u)", button, (uint8_t)longPress, count);
+    //DBGLN("handlePress(%u, %u, %u)", button, (uint8_t)longPress, count);
 #if defined(TARGET_TX)
     const button_action_t *button_actions = config.GetButtonActions(button)->val.actions;
 #endif

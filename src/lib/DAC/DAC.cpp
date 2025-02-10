@@ -12,7 +12,7 @@
 
 void DAC::init()
 {
-    DBGLN("Init DAC Driver");
+    //DBGLN("Init DAC Driver");
 
     // I2C initialization is the responsibility of the caller
     // e.g. Wire.begin(GPIO_PIN_SDA, GPIO_PIN_SCL);
@@ -63,7 +63,7 @@ void DAC::setPower(uint32_t milliVolts)
 {
     uint8_t ScaledVolts = map(milliVolts, 0, DAC_REF_VCC, 0, 255);
     setVoltageRegDirect(ScaledVolts);
-    DBGLN("DAC::setPower(%umV)", milliVolts);
+    //DBGLN("DAC::setPower(%umV)", milliVolts);
 }
 
 

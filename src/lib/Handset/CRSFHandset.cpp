@@ -482,10 +482,10 @@ void CRSFHandset::handleInput()
     {
         onTXSerialBind(&SerialInBuffer[3]);
     }
-    // if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
-    // {
-    //     onVTXConfig(&SerialInBuffer[3]);
-    // }
+    if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
+    {
+        onVTXConfig(&SerialInBuffer[3]);
+    }
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
         GoodPktsCount++;
