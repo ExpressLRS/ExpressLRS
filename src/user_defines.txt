@@ -11,8 +11,8 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
--DMY_BIND_PHRASE="emkz9h7a0rau6irz"
--DMY_BINDING_PHRASE="emkz9h7a0rau6irz"
+-DMY_BIND_PHRASE="kjujjnc9nydouenx"
+-DMY_BINDING_PHRASE="kjujjnc9nydouenx"
 ### REGULATORY DOMAIN: ###
 
 # Domain is used to define correct frequency band for 900MHz hardware.
@@ -81,7 +81,7 @@
 ### Debugging options ###
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
-#-DDEBUG_LOG
+-DDEBUG_LOG
 
 # For an ESP32S3 MCU, there are two options:
 # 1 - Pull-up on GPIO3, USB for JTAG (on MI_02), debug logging uses main UART.
@@ -95,7 +95,7 @@
 #-DDEBUG_RX_SCOREBOARD
 
 # Don't send RC msgs over UART
-#-DDEBUG_CRSF_NO_OUTPUT
+-DDEBUG_CRSF_NO_OUTPUT
 
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS

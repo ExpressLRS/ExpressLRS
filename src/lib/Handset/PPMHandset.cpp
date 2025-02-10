@@ -70,7 +70,7 @@ void PPMHandset::handleInput()
     }
     else if (lastPPM && now - 1000 > lastPPM)
     {
-        DBGLN("PPM signal lost, disarming");
+        //DBGLN("PPM signal lost, disarming");
         if (disconnected)
         {
             disconnected();

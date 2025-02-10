@@ -141,7 +141,7 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
         auto err = mcpwm_gpio_init(mcpwm_config[channel].unit, mcpwm_config[channel].signal, pin);
         if (err != ESP_OK)
         {
-            DBGLN("mcpwm_gpio_init failed with error 0x%x on pin %d", err, pin);
+            //DBGLN("mcpwm_gpio_init failed with error 0x%x on pin %d", err, pin);
         }
         mcpwm_init(mcpwm_config[channel].unit, mcpwm_config[channel].timer, &pwm_config);
         mcpwm_frequencies[channel] = frequency;
@@ -176,7 +176,7 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
                     ledc_config[ch].pin = pin;
                     ledc_config[ch].resolution_bits = bits;
                     ledc_config[ch].interval = 1000000U / frequency;
-                    DBGLN("allocate ledc_ch %d on pin %d using ledc_tim: %d, bits: %d", ch, pin, timer_idx, bits);
+                    //DBGLN("allocate ledc_ch %d on pin %d using ledc_tim: %d, bits: %d", ch, pin, timer_idx, bits);
                     return ch | LEDC_CHANNEL_FLAG;
                 }
             }
@@ -185,7 +185,7 @@ pwm_channel_t PWMController::allocate(uint8_t pin, uint32_t frequency)
     }
 
     // 3. bail out, nothing left
-    DBGLN("No MCPWM or LEDC channels available for frequency %dHz", frequency);
+    //DBGLN("No MCPWM or LEDC channels available for frequency %dHz", frequency);
     return -1;
 }
 

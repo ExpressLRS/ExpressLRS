@@ -55,7 +55,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
 #if defined(PLATFORM_ESP32)
     if ((eServoOutputMode)chConfig->val.mode == somDShot)
     {
-        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+        // //DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
         if (dshotInstances[ch])
         {
             dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
@@ -177,7 +177,7 @@ static void initialize()
             {
                 auto gpio = (gpio_num_t)pin;
                 auto rmtChannel = (rmt_channel_t)rmtCH;
-                DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
+                //DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
                 rmtCH++;
@@ -191,11 +191,11 @@ static void initialize()
         {
             if (mode == somOnOff)
             {
-                DBGLN("Initializing digital output: ch: %d, pin: %d", ch, pin);
+                //DBGLN("Initializing digital output: ch: %d, pin: %d", ch, pin);
             }
             else
             {
-                DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
+                //DBGLN("Initializing PWM output: ch: %d, pin: %d", ch, pin);
             }
 
             pinMode(pin, OUTPUT);

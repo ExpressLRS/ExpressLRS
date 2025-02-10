@@ -133,7 +133,7 @@ static int debouncedRead(int pin) {
     } else {
         // We are bouncing. Reset the match counter.
         matches = 0;
-        DBGLN("Bouncing!, current state: %d, last_state: %d, matches: %d", current_state, last_state, matches);
+        //DBGLN("Bouncing!, current state: %d, last_state: %d, matches: %d", current_state, last_state, matches);
     }
 
     if (matches == min_matches) {
@@ -362,7 +362,7 @@ static int timeout()
         out.makeCommand();
         out.function = MSP_ELRS_GET_BACKPACK_VERSION;
         MSP::sendPacket(&out, TxBackpack);
-        DBGLN("Sending get backpack version command");
+        //DBGLN("Sending get backpack version command");
     }
 
     if (TxBackpackWiFiReadyToSend && connectionState < MODE_STATES)

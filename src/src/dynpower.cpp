@@ -110,7 +110,7 @@ void DynamicPower_Update(uint32_t now)
       linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);
       if ((now - dynpower_last_linkstats_millis) > (linkstatsInterval + 2U))
       {
-        DBGLN("+power (tlm)");
+        //DBGLN("+power (tlm)");
         POWERMGNT::incPower();
       }
     }
@@ -157,7 +157,7 @@ void DynamicPower_Update(uint32_t now)
       int8_t avg_rssi = dynpower_mean_rssi.mean(); // resets it too
       if ((avg_rssi < rssi_inc_threshold) && (powerHeadroom > 0))
       {
-        DBGLN("+power (rssi)");
+        //DBGLN("+power (rssi)");
         POWERMGNT::incPower();
       }
       else if (avg_rssi > rssi_dec_threshold && lq_avg >= DYNPOWER_LQ_THRESH_DN)
@@ -180,7 +180,7 @@ void DynamicPower_Update(uint32_t now)
 
     while ((snrScaled <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
     {
-      DBGLN("+power (snr)");
+      //DBGLN("+power (snr)");
       POWERMGNT::incPower();
       // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
       snrScaled += SNR_SCALE(2);
@@ -191,7 +191,7 @@ void DynamicPower_Update(uint32_t now)
   // If instant LQ is low, but the SNR/RSSI did nothing, inc power by one step
   if ((powerHeadroom > 0) && (startPowerLevel == POWERMGNT::currPower()) && (lq_current <= DYNPOWER_LQ_THRESH_UP))
   {
-    DBGLN("+power (lq)");
+    //DBGLN("+power (lq)");
     POWERMGNT::incPower();
   }
 }
@@ -215,7 +215,7 @@ void DynamicPower_UpdateRx(bool initialize)
     if (CRSF::clearUpdatedUplinkPower())
     {
       PowerLevels_e newPower = crsfpowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
-      DBGLN("Matching TX power %u", newPower);
+      //DBGLN("Matching TX power %u", newPower);
       POWERMGNT::setPower(newPower);
     }
     else if (initialize)

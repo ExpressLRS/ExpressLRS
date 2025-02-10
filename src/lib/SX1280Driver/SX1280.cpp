@@ -85,14 +85,14 @@ bool SX1280Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     hal.IsrCallback_2 = &SX1280Driver::IsrCallback_2;
 
     hal.reset();
-    DBGLN("SX1280 Begin");
+    //DBGLN("SX1280 Begin");
 
     RFAMP.init();
 
     SetMode(SX1280_MODE_STDBY_RC, SX12XX_Radio_All); // Put in STDBY_RC mode.  Must be SX1280_MODE_STDBY_RC for SX1280_RADIO_SET_REGULATORMODE to be set.
 
     uint16_t firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX12XX_Radio_1)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX12XX_Radio_1)));
-    DBGLN("Read Vers sx1280 #1: %d", firmwareRev);
+    //DBGLN("Read Vers sx1280 #1: %d", firmwareRev);
     if ((firmwareRev == 0) || (firmwareRev == 65535))
     {
         // SPI communication failed, just return without configuration
@@ -104,7 +104,7 @@ bool SX1280Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         firmwareRev = (((hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB, SX12XX_Radio_2)) << 8) | (hal.ReadRegister(REG_LR_FIRMWARE_VERSION_MSB + 1, SX12XX_Radio_2)));
-        DBGLN("Read Vers sx1280 #2: %d", firmwareRev);
+        //DBGLN("Read Vers sx1280 #2: %d", firmwareRev);
         if ((firmwareRev == 0) || (firmwareRev == 65535))
         {
             // SPI communication failed, just return without configuration
@@ -212,7 +212,7 @@ void SX1280Driver::SetOutputPower(int8_t power)
     if ((pwrPending == PWRPENDING_NONE && pwrCurrent != pwrNew) || pwrPending != pwrNew)
     {
         pwrPending = pwrNew;
-        DBGLN("SetPower: %u", pwrPending);
+        //DBGLN("SetPower: %u", pwrPending);
     }
 }
 
@@ -472,7 +472,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     currOpmode = SX1280_MODE_FS; // radio goes to FS after TX
 #ifdef DEBUG_SX1280_OTA_TIMING
     endTX = micros();
-    DBGLN("TOA: %d", endTX - beginTX);
+    //DBGLN("TOA: %d", endTX - beginTX);
 #endif
     CommitOutputPower();
     TXdoneCallback();
@@ -485,7 +485,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
     //catch TX timeout
     if (currOpmode == SX1280_MODE_TX)
     {
-        DBGLN("Timeout!");
+        //DBGLN("Timeout!");
         SetMode(fallBackMode, SX12XX_Radio_All);
         ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX12XX_Radio_All);
         TXnbISR();
@@ -577,7 +577,7 @@ void ICACHE_RAM_ATTR SX1280Driver::GetStatus(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status = 0;
     hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1, radioNumber);
-    DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
+    //DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
 }
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool()

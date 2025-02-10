@@ -143,7 +143,7 @@ static bool captivePortal(AsyncWebServerRequest *request)
 
   if (!isIp(request->host()) && request->host() != (String(wifi_hostname) + ".local"))
   {
-    DBGLN("Request redirected to captive portal");
+    //DBGLN("Request redirected to captive portal");
     request->redirect(String("http://") + toStringIp(request->client()->localIP()));
     return true;
   }
@@ -485,7 +485,7 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
 {
   int button1Color = json[0].as<int>();
   int button2Color = json[1].as<int>();
-  DBGLN("%d %d", button1Color, button2Color);
+  //DBGLN("%d %d", button1Color, button2Color);
   setButtonColors(button1Color, button2Color);
   request->send(200);
 }
@@ -539,7 +539,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   for(uint32_t channel = 0 ; channel < pwm.size() ; channel++)
   {
     uint32_t val = pwm[channel];
-    //DBGLN("PWMch(%u)=%u", channel, val);
+    ////DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
   }
   #endif
@@ -586,12 +586,12 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
   int numNetworks = WiFi.scanComplete();
   if (numNetworks >= 0 && millis() - lastScanTimeMS < STALE_WIFI_SCAN) {
-    DBGLN("Found %d networks", numNetworks);
+    //DBGLN("Found %d networks", numNetworks);
     std::set<String> vs;
     String s="[";
     for(int i=0 ; i<numNetworks ; i++) {
       String w = WiFi.SSID(i);
-      DBGLN("found %s", w.c_str());
+      //DBGLN("found %s", w.c_str());
       if (vs.find(w)==vs.end() && w.length()>0) {
         if (!vs.empty()) s += ",";
         s += "\"" + w + "\"";
@@ -628,14 +628,14 @@ static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFi
 
 static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 {
-  DBGLN("Starting Access Point");
+  //DBGLN("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
-  DBGLN("Connecting to network");
+  //DBGLN("Connecting to network");
   String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     wifi_hostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
@@ -646,7 +646,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String ssid = request->arg("network");
   String password = request->arg("password");
 
-  DBGLN("Setting network %s", ssid.c_str());
+  //DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
   if (request->hasArg("save")) {
@@ -659,7 +659,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
 
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
-  DBGLN("Forget network");
+  //DBGLN("Forget network");
   firmwareOptions.home_wifi_ssid[0] = 0;
   firmwareOptions.home_wifi_password[0] = 0;
   saveOptions();
@@ -704,7 +704,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   if (target_seen || Update.hasError()) {
     String msg;
     if (!Update.hasError() && Update.end()) {
-      DBGLN("Update complete, rebooting");
+      //DBGLN("Update complete, rebooting");
       msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
         msg += "Please wait for the LED to resume blinking before disconnecting power.\"}";
@@ -720,7 +720,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
         p.println("Not enough data uploaded!");
       }
       p.trim();
-      DBGLN("Failed to upload firmware: %s", p.c_str());
+      //DBGLN("Failed to upload firmware: %s", p.c_str());
       msg = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
     }
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
@@ -746,11 +746,11 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     #endif
 
     size_t filesize = request->header("X-FileSize").toInt();
-    DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
+    //DBGLN("Update: '%s' size %u", filename.c_str(), filesize);
     #if defined(PLATFORM_ESP8266)
     Update.runAsync(true);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-    DBGLN("Free space = %u", maxSketchSpace);
+    //DBGLN("Free space = %u", maxSketchSpace);
     UNUSED(maxSketchSpace); // for warning
     #endif
     if (!Update.begin(filesize, U_FLASH)) { // pass the size provided
@@ -793,7 +793,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       }
       totalSize += len;
     } else {
-      DBGLN("write failed to write %d", len);
+      //DBGLN("write failed to write %d", len);
     }
   }
 }
@@ -941,11 +941,11 @@ static void startWiFi(unsigned long now)
 
     setWifiUpdateMode();
 
-    DBGLN("Stopping Radio");
+    //DBGLN("Stopping Radio");
     Radio.End();
   }
 
-  DBGLN("Begin Webupdater");
+  //DBGLN("Begin Webupdater");
 
   WiFi.persistent(false);
   WiFi.disconnect();
@@ -968,7 +968,7 @@ static void startMDNS()
 {
   if (!MDNS.begin(wifi_hostname))
   {
-    DBGLN("Error starting mDNS");
+    //DBGLN("Error starting mDNS");
     return;
   }
 
@@ -1132,7 +1132,7 @@ static void startServices()
   #endif
 
   servicesStarted = true;
-  DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
+  //DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
   #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
   wifi2tcp.begin();
   #endif
@@ -1144,7 +1144,7 @@ static void HandleWebUpdate()
   wl_status_t status = WiFi.status();
 
   if (status != laststatus && wifiMode == WIFI_STA) {
-    DBGLN("WiFi status %d", status);
+    //DBGLN("WiFi status %d", status);
     switch(status) {
       case WL_NO_SSID_AVAIL:
       case WL_CONNECT_FAILED:
@@ -1163,12 +1163,12 @@ static void HandleWebUpdate()
   if (status != WL_CONNECTED && wifiMode == WIFI_STA && (now - changeTime) > 30000) {
     changeTime = now;
     changeMode = WIFI_AP;
-    DBGLN("Connection failed %d", status);
+    //DBGLN("Connection failed %d", status);
   }
   if (changeMode != wifiMode && changeMode != WIFI_OFF && (now - changeTime) > 500) {
     switch(changeMode) {
       case WIFI_AP:
-        DBGLN("Changing to AP mode");
+        //DBGLN("Changing to AP mode");
         WiFi.disconnect();
         wifiMode = WIFI_AP;
         #if defined(PLATFORM_ESP32)
@@ -1190,7 +1190,7 @@ static void HandleWebUpdate()
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to network '%s'", station_ssid);
+        //DBGLN("Connecting to network '%s'", station_ssid);
         wifiMode = WIFI_STA;
         #if defined(PLATFORM_ESP32)
         WiFi.setHostname(wifi_hostname); // hostname must be set before the mode is set to STA
@@ -1316,7 +1316,7 @@ static int timeout()
   // if webupdate was requested before or .wifi_auto_on_interval has elapsed but uart is not detected
   // start webupdate, there might be wrong configuration flashed.
   if(firmwareOptions.wifi_auto_on_interval != -1 && webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
-    DBGLN("No CRSF ever detected, starting WiFi");
+    //DBGLN("No CRSF ever detected, starting WiFi");
     setWifiUpdateMode();
     return DURATION_IMMEDIATELY;
   }

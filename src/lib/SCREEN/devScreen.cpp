@@ -114,7 +114,7 @@ static int handle(void)
 #if defined(DEBUG_SCREENSHOT)
         if (key == INPUT_KEY_DOWN_PRESS && isLongPressed)
         {
-            DBGLN("state_%d", state_machine.getCurrentState());
+            //DBGLN("state_%d", state_machine.getCurrentState());
             Display::printScreenshot();
         }
 #endif
