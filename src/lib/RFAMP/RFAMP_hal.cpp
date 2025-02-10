@@ -90,6 +90,12 @@ void RFAMP_hal::init()
         pinMode(GPIO_PIN_RX_ENABLE_2, OUTPUT);
         digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
     }
+
+    #if defined(TARGET_DIY_900_RX_STM32)
+    pinMode(PB2, OUTPUT);
+    digitalWrite(PB2, HIGH);
+    #endif
+
 }
 
 void ICACHE_RAM_ATTR RFAMP_hal::TXenable(SX12XX_Radio_Number_t radioNumber)
