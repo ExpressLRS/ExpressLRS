@@ -88,8 +88,8 @@ typedef struct {
     uint32_t        mid_frequency;
     uint8_t         num_channels;
     uint32_t        version;
-    uint8_t         vtxBand;    // 0=Off, else band number
-    uint8_t         vtxChannel; // 0=Ch1 -> 7=Ch8
+    uint8_t         vtxBand=5;    // 0=Off, else band number
+    uint8_t         vtxChannel=1; // 0=Ch1 -> 7=Ch8
     uint8_t         vtxPower;   // 0=Do not set, else power number
     uint8_t         vtxPitmode; // Off/On/AUX1^/AUX1v/etc
     uint8_t         powerFanThreshold:4; // Power level to enable fan if present

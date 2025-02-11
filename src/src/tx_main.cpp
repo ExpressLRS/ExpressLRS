@@ -882,9 +882,9 @@ void onTXSerialBind(uint8_t* newConfigPacket)
 
 void onVTXConfig(uint8_t* newVideoPacket){
   DBGLN("Got video change to channel: %u", static_cast<uint32_t>(newVideoPacket[0]));
-  if(newVideoPacket[0]!=0 && newVideoPacket[0]<64){
-    config.SetVtxBand(newVideoPacket[0]/ 8 + 1);
-    config.SetVtxChannel(newVideoPacket[0] % 8);
+  if(newVideoPacket[0]<64){
+    config.SetVtxBand(((newVideoPacket[0])/ 8)+1);
+    config.SetVtxChannel((newVideoPacket[0] % 8) + 1);
     CRSF::LinkStatistics.vtx_channel = newVideoPacket[0];
     VtxTriggerSend();
   }
@@ -1395,16 +1395,22 @@ static void setupBindingFromConfig()
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
 
-      config.SetStartFrequency(startBase);
-      CRSF::LinkStatistics.freq_low = startBase;
+    config.SetStartFrequency(startBase);
+    CRSF::LinkStatistics.freq_low = startBase;
 
-      // config.SetEndFrequency(endBase);
-      CRSF::LinkStatistics.freq_high = endBase;
-  
-      // config.SetNumChannels(numChannels);
-      CRSF::LinkStatistics.num_channels = numChannels;
+    // config.SetEndFrequency(endBase);
+    CRSF::LinkStatistics.freq_high = endBase;
 
-      CRSF::LinkStatistics.vtx_channel = (8* config.GetVtxBand() - 1) + config.GetVtxChannel();
+    // config.SetNumChannels(numChannels);
+    CRSF::LinkStatistics.num_channels = numChannels;
+
+    if(config.GetVtxBand()==255){
+      config.SetVtxBand(5);
+    }
+    if(config.GetVtxChannel() == 255){
+      config.SetVtxChannel(1);
+    }
+    CRSF::LinkStatistics.vtx_channel = (8* (config.GetVtxBand() - 1)) + (config.GetVtxChannel()-1);
 
 
     if(config.GetUID()[0] != 0) {
