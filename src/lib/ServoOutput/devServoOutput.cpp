@@ -54,13 +54,34 @@ static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
 #if defined(PLATFORM_ESP32)
-    if ((eServoOutputMode)chConfig->val.mode == somDShot)
+    if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
     {
         // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
         if (dshotInstances[ch])
         {
-            us = fmap(constrain(us, 1000, 2000), 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
-            dshotInstances[ch]->send_dshot_value(us);
+            if (us > 0) { // check if we actually want a pulse (for no-pulse failsafe)
+                if ((eServoOutputMode)chConfig->val.mode == somDShot) {
+                    us = fmap(constrain(us, 1000, 2000), 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+                    dshotInstances[ch]->send_dshot_value(us);
+                }
+                else if ((eServoOutputMode)chConfig->val.mode == somDShot3D) {
+                    uint16_t x;
+                    if (us == 1500) { // stopped
+                        x = 0;
+                    }
+                    else if (us > 1500) { // forward
+                        x = fmap(us, 1501, 2012, 1048, 2047);
+                    }
+                    else { // reverse
+                        x = fmap(us, 1499, 988, 48, 1047);
+                    }
+                    dshotInstances[ch]->send_dshot_value(x);
+                }
+            }
+            else {
+                // getting an actual zero microsecond command means the failsafe mode is no-pulse
+                dshotInstances[ch]->set_looping(false);
+            }
         }
     }
     else
@@ -173,7 +194,7 @@ static bool initialize()
             pin = UNDEF_PIN;
         }
 #if defined(PLATFORM_ESP32)
-        else if (mode == somDShot)
+        else if (mode == somDShot || mode == somDShot3D)
         {
             if (rmtCH < RMT_MAX_CHANNELS)
             {
