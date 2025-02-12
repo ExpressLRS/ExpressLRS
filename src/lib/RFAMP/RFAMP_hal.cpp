@@ -91,10 +91,10 @@ void RFAMP_hal::init()
         digitalWrite(GPIO_PIN_RX_ENABLE_2, LOW);
     }
 
-    // #if defined(TARGET_DIY_900_RX_STM32)
-    // pinMode(PB2, OUTPUT);
-    // digitalWrite(PB2, HIGH);
-    // #endif
+    #if defined(TARGET_DIY_900_RX_STM32)
+    pinMode(PB2, OUTPUT);
+    digitalWrite(PB2, HIGH);
+    #endif
 
 }
 
