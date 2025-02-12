@@ -58,8 +58,8 @@ char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAmount 3
-#define syncSpamAmountAfterRateChange 10
+#define syncSpamAmount 0
+#define syncSpamAmountAfterRateChange0 0
 volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
