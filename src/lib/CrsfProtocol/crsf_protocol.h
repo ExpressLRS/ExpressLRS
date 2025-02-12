@@ -373,6 +373,27 @@ typedef struct crsf_sensor_flight_mode_s
 //     int8_t downlink_SNR;
 // } PACKED crsfLinkStatistics_t;
 
+#ifdef TARGET_DIY_900_RX_STM32
+typedef struct crsfPayloadLinkstatistics_s
+{
+    uint8_t uplink_RSSI_1;
+    uint8_t uplink_RSSI_2;
+    uint8_t uplink_Link_quality;
+    int8_t uplink_SNR;
+    uint8_t active_antenna;
+    uint8_t rf_Mode;
+    uint8_t tlm_Ratio;
+    uint8_t uplink_TX_Power;
+    uint8_t downlink_RSSI_1;
+    uint8_t downlink_Link_quality;
+    int8_t downlink_SNR;
+    uint16_t freq_low;
+    uint16_t freq_high;
+    uint8_t num_channels;
+    uint8_t uid[6];
+    uint8_t bind_phrase[12];
+} PACKED crsfLinkStatistics_t;
+#else
 typedef struct crsfPayloadLinkstatistics_s
 {
     uint8_t uplink_RSSI_1;
@@ -393,6 +414,7 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t bind_phrase[16];
     uint8_t vtx_channel;
 } PACKED crsfLinkStatistics_t;
+#endif
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
 {
