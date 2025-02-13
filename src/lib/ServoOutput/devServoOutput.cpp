@@ -128,7 +128,9 @@ static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
 
+    #if defined(PLATFORM_ESP32)
     DShotRMT::poll();
+    #endif
 
     if (newChannelsAvailable)
     {
