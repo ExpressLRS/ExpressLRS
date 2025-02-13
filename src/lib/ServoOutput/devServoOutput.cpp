@@ -127,6 +127,9 @@ static void servosFailsafe()
 static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
+
+    DShotRMT::poll();
+
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
