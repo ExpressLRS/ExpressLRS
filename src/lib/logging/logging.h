@@ -27,11 +27,7 @@
 
 #if defined(TARGET_TX)
 extern Stream *TxBackpack;
-#if defined(PLATFORM_ESP32_S3)
 #define LOGGING_UART (Serial)
-#else
-#define LOGGING_UART (*TxBackpack)
-#endif
 #else
 extern Stream *SerialLogger;
 #define LOGGING_UART (*SerialLogger)

@@ -191,20 +191,20 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
-    //DBGLN("TLM HW CRC error");
+    DBGLN("TLM HW CRC error");
     return false;
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
-    //DBGLN("TLM crc error");
+    DBGLN("TLM crc error");
     return false;
   }
 
   if (otaPktPtr->std.type != PACKET_TYPE_TLM)
   {
-    //DBGLN("TLM type error %d", otaPktPtr->std.type);
+    DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
   }
 
@@ -238,7 +238,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
-    //DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
+    DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
     TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES, telemPtr, dataLen);
   }
   // Std res mode
@@ -360,7 +360,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
-  //DBGLN("set rate %u", index);
+  DBGLN("set rate %u", index);
   uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
@@ -420,19 +420,8 @@ void ICACHE_RAM_ATTR HandleFHSS()
   // If the next packet should be on the next FHSS frequency, do the hop
   if (!InBindingMode && modresult == 0)
   {
-    double video_channel = 5658;
     uint32_t nextFreq = FHSSgetNextFreq();
-    double freq_val = freqRegValToMHz(nextFreq);
-    double harmonic = freq_val * 7;
-    double diff = abs(harmonic - video_channel);
-    if(true){
-      Radio.SetFrequencyReg(nextFreq);
-       //DBGLN("FREQUENCY %u --- HARMONIC: %u -- DIFF: %u", static_cast<uint32_t>(freq_val), static_cast<uint32_t>(harmonic),static_cast<uint32_t>(diff));
-    }
-    else {
-       //DBGLN("Skipped frequency %u due to harmonic interference", static_cast<uint32_t>(freq_val));
-    }
-
+    Radio.SetFrequencyReg(nextFreq);
   }
 }
 
@@ -886,7 +875,7 @@ void onVTXConfig(uint8_t* newVideoPacket){
     config.SetVtxBand(((newVideoPacket[0])/ 8)+1);
     config.SetVtxChannel((newVideoPacket[0] % 8) + 1);
     CRSF::LinkStatistics.vtx_channel = newVideoPacket[0];
-    VtxTriggerSend();
+    //VtxTriggerSend();
   }
 }
 
@@ -950,13 +939,13 @@ static void UpdateConnectDisconnectStatus()
     {
       connectionState = connected;
       CRSFHandset::ForwardDevicePings = true;
-      //DBGLN("got downlink conn");
+      DBGLN("got downlink conn");
 
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
 
-      VtxTriggerSend();
+      //VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -995,7 +984,7 @@ void OnPowerGetCalibration(mspPacket_t *packet)
   UNUSED(index);
   int8_t values[PWR_COUNT] = {0};
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  //DBGLN("power get calibration value %d",  values[index]);
+  DBGLN("power get calibration value %d",  values[index]);
 }
 
 void OnPowerSetCalibration(mspPacket_t *packet)
@@ -1005,7 +994,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 
   if((index < 0) || (index > PWR_COUNT))
   {
-    //DBGLN("calibration error index %d out of range", index);
+    DBGLN("calibration error index %d out of range", index);
     return;
   }
   hwTimer::stop();
@@ -1015,7 +1004,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
   values[index] = value;
   POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  //DBGLN("power calibration done %d, %d", index, value);
+  DBGLN("power calibration done %d, %d", index, value);
   hwTimer::resume();
 }
 #endif
@@ -1053,7 +1042,7 @@ static void EnterBindingMode()
   // Start transmitting again
   hwTimer::resume();
 
-  //DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 }
 
 static void ExitBindingMode()
@@ -1069,7 +1058,7 @@ static void ExitBindingMode()
 
   SetRFLinkRate(config.GetRate()); //return to original rate
 
-  //DBGLN("Exiting binding mode");
+  DBGLN("Exiting binding mode");
 }
 
 void EnterBindingModeSafely()
@@ -1111,7 +1100,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
       return; // Packets containing frequency in MHz are not yet supported.
     }
 
-    VtxTriggerSend();
+    //VtxTriggerSend();
   }
   else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
   {
@@ -1404,13 +1393,13 @@ static void setupBindingFromConfig()
     // config.SetNumChannels(numChannels);
     CRSF::LinkStatistics.num_channels = numChannels;
 
-    if(config.GetVtxBand()==255){
-      config.SetVtxBand(5);
-    }
-    if(config.GetVtxChannel() == 255){
-      config.SetVtxChannel(1);
-    }
-    CRSF::LinkStatistics.vtx_channel = (8* (config.GetVtxBand() - 1)) + (config.GetVtxChannel()-1);
+    // if(config.GetVtxBand()==255){
+    //   config.SetVtxBand(5);
+    // }
+    // if(config.GetVtxChannel() == 255){
+    //   config.SetVtxChannel(1);
+    // }
+    CRSF::LinkStatistics.vtx_channel = 0;//(8* (config.GetVtxBand() - 1)) + (config.GetVtxChannel()-1);
 
 
     if(config.GetUID()[0] != 0) {
@@ -1468,7 +1457,7 @@ void setup()
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
     // Initialise the devices
     devicesInit();
-    //DBGLN("Initialised devices");
+    DBGLN("Initialised devices");
 
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -1487,7 +1476,7 @@ void setup()
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
 
-    //DBGLN("ExpressLRS TX Module Booted...");
+    DBGLN("ExpressLRS TX Module Booted...");
 
     //HARD CODE TO R1
     // config.SetVtxBand(5);

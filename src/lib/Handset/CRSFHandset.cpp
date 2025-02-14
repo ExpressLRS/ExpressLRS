@@ -62,7 +62,7 @@ static const int UARTwdtInterval = 1000;
 
 void CRSFHandset::Begin()
 {
-    //DBGLN("About to start CRSF task...");
+    DBGLN("About to start CRSF task...");
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
@@ -94,7 +94,7 @@ void CRSFHandset::Begin()
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
 #elif defined(PLATFORM_STM32)
-    //DBGLN("Start STM32 R9M TX CRSF UART");
+    DBGLN("Start STM32 R9M TX CRSF UART");
     halfDuplex = true;
 
     CRSFHandset::Port.setTx(GPIO_PIN_RCSIGNAL_TX);
@@ -120,7 +120,7 @@ void CRSFHandset::Begin()
     USART2->CR2 |= USART_CR2_RXINV | USART_CR2_TXINV; //inverted
     USART2->CR1 |= USART_CR1_UE;
 #endif
-    //DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
+    DBGLN("STM32 CRSF UART LISTEN TASK STARTED");
     CRSFHandset::Port.flush();
     flush_port_input();
 #endif
@@ -138,7 +138,7 @@ void CRSFHandset::End()
         }
     }
     //CRSFHandset::Port.end(); // don't call serial.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
-    //DBGLN("CRSF UART END");
+    DBGLN("CRSF UART END");
 }
 
 void CRSFHandset::flush_port_input()
@@ -236,7 +236,7 @@ void ICACHE_RAM_ATTR CRSFHandset::JustSentRFpacket()
         OpenTXsyncWindow = 0;
         OpenTXsyncLastSent -= OpenTXsyncPacketInterval;
 #ifdef DEBUG_OPENTX_SYNC
-        //DBGLN("Missed packet, forced resync (%d)!", delta);
+        DBGLN("Missed packet, forced resync (%d)!", delta);
 #endif
     }
     else
@@ -256,7 +256,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
         int32_t packetRate = RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = OpenTXsyncOffset - OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
 #ifdef DEBUG_OPENTX_SYNC
-        //DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
+        DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
 #endif
 
         struct otxSyncData {
@@ -366,7 +366,7 @@ bool CRSFHandset::ProcessPacket()
     if (!controllerConnected)
     {
         controllerConnected = true;
-        //DBGLN("CRSF UART Connected");
+        DBGLN("CRSF UART Connected");
         if (connected) connected();
     }
 
@@ -482,10 +482,10 @@ void CRSFHandset::handleInput()
     {
         onTXSerialBind(&SerialInBuffer[3]);
     }
-    if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
-    {
-        onVTXConfig(&SerialInBuffer[3]);
-    }
+    // if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
+    // {
+    //     onVTXConfig(&SerialInBuffer[3]);
+    // }
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
         GoodPktsCount++;
@@ -500,7 +500,7 @@ void CRSFHandset::handleInput()
     }
     else
     {
-        //DBGLN("UART CRC failure");
+        DBGLN("UART CRC failure");
         BadPktsCount++;
     }
 
@@ -657,7 +657,7 @@ void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
     maxPeriodBytes = std::min((int)(UARTrequestedBaud / 10 / (1000000/RequestedRCpacketInterval) * 87 / 100), HANDSET_TELEMETRY_FIFO_SIZE);
     // Maximum number of bytes we can send in a single window, half the period bytes, upto one full CRSF packet.
     maxPacketBytes = std::min(maxPeriodBytes - max(maxPeriodBytes / 2, LUA_CHUNK_QUERY_SIZE), CRSF_MAX_PACKET_LEN);
-    //DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
+    DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
 #if defined(PLATFORM_ESP32_S3)
@@ -697,7 +697,7 @@ uint32_t CRSFHandset::autobaud()
     REG_CLR_BIT(UART_CONF0_REG(0), UART_AUTOBAUD_EN); // disable autobaud
     REG_CLR_BIT(UART_RX_FILT_REG(0), UART_GLITCH_FILT_EN); // disable glitch filtering
 
-    //DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
     // According to the tecnnical reference
     const int32_t calulatedBaud = UART_CLK_FREQ / (low_period + high_period + 2);
     int32_t bestBaud = TxToHandsetBauds[0];
@@ -740,7 +740,7 @@ uint32_t CRSFHandset::autobaud()
     auto high_period = (int32_t)REG_READ(UART_HIGHPULSE_REG(0));
     REG_CLR_BIT(UART_AUTOBAUD_REG(0), UART_AUTOBAUD_EN);   // disable autobaud
 
-    //DBGLN("autobaud: low %d, high %d", low_period, high_period);
+    DBGLN("autobaud: low %d, high %d", low_period, high_period);
     // sample code at https://github.com/espressif/esp-idf/issues/3336
     // says baud rate = 80000000/min(UART_LOWPULSE_REG, UART_HIGHPULSE_REG);
     // Based on testing use max and add 2 for lowest deviation
@@ -774,11 +774,11 @@ bool CRSFHandset::UARTwdt()
         // uploaded, it will cause tons of serial errors during the flash writes
         if ((connectionState != wifiUpdate) && (BadPktsCount >= GoodPktsCount || !controllerConnected))
         {
-            //DBGLN("Too many bad UART RX packets!");
+            DBGLN("Too many bad UART RX packets!");
 
             if (controllerConnected)
             {
-                //DBGLN("CRSF UART Disconnected");
+                DBGLN("CRSF UART Disconnected");
                 if (disconnected) disconnected();
                 controllerConnected = false;
             }
@@ -786,7 +786,7 @@ bool CRSFHandset::UARTwdt()
             UARTrequestedBaud = autobaud();
             if (UARTrequestedBaud != 0)
             {
-                //DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
+                DBGLN("UART WDT: Switch to: %d baud", UARTrequestedBaud);
 
                 adjustMaxPacketSize();
 
@@ -821,7 +821,7 @@ bool CRSFHandset::UARTwdt()
 #ifdef DEBUG_OPENTX_SYNC
         if (abs((int)((1000000 / (ExpressLRS_currAirRate_Modparams->interval * ExpressLRS_currAirRate_Modparams->numOfSends)) - (int)GoodPktsCount)) > 1)
 #endif
-            //DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
+            DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
         if (retval)
