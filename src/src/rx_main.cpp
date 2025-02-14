@@ -580,7 +580,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
 
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, transmittingRadio);
 
     if (transmittingRadio == SX12XX_Radio_NONE)
     {

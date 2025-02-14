@@ -582,7 +582,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
     
@@ -627,21 +627,17 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, uint8_t size, SX12XX_Rad
         }
     }
 
+    uint8_t outBuffer[PayloadLength+3] = {0};
     if (useFEC)
     {
-        uint8_t FECBuffer[PayloadLength] = {0};
-        FECEncode(data, FECBuffer);
-
-        // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, FECBuffer, PayloadLength, radioNumber);
+        FECEncode(data, outBuffer);
     }
     else
     {
-        // 3.7.4 WriteBuffer8
-        hal.WriteCommand(LR11XX_REGMEM_WRITE_BUFFER8_OC, data, size, radioNumber);
+        memcpy(outBuffer, data, PayloadLength);
     }
-
-    SetMode(LR1121_MODE_TX, radioNumber);
+    // experimental WriteBuffer8_SetTx
+    hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, PayloadLength+3, radioNumber);
 
 #ifdef DEBUG_LLCC68_OTA_TIMING
     beginTX = micros();
