@@ -94,7 +94,7 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
         DBGLN("check not in BL mode");
         uint8_t packet[5];
         readRegister(lr1121UpdateState->updatingRadio, LR11XX_SYSTEM_GET_VERSION_OC, packet, 5);
-        uploadError = (packet[2] != 3);
+        uploadError = (packet[2] != 3 && packet[2] != 0xE1);
         DBGLN("hardware %x", packet[1]);
         DBGLN("type %x", packet[2]);
         DBGLN("firmware %x", ( ( uint16_t )packet[3] << 8 ) + ( uint16_t )packet[4]);
