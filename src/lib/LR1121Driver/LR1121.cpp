@@ -647,7 +647,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, SX12XX_Radio_Number_t ra
 inline void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
 {
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    const int8_t rssi = -(int8_t)(buf[useFEC ? 3 : 5] / 2);
+    const int8_t rssi = -(int8_t)(buf[useFSK ? 3 : 5] / 2);
 
     // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
     // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
