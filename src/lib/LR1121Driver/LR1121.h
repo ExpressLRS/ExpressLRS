@@ -85,6 +85,9 @@ private:
     static void IsrCallback_1();
     static void IsrCallback_2();
     static void IsrCallback(SX12XX_Radio_Number_t radioNumber);
+
+    void DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf);
+
     bool RXnbISR(SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
     void CommitOutputPower();

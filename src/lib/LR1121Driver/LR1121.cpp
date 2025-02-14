@@ -644,6 +644,22 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, SX12XX_Radio_Number_t ra
 #endif
 }
 
+inline void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
+{
+    // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
+    const int8_t rssi = -(int8_t)(buf[useFEC ? 3 : 5] / 2);
+
+    // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
+    // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
+    // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
+
+    // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
+    radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
+
+    // Update whatever SNRs we have
+    LastPacketSNRRaw = useFSK ? 0 : (int8_t)buf[4];
+}
+
 bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 {
     // GetPacket
@@ -659,20 +675,7 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     {
         memcpy(RXdataBuffer, buf + 6, PayloadLength);
     }
-
-    // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    const int8_t rssi = -(int8_t)(buf[useFEC ? 3 : 5] / 2);
-
-    // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
-    // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
-    // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
-
-    // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
-    radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
-
-    // Update whatever SNRs we have
-    LastPacketSNRRaw = useFSK ? 0 : (int8_t)buf[4];
-
+    DecodeRssiSnr(radioNumber, buf);
     return RXdoneCallback(SX12XX_RX_OK);
 }
 
@@ -697,22 +700,22 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
-    static constexpr SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    const uint8_t secondRadioIdx = instance->processingPacketRadio == SX12XX_Radio_1 ? 1 : 0;
+    const SX12XX_Radio_Number_t radioNumber = instance->processingPacketRadio == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
-    // processingRadio always passed the sanity check here
-    bool isSecondRadioGotData = false;
-    int8_t thisSNR = 0;
+    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
+    instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        const uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
+        const uint32_t secondIrqStatus = instance->GetIrqStatus(radioNumber);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
+            bool isSecondRadioGotData = false;
+
             // GetPacket
             uint8_t buf[PayloadLength+6] = {0};
-            hal.WriteCommand(LR11XX_RADIO_GET_PACKET, radio[secondRadioIdx]);
-            hal.ReadCommand(buf, sizeof(buf), radio[secondRadioIdx]);
+            hal.WriteCommand(LR11XX_RADIO_GET_PACKET, radioNumber);
+            hal.ReadCommand(buf, sizeof(buf), radioNumber);
 
             if (useFEC)
             {
@@ -733,17 +736,16 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
                 }
             }
 
-            // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-            const int8_t rssi = -(int8_t)(buf[useFEC ? 3 : 5] / 2);
+            const int8_t firstSNR = LastPacketSNRRaw;
+            DecodeRssiSnr(radioNumber, buf);
 
-            // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
-            // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
-            // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
-
-            // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
-            secondRadioIdx == 0 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
-
-            thisSNR = useFSK ? 0 : (int8_t)buf[4];
+            // when both radio got the packet, use the better RSSI one
+            if(isSecondRadioGotData)
+            {
+                LastPacketSNRRaw = instance->fuzzy_snr(LastPacketSNRRaw, firstSNR, instance->FuzzySNRThreshold);
+                // Update the last successful packet radio to be the one with better signal strength
+                instance->lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+            }
         }
 
         #if defined(DEBUG_RCVR_SIGNAL_STATS)
@@ -752,17 +754,6 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             instance->rxSignalStats[secondRadioIdx].fail_count++;
         }
         #endif
-    }
-
-    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
-    instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
-
-    // when both radio got the packet, use the better RSSI one
-    if(isSecondRadioGotData)
-    {
-        LastPacketSNRRaw = instance->fuzzy_snr(LastPacketSNRRaw, thisSNR, instance->FuzzySNRThreshold);
-        // Update the last successful packet radio to be the one with better signal strength
-        instance->lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
     }
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
