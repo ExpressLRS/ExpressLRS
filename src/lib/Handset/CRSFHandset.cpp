@@ -478,10 +478,10 @@ void CRSFHandset::handleInput()
 
     uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
     const crsf_ext_header_t *header = (crsf_ext_header_t *)SerialInBuffer;
-    if (header->type == CRSF_FRAMETYPE_TX_BIND)
-    {
-        onTXSerialBind(&SerialInBuffer[3]);
-    }
+    // if (header->type == CRSF_FRAMETYPE_TX_BIND)
+    // {
+    //     onTXSerialBind(&SerialInBuffer[3]);
+    // }
     // if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
     // {
     //     onVTXConfig(&SerialInBuffer[3]);
