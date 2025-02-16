@@ -102,6 +102,10 @@
 							<input id='is-airport' name='is-airport' type='checkbox'/>
 							<label for="is-airport">Use as AirPort Serial device</label>
 						</div>
+						<div class="mui-checkbox">
+							<input id='dji-permanently-armed' name='dji-permanently-armed' type='checkbox'/>
+							<label for="dji-permanently-armed">Permanently arm DJI air units</label>
+						</div>
 @@end
 						<button id='submit-options' class="mui-btn mui-btn--primary" disabled>Save</button>
 						<div id="reset-options" style="display: none;">
@@ -255,6 +259,7 @@
 									<option value='6'>HoTT Telemetry</option>
 									<option value='7'>MAVLINK</option>
 									<option value='8'>DisplayPort</option>
+									<option value='9'>GPS</option>
 								</select>
 								<label for='serial-protocol'>Serial Protocol</label>
 							</div>
@@ -273,6 +278,7 @@
 									<option value='8'>Tramp</option>
 									<option value='9'>SmartAudio</option>
 									<option value='10'>DisplayPort</option>
+									<option value='11'>GPS</option>
 								</select>
 								<label for='serial1-protocol'>Serial2 Protocol</label>
 							</div>

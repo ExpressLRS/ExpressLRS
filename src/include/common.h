@@ -2,6 +2,7 @@
 
 #ifndef UNIT_TEST
 #include "targets.h"
+#include <device.h>
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
@@ -242,6 +243,7 @@ enum eSerialProtocol : uint8_t
     PROTOCOL_HOTT_TLM,
     PROTOCOL_MAVLINK,
     PROTOCOL_MSP_DISPLAYPORT,
+    PROTOCOL_GPS
 };
 
 #if defined(PLATFORM_ESP32)
@@ -258,6 +260,7 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_TRAMP,
     PROTOCOL_SERIAL1_SMARTAUDIO,
     PROTOCOL_SERIAL1_MSP_DISPLAYPORT,
+    PROTOCOL_SERIAL1_GPS
 };
 #endif
 
@@ -325,10 +328,17 @@ extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
 extern bool InBindingMode;
 extern uint8_t ExpressLRS_currTlmDenom;
-extern connectionState_e connectionState;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
+
+extern connectionState_e connectionState;
+#if !defined(UNIT_TEST)
+inline void setConnectionState(connectionState_e newState) {
+    connectionState = newState;
+    devicesTriggerEvent(EVENT_CONNECTION_CHANGED);
+}
+#endif
 
 uint32_t uidMacSeedGet();
 bool isDualRadio();
@@ -337,5 +347,5 @@ void EnterBindingModeSafely(); // defined in rx_main/tx_main
 #if defined(RADIO_LR1121)
 bool isSupportedRFRate(uint8_t index);
 #else
-inline bool isSupportedRFRate(uint8_t index) { return true; };
+inline bool isSupportedRFRate(uint8_t index) { return true; }
 #endif

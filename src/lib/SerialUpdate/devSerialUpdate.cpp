@@ -13,9 +13,10 @@ extern void stub_handle_rx_byte(char byte);
 
 static bool running = false;
 
-static void initialize()
+static bool initialize()
 {
     running = true;
+    return true;
 }
 
 static int event()
@@ -30,16 +31,11 @@ static int event()
         Radio.End();
         return DURATION_IMMEDIATELY;
     }
-    return DURATION_IGNORE;
+    return DURATION_NEVER;
 }
 
 static int timeout()
 {
-    if (connectionState != serialUpdate)
-    {
-        return DURATION_NEVER;
-    }
-
     start_esp_upload();
     while (true)
     {
@@ -56,6 +52,7 @@ device_t SerialUpdate_device = {
     .initialize = initialize,
     .start = nullptr,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED
 };
 #endif

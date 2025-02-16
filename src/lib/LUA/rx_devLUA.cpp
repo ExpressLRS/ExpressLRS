@@ -19,7 +19,7 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort",
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS",
     STR_EMPTYSPACE
 };
 
@@ -27,7 +27,7 @@ static struct luaItem_selection luaSerialProtocol = {
 static struct luaItem_selection luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort",
+    "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS",
     STR_EMPTYSPACE
 };
 #endif
@@ -355,8 +355,11 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
         pwmModes[lastPos] = '\0';
     }
 
-    // Trigger an event to update the related fields to represent the selected channel
-    devicesTriggerEvent();
+    // update the related fields to represent the selected channel
+    const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
 }
 
 static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
@@ -660,7 +663,8 @@ device_t LUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout
+  .timeout = timeout,
+  .subscribe = EVENT_ALL
 };
 
 #endif
