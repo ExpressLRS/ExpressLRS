@@ -114,7 +114,7 @@ void setWifiUpdateMode()
   // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
   // Need to change this before the mode change event so the LED is updated
   InBindingMode = false;
-  connectionState = wifiUpdate;
+  setConnectionState(wifiUpdate);
   lastWifiActivityTime = millis();
 }
 
