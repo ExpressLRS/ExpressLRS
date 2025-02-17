@@ -1,4 +1,4 @@
-#if defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
 
 #include "devServoOutput.h"
 #include "PWM.h"

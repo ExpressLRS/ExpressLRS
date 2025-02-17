@@ -1,4 +1,4 @@
-#if defined(GPIO_PIN_PWM_OUTPUTS) && defined(PLATFORM_ESP32)
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 //
 // Name:		DShotRMT.h
 // Created: 	20.03.2021 00:49:15

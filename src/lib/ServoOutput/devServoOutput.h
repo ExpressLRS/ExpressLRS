@@ -1,5 +1,5 @@
 #pragma once
-#if defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
 
 #include "device.h"
 #include "common.h"
