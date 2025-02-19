@@ -46,6 +46,7 @@ public:
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
 
+    void StartRssiInst(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
 

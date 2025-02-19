@@ -710,10 +710,14 @@ bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
 }
 
 // 7.2.8 GetRssiInst
+void ICACHE_RAM_ATTR LR1121Driver::StartRssiInst(SX12XX_Radio_Number_t radioNumber)
+{
+    hal.WriteCommand(LR11XX_RADIO_GET_RSSI_INST_OC, radioNumber);
+}
+
 int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t status[2] = {0};
-    hal.WriteCommand(LR11XX_RADIO_GET_RSSI_INST_OC, radioNumber);
     hal.ReadCommand(status, sizeof(status), radioNumber);
     return -(int8_t)(status[1] / 2);
 }
