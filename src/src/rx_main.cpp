@@ -349,8 +349,6 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
     expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(index);
 
-    EnableLBT();
-
     // Binding always uses invertIQ
     bool invertIQ = bindMode || (UID[5] & 0x01);
 
@@ -403,6 +401,8 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_currAirRate_RFperfParams = RFperf;
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
+
+    EnableLBT();
 }
 
 bool ICACHE_RAM_ATTR HandleFHSS()

@@ -16,11 +16,9 @@ static uint32_t validRSSIdelayUs = 0;
 
 void EnableLBT()
 {
-#if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121)
     LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
-#endif
 #endif
 }
 
@@ -188,7 +186,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   // But for now, FHSShops and telemetry rates does not divide evenly, so telemetry will some times happen
   // right after FHSS and we need wait here.
 
-  uint32_t elapsed = micros() - rxStartTime;
+  const uint32_t elapsed = micros() - rxStartTime;
   if(elapsed < validRSSIdelayUs)
   {
     delayMicroseconds(validRSSIdelayUs - elapsed);
@@ -197,10 +195,10 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   int8_t rssiInst1 = 0;
   int8_t rssiInst2 = 0;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
-  int8_t rssiCutOff = PowerEnumToLBTLimit((PowerLevels_e)POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
+  const int8_t rssiCutOff = PowerEnumToLBTLimit(POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
 
 #if defined(RADIO_LR1121)
-  Radio.StartRssiInst(radioNumber);
+  Radio.StartRssiInst(SX12XX_Radio_All);
 #endif
   if (radioNumber & SX12XX_Radio_1)
   {
@@ -221,7 +219,10 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   }
 
   // Useful to debug if and how long the rssi wait is, and rssi threshold rssiCutOff
-  // DBGLN("wait: %d, cutoff: %d, rssi: %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask ? "clear" : "in use");
+  if (clearChannelsMask != radioNumber)
+  {
+    DBGLN("wait: %d, cutoff: %d, rssi: %d %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask, clearChannelsMask ? "clear" : "in use");
+  }
 
   if(clearChannelsMask)
   {
