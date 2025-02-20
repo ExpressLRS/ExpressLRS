@@ -15,12 +15,7 @@ extern device_t ServoOut_device;
 
 
 extern bool updatePWM;
-extern uint8_t pwmPin;
-extern uint8_t pwmCmd;
-extern uint8_t pwmOutputChannel;
-extern uint8_t pwmInputChannel;
-extern uint8_t pwmType;
-extern uint16_t pwmValue; 
+extern rx_pwm_config_in pwmInput;
 
 // Notify this unit that new channel data has arrived
 void servoNewChannelsAvailable();

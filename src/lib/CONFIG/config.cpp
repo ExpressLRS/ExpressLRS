@@ -748,6 +748,8 @@ void RxConfig::Load()
     UpgradeEepromV6();
     UpgradeEepromV7V8();
     m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
+    // TODO: implement an upgrade function instead of resetting to defaults
+    UpgradeEepromV9();
     m_modified = true;
     Commit();
 }
@@ -898,15 +900,6 @@ void RxConfig::UpgradeEepromV7V8()
         m_config.modelId = v7Config.modelId;
         m_config.serialProtocol = v7Config.serialProtocol;
         m_config.failsafeMode = v7Config.failsafeMode;
-
-#if defined(GPIO_PIN_PWM_OUTPUTS)
-        for (unsigned ch=0; ch<16; ++ch)
-        {
-            m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
-            if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
-                m_config.pwmChannels[ch].val.mode += 1;
-        }
-#endif
     }
 }
 
@@ -934,6 +927,11 @@ void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
         // No bind
         memset(m_config.uid, 0, UID_LEN);
     }
+}
+
+void RxConfig::UpgradeEepromV9()
+{
+    SetDefaults(true);
 }
 
 bool RxConfig::GetIsBound() const
@@ -1101,6 +1099,7 @@ RxConfig::SetDefaults(bool commit)
 #endif
 
     m_config.teamraceChannel = AUX7; // CH11
+    m_config.teamracePosition = 0;
 
 #if defined(RCVR_INVERT_TX)
     m_config.serialProtocol = PROTOCOL_INVERTED_CRSF;
@@ -1138,24 +1137,28 @@ RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inv
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
     newConfig.val.narrow = narrow;
-    if (pwm->raw == newConfig.raw)
+    if (pwm->raw.raw[0] == newConfig.raw.raw[0] && pwm->raw.raw[1] == newConfig.raw.raw[1] && pwm->raw.raw[2] == newConfig.raw.raw[2])
         return;
 
-    pwm->raw = newConfig.raw;
+    pwm->raw.raw[0] = newConfig.raw.raw[0];
+    pwm->raw.raw[1] = newConfig.raw.raw[1];
+    pwm->raw.raw[2] = newConfig.raw.raw[2];
     m_modified = true;
 }
 
 void
-RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
+RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t *raw)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    if (pwm->raw == raw)
-        return;
+    // if (pwm->raw.raw[0] == raw[0] && pwm->raw.raw[1] == raw[1] && pwm->raw.raw[2] == raw[2])
+        // return;
 
-    pwm->raw = raw;
+    pwm->raw.raw[0] = raw[0];
+    pwm->raw.raw[1] = raw[1];
+    pwm->raw.raw[2] = raw[2];
     m_modified = true;
 }
 #endif

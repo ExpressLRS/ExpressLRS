@@ -386,7 +386,7 @@ static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t a
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
   newPwmCh.val.inputChannel = arg - 1; // convert 1-16 -> 0-15
 
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+  config.SetPwmChannelRaw(ch, newPwmCh.raw.raw);
 }
 
 static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode)
@@ -410,7 +410,7 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
         siblingPinConfig.val.mode = som50Hz;
       }
 
-      config.SetPwmChannelRaw(ch, siblingPinConfig.raw);
+      config.SetPwmChannelRaw(ch, siblingPinConfig.raw.raw);
       break;
     }
   }
@@ -441,7 +441,7 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   {
     configureSerialPin(1, oldMode, newPwmCh.val.mode);
   }
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+  config.SetPwmChannelRaw(ch, newPwmCh.raw.raw);
 }
 
 static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t arg)
@@ -452,7 +452,7 @@ static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t ar
   newPwmCh.raw = config.GetPwmChannel(ch)->raw;
   newPwmCh.val.inverted = arg;
 
-  config.SetPwmChannelRaw(ch, newPwmCh.raw);
+  config.SetPwmChannelRaw(ch, newPwmCh.raw.raw);
 }
 
 static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
@@ -478,7 +478,7 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
       newPwmCh.raw = config.GetPwmChannel(ch)->raw;
       newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
       //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+988U);
-      config.SetPwmChannelRaw(ch, newPwmCh.raw);
+      config.SetPwmChannelRaw(ch, newPwmCh.raw.raw);
     }
   }
   else

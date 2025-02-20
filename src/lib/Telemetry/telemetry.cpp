@@ -302,19 +302,7 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
         if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_CH)
         {
             callUpdatePWM = true;
-            pwmPin = package[4]-1;
-            pwmCmd = package[3];
-            pwmOutputChannel = package[4]-1;      
-            pwmInputChannel = package[5]-1;
-            return true;
-        }
-        if (header->type == CRSF_FRAMETYPE_COMMAND && package[3] == PWMCmd::SET_PWM_VAL)
-        {
-            callUpdatePWM = true;
-            pwmCmd = package[3];
-            pwmInputChannel = package[4]-1; 
-            pwmType = package[5];
-            pwmValue = package[6] << 8 | package[7];
+            pwmInput = *((rx_pwm_config_in *) &package[4]);
             return true;
         }
     }

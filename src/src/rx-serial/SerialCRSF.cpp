@@ -19,12 +19,7 @@ extern void UpdateModelMatch(uint8_t model);
 extern device_t ServoOut_device;
 
 bool updatePWM = false;
-uint8_t pwmPin{0};
-uint8_t pwmCmd{0};
-uint8_t pwmOutputChannel{0};
-uint8_t pwmInputChannel{0};
-uint8_t pwmType{0}; 
-uint16_t pwmValue{0};
+rx_pwm_config_in pwmInput = {0};
 #endif // Servo output
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
@@ -176,15 +171,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
             DBGLN("Received Update PWM command");
 #ifdef GPIO_PIN_PWM_OUTPUTS
             updatePWM = true;
-            pwmPin = telemetry.GetPwmPin();
-            pwmCmd = telemetry.GetPwmCmd();
-            pwmOutputChannel = telemetry.GetPwmChannel();
-            pwmInputChannel = telemetry.GetPwmInputChannel();
-            pwmType = telemetry.GetPwmType();
-            pwmValue = telemetry.GetPwmValue();
-            DBGLN("Pwm Pin: %u\tPwm Cmd: %u", pwmPin, pwmCmd);
-            DBGLN("Input Ch: %u\tOutput Ch: %u", pwmInputChannel, pwmOutputChannel);
-            DBGLN("Pwm Type: %c\tPwm Val: %u", pwmType, pwmValue);
+            pwmInput = telemetry.GetPwmInput();
             ServoOut_device.event();
 #endif // Servo output
         }

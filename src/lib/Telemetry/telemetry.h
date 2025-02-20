@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "crsf_protocol.h"
 #include "CRSF.h"
+#include "config.h"
 
 enum CustomTelemSubTypeID : uint8_t {
     CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
@@ -80,12 +81,7 @@ public:
     bool AppendTelemetryPackage(uint8_t *package);
     bool ShouldCallUpdateUID();
     uint8_t * GetNewUID(){ return newUID;}
-    uint8_t GetPwmCmd(){ return pwmCmd;}
-    uint8_t GetPwmPin(){ return pwmPin;}
-    uint8_t GetPwmType(){ return pwmType;}
-    uint8_t GetPwmChannel(){ return pwmOutputChannel;}
-    uint8_t GetPwmInputChannel(){ return pwmInputChannel;}
-    uint16_t GetPwmValue(){ return pwmValue;}
+    rx_pwm_config_in GetPwmInput(){ return pwmInput;}
 private:
     bool processInternalTelemetryPackage(uint8_t *package);
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
@@ -107,10 +103,5 @@ private:
     bool callUpdateUID;
     bool callUpdatePWM;
     uint8_t modelMatchId;
-    uint8_t pwmCmd;
-    uint8_t pwmPin;
-    uint8_t pwmType;
-    uint8_t pwmOutputChannel;
-    uint16_t pwmInputChannel;
-    uint16_t pwmValue;
+    rx_pwm_config_in pwmInput;
 };

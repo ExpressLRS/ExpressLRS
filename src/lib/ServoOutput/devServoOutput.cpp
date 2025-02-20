@@ -23,6 +23,56 @@ static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
 
 constexpr unsigned SERVO_FAILSAFE_MIN = 886U;
 
+static uint16_t interpolate(uint16_t x, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+{
+    if (x2 == x1) return y1;
+    float ratio = (float)(x - x1) / (float)(x2 - x1);
+    float val   = (float)y1 + ratio * (float)(y2 - y1);
+    return (uint16_t)val;
+}
+
+static uint16_t mapChannelValue(const rx_config_pwm_t *cfg, uint16_t input_crsf)
+{
+    // If map off, return input directly
+    if (cfg->val.mapMode == MAP_OFF) {
+        return CRSF_to_US(input_crsf);
+    }
+
+    // Extract the three input points
+    // Each is stored with a 1-bit shift to save space
+    uint16_t in1 = (cfg->val.mapInVal1 << 1);
+    uint16_t in2 = (cfg->val.mapInVal2 << 1);
+    uint16_t in3 = (cfg->val.mapInVal3 << 1);
+
+    // Extract the three output points
+    uint16_t out1 = (cfg->val.mapOutVal1 << 1);
+    uint16_t out2 = (cfg->val.mapOutVal2 << 1);
+    uint16_t out3 = (cfg->val.mapOutVal3 << 1);
+
+    // Example Step
+    if (cfg->val.mapMode == MAP_STEP) {
+        // If input < in2 => out1
+        // if input < in3 => out2
+        // else => out3
+        if (input_crsf < in2)        return out1;
+        else if (input_crsf < in3)   return out2;
+        else                       return out3;
+    }
+
+    // Otherwise, we assume mapMode == MAP_INTERP => piecewise interpolation
+    // clamp if outside [in1..in3]
+    if (input_crsf <= in1) return out1;
+    if (input_crsf >= in3) return out3;
+
+    // If input_crsf <= in2 => interpolate between (in1,out1) and (in2,out2)
+    if (input_crsf <= in2) {
+        return interpolate(input_crsf, in1, out1, in2, out2);
+    } else {
+        // else interpolate between (in2,out2) and (in3,out3)
+        return interpolate(input_crsf, in2, out2, in3, out3);
+    }
+}
+
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
     newChannelsAvailable = true;
@@ -70,6 +120,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
         pwmChannelValues[ch] = us;
         if ((eServoOutputMode)chConfig->val.mode == somOnOff)
         {
+            pinMode(servoPins[ch], OUTPUT);
             digitalWrite(servoPins[ch], us > 1500);
         }
         else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
@@ -123,21 +174,16 @@ static void servosUpdate(unsigned long now)
                 continue;
             }
 
-            uint16_t us = CRSF_to_US(crsfVal);
+            uint16_t us = mapChannelValue(chConfig, crsfVal);
+            
             // Flip the output around the mid-value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
             {
                 us = 3000U - us;
             }
-            //
-            if (us < 1050U){
-                servoWrite(ch, SERVO_FAILSAFE_MIN);
-            } else if (us > 1500 && us < 1600){
-                servoWrite(ch, 1450);
-            } else {
-                servoWrite(ch, us);
-            }
+
+            servoWrite(ch, us);
         } /* for each servo */
     }     /* if newChannelsAvailable */
 
@@ -243,32 +289,12 @@ static int start()
 static int event()
 {
     // Change pwm value from telemetry command
-    if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_VAL){
-        updatePWM = false;
-
-        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-        {
-            if(pwmInputChannels[ch] == pwmInputChannel)
-            {
-                if (pwmChannels[ch] == -1){
-                    return DURATION_IMMEDIATELY;
-                }
-
-                if (pwmType == 's'){
-                    PWM.setMicroseconds(pwmChannels[ch], pwmValue);
-                }
-                else if (pwmType == 'd'){
-                    PWM.setDuty(pwmChannels[ch], pwmValue);
-                }
-            }
-        }
-    // Change pwm channel from telemetry command
-    } else if (updatePWM && (PWMCmd)pwmCmd == PWMCmd::SET_PWM_CH){
+    if (updatePWM){
         updatePWM = false;
 
         int8_t pin = -1;
 #ifdef M0139
-        switch(pwmPin) {
+        switch(pwmInput.pinIndex) {
             case 0:
                 pin = Ch1;
                 break;
@@ -285,17 +311,30 @@ static int event()
         
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
-            // Skip changing channel if the new channel is the same as the old one
-            if(servoPins[ch] == pin && pwmInputChannels[ch] != pwmInputChannel)
+            if(servoPins[ch] == pin)
             {
-                // TODO: Allow setting the mode and failsafe as well
                 // Release the pin from its old allocation (unnecessary if not changing modes so commented out)
                 //PWM.release(pin);
                 //pwmChannels[ch] = PWM.allocate(pin, 50U);
 
                 // Set the new channel
-                config.SetPwmChannel(ch, 0, pwmInputChannel, false, som50Hz, false);
-                pwmInputChannels[ch] = pwmInputChannel;
+                rx_config_pwm_t newConfig;
+                newConfig.val.failsafe = pwmInput.failsafe;
+                newConfig.val.inputChannel = pwmInput.inputChannel;
+                newConfig.val.inverted = pwmInput.inverted;
+                newConfig.val.mode = pwmInput.mode;
+                newConfig.val.narrow = pwmInput.narrow;
+                newConfig.val.failsafeMode = pwmInput.failsafeMode;
+                newConfig.val.mapMode = pwmInput.mapMode;
+                newConfig.val.mapInVal1 = pwmInput.mapInVal1 >> 1; // (All right shifted by one so the 6 values fit in 64 bits)
+                newConfig.val.mapInVal2 = pwmInput.mapInVal2 >> 1;
+                newConfig.val.mapInVal3 = pwmInput.mapInVal3 >> 1;
+                newConfig.val.mapOutVal1 = pwmInput.mapOutVal1 >> 1;
+                newConfig.val.mapOutVal2 = pwmInput.mapOutVal2 >> 1;
+                newConfig.val.mapOutVal3 = pwmInput.mapOutVal3 >> 1;
+
+                config.SetPwmChannelRaw(ch, newConfig.raw.raw);
+                pwmInputChannels[ch] = pwmInput.inputChannel;
                 break;
             }
         }

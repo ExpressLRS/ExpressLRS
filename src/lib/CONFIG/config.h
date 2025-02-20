@@ -16,7 +16,7 @@
 #define RX_CONFIG_MAGIC     (0b10U << 30)
 
 #define TX_CONFIG_VERSION   7U
-#define RX_CONFIG_VERSION   9U
+#define RX_CONFIG_VERSION   10U
 
 #if defined(TARGET_TX)
 
@@ -197,17 +197,55 @@ typedef enum : uint8_t {
     BINDSTORAGE_RETURNABLE = 2,
 } rx_config_bindstorage_t;
 
+typedef enum : uint8_t {
+    MAP_OFF = 0,        // no mapping - pass CRSF_TO_US
+    MAP_INTERP = 1,      // 3-point linear interpolation
+    MAP_STEP = 2       // step curve
+    // etc.
+};
+
+typedef struct __attribute__((packed)) {
+    uint8_t pinIndex;
+    uint16_t failsafe;
+    uint8_t inputChannel;
+    uint8_t inverted;     // invert channel output
+    uint8_t mode;         // Output mode (eServoOutputMode)
+    uint8_t narrow;       // Narrow output mode (half pulse width)
+    uint8_t failsafeMode; // failsafe output mode (eServoOutputFailsafeMode)
+    uint8_t mapMode;      // uses the mapping values to 
+    uint8_t unused;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+
+    uint16_t mapInVal1; // input value 1 (All these values are right shifted one bit to save space)
+    uint16_t mapInVal2; // input value 1 (Input values should be CRSF)
+    uint16_t mapInVal3; // input value 1
+    uint16_t mapOutVal1; // output value 1 (Output values should be us)
+    uint16_t mapOutVal2; // output value 1
+    uint16_t mapOutVal3; // output value 1
+
+} rx_pwm_config_in;
+
 typedef union {
     struct {
-        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
-                 inputChannel:4, // 0-based input channel
-                 inverted:1,     // invert channel output
-                 mode:4,         // Output mode (eServoOutputMode)
-                 narrow:1,       // Narrow output mode (half pulse width)
-                 failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+        uint32_t  failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+                  inputChannel:4, // 0-based input channel
+                  inverted:1,     // invert channel output
+                  mode:4,         // Output mode (eServoOutputMode)
+                  narrow:1,       // Narrow output mode (half pulse width)
+                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
+                  mapMode:2,      // uses the mapping values to 
+                  unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+
+        uint64_t  mapInVal1:10,   // input value 1 (All these values are right shifted one bit to save space)
+                  mapInVal2:10,   // input value 1 (Input values should be CRSF)
+                  mapInVal3:10,   // input value 1
+                  mapOutVal1:10,  // output value 1 (Output values should be us)
+                  mapOutVal2:10,  // output value 1
+                  mapOutVal3:10,  // output value 1
+                  extra:4;
     } val;
-    uint32_t raw;
+    struct {
+        uint32_t raw[3];
+    } raw;
 } rx_config_pwm_t;
 
 typedef struct __attribute__((packed)) {
@@ -286,7 +324,7 @@ public:
     void SetStorageProvider(ELRS_EEPROM *eeprom);
     #if defined(GPIO_PIN_PWM_OUTPUTS)
     void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
-    void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
+    void SetPwmChannelRaw(uint8_t ch, uint32_t *raw);
     #endif
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
@@ -309,6 +347,7 @@ private:
     void UpgradeEepromV5();
     void UpgradeEepromV6();
     void UpgradeEepromV7V8();
+    void UpgradeEepromV9();
 
     rx_config_t m_config;
     ELRS_EEPROM *m_eeprom;

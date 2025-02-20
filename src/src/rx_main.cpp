@@ -1953,7 +1953,12 @@ void EnterUnbindMode()
 {
     DBGLN("Received Unbind command");
     LostConnection(true);
+#ifdef PARTIAL_UNBIND
     memcpy(UID, config.GetUID(), UID_LEN);
+#else
+    uint8_t new_id[UID_LEN] = {0};
+    memcpy(UID, new_id, UID_LEN);
+#endif
     devicesTriggerEvent();
 }
 
