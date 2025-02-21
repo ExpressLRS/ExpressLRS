@@ -464,9 +464,9 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
     case LR1121_MODE_RX:
         // 7.2.2 SetRx
         tempTimeout = incomingTimeout ? (incomingTimeout * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS) : timeout;
-        buf[0] = timeout >> 16;
-        buf[1] = timeout >> 8;
-        buf[2] = timeout & 0xFF;
+        buf[0] = tempTimeout >> 16;
+        buf[1] = tempTimeout >> 8;
+        buf[2] = tempTimeout & 0xFF;
         hal.WriteCommand(LR11XX_RADIO_SET_RX_OC, buf, 3, radioNumber);
         break;
 
