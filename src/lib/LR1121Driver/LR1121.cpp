@@ -608,11 +608,11 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, SX12XX_Radio_Number_t ra
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_1)
     {
-        instance->rxSignalStats[0].telem_count++;
+        rxSignalStats[0].telem_count++;
     }
     if (radioNumber == SX12XX_Radio_All || radioNumber == SX12XX_Radio_2)
     {
-        instance->rxSignalStats[1].telem_count++;
+        rxSignalStats[1].telem_count++;
     }
 #endif
 
@@ -692,7 +692,7 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     if (!RXdoneCallback(SX12XX_RX_OK))
     {
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-        instance->rxSignalStats[radioNumber == SX12XX_Radio_1 ? 0 : 1].fail_count++;
+        rxSignalStats[radioNumber == SX12XX_Radio_1 ? 0 : 1].fail_count++;
 #endif
         return false;
     }
@@ -724,18 +724,18 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
-    const SX12XX_Radio_Number_t radioNumber = instance->processingPacketRadio == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
+    const SX12XX_Radio_Number_t radioNumber = processingPacketRadio == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
     // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
     lastSuccessfulPacketRadio = processingPacketRadio;
     DecodeRssiSnr(processingPacketRadio, rx_buf);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    instance->irq_count_or++;
+    irq_count_or++;
 #endif
 
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        const uint32_t secondIrqStatus = instance->GetIrqStatus(radioNumber);
+        const uint32_t secondIrqStatus = GetIrqStatus(radioNumber);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
             bool isSecondRadioGotData = false;
@@ -768,15 +768,15 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             {
                 const int8_t firstSNR = LastPacketSNRRaw;
                 DecodeRssiSnr(radioNumber, rx_buf);
-                LastPacketSNRRaw = instance->fuzzy_snr(LastPacketSNRRaw, firstSNR, instance->FuzzySNRThreshold);
+                LastPacketSNRRaw = fuzzy_snr(LastPacketSNRRaw, firstSNR, FuzzySNRThreshold);
                 // Update the last successful packet radio to be the one with better signal strength
-                instance->lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+                lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
-                instance->irq_count_both++;
+                irq_count_both++;
             }
             else
             {
-                instance->rxSignalStats[radioNumber].fail_count++;
+                rxSignalStats[radioNumber].fail_count++;
 #endif
             }
         }
@@ -787,7 +787,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
 {
     if (digitalRead(GPIO_PIN_DIO1))
     {
-        instance->IsrCallback(SX12XX_Radio_1);
+        IsrCallback(SX12XX_Radio_1);
     }
 }
 
@@ -795,7 +795,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 {
     if (digitalRead(GPIO_PIN_DIO1_2))
     {
-        instance->IsrCallback(SX12XX_Radio_2);
+        IsrCallback(SX12XX_Radio_2);
     }
 }
 
@@ -803,7 +803,7 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
 {
     instance->processingPacketRadio = radioNumber;
 
-    uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
+    const uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
