@@ -67,6 +67,8 @@ private:
     lr11xx_RadioOperatingModes_t fallBackMode;
     bool useFEC;
 
+    WORD_ALIGNED_ATTR uint8_t rx_buf[32] = {};
+
     void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
     // LoRa functions
