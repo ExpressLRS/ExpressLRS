@@ -1,3 +1,5 @@
+#if defined(TARGET_RX)
+
 #include "devServoOutput.h"
 #include "PWM.h"
 #include "CRSF.h"
@@ -268,3 +270,5 @@ device_t ServoOut_device = {
     .timeout = timeout,
     .subscribe = EVENT_CONNECTION_CHANGED
 };
+
+#endif
