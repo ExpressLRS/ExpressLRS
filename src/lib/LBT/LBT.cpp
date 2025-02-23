@@ -29,16 +29,16 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, ui
   {
     switch((lr11xx_radio_lora_sf_t)SF)
     {
-      case LR11XX_RADIO_LORA_SF5: return 100;
-      case LR11XX_RADIO_LORA_SF6: return 141;
-      case LR11XX_RADIO_LORA_SF7: return 218;
-      case LR11XX_RADIO_LORA_SF8: return 218;
-      default: return 218;
+      case LR11XX_RADIO_LORA_SF5: return 22;
+      case LR11XX_RADIO_LORA_SF6: return 22;
+      case LR11XX_RADIO_LORA_SF7: return 22;
+      case LR11XX_RADIO_LORA_SF8: return 240;
+      default: return 240;
     }
   }
   if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
   {
-    return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
+    return 20; // 20us settling time (seems fine when testing)
   }
 #elif defined(RADIO_SX128X)
   // The necessary wait time from RX start to valid instant RSSI reading
