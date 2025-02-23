@@ -771,7 +771,6 @@ void ResetPower()
     POWERMGNT::setPower((PowerLevels_e)config.GetPower());
   }
   // TLM interval is set on the next SYNC packet
-  EnableLBT();
 }
 
 static void ChangeRadioParams()
@@ -779,6 +778,7 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
   ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
+  EnableLBT();
 }
 
 void ModelUpdateReq()
