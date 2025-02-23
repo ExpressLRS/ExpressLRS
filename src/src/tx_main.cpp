@@ -58,8 +58,8 @@ char backpackVersion[32] = "";
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
-#define syncSpamAmount 1
-#define syncSpamAmountAfterRateChange 1
+#define syncSpamAmount 3
+#define syncSpamAmountAfterRateChange 10
 volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
@@ -90,6 +90,7 @@ static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
+uint8_t otaSyncBuffer[1];
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -191,20 +192,20 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
-    DBGLN("TLM HW CRC error");
+    ////DBGLN("TLM HW CRC error");
     return false;
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
-    DBGLN("TLM crc error");
+    ////DBGLN("TLM crc error");
     return false;
   }
 
   if (otaPktPtr->std.type != PACKET_TYPE_TLM)
   {
-    DBGLN("TLM type error %d", otaPktPtr->std.type);
+    ////DBGLN("TLM type error %d", otaPktPtr->std.type);
     return false;
   }
 
@@ -215,6 +216,8 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
   CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
+
+  DBGLN("%d",Radio.LastPacketRSSI);
 
   // Full res mode
   if (OtaIsFullRes)
@@ -238,7 +241,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       telemPtr = ota8->tlm_dl.payload;
       dataLen = sizeof(ota8->tlm_dl.payload);
     }
-    DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
+    ////DBGLN("pi=%u len=%u", ota8->tlm_dl.packageIndex, dataLen);
     TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES, telemPtr, dataLen);
   }
   // Std res mode
@@ -273,23 +276,17 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   bool updateTelemDenom = true;
 
-  // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
-  {
-    retVal = TLM_RATIO_1_2;
-  }
-  // If Armed, telemetry is disabled, otherwise use STD
-  else if (ratioConfigured == TLM_RATIO_DISARMED)
-  {
-    if (handset->IsArmed())
-    {
-      retVal = TLM_RATIO_NO_TLM;
-      // Avoid updating ExpressLRS_currTlmDenom until connectionState == disconnected
-      if (connectionState == connected)
-        updateTelemDenom = false;
-    }
-  }
-  else if (ratioConfigured != TLM_RATIO_STD)
+  // else if (ratioConfigured == TLM_RATIO_DISARMED)
+  // {
+  //   if (handset->IsArmed())
+  //   {
+  //     retVal = TLM_RATIO_NO_TLM;
+  //     // Avoid updating ExpressLRS_currTlmDenom until connectionState == disconnected
+  //     if (connectionState == connected)
+  //       updateTelemDenom = false;
+  //   }
+  // }
+  if (ratioConfigured != TLM_RATIO_STD)
   {
     retVal = ratioConfigured;
   }
@@ -360,13 +357,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 
-  DBGLN("set rate %u", index);
+  //DBGLN("set rate %u", index);
   uint32_t interval = ModParams->interval;
 #if defined(DEBUG_FREQ_CORRECTION) && defined(RADIO_SX128X)
   interval = interval * 12 / 10; // increase the packet interval by 20% to allow adding packet header
 #endif
   hwTimer::updateInterval(interval);
-
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
@@ -478,6 +474,7 @@ void injectBackpackPanTiltRollData(uint32_t const now)
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
 {
+  // DBGLN("SENDING RC DATA TO RF!");
   // Do not send a stale channels packet to the RX if one has not been received from the handset
   // *Do* send data if a packet has never been received from handset and the timer is running
   // this is the case when bench testing and TXing without a handset
@@ -607,8 +604,25 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
+    // DBGLN("SENDING TXNB!");
+    // #ifdef SLAVE_TX
+    // if((OtaNonce % 2 == 0) && (((OtaNonce + 1) % 8) != 0)){
+    //   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    // }
+    // #else 
+    // if((OtaNonce % 2 == 1) && (((OtaNonce + 1) % 8) != 0)){
+    //   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    // }
+    // #endif
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+
   }
+}
+
+void ICACHE_RAM_ATTR resetNonceCallback(){
+#ifdef SLAVE_TX
+  OtaNonce = 1;
+#endif
 }
 
 void ICACHE_RAM_ATTR nonceAdvance()
@@ -619,12 +633,20 @@ void ICACHE_RAM_ATTR nonceAdvance()
     ++FHSSptr;
   }
 }
-
 /*
  * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
+
+bool firstTrigger = 1;
 void ICACHE_RAM_ATTR timerCallback()
 {
+#ifndef SLAVE_TX
+if(OtaNonce == 0) {
+  digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
+  delayMicroseconds(20);
+  digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+}
+#endif
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
   if (commitInProgress)
   {
@@ -641,43 +663,27 @@ void ICACHE_RAM_ATTR timerCallback()
   }
 
   // Do not transmit or advance FHSS/Nonce until in disconnected/connected state
-  if (connectionState == awaitingModelId)
-    return;
-
-  // Tx Antenna Diversity
-  if ((OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == 0 || // Swicth with new packet data
-      OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) && // Swicth in the middle of DVDA sends
-      TelemetryRcvPhase == ttrpTransmitting) // Only switch when transmitting.  A diversity rx will send tlm back on the best antenna.  So dont switch away from it.
-  {
-    switchDiversityAntennas();
-  }
+  // if (connectionState == awaitingModelId) {
+  //   return;
+  // }
 
   // Nonce advances on every timer tick
-  if (!InBindingMode)
-    OtaNonce++;
+  //if (!InBindingMode)
+  OtaNonce++;
+  // DBGLN("%d",OtaNonce);
 
   // If HandleTLM has started Receive mode, TLM packet reception should begin shortly
   // Skip transmitting on this slot
   if (TelemetryRcvPhase == ttrpPreReceiveGap)
   {
     TelemetryRcvPhase = ttrpExpectingTelem;
-#if defined(Regulatory_Domain_EU_CE_2400)
-    // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
-    CRSF::LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
-#else
     CRSF::LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
-#endif
     LQCalc.inc();
     return;
   }
-  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet())
-  {
-    // Indicate no telemetry packet received to the DP system
-    DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
-  }
+
 
   TelemetryRcvPhase = ttrpTransmitting;
-
   SendRCdataToRF();
 }
 
@@ -823,7 +829,6 @@ static void CheckConfigChangePending()
     uint32_t pauseCycles = ((EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval) + 1;
     // Pause won't return until paused, and has just passed the tick ISR (but not fired)
     hwTimer::pause(pauseCycles * cycleInterval);
-
     while (busyTransmitting); // wait until no longer transmitting
 
     --pauseCycles; // the last cycle will actually be a transmit
@@ -870,7 +875,7 @@ void onTXSerialBind(uint8_t* newConfigPacket)
 }
 
 void onVTXConfig(uint8_t* newVideoPacket){
-  DBGLN("Got video change to channel: %u", static_cast<uint32_t>(newVideoPacket[0]));
+  //DBGLN("Got video change to channel: %u", static_cast<uint32_t>(newVideoPacket[0]));
   if(newVideoPacket[0]<64){
     config.SetVtxBand(((newVideoPacket[0])/ 8)+1);
     config.SetVtxChannel((newVideoPacket[0] % 8) + 1);
@@ -881,6 +886,7 @@ void onVTXConfig(uint8_t* newVideoPacket){
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
+
   if (LQCalc.currentIsSet())
   {
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
@@ -908,16 +914,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
   {
     HandleFHSS();
     HandlePrepareForTLM();
-#if defined(Regulatory_Domain_EU_CE_2400)
-    if (TelemetryRcvPhase != ttrpPreReceiveGap)
-    {
-      // Start RX for Listen Before Talk early because it takes about 100us
-      // from RX enable to valid instant RSSI values are returned.
-      // If rx was already started by TLM prepare above, this call will let RX
-      // continue as normal.
-      SetClearChannelAssessmentTime();
-    }
-#endif // non-CE
   }
   busyTransmitting = false;
 }
@@ -939,7 +935,7 @@ static void UpdateConnectDisconnectStatus()
     {
       connectionState = connected;
       CRSFHandset::ForwardDevicePings = true;
-      DBGLN("got downlink conn");
+      //DBGLN("got downlink conn");
 
       apInputBuffer.flush();
       apOutputBuffer.flush();
@@ -984,7 +980,7 @@ void OnPowerGetCalibration(mspPacket_t *packet)
   UNUSED(index);
   int8_t values[PWR_COUNT] = {0};
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power get calibration value %d",  values[index]);
+  //DBGLN("power get calibration value %d",  values[index]);
 }
 
 void OnPowerSetCalibration(mspPacket_t *packet)
@@ -994,7 +990,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
 
   if((index < 0) || (index > PWR_COUNT))
   {
-    DBGLN("calibration error index %d out of range", index);
+    //DBGLN("calibration error index %d out of range", index);
     return;
   }
   hwTimer::stop();
@@ -1004,7 +1000,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   POWERMGNT::GetPowerCaliValues(values, PWR_COUNT);
   values[index] = value;
   POWERMGNT::SetPowerCaliValues(values, PWR_COUNT);
-  DBGLN("power calibration done %d, %d", index, value);
+  //DBGLN("power calibration done %d, %d", index, value);
   hwTimer::resume();
 }
 #endif
@@ -1041,8 +1037,7 @@ static void EnterBindingMode()
 
   // Start transmitting again
   hwTimer::resume();
-
-  DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+  //DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
 }
 
 static void ExitBindingMode()
@@ -1058,7 +1053,7 @@ static void ExitBindingMode()
 
   SetRFLinkRate(config.GetRate()); //return to original rate
 
-  DBGLN("Exiting binding mode");
+  //DBGLN("Exiting binding mode");
 }
 
 void EnterBindingModeSafely()
@@ -1425,7 +1420,7 @@ static void setupBindingFromConfig()
     }
 
 
-    // DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+    // //DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
     //     UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
@@ -1457,7 +1452,7 @@ void setup()
     devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
     // Initialise the devices
     devicesInit();
-    DBGLN("Initialised devices");
+    ////DBGLN("Initialised devices");
 
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
@@ -1468,7 +1463,7 @@ void setup()
     config.SetDynamicPower(0); // Disable dynamic power by default
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
-    config.SetTlm(TLM_RATIO_1_16);
+    config.SetTlm(TLM_RATIO_1_2);
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
 
     Radio.RXdoneCallback = &RXdoneISR;
@@ -1476,7 +1471,7 @@ void setup()
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
 
-    DBGLN("ExpressLRS TX Module Booted...");
+    ////DBGLN("ExpressLRS TX Module Booted...");
 
     //HARD CODE TO R1
     // config.SetVtxBand(5);
@@ -1517,6 +1512,13 @@ void setup()
   #if defined(Regulatory_Domain_EU_CE_2400)
       SetClearChannelAssessmentTime();
   #endif
+#ifndef SLAVE_TX
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT, OUTPUT);
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+#else
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
+      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), resetNonceCallback, RISING);
+#endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
     }
@@ -1590,18 +1592,20 @@ void loop()
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if ((!handset->IsArmed()) &&
+  if (
       (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
     CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
     handset->sendTelemetryToTX(linkStatisticsFrame);
+
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }
 
   if (TelemetryReceiver.HasFinishedData())
   {
+     
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
@@ -1620,8 +1624,9 @@ void loop()
       }
       else
       {
-        // Send all other tlm to handset
+        // Send all other tlm to handset 
         handset->sendTelemetryToTX(CRSFinBuffer);
+      
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       TelemetryReceiver.Unlock();

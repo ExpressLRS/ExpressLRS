@@ -2,7 +2,8 @@
     #define DEVICE_NAME "NEROS ELRS TX"
 #endif
 
-//
+// #define SLAVE_TX
+
 // #define STM32_USE_FLASH
 //#define USE_I2C
 // #define TARGET_USE_EEPROM               1
@@ -27,11 +28,13 @@
 #define GPIO_PIN_RCSIGNAL_TX            PB10 // not yet confirmed
 #define GPIO_PIN_LED_RED                PA11 // Red LED
 #define GPIO_PIN_LED_GREEN              PA12 // Green LED
-#define GPIO_PIN_BUTTON                 PA8 // pullup e.g. LOW when pressed
-#define GPIO_PIN_BUZZER                 PB1
-#define GPIO_PIN_DIP1                   PA12 // dip switch 1
-#define GPIO_PIN_DIP2                   PA11 // dip switch 2
-#define GPIO_PIN_FAN_EN                 PB9 // Fan mod https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover
+//#define GPIO_PIN_BUTTON                 PA8 // pullup e.g. LOW when pressed
+#define GPIO_PIN_SLAVE_INTERRUPT        PA8
+// #define GPIO_PIN_TXD                    PA3
+// #define GPIO_PIN_RXD                    PA4
+//#define GPIO_PIN_DIP1                   PA12 // dip switch 1
+//#define GPIO_PIN_DIP2                   PA11 // dip switch 2
+//#define GPIO_PIN_FAN_EN                 PB9 // Fan mod https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover
 
 #define GPIO_PIN_DEBUG_RX               PA10 // confirmed
 #define GPIO_PIN_DEBUG_TX               PA9 // confirmed
@@ -40,6 +43,7 @@
 #define GPIO_PIN_BUFFER_OE              PA5  //CONFIRMED
 #define GPIO_PIN_BUFFER_OE_INVERTED     0
 #define GPIO_PIN_DIO1                   PA1  //Not Needed, HEARTBEAT pin
+
 
 // Power Output
 #define POWER_OUTPUT_DAC2               0b0001101

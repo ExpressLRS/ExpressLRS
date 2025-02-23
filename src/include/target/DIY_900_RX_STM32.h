@@ -3,6 +3,7 @@
 #endif
 
 #define TARGET_DIY_900_RX_STM32
+#define SLAVE_TX
 
 //#define USE_SX1276_RFO_HF false // disable PA Boost.
 
@@ -26,6 +27,9 @@
 
 #define GPIO_PIN_DEBUG_RX    PB11 // USART3
 #define GPIO_PIN_DEBUG_TX    PB10 // USART3
+#define GPIO_PIN_DEBUG_TX    PB10
+
+#define GPIO_PIN_TOCK_EXTI PB1
 
 #define GPIO_PIN_LED_GREEN   PC13
 #define GPIO_LED_GREEN_INVERTED 0

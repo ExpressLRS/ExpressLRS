@@ -338,7 +338,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
     //CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
     CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
-    //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
+    ////DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
     CRSF::LinkStatistics.downlink_RSSI_1 = debug1;
     CRSF::LinkStatistics.downlink_Link_quality = debug2;
@@ -608,7 +608,7 @@ int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
             tempFC--; // FREQ_STEP units
             if (tempFC == FreqCorrectionMin)
             {
-                DBGLN("Max -FreqCorrection reached!");
+                //DBGLN("Max -FreqCorrection reached!");
             }
         }
     }
@@ -619,7 +619,7 @@ int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
             tempFC++; // FREQ_STEP units
             if (tempFC == FreqCorrectionMax)
             {
-                DBGLN("Max +FreqCorrection reached!");
+                //DBGLN("Max +FreqCorrection reached!");
             }
         }
     }
@@ -844,7 +844,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
 
 void LostConnection(bool resumeRx)
 {
-    DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
+    //DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
     // Use this rate as the initial rate next time if we connected on it
     if (connectionState == connected)
@@ -886,7 +886,7 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     connectionState = tentative;
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
-    DBGLN("tentative conn");
+    //DBGLN("tentative conn");
     PfdPrevRawOffset = 0;
     LPF_Offset.init(0);
     SnrMean.reset();
@@ -918,7 +918,7 @@ void GotConnection(unsigned long now)
         apOutputBuffer.flush();
     }
 
-    DBGLN("got conn");
+    //DBGLN("got conn");
 }
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPktPtr)
@@ -965,7 +965,7 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
         UID[i + 2] = newUid4[i];
     }
 
-    DBGLN("New UID = %u, %u, %u, %u, %u, %u", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
+    //DBGLN("New UID = %u, %u, %u, %u, %u, %u", UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
 
     // Set new UID in eeprom
     // EEPROM commit will happen on the main thread in ExitBindingMode()
@@ -1085,7 +1085,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     uint8_t TlmDenom = TLMratioEnumToValue(TLMrateIn);
     if (ExpressLRS_currTlmDenom != TlmDenom)
     {
-        DBGLN("New TLMrate 1:%u", TlmDenom);
+        //DBGLN("New TLMrate 1:%u", TlmDenom);
         ExpressLRS_currTlmDenom = TlmDenom;
         telemBurstValid = false;
     }
@@ -1100,7 +1100,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         || FHSSgetCurrIndex() != otaSync->fhssIndex
         || connectionHasModelMatch != modelMatched)
     {
-        DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
+        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
         FHSSsetCurrIndex(otaSync->fhssIndex);
         OtaNonce = otaSync->nonce;
         TentativeConnection(now);
@@ -1225,7 +1225,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
 void UpdateModelMatch(uint8_t model)
 {
-    DBGLN("Set ModelId=%u", model);
+    //DBGLN("Set ModelId=%u", model);
     config.SetModelId(model);
 }
 
@@ -1656,7 +1656,7 @@ void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
     bool anyChange = false;
     uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
     uint8_t tempNumChannels;
-    DBGLN("Binding over Serial UART called successfully");
+    //DBGLN("Binding over Serial UART called successfully");
     bool uidChange = false;
     for (unsigned i = 0; i < 6; i++)
     {
@@ -1713,7 +1713,7 @@ static void setupRadio()
     POWERMGNT::init();
     if (!init_success)
     {
-        DBGLN("Failed to detect RF chipset!!!");
+        //DBGLN("Failed to detect RF chipset!!!");
         connectionState = radioFailed;
         return;
     }
@@ -1775,7 +1775,7 @@ static void setupBindingFromConfig()
     //   memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);
     // }
 
-    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+    //DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
@@ -1813,7 +1813,7 @@ static void cycleRfMode(unsigned long now)
         // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
-        DBGLN("Cycling RF mode:%u", ExpressLRS_currAirRate_Modparams->interval);
+        //DBGLN("Cycling RF mode:%u", ExpressLRS_currAirRate_Modparams->interval);
 
         // Switch to FAST_SYNC if not already in it (won't be if was just connected)
         RFmodeCycleMultiplier = 1;
@@ -1824,7 +1824,7 @@ static void EnterBindingMode()
 {
     if (InBindingMode)
     {
-        DBGLN("Already in binding mode");
+        //DBGLN("Already in binding mode");
         return;
     }
 
@@ -1843,7 +1843,7 @@ static void EnterBindingMode()
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
 
-    DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
+    //DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
     devicesTriggerEvent();
 }
 
@@ -1851,7 +1851,7 @@ static void ExitBindingMode()
 {
     if (!InBindingMode)
     {
-        DBGLN("Not in binding mode");
+        //DBGLN("Not in binding mode");
         return;
     }
 
@@ -1878,7 +1878,7 @@ static void ExitBindingMode()
     // Do this last as LostConnection() will wait for a tock that never comes
     // if we're in binding mode
     InBindingMode = false;
-    DBGLN("Exiting binding mode");
+    //DBGLN("Exiting binding mode");
     devicesTriggerEvent();
 }
 
@@ -1915,20 +1915,20 @@ static void updateBindingMode(unsigned long now)
         // Never enter wifi if forced to binding mode
         webserverPreventAutoStart = true;
 #endif
-        DBGLN("Power on counter >=3, enter binding mode");
+        //DBGLN("Power on counter >=3, enter binding mode");
         //EnterBindingMode();
     }
 
     // If the eeprom is indicating that we're not bound, enter binding
     else if (!UID_IS_BOUND(UID) && !InBindingMode)
     {
-        DBGLN("RX has not been bound, enter binding mode");
+        //DBGLN("RX has not been bound, enter binding mode");
         EnterBindingMode();
     }
 
     else if (BindingModeRequest)
     {
-        DBGLN("Connected request to enter binding mode");
+        //DBGLN("Connected request to enter binding mode");
         BindingModeRequest = false;
         if (connectionState == connected)
         {
@@ -1938,7 +1938,7 @@ static void updateBindingMode(unsigned long now)
             // sitting in a field ready to be bound to anyone within 10km
             if (config.IsOnLoan())
             {
-                DBGLN("Model was on loan, becoming inert");
+                //DBGLN("Model was on loan, becoming inert");
                 config.ReturnLoan();
                 config.Commit(); // prevents CheckConfigChangePending() re-enabling radio
                 Radio.End();
@@ -2062,11 +2062,11 @@ static void debugRcvrSignalStats(uint32_t now)
         }
         if (isDualRadio())
         {
-            DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
+            //DBGLN("%d\t%d", Radio.irq_count_or, Radio.irq_count_both);
         }
         else
         {
-            DBGLN("");
+            //DBGLN("");
         }
         Radio.irq_count_or = 0;
         Radio.irq_count_both = 0;
@@ -2212,7 +2212,7 @@ void setup()
         if (connectionState != radioFailed)
         {
             // RFnoiseFloor = MeasureNoiseFloor(); //TODO move MeasureNoiseFloor to driver libs
-            // DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
+            // //DBGLN("RF noise floor: %d dBm", RFnoiseFloor);
 
             MspReceiver.SetDataToReceive(MspData, ELRS_MSP_BUFFER);
             Radio.RXnb();
@@ -2272,7 +2272,7 @@ void loop()
     }
 
     if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)){ // forced change
-        DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
+        //DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
@@ -2282,7 +2282,7 @@ void loop()
 
     if (connectionState == tentative && (now - LastSyncPacket > ExpressLRS_currAirRate_RFperfParams->RxLockTimeoutMs))
     {
-        DBGLN("Bad sync, aborting");
+        //DBGLN("Bad sync, aborting");
         LostConnection(true);
         RFmodeLastCycled = now;
         LastSyncPacket = now;
@@ -2306,7 +2306,7 @@ void loop()
     if ((RXtimerState == tim_tentative) && ((now - GotConnectionMillis) > ConsiderConnGoodMillis) && (abs(LPF_OffsetDx.value()) <= 5))
     {
         RXtimerState = tim_locked;
-        DBGLN("Timer locked");
+        //DBGLN("Timer locked");
     }
 
     uint8_t *nextPayload = 0;
@@ -2365,7 +2365,7 @@ void reset_into_bootloader(void)
     SERIAL_PROTOCOL_TX.flush();
 #if defined(PLATFORM_STM32)
     delay(100);
-    DBGLN("Jumping to Bootloader...");
+    //DBGLN("Jumping to Bootloader...");
     delay(100);
 
     /** Write command for firmware update.

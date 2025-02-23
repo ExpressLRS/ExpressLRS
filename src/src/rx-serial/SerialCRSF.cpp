@@ -132,22 +132,22 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
 
         if (telemetry.ShouldCallBootloader())
         {
-            DBGLN("Entering bootloader");
+            //DBGLN("Entering bootloader");
             reset_into_bootloader();
         }
         if (telemetry.ShouldCallEnterBind())
         {
-            DBGLN("Entering bind");
+            //DBGLN("Entering bind");
             EnterBindingModeSafely();
         }
         if (telemetry.ShouldCallUpdateModelMatch())
         {
-            DBGLN("Entering model match");
+            //DBGLN("Entering model match");
             UpdateModelMatch(telemetry.GetUpdatedModelMatch());
         }
         if (telemetry.ShouldSendDeviceFrame())
         {
-            DBGLN("Entering should send device frame");
+            //DBGLN("Entering should send device frame");
             uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
             CRSF::GetDeviceInformation(deviceInformation, 0);
             CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
