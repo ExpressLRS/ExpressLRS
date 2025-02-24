@@ -3,7 +3,7 @@
 #endif
 
 #define TARGET_DIY_900_RX_STM32
-#define SLAVE_TX
+// #define SLAVE_TX
 
 //#define USE_SX1276_RFO_HF false // disable PA Boost.
 

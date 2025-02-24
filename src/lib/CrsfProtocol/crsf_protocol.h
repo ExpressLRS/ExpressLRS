@@ -413,6 +413,10 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t uid[6];
     uint8_t bind_phrase[16];
     uint8_t vtx_channel;
+    uint8_t connected;
+    int32_t lastTXnb;
+    int32_t lastRXnb;
+    uint8_t otaNonce;
 } PACKED crsfLinkStatistics_t;
 #endif
 

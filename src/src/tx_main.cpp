@@ -31,6 +31,7 @@
 #endif
 
 //// CONSTANTS ////
+#define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -91,6 +92,11 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 uint8_t otaSyncBuffer[1];
+
+int32_t firstSyncNonce = micros();
+uint8_t maxSyncs = 4;
+uint8_t syncsSent = 0;
+
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -407,6 +413,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
+  CRSF::LinkStatistics.connected = 0;
   rfModeLastChangedMS = millis();
 }
 
@@ -426,6 +433,8 @@ void ICACHE_RAM_ATTR HandlePrepareForTLM()
   // If TLM enabled and next packet is going to be telemetry, start listening to have a large receive window (time-wise)
   if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0)
   {
+    CRSF::LinkStatistics.lastRXnb = ((int32_t)(micros()-firstSyncNonce));
+    // DBGLN("%d", CRSF::LinkStatistics.lastRXnb);
     Radio.RXnb();
     TelemetryRcvPhase = ttrpPreReceiveGap;
   }
@@ -604,16 +613,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
-    // DBGLN("SENDING TXNB!");
-    // #ifdef SLAVE_TX
-    // if((OtaNonce % 2 == 0) && (((OtaNonce + 1) % 8) != 0)){
-    //   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-    // }
-    // #else 
-    // if((OtaNonce % 2 == 1) && (((OtaNonce + 1) % 8) != 0)){
-    //   Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-    // }
-    // #endif
+    CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
   }
@@ -621,7 +621,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
 #ifdef SLAVE_TX
+ syncsSent+=1;
+ if(syncsSent<=maxSyncs){
   OtaNonce = 1;
+  firstSyncNonce = micros();
+ }
 #endif
 }
 
@@ -642,9 +646,12 @@ void ICACHE_RAM_ATTR timerCallback()
 {
 #ifndef SLAVE_TX
 if(OtaNonce == 0) {
+  syncsSent+=1;
+  if(syncsSent<=maxSyncs){
+  firstSyncNonce = micros();
   digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
-  delayMicroseconds(20);
   digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+  }
 }
 #endif
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
@@ -663,12 +670,13 @@ if(OtaNonce == 0) {
   }
 
   // Do not transmit or advance FHSS/Nonce until in disconnected/connected state
-  // if (connectionState == awaitingModelId) {
-  //   return;
-  // }
+  if (connectionState == awaitingModelId) {
+    return;
+  }
 
   // Nonce advances on every timer tick
   //if (!InBindingMode)
+  CRSF::LinkStatistics.otaNonce = OtaNonce;
   OtaNonce++;
   // DBGLN("%d",OtaNonce);
 
@@ -765,6 +773,7 @@ void ModelUpdateReq()
   if (connectionState == awaitingModelId)
   {
     connectionState = disconnected;
+    CRSF::LinkStatistics.connected = 0;
   }
 }
 bool bigChange = false;
@@ -862,15 +871,20 @@ void SetSyncSpam()
 
 void onTXSerialBind(uint8_t* newConfigPacket)
 {
-    if(newConfigPacket[0]!=0){
-    memcpy(tempUID, newConfigPacket, UID_LEN);
-    config.SetUID(newConfigPacket);
-    bigChange=true;
+    if(handset->IsArmed()){
+      return;
     }
-    if(newConfigPacket[UID_LEN]!=0){
-    memcpy(tempBindPhrase, newConfigPacket+UID_LEN, PHRASE_LEN);
-    config.SetBindPhrase(newConfigPacket+UID_LEN);
-    bigChange=true;
+    else {
+      if(newConfigPacket[0]!=0){
+      memcpy(tempUID, newConfigPacket, UID_LEN);
+      config.SetUID(newConfigPacket);
+      bigChange=true;
+      }
+      if(newConfigPacket[UID_LEN]!=0){
+      memcpy(tempBindPhrase, newConfigPacket+UID_LEN, PHRASE_LEN);
+      config.SetBindPhrase(newConfigPacket+UID_LEN);
+      bigChange=true;
+      }
     }
 }
 
@@ -934,6 +948,7 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       connectionState = connected;
+      CRSF::LinkStatistics.connected = 1;
       CRSFHandset::ForwardDevicePings = true;
       //DBGLN("got downlink conn");
 
@@ -949,6 +964,7 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
+    CRSF::LinkStatistics.connected = 0;
     connectionHasModelMatch = true;
     CRSFHandset::ForwardDevicePings = false;
   }

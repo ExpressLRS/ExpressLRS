@@ -384,6 +384,15 @@ bool CRSFHandset::ProcessPacket()
         RcPacketToChannelsData();
         packetReceived = true;
     }
+    else if (packetType == CRSF_FRAMETYPE_TX_BIND)
+    {
+        packetReceived = true;
+        onTXSerialBind(&SerialInBuffer[3]);
+    }
+    // else if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
+    // {
+    //     onVTXConfig(&SerialInBuffer[3]);
+    // }
     // check for all extended frames that are a broadcast or a message to the FC
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
             (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
@@ -483,14 +492,6 @@ void CRSFHandset::handleInput()
 
     uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
     const crsf_ext_header_t *header = (crsf_ext_header_t *)SerialInBuffer;
-    // if (header->type == CRSF_FRAMETYPE_TX_BIND)
-    // {
-    //     onTXSerialBind(&SerialInBuffer[3]);
-    // }
-    // if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
-    // {
-    //     onVTXConfig(&SerialInBuffer[3]);
-    // }
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
         GoodPktsCount++;
