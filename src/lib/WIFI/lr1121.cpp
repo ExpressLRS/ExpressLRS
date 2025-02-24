@@ -36,11 +36,11 @@ static void writeLR1121Bytes(uint8_t *data, uint32_t data_size) {
     uint32_t write_size = lr1121UpdateState->left_over;
     if (data != nullptr)
     {
-        DBGLN("new %x", data_size);
+        DBGLN("left %d, new %d", lr1121UpdateState->left_over, data_size);
         memcpy(lr1121UpdateState->packet.buffer + lr1121UpdateState->left_over, data, data_size);
         write_size += data_size;
     }
-    DBGLN("flashing %x at %x", write_size, lr1121UpdateState->totalSize);
+    DBGLN("flashing %d at %x", write_size, lr1121UpdateState->totalSize);
 
     // Have to do this the OLD way, so we can pump out more than 64 bytes in one message
     digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, LOW);
@@ -72,7 +72,8 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     // Complete upload and set error flag
     bool uploadError = false;
     writeLR1121Bytes(nullptr, 0);
-    lr1121UpdateState->totalSize += lr1121UpdateState->left_over;
+
+    DBGLN("finished expected %d, total %d, current %d", lr1121UpdateState->expectedFilesize, lr1121UpdateState->totalSize, lr1121UpdateState->currentSize);
 
     SPIEx.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
@@ -107,9 +108,9 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     } else {
         StreamString p = StreamString();
         if (lr1121UpdateState->totalSize != lr1121UpdateState->expectedFilesize) {
-            p.println("Not enough data uploaded!");
+            p.print("Not enough data uploaded!");
         } else {
-            p.println("Update failed, refresh and try again.");
+            p.print("Update failed, refresh and try again.");
         }
         DBGLN("Failed to upload firmware: %s", p.c_str());
         msg = String(R"({"status": "error", "msg": ")") + p + R"("})";
@@ -131,6 +132,7 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         lr1121UpdateState->updatingRadio = request->header("X-Radio").toInt();
         DBGLN("Update: '%s' size %u on radio %d", filename.c_str(), lr1121UpdateState->expectedFilesize, lr1121UpdateState->updatingRadio);
         lr1121UpdateState->totalSize = 0;
+        lr1121UpdateState->left_over = 0;
 
         // Reboot to BL mode
         DBGLN("Reboot 1121 to bootloader mode");
@@ -176,7 +178,7 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
         digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
     }
     if (len) {
-        DBGLN("writing %x", len);
+        DBGLN("got %d", len);
         // Write len bytes to LR1121 from data
         while (len >= 256 - lr1121UpdateState->left_over)
         {
@@ -185,8 +187,9 @@ static void WebUploadLR1121DataHandler(AsyncWebServerRequest *request, const Str
             len -= chunk_size;
             data += chunk_size;
         }
-        memcpy(lr1121UpdateState->packet.buffer, data, len);
-        lr1121UpdateState->left_over = len;
+        memcpy(lr1121UpdateState->packet.buffer + lr1121UpdateState->left_over, data, len);
+        lr1121UpdateState->left_over += len;
+        DBGLN("left-over %d", lr1121UpdateState->left_over);
     }
 }
 
