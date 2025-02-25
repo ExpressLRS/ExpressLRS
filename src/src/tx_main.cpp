@@ -94,7 +94,7 @@ uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 uint8_t otaSyncBuffer[1];
 
 int32_t firstSyncNonce = micros();
-uint8_t maxSyncs = 4;
+uint8_t maxSyncs = 2;
 uint8_t syncsSent = 0;
 
 
@@ -697,6 +697,7 @@ if(OtaNonce == 0) {
 
 static void UARTdisconnected()
 {
+  syncsSent=0;
   hwTimer::stop();
   connectionState = noCrossfire;
 }
@@ -718,6 +719,7 @@ static void UARTconnected()
     connectionState = awaitingModelId;
   }
   // But start the timer to get OpenTX sync going and a ModelID update sent
+  syncsSent=0;
   hwTimer::resume();
 }
 
@@ -1234,9 +1236,9 @@ static void HandleUARTin()
 
 static void setupSerial()
 { 
-  Serial.setRx(GPIO_PIN_DEBUG_RX);
-  Serial.setTx(GPIO_PIN_DEBUG_TX);
-  Serial.begin(115200); // Same baud as CRSF for simplicity
+  // Serial.setRx(GPIO_PIN_DEBUG_RX);
+  // Serial.setTx(GPIO_PIN_DEBUG_TX);
+  // Serial.begin(115200); // Same baud as CRSF for simplicity
   TxUSB = new NullStream();
   Stream *serialPort = new NullStream();
   TxBackpack = serialPort;
