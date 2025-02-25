@@ -73,7 +73,7 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request) {
     bool uploadError = false;
     writeLR1121Bytes(nullptr, 0);
 
-    DBGLN("finished expected %d, total %d, current %d", lr1121UpdateState->expectedFilesize, lr1121UpdateState->totalSize, lr1121UpdateState->currentSize);
+    DBGLN("finished expected %d, total %d", lr1121UpdateState->expectedFilesize, lr1121UpdateState->totalSize);
 
     SPIEx.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
