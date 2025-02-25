@@ -1481,7 +1481,7 @@ void setup()
     config.SetDynamicPower(0); // Disable dynamic power by default
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
-    config.SetTlm(TLM_RATIO_1_2);
+    config.SetTlm(TLM_RATIO_1_8);
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
 
     Radio.RXdoneCallback = &RXdoneISR;
