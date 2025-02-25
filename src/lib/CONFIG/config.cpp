@@ -726,6 +726,15 @@ void RxConfig::Load()
        version = m_config.version & ~CONFIG_MAGIC_MASK;
     DBGLN("Config version %u", version);
 
+#ifdef NO_TEAMRACE
+    // Turn off teamrace
+    m_config.teamraceChannel = AUX7; // CH11
+    m_config.teamracePosition = 0;
+
+    m_modified = true;
+    Commit();
+#endif
+
     // If version is current, all done
     if (version == RX_CONFIG_VERSION)
     {
@@ -747,9 +756,9 @@ void RxConfig::Load()
     UpgradeEepromV5();
     UpgradeEepromV6();
     UpgradeEepromV7V8();
-    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     // TODO: implement an upgrade function instead of resetting to defaults
-    UpgradeEepromV9();
+    SetDefaults(false);
+    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
     m_modified = true;
     Commit();
 }
