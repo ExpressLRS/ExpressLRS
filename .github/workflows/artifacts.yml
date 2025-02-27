@@ -1,4 +1,7 @@
-name: Cleanup stale artifacts
+run-name: 
+defaults:
+  run:
+    shell: name: Cleanup stale artifacts
 on:
   schedule:
     - cron: "30 2 * * *"
