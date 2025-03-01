@@ -198,7 +198,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   const int8_t rssiCutOff = PowerEnumToLBTLimit(POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
 
 #if defined(RADIO_LR1121)
-  Radio.StartRssiInst(SX12XX_Radio_All);
+  Radio.StartRssiInst(radioNumber);
 #endif
   if (radioNumber & SX12XX_Radio_1)
   {
