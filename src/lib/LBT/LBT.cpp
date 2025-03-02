@@ -14,14 +14,6 @@ static uint32_t rxStartTime;
 static bool LBTEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 
-void EnableLBT()
-{
-    LBTEnabled = config.GetPower() > PWR_10mW;
-#if defined(RADIO_LR1121)
-    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
-#endif
-}
-
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_LR1121)
@@ -76,6 +68,15 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, ui
 #endif
   ERRLN("LBT not support on this radio type");
   return 0;
+}
+
+void EnableLBT()
+{
+    LBTEnabled = config.GetPower() > PWR_10mW;
+#if defined(RADIO_LR1121)
+    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
+#endif
+    validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
 
 static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t radio_type)
@@ -146,18 +147,17 @@ void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
   if (!LBTEnabled)
     return;
 
-  rxStartTime = micros();
-  validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
-
 #if defined(TARGET_TX)
 #if defined(RADIO_LR1121)
-  Radio.RXnb(LR1121_MODE_RX, validRSSIdelayUs);  
+  Radio.RXnb(LR1121_MODE_RX, validRSSIdelayUs);
 #elif defined(RADIO_SX128X)
-  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);  
+  Radio.RXnb(SX1280_MODE_RX, validRSSIdelayUs);
 #else
 #error No continuous receive mode defined for this radio type
 #endif
 #endif
+
+  rxStartTime = micros();
 }
 
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
@@ -196,33 +196,34 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   int8_t rssiInst2 = 0;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
   const int8_t rssiCutOff = PowerEnumToLBTLimit(POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
-
-#if defined(RADIO_LR1121)
-  Radio.StartRssiInst(radioNumber);
-#endif
-  if (radioNumber & SX12XX_Radio_1)
-  {
-    rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
-    if(rssiInst1 < rssiCutOff)
-    {
-      clearChannelsMask |= SX12XX_Radio_1;
-    }
-  }
-
-  if (radioNumber & SX12XX_Radio_2)
-  {
-    rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
-    if(rssiInst2 < rssiCutOff)
-    {
-      clearChannelsMask |= SX12XX_Radio_2;
-    }
-  }
+//
+// #if defined(RADIO_LR1121)
+//   Radio.StartRssiInst(radioNumber);
+// #endif
+//   if (radioNumber & SX12XX_Radio_1)
+//   {
+//     rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
+//     if(rssiInst1 < rssiCutOff)
+//     {
+//       clearChannelsMask |= SX12XX_Radio_1;
+//     }
+//   }
+//
+//   if (radioNumber & SX12XX_Radio_2)
+//   {
+//     rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
+//     if(rssiInst2 < rssiCutOff)
+//     {
+//       clearChannelsMask |= SX12XX_Radio_2;
+//     }
+//   }
+    clearChannelsMask = radioNumber;
 
   // Useful to debug if and how long the rssi wait is, and rssi threshold rssiCutOff
-  if (clearChannelsMask != radioNumber)
-  {
-    DBGLN("wait: %d, cutoff: %d, rssi: %d %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask, clearChannelsMask ? "clear" : "in use");
-  }
+  // if (clearChannelsMask != radioNumber)
+  // {
+  //   DBGLN("wait: %d, cutoff: %d, rssi: %d %d %d, %s", validRSSIdelayUs - elapsed, rssiCutOff, rssiInst1, rssiInst2, clearChannelsMask, clearChannelsMask ? "clear" : "in use");
+  // }
 
   if(clearChannelsMask)
   {
