@@ -93,6 +93,6 @@ private:
 };
 
 extern void onTXSerialBind(uint8_t* newConfigPacket);
-extern void onVTXConfig(uint8_t* newVideoPacket);
+extern void onMastTXSync(uint8_t* newSyncPacket);
 
 #endif

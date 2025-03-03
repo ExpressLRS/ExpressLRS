@@ -73,6 +73,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_BIND = 0x0C,
     CRSF_FRAMETYPE_TX_BIND = 0x0D,
     CRSF_FRAMETYPE_VTX_CONFIG = 0x30,
+    CRSF_FRAMETYPE_MAST_FORCE_SYNC = 0x31,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
