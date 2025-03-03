@@ -99,6 +99,7 @@ uint8_t maxSyncs = 2;
 volatile int32_t firstSyncNonce = micros();
 volatile uint8_t syncsSent = 0;
 volatile bool forceSync = false;
+volatile bool forcePhaseOffset = false;
 volatile bool resetNonce = false;
 
 
@@ -417,6 +418,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
+  syncsSent = 0;
   CRSF::LinkStatistics.connected = 0;
   rfModeLastChangedMS = millis();
 }
@@ -638,6 +640,17 @@ void ICACHE_RAM_ATTR nonceAdvance()
     ++FHSSptr;
   }
 }
+
+
+void ICACHE_RAM_ATTR phaseCallback(){
+#ifndef SLAVE_TX
+  if(forcePhaseOffset){
+      forcePhaseOffset = false;
+      hwTimer::phaseShift(-delayTimeMicros);
+  }
+#endif
+}
+
 /*
  * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
@@ -647,6 +660,7 @@ void ICACHE_RAM_ATTR timerCallback()
 #ifndef SLAVE_TX
   if(OtaNonce == 0) {
     if(syncsSent<maxSyncs || forceSync){
+      forceSync = false;
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
       firstSyncNonce = micros();
@@ -778,6 +792,7 @@ void ModelUpdateReq()
   if (connectionState == awaitingModelId)
   {
     connectionState = disconnected;
+    syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
   }
 }
@@ -895,11 +910,16 @@ void onTXSerialBind(uint8_t* newConfigPacket)
 
 
 void onMastTXSync(uint8_t* newSyncPacket){
+  if(!handset->IsArmed()){
+      delayTimeMicros = static_cast<int32_t>((static_cast<uint32_t>(newSyncPacket[1]) << 24) |
+                                        (static_cast<uint32_t>(newSyncPacket[2]) << 16) |
+                                        (static_cast<uint32_t>(newSyncPacket[3]) << 8)  |
+                                        static_cast<uint32_t>(newSyncPacket[4]));
 #ifndef SLAVE_TX
-if(!handset->IsArmed()){
-  forceSync = true;
-}
+    forceSync = true;
+    forcePhaseOffset = true;
 #endif
+  }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -952,6 +972,7 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       connectionState = connected;
+      syncsSent = 0;
       CRSF::LinkStatistics.connected = 1;
       CRSFHandset::ForwardDevicePings = true;
       //DBGLN("got downlink conn");
@@ -966,6 +987,7 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
+    syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
     connectionHasModelMatch = true;
     CRSFHandset::ForwardDevicePings = false;
@@ -1440,7 +1462,7 @@ void setup()
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
       attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), resetNonceCallback, RISING);
 #endif
-      hwTimer::init(nullptr, timerCallback);
+      hwTimer::init(phaseCallback, timerCallback);
       connectionState = noCrossfire;
     }
   }
