@@ -776,7 +776,7 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             }
             else
             {
-                rxSignalStats[radioNumber].fail_count++;
+                rxSignalStats[radioNumber == SX12XX_Radio_1 ? 0 : 1].fail_count++;
 #endif
             }
         }
