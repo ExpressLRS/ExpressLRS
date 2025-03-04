@@ -628,7 +628,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 void ICACHE_RAM_ATTR resetNonceCallback(){
 #ifdef SLAVE_TX
   forceSync = true;
-  firstSyncNonce = micros();
 #endif
 }
 
@@ -642,15 +641,6 @@ void ICACHE_RAM_ATTR nonceAdvance()
 }
 
 
-void ICACHE_RAM_ATTR phaseCallback(){
-#ifndef SLAVE_TX
-  if(forcePhaseOffset){
-      forcePhaseOffset = false;
-      hwTimer::phaseShift(-delayTimeMicros);
-  }
-#endif
-}
-
 /*
  * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
@@ -658,6 +648,10 @@ void ICACHE_RAM_ATTR phaseCallback(){
 void ICACHE_RAM_ATTR timerCallback()
 {
 #ifndef SLAVE_TX
+  if(forcePhaseOffset){
+    forcePhaseOffset = false;
+    hwTimer::phaseShift(-delayTimeMicros);
+  }
   if(OtaNonce == 0) {
     if(syncsSent<maxSyncs || forceSync){
       forceSync = false;
@@ -671,6 +665,7 @@ void ICACHE_RAM_ATTR timerCallback()
   if(forceSync){
     forceSync = false;
     OtaNonce = 0;
+    firstSyncNonce = micros();
   }
 #endif
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
@@ -917,7 +912,7 @@ void onMastTXSync(uint8_t* newSyncPacket){
                                         static_cast<uint32_t>(newSyncPacket[4]));
 #ifndef SLAVE_TX
     forceSync = true;
-    forcePhaseOffset = true;
+    // forcePhaseOffset = true;
 #endif
   }
 }
@@ -1462,7 +1457,7 @@ void setup()
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
       attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), resetNonceCallback, RISING);
 #endif
-      hwTimer::init(phaseCallback, timerCallback);
+      hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
     }
   }
