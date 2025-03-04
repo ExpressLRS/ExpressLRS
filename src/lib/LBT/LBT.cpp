@@ -196,28 +196,27 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   int8_t rssiInst2 = 0;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
   const int8_t rssiCutOff = PowerEnumToLBTLimit(POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
-//
-// #if defined(RADIO_LR1121)
-//   Radio.StartRssiInst(radioNumber);
-// #endif
-//   if (radioNumber & SX12XX_Radio_1)
-//   {
-//     rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
-//     if(rssiInst1 < rssiCutOff)
-//     {
-//       clearChannelsMask |= SX12XX_Radio_1;
-//     }
-//   }
-//
-//   if (radioNumber & SX12XX_Radio_2)
-//   {
-//     rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
-//     if(rssiInst2 < rssiCutOff)
-//     {
-//       clearChannelsMask |= SX12XX_Radio_2;
-//     }
-//   }
-    clearChannelsMask = radioNumber;
+
+#if defined(RADIO_LR1121)
+  Radio.StartRssiInst(radioNumber);
+#endif
+  if (radioNumber & SX12XX_Radio_1)
+  {
+    rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
+    if(rssiInst1 < rssiCutOff)
+    {
+      clearChannelsMask |= SX12XX_Radio_1;
+    }
+  }
+
+  if (radioNumber & SX12XX_Radio_2)
+  {
+    rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
+    if(rssiInst2 < rssiCutOff)
+    {
+      clearChannelsMask |= SX12XX_Radio_2;
+    }
+  }
 
   // Useful to debug if and how long the rssi wait is, and rssi threshold rssiCutOff
   // if (clearChannelsMask != radioNumber)
