@@ -630,7 +630,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t * data, SX12XX_Radio_Number_t ra
         }
     }
 
-    uint8_t outBuffer[PayloadLength+3] = {0};
+    WORD_ALIGNED_ATTR uint8_t outBuffer[32] = {0};
     if (useFEC)
     {
         FECEncode(data, outBuffer);
