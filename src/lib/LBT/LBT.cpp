@@ -170,7 +170,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   if (!LBTEnabled)
   {
     LBTSuccessCalc.add();
-    return SX12XX_Radio_All;
+    return radioNumber;
   }
 
   // Read rssi after waiting the minimum RSSI valid delay.
