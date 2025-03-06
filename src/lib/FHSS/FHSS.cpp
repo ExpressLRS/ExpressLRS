@@ -167,3 +167,8 @@ bool isDomain868()
 {
     return strcmp(FHSSconfig->domain, "EU868") == 0;
 }
+
+bool isUsingPrimaryFreqBand()
+{
+    return FHSSusePrimaryFreqBand;
+}

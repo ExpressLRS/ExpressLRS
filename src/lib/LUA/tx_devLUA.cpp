@@ -101,9 +101,16 @@ static struct luaItem_selection luaFanThreshold = {
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
-    {"100mW CE LIMIT", CRSF_INFO},
+    {"100mW 2G4 CE LIMIT", CRSF_INFO},
     STR_EMPTYSPACE
 };
+
+#if defined(RADIO_LR1121)
+static struct luaItem_string lua868CELimit = {
+    {"25mW 868 CE LIMIT", CRSF_INFO},
+    STR_EMPTYSPACE
+};
+#endif
 #endif
 
 //----------------------------POWER------------------
@@ -763,6 +770,9 @@ static void registerLuaParameters()
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (HAS_RADIO) {
     registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
+#if defined(RADIO_LR1121)
+    registerLUAParameter(&lua868CELimit, NULL, luaPowerFolder.common.id);
+#endif
   }
 #endif
   if ((HAS_RADIO || OPT_USE_TX_BACKPACK) && !firmwareOptions.is_airport) {
