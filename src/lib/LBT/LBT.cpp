@@ -137,8 +137,8 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -73 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  ERRLN("LBT not support on this radio type");
 #endif
+  ERRLN("LBT not support on this radio type");
   return 0;
 }
 
