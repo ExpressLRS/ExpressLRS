@@ -464,6 +464,11 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
     case LR1121_MODE_RX:
         // 7.2.2 SetRx
         tempTimeout = incomingTimeout ? (incomingTimeout * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS) : timeout;
+
+        // incomingTimeout is below the minimum period so lets set it to 1.
+        if (incomingTimeout && !tempTimeout)
+            tempTimeout = 1;
+            
         buf[0] = tempTimeout >> 16;
         buf[1] = tempTimeout >> 8;
         buf[2] = tempTimeout & 0xFF;
