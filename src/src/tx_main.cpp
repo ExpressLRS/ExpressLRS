@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-#define SLAVE_TX
+// #define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -67,6 +67,9 @@ uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
 
+//INTER TX SYNCING
+volatile int32_t delayTimeMicros = 0;
+
 volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 static bool commitInProgress = false;
@@ -91,11 +94,13 @@ static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
-uint8_t otaSyncBuffer[1];
 
-int32_t firstSyncNonce = micros();
 uint8_t maxSyncs = 2;
-uint8_t syncsSent = 0;
+volatile int32_t firstSyncNonce = micros();
+volatile uint8_t syncsSent = 0;
+volatile bool forceSync = false;
+volatile bool forcePhaseOffset = false;
+volatile bool resetNonce = false;
 
 
 device_affinity_t ui_devices[] = {
@@ -413,6 +418,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
+  syncsSent = 0;
   CRSF::LinkStatistics.connected = 0;
   rfModeLastChangedMS = millis();
 }
@@ -621,11 +627,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
 #ifdef SLAVE_TX
- syncsSent+=1;
- if(syncsSent<=maxSyncs){
-  OtaNonce = 1;
-  firstSyncNonce = micros();
- }
+  forceSync = true;
 #endif
 }
 
@@ -637,22 +639,34 @@ void ICACHE_RAM_ATTR nonceAdvance()
     ++FHSSptr;
   }
 }
+
+
 /*
  * Called as the TOCK timer ISR when there is a CRSF connection from the handset
  */
 
-bool firstTrigger = 1;
 void ICACHE_RAM_ATTR timerCallback()
 {
 #ifndef SLAVE_TX
-if(OtaNonce == 0) {
-  syncsSent+=1;
-  if(syncsSent<=maxSyncs){
-  firstSyncNonce = micros();
-  digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
-  digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+  if(forcePhaseOffset){
+    forcePhaseOffset = false;
+    hwTimer::phaseShift(-delayTimeMicros);
   }
-}
+  if(OtaNonce == 0) {
+    if(syncsSent<maxSyncs || forceSync){
+      forceSync = false;
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+      firstSyncNonce = micros();
+      syncsSent+=1;
+    }
+  }
+#else
+  if(forceSync){
+    forceSync = false;
+    OtaNonce = 0;
+    firstSyncNonce = micros();
+  }
 #endif
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
   if (commitInProgress)
@@ -697,7 +711,6 @@ if(OtaNonce == 0) {
 
 static void UARTdisconnected()
 {
-  syncsSent=0;
   hwTimer::stop();
   connectionState = noCrossfire;
 }
@@ -719,7 +732,6 @@ static void UARTconnected()
     connectionState = awaitingModelId;
   }
   // But start the timer to get OpenTX sync going and a ModelID update sent
-  syncsSent=0;
   hwTimer::resume();
 }
 
@@ -775,6 +787,7 @@ void ModelUpdateReq()
   if (connectionState == awaitingModelId)
   {
     connectionState = disconnected;
+    syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
   }
 }
@@ -890,13 +903,17 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     }
 }
 
-void onVTXConfig(uint8_t* newVideoPacket){
-  //DBGLN("Got video change to channel: %u", static_cast<uint32_t>(newVideoPacket[0]));
-  if(newVideoPacket[0]<64){
-    config.SetVtxBand(((newVideoPacket[0])/ 8)+1);
-    config.SetVtxChannel((newVideoPacket[0] % 8) + 1);
-    CRSF::LinkStatistics.vtx_channel = newVideoPacket[0];
-    //VtxTriggerSend();
+
+void onMastTXSync(uint8_t* newSyncPacket){
+  if(!handset->IsArmed()){
+      delayTimeMicros = static_cast<int32_t>((static_cast<uint32_t>(newSyncPacket[1]) << 24) |
+                                        (static_cast<uint32_t>(newSyncPacket[2]) << 16) |
+                                        (static_cast<uint32_t>(newSyncPacket[3]) << 8)  |
+                                        static_cast<uint32_t>(newSyncPacket[4]));
+#ifndef SLAVE_TX
+    forceSync = true;
+    // forcePhaseOffset = true;
+#endif
   }
 }
 
@@ -950,6 +967,7 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       connectionState = connected;
+      syncsSent = 0;
       CRSF::LinkStatistics.connected = 1;
       CRSFHandset::ForwardDevicePings = true;
       //DBGLN("got downlink conn");
@@ -957,8 +975,6 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
-
-      //VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -966,6 +982,7 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
+    syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
     connectionHasModelMatch = true;
     CRSFHandset::ForwardDevicePings = false;
@@ -1185,18 +1202,6 @@ static void HandleUARTin()
         uartInputBuffer.lock();
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
-        
-
-        // Lets check if the data is Mav and auto change LinkMode
-        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
-        // if (connectionState == noCrossfire)
-        // {
-        //   if (isThisAMavPacket(buf, size))
-        //   {
-        //     config.SetLinkMode(TX_MAVLINK_MODE);
-        //     UARTconnected();
-        //   }
-        // }
       }
     }
   }
@@ -1243,91 +1248,6 @@ static void setupSerial()
   Stream *serialPort = new NullStream();
   TxBackpack = serialPort;
 }
-
-
-// static void setupSerial()
-// {  /*
-//    * Setup the logging/backpack serial port, and the USB serial port.
-//    * This is always done because we need a place to send data even if there is no backpack!
-//    */
-
-// // Setup TxBackpack
-// #if defined(PLATFORM_ESP32)
-//   Stream *serialPort;
-//   if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-//   {
-//     serialPort = new HardwareSerial(2);
-//     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
-//   }
-//   else
-//   {
-//     serialPort = new NullStream();
-//   }
-// #elif defined(PLATFORM_ESP8266)
-//   Stream *serialPort;
-//   if (GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-//   {
-//     serialPort = new HardwareSerial(1);
-//     ((HardwareSerial*)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, SERIAL_TX_ONLY, GPIO_PIN_DEBUG_TX);
-//   }
-//   else
-//   {
-//     serialPort = new NullStream();
-//   }
-// #elif defined(TARGET_TX_FM30)
-//   #if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_CDC)
-//     USBSerial *serialPort = &SerialUSB; // No way to disable creating SerialUSB global, so use it
-//     serialPort->begin();
-//   #else
-//     Stream *serialPort = new NullStream();
-//   #endif
-// #elif (defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN) || (defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
-//   HardwareSerial *serialPort = new HardwareSerial(2);
-//   #if defined(GPIO_PIN_DEBUG_RX) && GPIO_PIN_DEBUG_RX != UNDEF_PIN
-//     serialPort->setRx(GPIO_PIN_DEBUG_RX);
-//   #endif
-//   #if defined(GPIO_PIN_DEBUG_TX) && GPIO_PIN_DEBUG_TX != UNDEF_PIN
-//     serialPort->setTx(GPIO_PIN_DEBUG_TX);
-//   #endif
-//   serialPort->begin(BACKPACK_LOGGING_BAUD);
-// #else
-//   Stream *serialPort = new NullStream();
-// #endif
-//   TxBackpack = serialPort;
-
-// #if defined(PLATFORM_ESP32_S3)
-//   Serial.begin(460800);
-// #endif
-
-// // Setup TxUSB
-// #if defined(PLATFORM_ESP32_S3)
-//   USBSerial.begin(firmwareOptions.uart_baud);
-//   TxUSB = &USBSerial;
-// #elif defined(PLATFORM_ESP32)
-//   if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
-//   {
-//     // The backpack is already assigned on UART0 (pins 3, 1)
-//     // This is also USB on modules that use DIPs
-//     // Set TxUSB to TxBackpack so that data goes to the same place
-//     TxUSB = TxBackpack;
-//   }
-//   else if (GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM)
-//   {
-//     // This is an internal module, or an external module configured with a relay.  Do not setup TxUSB.
-//     TxUSB = new NullStream();
-//   }
-//   else
-//   {
-//     // The backpack is on a separate UART to UART0
-//     // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
-//     TxUSB = new HardwareSerial(1);
-//     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, 3, 1);
-//   }
-// #else
-//   TxUSB = new NullStream();
-// #endif
-// }
-
 /**
  * Target-specific initialization code called early in setup()
  * Setup GPIOs or other hardware, config not yet loaded

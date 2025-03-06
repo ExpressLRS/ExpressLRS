@@ -389,10 +389,12 @@ bool CRSFHandset::ProcessPacket()
         packetReceived = true;
         onTXSerialBind(&SerialInBuffer[3]);
     }
-    // else if (header->type == CRSF_FRAMETYPE_VTX_CONFIG)
-    // {
-    //     onVTXConfig(&SerialInBuffer[3]);
-    // }
+    else if (packetType == CRSF_FRAMETYPE_MAST_FORCE_SYNC)
+    {
+        packetReceived = true;
+        onMastTXSync(&SerialInBuffer[3]);
+    }
+
     // check for all extended frames that are a broadcast or a message to the FC
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
             (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
