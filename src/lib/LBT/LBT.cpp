@@ -74,7 +74,7 @@ void EnableLBT()
 {
     LBTEnabled = config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121)
-    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
+    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_TYPE_LR1121_LORA_900);
 #endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
@@ -202,19 +202,26 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
 #endif
   if (radioNumber & SX12XX_Radio_1)
   {
-    rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
+    // If using dualband, radio1 is always SubGHz and no CCA is required.
+    // Leave rssiInst1=0 so it always passes.
+    if (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_TYPE_LR1121_LORA_DUAL)
+    {
+        rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
+    }
+
     if(rssiInst1 < rssiCutOff)
     {
-      clearChannelsMask |= SX12XX_Radio_1;
+        clearChannelsMask |= SX12XX_Radio_1;
     }
   }
 
   if (radioNumber & SX12XX_Radio_2)
   {
     rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
+    
     if(rssiInst2 < rssiCutOff)
     {
-      clearChannelsMask |= SX12XX_Radio_2;
+        clearChannelsMask |= SX12XX_Radio_2;
     }
   }
 
