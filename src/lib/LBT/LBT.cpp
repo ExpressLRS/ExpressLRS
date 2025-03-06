@@ -17,7 +17,7 @@ static uint32_t validRSSIdelayUs = 0;
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_LR1121)
-  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4)
+  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
   {
     switch((lr11xx_radio_lora_sf_t)SF)
     {
@@ -74,7 +74,7 @@ void EnableLBT()
 {
     LBTEnabled = config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121)
-    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_TYPE_LR1121_LORA_900);
+    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL);
 #endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
@@ -88,7 +88,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
 #if defined(RADIO_LR1121)
-  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4)
+  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
   {
     switch(txPower)
     {
@@ -192,8 +192,8 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
     delayMicroseconds(validRSSIdelayUs - elapsed);
   }
 
-  int8_t rssiInst1 = 0;
-  int8_t rssiInst2 = 0;
+  int8_t rssiInst1 = -128;
+  int8_t rssiInst2 = -128;
   SX12XX_Radio_Number_t clearChannelsMask = SX12XX_Radio_NONE;
   const int8_t rssiCutOff = PowerEnumToLBTLimit(POWERMGNT::currPower(), ExpressLRS_currAirRate_Modparams->radio_type);
 
@@ -203,7 +203,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   if (radioNumber & SX12XX_Radio_1)
   {
     // If using dualband, radio1 is always SubGHz and no CCA is required.
-    // Leave rssiInst1=0 so it always passes.
+    // Leave rssiInst1=-128 so it always passes.
     if (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_TYPE_LR1121_LORA_DUAL)
     {
         rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
