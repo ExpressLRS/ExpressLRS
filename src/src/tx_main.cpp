@@ -912,7 +912,8 @@ void ICACHE_RAM_ATTR TXdoneISR()
     const uint8_t modResult = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     // If TLM enabled and next packet is going to be telemetry, or in LBT mode, start listening to have a large receive window (time-wise)
-    const bool doRx = (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0) || LBTEnabled;
+    const bool nextIsTLM = ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0;
+    const bool doRx = nextIsTLM || LBTEnabled;
 
     // If the next packet should be on the next FHSS frequency, do the hop
     if (!InBindingMode && modResult == 0)
@@ -925,35 +926,35 @@ void ICACHE_RAM_ATTR TXdoneISR()
         if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
         {
           const uint32_t freqRadio = FHSSgetNextFreq();
-          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
-          Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1, doRx);
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx, nextIsTLM ? 0 : getRXWaitTime());
+          Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1, doRx, nextIsTLM ? 0 : getRXWaitTime());
         }
         else
         {
-          Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, doRx);
-          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
+          Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, doRx, nextIsTLM ? 0 : getRXWaitTime());
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx, nextIsTLM ? 0 : getRXWaitTime());
         }
       }
       else
       {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, doRx);
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, doRx, nextIsTLM ? 0 : getRXWaitTime());
       }
-#if defined(Regulatory_Domain_EU_CE_2400)
-      SetClearChannelAssessmentTime();
-#endif // non-CE
     }
     else if (doRx)
     {
-      Radio.RXnb();
-#if defined(Regulatory_Domain_EU_CE_2400)
-      SetClearChannelAssessmentTime();
-#endif // non-CE
+      Radio.RXnb(nextIsTLM ? 0 : getRXWaitTime());
     }
     // If TLM enabled and next packet is going to be telemetry
-    if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0)
+    if (nextIsTLM)
     {
       TelemetryRcvPhase = ttrpPreReceiveGap;
     }
+#if defined(Regulatory_Domain_EU_CE_2400)
+    else if (doRx)
+    {
+      SetClearChannelAssessmentTime();
+    }
+#endif // non-CE
   }
   busyTransmitting = false;
 }

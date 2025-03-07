@@ -529,16 +529,16 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx)
+void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
 {
     uint8_t buf[7] = {
         (uint8_t)(freq >> 24),
         (uint8_t)(freq >> 16),
         (uint8_t)(freq >> 8),
         (uint8_t)(freq),
-        0,
-        0,
-        0
+        (uint8_t)(rxTime >> 16),
+        (uint8_t)(rxTime >> 8),
+        (uint8_t)(rxTime & 0xFF),
     };
     if (doRx)
     {
@@ -554,9 +554,9 @@ void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Nu
     currFreq = freq;
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx)
+void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
 {
-    SetFrequencyHz(freq, radioNumber, doRx);
+    SetFrequencyHz(freq, radioNumber, doRx, rxTime);
 }
 
 // 4.1.1 SetDioIrqParams
@@ -732,9 +732,9 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     return true;
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode, uint32_t incomingTimeout)
+void ICACHE_RAM_ATTR LR1121Driver::RXnb(uint32_t incomingTimeout)
 {
-    SetMode(rxMode, SX12XX_Radio_All, incomingTimeout);
+    SetMode(LR1121_MODE_RX, SX12XX_Radio_All, incomingTimeout);
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
