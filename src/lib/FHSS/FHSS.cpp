@@ -27,7 +27,7 @@ const fhss_config_t domainsDualBand[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
         "CE_LBT",
-    #elif defined(Regulatory_Domain_ISM_2400)
+    #else
         "ISM2G4",
     #endif
     FREQ_HZ_TO_REG_VAL(2400400000), FREQ_HZ_TO_REG_VAL(2479400000), 80, 2440000000}
