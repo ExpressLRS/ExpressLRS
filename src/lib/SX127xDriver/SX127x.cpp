@@ -121,7 +121,8 @@ void SX127xDriver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
   SetPreambleLength(8);
   SetSpreadingFactor(SX127x_SF_9);
   SetBandwidthCodingRate(SX127x_BW_125_00_KHZ, SX127x_CR_4_5);
-  SetFrequencyHz(freq, SX12XX_Radio_All);
+  const int32_t regFreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
+  SetFrequencyReg(regFreq, SX12XX_Radio_All);
   if (freq > 900000000)
   {
     hal.writeRegister(0x01, 0x80, radioNumber);
@@ -325,14 +326,7 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
-{
-  int32_t regfreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
-
-  SetFrequencyReg(regfreq, radioNumber);
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
 {
   currFreq = regfreq;
   SetMode(SX127x_OPMODE_STANDBY, radioNumber);
@@ -490,7 +484,7 @@ bool ICACHE_RAM_ATTR SX127xDriver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
   return RXdoneCallback(SX12XX_RX_OK);
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::RXnb()
+void ICACHE_RAM_ATTR SX127xDriver::RXnb(uint32_t incomingTimeout)
 {
   RFAMP.RXenable();
 
@@ -630,7 +624,7 @@ void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uin
   SetPreambleLength(preambleLen);
   SetSpreadingFactor((SX127x_SpreadingFactor)sf);
   SetBandwidthCodingRate((SX127x_Bandwidth)bw, (SX127x_CodingRate)cr);
-  SetFrequencyReg(freq);
+  SetFrequencyReg(freq, SX12XX_Radio_All);
   SetRxTimeoutUs(rxtimeout);
 }
 

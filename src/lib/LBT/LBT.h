@@ -1,5 +1,5 @@
-#if defined(Regulatory_Domain_EU_CE_2400)
 #pragma once
+#if defined(Regulatory_Domain_EU_CE_2400)
 
 #include "POWERMGNT.h"
 #include "LQCALC.h"
@@ -13,5 +13,5 @@ uint32_t getRXWaitTime();
 SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber);
 #else
 inline void EnableLBT() {}
-uint32_t getRXWaitTime() { return 0; }
+inline uint32_t getRXWaitTime() { return 0; }
 #endif
