@@ -10,6 +10,7 @@
 #include "stubborn_sender.h"
 
 #include "devHandset.h"
+#include "devADC.h"
 #include "devLED.h"
 #include "devScreen.h"
 #include "devBuzzer.h"
@@ -101,6 +102,7 @@ device_affinity_t ui_devices[] = {
   {&RGB_device, 0},
 #endif
   {&LUA_device, 1},
+  {&ADC_device, 1},
 #if defined(USE_TX_BACKPACK)
   {&Backpack_device, 0},
 #endif
@@ -759,8 +761,8 @@ void ResetPower()
 static void ChangeRadioParams()
 {
   ModelUpdatePending = false;
+  ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
-  ResetPower();
 }
 
 void ModelUpdateReq()
@@ -908,8 +910,6 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
-
-      VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected

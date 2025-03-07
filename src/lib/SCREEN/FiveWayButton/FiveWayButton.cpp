@@ -1,5 +1,6 @@
 #ifdef HAS_FIVE_WAY_BUTTON
 #include "FiveWayButton.h"
+#include "devADC.h"
 
 #if defined(GPIO_PIN_JOYSTICK)
 #if !defined(JOY_ADC_VALUES)
@@ -68,7 +69,7 @@ int FiveWayButton::readKey()
 #if defined(GPIO_PIN_JOYSTICK)
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
-        uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
+        const uint16_t value = getADCReading(ADC_JOYSTICK);
 
         constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
             {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};

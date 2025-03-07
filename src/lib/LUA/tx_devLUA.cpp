@@ -46,6 +46,7 @@ static const char switchmodeOpts4chMav[] = ";Hybrid";
 static const char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
 static const char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static const char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
+static const char antennamodeOptsDualBand[] = "Gemini;;;";
 static const char linkModeOpts[] = "Normal;MAVLink";
 static const char luastrDvrAux[] = "Off;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrDvrDelay[] = "0s;5s;15s;30s;45s;1min;2min";
@@ -638,6 +639,8 @@ static void registerLuaParameters()
       uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
       uint8_t newSwitchMode = adjustSwitchModeForAirRate(
         (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
+      // Force Gemini when using dual band modes.
+      uint8_t newAntennaMode = get_elrs_airRateConfig(actualRate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
       // If the switch mode is going to change, block the change while connected
       bool isDisconnected = connectionState == disconnected;
       // Don't allow the switch mode to change if the TX is in mavlink mode
@@ -648,6 +651,7 @@ static void registerLuaParameters()
       {
         config.SetRate(actualRate);
         config.SetSwitchMode(newSwitchMode);
+        config.SetAntennaMode(newAntennaMode);
         if (actualRate != selectedRate)
         {
           setLuaWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
@@ -699,7 +703,9 @@ static void registerLuaParameters()
     if (isDualRadio())
     {
       registerLUAParameter(&luaAntenna, [](struct luaPropertiesCommon *item, uint8_t arg) {
-        config.SetAntennaMode(arg);
+        // Force Gemini when using dual band modes.
+        uint8_t newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : arg;
+        config.SetAntennaMode(newAntennaMode);
       });
     }
     registerLUAParameter(&luaLinkMode, [](struct luaPropertiesCommon *item, uint8_t arg) {
@@ -878,6 +884,8 @@ static int event()
   setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
   luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
 
+  luaAntenna.options = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? antennamodeOptsDualBand : antennamodeOpts;
+
   setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   if (isMavlinkMode)
   {
@@ -907,6 +915,8 @@ static int event()
   setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setLuaUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  // Pit mode can only be sent as part of the power byte
+  LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
   setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
