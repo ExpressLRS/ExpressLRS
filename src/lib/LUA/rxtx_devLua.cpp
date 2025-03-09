@@ -3,9 +3,9 @@
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 #if defined(RADIO_LR1121)
-char strPowerLevels[] = "10-10;25-25*;25-50*;25-100*;25-250;25-500;25-1000;25-2000;MatchTX ";
+char strPowerLevels[] = "10&10;25&25;25&50;25&100;25&250;25&500;25&1000;25&2000;MatchTX ";
 #else
-char strPowerLevels[] = "10;25*;50*;100*;250;500;1000;2000;MatchTX ";
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";

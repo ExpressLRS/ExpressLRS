@@ -5,6 +5,7 @@
 #include "lua.h"
 #include "config.h"
 #include "POWERMGNT.h"
+#include "LBT.h"
 
 // Common functions
 void luadevGeneratePowerOpts(luaItem_selection *luaPower);
