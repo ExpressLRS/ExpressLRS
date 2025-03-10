@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-// #define SLAVE_TX
+#define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -95,13 +95,14 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-uint8_t maxSyncs = 2;
+volatile int32_t currResetTime = micros();
 volatile int32_t firstSyncNonce = micros();
+volatile int32_t callbackSyncTime = micros();
+volatile int32_t lastTimerCallbackTime = micros();
+volatile uint8_t maxSyncs = 4;
 volatile uint8_t syncsSent = 0;
-volatile bool forceSync = false;
-volatile bool forcePhaseOffset = false;
-volatile bool resetNonce = false;
 
+volatile bool forceSync = false;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -619,16 +620,17 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
-    CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
+    // CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
   }
 }
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
-#ifdef SLAVE_TX
-  forceSync = true;
-#endif
+  #ifdef SLAVE_TX
+    forceSync = true;
+    callbackSyncTime = micros();
+  #endif
 }
 
 void ICACHE_RAM_ATTR nonceAdvance()
@@ -647,11 +649,7 @@ void ICACHE_RAM_ATTR nonceAdvance()
 
 void ICACHE_RAM_ATTR timerCallback()
 {
-#ifndef SLAVE_TX
-  if(forcePhaseOffset){
-    forcePhaseOffset = false;
-    hwTimer::phaseShift(-delayTimeMicros);
-  }
+  #ifndef SLAVE_TX
   if(OtaNonce == 0) {
     if(syncsSent<maxSyncs || forceSync){
       forceSync = false;
@@ -662,12 +660,28 @@ void ICACHE_RAM_ATTR timerCallback()
     }
   }
 #else
+
   if(forceSync){
     forceSync = false;
-    OtaNonce = 0;
-    firstSyncNonce = micros();
+    currResetTime = micros();
+    int32_t offsetTime = currResetTime - callbackSyncTime;
+    hwTimer::phaseShift(-offsetTime);
+    //If more than 500 micros has passed since this was set, assume that the other timer has moved on
+    CRSF::LinkStatistics.lastTXnb = offsetTime;
+    if(offsetTime > 500){
+      OtaNonce = 1;
+      //Doing it this way so we set this to when 0 was actually hit to stay consistent
+      firstSyncNonce=lastTimerCallbackTime;
+    }
+    else{
+      OtaNonce = 0;
+      firstSyncNonce=micros();
+    }
+
   }
 #endif
+
+lastTimerCallbackTime = micros();
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
   if (commitInProgress)
   {
@@ -912,7 +926,6 @@ void onMastTXSync(uint8_t* newSyncPacket){
                                         static_cast<uint32_t>(newSyncPacket[4]));
 #ifndef SLAVE_TX
     forceSync = true;
-    // forcePhaseOffset = true;
 #endif
   }
 }
