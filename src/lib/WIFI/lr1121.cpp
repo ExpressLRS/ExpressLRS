@@ -61,10 +61,10 @@ static void WebUploadLR1121DataHandler(const AsyncWebServerRequest *request, con
 
 static void ReadStatusForRadio(const JsonObject json, const SX12XX_Radio_Number_t radio)
 {
-    const uint32_t version = Radio.GetFirmwareVersion(radio);
-    json["hardware"] = version >> 24;
-    json["type"] = version >> 16 & 0xFF;
-    json["firmware"] = version & 0xFFFF;
+    const firmware_version_t version = Radio.GetFirmwareVersion(radio);
+    json["hardware"] = version.hardware;
+    json["type"] = version.type;
+    json["firmware"] = version.version;
 }
 
 static void GetLR1121Status(AsyncWebServerRequest *request)

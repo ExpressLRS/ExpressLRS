@@ -63,14 +63,11 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     hal.reset();
 
     // Validate that the LR1121 is working.
-    uint8_t version[5] = {0};
-    hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_1);
-    hal.ReadCommand(version, sizeof(version), SX12XX_Radio_1);
-
-    DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version[2]);
-    if (version[2] != 0x03 && version[2] != 0xE1)
+    firmware_version_t version = GetFirmwareVersion(SX12XX_Radio_1);
+    DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version.type);
+    if (version.type != 0x03 && version.type != 0xE1)
     {
-    DBGLN("LR1121 #1 failed to be detected.");
+        DBGLN("LR1121 #1 failed to be detected.");
         return false;
     }
     DBGLN("LR1121 #1 Ready");
@@ -78,14 +75,11 @@ bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
         // Validate that the LR1121 #2 is working.
-        memset(version, 0, sizeof(version));
-        hal.WriteCommand(LR11XX_SYSTEM_GET_VERSION_OC, SX12XX_Radio_2);
-        hal.ReadCommand(version, sizeof(version), SX12XX_Radio_2);
-
-        DBGLN("Read LR1121 #2 Use Case (0x03 = LR1121): %d", version[2]);
-        if (version[2] != 0x03 && version[2] != 0xE1)
+        version = GetFirmwareVersion(SX12XX_Radio_2);
+        DBGLN("Read LR1121 #2 Use Case (0x03 = LR1121): %d", version.type);
+        if (version.type != 0x03 && version.type != 0xE1)
         {
-        DBGLN("LR1121 #2 failed to be detected.");
+            DBGLN("LR1121 #2 failed to be detected.");
             return false;
         }
         DBGLN("LR1121 #2 Ready");
@@ -834,13 +828,18 @@ struct lr1121UpdateState_s {
 
 static lr1121UpdateState_s *lr1121UpdateState;
 
-uint32_t LR1121Driver::GetFirmwareVersion(const SX12XX_Radio_Number_t radioNumber, const uint16_t command)
+firmware_version_t LR1121Driver::GetFirmwareVersion(const SX12XX_Radio_Number_t radioNumber, const uint16_t command)
 {
     uint8_t buffer[5] = {};
     hal.WriteCommand(command, radioNumber);
     hal.ReadCommand(buffer, sizeof(buffer), radioNumber);
     hal.WaitOnBusy(radioNumber);
-    return buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4];
+
+    return {
+        .hardware = buffer[1],
+        .type = buffer[2],
+        .version = (uint16_t)(buffer[3] << 8 | buffer[4])
+    };
 }
 
 int LR1121Driver::BeginUpdate(const SX12XX_Radio_Number_t radioNumber, const uint32_t expectedSize)
@@ -863,8 +862,8 @@ int LR1121Driver::BeginUpdate(const SX12XX_Radio_Number_t radioNumber, const uin
 
     // Ensure we're in BL mode
     DBGLN("Ensure BL mode");
-    const uint32_t version = GetFirmwareVersion(radioNumber, LR11XX_BL_GET_VERSION_OC);
-    if ((version >> 16 & 0xFF) != 0xDF)
+    const firmware_version_t version = GetFirmwareVersion(radioNumber, LR11XX_BL_GET_VERSION_OC);
+    if (version.type != 0xDF)
     {
         DBGLN("%x", version);
         return -1;  // Not in bootloader mode
@@ -956,15 +955,13 @@ int LR1121Driver::EndUpdate()
         }
 
         DBGLN("Check not in BL mode");
-        const uint32_t version = GetFirmwareVersion(lr1121UpdateState->updatingRadio, LR11XX_SYSTEM_GET_VERSION_OC);
-        const uint8_t type = version >> 16 & 0xFF;
-        DBGLN("Version %x", version);
-        DBGLN("Hardware %x", version >> 24);
-        DBGLN("Type %x", type);
-        DBGLN("Firmware %x", version & 0xFFFF);
+        const firmware_version_t version = GetFirmwareVersion(lr1121UpdateState->updatingRadio, LR11XX_SYSTEM_GET_VERSION_OC);
+        DBGLN("Hardware %x", version.hardware >> 24);
+        DBGLN("Type %x", version.type);
+        DBGLN("Firmware %x", version.version & 0xFFFF);
         delete lr1121UpdateState;
         lr1121UpdateState = nullptr;
-        retCode = type != 3 && type != 0xE1 ? -2 : 0;
+        retCode = version.type != 3 && version.type != 0xE1 ? -2 : 0;
     }
     else
     {

@@ -11,6 +11,13 @@
 
 #define RADIO_SNR_SCALE 4
 
+typedef struct
+{
+    uint8_t hardware;
+    uint8_t type;
+    uint16_t version;
+} __attribute__((packed)) firmware_version_t;
+
 class LR1121Driver: public SX12xxDriverCommon
 {
 public:
@@ -51,7 +58,7 @@ public:
     void GetLastPacketStats();
 
     // Firmware update methods
-    uint32_t GetFirmwareVersion(SX12XX_Radio_Number_t radioNumber, uint16_t command = LR11XX_SYSTEM_GET_VERSION_OC);
+    firmware_version_t GetFirmwareVersion(SX12XX_Radio_Number_t radioNumber, uint16_t command = LR11XX_SYSTEM_GET_VERSION_OC);
     int BeginUpdate(SX12XX_Radio_Number_t radioNumber, uint32_t expectedSize);
     int WriteUpdateBytes(const uint8_t *bytes, uint32_t size);
     int EndUpdate();
