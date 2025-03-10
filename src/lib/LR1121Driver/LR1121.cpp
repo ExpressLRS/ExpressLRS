@@ -3,6 +3,7 @@
 #include "LR1121.h"
 #include "logging.h"
 #include <math.h>
+#include <SPIEx.h>
 
 LR1121Hal hal;
 LR1121Driver *LR1121Driver::instance = NULL;
@@ -818,4 +819,159 @@ void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber
     {
         instance->RXnbISR(radioNumber);
     }
+}
+
+struct lr1121UpdateState_s {
+    size_t expectedFilesize;
+    size_t totalSize;
+    SX12XX_Radio_Number_t updatingRadio;
+    size_t left_over;
+    struct {
+        uint8_t header[6];
+        uint8_t buffer[256];
+    } __attribute__((packed)) packet;
+};
+
+static lr1121UpdateState_s *lr1121UpdateState;
+
+uint32_t LR1121Driver::GetFirmwareVersion(const SX12XX_Radio_Number_t radioNumber, const uint16_t command)
+{
+    uint8_t buffer[5] = {};
+    hal.WriteCommand(command, radioNumber);
+    hal.ReadCommand(buffer, sizeof(buffer), radioNumber);
+    hal.WaitOnBusy(radioNumber);
+    return buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4];
+}
+
+int LR1121Driver::BeginUpdate(const SX12XX_Radio_Number_t radioNumber, const uint32_t expectedSize)
+{
+    lr1121UpdateState = new lr1121UpdateState_s;
+    lr1121UpdateState->expectedFilesize = expectedSize;
+    lr1121UpdateState->updatingRadio = radioNumber;
+    lr1121UpdateState->totalSize = 0;
+    lr1121UpdateState->left_over = 0;
+
+    // Reboot to BL mode
+    DBGLN("Reboot 1121 to bootloader mode");
+    uint8_t mode = 3;
+    hal.WriteCommand(LR11XX_SYSTEM_REBOOT_OC, &mode, 1, radioNumber);
+    while(!hal.WaitOnBusy(radioNumber))
+    {
+        DBGLN("Waiting...");
+        delay(10);
+    }
+
+    // Ensure we're in BL mode
+    DBGLN("Ensure BL mode");
+    const uint32_t version = GetFirmwareVersion(radioNumber, LR11XX_BL_GET_VERSION_OC);
+    if ((version >> 16 & 0xFF) != 0xDF)
+    {
+        DBGLN("%x", version);
+        return -1;  // Not in bootloader mode
+    }
+
+    // Erase flash
+    DBGLN("Erasing");
+    hal.WriteCommand(LR11XX_BL_ERASE_FLASH_OC, radioNumber);
+    while(!hal.WaitOnBusy(radioNumber))
+    {
+        DBGLN("Waiting...");
+        delay(100);
+    }
+    DBGLN("Erased");
+
+    lr1121UpdateState->left_over = 0;
+    SPIEx.setHwCs(false);
+
+    pinMode(radioNumber == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, OUTPUT);
+    digitalWrite(radioNumber == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
+    return 0;
+}
+
+static void writeBytes(const uint8_t *data, const uint32_t data_size) {
+    lr1121UpdateState->packet.header[0] = (uint8_t)(LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC >> 8);
+    lr1121UpdateState->packet.header[1] = (uint8_t)(LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC);
+    lr1121UpdateState->packet.header[2] = (uint8_t)(lr1121UpdateState->totalSize >> 24);
+    lr1121UpdateState->packet.header[3] = (uint8_t)(lr1121UpdateState->totalSize >> 16);
+    lr1121UpdateState->packet.header[4] = (uint8_t)(lr1121UpdateState->totalSize >> 8);
+    lr1121UpdateState->packet.header[5] = (uint8_t)(lr1121UpdateState->totalSize);
+
+    uint32_t write_size = lr1121UpdateState->left_over;
+    if (data != nullptr)
+    {
+        DBGLN("Left %d, new %d", lr1121UpdateState->left_over, data_size);
+        memcpy(lr1121UpdateState->packet.buffer + lr1121UpdateState->left_over, data, data_size);
+        write_size += data_size;
+    }
+    DBGLN("Flashing %d at %x", write_size, lr1121UpdateState->totalSize);
+
+    // Have to do this the OLD way, so we can pump out more than 64 bytes in one message
+    digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, LOW);
+    SPIEx.transferBytes(lr1121UpdateState->packet.header, nullptr, 6 + write_size);
+    digitalWrite(lr1121UpdateState->updatingRadio == SX12XX_Radio_1 ? GPIO_PIN_NSS : GPIO_PIN_NSS_2, HIGH);
+
+    while (!hal.WaitOnBusy(lr1121UpdateState->updatingRadio))
+    {
+        delay(1);
+    }
+    lr1121UpdateState->totalSize += write_size;
+    lr1121UpdateState->left_over = 0;
+    DBGLN("Flashed");
+}
+
+int LR1121Driver::WriteUpdateBytes(const uint8_t *bytes, uint32_t size)
+{
+    while (size >= 256 - lr1121UpdateState->left_over)
+    {
+        const uint32_t chunk_size = size > 256 - lr1121UpdateState->left_over ? 256 - lr1121UpdateState->left_over : size;
+        writeBytes(bytes, chunk_size);
+        size -= chunk_size;
+        bytes += chunk_size;
+    }
+    memcpy(lr1121UpdateState->packet.buffer + lr1121UpdateState->left_over, bytes, size);
+    lr1121UpdateState->left_over += size;
+    DBGLN("Left-over %d", lr1121UpdateState->left_over);
+    return 0;
+}
+
+int LR1121Driver::EndUpdate()
+{
+    int retCode = 0;
+    writeBytes(nullptr, 0);
+
+    SPIEx.setHwCs(true);
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        spiAttachSS(SPIEx.bus(), 1, GPIO_PIN_NSS_2);
+    }
+
+    if (lr1121UpdateState->totalSize == lr1121UpdateState->expectedFilesize)
+    {
+        DBGLN("Reboot LR1121");
+        uint8_t buf = 0;
+        hal.WriteCommand(LR11XX_BL_REBOOT_OC, &buf, 1, lr1121UpdateState->updatingRadio);
+        while(!hal.WaitOnBusy(lr1121UpdateState->updatingRadio))
+        {
+            delay(1);
+        }
+
+        DBGLN("Check not in BL mode");
+        const uint32_t version = GetFirmwareVersion(lr1121UpdateState->updatingRadio, LR11XX_SYSTEM_GET_VERSION_OC);
+        const uint8_t type = version >> 16 & 0xFF;
+        DBGLN("Version %x", version);
+        DBGLN("Hardware %x", version >> 24);
+        DBGLN("Type %x", type);
+        DBGLN("Firmware %x", version & 0xFFFF);
+        delete lr1121UpdateState;
+        lr1121UpdateState = nullptr;
+        retCode = type != 3 && type != 0xE1 ? -2 : 0;
+    }
+    else
+    {
+        DBGLN("Finished expected %d, total %d", lr1121UpdateState->expectedFilesize, lr1121UpdateState->totalSize);
+        retCode = -1; // Not enough bytes uploaded
+    }
+    delete lr1121UpdateState;
+    lr1121UpdateState = nullptr;
+    return retCode;
 }

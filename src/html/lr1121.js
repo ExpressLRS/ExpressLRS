@@ -68,6 +68,10 @@ function fileSelectHandler(e) {
 }
 
 function uploadFile(file) {
+  mui.overlay('on', {
+    'keyboard': false,
+    'static': true
+  })
   _('upload_btn').disabled = true
   try {
     const formdata = new FormData();
@@ -84,6 +88,7 @@ function uploadFile(file) {
   }
   catch (e) {
     _('upload_btn').disabled = false
+    mui.overlay('off')
   }
 }
 
@@ -110,6 +115,7 @@ async function completeHandler(event) {
         _('status').innerHTML = '';
         _('progressBar').value = 0;
         _('upload_btn').disabled = false
+        mui.overlay('off')
         await cuteAlert({
           type: 'success',
           title: 'Update Succeeded',
@@ -119,6 +125,7 @@ async function completeHandler(event) {
     }, 100);
   } else {
     _('upload_btn').disabled = false
+    mui.overlay('off')
     await cuteAlert({
       type: 'error',
       title: 'Update Failed',
@@ -131,6 +138,7 @@ function errorHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
   _('upload_btn').disabled = false
+  mui.overlay('off')
   return cuteAlert({
     type: 'error',
     title: 'Update Failed',
@@ -142,6 +150,7 @@ function abortHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
   _('upload_btn').disabled = false
+  mui.overlay('off')
   return cuteAlert({
     type: 'info',
     title: 'Update Aborted',
