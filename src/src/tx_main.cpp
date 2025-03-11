@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-// #define SLAVE_TX
+#define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -61,14 +61,12 @@ char backpackVersion[32] = "";
 /// sync packet spamming on mode change vars ///
 #define syncSpamAmount 3
 #define syncSpamAmountAfterRateChange 10
+#define START_TIMEOUT 1000
 volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
-
-//INTER TX SYNCING
-volatile int32_t delayTimeMicros = 0;
 
 //INTER TX SYNCING
 volatile int32_t delayTimeMicros = 0;
@@ -104,6 +102,10 @@ volatile int32_t callbackSyncTime = micros();
 volatile int32_t lastTimerCallbackTime = micros();
 volatile uint8_t maxSyncs = 2;
 volatile uint8_t syncsSent = 0;
+volatile bool forceOffset = false;
+volatile int32_t offsetTime = 0;
+volatile int32_t currTime = 0;
+volatile int32_t startTime = micros();
 
 volatile bool forceSync = false;
 
@@ -631,8 +633,11 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
   #ifdef SLAVE_TX
-    forceSync = true;
-    callbackSyncTime = micros();
+    currTime = micros();
+    if(currTime - startTime > START_TIMEOUT){
+      forceSync = true;
+      callbackSyncTime = micros();
+    }
   #endif
 }
 
@@ -663,23 +668,16 @@ void ICACHE_RAM_ATTR timerCallback()
     }
   }
 #else
+  //Just in case we trigger this before handling forceOffset logic, do not increment Nonce
+  if(forceOffset) return;
 
   if(forceSync){
     forceSync = false;
     currResetTime = micros();
-    int32_t offsetTime = currResetTime - callbackSyncTime;
-    //hwTimer::phaseShift(-offsetTime);
-    //If more than 500 micros has passed since this was set, assume that the other timer has moved on
-    CRSF::LinkStatistics.lastTXnb = offsetTime;
-    if(offsetTime > 500){
-      OtaNonce = 1;
-      //Doing it this way so we set this to when 0 was actually hit to stay consistent
-      firstSyncNonce=callbackSyncTime;
-    } else {
-      OtaNonce = 0;
-      firstSyncNonce =callbackSyncTime;
+    if((currResetTime - callbackSyncTime) > 0){
+      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime ));
+      forceOffset = true;
     }
-
   }
 #endif
 
@@ -1396,6 +1394,22 @@ static void cyclePower()
   }
 }
 
+void HandleTXOffset(){
+#ifdef SLAVE_TX
+if(forceOffset){
+  CRSF::LinkStatistics.lastTXnb = offsetTime;
+  firstSyncNonce=callbackSyncTime;
+  if(offsetTime > (2*ExpressLRS_currAirRate_Modparams->interval)){
+    OtaNonce = 3;
+  } else {
+    OtaNonce = 2;
+  }
+  hwTimer::pause(offsetTime);
+  forceOffset = false;
+}
+#endif
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1542,6 +1556,7 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
+  HandleTXOffset();
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
