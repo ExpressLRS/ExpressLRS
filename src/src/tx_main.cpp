@@ -99,7 +99,7 @@ volatile int32_t currResetTime = micros();
 volatile int32_t firstSyncNonce = micros();
 volatile int32_t callbackSyncTime = micros();
 volatile int32_t lastTimerCallbackTime = micros();
-volatile uint8_t maxSyncs = 4;
+volatile uint8_t maxSyncs = 2;
 volatile uint8_t syncsSent = 0;
 
 volatile bool forceSync = false;
@@ -665,17 +665,16 @@ void ICACHE_RAM_ATTR timerCallback()
     forceSync = false;
     currResetTime = micros();
     int32_t offsetTime = currResetTime - callbackSyncTime;
-    hwTimer::phaseShift(-offsetTime);
+    //hwTimer::phaseShift(-offsetTime);
     //If more than 500 micros has passed since this was set, assume that the other timer has moved on
     CRSF::LinkStatistics.lastTXnb = offsetTime;
     if(offsetTime > 500){
       OtaNonce = 1;
       //Doing it this way so we set this to when 0 was actually hit to stay consistent
-      firstSyncNonce=lastTimerCallbackTime;
-    }
-    else{
+      firstSyncNonce=callbackSyncTime;
+    } else {
       OtaNonce = 0;
-      firstSyncNonce=micros();
+      firstSyncNonce =callbackSyncTime;
     }
 
   }
