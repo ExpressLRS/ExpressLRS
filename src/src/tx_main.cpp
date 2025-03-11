@@ -423,7 +423,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
   syncsSent = 0;
-  syncsSent = 0;
   CRSF::LinkStatistics.connected = 0;
   rfModeLastChangedMS = millis();
 }
@@ -984,7 +983,6 @@ static void UpdateConnectDisconnectStatus()
     {
       connectionState = connected;
       syncsSent = 0;
-      syncsSent = 0;
       CRSF::LinkStatistics.connected = 1;
       CRSFHandset::ForwardDevicePings = true;
       //DBGLN("got downlink conn");
@@ -999,7 +997,6 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
-    syncsSent = 0;
     syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
     connectionHasModelMatch = true;
