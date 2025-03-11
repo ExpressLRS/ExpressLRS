@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-#define SLAVE_TX
+// #define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -66,6 +66,9 @@ volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
+
+//INTER TX SYNCING
+volatile int32_t delayTimeMicros = 0;
 
 //INTER TX SYNCING
 volatile int32_t delayTimeMicros = 0;
@@ -419,6 +422,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   connectionState = disconnected;
+  syncsSent = 0;
   syncsSent = 0;
   CRSF::LinkStatistics.connected = 0;
   rfModeLastChangedMS = millis();
@@ -980,6 +984,7 @@ static void UpdateConnectDisconnectStatus()
     {
       connectionState = connected;
       syncsSent = 0;
+      syncsSent = 0;
       CRSF::LinkStatistics.connected = 1;
       CRSFHandset::ForwardDevicePings = true;
       //DBGLN("got downlink conn");
@@ -994,6 +999,7 @@ static void UpdateConnectDisconnectStatus()
     (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs)
   {
     connectionState = disconnected;
+    syncsSent = 0;
     syncsSent = 0;
     CRSF::LinkStatistics.connected = 0;
     connectionHasModelMatch = true;
