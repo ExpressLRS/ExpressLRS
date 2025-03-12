@@ -1,9 +1,10 @@
-#include "LR1121_Regs.h"
-#include "LR1121_hal.h"
 #include "LR1121.h"
+#include "lr1121_transceiver_F30104.h"
+#include "LR1121_hal.h"
 #include "logging.h"
-#include <math.h>
 #include <SPIEx.h>
+
+#define LR1121_FIRMWARE_TYPE 0xF3
 
 LR1121Hal hal;
 LR1121Driver *LR1121Driver::instance = NULL;
@@ -54,36 +55,58 @@ void LR1121Driver::End()
     RemoveCallbacks();
 }
 
+bool LR1121Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
+{
+    firmware_version_t version = GetFirmwareVersion(radioNumber);
+    if (version.type != LR1121_FIRMWARE_TYPE && version.version != LR11XX_FIRMWARE_VERSION)
+    {
+        DBGLN("Upgrading radio #%d", radioNumber);
+        // do upgrade
+        if (BeginUpdate(radioNumber, sizeof(lr11xx_firmware_image)) != 0) return false;
+        uint8_t dest[256];
+        for (int pos = 0 ; pos < sizeof(lr11xx_firmware_image) / 4 ; pos += 64)
+        {
+            uint32_t size = 256;
+            if (pos + 63 > sizeof(lr11xx_firmware_image) / 4) size = sizeof(lr11xx_firmware_image) % 256;
+            DBGLN("*** %d", size);
+            memcpy(dest, lr11xx_firmware_image + pos, size);
+
+            for (size_t i = 0; i < size; i += 4)
+            {
+                const auto ptr = (uint32_t *)&dest[i];
+                *ptr = __builtin_bswap32(*ptr);
+            }
+            WriteUpdateBytes(dest, size);
+        }
+
+        if (EndUpdate() != 0) return false;
+
+        // re-check version
+        version = GetFirmwareVersion(radioNumber);
+        if (version.type != LR1121_FIRMWARE_TYPE && version.version != LR11XX_FIRMWARE_VERSION)
+        {
+            DBGLN("LR1121 #%d failed to be detected or upgraded.", radioNumber);
+            return false;
+        }
+    }
+    DBGLN("LR1121 #%d Ready", radioNumber);
+    return true;
+}
+
 bool LR1121Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
 {
     hal.init();
-    hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
-    hal.IsrCallback_2 = &LR1121Driver::IsrCallback_2;
-
     hal.reset();
 
-    // Validate that the LR1121 is working.
-    firmware_version_t version = GetFirmwareVersion(SX12XX_Radio_1);
-    DBGLN("Read LR1121 #1 Use Case (0x03 = LR1121): %d", version.type);
-    if (version.type != 0x03 && version.type != 0xE1)
-    {
-        DBGLN("LR1121 #1 failed to be detected.");
-        return false;
-    }
-    DBGLN("LR1121 #1 Ready");
-
+    // Validate that the LR1121(s) are working.
+    if (!CheckVersion(SX12XX_Radio_1)) return false;
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
-        // Validate that the LR1121 #2 is working.
-        version = GetFirmwareVersion(SX12XX_Radio_2);
-        DBGLN("Read LR1121 #2 Use Case (0x03 = LR1121): %d", version.type);
-        if (version.type != 0x03 && version.type != 0xE1)
-        {
-            DBGLN("LR1121 #2 failed to be detected.");
-            return false;
-        }
-        DBGLN("LR1121 #2 Ready");
+        if (!CheckVersion(SX12XX_Radio_2)) return false;
     }
+
+    hal.IsrCallback_1 = &LR1121Driver::IsrCallback_1;
+    hal.IsrCallback_2 = &LR1121Driver::IsrCallback_2;
 
     //Clear Errors
     hal.WriteCommand(LR11XX_SYSTEM_CLEAR_ERRORS_OC, SX12XX_Radio_All); // Remove later?  Might not be required???
@@ -961,7 +984,7 @@ int LR1121Driver::EndUpdate()
         DBGLN("Firmware %x", version.version & 0xFFFF);
         delete lr1121UpdateState;
         lr1121UpdateState = nullptr;
-        retCode = version.type != 3 && version.type != 0xE1 ? -2 : 0;
+        retCode = version.type == 0xDF ? -2 : 0; // still in bootloader mode?
     }
     else
     {
