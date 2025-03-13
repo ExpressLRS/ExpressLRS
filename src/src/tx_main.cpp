@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-#define SLAVE_TX
+// #define SLAVE_TX
 #define SET_TX_OFFSET 100
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
@@ -1470,7 +1470,7 @@ void setup()
       SetClearChannelAssessmentTime();
   #endif
 #ifndef SLAVE_TX
-      pinMode(GPIO_PIN_SLAVE_INTERRUPT, OUTPUT);
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT_PULLUP);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 #else
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
