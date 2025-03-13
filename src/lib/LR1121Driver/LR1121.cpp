@@ -2,6 +2,8 @@
 #include "lr1121_transceiver_F30104.h"
 #include "LR1121_hal.h"
 #include "logging.h"
+
+#include <SPIFFS.h>
 #include <SPIEx.h>
 
 #define LR1121_FIRMWARE_TYPE 0xF3
@@ -58,7 +60,7 @@ void LR1121Driver::End()
 bool LR1121Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
 {
     firmware_version_t version = GetFirmwareVersion(radioNumber);
-    if (version.type != LR1121_FIRMWARE_TYPE && version.version != LR11XX_FIRMWARE_VERSION)
+    if (!SPIFFS.exists("/lr1121.txt") && version.type != LR1121_FIRMWARE_TYPE && version.version != LR11XX_FIRMWARE_VERSION)
     {
         DBGLN("Upgrading radio #%d", radioNumber);
         // do upgrade
@@ -68,7 +70,6 @@ bool LR1121Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
         {
             uint32_t size = 256;
             if (pos + 63 > sizeof(lr11xx_firmware_image) / 4) size = sizeof(lr11xx_firmware_image) % 256;
-            DBGLN("*** %d", size);
             memcpy(dest, lr11xx_firmware_image + pos, size);
 
             for (size_t i = 0; i < size; i += 4)

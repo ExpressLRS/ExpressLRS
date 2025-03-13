@@ -4,6 +4,38 @@
 
 // =========================================================
 
+function postWithFeedback(title, msg, url, getdata, success) {
+  return function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+      if (this.readyState === 4) {
+        if (this.status === 200) {
+          if (success) success();
+          cuteAlert({
+            type: 'info',
+            title: title,
+            message: this.responseText
+          });
+        } else {
+          cuteAlert({
+            type: 'error',
+            title: title,
+            message: msg
+          });
+        }
+      }
+    };
+    xmlhttp.open('POST', url, true);
+    if (getdata) data = getdata(xmlhttp);
+    else data = null;
+    xmlhttp.send(data);
+  };
+}
+
+// =========================================================
+
 // Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/
 
 // eslint-disable-next-line no-unused-vars

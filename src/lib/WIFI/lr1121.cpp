@@ -6,6 +6,7 @@
 #include "AsyncJson.h"
 #include <ESPAsyncWebServer.h>
 #include <StreamString.h>
+#include <SPIFFS.h>
 
 #include "common.h"
 #include "logging.h"
@@ -20,6 +21,12 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request)
     if (uploadError == 0)
     {
         msg = String(R"({"status": "ok", "msg": "Update complete. Refresh page to see new version information."})");
+        // add tag file for lr1121 custom firmware
+        if (!SPIFFS.exists("/lr1121.txt"))
+        {
+            File tagFile = SPIFFS.open("/lr1121.txt", "w");
+            tagFile.close();
+        }
         DBGLN("Update complete");
     }
     else
@@ -41,7 +48,8 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-static void WebUploadLR1121DataHandler(const AsyncWebServerRequest *request, const String& filename, const size_t index, uint8_t *data, const size_t len, bool final) {
+static void WebUploadLR1121DataHandler(const AsyncWebServerRequest *request, const String& filename, const size_t index, uint8_t *data, const size_t len, bool final)
+{
     if (index == 0)
     {
 #ifdef HAS_WIFI_JOYSTICK
@@ -74,7 +82,7 @@ static void GetLR1121Status(AsyncWebServerRequest *request)
     hal.end();
     hal.init();
     hal.reset();
-
+    json["manual"] = SPIFFS.exists("/lr1121.txt");
     ReadStatusForRadio(json["radio1"].to<JsonObject>(), SX12XX_Radio_1);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {

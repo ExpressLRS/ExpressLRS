@@ -1,9 +1,8 @@
 #pragma once
 
 #include "targets.h"
-#include "LR1121_Regs.h"
-#include "LR1121_hal.h"
 #include "SX12xxDriverCommon.h"
+#include "LR1121_Regs.h"
 
 #ifdef PLATFORM_ESP8266
 #include <cstdint>

@@ -19,11 +19,14 @@ function dec2hex(i, len) {
   return "0x" + (i+0x10000).toString(16).substr(-len).toUpperCase();
 }
 
+_('reset').addEventListener('click', postWithFeedback('Reset LR1121 Firmware', 'An error occurred resetting the custom firmware flag', '/reset?lr1121', null))
+
 function loadData() {
-  xmlhttp = new XMLHttpRequest();
+  let xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
     if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
+      if (data['manual']) _('manual_upload').style.display = 'block';
       _('radio_type1').textContent = dec2hex(data['radio1']['type'], 2)
       _('radio_hardware1').textContent = dec2hex(data['radio1']['hardware'], 2)
       _('radio_firmware1').textContent = dec2hex(data['radio1']['firmware'], 4)
