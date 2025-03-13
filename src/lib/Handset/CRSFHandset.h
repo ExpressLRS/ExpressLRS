@@ -93,6 +93,5 @@ private:
 };
 
 extern void onTXSerialBind(uint8_t* newConfigPacket);
-extern void onMastTXSync(uint8_t* newSyncPacket);
 
 #endif

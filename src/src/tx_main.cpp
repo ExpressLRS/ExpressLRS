@@ -635,8 +635,11 @@ void ICACHE_RAM_ATTR resetNonceCallback(){
   #ifdef SLAVE_TX
     currTime = micros();
     if(currTime - startTime > START_TIMEOUT){
-      forceSync = true;
-      callbackSyncTime = micros();
+      if(syncsSent<maxSyncs){
+        syncsSent+=1;
+        forceSync = true;
+        callbackSyncTime = micros();
+      }
     }
   #endif
 }
@@ -659,8 +662,7 @@ void ICACHE_RAM_ATTR timerCallback()
 {
   #ifndef SLAVE_TX
   if(OtaNonce == 0) {
-    if(syncsSent<maxSyncs || forceSync){
-      forceSync = false;
+    if(syncsSent<maxSyncs){
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
       firstSyncNonce = micros();
@@ -915,19 +917,6 @@ void onTXSerialBind(uint8_t* newConfigPacket)
       bigChange=true;
       }
     }
-}
-
-
-void onMastTXSync(uint8_t* newSyncPacket){
-  if(!handset->IsArmed()){
-      delayTimeMicros = static_cast<int32_t>((static_cast<uint32_t>(newSyncPacket[1]) << 24) |
-                                        (static_cast<uint32_t>(newSyncPacket[2]) << 16) |
-                                        (static_cast<uint32_t>(newSyncPacket[3]) << 8)  |
-                                        static_cast<uint32_t>(newSyncPacket[4]));
-#ifndef SLAVE_TX
-    forceSync = true;
-#endif
-  }
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
