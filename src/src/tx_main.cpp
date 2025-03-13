@@ -31,8 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-// #define SLAVE_TX
-#define SET_TX_OFFSET 100
+#define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -634,8 +633,9 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
   #ifdef SLAVE_TX
+  
     currTime = micros();
-    if(currTime - startTime > START_TIMEOUT){
+    if(currTime - startTime > START_TIMEOUT && !handset->IsArmed()){
       if(syncsSent<maxSyncs){
         syncsSent+=1;
         forceSync = true;
@@ -663,7 +663,7 @@ void ICACHE_RAM_ATTR timerCallback()
 {
   #ifndef SLAVE_TX
   if(OtaNonce == 0) {
-    if(syncsSent<maxSyncs){
+    if(syncsSent<maxSyncs && !handset->IsArmed()){
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
       firstSyncNonce = micros();
@@ -678,7 +678,7 @@ void ICACHE_RAM_ATTR timerCallback()
     forceSync = false;
     currResetTime = micros();
     if((currResetTime - callbackSyncTime) > 0){
-      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime + SET_TX_OFFSET));
+      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime));
       forceOffset = true;
     }
   }
@@ -1470,7 +1470,7 @@ void setup()
       SetClearChannelAssessmentTime();
   #endif
 #ifndef SLAVE_TX
-      pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT_PULLUP);
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT, OUTPUT);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 #else
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
