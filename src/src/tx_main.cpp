@@ -32,6 +32,7 @@
 
 //// CONSTANTS ////
 #define SLAVE_TX
+#define SET_TX_OFFSET 100
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -677,7 +678,7 @@ void ICACHE_RAM_ATTR timerCallback()
     forceSync = false;
     currResetTime = micros();
     if((currResetTime - callbackSyncTime) > 0){
-      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime ));
+      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime + SET_TX_OFFSET));
       forceOffset = true;
     }
   }
