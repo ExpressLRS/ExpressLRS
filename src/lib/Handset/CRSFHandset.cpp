@@ -390,6 +390,12 @@ bool CRSFHandset::ProcessPacket()
         onTXSerialBind(&SerialInBuffer[3]);
     }
 
+    else if (packetType == CRSF_FRAMETYPE_TELEM_CHANGE)
+    {
+        packetReceived = true;
+        onTXTelemetryOff(&SerialInBuffer[3]);
+    }
+
     // check for all extended frames that are a broadcast or a message to the FC
     else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
             (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))

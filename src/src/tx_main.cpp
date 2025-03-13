@@ -920,6 +920,15 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     }
 }
 
+void onTXTelemetryOff(uint8_t* newConfigPacket){
+  if(handset->IsArmed()){
+    return;
+  }
+  else {
+    config.SetTlm(newConfigPacket[0]);
+  }
+}
+
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
 
@@ -1319,51 +1328,61 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
+    if(config.GetStartFrequency() == 0){
+      config.SetStartFrequency(startBase);
+      startFrequency = freqHzToRegVal(startBase*100000);
+      CRSF::LinkStatistics.freq_low = startBase;
+    }
+    else {
+      startBase = config.GetStartFrequency();
+      startFrequency = freqHzToRegVal(startBase*100000);
+      CRSF::LinkStatistics.freq_low = config.GetStartFrequency();
+    }
+    if(config.GetEndFrequency() == 0){
+      config.SetEndFrequency(endBase);
+      CRSF::LinkStatistics.freq_high = endBase;
+    }
+    else {
+      endBase = config.GetEndFrequency();
+      endFrequency = freqHzToRegVal(endBase*100000);
+      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();     
+    }
+    if(config.GetNumChannels() == 0){
+      config.SetNumChannels(numChannels);
+      CRSF::LinkStatistics.num_channels = numChannels;
+    }
+    else {
+      CRSF::LinkStatistics.num_channels = config.GetNumChannels();
+      numChannels=config.GetNumChannels(); 
+    }
 
-    config.SetStartFrequency(startBase);
-    CRSF::LinkStatistics.freq_low = startBase;
-
-    // config.SetEndFrequency(endBase);
-    CRSF::LinkStatistics.freq_high = endBase;
-
-    // config.SetNumChannels(numChannels);
-    CRSF::LinkStatistics.num_channels = numChannels;
-
-    // if(config.GetVtxBand()==255){
-    //   config.SetVtxBand(5);
-    // }
-    // if(config.GetVtxChannel() == 255){
-    //   config.SetVtxChannel(1);
-    // }
-    CRSF::LinkStatistics.vtx_channel = 0;//(8* (config.GetVtxBand() - 1)) + (config.GetVtxChannel()-1);
-
-
+    CRSF::LinkStatistics.vtx_channel = 0;
     if(config.GetUID()[0] != 0) {
       memcpy(UID,config.GetUID(),UID_LEN);
       memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
     else
     {
-        memcpy(UID, firmwareOptions.uid, UID_LEN);
-        memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
-        config.SetUID(UID);
+      memcpy(UID, firmwareOptions.uid, UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
+      config.SetUID(UID);
     }
 
     if(config.GetBindPhrase()[0]!=0){
-    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
+      memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+      memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
     }
     else
     {
-        memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        config.SetBindPhrase(bindPhrase);
+      memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+      memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+      config.SetBindPhrase(bindPhrase);
     }
 
-
-    // //DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-    //     UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
-
+    //By default we should be on 1_8, only valid options are 1_8 and NO_TLM
+    if(config.GetTlm() == 0){
+      config.SetTlm(TLM_RATIO_1_8);
+    }
     OtaUpdateCrcInitFromUid();
 }
 
@@ -1420,7 +1439,6 @@ void setup()
     config.SetDynamicPower(0); // Disable dynamic power by default
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
-    config.SetTlm(TLM_RATIO_1_8);
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
 
     Radio.RXdoneCallback = &RXdoneISR;
