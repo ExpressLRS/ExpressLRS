@@ -100,14 +100,9 @@ static struct luaItem_selection luaFanThreshold = {
 #endif
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-static struct luaItem_string luaCELBTIndicator = {
-    {"2G4 LBT", CRSF_INFO},
-    STR_EMPTYSPACE
-};
-
 static struct luaItem_string luaCELimit = {
 #if defined(RADIO_LR1121)
-    {"25&100mW 868M&2G4 CE LIMIT", CRSF_INFO},
+    {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
 #else
     {"100mW 2G4 CE LIMIT", CRSF_INFO},
 #endif
@@ -771,7 +766,6 @@ static void registerLuaParameters()
   }
 #if defined(Regulatory_Domain_EU_CE_2400)
   if (HAS_RADIO) {
-    registerLUAParameter(&luaCELBTIndicator, NULL, luaPowerFolder.common.id);
     registerLUAParameter(&luaCELimit, NULL, luaPowerFolder.common.id);
   }
 #endif
@@ -913,10 +907,6 @@ static int event()
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
-
-  #if defined(Regulatory_Domain_EU_CE_2400)
-  setLuaStringValue(&luaCELBTIndicator, getLBTEnabled() ? "Enabled" : "Disabled");
-  #endif
 
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
