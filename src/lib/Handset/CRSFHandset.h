@@ -93,6 +93,6 @@ private:
 };
 
 extern void onTXSerialBind(uint8_t* newConfigPacket);
-extern void onTXTelemetryOff(uint8_t* newConfigPacket);
+extern void onTXTelemetryChange(uint8_t* newConfigPacket);
 
 #endif

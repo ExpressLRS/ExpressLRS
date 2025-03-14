@@ -920,7 +920,7 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     }
 }
 
-void onTXTelemetryOff(uint8_t* newConfigPacket){
+void onTXTelemetryChange(uint8_t* newConfigPacket){
   if(handset->IsArmed()){
     return;
   }
