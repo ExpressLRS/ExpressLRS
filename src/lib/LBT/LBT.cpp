@@ -79,11 +79,6 @@ void EnableLBT()
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
 
-bool getLBTEnabled()
-{
-    return LBTEnabled;
-}
-
 static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t radio_type)
 {
   // Calculated from EN 300 328, adjusted for 800kHz BW for sx1280
