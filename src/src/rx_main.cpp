@@ -20,6 +20,7 @@
 #include "rx-serial/SerialNOOP.h"
 #include "rx-serial/SerialCRSF.h"
 #include "rx-serial/SerialSBUS.h"
+#include "rx-serial/SerialIBus.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
 #include "rx-serial/SerialHoTT_TLM.h"
@@ -1383,6 +1384,10 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_IBUS)
+    {
+        serialBaud = 115200;
+    }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
@@ -1500,6 +1505,10 @@ static void setupSerial()
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
         serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_IBUS)
+    {
+        serialIO = new SerialIBus(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (hottTlmSerial)
