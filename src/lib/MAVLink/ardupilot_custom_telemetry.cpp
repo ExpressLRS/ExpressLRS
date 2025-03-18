@@ -308,13 +308,13 @@ uint32_t format_ap_status(uint8_t base_mode, uint32_t custom_mode, uint8_t syste
 #define AP_THROTTLE_OFFSET          19
 
     // control/flight mode number (limit to 31 (0x1F) since the value is stored on 5 bits)
-    uint32_t ap_status = (uint8_t)((custom_mode+1) & AP_CONTROL_MODE_LIMIT);
+    uint32_t ap_status = ((custom_mode+1) & AP_CONTROL_MODE_LIMIT);
     // is_flying flag
     if (system_status == MAV_STATE_ACTIVE) {
         ap_status |= (1 << AP_FLYING_OFFSET);
     }
     // armed flag
-    if (base_mode & MAV_MODE_FLAG_SAFETY_ARMED) {
+    if ((base_mode & MAV_MODE_FLAG_SAFETY_ARMED) > 0U) {
         ap_status |= (1 << AP_ARMED_OFFSET);
     }
     // generic failsafe
