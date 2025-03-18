@@ -389,10 +389,11 @@ bool CRSFHandset::ProcessPacket()
         packetReceived = true;
         onTXSerialBind(&SerialInBuffer[3]);
     }
-    else if (packetType == CRSF_FRAMETYPE_MAST_FORCE_SYNC)
+
+    else if (packetType == CRSF_FRAMETYPE_TELEM_CHANGE)
     {
         packetReceived = true;
-        onMastTXSync(&SerialInBuffer[3]);
+        onTXTelemetryChange(&SerialInBuffer[3]);
     }
 
     // check for all extended frames that are a broadcast or a message to the FC

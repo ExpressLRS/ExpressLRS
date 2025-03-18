@@ -120,8 +120,7 @@ void hwTimer::callback(void)
     else
     {
 #if defined(TARGET_TX)
-        MyTim->setOverflow((HWtimerInterval >> 1)+ PhaseShift, TICK_FORMAT);
-        PhaseShift = 0;
+        MyTim->setOverflow(HWtimerInterval >> 1, TICK_FORMAT);
         hwTimer::callbackTock();
 #else
         MyTim->setOverflow((HWtimerInterval >> 1) + PhaseShift, MICROSEC_FORMAT);

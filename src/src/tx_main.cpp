@@ -31,7 +31,7 @@
 #endif
 
 //// CONSTANTS ////
-// #define SLAVE_TX
+#define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -61,6 +61,7 @@ char backpackVersion[32] = "";
 /// sync packet spamming on mode change vars ///
 #define syncSpamAmount 3
 #define syncSpamAmountAfterRateChange 10
+#define START_TIMEOUT 1000
 volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
@@ -95,13 +96,18 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-uint8_t maxSyncs = 2;
+volatile int32_t currResetTime = micros();
 volatile int32_t firstSyncNonce = micros();
+volatile int32_t callbackSyncTime = micros();
+volatile int32_t lastTimerCallbackTime = micros();
+volatile uint8_t maxSyncs = 2;
 volatile uint8_t syncsSent = 0;
-volatile bool forceSync = false;
-volatile bool forcePhaseOffset = false;
-volatile bool resetNonce = false;
+volatile bool forceOffset = false;
+volatile int32_t offsetTime = 0;
+volatile int32_t currTime = 0;
+volatile int32_t startTime = micros();
 
+volatile bool forceSync = false;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -619,16 +625,24 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
-    CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
+    // CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
 
   }
 }
 
 void ICACHE_RAM_ATTR resetNonceCallback(){
-#ifdef SLAVE_TX
-  forceSync = true;
-#endif
+  #ifdef SLAVE_TX
+  
+    currTime = micros();
+    if(currTime - startTime > START_TIMEOUT && !handset->IsArmed()){
+      if(syncsSent<maxSyncs){
+        syncsSent+=1;
+        forceSync = true;
+        callbackSyncTime = micros();
+      }
+    }
+  #endif
 }
 
 void ICACHE_RAM_ATTR nonceAdvance()
@@ -647,14 +661,9 @@ void ICACHE_RAM_ATTR nonceAdvance()
 
 void ICACHE_RAM_ATTR timerCallback()
 {
-#ifndef SLAVE_TX
-  if(forcePhaseOffset){
-    forcePhaseOffset = false;
-    hwTimer::phaseShift(-delayTimeMicros);
-  }
+  #ifndef SLAVE_TX
   if(OtaNonce == 0) {
-    if(syncsSent<maxSyncs || forceSync){
-      forceSync = false;
+    if(syncsSent<maxSyncs && !handset->IsArmed()){
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
       firstSyncNonce = micros();
@@ -662,12 +671,20 @@ void ICACHE_RAM_ATTR timerCallback()
     }
   }
 #else
+  //Just in case we trigger this before handling forceOffset logic, do not increment Nonce
+  if(forceOffset) return;
+
   if(forceSync){
     forceSync = false;
-    OtaNonce = 0;
-    firstSyncNonce = micros();
+    currResetTime = micros();
+    if((currResetTime - callbackSyncTime) > 0){
+      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime));
+      forceOffset = true;
+    }
   }
 #endif
+
+lastTimerCallbackTime = micros();
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
   if (commitInProgress)
   {
@@ -903,17 +920,12 @@ void onTXSerialBind(uint8_t* newConfigPacket)
     }
 }
 
-
-void onMastTXSync(uint8_t* newSyncPacket){
-  if(!handset->IsArmed()){
-      delayTimeMicros = static_cast<int32_t>((static_cast<uint32_t>(newSyncPacket[1]) << 24) |
-                                        (static_cast<uint32_t>(newSyncPacket[2]) << 16) |
-                                        (static_cast<uint32_t>(newSyncPacket[3]) << 8)  |
-                                        static_cast<uint32_t>(newSyncPacket[4]));
-#ifndef SLAVE_TX
-    forceSync = true;
-    // forcePhaseOffset = true;
-#endif
+void onTXTelemetryChange(uint8_t* newConfigPacket){
+  if(handset->IsArmed()){
+    return;
+  }
+  else {
+    config.SetTlm(newConfigPacket[0]);
   }
 }
 
@@ -1316,51 +1328,61 @@ static void setupBindingFromConfig()
 {
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
+    if(config.GetStartFrequency() == 0){
+      config.SetStartFrequency(startBase);
+      startFrequency = freqHzToRegVal(startBase*100000);
+      CRSF::LinkStatistics.freq_low = startBase;
+    }
+    else {
+      startBase = config.GetStartFrequency();
+      startFrequency = freqHzToRegVal(startBase*100000);
+      CRSF::LinkStatistics.freq_low = config.GetStartFrequency();
+    }
+    if(config.GetEndFrequency() == 0){
+      config.SetEndFrequency(endBase);
+      CRSF::LinkStatistics.freq_high = endBase;
+    }
+    else {
+      endBase = config.GetEndFrequency();
+      endFrequency = freqHzToRegVal(endBase*100000);
+      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();     
+    }
+    if(config.GetNumChannels() == 0){
+      config.SetNumChannels(numChannels);
+      CRSF::LinkStatistics.num_channels = numChannels;
+    }
+    else {
+      CRSF::LinkStatistics.num_channels = config.GetNumChannels();
+      numChannels=config.GetNumChannels(); 
+    }
 
-    config.SetStartFrequency(startBase);
-    CRSF::LinkStatistics.freq_low = startBase;
-
-    // config.SetEndFrequency(endBase);
-    CRSF::LinkStatistics.freq_high = endBase;
-
-    // config.SetNumChannels(numChannels);
-    CRSF::LinkStatistics.num_channels = numChannels;
-
-    // if(config.GetVtxBand()==255){
-    //   config.SetVtxBand(5);
-    // }
-    // if(config.GetVtxChannel() == 255){
-    //   config.SetVtxChannel(1);
-    // }
-    CRSF::LinkStatistics.vtx_channel = 0;//(8* (config.GetVtxBand() - 1)) + (config.GetVtxChannel()-1);
-
-
+    CRSF::LinkStatistics.vtx_channel = 0;
     if(config.GetUID()[0] != 0) {
       memcpy(UID,config.GetUID(),UID_LEN);
       memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
     else
     {
-        memcpy(UID, firmwareOptions.uid, UID_LEN);
-        memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
-        config.SetUID(UID);
+      memcpy(UID, firmwareOptions.uid, UID_LEN);
+      memcpy(CRSF::LinkStatistics.uid, firmwareOptions.uid, UID_LEN);
+      config.SetUID(UID);
     }
 
     if(config.GetBindPhrase()[0]!=0){
-    memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
-    memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
+      memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
+      memcpy(CRSF::LinkStatistics.bind_phrase, config.GetBindPhrase(), PHRASE_LEN);
     }
     else
     {
-        memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
-        config.SetBindPhrase(bindPhrase);
+      memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+      memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
+      config.SetBindPhrase(bindPhrase);
     }
 
-
-    // //DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-    //     UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
-
+    //By default we should be on 1_8, only valid options are 1_8 and NO_TLM
+    if(config.GetTlm() == 0){
+      config.SetTlm(TLM_RATIO_1_8);
+    }
     OtaUpdateCrcInitFromUid();
 }
 
@@ -1379,6 +1401,22 @@ static void cyclePower()
       POWERMGNT::incPower();
     }
   }
+}
+
+void HandleTXOffset(){
+#ifdef SLAVE_TX
+if(forceOffset){
+  CRSF::LinkStatistics.lastTXnb = offsetTime;
+  firstSyncNonce=callbackSyncTime;
+  if(offsetTime > (2*ExpressLRS_currAirRate_Modparams->interval)){
+    OtaNonce = 3;
+  } else {
+    OtaNonce = 2;
+  }
+  hwTimer::pause(offsetTime);
+  forceOffset = false;
+}
+#endif
 }
 
 void setup()
@@ -1401,7 +1439,6 @@ void setup()
     config.SetDynamicPower(0); // Disable dynamic power by default
     //FORCE TO 25HZ
     config.SetRate(enumRatetoIndex(RATE_LORA_25HZ));
-    config.SetTlm(TLM_RATIO_1_8);
     config.SetPower(PWR_1000mW); // Set the power to 1000mW by default
 
     Radio.RXdoneCallback = &RXdoneISR;
@@ -1527,6 +1564,7 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
+  HandleTXOffset();
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
