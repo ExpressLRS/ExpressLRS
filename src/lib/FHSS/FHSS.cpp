@@ -41,10 +41,13 @@ double freqRegValToMHz(uint32_t reg_val) {
 }
 
 
+uint16_t startBase = 9200;
+uint16_t endBase = 10200;
+uint8_t numChannels=20;
 
-uint16_t startBase = 9035;
-uint16_t endBase = 9269;
-uint8_t numChannels=40;
+// uint16_t startBase = 9035;
+// uint16_t endBase = 9269;
+// uint8_t numChannels=40;
 
 // uint16_t startBase = 7850;
 // uint16_t endBase = 8350;
