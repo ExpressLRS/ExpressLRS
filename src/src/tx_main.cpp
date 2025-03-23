@@ -459,7 +459,7 @@ void injectBackpackPanTiltRollData(uint32_t const now)
 {
 #if !defined(CRITICAL_FLASH)
   // Do not override channels if the backpack is NOT communicating or PanTiltRoll is disabled
-  if (config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
+  if ((!headTrackingEnabled && config.GetPTREnableChannel() == HT_OFF) || backpackVersion[0] == 0)
   {
     return;
   }
