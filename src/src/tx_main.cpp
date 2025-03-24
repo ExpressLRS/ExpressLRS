@@ -26,7 +26,7 @@
 
 #include "MAVLink.h"
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
 #include "USB.h"
 #define USBSerial Serial
 #endif
@@ -1270,12 +1270,12 @@ static void setupSerial()
 #endif
   TxBackpack = serialPort;
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
   Serial.begin(460800);
 #endif
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
 #elif defined(PLATFORM_ESP32)
@@ -1479,6 +1479,7 @@ void setup()
     // In the failure case we set the logging to the null logger so nothing crashes
     // if it decides to log something
     TxBackpack = new NullStream();
+    TxUSB = TxBackpack;
   }
 
 #if defined(HAS_BUTTON)
