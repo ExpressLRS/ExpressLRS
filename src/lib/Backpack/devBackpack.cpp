@@ -276,9 +276,9 @@ static void injectBackpackPanTiltRollData()
         // If enabled and this packet is less than 1 second old then use it
         if (millis() - lastPTRValidTimeMs < 1000)
         {
-            ChannelData[0] = ptrChannelData[0]; // Pan on channel 0
-            ChannelData[1] = ptrChannelData[1]; // Tilt on channel 1
-            ChannelData[2] = ptrChannelData[2]; // Roll on channel 2
+            ChannelData[3] = ptrChannelData[0]; // Pan on channel 0
+            ChannelData[2] = CRSF_CHANNEL_VALUE_MAX - ptrChannelData[1]; // Tilt on channel 1
+            ChannelData[1] = ptrChannelData[2]; // Roll on channel 2
         }
     }
     else
