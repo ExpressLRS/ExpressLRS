@@ -22,6 +22,8 @@ static bool has_deinited = false;
 
 static rmt_item32_t dshot_tx_rmt_item[DSHOT_PACKET_LENGTH + 1];
 
+static void unassign_prev_pin(int pin, bool bidir);
+
 DShotRMT::DShotRMT(gpio_num_t gpio, int idx) : gpio_num(gpio), my_idx(idx) {
 }
 
@@ -256,11 +258,7 @@ void DShotRMT::set_pin() {
 		// rmt_set_pin and rmt_config only seems to add pins to the RMT mux
 		// they do not remove pins
 		// so we must manually remove the previous pin from the mux
-		pinMode(prev_pin, INPUT);
-		if (bidirectional == false) {
-			digitalWrite(prev_pin, LOW);
-			pinMode(prev_pin, OUTPUT);
-		}
+		unassign_prev_pin(prev_pin, bidirectional);
 	}
 	pinMode(gpio_num, OUTPUT);
 	rmt_set_gpio(rmt_channel, RMT_MODE_TX, gpio_num, false);
@@ -292,6 +290,26 @@ void DShotRMT::poll() {
 		inst->output_rmt_data(); // actually send the data, this will set the pin first, and clear the has_new_data flag
 		inst->last_send_time = now_us;
 		last_time_us = now_us;
+	}
+}
+
+static void unassign_prev_pin(int pin, bool bidir)
+{
+	if (bidir == false) {
+		gpio_set_level((gpio_num_t)pin, 0);
+	}
+
+	gpio_config_t conf = {
+		.pin_bit_mask = (1ULL<<pin),
+		.mode = bidir ? GPIO_MODE_DISABLE : GPIO_MODE_OUTPUT,
+		.pull_up_en = bidir ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
+		.pull_down_en = bidir ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE,
+		.intr_type = GPIO_INTR_DISABLE
+	};
+	gpio_config(&conf);
+
+	if (bidir == false) {
+		gpio_set_level((gpio_num_t)pin, 0);
 	}
 }
 
