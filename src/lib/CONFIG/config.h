@@ -46,6 +46,7 @@ typedef enum {
 
 typedef enum {
     HT_START_EDGETX,
+    HT_START_RC,
     HT_START_AUX1,
     HT_START_AUX2,
     HT_START_AUX3,
