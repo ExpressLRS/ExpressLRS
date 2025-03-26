@@ -28,14 +28,15 @@ uint32_t SerialIBus::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
 
     PackedRCdataOut.checksum = IBUS_CHECKSUM_START; // Compute checksum as we go
     PackedRCdataOut.header = IBUS_HEADER;
-    PackedRCdataOut.checksum -= PackedRCdataOut.header;
 
     for(int i = 0; i < IBUS_NUM_CHANS; i++)
     {
         uint16_t channel_output = fmap(channelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, IBUS_CHANNEL_VALUE_MIN, IBUS_CHANNEL_VALUE_MAX);
         PackedRCdataOut.channels[i] = channel_output;
-        PackedRCdataOut.checksum -= PackedRCdataOut.channels[i];
     }
+
+    // Write the checksum to the packet
+    setChecksum(&PackedRCdataOut);
 
     _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
     return IBUS_CHAN_PACKET_INTERVAL_MS;
@@ -47,9 +48,9 @@ void SerialIBus::setChecksum(ibus_channels_packet_t *packet)
     packet->checksum = IBUS_CHECKSUM_START;
 
     // Subtract every two bytes before the checksum as if they were uint16_ts
-    for(int i = 0; i < offsetof(ibus_channels_packet_t, checksum) / 2; i++)
+    for(int i = 0; i < offsetof(ibus_channels_packet_t, checksum); i++)
     {
-        packet->checksum -= ((uint16_t *) packet)[i];
+        packet->checksum -= ((uint8_t *) packet)[i];
     }
 }
 

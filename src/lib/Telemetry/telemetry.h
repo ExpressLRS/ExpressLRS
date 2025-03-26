@@ -81,7 +81,9 @@ public:
     bool AppendTelemetryPackage(uint8_t *package);
     bool ShouldCallUpdateUID();
     uint8_t * GetNewUID(){ return newUID;}
+#if defined(TARGET_RX)
     rx_pwm_config_in GetPwmInput(){ return pwmInput;}
+#endif
 private:
     bool processInternalTelemetryPackage(uint8_t *package);
     void AppendToPackage(volatile crsf_telemetry_package_t *current);
@@ -103,5 +105,7 @@ private:
     bool callUpdateUID;
     bool callUpdatePWM;
     uint8_t modelMatchId;
+#if defined(TARGET_RX)
     rx_pwm_config_in pwmInput;
+#endif
 };
