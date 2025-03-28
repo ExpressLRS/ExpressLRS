@@ -866,7 +866,6 @@ static void registerLuaParameters()
   }
   strlcat(version_domain, FHSSconfig->domain, sizeof(version_domain));
   registerLUAParameter(&luaELRSversion);
-  registerLUAParameter(NULL);
 }
 
 static int event()
