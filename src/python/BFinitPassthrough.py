@@ -49,7 +49,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     rl = SerialHelper.SerialHelper(s, 3., ['CCC', "# "])
     rl.clear()
     # Send start command '#'
-    rl.write_str("#", half_duplex)
+    rl.write_str("#", half_duplex, False)
     start = rl.read_line(2.).strip()
     #dbg_print("BF INIT: '%s'" % start.replace("\r", ""))
     if "CCC" in start:
@@ -91,7 +91,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         if line.startswith("serial"):
             if SCRIPT_DEBUG:
                 dbg_print("  '%s'" % line)
-            config = re.search('serial ([0-9]+) ([0-9]+) ', line)
+            config = re.search('serial ((?:UART)?[0-9]+) ([0-9]+) ', line)
             if config and (int(config.group(2)) & 64 == 64):
                 dbg_print("    ** Serial RX config detected: '%s'" % line)
                 SerialRXindex = config.group(1)

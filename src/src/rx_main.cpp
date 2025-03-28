@@ -1764,6 +1764,11 @@ static void EnterBindingMode()
         return;
     }
 
+    // never enter binding mode if binding is supposed to only be administered through the web UI
+    if (config.GetBindStorage() == BINDSTORAGE_ADMINISTERED) {
+        return;
+    }
+
     // Binding uses a CRCInit=0, 50Hz, and InvertIQ
     OtaCrcInitializer = 0;
     InBindingMode = true;
@@ -2214,7 +2219,7 @@ void loop()
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
         if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
         {
-            DBGLN("Mode %u not supported, ignoring", get_elrs_airRateConfig(index)->interval);
+            DBGLN("Mode %u not supported, ignoring", ExpressLRS_nextAirRateIndex);
             ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
         }
         LostConnection(true);
