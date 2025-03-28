@@ -74,8 +74,12 @@ class SerialHelper:
             #   All written data is read into RX buffer
             serial.read(cnt)
 
-    def write_str(self, data, half_duplex=None):
-        self.write(data+'\r\n', half_duplex)
+    def write_str(self, data, half_duplex=None, new_line=True):
+        if (new_line):
+            self.write(data+'\r\n', half_duplex)
+        else:
+            self.write(data, half_duplex)
+
 
     def __convert_to_str(self, data):
         try:
