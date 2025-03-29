@@ -38,6 +38,7 @@ local COL2
 local maxLineIndex
 local textYoffset
 local textSize
+local barTextSpacing
 
 local function allocateFields()
   fields = {}
@@ -595,7 +596,6 @@ local function lcd_title_color()
   local EGREEN = lcd.RGB(0x9f, 0xc7, 0x6f)
   local EGREY1 = lcd.RGB(0x91, 0xb2, 0xc9)
   local EGREY2 = lcd.RGB(0x6f, 0x62, 0x7f)
-  local barHeight = 30
 
   -- Field display area (white w/ 2px green border)
   lcd.setColor(CUSTOM_COLOR, EGREEN)
@@ -610,19 +610,19 @@ local function lcd_title_color()
   lcd.drawRectangle(LCD_W - textSize, 1 , textSize - 1, barHeight - 2, CUSTOM_COLOR) -- left and bottom line only 1px, make it look bevelled
   lcd.setColor(CUSTOM_COLOR, BLACK)
   if titleShowWarn then
-    lcd.drawText(COL1 + 1, 4, elrsFlagsInfo, CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, barTextSpacing, elrsFlagsInfo, CUSTOM_COLOR)
   else
     local title = fields_count > 0 and deviceName or "Loading..."
-    lcd.drawText(COL1 + 1, 4, title, CUSTOM_COLOR)
-    lcd.drawText(LCD_W - 5, 4, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, barTextSpacing, title, CUSTOM_COLOR)
+    lcd.drawText(LCD_W - 5, barTextSpacing, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
   end
   -- progress bar
   if #loadQ > 0 and fields_count > 0 then
     local barW = (COL2-4) * (fields_count - #loadQ) / fields_count
     lcd.setColor(CUSTOM_COLOR, EBLUE)
-    lcd.drawFilledRectangle(2, 2+20, barW, barHeight-5-20, CUSTOM_COLOR)
+    lcd.drawFilledRectangle(2, barTextSpacing/2+textSize, barW, barTextSpacing, CUSTOM_COLOR)
     lcd.setColor(CUSTOM_COLOR, WHITE)
-    lcd.drawFilledRectangle(2+barW, 2+20, COL2-2-barW, barHeight-5-20, CUSTOM_COLOR)
+    lcd.drawFilledRectangle(2+barW, barTextSpacing/2+textSize, COL2-2-barW, barTextSpacing, CUSTOM_COLOR)
   end
 end
 
@@ -847,24 +847,18 @@ local function setLCDvar()
   if major ~= 1 then
     popupCompat = popupConfirmation
   end
-  if LCD_W == 480 then
+	
+	if (lcd.RGB ~= nil) then
+    local textWidth, fontHeight = lcd.sizeText("TEXT") -- determine standard font height
     COL1 = 3
-    COL2 = 240
-    if LCD_H == 320 then
-      maxLineIndex = 12
-    else
-      maxLineIndex = 10
-    end
-    textYoffset = 10
-    textSize = 22 --textSize is text Height
-  elseif LCD_W == 320 then
-    COL1 = 3
-    COL2 = 160
-    maxLineIndex = 14
-    textYoffset = 10
-    textSize = 22
-  else
-    if LCD_W == 212 then
+    COL2 = LCD_W/2
+    textSize = fontHeight
+    barTextSpacing = 4
+    barHeight = textSize + barTextSpacing + barTextSpacing
+    textYoffset = 2 * barTextSpacing + 2
+    maxLineIndex = math.floor(((LCD_H - barHeight - textYoffset) / textSize)) - 1
+	else
+	  if LCD_W == 212 then
       COL2 = 110
     else
       COL2 = 70
