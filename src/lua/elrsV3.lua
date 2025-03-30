@@ -847,9 +847,9 @@ local function setLCDvar()
   if major ~= 1 then
     popupCompat = popupConfirmation
   end
-	
-	if (lcd.RGB ~= nil) then
-    local textWidth, fontHeight = lcd.sizeText("TEXT") -- determine standard font height
+  
+  if (lcd.RGB ~= nil) then
+    local textWidth, fontHeight = lcd.sizeText("Qg") -- determine standard font height
     COL1 = 3
     COL2 = LCD_W/2
     textSize = fontHeight
@@ -857,8 +857,8 @@ local function setLCDvar()
     barHeight = textSize + barTextSpacing + barTextSpacing
     textYoffset = 2 * barTextSpacing + 2
     maxLineIndex = math.floor(((LCD_H - barHeight - textYoffset) / textSize)) - 1
-	else
-	  if LCD_W == 212 then
+  else
+    if LCD_W == 212 then
       COL2 = 110
     else
       COL2 = 70
