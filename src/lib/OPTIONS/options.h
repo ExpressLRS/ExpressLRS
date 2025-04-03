@@ -57,6 +57,7 @@ constexpr size_t ELRSOPTS_PRODUCTNAME_SIZE = 128;
 constexpr size_t ELRSOPTS_DEVICENAME_SIZE = 16;
 constexpr size_t ELRSOPTS_OPTIONS_SIZE = 512;
 constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
+constexpr size_t ELRSOPTS_EEPROM_SIZE = 1024; // RESERVED_EEPROM_SIZE from elrs_eeprom.h is 1024
 
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 extern firmware_options_t firmwareOptions;

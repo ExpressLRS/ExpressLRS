@@ -11,6 +11,7 @@
 #else
 #include <SPIFFS.h>
 #endif
+#include <EEPROM.h>
 
 #if defined(PLATFORM_ESP32)
 #include <WiFi.h>
@@ -102,6 +103,8 @@ static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
+static uint32_t sketchSize = 0;
+static size_t firmwareOffset = 0;
 
 void setWifiUpdateMode()
 {
@@ -704,6 +707,25 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
   if (target_seen || Update.hasError()) {
     String msg;
     if (!Update.hasError() && Update.end()) {
+#if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
+      unsigned int trailerAdr = totalSize - 4096;
+      unsigned int eeAdr = trailerAdr + ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE + ELRSOPTS_HARDWARE_SIZE;
+      #if defined(PLATFORM_ESP32)
+      const esp_partition_t *data_partition = esp_ota_get_boot_partition();
+      if (data_partition) {
+          firmwareOffset = data_partition->address;
+      }
+      #endif
+      uint8_t eeBuff[ELRSOPTS_EEPROM_SIZE];
+      ESP.flashRead(firmwareOffset + eeAdr, (uint32_t*)eeBuff, (size_t)ELRSOPTS_EEPROM_SIZE);
+      if (memcmp(eeBuff, "EEPROM", 6) == 0) { // contains the header
+        for (unsigned int i = 6; i < ELRSOPTS_EEPROM_SIZE; i++) {
+          EEPROM.write(i - 6, eeBuff[i]);
+        }
+        EEPROM.commit();
+        DBGLN("Updated the EEPROM using trailing data");
+      }
+#endif
       DBGLN("Update complete, rebooting");
       msg = String("{\"status\": \"ok\", \"msg\": \"Update complete. ");
       #if defined(TARGET_RX)
@@ -828,7 +850,6 @@ static void WebUdpControl(AsyncWebServerRequest *request)
 }
 #endif
 
-static size_t firmwareOffset = 0;
 static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
 {
   uint8_t *dst;
@@ -847,6 +868,69 @@ static size_t getFirmwareChunk(uint8_t *data, size_t len, size_t pos)
   }
 
   ESP.flashRead(firmwareOffset + pos, (uint32_t *)dst, len);
+#if defined(TARGET_RX) && (defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266))
+  if (sketchSize <= 0) {
+    sketchSize = ESP.getSketchSize();
+  }
+  if (pos >= sketchSize || (pos + len) >= sketchSize) {
+    File file1 = SPIFFS.open("/options.json", "r");
+    File file2 = SPIFFS.open("/hardware.json", "r");
+    for (unsigned int i = 0; i < len; i++) { // for all in this chunk
+      unsigned int adr = pos + i;
+      if (adr >= sketchSize + ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE) // if within the trailing region
+      {
+        unsigned int metaAdr1 = adr - (sketchSize + ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE);
+        unsigned int metaAdr2 = metaAdr1 - ELRSOPTS_OPTIONS_SIZE;
+        unsigned int metaAdr3 = metaAdr2 - ELRSOPTS_HARDWARE_SIZE;
+        if (metaAdr1 < ELRSOPTS_OPTIONS_SIZE && file1 && !file1.isDirectory()) { // if writing options file region and the file exists
+          if (metaAdr1 < file1.size()) {
+            file1.seek(metaAdr1, SeekSet);
+            if (file1.available()) {
+              uint8_t fdata = file1.read();
+              dst[i] = fdata;
+            }
+          }
+          else {
+            dst[i] = 0; // blank out the rest of the file
+          }
+        }
+        if (metaAdr2 < ELRSOPTS_HARDWARE_SIZE && file2 && !file2.isDirectory()) { // if writing hardware file region and the file exists
+          if (metaAdr2 < file2.size()) {
+            file2.seek(metaAdr2, SeekSet);
+            if (file2.available()) {
+              uint8_t fdata = file2.read();
+              dst[i] = fdata;
+            }
+          }
+          else {
+            dst[i] = 0; // blank out the rest of the file
+          }
+        }
+        if (metaAdr3 < ELRSOPTS_EEPROM_SIZE) {
+          switch (metaAdr3) { // first 6 characters are used to indicate that the EEPROM exists
+            case 0: dst[i] = 'E'; break;
+            case 1: dst[i] = 'E'; break;
+            case 2: dst[i] = 'P'; break;
+            case 3: dst[i] = 'R'; break;
+            case 4: dst[i] = 'O'; break;
+            case 5: dst[i] = 'M'; break;
+            default:
+            {
+              dst[i] = EEPROM.read(metaAdr3 - 6);
+            }
+            break;
+          }
+        }
+      }
+    }
+    if (file1) {
+      file1.close();
+    }
+    if (file2) {
+      file2.close();
+    }
+  }
+#endif
 
   // If using local stack buffer, move the 4 bytes into the passed buffer
   // data is known to not be aligned so it is moved byte-by-byte instead of as uint32_t*
