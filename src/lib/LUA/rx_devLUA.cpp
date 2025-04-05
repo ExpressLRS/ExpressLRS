@@ -168,7 +168,7 @@ static struct luaItem_command luaSetFailsafe = {
 static struct luaItem_selection luaBindStorage = {
     {"Bind Storage", CRSF_TEXT_SELECTION},
     0, // value
-    "Persistent;Volatile;Returnable",
+    "Persistent;Volatile;Returnable;Administered",
     STR_EMPTYSPACE
 };
 
@@ -568,7 +568,6 @@ static void registerLuaParameters()
 
   registerLUAParameter(&luaModelNumber);
   registerLUAParameter(&luaELRSversion);
-  registerLUAParameter(nullptr);
 }
 
 static void updateBindModeLabel()

@@ -1,4 +1,5 @@
 #include "FiveWayButton.h"
+#include "devADC.h"
 
 #if defined(PLATFORM_ESP32)
 uint16_t FiveWayButton::joyAdcValues[] = {0};
@@ -49,7 +50,7 @@ int FiveWayButton::readKey()
 {
     if (GPIO_PIN_JOYSTICK != UNDEF_PIN)
     {
-        uint16_t value = analogRead(GPIO_PIN_JOYSTICK);
+        const uint16_t value = getADCReading(ADC_JOYSTICK);
 
         constexpr uint8_t IDX_TO_INPUT[N_JOY_ADC_VALUES - 1] =
             {INPUT_KEY_UP_PRESS, INPUT_KEY_DOWN_PRESS, INPUT_KEY_LEFT_PRESS, INPUT_KEY_RIGHT_PRESS, INPUT_KEY_OK_PRESS};
