@@ -1196,7 +1196,11 @@ static void HandleUARTout()
       apOutputBuffer.lock();
       apOutputBuffer.popBytes(buf, size);
       apOutputBuffer.unlock();
+#if defined(PLATFORM_ESP8266)
+      handset->write(buf, size);
+#else
       TxUSB->write(buf, size);
+#endif
     }
   }
 }
@@ -1212,7 +1216,11 @@ static void HandleUARTin()
       if (size > 0)
       {
         uint8_t buf[size];
+#if defined(PLATFORM_ESP8266)
+        handset->readBytes(buf, size);
+#else
         TxUSB->readBytes(buf, size);
+#endif
         apInputBuffer.lock();
         apInputBuffer.pushBytes(buf, size);
         apInputBuffer.unlock();
