@@ -55,22 +55,25 @@ const char *rate_string[] = {
 static const char *rate_string[] = {
     // 900
     "200Hz",
-    "100 Full",
+    "100Full",
     "100Hz",
     "50Hz",
     // 2.4
     "500Hz",
-    "333 Full",
+    "333Full",
     "250Hz",
     "150Hz",
-    "100 Full",
+    "100Full",
     "50Hz",
     // Dual
     "X150Hz",
-    "X100 Full",
+    "X100Full",
     // 900
     "250Hz",
-    "200 Full",
+    "200Full",
+    // K Modes
+    "DK500",
+    "K1000Full",
 };
 #else
 static const char *rate_string[] = {

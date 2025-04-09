@@ -27,6 +27,7 @@
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
 #include "rx-serial/SerialDisplayport.h"
+#include "rx-serial/SerialGPS.h"
 
 #include "rx-serial/devSerialIO.h"
 #include "devLED.h"
@@ -1432,6 +1433,10 @@ static void setupSerial()
         hottTlmSerial = true;
         serialBaud = 19200;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1491,6 +1496,10 @@ static void setupSerial()
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
         serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (hottTlmSerial)
     {
@@ -1592,6 +1601,10 @@ static void setupSerial1()
             Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialDisplayport(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
+        case PROTOCOL_SERIAL1_GPS:        
+            Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
     }
 }
 
@@ -1691,7 +1704,7 @@ static void setupRadio()
         return;
     }
 
-    DynamicPower_UpdateRx(true);
+    DynamicPower_UpdateRx(true);  // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
 
 #if defined(Regulatory_Domain_EU_CE_2400)
     LBTEnabled = (config.GetPower() > PWR_10mW);
@@ -1767,6 +1780,11 @@ static void EnterBindingMode()
     if (InBindingMode)
     {
         DBGLN("Already in binding mode");
+        return;
+    }
+
+    // never enter binding mode if binding is supposed to only be administered through the web UI
+    if (config.GetBindStorage() == BINDSTORAGE_ADMINISTERED) {
         return;
     }
 
