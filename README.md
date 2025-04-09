@@ -55,7 +55,7 @@ with many more features on the way!
 
 ExpressLRS currently supports hardware from a wide range of manufacturers. In principle, the targets listed in the [ExpressLRS Configurator](https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/) are tested and supported hardware.
 
-Please refer to the [Hardware Selection] page (https://www.expresslrs.org/hardware/hardware-selection/) on the website for guidance. We do not manufacture any of our hardware, so we can only provide limited support for faulty hardware.
+See [Hardware Selection](https://www.expresslrs.org/hardware/hardware-selection/) for guidance. We do not manufacture any of our hardware, so we can only provide limited support for faulty hardware.
 
 ## Developers
 

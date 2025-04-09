@@ -67,8 +67,12 @@ class SerialHelper:
         cnt = serial.write(data)
         serial.flush()
 
-    def write_str(self, data):
-        self.write(data+'\r\n')
+    def write_str(self, data, new_line=True):
+        if (new_line):
+            self.write(data+'\r\n')
+        else:
+            self.write(data)
+
 
     def __convert_to_str(self, data):
         try:

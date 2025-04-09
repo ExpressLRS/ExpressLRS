@@ -12,6 +12,8 @@ COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
 CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 ************************************************************************************/
 
+#if defined(TARGET_RX)
+
 #pragma once
 #include "SerialIO.h"
 
@@ -19,19 +21,19 @@ CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 #define MSP_STATUS_EX       150
 #define MSP_MSG_PERIOD_MS   100
 
-// MSP_STATUS_DJI
-struct msp_status_DJI_t
+struct msp_status_t
 {
-  uint16_t cycleTime;
-  uint16_t i2cErrorCounter;
-  uint16_t sensor;                    // MSP_STATUS_SENSOR_...
-  uint32_t flightModeFlags;           // see getActiveModes()
-  uint8_t  configProfileIndex;
-  uint16_t averageSystemLoadPercent;  // 0...100
-  uint16_t armingFlags;   //0x0103 or 0x0301
-  uint8_t  accCalibrationAxisFlags;  //0
-  uint8_t  DJI_ARMING_DISABLE_FLAGS_COUNT; //25
-  uint32_t djiPackArmingDisabledFlags; //(1 << 24)
+    uint16_t task_delta_time;
+    uint16_t i2c_error_count;
+    uint16_t sensor_status;
+    uint32_t flight_mode_flags;
+    uint8_t pid_profile;
+    uint16_t system_load;
+    uint16_t gyro_cycle_time;
+    uint8_t box_mode_flags;
+    uint8_t arming_disable_flags_count;
+    uint32_t arming_disable_flags;
+    uint8_t extra_flags;
 } __attribute__ ((packed));
 
 ////////////////////////////
@@ -39,7 +41,7 @@ struct msp_status_DJI_t
 class SerialDisplayport : public SerialIO
 {
 public:
-    explicit SerialDisplayport(Stream &out, Stream &in) : SerialIO(&out, &in), m_lastSentMSP(0) {}
+    explicit SerialDisplayport(Stream &out, Stream &in) : SerialIO(&out, &in), m_receivedBytes(0), m_receivedTimestamp(0) {}
     virtual ~SerialDisplayport() {}
 
     void queueLinkStatisticsPacket() override {}
@@ -48,8 +50,12 @@ public:
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
 private:
-    void processBytes(uint8_t *bytes, uint16_t size) override {};
+    void processBytes(uint8_t *bytes, uint16_t size) override;
     void send(uint8_t messageID, void * payload, uint8_t size, Stream * _stream);
+    bool getArmedState();
 
-    uint32_t m_lastSentMSP;
+    uint8_t m_receivedBytes;
+    uint32_t m_receivedTimestamp;
 };
+
+#endif // defined(TARGET_RX)
