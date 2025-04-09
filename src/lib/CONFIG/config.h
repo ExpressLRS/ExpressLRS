@@ -205,7 +205,7 @@ typedef union {
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
-                 narrow:1,       // Narrow output mode (half pulse width)
+                 stretched:1,    // Stretched pulse mode 500us to 2500us
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
                  unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
@@ -284,7 +284,8 @@ public:
     void SetAntennaMode(uint8_t antennaMode);
     void SetDefaults(bool commit);
     void SetStorageProvider(ELRS_EEPROM *eeprom);
-    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow);
+    #if defined(GPIO_PIN_PWM_OUTPUTS)
+    void SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched);
     void SetPwmChannelRaw(uint8_t ch, uint32_t raw);
     void SetForceTlmOff(bool forceTlmOff);
     void SetRateInitialIdx(uint8_t rateInitialIdx);
