@@ -197,6 +197,7 @@ typedef enum : uint8_t {
     ACTION_BIND,
     ACTION_BLE_JOYSTICK,
     ACTION_RESET_REBOOT,
+    ACTION_TOGGLE_MODEL_ID,
 
     ACTION_LAST
 } action_e;
