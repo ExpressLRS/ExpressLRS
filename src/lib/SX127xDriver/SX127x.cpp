@@ -338,6 +338,11 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radi
   WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
   hal.writeRegister(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff), radioNumber);
+
+  if (doRx)
+  {
+    RXnb(rxTime);
+  }
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)

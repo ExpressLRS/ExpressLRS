@@ -406,6 +406,11 @@ void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radi
     hal.WriteCommand(SX1280_RADIO_SET_RFFREQUENCY, buf, sizeof(buf), radioNumber);
 
     currFreq = regfreq;
+
+    if (doRx)
+    {
+        RXnb(rxTime);
+    }
 }
 
 void SX1280Driver::SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr)
