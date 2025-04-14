@@ -849,10 +849,16 @@ local function setLCDvar()
   end
   
   if (lcd.RGB ~= nil) then
-    local textWidth, fontHeight = lcd.sizeText("Qg") -- determine standard font height
+    local ver, radio, maj, minor, rev, osname = getVersion()
+
+    if osname ~= nil and osname == "EdgeTX" then
+      textWidth, textSize = lcd.sizeText("Qg") -- determine standard font height for EdgeTX
+    else
+      textSize = 21                            -- use this for OpenTX
+    end
+
     COL1 = 3
     COL2 = LCD_W/2
-    textSize = fontHeight
     barTextSpacing = 4
     barHeight = textSize + barTextSpacing + barTextSpacing
     textYoffset = 2 * barTextSpacing + 2
