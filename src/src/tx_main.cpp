@@ -31,6 +31,12 @@
 #endif
 
 //// CONSTANTS ////
+#define MILLS_1 (1)
+#define MILLS_2 (2)
+#define MILLS_3 (3)
+#define MILLS_82 (82)
+#define FALLING_IT (0)
+#define PA8_IDR (1<<8)
 #define SLAVE_TX
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
@@ -67,6 +73,14 @@ volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
 ////////////////////////////////////////////////
+
+// OTANONCE SYNC /////////////////////////
+volatile uint32_t otanonce_master_last_synched = millis();
+volatile bool otanonce_master_timer = false;
+void ICACHE_RAM_ATTR timerCallback();
+
+// OTANONCE SYNC END /////////////////////
+
 
 //INTER TX SYNCING
 volatile int32_t delayTimeMicros = 0;
@@ -631,17 +645,31 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
-void ICACHE_RAM_ATTR resetNonceCallback(){
+ 
+void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
+
   #ifdef SLAVE_TX
+
+
+  if( connectionState == noCrossfire ){
+    return;
+  }
   
-    currTime = micros();
-    if(currTime - startTime > START_TIMEOUT && !handset->IsArmed()){
-      if(syncsSent<maxSyncs){
-        syncsSent+=1;
-        forceSync = true;
-        callbackSyncTime = micros();
-      }
+
+  uint32_t interrupt_io = GPIOA->IDR & PA8_IDR; // Faster.
+  
+  if( interrupt_io != FALLING_IT ){
+    otanonce_master_last_synched = HAL_GetTick(); // faster. 
+    timerCallback();
+    hwTimer::stop();
+    otanonce_master_timer = true;
+  }
+  else{
+    if( (millis() - otanonce_master_last_synched) >= MILLS_2 ){
+      OtaNonce = 0;        
     }
+  }
+   
   #endif
 }
 
@@ -661,28 +689,12 @@ void ICACHE_RAM_ATTR nonceAdvance()
 
 void ICACHE_RAM_ATTR timerCallback()
 {
-  #ifndef SLAVE_TX
-  if(OtaNonce == 0) {
-    if(syncsSent<maxSyncs && !handset->IsArmed()){
-      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
-      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
-      firstSyncNonce = micros();
-      syncsSent+=1;
-    }
-  }
-#else
-  //Just in case we trigger this before handling forceOffset logic, do not increment Nonce
-  if(forceOffset) return;
+    #ifndef SLAVE_TX
 
-  if(forceSync){
-    forceSync = false;
-    currResetTime = micros();
-    if((currResetTime - callbackSyncTime) > 0){
-      offsetTime =  ExpressLRS_currAirRate_Modparams->interval + (ExpressLRS_currAirRate_Modparams->interval -(currResetTime - callbackSyncTime));
-      forceOffset = true;
-    }
-  }
-#endif
+    otanonce_master_last_synched = HAL_GetTick(); // faster.    
+    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
+
+    #endif
 
 lastTimerCallbackTime = micros();
   /* If we are busy writing to EEPROM (committing config changes) then we just advance the nonces, i.e. no SPI traffic */
@@ -723,7 +735,9 @@ lastTimerCallbackTime = micros();
 
 
   TelemetryRcvPhase = ttrpTransmitting;
+  digitalWrite(GPIO_PIN_SLAVE_SYNC,HIGH);
   SendRCdataToRF();
+  digitalWrite(GPIO_PIN_SLAVE_SYNC,LOW);
 }
 
 static void UARTdisconnected()
@@ -869,12 +883,25 @@ static void CheckConfigChangePending()
     // adding one cycle that will be eaten by busywaiting for the transmit to end
     uint32_t pauseCycles = ((EEPROM_WRITE_DURATION + cycleInterval - 1) / cycleInterval) + 1;
     // Pause won't return until paused, and has just passed the tick ISR (but not fired)
+
+    #ifdef SLAVE_TX
+    // resume timer and detach sync interrupt.
+    hwTimer::resume();
+    detachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT));
+    #endif
+
     hwTimer::pause(pauseCycles * cycleInterval);
     while (busyTransmitting); // wait until no longer transmitting
 
     --pauseCycles; // the last cycle will actually be a transmit
     while (pauseCycles--)
       nonceAdvance();
+
+    #ifdef SLAVE_TX
+    // re-attach sync interrupt.  
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, CHANGE);
+    #endif
+
 #endif
     // Set the commitInProgress flag to prevent any other RF SPI traffic during the commit from RX or scheduled TX
     commitInProgress = true;
@@ -1403,21 +1430,7 @@ static void cyclePower()
   }
 }
 
-void HandleTXOffset(){
-#ifdef SLAVE_TX
-if(forceOffset){
-  CRSF::LinkStatistics.lastTXnb = offsetTime;
-  firstSyncNonce=callbackSyncTime;
-  if(offsetTime > (2*ExpressLRS_currAirRate_Modparams->interval)){
-    OtaNonce = 3;
-  } else {
-    OtaNonce = 2;
-  }
-  hwTimer::pause(offsetTime);
-  forceOffset = false;
-}
-#endif
-}
+
 
 void setup()
 {
@@ -1487,12 +1500,13 @@ void setup()
   #if defined(Regulatory_Domain_EU_CE_2400)
       SetClearChannelAssessmentTime();
   #endif
+  pinMode(GPIO_PIN_SLAVE_SYNC, OUTPUT);
 #ifndef SLAVE_TX
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, OUTPUT);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 #else
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
-      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), resetNonceCallback, RISING);
+      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, CHANGE);
 #endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
@@ -1523,6 +1537,23 @@ void setup()
 void loop()
 {
   uint32_t now = millis();
+  #ifndef SLAVE_TX
+  if(OtaNonce == 0 && (now - otanonce_master_last_synched) >= MILLS_3) {
+    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+  }else if( OtaNonce != 0 && ( now - otanonce_master_last_synched) >= MILLS_1 )
+  {
+    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+  }
+  #else
+    if( (now - otanonce_master_last_synched) > MILLS_82 && otanonce_master_timer == true){
+      // resume local timer if master stops driving.
+      otanonce_master_timer = false;
+      if( connectionState != noCrossfire){
+        hwTimer::resume();
+      }
+    }
+
+  #endif
 
   HandleUARTout(); // Only used for non-CRSF output
 
@@ -1564,7 +1595,7 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
-  HandleTXOffset();
+
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
