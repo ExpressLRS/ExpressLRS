@@ -32,9 +32,20 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 // mV -> mv*100
                 crsfbatt.p.voltage = htobe16(battery_status.voltages[0] / 100);
                 // cA -> mA*100
-                crsfbatt.p.current = htobe16(battery_status.current_battery / 10);
-                crsfbatt.p.capacity = htobe32(battery_status.current_consumed & 0x0FFF);
-                crsfbatt.p.remaining = battery_status.battery_remaining;
+                crsfbatt.p.current = 0;
+                if (battery_status.current_battery > 0){ // int16_t, -1 means invalid
+                    crsfbatt.p.current = htobe16(((uint16_t) battery_status.current_battery) / 10);
+                }
+                // mAh
+                crsfbatt.p.capacity = 0;
+                if (battery_status.current_consumed > 0){ // int32_t, -1 means invalid
+                    crsfbatt.p.capacity = htobe32(std::min(((uint32_t) battery_status.current_consumed), (uint32_t) 0xFFFFFFU)); // 24bit value
+                }
+                // 0-100%
+                crsfbatt.p.remaining = 0;
+                if (battery_status.battery_remaining > 0){ // int8_t, -1 means invalid
+                    crsfbatt.p.remaining = (uint8_t) battery_status.battery_remaining;
+                }
                 CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfbatt);
                 break;
