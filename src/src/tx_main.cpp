@@ -107,6 +107,7 @@ device_affinity_t ui_devices[] = {
   {&LED_device, 0},
   {&RGB_device, 0},
   {&LUA_device, 1},
+  {&ADC_device, 1},
   {&WIFI_device, 0},
   {&Button_device, 0},
 #if defined(PLATFORM_ESP32)
