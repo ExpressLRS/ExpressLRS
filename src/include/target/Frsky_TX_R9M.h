@@ -30,7 +30,7 @@
 #define GPIO_PIN_LED_GREEN              PA12 // Green LED
 //#define GPIO_PIN_BUTTON                 PA8 // pullup e.g. LOW when pressed
 #define GPIO_PIN_SLAVE_INTERRUPT        PA8
-
+#define GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA PA3
 #define GPIO_PIN_SLAVE_SYNC             PA2 // TODO: debug
 // #define GPIO_PIN_TXD                    PA3
 // #define GPIO_PIN_RXD                    PA4
