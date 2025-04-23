@@ -235,51 +235,6 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
     }
 }
 
-void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per channel
-{
-    auto payload = (uint8_t const * const)&inBuffer.asRCPacket_t.channels;
-    constexpr unsigned srcBits = 11;
-    constexpr unsigned dstBits = 11;
-    constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
-    constexpr unsigned precisionShift = dstBits - srcBits;
-
-    // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
-    uint8_t bitsMerged = 0;
-    uint32_t readValue = 0;
-    unsigned readByteIndex = 0;
-    for (uint32_t & n : ChannelData)
-    {
-        while (bitsMerged < srcBits)
-        {
-            uint8_t readByte = payload[readByteIndex++];
-            readValue |= ((uint32_t) readByte) << bitsMerged;
-            bitsMerged += 8;
-        }
-        //printf("rv=%x(%x) bm=%u\n", readValue, (readValue & inputChannelMask), bitsMerged);
-        n = (readValue & inputChannelMask) << precisionShift;
-        readValue >>= srcBits;
-        bitsMerged -= srcBits;
-    }
-
-    // Call the registered RCdataCallback, if there is one, so it can modify the channel data if it needs to.
-    if (RCdataCallback) RCdataCallback();
-
-    //
-    // sends channel data and also communicates commanded armed status in arming mode Switch.
-    // frame len 24 -> arming mode CH5: use channel 5 value
-    // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
-    //
-    armCmd = inBuffer.asUint8_t[1] == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
-
-    // monitoring arming state
-    if (lastArmCmd != armCmd) {
-        #if defined(PLATFORM_ESP32)
-        devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);
-        #endif
-        lastArmCmd = armCmd;
-    }
-}
-
 bool CRSFHandset::ProcessPacket()
 {
     dataLastRecv = micros();
@@ -291,18 +246,8 @@ bool CRSFHandset::ProcessPacket()
         if (connected) connected();
     }
 
-    // processing of the RC Channels should be in the CRSFEndPoint
-    const uint8_t packetType = inBuffer.asRCPacket_t.header.type;
-    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
-    {
-        RCdataLastRecv = micros();
-        RcPacketToChannelsData();
-    }
-    else
-    {
-        // send to TXModuleCRSF
-        crsfEndpoint->processMessage(&connector, (crsf_ext_header_t *)inBuffer.asUint8_t);
-    }
+    const auto message = (crsf_ext_header_t *)inBuffer.asUint8_t;
+    crsfEndpoint->processMessage(&connector, message);
 
     return true;
 }
@@ -385,10 +330,6 @@ void CRSFHandset::handleInput()
         if (ProcessPacket())
         {
             handleOutput(totalLen);
-            if (RCdataCallback)
-            {
-                RCdataCallback();
-            }
         }
     }
     else
