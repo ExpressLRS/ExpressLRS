@@ -1362,6 +1362,7 @@ void MspReceiveComplete()
             if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
             {
                 luaParamUpdateReq(
+                    receivedHeader->orig_addr,
                     MspData[CRSF_TELEMETRY_TYPE_INDEX],
                     MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
                     MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]

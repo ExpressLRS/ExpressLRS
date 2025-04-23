@@ -31,6 +31,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "MAVLink.h"
+#include "tx-crsf/TXModuleCRSF.h"
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -97,6 +98,8 @@ static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
 StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
+
+TXModuleCRSF *crsfEndpoint;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -440,7 +443,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
   if (!InBindingMode && config.GetModelMatch())
   {
-    syncPtr->UID5 ^= (~CRSFHandset::getModelID()) & MODELMATCH_MASK;
+    syncPtr->UID5 ^= (~crsfEndpoint->modelId) & MODELMATCH_MASK;
   }
 }
 
@@ -823,7 +826,7 @@ static void ChangeRadioParams()
 void ModelUpdateReq()
 {
   // Force synspam with the current rate parameters in case already have a connection established
-  if (config.SetModelId(CRSFHandset::getModelID()))
+  if (config.SetModelId(crsfEndpoint->modelId))
   {
     syncSpamCounter = syncSpamAmount;
     syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
@@ -942,7 +945,6 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       setConnectionState(connected);
-      CRSFHandset::ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
       apInputBuffer.flush();
@@ -956,7 +958,6 @@ static void UpdateConnectDisconnectStatus()
   {
     setConnectionState(disconnected);
     connectionHasModelMatch = true;
-    CRSFHandset::ForwardDevicePings = false;
   }
 }
 
@@ -1393,7 +1394,11 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
+    crsfEndpoint = new TXModuleCRSF();
+    crsfEndpoint->OnBindingCommand = EnterBindingModeSafely;
+    crsfEndpoint->RecvModelUpdate = ModelUpdateReq;
+
+    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
     DBGLN("ExpressLRS TX Module Booted...");
 

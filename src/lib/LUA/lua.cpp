@@ -19,6 +19,7 @@ static void (*devicePingCallback)() = nullptr;
 #endif
 
 #define LUA_MAX_PARAMS 64
+static crsf_addr_e parameterOrigin;
 static uint8_t parameterType;
 static uint8_t parameterIndex;
 static uint8_t parameterArg;
@@ -150,7 +151,7 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
   return childParameters;
 }
 
-static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
+static uint8_t sendCRSFparam(crsf_addr_e origen, crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
@@ -164,7 +165,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 #ifdef TARGET_TX
   // Set the hidden flag
   chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
-  if (CRSFHandset::elrsLUAmode) {
+  if (origen == CRSF_ADDRESS_ELRS_LUA) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
 #else
@@ -232,7 +233,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 #else
   memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
-  CRSF::SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  CRSF::SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
 
   telemetry.AppendTelemetryPackage(paramInformation);
 #endif
@@ -241,7 +242,7 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(parameterOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -322,8 +323,9 @@ void luaRegisterDevicePingCallback(void (*callback)())
 
 #endif
 
-void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
+void luaParamUpdateReq(crsf_addr_e origin, uint8_t type, uint8_t index, uint8_t arg)
 {
+  parameterOrigin = origin;
   parameterType = type;
   parameterIndex = index;
   parameterArg = arg;
@@ -401,7 +403,7 @@ bool luaHandleUpdateParameter()
             field->step = lcsIdle;
             field->info = "";
           }
-          sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
+          sendCRSFparam(parameterOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
         }
       }
       break;
@@ -433,7 +435,7 @@ void sendLuaDevicePacket(void)
 #ifdef TARGET_TX
   CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
 #else
-  CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
   telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
 }

@@ -6,6 +6,7 @@
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
+#include "HandsetConnector.h"
 #include "common.h"
 
 #ifdef PLATFORM_ESP32
@@ -28,9 +29,6 @@ public:
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
-    static uint8_t modelId;         // The model ID as received from the Transmitter
-    static bool ForwardDevicePings; // true if device pings should be forwarded OTA
-    static bool elrsLUAmode;
 
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
@@ -42,8 +40,6 @@ public:
     void setPacketInterval(int32_t PacketInterval) override;
     void JustSentRFpacket() override;
     void sendTelemetryToTX(uint8_t *data) override;
-
-    static uint8_t getModelID() { return modelId; }
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
@@ -76,6 +72,8 @@ private:
     bool armCmd = false;           // Arm command from handset either via ch5 or arm message
     bool lastArmCmd = false;
 
+    HandsetConnector connector;
+
 #if defined(PLATFORM_ESP32)
     bool UARTinverted = false;
 #endif
@@ -85,7 +83,6 @@ private:
     void duplex_set_RX() const;
     void duplex_set_TX() const;
     void RcPacketToChannelsData();
-    bool processInternalCrsfPackage(uint8_t *package);
     void alignBufferToSync(uint8_t startIdx);
     bool ProcessPacket();
     bool UARTwdt();

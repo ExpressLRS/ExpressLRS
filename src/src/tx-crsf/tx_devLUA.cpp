@@ -3,8 +3,9 @@
 #include "rxtx_devLua.h"
 #include "CRSF.h"
 #include "CRSFHandset.h"
-#include "OTA.h"
 #include "FHSS.h"
+#include "OTA.h"
+#include "TXModuleCRSF.h"
 #include "helpers.h"
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
@@ -36,6 +37,7 @@
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
+extern TXModuleCRSF *crsfEndpoint;
 
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
@@ -316,7 +318,7 @@ extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
 
 static void luadevUpdateModelID() {
-  itoa(CRSFHandset::getModelID(), modelMatchUnit+6, 10);
+  itoa(crsfEndpoint->modelId, modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -785,7 +787,7 @@ static void registerLuaParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? CRSFHandset::getModelID() : 0xff);
+          msp.addByte(newModelMatch ? crsfEndpoint->modelId : 0xff);
           CRSF::AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER);
         }
         luadevUpdateModelID();
@@ -1008,7 +1010,7 @@ static int start()
   {
     return DURATION_NEVER;
   }
-  handset->registerParameterUpdateCallback(luaParamUpdateReq);
+  crsfEndpoint->RecvParameterUpdate = luaParamUpdateReq;
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);

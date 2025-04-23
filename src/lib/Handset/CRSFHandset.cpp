@@ -1,10 +1,11 @@
-#include "CRSF.h"
 #include "CRSFHandset.h"
+#include "CRSF.h"
 #include "FIFO.h"
-#include "logging.h"
 #include "helpers.h"
+#include "logging.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
+#include "CRSFEndPoint.h"
 #include "device.h"
 
 #if defined(PLATFORM_ESP32)
@@ -14,7 +15,6 @@
 // UART0 is used since for DupleTX we can connect directly through IO_MUX and not the Matrix
 // for better performance, and on other targets (mostly using pin 13), it always uses Matrix
 HardwareSerial CRSFHandset::Port(0);
-RTC_DATA_ATTR int rtcModelId = 0;
 #elif defined(PLATFORM_ESP8266)
 HardwareSerial CRSFHandset::Port(0);
 #elif defined(TARGET_NATIVE)
@@ -27,15 +27,14 @@ static constexpr int HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest 
 static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
 static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
 
+extern CRSFEndPoint *crsfEndpoint;
+
 Stream *CRSFHandset::PortSecondary;
 
 /// UART Handling ///
 uint32_t CRSFHandset::GoodPktsCountResult = 0;
 uint32_t CRSFHandset::BadPktsCountResult = 0;
 
-uint8_t CRSFHandset::modelId = 0;
-bool CRSFHandset::ForwardDevicePings = false;
-bool CRSFHandset::elrsLUAmode = false;
 bool CRSFHandset::halfDuplex = false;
 
 /// OpenTX mixer sync ///
@@ -53,6 +52,8 @@ static const int UARTwdtInterval = 1000;
 void CRSFHandset::Begin()
 {
     DBGLN("About to start CRSF task...");
+
+    crsfEndpoint->addConnector(&connector);
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
@@ -72,11 +73,6 @@ void CRSFHandset::Begin()
     }
     portENABLE_INTERRUPTS();
     flush_port_input();
-    if (esp_reset_reason() != ESP_RST_POWERON)
-    {
-        modelId = rtcModelId;
-        if (RecvModelUpdate) RecvModelUpdate();
-    }
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
     CRSFHandset::Port.begin(UARTrequestedBaud);
@@ -284,54 +280,9 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
     }
 }
 
-
-bool CRSFHandset::processInternalCrsfPackage(uint8_t *package)
-{
-    const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
-    const crsf_frame_type_e packetType = (crsf_frame_type_e)header->type;
-
-    // Enter Binding Mode
-    if (packetType == CRSF_FRAMETYPE_COMMAND
-        && header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
-        && header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER
-        && header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER
-        && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
-        && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
-    {
-        if (OnBindingCommand) OnBindingCommand();
-        return true;
-    }
-
-    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-        (header->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER || header->dest_addr == CRSF_ADDRESS_BROADCAST) &&
-        (header->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER || header->orig_addr == CRSF_ADDRESS_ELRS_LUA))
-    {
-        elrsLUAmode = header->orig_addr == CRSF_ADDRESS_ELRS_LUA;
-
-        if (packetType == CRSF_FRAMETYPE_COMMAND && header->payload[0] == CRSF_COMMAND_SUBCMD_RX && header->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
-        {
-            modelId = header->payload[2];
-            #if defined(PLATFORM_ESP32)
-            rtcModelId = modelId;
-            #endif
-            if (RecvModelUpdate) RecvModelUpdate();
-        }
-        else
-        {
-            if (RecvParameterUpdate) RecvParameterUpdate(packetType, header->payload[0], header->payload[1]);
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
 bool CRSFHandset::ProcessPacket()
 {
-    bool packetReceived = false;
-
-    CRSFHandset::dataLastRecv = micros();
+    dataLastRecv = micros();
 
     if (!controllerConnected)
     {
@@ -340,33 +291,20 @@ bool CRSFHandset::ProcessPacket()
         if (connected) connected();
     }
 
+    // processing of the RC Channels should be in the CRSFEndPoint
     const uint8_t packetType = inBuffer.asRCPacket_t.header.type;
-    uint8_t *SerialInBuffer = inBuffer.asUint8_t;
-
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         RCdataLastRecv = micros();
         RcPacketToChannelsData();
-        packetReceived = true;
     }
-    // check for all extended frames that are a broadcast or a message to the FC
-    else if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-            (SerialInBuffer[3] == CRSF_ADDRESS_FLIGHT_CONTROLLER || SerialInBuffer[3] == CRSF_ADDRESS_BROADCAST || SerialInBuffer[3] == CRSF_ADDRESS_CRSF_RECEIVER))
+    else
     {
-        // Some types trigger telemburst to attempt a connection even with telm off
-        // but for pings (which are sent when the user loads Lua) do not forward
-        // unless connected
-        if (ForwardDevicePings || packetType != CRSF_FRAMETYPE_DEVICE_PING)
-        {
-            const uint8_t length = inBuffer.asRCPacket_t.header.frame_size + 2;
-            CRSF::AddMspMessage(length, SerialInBuffer);
-        }
-        packetReceived = true;
+        // send to TXModuleCRSF
+        crsfEndpoint->processMessage(&connector, (crsf_ext_header_t *)inBuffer.asUint8_t);
     }
 
-    packetReceived |= processInternalCrsfPackage(SerialInBuffer);
-
-    return packetReceived;
+    return true;
 }
 
 void CRSFHandset::alignBufferToSync(uint8_t startIdx)

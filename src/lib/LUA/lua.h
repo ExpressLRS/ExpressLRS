@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "targets.h"
 #include "crsf_protocol.h"
 
@@ -143,7 +142,7 @@ void luaRegisterDevicePingCallback(void (*callback)());
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
-extern void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg);
+extern void luaParamUpdateReq(crsf_addr_e origin, uint8_t type, uint8_t index, uint8_t arg);
 extern bool luaHandleUpdateParameter();
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
