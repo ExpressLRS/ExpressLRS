@@ -8,6 +8,7 @@
 class CRSFConnector {
 public:
     CRSFConnector() {}
+    virtual ~CRSFConnector() = default;
 
     void addDevice(crsf_addr_e device_id);
 

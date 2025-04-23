@@ -31,6 +31,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "MAVLink.h"
+#include "tx-crsf/OTAConnector.h"
 #include "tx-crsf/TXModuleCRSF.h"
 
 #if defined(PLATFORM_ESP32_S3)
@@ -1397,6 +1398,9 @@ void setup()
     crsfEndpoint = new TXModuleCRSF();
     crsfEndpoint->OnBindingCommand = EnterBindingModeSafely;
     crsfEndpoint->RecvModelUpdate = ModelUpdateReq;
+
+    crsfEndpoint->addConnector(new OTAConnector());
+    // When a CRSF handset is detected, it will add itself to the endpoint
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
