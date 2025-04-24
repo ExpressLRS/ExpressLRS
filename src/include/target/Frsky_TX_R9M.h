@@ -2,7 +2,9 @@
     #define DEVICE_NAME "NEROS ELRS TX"
 #endif
 
-
+#ifdef TX_BAND_HIGH
+#define SLAVE_TX
+#endif
 
 // #define STM32_USE_FLASH
 //#define USE_I2C

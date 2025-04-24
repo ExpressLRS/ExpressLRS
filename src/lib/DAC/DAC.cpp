@@ -43,16 +43,25 @@ void DAC::resume()
 void DAC::setVoltageRegDirect(uint8_t voltReg)
 {
     m_currVoltageRegVal = voltReg;
-    uint8_t RegH = ((voltReg & 0b11110000) >> 4) + (0b0000 << 4);
-    uint8_t RegL = (voltReg & 0b00001111) << 4;
+#ifdef TX_BAND_LOW
+    /* These values were calculated by RF department (Peter) */
+    constexpr uint8_t VAPC_1 = 180;
+    constexpr uint8_t VAPC_2 = 185;
+#elif TX_BAND_HIGH
+    constexpr uint8_t VAPC_1 = 175;
+    constexpr uint8_t VAPC_2 = 175;
+#endif
+
+    uint8_t RegH = (VAPC_1 & 0xF0) >> 4;
+    uint8_t RegL = (VAPC_1 & 0x0F) << 4;
 
     Wire.beginTransmission(POWER_OUTPUT_DAC2);
     Wire.write(RegH);
     Wire.write(RegL);
     Wire.endTransmission();
 
-    RegH = ((208 & 0b11110000) >> 4) + (0b0000 << 4);
-    RegL = (208 & 0b00001111) << 4;
+    RegH = (VAPC_2 & 0xF0) >> 4;
+    RegL = (VAPC_2 & 0x0F) << 4;
 
     Wire.beginTransmission(POWER_OUTPUT_DAC);
     Wire.write(RegH);
