@@ -37,7 +37,6 @@
 #define MILLS_82 (82)
 
 #define MILLS_122 (122)
-#define SLAVE_TX
 
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
