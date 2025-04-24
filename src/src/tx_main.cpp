@@ -31,7 +31,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "MAVLink.h"
-#include "tx-crsf/OTAConnector.h"
+#include "tx-crsf/TXOTAConnector.h"
 #include "tx-crsf/TXModuleEndpoint.h"
 
 #if defined(PLATFORM_ESP32_S3)
@@ -101,7 +101,7 @@ StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 CRSFEndpoint *crsfEndpoint;
-OTAConnector otaConnector;
+TXOTAConnector otaConnector;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},

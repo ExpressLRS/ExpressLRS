@@ -1,13 +1,13 @@
-#ifndef OTA_CONNECTOR_H
-#define OTA_CONNECTOR_H
+#ifndef TX_OTA_CONNECTOR_H
+#define TX_OTA_CONNECTOR_H
 
 #include "CRSFEndpoint.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 
-class OTAConnector final : public CRSFConnector {
+class TXOTAConnector final : public CRSFConnector {
 public:
-    OTAConnector();
+    TXOTAConnector();
 
     void forwardMessage(crsf_ext_header_t *message) override;
 
@@ -27,4 +27,4 @@ private:
     uint8_t MspDataLength = 0;
 };
 
-#endif //OTA_CONNECTOR_H
+#endif //TX_OTA_CONNECTOR_H

@@ -34,8 +34,8 @@ uint32_t CRSFHandset::BadPktsCountResult = 0;
 bool CRSFHandset::halfDuplex = false;
 
 /// OpenTX mixer sync ///
-static const int32_t OpenTXsyncPacketInterval = 200; // in ms
-static const int32_t OpenTXsyncOffsetSafeMargin = 1000; // 100us
+static constexpr int32_t OpenTXsyncPacketInterval = 200; // in ms
+static constexpr int32_t OpenTXsyncOffsetSafeMargin = 1000; // 100us
 
 /// UART Handling ///
 static const int32_t TxToHandsetBauds[] = {400000, 115200, 5250000, 3750000, 1870000, 921600, 2250000};
@@ -43,13 +43,15 @@ uint8_t CRSFHandset::UARTcurrentBaudIdx = 6;   // only used for baud-cycling, in
 uint32_t CRSFHandset::UARTrequestedBaud = 5250000;
 
 // for the UART wdt, every 1000ms we change bauds when connect is lost
-static const int UARTwdtInterval = 1000;
+static constexpr int UARTwdtInterval = 1000;
 
 void CRSFHandset::Begin()
 {
     DBGLN("About to start CRSF task...");
 
-    crsfEndpoint->addConnector(&connector);
+    addDevice(CRSF_ADDRESS_ELRS_LUA);
+    addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfEndpoint->addConnector(this);
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
@@ -58,11 +60,11 @@ void CRSFHandset::Begin()
 #if defined(PLATFORM_ESP32)
     portDISABLE_INTERRUPTS();
     UARTinverted = halfDuplex; // on a full UART we will start uninverted checking first
-    CRSFHandset::Port.begin(UARTrequestedBaud, SERIAL_8N1,
+    Port.begin(UARTrequestedBaud, SERIAL_8N1,
                      GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX,
                      false, 0);
     // Arduino defaults every esp32 stream to a 1000ms timeout which is just baffling
-    CRSFHandset::Port.setTimeout(0);
+    Port.setTimeout(0);
     if (halfDuplex)
     {
         duplex_set_RX();
@@ -96,9 +98,30 @@ void CRSFHandset::End()
 void CRSFHandset::flush_port_input()
 {
     // Make sure there is no garbage on the UART at the start
-    while (CRSFHandset::Port.available())
+    while (Port.available())
     {
-        CRSFHandset::Port.read();
+        Port.read();
+    }
+}
+
+void CRSFHandset::forwardMessage(crsf_ext_header_t *message)
+{
+    if (controllerConnected)
+    {
+        uint8_t size = CRSF_FRAME_SIZE(message->frame_size);
+        if (size > CRSF_MAX_PACKET_LEN)
+        {
+            ERRLN("too large");
+            return;
+        }
+
+        SerialOutFIFO.lock();
+        if (SerialOutFIFO.ensure(size + 1))
+        {
+            SerialOutFIFO.push(size); // length
+            SerialOutFIFO.pushBytes((uint8_t *)message, size);
+        }
+        SerialOutFIFO.unlock();
     }
 }
 
@@ -121,49 +144,25 @@ void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
  **/
 void CRSFHandset::packetQueueExtended(uint8_t type, void *data, uint8_t len)
 {
-    uint8_t buf[6] = {
-        (uint8_t)(len + 6),
+    uint8_t buf[len + 6] = {
         CRSF_ADDRESS_RADIO_TRANSMITTER,
         (uint8_t)(len + 4),
         type,
         CRSF_ADDRESS_RADIO_TRANSMITTER,
-        CRSF_ADDRESS_CRSF_TRANSMITTER
+        CRSF_ADDRESS_CRSF_TRANSMITTER,
     };
 
     // CRC - Starts at type, ends before CRC
-    uint8_t crc = crsfEndpoint->crsf_crc.calc(&buf[3], sizeof(buf)-3);
-    crc = crsfEndpoint->crsf_crc.calc((byte *)data, len, crc);
-
-    SerialOutFIFO.lock();
-    if (SerialOutFIFO.ensure(buf[0] + 1))
-    {
-        SerialOutFIFO.pushBytes(buf, sizeof(buf));
-        SerialOutFIFO.pushBytes((byte *)data, len);
-        SerialOutFIFO.push(crc);
-    }
-    SerialOutFIFO.unlock();
+    memcpy(buf + 5, data, len);
+    uint8_t crc = crsfEndpoint->crsf_crc.calc(&buf[2], sizeof(buf)-3);
+    buf[sizeof(buf)-1] = crc;
+    crsfEndpoint->processMessage(nullptr, (crsf_ext_header_t *)buf);
 }
 
 void CRSFHandset::sendTelemetryToTX(uint8_t *data)
 {
-    if (controllerConnected)
-    {
-        uint8_t size = CRSF_FRAME_SIZE(data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        if (size > CRSF_MAX_PACKET_LEN)
-        {
-            ERRLN("too large");
-            return;
-        }
-
-        data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-        SerialOutFIFO.lock();
-        if (SerialOutFIFO.ensure(size + 1))
-        {
-            SerialOutFIFO.push(size); // length
-            SerialOutFIFO.pushBytes(data, size);
-        }
-        SerialOutFIFO.unlock();
-    }
+    data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    crsfEndpoint->processMessage(nullptr, (crsf_ext_header_t *)data);
 }
 
 void ICACHE_RAM_ATTR CRSFHandset::setPacketInterval(int32_t PacketInterval)
@@ -244,7 +243,7 @@ bool CRSFHandset::ProcessPacket()
     }
 
     const auto message = (crsf_ext_header_t *)inBuffer.asUint8_t;
-    crsfEndpoint->processMessage(&connector, message);
+    crsfEndpoint->processMessage(this, message);
 
     return true;
 }
@@ -389,10 +388,10 @@ void CRSFHandset::handleOutput(int receivedBytes)
             uint8_t writeLength = std::min(packageLengthRemaining, periodBytesRemaining);
 
             // write the packet out, if it's a large package the offset holds the starting position
-            CRSFHandset::Port.write(CRSFoutBuffer + sendingOffset, writeLength);
-            if (CRSFHandset::PortSecondary)
+            Port.write(CRSFoutBuffer + sendingOffset, writeLength);
+            if (PortSecondary)
             {
-                CRSFHandset::PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
+                PortSecondary->write(CRSFoutBuffer + sendingOffset, writeLength);
             }
 
             sendingOffset += writeLength;
@@ -614,8 +613,8 @@ bool CRSFHandset::UARTwdt()
                 adjustMaxPacketSize();
 
                 SerialOutFIFO.flush();
-                CRSFHandset::Port.flush();
-                CRSFHandset::Port.updateBaudRate(UARTrequestedBaud);
+                Port.flush();
+                Port.updateBaudRate(UARTrequestedBaud);
                 if (halfDuplex)
                 {
                     duplex_set_RX();

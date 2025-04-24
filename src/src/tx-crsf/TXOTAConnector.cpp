@@ -1,24 +1,24 @@
-#include "OTAConnector.h"
+#include "TXOTAConnector.h"
 
 #include "CRSF.h"
 #include "stubborn_sender.h"
 
 extern StubbornSender MspSender;
 
-OTAConnector::OTAConnector()
+TXOTAConnector::TXOTAConnector()
 {
     // add the devices that we know are reachable via this connector
     addDevice(CRSF_ADDRESS_CRSF_RECEIVER);
     addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
-void OTAConnector::forwardMessage(crsf_ext_header_t *message)
+void TXOTAConnector::forwardMessage(crsf_ext_header_t *message)
 {
     const uint8_t length = message->frame_size + 2;
     AddMspMessage(length, (uint8_t *)message);
 }
 
-void OTAConnector::pumpMSPSender()
+void TXOTAConnector::pumpMSPSender()
 {
       static bool mspTransferActive = false;
     // sending is done and we need to update our flag
@@ -43,20 +43,20 @@ void OTAConnector::pumpMSPSender()
     }
 }
 
-void OTAConnector::GetMspMessage(uint8_t **data, uint8_t *len)
+void TXOTAConnector::GetMspMessage(uint8_t **data, uint8_t *len)
 {
     *len = MspDataLength;
     *data = (MspDataLength > 0) ? MspData : nullptr;
 }
 
-void OTAConnector::ResetMspQueue()
+void TXOTAConnector::ResetMspQueue()
 {
     MspWriteFIFO.flush();
     MspDataLength = 0;
     memset(MspData, 0, ELRS_MSP_BUFFER);
 }
 
-void OTAConnector::UnlockMspMessage()
+void TXOTAConnector::UnlockMspMessage()
 {
     // the current msp message is sent so restore the next buffered write
     if (MspWriteFIFO.size() > 0)
@@ -74,7 +74,7 @@ void OTAConnector::UnlockMspMessage()
     }
 }
 
-void OTAConnector::AddMspMessage(const uint8_t length, uint8_t* data)
+void TXOTAConnector::AddMspMessage(const uint8_t length, uint8_t* data)
 {
     if (length > ELRS_MSP_BUFFER)
     {

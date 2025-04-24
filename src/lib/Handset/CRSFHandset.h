@@ -6,14 +6,14 @@
 #ifndef TARGET_NATIVE
 #include "HardwareSerial.h"
 #endif
-#include "HandsetConnector.h"
+#include "CRSFConnector.h"
 #include "common.h"
 
 #ifdef PLATFORM_ESP32
 #include "driver/uart.h"
 #endif
 
-class CRSFHandset final : public Handset
+class CRSFHandset final : public Handset, public CRSFConnector
 {
 
 public:
@@ -21,13 +21,14 @@ public:
     void Begin() override;
     void End() override;
 
+    void forwardMessage(crsf_ext_header_t *message) override;
+
 #ifdef CRSF_TX_MODULE
     void handleInput() override;
     void handleOutput(int receivedBytes);
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
-
 
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
@@ -68,8 +69,6 @@ private:
     static uint8_t UARTcurrentBaudIdx;
     static uint32_t UARTrequestedBaud;
 
-    HandsetConnector connector;
-
 #if defined(PLATFORM_ESP32)
     bool UARTinverted = false;
 #endif
@@ -78,7 +77,6 @@ private:
     void adjustMaxPacketSize();
     void duplex_set_RX() const;
     void duplex_set_TX() const;
-    void RcPacketToChannelsData();
     void alignBufferToSync(uint8_t startIdx);
     bool ProcessPacket();
     bool UARTwdt();
