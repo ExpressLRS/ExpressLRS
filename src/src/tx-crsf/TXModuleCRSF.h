@@ -1,6 +1,7 @@
 #ifndef TX_MODULE_CRSF_H
 #define TX_MODULE_CRSF_H
 #include "CRSFEndPoint.h"
+#include "msp.h"
 
 class TXModuleCRSF final : public CRSFEndPoint {
 public:

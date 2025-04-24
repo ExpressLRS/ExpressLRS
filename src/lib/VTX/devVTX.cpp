@@ -2,10 +2,11 @@
 #include "common.h"
 #include "device.h"
 
-#include "config.h"
 #include "CRSF.h"
-#include "msp.h"
+#include "CRSFEndPoint.h"
+#include "config.h"
 #include "logging.h"
+#include "msp.h"
 
 #include "devButton.h"
 #include "handset.h"
@@ -22,9 +23,9 @@
 // See https://github.com/ExpressLRS/ExpressLRS/issues/2976
 #define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
 
-extern Stream *TxBackpack;
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
+extern CRSFEndPoint *crsfEndpoint;
 
 static enum VtxSendState_e
 {
@@ -73,7 +74,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
 static void VtxConfigToMSPOut()
@@ -93,7 +94,7 @@ static void VtxConfigToMSPOut()
         packet.addByte(pitmodeAuxState);
     }
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
@@ -174,7 +175,8 @@ static int timeout()
     }
     else
     {
-        CRSF::ResetMspQueue();
+        // FIXME
+        // otaConnector.ResetMspQueue();
         VtxSendState = VTXSS_UNKNOWN;
     }
 

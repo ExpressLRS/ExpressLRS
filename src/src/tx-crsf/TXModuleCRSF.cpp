@@ -1,7 +1,10 @@
 #include "TXModuleCRSF.h"
 
+#include "CRSF.h"
 #include "CRSFHandset.h"
 #include "common.h"
+#include "msp.h"
+#include "msptypes.h"
 
 #if defined(PLATFORM_ESP32)
 RTC_DATA_ATTR int rtcModelId = 0;

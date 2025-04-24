@@ -3,6 +3,7 @@
 
 #include "CRSFConnector.h"
 #include "crsf_protocol.h"
+#include "msp.h"
 
 #include <vector>
 
@@ -23,6 +24,8 @@ public:
     void addConnector(CRSFConnector *connector);
 
     virtual bool handleMessage(crsf_ext_header_t * message) = 0;
+
+    void AddMspMessage(mspPacket_t *packet, uint8_t destination);
 
     elrsLinkStatistics_t LinkStats = {};
 

@@ -101,6 +101,7 @@ StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 TXModuleCRSF *crsfEndpoint;
+OTAConnector otaConnector;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -1399,7 +1400,7 @@ void setup()
     crsfEndpoint->OnBindingCommand = EnterBindingModeSafely;
     crsfEndpoint->RecvModelUpdate = ModelUpdateReq;
 
-    crsfEndpoint->addConnector(new OTAConnector());
+    crsfEndpoint->addConnector(&otaConnector);
     // When a CRSF handset is detected, it will add itself to the endpoint
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
@@ -1554,7 +1555,6 @@ void loop()
   }
 
   // only send msp data when binding is not active
-  static bool mspTransferActive = false;
   if (InBindingMode)
   {
 #if defined(RADIO_LR1121)
@@ -1572,26 +1572,7 @@ void loop()
   }
   else if (!MspSender.IsActive())
   {
-    // sending is done and we need to update our flag
-    if (mspTransferActive)
-    {
-      // unlock buffer for msp messages
-      CRSF::UnlockMspMessage();
-      mspTransferActive = false;
-    }
-    // we are not sending so look for next msp package
-    else
-    {
-      uint8_t* mspData;
-      uint8_t mspLen;
-      CRSF::GetMspMessage(&mspData, &mspLen);
-      // if we have a new msp package start sending
-      if (mspData != nullptr)
-      {
-        MspSender.SetDataToTransmit(mspData, mspLen);
-        mspTransferActive = true;
-      }
-    }
+    otaConnector.pumpMSPSender();
   }
 
   if (config.GetLinkMode() == TX_MAVLINK_MODE)

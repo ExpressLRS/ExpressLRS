@@ -11,8 +11,6 @@ HandsetConnector::HandsetConnector()
 
 void HandsetConnector::forwardMessage(crsf_ext_header_t *message)
 {
-    // append the message to queue for sending
-    //FIXME this should be in the OTAConnector
-    // const uint8_t length = message->frame_size + 2;
-    // CRSF::AddMspMessage(length, (uint8_t *)message);
+    // FIXME
+    // append the message to the queue for sending to the handset
 }
