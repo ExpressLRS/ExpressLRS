@@ -9,13 +9,13 @@ class TXOTAConnector final : public CRSFConnector {
 public:
     TXOTAConnector();
 
-    void forwardMessage(crsf_ext_header_t *message) override;
+    void forwardMessage(crsf_header_t *message) override;
 
     void AddMspMessage(uint8_t length, uint8_t *data);
 
-    void pumpMSPSender();
-
     void ResetMspQueue();
+
+    void pumpMspSender();
 
 private:
     void UnlockMspMessage();

@@ -74,7 +74,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 }
 
 static void VtxConfigToMSPOut()
@@ -94,7 +94,7 @@ static void VtxConfigToMSPOut()
         packet.addByte(pitmodeAuxState);
     }
 
-    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {

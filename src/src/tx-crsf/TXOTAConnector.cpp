@@ -1,6 +1,7 @@
 #include "TXOTAConnector.h"
 
 #include "CRSF.h"
+#include "common.h"
 #include "stubborn_sender.h"
 
 extern StubbornSender MspSender;
@@ -12,15 +13,18 @@ TXOTAConnector::TXOTAConnector()
     addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
-void TXOTAConnector::forwardMessage(crsf_ext_header_t *message)
+void TXOTAConnector::forwardMessage(crsf_header_t *message)
 {
-    const uint8_t length = message->frame_size + 2;
-    AddMspMessage(length, (uint8_t *)message);
+    if (connectionState == connected)
+    {
+        const uint8_t length = message->frame_size + 2;
+        AddMspMessage(length, (uint8_t *)message);
+    }
 }
 
-void TXOTAConnector::pumpMSPSender()
+void TXOTAConnector::pumpMspSender()
 {
-      static bool mspTransferActive = false;
+    static bool mspTransferActive = false;
     // sending is done and we need to update our flag
     if (mspTransferActive)
     {
@@ -29,7 +33,7 @@ void TXOTAConnector::pumpMSPSender()
         mspTransferActive = false;
     }
     // we are not sending so look for next msp package
-    else
+    if (!mspTransferActive)
     {
         uint8_t* mspData;
         uint8_t mspLen;

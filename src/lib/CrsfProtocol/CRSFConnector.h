@@ -12,9 +12,9 @@ public:
 
     void addDevice(crsf_addr_e device_id);
 
-    void processMessage(crsf_ext_header_t *message);
+    bool forwardsTo(crsf_addr_e device_id);
 
-    virtual void forwardMessage(crsf_ext_header_t *message) = 0;
+    virtual void forwardMessage(crsf_header_t *message) = 0;
 
 private:
     std::set<crsf_addr_e> devices;

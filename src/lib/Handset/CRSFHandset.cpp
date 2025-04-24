@@ -73,7 +73,7 @@ void CRSFHandset::Begin()
     flush_port_input();
 #elif defined(PLATFORM_ESP8266)
     // Uses default UART pins
-    CRSFHandset::Port.begin(UARTrequestedBaud);
+    Port.begin(UARTrequestedBaud);
     // Invert RX/TX (not done, connection is full duplex uninverted)
     //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
     // No log message because this is our only UART
@@ -91,7 +91,7 @@ void CRSFHandset::End()
             break;
         }
     }
-    //CRSFHandset::Port.end(); // don't call serial.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
+    //Port.end(); // don't call serial.end(), it causes some sort of issue with the 900mhz hardware using gpio2 for serial
     DBGLN("CRSF UART END");
 }
 
@@ -104,7 +104,7 @@ void CRSFHandset::flush_port_input()
     }
 }
 
-void CRSFHandset::forwardMessage(crsf_ext_header_t *message)
+void CRSFHandset::forwardMessage(crsf_header_t *message)
 {
     if (controllerConnected)
     {
@@ -125,19 +125,6 @@ void CRSFHandset::forwardMessage(crsf_ext_header_t *message)
     }
 }
 
-//FIXME this should not be here! CRSFEndpoint
-void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
-{
-    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
-    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
-
-    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    buffer[1] = CRSF_FRAME_SIZE(payloadLen);
-    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    memcpy(&buffer[3], (uint8_t *)&crsfEndpoint->linkStats, payloadLen);
-    buffer[payloadLen + 3] = crsfEndpoint->crsf_crc.calc(&buffer[2], payloadLen + 1);
-}
-
 /**
  * Build a an extended type packet and queue it in the SerialOutFIFO
  * This is just a regular packet with 2 extra bytes with the sub src and target
@@ -156,13 +143,7 @@ void CRSFHandset::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     memcpy(buf + 5, data, len);
     uint8_t crc = crsfEndpoint->crsf_crc.calc(&buf[2], sizeof(buf)-3);
     buf[sizeof(buf)-1] = crc;
-    crsfEndpoint->processMessage(nullptr, (crsf_ext_header_t *)buf);
-}
-
-void CRSFHandset::sendTelemetryToTX(uint8_t *data)
-{
-    data[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    crsfEndpoint->processMessage(nullptr, (crsf_ext_header_t *)data);
+    crsfEndpoint->processMessage(nullptr, (crsf_header_t *)buf);
 }
 
 void ICACHE_RAM_ATTR CRSFHandset::setPacketInterval(int32_t PacketInterval)
@@ -203,8 +184,8 @@ void ICACHE_RAM_ATTR CRSFHandset::JustSentRFpacket()
 
 void CRSFHandset::sendSyncPacketToTX() // in values in us.
 {
-    uint32_t now = millis();
-    if (controllerConnected && (now - OpenTXsyncLastSent) >= OpenTXsyncPacketInterval)
+    const uint32_t now = millis();
+    if (now - OpenTXsyncLastSent >= OpenTXsyncPacketInterval)
     {
         int32_t packetRate = RequestedRCpacketInterval * 10; //convert from us to right format
         int32_t offset = OpenTXsyncOffset - OpenTXsyncOffsetSafeMargin; // offset so that opentx always has some headroom
@@ -242,8 +223,7 @@ bool CRSFHandset::ProcessPacket()
         if (connected) connected();
     }
 
-    const auto message = (crsf_ext_header_t *)inBuffer.asUint8_t;
-    crsfEndpoint->processMessage(this, message);
+    crsfEndpoint->processMessage(this, &inBuffer.asRCPacket_t.header);
 
     return true;
 }
@@ -298,8 +278,8 @@ void CRSFHandset::handleInput()
     }
 
     // Add new data, and then discard bytes until we start with header byte
-    auto toRead = std::min(CRSFHandset::Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
-    SerialInPacketPtr += CRSFHandset::Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
+    auto toRead = std::min(Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
+    SerialInPacketPtr += Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
     alignBufferToSync(0);
 
     // Make sure we have at least a packet header and a length byte
@@ -323,10 +303,8 @@ void CRSFHandset::handleInput()
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
         GoodPktsCount++;
-        if (ProcessPacket())
-        {
-            handleOutput(totalLen);
-        }
+        ProcessPacket();
+        handleOutput(totalLen);
     }
     else
     {
@@ -338,7 +316,7 @@ void CRSFHandset::handleInput()
     memmove(SerialInBuffer, &SerialInBuffer[totalLen], SerialInPacketPtr);
 }
 
-void CRSFHandset::handleOutput(int receivedBytes)
+void CRSFHandset::handleOutput(const uint32_t receivedBytes)
 {
     static uint8_t CRSFoutBuffer[CRSF_MAX_PACKET_LEN] = {0};
     // both static to split up larger packages
@@ -363,7 +341,7 @@ void CRSFHandset::handleOutput(int receivedBytes)
         uint8_t periodBytesRemaining = HANDSET_TELEMETRY_FIFO_SIZE;
         if (halfDuplex)
         {
-            periodBytesRemaining = std::min((maxPeriodBytes - receivedBytes % maxPeriodBytes), (int)maxPacketBytes);
+            periodBytesRemaining = std::min(maxPeriodBytes - receivedBytes % maxPeriodBytes, (uint32_t)maxPacketBytes);
             periodBytesRemaining = std::max(periodBytesRemaining, (uint8_t)10);
             if (!transmitting)
             {
@@ -452,15 +430,15 @@ void CRSFHandset::duplex_set_TX() const
 
 int CRSFHandset::getMinPacketInterval() const
 {
-    if (CRSFHandset::isHalfDuplex() && CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
+    if (isHalfDuplex() && GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
     {
         return 5000;
     }
-    else if (CRSFHandset::GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    if (GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
     {
         return 4000;
     }
-    else if (CRSFHandset::GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    if (GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
     {
         return 2000;
     }

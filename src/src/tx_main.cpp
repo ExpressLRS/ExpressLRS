@@ -1521,8 +1521,8 @@ void loop()
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
 
-    CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
-    handset->sendTelemetryToTX(linkStatisticsFrame);
+    crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame);
+    crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame); // pretend that the linkStats comes from the RX
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }
@@ -1533,12 +1533,12 @@ void loop()
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
-          // raw mavlink data - forward to USB rather than handset
-          uint8_t count = CRSFinBuffer[1];
-          // Convert to CRSF telemetry where we can
-          convert_mavlink_to_crsf_telem(CRSFinBuffer, count, handset);
+          const uint8_t count = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX];
+          // Convert to CRSF telemetry where we can and send to handset
+          convert_mavlink_to_crsf_telem(&otaConnector, CRSFinBuffer, count);
+          // forward raw mavlink data to USB
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-          // If we have a backpack
+          // And to the backpack if we have one
           if (TxUSB != TxBackpack)
           {
             sendMAVLinkTelemetryToBackpack(CRSFinBuffer);
@@ -1548,7 +1548,7 @@ void loop()
       else
       {
         // Send all other tlm to handset
-        handset->sendTelemetryToTX(CRSFinBuffer);
+        crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       TelemetryReceiver.Unlock();
@@ -1572,7 +1572,7 @@ void loop()
   }
   else if (!MspSender.IsActive())
   {
-    otaConnector.pumpMSPSender();
+    otaConnector.pumpMspSender();
   }
 
   if (config.GetLinkMode() == TX_MAVLINK_MODE)

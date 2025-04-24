@@ -1,5 +1,6 @@
 #include "targets.h"
 
+#include "CRSFEndpoint.h"
 #include "CRSFHandset.h"
 #include "MAVLink.h"
 #include "common.h"
@@ -268,8 +269,8 @@ static void injectBackpackPanTiltRollData()
                     .ch2 = ptrChannelData[2]
                 }
             };
-            CRSF::SetHeaderAndCrc((uint8_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t)-2, CRSF_ADDRESS_CRSF_TRANSMITTER);
-            handset->sendTelemetryToTX((uint8_t *)&rcPacket);
+            crsfEndpoint->SetHeaderAndCrc((uint8_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t)-2, CRSF_ADDRESS_CRSF_TRANSMITTER);
+            crsfEndpoint->processMessage(nullptr, &rcPacket.header);
         }
     }
     else

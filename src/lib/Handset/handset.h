@@ -74,12 +74,6 @@ public:
     virtual void JustSentRFpacket() {}
 
     /**
-     * Send a telemetry packet back to the handset
-     * @param data
-     */
-    virtual void sendTelemetryToTX(uint8_t *data) {}
-
-    /**
      * Inform the handset that a valid RC packet has been received
      */
     void SetRCDataReceived()

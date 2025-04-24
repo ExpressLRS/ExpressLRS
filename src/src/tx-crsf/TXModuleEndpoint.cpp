@@ -3,8 +3,6 @@
 #include "CRSF.h"
 #include "CRSFHandset.h"
 #include "common.h"
-#include "msp.h"
-#include "msptypes.h"
 
 #if defined(PLATFORM_ESP32)
 RTC_DATA_ATTR int rtcModelId = 0;
@@ -25,52 +23,47 @@ void TXModuleEndpoint::begin()
 #endif
 }
 
-bool TXModuleEndpoint::handleMessage(crsf_ext_header_t *message)
+bool TXModuleEndpoint::handleMessage(crsf_header_t *message)
 {
     const crsf_frame_type_e packetType = message->type;
 
     if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         RcPacketToChannelsData(message);
-        return true;    // do NOT forward channel data via CRSF
+        return true;    // do NOT forward channel data via CRSF, as we have 'magic' OTA encoding
     }
 
+    const auto extMessage = (crsf_ext_header_t *)message;
     // Enter Binding Mode
     if (packetType == CRSF_FRAMETYPE_COMMAND
-        && message->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
-        && message->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER
-        && message->orig_addr == CRSF_ADDRESS_RADIO_TRANSMITTER
-        && message->payload[0] == CRSF_COMMAND_SUBCMD_RX
-        && message->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
+        && extMessage->frame_size >= 6 // official CRSF has 7 bytes with two CRCs
+        && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
+        && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
         if (OnBindingCommand) OnBindingCommand();
     }
-
-    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING &&
-        (message->dest_addr == CRSF_ADDRESS_CRSF_TRANSMITTER || message->dest_addr == CRSF_ADDRESS_BROADCAST))
+    else if (packetType == CRSF_FRAMETYPE_COMMAND
+        && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
+        && extMessage->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
     {
-        if (packetType == CRSF_FRAMETYPE_COMMAND && message->payload[0] == CRSF_COMMAND_SUBCMD_RX && message->payload[1] == CRSF_COMMAND_MODEL_SELECT_ID)
-        {
-            modelId = message->payload[2];
+        modelId = extMessage->payload[2];
 #if defined(PLATFORM_ESP32)
-            rtcModelId = modelId;
+        rtcModelId = modelId;
 #endif
-            if (RecvModelUpdate) RecvModelUpdate();
-        }
-        else
-        {
-            if (RecvParameterUpdate) RecvParameterUpdate(message->orig_addr, packetType, message->payload[0], message->payload[1]);
-        }
+        if (RecvModelUpdate) RecvModelUpdate();
     }
-
-    // Some types trigger a telemetry burst to attempt a connection even with telemetry off,
-    // but for pings (which are sent when the user loads Lua) do not forward unless connected
-    return connectionState != connected && packetType == CRSF_FRAMETYPE_DEVICE_PING;
+    else if (packetType == CRSF_FRAMETYPE_DEVICE_PING
+        || packetType == CRSF_FRAMETYPE_PARAMETER_READ
+        || packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    {
+        if (RecvParameterUpdate) RecvParameterUpdate(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload[1]);
+    }
+    return false;
 }
 
-void TXModuleEndpoint::RcPacketToChannelsData(crsf_ext_header_t *message) // data is packed as 11 bits per channel
+void TXModuleEndpoint::RcPacketToChannelsData(crsf_header_t *message) // data is packed as 11 bits per channel
 {
-    const auto payload = ((crsf_header_t *)message)->payload;
+    const auto payload = (uint8_t *)message + sizeof(crsf_header_t);
     constexpr unsigned srcBits = 11;
     constexpr unsigned dstBits = 11;
     constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
@@ -101,10 +94,11 @@ void TXModuleEndpoint::RcPacketToChannelsData(crsf_ext_header_t *message) // dat
     // frame len 24 -> arming mode CH5: use channel 5 value
     // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
     //
-    armCmd = message->frame_size == 24 ? CRSF_to_BIT(ChannelData[4]) : message->payload[25];
+    armCmd = message->frame_size == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[25];
 
     // monitoring arming state
-    if (lastArmCmd != armCmd) {
+    if (lastArmCmd != armCmd)
+    {
         handset->SetArmed(armCmd);
         lastArmCmd = armCmd;
 #if defined(PLATFORM_ESP32)

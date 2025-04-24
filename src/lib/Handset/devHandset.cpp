@@ -42,19 +42,11 @@ static int timeout()
     return DURATION_IMMEDIATELY;
 }
 
-static int event()
-{
-    // An event should be generated every time the TX power changes
-    //FIXME this should not be here either!
-    crsfEndpoint->linkStats.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
-    return DURATION_IGNORE;
-}
-
 device_t Handset_device = {
     .initialize = initialize,
     .start = start,
-    .event = event,
+    .event = nullptr,
     .timeout = timeout,
-    .subscribe = EVENT_POWER_CHANGED
+    .subscribe = EVENT_NONE,
 };
 #endif

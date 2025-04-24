@@ -21,11 +21,11 @@ public:
     void Begin() override;
     void End() override;
 
-    void forwardMessage(crsf_ext_header_t *message) override;
+    void forwardMessage(crsf_header_t *message) override;
 
 #ifdef CRSF_TX_MODULE
     void handleInput() override;
-    void handleOutput(int receivedBytes);
+    void handleOutput(uint32_t receivedBytes);
 
     static HardwareSerial Port;
     static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
@@ -33,13 +33,10 @@ public:
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
 
-    static void makeLinkStatisticsPacket(uint8_t *buffer);
-
     static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
 
     void setPacketInterval(int32_t PacketInterval) override;
     void JustSentRFpacket() override;
-    void sendTelemetryToTX(uint8_t *data) override;
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
     static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }

@@ -8,8 +8,8 @@ public:
     TXModuleEndpoint();
     void begin();
 
-    bool handleMessage(crsf_ext_header_t *message) override;
-    void RcPacketToChannelsData(crsf_ext_header_t *message);
+    bool handleMessage(crsf_header_t *message) override;
+    void RcPacketToChannelsData(crsf_header_t *message);
 
     void (*RecvModelUpdate)() = nullptr; // called when model id changes, ie command from Radio
     void (*OnBindingCommand)() = nullptr; // Called when a binding command is received
