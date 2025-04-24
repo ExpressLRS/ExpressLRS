@@ -3,7 +3,6 @@
 #include "common.h"
 
 elrsLinkStatistics_t CRSF::LinkStatistics;
-GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 /***
  * @brief: Convert `version` (string) to a integer version representation
@@ -66,38 +65,6 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
-}
-
-void CRSF::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
-{
-    auto *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
-    packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
-    packet[1] = 0;             // flags
-    packet[2] = function & 0xFF;
-    packet[3] = (function >> 8) & 0xFF;
-    packet[4] = payloadLength & 0xFF;
-    packet[5] = (payloadLength >> 8) & 0xFF;
-    memcpy(packet + 6, payload, payloadLength);
-    packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
-}
-
-void CRSF::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
-{
-    auto *header = (crsf_header_t *)frame;
-    header->device_addr = destAddr;
-    header->frame_size = frameSize;
-    header->type = frameType;
-
-    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], frameSize - 1, 0);
-    frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
-}
-
-void CRSF::SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr)
-{
-    auto *header = (crsf_ext_header_t *)frame;
-    header->dest_addr = destAddr;
-    header->orig_addr = senderAddr;
-    SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
 
 #if defined(CRSF_RX_MODULE)

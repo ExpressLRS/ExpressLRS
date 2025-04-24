@@ -1,14 +1,12 @@
-#include "CRSFEndPoint.h"
+#include "CRSFEndpoint.h"
 #include "msptypes.h"
 
-extern GENERIC_CRC8 crsf_crc;
-
-void CRSFEndPoint::addConnector(CRSFConnector *connector)
+void CRSFEndpoint::addConnector(CRSFConnector *connector)
 {
     connectors.push_back(connector);
 }
 
-void CRSFEndPoint::processMessage(CRSFConnector *connector, crsf_ext_header_t *message)
+void CRSFEndpoint::processMessage(CRSFConnector *connector, crsf_ext_header_t *message)
 {
     if (connector) connector->addDevice(message->orig_addr);
 
@@ -32,7 +30,7 @@ void CRSFEndPoint::processMessage(CRSFConnector *connector, crsf_ext_header_t *m
     }
 }
 
-void CRSFEndPoint::AddMspMessage(mspPacket_t* packet, uint8_t destination)
+void CRSFEndpoint::AddMspMessage(mspPacket_t* packet, uint8_t destination)
 {
     if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
     {
@@ -66,3 +64,21 @@ void CRSFEndPoint::AddMspMessage(mspPacket_t* packet, uint8_t destination)
     processMessage(nullptr, (crsf_ext_header_t *)outBuffer);
 }
 
+void CRSFEndpoint::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
+{
+    auto *header = (crsf_header_t *)frame;
+    header->device_addr = destAddr;
+    header->frame_size = frameSize;
+    header->type = frameType;
+
+    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], frameSize - 1, 0);
+    frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+}
+
+void CRSFEndpoint::SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr)
+{
+    auto *header = (crsf_ext_header_t *)frame;
+    header->dest_addr = destAddr;
+    header->orig_addr = senderAddr;
+    SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
+}

@@ -25,8 +25,6 @@ static constexpr int HANDSET_TELEMETRY_FIFO_SIZE = 128; // this is the smallest 
 static constexpr auto CRSF_SERIAL_OUT_FIFO_SIZE = 256U;
 static FIFO<CRSF_SERIAL_OUT_FIFO_SIZE> SerialOutFIFO;
 
-extern CRSFEndPoint *crsfEndpoint;
-
 Stream *CRSFHandset::PortSecondary;
 
 /// UART Handling ///
@@ -113,7 +111,7 @@ void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
     buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
     memcpy(&buffer[3], (uint8_t *)&CRSF::LinkStatistics, payloadLen);
-    buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
+    buffer[payloadLen + 3] = crsfEndpoint->crsf_crc.calc(&buffer[2], payloadLen + 1);
 }
 
 /**
@@ -132,8 +130,8 @@ void CRSFHandset::packetQueueExtended(uint8_t type, void *data, uint8_t len)
     };
 
     // CRC - Starts at type, ends before CRC
-    uint8_t crc = crsf_crc.calc(&buf[3], sizeof(buf)-3);
-    crc = crsf_crc.calc((byte *)data, len, crc);
+    uint8_t crc = crsfEndpoint->crsf_crc.calc(&buf[3], sizeof(buf)-3);
+    crc = crsfEndpoint->crsf_crc.calc((byte *)data, len, crc);
 
     SerialOutFIFO.lock();
     if (SerialOutFIFO.ensure(buf[0] + 1))
@@ -321,7 +319,7 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < totalLen)
         return;
 
-    uint8_t CalculatedCRC = crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
+    uint8_t CalculatedCRC = crsfEndpoint->crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
     if (CalculatedCRC == SerialInBuffer[totalLen - 1])
     {
         GoodPktsCount++;

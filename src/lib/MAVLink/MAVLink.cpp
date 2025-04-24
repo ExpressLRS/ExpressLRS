@@ -1,4 +1,6 @@
 #include "MAVLink.h"
+
+#include "CRSFEndpoint.h"
 #include "ardupilot_protocol.h"
 #include "ardupilot_custom_telemetry.h"
 
@@ -21,7 +23,7 @@ static void ap_send_crsf_passthrough_single(uint16_t appid, uint32_t data)
     crsfpassthrough.p.appid = appid;
     crsfpassthrough.p.data = data;
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
     handset->sendTelemetryToTX((uint8_t *)&crsfpassthrough);
     return;
 }
@@ -44,7 +46,7 @@ static void ap_send_crsf_passthrough_text(const char *text, uint8_t severity)
     crsftext.p.severity = severity;
     memcpy(crsftext.p.text, text, sizeof(crsftext.p.text));
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
     handset->sendTelemetryToTX((uint8_t *)&crsftext);
 }
 
@@ -73,7 +75,7 @@ static void ap_send_crsf_passthrough_multi(uint16_t appid, uint32_t data, uint16
     crsfpassthrough.p.items[1].appid = appid2;
     crsfpassthrough.p.items[1].data = data2;
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
     handset->sendTelemetryToTX((uint8_t *)&crsfpassthrough);
     return;
 }
@@ -130,7 +132,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 if (battery_status.battery_remaining > 0){ // int8_t, -1 means invalid
                     crsfbatt.p.remaining = (uint8_t) battery_status.battery_remaining;
                 }
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfbatt);
 
                 // send the batt1 message to Yaapu Telemetry Script
@@ -155,7 +157,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfgps.p.longitude = htobe32(gps_int.lon);
                 crsfgps.p.gps_heading = htobe16(gps_int.cog);
                 crsfgps.p.satellites_in_use = gps_int.satellites_visible;
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfgps);
 
                 // send the gps_status message to Yaapu Telemetry Script
@@ -183,7 +185,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 // store relative altitude for GPS Alt so we don't have 2 Alt sensors
                 relative_alt_mm = global_pos.relative_alt;
                 crsfvario.p.verticalspd = htobe16(-global_pos.vz); // MAVLink vz is positive down
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfvario);
                 break;
             }
@@ -195,7 +197,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                 crsfatt.p.pitch = htobe16(attitude.pitch * 10000); // in Betaflight & INAV, CRSF positive pitch is nose down, but in Ardupilot, it's nose up - we follow Ardupilot
                 crsfatt.p.roll = htobe16(attitude.roll * 10000);
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsfatt);
 
                 // send the attitude message to Yaapu Telemetry Script
@@ -214,7 +216,7 @@ void convert_mavlink_to_crsf_telem(uint8_t *CRSFinBuffer, uint8_t count, Handset
                     crsffm.p.flight_mode[len] = '*';
                     crsffm.p.flight_mode[len + 1] = '\0';
                 }
-                CRSF::SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_CRSF_TRANSMITTER);
                 handset->sendTelemetryToTX((uint8_t *)&crsffm);
 
                 /**

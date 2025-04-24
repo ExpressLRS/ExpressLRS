@@ -3,13 +3,14 @@
 #include "device.h"
 
 #include "CRSF.h"
-#include "CRSFEndPoint.h"
+#include "CRSFEndpoint.h"
 #include "config.h"
 #include "logging.h"
 #include "msp.h"
 
 #include "devButton.h"
 #include "handset.h"
+#include "msptypes.h"
 
 #define PITMODE_NOT_INITIALISED    -1
 #define PITMODE_OFF                 0
@@ -25,7 +26,6 @@
 
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
-extern CRSFEndPoint *crsfEndpoint;
 
 static enum VtxSendState_e
 {

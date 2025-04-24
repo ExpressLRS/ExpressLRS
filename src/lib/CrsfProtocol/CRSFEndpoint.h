@@ -7,12 +7,14 @@
 
 #include <vector>
 
-class CRSFEndPoint {
+class CRSFEndpoint {
 public:
-    explicit CRSFEndPoint(const uint8_t device_id)
+    explicit CRSFEndpoint(const uint8_t device_id)
         : device_id(device_id) {}
 
-    virtual ~CRSFEndPoint() = default;
+    virtual ~CRSFEndpoint() = default;
+
+    virtual bool handleMessage(crsf_ext_header_t * message) = 0;
 
     /* Process the message if it's for our device_id or a broadcast.
      * If the message is not for us, or it's a broadcast message, then forward it to all 'other' connectors.
@@ -23,9 +25,12 @@ public:
 
     void addConnector(CRSFConnector *connector);
 
-    virtual bool handleMessage(crsf_ext_header_t * message) = 0;
-
     void AddMspMessage(mspPacket_t *packet, uint8_t destination);
+
+    void SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
+    void SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e senderAddr, crsf_addr_e destAddr);
+
+    GENERIC_CRC8 crsf_crc = GENERIC_CRC8(CRSF_CRC_POLY);
 
     elrsLinkStatistics_t LinkStats = {};
 
@@ -33,5 +38,8 @@ private:
     uint8_t device_id;
     std::vector<CRSFConnector *> connectors;
 };
+
+// The global instance of the endpoint
+extern CRSFEndpoint *crsfEndpoint;
 
 #endif //CRSF_ENDPOINT_H

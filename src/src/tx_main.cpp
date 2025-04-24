@@ -32,7 +32,7 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 
 #include "MAVLink.h"
 #include "tx-crsf/OTAConnector.h"
-#include "tx-crsf/TXModuleCRSF.h"
+#include "tx-crsf/TXModuleEndpoint.h"
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -100,7 +100,7 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
-TXModuleCRSF *crsfEndpoint;
+CRSFEndpoint *crsfEndpoint;
 OTAConnector otaConnector;
 
 device_affinity_t ui_devices[] = {
@@ -445,7 +445,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
   if (!InBindingMode && config.GetModelMatch())
   {
-    syncPtr->UID5 ^= (~crsfEndpoint->modelId) & MODELMATCH_MASK;
+    syncPtr->UID5 ^= (~static_cast<TXModuleEndpoint *>(crsfEndpoint)->modelId) & MODELMATCH_MASK;
   }
 }
 
@@ -828,7 +828,7 @@ static void ChangeRadioParams()
 void ModelUpdateReq()
 {
   // Force synspam with the current rate parameters in case already have a connection established
-  if (config.SetModelId(crsfEndpoint->modelId))
+  if (config.SetModelId(static_cast<TXModuleEndpoint *>(crsfEndpoint)->modelId))
   {
     syncSpamCounter = syncSpamAmount;
     syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
@@ -1396,9 +1396,9 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    crsfEndpoint = new TXModuleCRSF();
-    crsfEndpoint->OnBindingCommand = EnterBindingModeSafely;
-    crsfEndpoint->RecvModelUpdate = ModelUpdateReq;
+    crsfEndpoint = new TXModuleEndpoint();
+    static_cast<TXModuleEndpoint *>(crsfEndpoint)->OnBindingCommand = EnterBindingModeSafely;
+    static_cast<TXModuleEndpoint *>(crsfEndpoint)->RecvModelUpdate = ModelUpdateReq;
 
     crsfEndpoint->addConnector(&otaConnector);
     // When a CRSF handset is detected, it will add itself to the endpoint

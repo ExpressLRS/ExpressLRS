@@ -1,4 +1,4 @@
-#include "TXModuleCRSF.h"
+#include "TXModuleEndpoint.h"
 
 #include "CRSF.h"
 #include "CRSFHandset.h"
@@ -10,11 +10,11 @@
 RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
-TXModuleCRSF::TXModuleCRSF() : CRSFEndPoint(CRSF_ADDRESS_CRSF_TRANSMITTER), modelId(0)
+TXModuleEndpoint::TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER), modelId(0)
 {
 }
 
-void TXModuleCRSF::begin()
+void TXModuleEndpoint::begin()
 {
 #if defined(PLATFORM_ESP32)
     if (esp_reset_reason() != ESP_RST_POWERON)
@@ -25,7 +25,7 @@ void TXModuleCRSF::begin()
 #endif
 }
 
-bool TXModuleCRSF::handleMessage(crsf_ext_header_t *message)
+bool TXModuleEndpoint::handleMessage(crsf_ext_header_t *message)
 {
     const crsf_frame_type_e packetType = message->type;
 
@@ -68,7 +68,7 @@ bool TXModuleCRSF::handleMessage(crsf_ext_header_t *message)
     return connectionState != connected && packetType == CRSF_FRAMETYPE_DEVICE_PING;
 }
 
-void TXModuleCRSF::RcPacketToChannelsData(crsf_ext_header_t *message) // data is packed as 11 bits per channel
+void TXModuleEndpoint::RcPacketToChannelsData(crsf_ext_header_t *message) // data is packed as 11 bits per channel
 {
     const auto payload = ((crsf_header_t *)message)->payload;
     constexpr unsigned srcBits = 11;

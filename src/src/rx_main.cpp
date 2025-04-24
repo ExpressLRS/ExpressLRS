@@ -29,14 +29,15 @@
 #include "rx-serial/SerialDisplayport.h"
 #include "rx-serial/SerialGPS.h"
 
-#include "rx-serial/devSerialIO.h"
+#include "devAnalogVbat.h"
+#include "devBaro.h"
+#include "devButton.h"
 #include "devLED.h"
 #include "devLUA.h"
-#include "devWIFI.h"
-#include "devButton.h"
 #include "devServoOutput.h"
-#include "devBaro.h"
-#include "devAnalogVbat.h"
+#include "devWIFI.h"
+#include "rx-crsf/RXEndpoint.h"
+#include "rx-serial/devSerialIO.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
@@ -107,6 +108,8 @@ ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
+
+CRSFEndpoint *crsfEndpoint;
 
 #include "crsf2msp.h"
 #include "msp2crsf.h"
@@ -2136,6 +2139,8 @@ void setup()
         }
         setupSerial();
         setupSerial1();
+
+        crsfEndpoint = new RXEndpoint();
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();

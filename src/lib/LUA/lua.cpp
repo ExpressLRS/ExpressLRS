@@ -1,6 +1,7 @@
 #include "lua.h"
-#include "common.h"
 #include "CRSF.h"
+#include "CRSFEndpoint.h"
+#include "common.h"
 #include "logging.h"
 
 #ifdef TARGET_RX
@@ -233,7 +234,7 @@ static uint8_t sendCRSFparam(crsf_addr_e origen, crsf_frame_type_e frameType, ui
 #else
   memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
 
-  CRSF::SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
+  crsfEndpoint->SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
 
   telemetry.AppendTelemetryPackage(paramInformation);
 #endif
@@ -435,7 +436,7 @@ void sendLuaDevicePacket(void)
 #ifdef TARGET_TX
   CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
 #else
-  CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
+  crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
   telemetry.AppendTelemetryPackage(deviceInformation);
 #endif
 }

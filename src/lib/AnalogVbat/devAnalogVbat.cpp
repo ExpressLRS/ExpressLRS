@@ -1,10 +1,11 @@
 #include "devAnalogVbat.h"
 
-#include <Arduino.h>
 #include "CRSF.h"
-#include "telemetry.h"
-#include "median.h"
+#include "CRSFEndpoint.h"
 #include "logging.h"
+#include "median.h"
+#include "telemetry.h"
+#include <Arduino.h>
 
 // Sample 5x samples over 500ms (unless SlowUpdate)
 #define VBAT_SMOOTH_CNT         5
@@ -86,7 +87,7 @@ static void reportVbat()
     crsfbatt.p.voltage = htobe16((uint16_t)vbat);
     // No sensors for current, capacity, or remaining available
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
     telemetry.AppendTelemetryPackage((uint8_t *)&crsfbatt);
 }
 

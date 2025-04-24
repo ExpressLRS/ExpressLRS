@@ -1,9 +1,11 @@
 #include "SerialCRSF.h"
-#include "common.h"
+
+#include "CRSFEndpoint.h"
 #include "OTA.h"
+#include "common.h"
 #include "device.h"
-#include "telemetry.h"
 #include "msp2crsf.h"
+#include "telemetry.h"
 
 extern MSP2CROSSFIRE msp2crsf;
 
@@ -42,8 +44,8 @@ void SerialCRSF::queueLinkStatisticsPacket()
         CRSF_FRAMETYPE_LINK_STATISTICS
     };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
+    uint8_t crc = crsfEndpoint->crsf_crc.calc(outBuffer[3]);
+    crc = crsfEndpoint->crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
 
     _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
@@ -99,8 +101,8 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
     };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
+    uint8_t crc = crsfEndpoint->crsf_crc.calc(outBuffer[2]);
+    crc = crsfEndpoint->crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
 
     _outputPort->write(outBuffer, sizeof(outBuffer));
     _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
@@ -143,7 +145,7 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
         {
             uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
             CRSF::GetDeviceInformation(deviceInformation, 0);
-            CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             queueMSPFrameTransmission(deviceInformation);
         }
     }

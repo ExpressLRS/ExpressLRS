@@ -1,11 +1,11 @@
 #ifndef TX_MODULE_CRSF_H
 #define TX_MODULE_CRSF_H
-#include "CRSFEndPoint.h"
+#include "CRSFEndpoint.h"
 #include "msp.h"
 
-class TXModuleCRSF final : public CRSFEndPoint {
+class TXModuleEndpoint final : public CRSFEndpoint {
 public:
-    TXModuleCRSF();
+    TXModuleEndpoint();
     void begin();
 
     bool handleMessage(crsf_ext_header_t *message) override;
