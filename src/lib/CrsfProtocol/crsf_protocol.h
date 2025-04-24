@@ -61,6 +61,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_AIRSPEED = 0x0A,
     CRSF_FRAMETYPE_RPM = 0x0C,
     CRSF_FRAMETYPE_TEMP = 0x0D,
+    CRSF_FRAME_TYPE_CELLS = 0x0E,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
     CRSF_FRAMETYPE_RADIO_ID = 0x3A,
@@ -114,6 +115,7 @@ enum {
     CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE = 2,
     CRSF_FRAME_RPM_PAYLOAD_SIZE = 19 * 3 + 1,   // 58 Bytes
     CRSF_FRAME_TEMP_PAYLOAD_SIZE = 20 * 2 + 1,  // 41 Bytes
+    CRSF_FRAME_CELLS_PAYLOAD_SIZE = 29 * 2 + 1, // 59 Bytes
     CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
 };
 
@@ -344,6 +346,13 @@ typedef struct crsf_sensor_temp_s
     uint8_t temp_source_id;     // Identifies the source of the temperature data (e.g., 0 = Motor 1, 1 = ESC, 2 = Ambient, etc.)
     int16_t temperature[20];    // Temperature in tenths of a degree Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
 } PACKED crsf_sensor_temp_t;
+
+// CRSF_FRAMETYPE_CELLS
+typedef struct crsf_sensor_cells_s
+{
+    uint8_t Cell_Sensor_source_id;    // Identifies the source of the Main_battery data (e.g., 0 = battery 1, 1 = battery 2, etc.)
+    uint16_t Cell_Sensor_value[];     // up to 29 cell values in a resolution of a thousandth of a Volt (e.g. 3.850V = 3850)
+} PACKED crsf_sensor_cells_t;
 
 // CRSF_FRAMETYPE_VARIO
 typedef struct crsf_sensor_vario_s
