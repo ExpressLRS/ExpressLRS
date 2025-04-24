@@ -35,8 +35,9 @@
 #define MILLS_2 (2)
 #define MILLS_3 (3)
 #define MILLS_82 (82)
-#define FALLING_IT (0)
-#define PA8_IDR (1<<8)
+
+#define MILLS_122 (122)
+
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -77,7 +78,7 @@ uint32_t SyncPacketLastSent = 0;
 volatile uint32_t otanonce_master_last_synched = millis();
 volatile bool otanonce_master_timer = false;
 void ICACHE_RAM_ATTR timerCallback();
-
+volatile bool otanonce_slave_interrupted = false;
 // OTANONCE SYNC END /////////////////////
 
 
@@ -645,30 +646,28 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
 }
 
 
+void ICACHE_RAM_ATTR otanonceMasterTimerSyncCallback()
+{
+  #ifdef SLAVE_TX
+  if( (HAL_GetTick() - otanonce_master_last_synched) <= MILLS_3){
+    OtaNonce = 0;
+  }
+  #endif
+} 
+
 void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
 
   #ifdef SLAVE_TX
-
 
   if( connectionState == noCrossfire ){
     return;
   }
 
-
-  uint32_t interrupt_io = GPIOA->IDR & PA8_IDR; // Faster.
-
-  if( interrupt_io != FALLING_IT ){
-    otanonce_master_last_synched = HAL_GetTick(); // faster.
-    timerCallback();
-    hwTimer::stop();
-    otanonce_master_timer = true;
-  }
-  else{
-    if( (millis() - otanonce_master_last_synched) >= MILLS_2 ){
-      OtaNonce = 0;
-    }
-  }
-
+  otanonce_master_last_synched = HAL_GetTick(); // faster. 
+  timerCallback();
+  hwTimer::stop();
+  otanonce_master_timer = true;
+  
   #endif
 }
 
@@ -692,6 +691,7 @@ void ICACHE_RAM_ATTR timerCallback()
 
     otanonce_master_last_synched = HAL_GetTick(); // faster.
     digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
+    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 
     #endif
 
@@ -737,6 +737,7 @@ lastTimerCallbackTime = micros();
   digitalWrite(GPIO_PIN_SLAVE_SYNC,HIGH);
   SendRCdataToRF();
   digitalWrite(GPIO_PIN_SLAVE_SYNC,LOW);
+
 }
 
 static void UARTdisconnected()
@@ -1501,11 +1502,16 @@ void setup()
   #endif
   pinMode(GPIO_PIN_SLAVE_SYNC, OUTPUT);
 #ifndef SLAVE_TX
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, OUTPUT);
+
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, OUTPUT);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 #else
       pinMode(GPIO_PIN_SLAVE_INTERRUPT, INPUT);
-      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, CHANGE);
+      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, HIGH);
+      pinMode(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, INPUT);
+      attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA), otanonceMasterTimerSyncCallback, HIGH);
+      
 #endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
@@ -1533,18 +1539,23 @@ void setup()
   }
 }
 
+
 void loop()
 {
   uint32_t now = millis();
   #ifndef SLAVE_TX
-  if(OtaNonce == 0 && (now - otanonce_master_last_synched) >= MILLS_3) {
-    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
-  }else if( OtaNonce != 0 && ( now - otanonce_master_last_synched) >= MILLS_1 )
-  {
-    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+ 
+  if(OtaNonce == 0  && otanonce_slave_interrupted == false   && (now - otanonce_master_last_synched) <= MILLS_3) {
+    otanonce_slave_interrupted = true;
+    
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, HIGH);
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, LOW);
+  }else if( OtaNonce > 0 ){
+    otanonce_slave_interrupted =  false;
   }
+
   #else
-    if( (now - otanonce_master_last_synched) > MILLS_82 && otanonce_master_timer == true){
+    if( (now - otanonce_master_last_synched) > MILLS_122 && otanonce_master_timer == true){
       // resume local timer if master stops driving.
       otanonce_master_timer = false;
       if( connectionState != noCrossfire){
