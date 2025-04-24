@@ -35,8 +35,10 @@
 #define MILLS_2 (2)
 #define MILLS_3 (3)
 #define MILLS_82 (82)
+
 #define MILLS_122 (122)
 #define SLAVE_TX
+
 #define MSP_PACKET_SEND_INTERVAL 10LU
 /// define some libs to use ///
 MSP msp;
@@ -644,6 +646,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
+
 void ICACHE_RAM_ATTR otanonceMasterTimerSyncCallback()
 {
   #ifdef SLAVE_TX
@@ -652,6 +655,7 @@ void ICACHE_RAM_ATTR otanonceMasterTimerSyncCallback()
   }
   #endif
 } 
+
 void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
 
   #ifdef SLAVE_TX
@@ -664,7 +668,7 @@ void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
   timerCallback();
   hwTimer::stop();
   otanonce_master_timer = true;
-   
+  
   #endif
 }
 
@@ -686,7 +690,7 @@ void ICACHE_RAM_ATTR timerCallback()
 {
     #ifndef SLAVE_TX
 
-    otanonce_master_last_synched = HAL_GetTick(); // faster.    
+    otanonce_master_last_synched = HAL_GetTick(); // faster.
     digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
     digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
 
@@ -838,7 +842,7 @@ static void ConfigChangeCommit()
     memcpy(CRSF::LinkStatistics.uid, tempUID, UID_LEN);
     memcpy(CRSF::LinkStatistics.bind_phrase, tempBindPhrase, PHRASE_LEN);
   }
-  
+
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
@@ -851,7 +855,7 @@ static void ConfigChangeCommit()
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
   luadevUpdateFolderNames();
   devicesTriggerEvent();
-  if(bigChange) {    
+  if(bigChange) {
     #if defined(PLATFORM_STM32)
     HAL_NVIC_SystemReset();
     #else
@@ -895,7 +899,7 @@ static void CheckConfigChangePending()
       nonceAdvance();
 
     #ifdef SLAVE_TX
-    // re-attach sync interrupt.  
+    // re-attach sync interrupt.
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, CHANGE);
     #endif
 
@@ -1276,7 +1280,7 @@ static void HandleUARTin()
 }
 
 static void setupSerial()
-{ 
+{
   // Serial.setRx(GPIO_PIN_DEBUG_RX);
   // Serial.setTx(GPIO_PIN_DEBUG_TX);
   // Serial.begin(115200); // Same baud as CRSF for simplicity
@@ -1369,7 +1373,7 @@ static void setupBindingFromConfig()
     else {
       endBase = config.GetEndFrequency();
       endFrequency = freqHzToRegVal(endBase*100000);
-      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();     
+      CRSF::LinkStatistics.freq_high = config.GetEndFrequency();
     }
     if(config.GetNumChannels() == 0){
       config.SetNumChannels(numChannels);
@@ -1377,7 +1381,7 @@ static void setupBindingFromConfig()
     }
     else {
       CRSF::LinkStatistics.num_channels = config.GetNumChannels();
-      numChannels=config.GetNumChannels(); 
+      numChannels=config.GetNumChannels();
     }
 
     CRSF::LinkStatistics.vtx_channel = 0;
@@ -1619,7 +1623,7 @@ void loop()
 
   if (TelemetryReceiver.HasFinishedData())
   {
-     
+
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
@@ -1638,9 +1642,9 @@ void loop()
       }
       else
       {
-        // Send all other tlm to handset 
+        // Send all other tlm to handset
         handset->sendTelemetryToTX(CRSFinBuffer);
-      
+
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       TelemetryReceiver.Unlock();

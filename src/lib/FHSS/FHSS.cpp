@@ -40,18 +40,26 @@ double freqRegValToMHz(uint32_t reg_val) {
     return (static_cast<double>(reg_val + FreqCorrection) * FREQ_STEP) / 1000000.0;
 }
 
+#ifdef TX_BAND_HIGH
+    /* ISM HIGH BAND */
+    uint16_t startBase  =  9200;
+    uint16_t endBase    = 10200;
+    uint8_t numChannels =    20;
 
-uint16_t startBase = 9200;
-uint16_t endBase = 10200;
-uint8_t numChannels=20;
+    // TODO: Will fix with new logic to switch HI between both bands
+    /* STD HIGH BAND */
+    // uint16_t startBase  = 9035;
+    // uint16_t endBase    = 9269;
+    // uint8_t numChannels =   40;
+#endif
 
-// uint16_t startBase = 9035;
-// uint16_t endBase = 9269;
-// uint8_t numChannels=40;
 
-// uint16_t startBase = 7850;
-// uint16_t endBase = 8350;
-// uint8_t numChannels=20;
+
+#ifdef TX_BAND_LOW
+    uint16_t startBase  = 7850;
+    uint16_t endBase    = 8350;
+    uint8_t numChannels =   20;
+#endif
 
 uint32_t startFrequency=freqHzToRegVal(startBase*100000);
 uint32_t endFrequency=freqHzToRegVal(endBase*100000);

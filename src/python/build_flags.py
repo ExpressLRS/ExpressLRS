@@ -81,6 +81,15 @@ def process_build_flag(define):
             define = "-DMY_UID=" + UIDbytes
             sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
             sys.stdout.flush()
+        # TODO: NOT ready to be used yet. There was binding issues with this setup.
+        # if "MY_BIND_PHRASE_HIGH" in define:
+        #     define = "-DMY_BIND_PHRASE_HIGH=" + ",".join(map(lambda x: str(ord(x)), define.split('=', 1)[1].replace('"', '').ljust(12, '\0')))
+        # if "MY_BINDING_PHRASE_HIGH" in define:
+        #     bindingPhraseHash = hashlib.md5(define.encode()).digest()
+        #     UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
+        #     define = "-DMY_UID=" + UIDbytes
+        #     sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+        #     sys.stdout.flush()
         if "MY_STARTUP_MELODY=" in define:
             parsedMelody = melodyparser.parse(define.split('"')[1::2][0])
             define = "-DMY_STARTUP_MELODY_ARR=\"" + parsedMelody + "\""
