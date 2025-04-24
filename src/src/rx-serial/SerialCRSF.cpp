@@ -45,13 +45,13 @@ void SerialCRSF::queueLinkStatisticsPacket()
     };
 
     uint8_t crc = crsfEndpoint->crsf_crc.calc(outBuffer[3]);
-    crc = crsfEndpoint->crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
+    crc = crsfEndpoint->crsf_crc.calc((byte *)&crsfEndpoint->linkStats, payloadLen, crc);
 
     _fifo.lock();
     if (_fifo.ensure(outBuffer[0] + 1))
     {
         _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, payloadLen);
+        _fifo.pushBytes((byte *)&crsfEndpoint->linkStats, payloadLen);
         _fifo.push(crc);
     }
     _fifo.unlock();
@@ -87,9 +87,9 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     else
     {
         // Not in 16-channel mode, send LQ and RSSI dBm
-        int32_t rssiDBM = CRSF::LinkStatistics.active_antenna == 0 ? -CRSF::LinkStatistics.uplink_RSSI_1 : -CRSF::LinkStatistics.uplink_RSSI_2;
+        int32_t rssiDBM = crsfEndpoint->linkStats.active_antenna == 0 ? -crsfEndpoint->linkStats.uplink_RSSI_1 : -crsfEndpoint->linkStats.uplink_RSSI_2;
 
-        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(CRSF::LinkStatistics.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(crsfEndpoint->linkStats.uplink_Link_quality, 0, 100, 0, 1023));
         PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     }

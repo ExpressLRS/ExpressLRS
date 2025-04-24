@@ -102,6 +102,7 @@ void CRSFHandset::flush_port_input()
     }
 }
 
+//FIXME this should not be here! CRSFEndpoint
 void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
 {
     // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
@@ -110,7 +111,7 @@ void CRSFHandset::makeLinkStatisticsPacket(uint8_t *buffer)
     buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
     buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    memcpy(&buffer[3], (uint8_t *)&CRSF::LinkStatistics, payloadLen);
+    memcpy(&buffer[3], (uint8_t *)&crsfEndpoint->linkStats, payloadLen);
     buffer[payloadLen + 3] = crsfEndpoint->crsf_crc.calc(&buffer[2], payloadLen + 1);
 }
 

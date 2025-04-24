@@ -1,10 +1,11 @@
 #if defined(TARGET_RX)
 
 #include "SerialMavlink.h"
-#include "device.h"
-#include "common.h"
 #include "CRSF.h"
+#include "CRSFEndpoint.h"
+#include "common.h"
 #include "config.h"
+#include "device.h"
 
 #define MAVLINK_RC_PACKET_INTERVAL 10
 
@@ -97,10 +98,10 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         const mavlink_radio_status_t radio_status {
             rxerrors: 0,
             fixed: 0,
-            rssi: (uint8_t)((float)CRSF::LinkStatistics.uplink_Link_quality * 2.55),
-            remrssi: CRSF::LinkStatistics.uplink_RSSI_1,
+            rssi: (uint8_t)((float)crsfEndpoint->linkStats.uplink_Link_quality * 2.55),
+            remrssi: crsfEndpoint->linkStats.uplink_RSSI_1,
             txbuf: percentage_remaining,
-            noise: (uint8_t)CRSF::LinkStatistics.uplink_SNR,
+            noise: (uint8_t)crsfEndpoint->linkStats.uplink_SNR,
             remnoise: 0,
         };
 

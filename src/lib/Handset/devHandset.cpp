@@ -2,10 +2,11 @@
 
 #ifdef TARGET_TX
 
-#include "CRSF.h"
 #include "CRSFHandset.h"
 #include "POWERMGNT.h"
 #include "devHandset.h"
+
+#include "CRSFEndpoint.h"
 
 #if defined(PLATFORM_ESP32)
 #include "AutoDetect.h"
@@ -44,7 +45,8 @@ static int timeout()
 static int event()
 {
     // An event should be generated every time the TX power changes
-    CRSF::LinkStatistics.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
+    //FIXME this should not be here either!
+    crsfEndpoint->linkStats.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
     return DURATION_IGNORE;
 }
 

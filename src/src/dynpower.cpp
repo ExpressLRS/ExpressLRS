@@ -1,8 +1,10 @@
+#include "CRSFEndpoint.h"
+
 #include <dynpower.h>
 
 #if defined(TARGET_TX)
-#include <handset.h>
 #include <LBT.h>
+#include <handset.h>
 
 // LQ-based boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
@@ -61,7 +63,7 @@ void DynamicPower_Update(uint32_t now)
   bool newTlmAvail = snrScaled > DYNPOWER_UPDATE_MISSED;
   bool lastTlmMissed = snrScaled == DYNPOWER_UPDATE_MISSED;
 
-  int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
+  int8_t rssi = (crsfEndpoint->linkStats.active_antenna == 0) ? crsfEndpoint->linkStats.uplink_RSSI_1 : crsfEndpoint->linkStats.uplink_RSSI_2;
 
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
@@ -125,7 +127,7 @@ void DynamicPower_Update(uint32_t now)
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
-  uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
+  uint32_t lq_current = crsfEndpoint->linkStats.uplink_Link_quality;
 #if defined(Regulatory_Domain_EU_CE_2400)
   // Scale up receiver LQ for packets not sent because the channel was not clear
   // the calculation could exceed 100% during a rate change or initial connect when the LQs are not synced
@@ -212,9 +214,11 @@ void DynamicPower_UpdateRx(bool initialize)
   } /* !PWR_MATCH_TX (fixed power) */
   else
   {
-    if (CRSF::clearUpdatedUplinkPower())
+    static uint8_t powerLevel = 0;
+    if (crsfEndpoint->linkStats.uplink_TX_Power != powerLevel)
     {
-      PowerLevels_e newPower = crsfPowerToPower(CRSF::LinkStatistics.uplink_TX_Power);
+      powerLevel = crsfEndpoint->linkStats.uplink_TX_Power;
+      PowerLevels_e newPower = crsfPowerToPower(crsfEndpoint->linkStats.uplink_TX_Power);
       DBGLN("Matching TX power %u", newPower);
       POWERMGNT::setPower(newPower);
     }

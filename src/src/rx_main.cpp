@@ -271,8 +271,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM2 = (rssiDBM2 > 0) ? 0 : rssiDBM2;
 
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
-        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
+        crsfEndpoint->linkStats.uplink_RSSI_1 = -rssiDBM;
+        crsfEndpoint->linkStats.uplink_RSSI_2 = -rssiDBM2;
         antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
     }
     else if (antenna == 0)
@@ -282,7 +282,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         #endif
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+        crsfEndpoint->linkStats.uplink_RSSI_1 = -rssiDBM;
     }
     else
     {
@@ -292,26 +292,26 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         // May be overwritten below if DEBUG_BF_LINK_STATS is set
-        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
+        crsfEndpoint->linkStats.uplink_RSSI_2 = -rssiDBM;
     }
 
     SnrMean.add(Radio.LastPacketSNRRaw);
 
-    CRSF::LinkStatistics.active_antenna = antenna;
-    CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
-    //CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
-    CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
-    //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
+    crsfEndpoint->linkStats.active_antenna = antenna;
+    crsfEndpoint->linkStats.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
+    //crsfEndpoint->linkStats.uplink_Link_quality = uplinkLQ; // handled in Tick
+    crsfEndpoint->linkStats.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
+    //DBGLN(crsfEndpoint->linkStats.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    CRSF::LinkStatistics.downlink_RSSI_1 = debug1;
-    CRSF::LinkStatistics.downlink_Link_quality = debug2;
-    CRSF::LinkStatistics.downlink_SNR = debug3;
-    CRSF::LinkStatistics.uplink_RSSI_2 = debug4;
+    crsfEndpoint->linkStats.downlink_RSSI_1 = debug1;
+    crsfEndpoint->linkStats.downlink_Link_quality = debug2;
+    crsfEndpoint->linkStats.downlink_SNR = debug3;
+    crsfEndpoint->linkStats.uplink_RSSI_2 = debug4;
     #endif
 
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
-    CRSF::LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
+    crsfEndpoint->linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
     debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
@@ -425,11 +425,11 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     // The value in linkstatistics is "positivized" (inverted polarity)
     // and must be inverted on the TX side. Positive values are used
     // so save a bit to encode which antenna is in use
-    ls->uplink_RSSI_1 = CRSF::LinkStatistics.uplink_RSSI_1;
-    ls->uplink_RSSI_2 = CRSF::LinkStatistics.uplink_RSSI_2;
+    ls->uplink_RSSI_1 = crsfEndpoint->linkStats.uplink_RSSI_1;
+    ls->uplink_RSSI_2 = crsfEndpoint->linkStats.uplink_RSSI_2;
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
-    ls->lq = CRSF::LinkStatistics.uplink_Link_quality;
+    ls->lq = crsfEndpoint->linkStats.uplink_Link_quality;
     ls->tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
@@ -738,7 +738,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalcDVDA.inc();
     }
 
-    CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
+    crsfEndpoint->linkStats.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
         LQCalc.inc();
@@ -1974,7 +1974,7 @@ static void debugRcvrLinkstats()
 
         // Copy the data out of the ISR-updating bits ASAP
         // While YOLOing (const void *) away the volatile
-        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&CRSF::LinkStatistics);
+        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&crsfEndpoint->linkStats);
         uint32_t packetCounter = debugRcvrLinkstatsPacketId;
         uint8_t fhss = debugRcvrLinkstatsFhssIdx;
         // actually the previous packet's offset since the update happens in tick, and this will

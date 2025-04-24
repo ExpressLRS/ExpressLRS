@@ -32,7 +32,7 @@ public:
 
     GENERIC_CRC8 crsf_crc = GENERIC_CRC8(CRSF_CRC_POLY);
 
-    elrsLinkStatistics_t LinkStats = {};
+    elrsLinkStatistics_t linkStats = {};
 
 private:
     uint8_t device_id;

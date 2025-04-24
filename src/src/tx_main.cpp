@@ -145,16 +145,16 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // Antenna is the high bit in the RSSI_1 value
   // RSSI received is signed, inverted polarity (positive value = -dBm)
   // OpenTX's value is signed and will display +dBm and -dBm properly
-  CRSF::LinkStatistics.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
-  CRSF::LinkStatistics.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
-  CRSF::LinkStatistics.uplink_Link_quality = ls->lq;
+  crsfEndpoint->linkStats.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
+  crsfEndpoint->linkStats.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
+  crsfEndpoint->linkStats.uplink_Link_quality = ls->lq;
 #if defined(DEBUG_FREQ_CORRECTION)
   // Don't descale the FreqCorrection value being send in SNR
-  CRSF::LinkStatistics.uplink_SNR = snrScaled;
+  crsfEndpoint->linkStats.uplink_SNR = snrScaled;
 #else
-  CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(snrScaled);
+  crsfEndpoint->linkStats.uplink_SNR = SNR_DESCALE(snrScaled);
 #endif
-  CRSF::LinkStatistics.active_antenna = ls->antenna;
+  crsfEndpoint->linkStats.active_antenna = ls->antenna;
   connectionHasModelMatch = ls->modelMatch;
   // -- downlink_SNR / downlink_RSSI is updated for any packet received, not just Linkstats
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
@@ -193,9 +193,9 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   Radio.GetLastPacketStats();
-  CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
-  CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
+  crsfEndpoint->linkStats.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+  crsfEndpoint->linkStats.downlink_RSSI_1 = Radio.LastPacketRSSI;
+  crsfEndpoint->linkStats.downlink_RSSI_2 = Radio.LastPacketRSSI2;
 
   // Full res mode
   if (OtaIsFullRes)
@@ -514,7 +514,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-  CRSF::LinkStatistics.rf_Mode = ModParams->enum_rate;
+  crsfEndpoint->linkStats.rf_Mode = ModParams->enum_rate;
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   setConnectionState(disconnected);
@@ -749,9 +749,9 @@ void ICACHE_RAM_ATTR timerCallback()
     TelemetryRcvPhase = ttrpExpectingTelem;
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
-    CRSF::LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
+    crsfEndpoint->linkStats.downlink_Link_quality = LBTSuccessCalc.getLQ();
 #else
-    CRSF::LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    crsfEndpoint->linkStats.downlink_Link_quality = LQCalc.getLQ();
 #endif
     LQCalc.inc();
     return;

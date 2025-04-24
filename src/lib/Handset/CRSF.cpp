@@ -2,8 +2,6 @@
 
 #include "common.h"
 
-elrsLinkStatistics_t CRSF::LinkStatistics;
-
 /***
  * @brief: Convert `version` (string) to a integer version representation
  * e.g. "2.2.15 ISM24G" => 0x0002020f
@@ -66,31 +64,3 @@ void CRSF::GetDeviceInformation(uint8_t *frame, uint8_t fieldCount)
     device->fieldCnt = fieldCount;
     device->parameterVersion = 0;
 }
-
-#if defined(CRSF_RX_MODULE)
-
-bool CRSF::HasUpdatedUplinkPower = false;
-
-/***
- * @brief: Call this when new uplinkPower from the TX is availble from OTA instead of setting directly
- */
-void CRSF::updateUplinkPower(uint8_t uplinkPower)
-{
-    if (uplinkPower != LinkStatistics.uplink_TX_Power)
-    {
-        LinkStatistics.uplink_TX_Power = uplinkPower;
-        HasUpdatedUplinkPower = true;
-    }
-}
-
-/***
- * @brief: Returns true if HasUpdatedUplinkPower and clears the flag
- */
-bool CRSF::clearUpdatedUplinkPower()
-{
-    bool retVal = HasUpdatedUplinkPower;
-    HasUpdatedUplinkPower = false;
-    return retVal;
-}
-
-#endif // CRSF_RX_MODULE
