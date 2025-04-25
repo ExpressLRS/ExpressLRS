@@ -9,7 +9,7 @@ class TXOTAConnector final : public CRSFConnector {
 public:
     TXOTAConnector();
 
-    void forwardMessage(crsf_header_t *message) override;
+    void forwardMessage(const crsf_header_t *message) override;
 
     void AddMspMessage(uint8_t length, uint8_t *data);
 

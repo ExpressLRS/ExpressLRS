@@ -14,7 +14,9 @@ public:
 
     bool forwardsTo(crsf_addr_e device_id);
 
-    virtual void forwardMessage(crsf_header_t *message) = 0;
+    virtual void forwardMessage(const crsf_header_t *message) = 0;
+
+    static void debugCRSF(const char * str, const crsf_header_t * message);
 
 private:
     std::set<crsf_addr_e> devices;

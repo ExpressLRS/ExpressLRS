@@ -7,8 +7,10 @@ void CRSFEndpoint::addConnector(CRSFConnector *connector)
     connectors.push_back(connector);
 }
 
-void CRSFEndpoint::processMessage(CRSFConnector *connector, crsf_header_t *message)
+void CRSFEndpoint::processMessage(CRSFConnector *connector, const crsf_header_t *message)
 {
+    if (handleRaw((uint8_t *)message)) return;
+
     const crsf_frame_type_e packetType = message->type;
     const auto extMessage = (crsf_ext_header_t *)message;
     if (connector && packetType >= CRSF_FRAMETYPE_DEVICE_PING)
@@ -61,11 +63,11 @@ void CRSFEndpoint::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, 
     frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
 
-void CRSFEndpoint::SetExtendedHeaderAndCrc(uint8_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize, const crsf_addr_e senderAddr, const crsf_addr_e destAddr)
+void CRSFEndpoint::SetExtendedHeaderAndCrc(uint8_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize, const crsf_addr_e destAddr)
 {
     auto *header = (crsf_ext_header_t *)frame;
     header->dest_addr = destAddr;
-    header->orig_addr = senderAddr;
+    header->orig_addr = device_id;
     SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
 }
 

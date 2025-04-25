@@ -114,7 +114,7 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     if (!telemetry.GetCrsfBaroSensorDetected())
     {
         crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+        crsfEndpoint->processMessage(nullptr, &crsfBaro.h);
     }
 }
 

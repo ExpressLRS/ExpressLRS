@@ -225,7 +225,7 @@ void test_function_add_type_with_zero_crc(void)
         0x00                    // CRC
     };
 
-    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(TODO, sequence);
 
     uint8_t* data;
     uint8_t receivedLength;

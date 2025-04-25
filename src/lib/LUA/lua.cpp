@@ -6,24 +6,20 @@
 
 #ifdef TARGET_RX
 #include "telemetry.h"
-
-extern Telemetry telemetry;
 #else
 #include "CRSFHandset.h"
-#endif
-
-//LUA VARIABLES//
-
-#ifdef TARGET_TX
 static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 static void (*devicePingCallback)() = nullptr;
 #endif
 
+//LUA VARIABLES//
+
 #define LUA_MAX_PARAMS 64
-static crsf_addr_e parameterOrigin;
+static bool isElrsCalling = false;
+static crsf_addr_e requestOrigin;
 static uint8_t parameterType;
 static uint8_t parameterIndex;
-static uint8_t parameterArg;
+static uint8_t parameterChunk;
 static volatile bool UpdateParamReq = false;
 
 static luaItem_folder luaAgentLite = {
@@ -152,7 +148,7 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
   return childParameters;
 }
 
-static uint8_t sendCRSFparam(crsf_addr_e origen, crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
+static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
@@ -163,16 +159,12 @@ static uint8_t sendCRSFparam(crsf_addr_e origen, crsf_frame_type_e frameType, ui
   // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
   chunkBuffer[2] = luaData->parent;
   chunkBuffer[3] = dataType;
-#ifdef TARGET_TX
   // Set the hidden flag
   chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
-  if (origen == CRSF_ADDRESS_ELRS_LUA) {
+  if (isElrsCalling) {
     chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
   }
-#else
-  chunkBuffer[3] |= luaData->type;
-  uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
-#endif
+  uint8_t paramInformation[CRSF_MAX_PACKET_LEN];
 
   // Copy the name to the buffer starting at chunkBuffer[4]
   uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
@@ -229,21 +221,15 @@ static uint8_t sendCRSFparam(crsf_addr_e origen, crsf_frame_type_e frameType, ui
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
-#ifdef TARGET_TX
-  CRSFHandset::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
-#else
-  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
-
-  crsfEndpoint->SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
-
-  telemetry.AppendTelemetryPackage(paramInformation);
-#endif
+  memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
+  crsfEndpoint->SetExtendedHeaderAndCrc(paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin);
+  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)paramInformation);
   return chunkCnt - (fieldChunk+1);
 }
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(parameterOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(requestOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -297,16 +283,17 @@ void sendELRSstatus()
   };
   const char * warningInfo = "";
 
-  for (int i=7 ; i>=0 ; i--)
+  for (int i = 7; i >= 0; i--)
   {
-      if (luaWarningFlags & (1<<i))
+      if (luaWarningFlags & (1 << i))
       {
           warningInfo = messages[i];
           break;
       }
   }
-  uint8_t buffer[sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1];
-  struct tagLuaElrsParams * const params = (struct tagLuaElrsParams *)buffer;
+  const uint8_t payloadSize = sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1;
+  uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
+  const auto params = (struct tagLuaElrsParams *)&buffer[sizeof(crsf_ext_header_t)];
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
@@ -314,7 +301,8 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
-  CRSFHandset::packetQueueExtended(0x2E, &buffer, sizeof(buffer));
+  crsfEndpoint->SetExtendedHeaderAndCrc(buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin);
+  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)buffer);
 }
 
 void luaRegisterDevicePingCallback(void (*callback)())
@@ -326,10 +314,12 @@ void luaRegisterDevicePingCallback(void (*callback)())
 
 void luaParamUpdateReq(crsf_addr_e origin, uint8_t type, uint8_t index, uint8_t arg)
 {
-  parameterOrigin = origin;
+  // dodgy hack because 'our' LUA script uses a different origin and we need to reply to the radio!
+  isElrsCalling = origin == CRSF_ADDRESS_ELRS_LUA;
+  requestOrigin = isElrsCalling ? CRSF_ADDRESS_RADIO_TRANSMITTER : origin;
   parameterType = type;
   parameterIndex = index;
-  parameterArg = arg;
+  parameterChunk = arg;
   UpdateParamReq = true;
 }
 
@@ -365,7 +355,7 @@ bool luaHandleUpdateParameter()
 #endif
       } else {
         uint8_t id = parameterIndex;
-        uint8_t arg = parameterArg;
+        uint8_t arg = parameterChunk;
         struct luaPropertiesCommon *p = paramDefinitions[id];
         DBGLN("Set Lua [%s]=%u", p->name, arg);
         if (id < LUA_MAX_PARAMS && paramCallbacks[id]) {
@@ -391,20 +381,18 @@ bool luaHandleUpdateParameter()
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
       {
-        uint8_t fieldId = parameterIndex;
-        uint8_t fieldChunk = parameterArg;
         DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
-        if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
+        if (parameterIndex < LUA_MAX_PARAMS && paramDefinitions[parameterIndex])
         {
-          struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[fieldId];
+          const auto field = (struct luaItem_command *)paramDefinitions[parameterIndex];
           uint8_t dataType = field->common.type & CRSF_FIELD_TYPE_MASK;
           // On first chunk of a command, reset the step/info of the command
-          if (dataType == CRSF_COMMAND && fieldChunk == 0)
+          if (dataType == CRSF_COMMAND && parameterChunk == 0)
           {
             field->step = lcsIdle;
             field->info = "";
           }
-          sendCRSFparam(parameterOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
+          sendCRSFparam(requestOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterChunk, &field->common);
         }
       }
       break;
@@ -432,11 +420,6 @@ void sendLuaDevicePacket(void)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
-  // does append header + crc again so subtract size from length
-#ifdef TARGET_TX
-  CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
-#else
-  crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, parameterOrigin);
-  telemetry.AppendTelemetryPackage(deviceInformation);
-#endif
+  crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin);
+  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)deviceInformation);
 }

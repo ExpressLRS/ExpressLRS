@@ -37,6 +37,7 @@
 #include "devServoOutput.h"
 #include "devWIFI.h"
 #include "rx-crsf/RXEndpoint.h"
+#include "rx-crsf/RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
 #if defined(PLATFORM_ESP8266)
@@ -110,6 +111,7 @@ Telemetry telemetry;
 Stream *SerialLogger;
 
 CRSFEndpoint *crsfEndpoint;
+RXOTAConnector otaConnector;
 
 #include "crsf2msp.h"
 #include "msp2crsf.h"
@@ -1333,52 +1335,9 @@ void MspReceiveComplete()
         break;
     default:
         //handle received CRSF package
-        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-        switch (receivedHeader->type)
-        {
-        case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
-            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
-            {
-                UpdateModelMatch(MspData[9]);
-                break;
-            }
-#if defined(PLATFORM_ESP32)
-            else if (MspData[7] == MSP_SET_VTX_CONFIG)
-            {
-                if (OPT_HAS_VTX_SPI) {
-                    vtxSPIFrequency = getFreqByIdx(MspData[8]);
-                    if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                    {
-                        vtxSPIPowerIdx = MspData[10];
-                        vtxSPIPitmode = MspData[11];
-                    }
-                    devicesTriggerEvent(EVENT_VTX_CHANGE);
-                    break;
-                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
-                    serial1IO->queueMSPFrameTransmission(MspData);
-                    break;
-                }
-            }
-            // FALLTHROUGH
-#endif
-        default:
-            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
-            {
-                luaParamUpdateReq(
-                    receivedHeader->orig_addr,
-                    MspData[CRSF_TELEMETRY_TYPE_INDEX],
-                    MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
-                    MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]
-                );
-            }
-            break;
-        }
-        // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && teamraceHasModelMatch &&
-            (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-        {
-            serialIO->queueMSPFrameTransmission(MspData);
-        }
+        const auto receivedHeader = (crsf_header_t *) MspData;
+        crsfEndpoint->processMessage(&otaConnector, receivedHeader);
+
     }
 
     MspReceiver.Unlock();
@@ -2137,10 +2096,10 @@ void setup()
                 }
             }
         }
+        crsfEndpoint = new RXEndpoint();
+        crsfEndpoint->addConnector(&otaConnector);
         setupSerial();
         setupSerial1();
-
-        crsfEndpoint = new RXEndpoint();
 
         devicesRegister(ui_devices, ARRAY_SIZE(ui_devices));
         devicesInit();

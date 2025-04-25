@@ -71,7 +71,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
 
-    //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
+    CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, // ELRS good/bad packet count and status flags
 
     CRSF_FRAMETYPE_COMMAND = 0x32,
     // KISS frames

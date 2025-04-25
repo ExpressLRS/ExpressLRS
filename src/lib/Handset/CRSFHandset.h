@@ -1,6 +1,8 @@
 #ifndef H_CRSF_CONTROLLER
 #define H_CRSF_CONTROLLER
 
+#ifdef TARGET_TX
+
 #include "handset.h"
 #include "crsf_protocol.h"
 #ifndef TARGET_NATIVE
@@ -18,29 +20,23 @@ class CRSFHandset final : public Handset, public CRSFConnector
 
 public:
     /////Variables/////
-    void Begin() override;
-    void End() override;
-
-    void forwardMessage(crsf_header_t *message) override;
-
-#ifdef CRSF_TX_MODULE
-    void handleInput() override;
-    void handleOutput(uint32_t receivedBytes);
-
     static HardwareSerial Port;
-    static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
 
     static uint32_t GoodPktsCountResult; // need to latch the results
     static uint32_t BadPktsCountResult;  // need to latch the results
 
-    static void packetQueueExtended(uint8_t type, void *data, uint8_t len);
+    void Begin() override;
+    void End() override;
+
+    void forwardMessage(const crsf_header_t *message) override;
+
+    void handleInput() override;
+    void handleOutput(uint32_t receivedBytes);
 
     void setPacketInterval(int32_t PacketInterval) override;
     void JustSentRFpacket() override;
 
     uint8_t GetMaxPacketBytes() const override { return maxPacketBytes; }
-    static uint32_t GetCurrentBaudRate() { return UARTrequestedBaud; }
-    static bool isHalfDuplex() { return halfDuplex; }
     int getMinPacketInterval() const override;
 
 private:
@@ -66,6 +62,8 @@ private:
     static uint8_t UARTcurrentBaudIdx;
     static uint32_t UARTrequestedBaud;
 
+    static Stream *PortSecondary; // A second UART used to mirror telemetry out on the TX, not read from
+
 #if defined(PLATFORM_ESP32)
     bool UARTinverted = false;
 #endif
@@ -79,7 +77,7 @@ private:
     bool UARTwdt();
     uint32_t autobaud();
     void flush_port_input();
-#endif
 };
 
+#endif
 #endif

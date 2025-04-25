@@ -58,7 +58,7 @@ void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
-    crsfEndpoint->SetExtendedHeaderAndCrc(mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetExtendedHeaderAndCrc(mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_FLIGHT_CONTROLLER);
     SendMSPFrameToFC(mspFrame);
 }
 

@@ -13,6 +13,15 @@ extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
 
+void SerialCRSF::forwardMessage(const crsf_header_t *message)
+{
+    // No MSP data to the FC if no model match
+    if (connectionHasModelMatch && teamraceHasModelMatch)
+    {
+        queueMSPFrameTransmission((uint8_t*)message);
+    }
+}
+
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
@@ -127,26 +136,6 @@ void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
 {
     for (int i=0 ; i<size ; i++)
     {
-        telemetry.RXhandleUARTin(bytes[i]);
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-        if (telemetry.ShouldCallEnterBind())
-        {
-            EnterBindingModeSafely();
-        }
-        if (telemetry.ShouldCallUpdateModelMatch())
-        {
-            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
-        }
-        if (telemetry.ShouldSendDeviceFrame())
-        {
-            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-            CRSF::GetDeviceInformation(deviceInformation, 0);
-            crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            queueMSPFrameTransmission(deviceInformation);
-        }
+        telemetry.RXhandleUARTin(this, bytes[i]);
     }
 }

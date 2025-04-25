@@ -88,7 +88,7 @@ static void reportVbat()
     // No sensors for current, capacity, or remaining available
 
     crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-    telemetry.AppendTelemetryPackage((uint8_t *)&crsfbatt);
+    crsfEndpoint->processMessage(nullptr, &crsfbatt.h);
 }
 
 static int timeout()

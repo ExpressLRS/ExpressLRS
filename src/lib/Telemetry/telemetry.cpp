@@ -25,34 +25,6 @@ Telemetry::Telemetry()
     ResetState();
 }
 
-bool Telemetry::ShouldCallBootloader()
-{
-    bool bootloader = callBootloader;
-    callBootloader = false;
-    return bootloader;
-}
-
-bool Telemetry::ShouldCallEnterBind()
-{
-    bool enterBind = callEnterBind;
-    callEnterBind = false;
-    return enterBind;
-}
-
-bool Telemetry::ShouldCallUpdateModelMatch()
-{
-    bool updateModelMatch = callUpdateModelMatch;
-    callUpdateModelMatch = false;
-    return updateModelMatch;
-}
-
-bool Telemetry::ShouldSendDeviceFrame()
-{
-    bool deviceFrame = sendDeviceFrame;
-    sendDeviceFrame = false;
-    return deviceFrame;
-}
-
 void Telemetry::SetCrsfBatterySensorDetected()
 {
     crsfBatterySensorDetected = true;
@@ -163,7 +135,7 @@ void Telemetry::ResetState()
     }
 }
 
-bool Telemetry::RXhandleUARTin(uint8_t data)
+bool Telemetry::RXhandleUARTin(CRSFConnector *origin, uint8_t data)
 {
     switch(telemetry_state) {
         case TELEMETRY_IDLE:
@@ -205,12 +177,16 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
                 if (data == crc)
                 {
-                    AppendTelemetryPackage(CRSFinBuffer);
+                    const crsf_header_t *header = (crsf_header_t *) CRSFinBuffer;
+                    crsfEndpoint->processMessage(origin, header);
 
                     // Special case to check here and not in AppendTelemetryPackage(). devAnalogVbat and vario sends
                     // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.
-                    CheckCrsfBatterySensorDetected();
-                    CheckCrsfBaroSensorDetected();
+                    if (origin != nullptr)
+                    {
+                        CheckCrsfBatterySensorDetected();
+                        CheckCrsfBaroSensorDetected();
+                    }
 
                     receivedPackages++;
                     return true;
@@ -231,57 +207,8 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
     return true;
 }
 
-/**
- * @brief: Check the CRSF frame for commands that should not be passed on
- * @return: true if packet was internal and should not be processed further
-*/
-bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
-{
-    const crsf_ext_header_t *header = (crsf_ext_header_t *)package;
-
-    if (header->type == CRSF_FRAMETYPE_COMMAND)
-    {
-        // Non CRSF, dest=b src=l -> reboot to bootloader
-        if (package[3] == 'b' && package[4] == 'l')
-        {
-            callBootloader = true;
-            return true;
-        }
-        // 1. Non CRSF, dest=b src=b -> bind mode
-        // 2. CRSF bind command
-        if ((package[3] == 'b' && package[4] == 'd') ||
-            (header->frame_size >= 6 // official CRSF is 7 bytes with two CRCs
-            && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER
-            && header->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER
-            && header->payload[0] == CRSF_COMMAND_SUBCMD_RX
-            && header->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND))
-        {
-            callEnterBind = true;
-            return true;
-        }
-        // Non CRSF, dest=b src=m -> set modelmatch
-        if (package[3] == 'm' && package[4] == 'm')
-        {
-            callUpdateModelMatch = true;
-            modelMatchId = package[5];
-            return true;
-        }
-    }
-
-    if (header->type == CRSF_FRAMETYPE_DEVICE_PING && header->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER)
-    {
-        sendDeviceFrame = true;
-        return true;
-    }
-
-    return false;
-}
-
 bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
-    if (processInternalTelemetryPackage(package))
-        return true;
-
     const crsf_header_t *header = (crsf_header_t *) package;
     uint8_t targetIndex = 0;
     bool targetFound = false;

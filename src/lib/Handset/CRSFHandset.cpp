@@ -104,7 +104,7 @@ void CRSFHandset::flush_port_input()
     }
 }
 
-void CRSFHandset::forwardMessage(crsf_header_t *message)
+void CRSFHandset::forwardMessage(const crsf_header_t *message)
 {
     if (controllerConnected)
     {
@@ -123,27 +123,6 @@ void CRSFHandset::forwardMessage(crsf_header_t *message)
         }
         SerialOutFIFO.unlock();
     }
-}
-
-/**
- * Build a an extended type packet and queue it in the SerialOutFIFO
- * This is just a regular packet with 2 extra bytes with the sub src and target
- **/
-void CRSFHandset::packetQueueExtended(uint8_t type, void *data, uint8_t len)
-{
-    uint8_t buf[len + 6] = {
-        CRSF_ADDRESS_RADIO_TRANSMITTER,
-        (uint8_t)(len + 4),
-        type,
-        CRSF_ADDRESS_RADIO_TRANSMITTER,
-        CRSF_ADDRESS_CRSF_TRANSMITTER,
-    };
-
-    // CRC - Starts at type, ends before CRC
-    memcpy(buf + 5, data, len);
-    uint8_t crc = crsfEndpoint->crsf_crc.calc(&buf[2], sizeof(buf)-3);
-    buf[sizeof(buf)-1] = crc;
-    crsfEndpoint->processMessage(nullptr, (crsf_header_t *)buf);
 }
 
 void ICACHE_RAM_ATTR CRSFHandset::setPacketInterval(int32_t PacketInterval)
@@ -193,20 +172,26 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
         DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
 #endif
 
-        struct otxSyncData {
-            uint8_t extendedType; // CRSF_FRAMETYPE_OPENTX_SYNC
+        struct {
+            crsf_ext_header_t header;
+            uint8_t extendedType;
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
-        } PACKED;
-
-        uint8_t buffer[sizeof(otxSyncData)];
-        auto * const sync = (struct otxSyncData * const)buffer;
-
-        sync->extendedType = CRSF_FRAMETYPE_OPENTX_SYNC;
-        sync->rate = htobe32(packetRate);
-        sync->offset = htobe32(offset);
-
-        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer));
+            uint8_t crc;
+        } PACKED buf = {
+            .header = {
+                CRSF_ADDRESS_RADIO_TRANSMITTER,
+                CRSF_EXT_FRAME_SIZE(9),
+                CRSF_FRAMETYPE_RADIO_ID,
+                CRSF_ADDRESS_RADIO_TRANSMITTER,
+                CRSF_ADDRESS_CRSF_TRANSMITTER,
+            },
+            .extendedType = CRSF_FRAMETYPE_OPENTX_SYNC,
+            .rate = htobe32(packetRate),
+            .offset = htobe32(offset),
+            .crc = crsfEndpoint->crsf_crc.calc((uint8_t *)&buf + CRSF_TELEMETRY_TYPE_INDEX, sizeof(buf)-3)
+        };
+        crsfEndpoint->processMessage(nullptr, (crsf_header_t *)&buf);
 
         OpenTXsyncLastSent = now;
     }
@@ -430,15 +415,15 @@ void CRSFHandset::duplex_set_TX() const
 
 int CRSFHandset::getMinPacketInterval() const
 {
-    if (isHalfDuplex() && GetCurrentBaudRate() == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
+    if (halfDuplex && UARTrequestedBaud == 115200) // Packet rate limited to 200Hz if we are on 115k baud on half-duplex module
     {
         return 5000;
     }
-    if (GetCurrentBaudRate() == 115200) // Packet rate limited to 250Hz if we are on 115k baud
+    if (UARTrequestedBaud == 115200) // Packet rate limited to 250Hz if we are on 115k baud
     {
         return 4000;
     }
-    if (GetCurrentBaudRate() == 400000) // Packet rate limited to 500Hz if we are on 400k baud
+    if (UARTrequestedBaud == 400000) // Packet rate limited to 500Hz if we are on 400k baud
     {
         return 2000;
     }

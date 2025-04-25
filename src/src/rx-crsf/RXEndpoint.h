@@ -5,7 +5,8 @@
 class RXEndpoint final : public CRSFEndpoint {
 public:
     RXEndpoint();
-    bool handleMessage(crsf_ext_header_t *message) override;
+    bool handleRaw(uint8_t *message) override;
+    bool handleMessage(const crsf_header_t *message) override;
 };
 
 #endif //RX_ENDPOINT_H

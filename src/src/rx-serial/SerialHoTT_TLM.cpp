@@ -249,8 +249,7 @@ void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
     if ((now - lastVarioSent >= VARIO_MIN_CRSFRATE) || (lastVarioCRC != crsfBaro.crc))
     {
         lastVarioSent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+        crsfEndpoint->processMessage(nullptr, &crsfBaro.h);
     }
 
     lastVarioCRC = crsfBaro.crc;
@@ -273,8 +272,7 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     if ((now - lastGPSSent >= GPS_MIN_CRSFRATE) || (lastGPSCRC != crsfGPS.crc))
     {
         lastGPSSent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfGPS);
+        crsfEndpoint->processMessage(nullptr, &crsfGPS.h);
     }
 
     lastGPSCRC = crsfGPS.crc;
@@ -298,8 +296,7 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     if ((now - lastBatterySent >= BATT_MIN_CRSFRATE) || (lastBatteryCRC != crsfBatt.crc))
     {
         lastBatterySent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBatt);
+        crsfEndpoint->processMessage(nullptr, &crsfBatt.h);
     }
 
     lastBatteryCRC = crsfBatt.crc;

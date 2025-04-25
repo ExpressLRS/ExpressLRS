@@ -23,7 +23,7 @@ void TXModuleEndpoint::begin()
 #endif
 }
 
-bool TXModuleEndpoint::handleMessage(crsf_header_t *message)
+bool TXModuleEndpoint::handleMessage(const crsf_header_t *message)
 {
     const crsf_frame_type_e packetType = message->type;
 
@@ -61,7 +61,7 @@ bool TXModuleEndpoint::handleMessage(crsf_header_t *message)
     return false;
 }
 
-void TXModuleEndpoint::RcPacketToChannelsData(crsf_header_t *message) // data is packed as 11 bits per channel
+void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // data is packed as 11 bits per channel
 {
     const auto payload = (uint8_t *)message + sizeof(crsf_header_t);
     constexpr unsigned srcBits = 11;

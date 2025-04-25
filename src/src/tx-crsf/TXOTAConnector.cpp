@@ -13,7 +13,7 @@ TXOTAConnector::TXOTAConnector()
     addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
-void TXOTAConnector::forwardMessage(crsf_header_t *message)
+void TXOTAConnector::forwardMessage(const crsf_header_t *message)
 {
     if (connectionState == connected)
     {
