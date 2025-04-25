@@ -1755,7 +1755,7 @@ static void setupBindingFromConfig()
       CRSF::LinkStatistics.freq_high = config.GetEndFrequency();
       endBase = config.GetEndFrequency();
       endFrequency = freqHzToRegVal(endBase*100000);
-      
+
     }
     if(config.GetNumChannels() == 0){
       config.SetNumChannels(numChannels);
@@ -1763,7 +1763,7 @@ static void setupBindingFromConfig()
     }
     else {
       CRSF::LinkStatistics.num_channels = config.GetNumChannels();
-      numChannels=config.GetNumChannels(); 
+      numChannels=config.GetNumChannels();
     }
 
     if(config.GetUID()[0] != 0) {
@@ -1776,7 +1776,7 @@ static void setupBindingFromConfig()
     // }
 
     //DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
-        UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
+        // UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
 }
@@ -2287,7 +2287,7 @@ void loop()
         RFmodeLastCycled = now;
         LastSyncPacket = now;
     }
- 
+
     cycleRfMode(now);
 
     uint32_t localLastValidPacket = LastValidPacket; // Required to prevent race condition due to LastValidPacket getting updated from ISR

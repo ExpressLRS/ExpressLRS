@@ -51,14 +51,14 @@ double freqRegValToMHz(uint32_t reg_val) {
     // uint16_t startBase  = 9035;
     // uint16_t endBase    = 9269;
     // uint8_t numChannels =   40;
-#endif
-
-
-
-#ifdef TX_BAND_LOW
+#elif TX_BAND_LOW
     uint16_t startBase  = 7850;
     uint16_t endBase    = 8350;
     uint8_t numChannels =   20;
+#else /* default to LOW band */
+    uint16_t startBase  =  9200;
+    uint16_t endBase    = 10200;
+    uint8_t numChannels =    20;
 #endif
 
 uint32_t startFrequency=freqHzToRegVal(startBase*100000);

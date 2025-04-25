@@ -11,9 +11,9 @@
 ### BINDING PHRASE: ###
 # Uncomment the line below to use a hardcoded binding phrase
 # Leave commented to use traditional binding
-### Bind Phrase
--DMY_BIND_PHRASE="hightest"
--DMY_BINDING_PHRASE="hightest"
+### Bind Phrase LOW
+-DMY_BIND_PHRASE="lowtest"
+-DMY_BINDING_PHRASE="lowtest"
 ------------------------------------
 ### Bind Phrase HIGH TODO: NOT ready to be used yet.
 #-DMY_BIND_PHRASE_HIGH="hightest"

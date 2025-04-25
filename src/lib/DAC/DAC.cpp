@@ -50,6 +50,9 @@ void DAC::setVoltageRegDirect(uint8_t voltReg)
 #elif TX_BAND_HIGH
     constexpr uint8_t VAPC_1 = 175;
     constexpr uint8_t VAPC_2 = 175;
+#else /* Use original values */
+    constexpr uint8_t VAPC_1 = 208;
+    constexpr uint8_t VAPC_2 = 208;
 #endif
 
     uint8_t RegH = (VAPC_1 & 0xF0) >> 4;
