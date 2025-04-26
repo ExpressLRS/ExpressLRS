@@ -44,6 +44,20 @@ typedef enum {
     HT_AUX8_DN,
 } headTrackingEnable_t;
 
+typedef enum {
+    HT_START_EDGETX,
+    HT_START_AUX1,
+    HT_START_AUX2,
+    HT_START_AUX3,
+    HT_START_AUX4,
+    HT_START_AUX5,
+    HT_START_AUX6,
+    HT_START_AUX7,
+    HT_START_AUX8,
+    HT_START_AUX9,
+    HT_START_AUX10,
+} headTrackingStart_t;
+
 typedef struct {
     uint32_t    rate:5,
                 tlm:4,

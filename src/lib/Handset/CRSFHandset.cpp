@@ -265,6 +265,9 @@ void CRSFHandset::RcPacketToChannelsData() // data is packed as 11 bits per chan
         bitsMerged -= srcBits;
     }
 
+    // Call the registered RCdataCallback, if there is one, so it can modify the channel data if it needs to.
+    if (RCdataCallback) RCdataCallback();
+
     //
     // sends channel data and also communicates commanded armed status in arming mode Switch.
     // frame len 24 -> arming mode CH5: use channel 5 value
