@@ -26,6 +26,7 @@ public:
 
     void addConnector(CRSFConnector *connector);
 
+    void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
     void SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
     void SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
     void makeLinkStatisticsPacket(uint8_t *buffer);

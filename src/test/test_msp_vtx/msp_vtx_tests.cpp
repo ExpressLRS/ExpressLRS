@@ -5,12 +5,22 @@
 #include "common.h"
 #include "CRSF.h"
 #include "msptypes.h"
+#include "CRSFEndpoint.h"
 
 using namespace std;
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
+    bool handleMessage(const crsf_header_t *message) override { return false; }
+};
+CRSFEndpoint *crsfEndpoint = new MockEndpoint();
+
 
 void test_msp_simple_request(void)
 {
@@ -19,8 +29,8 @@ void test_msp_simple_request(void)
     TEST_ASSERT_EQUAL(7, MSP_REQUEST_PAYLOAD_LENGTH(0));
     TEST_ASSERT_EQUAL(13, MSP_REQUEST_LENGTH(0));
 
-    CRSF::SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
-    CRSF::SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
+    crsfEndpoint->SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 
@@ -48,8 +58,8 @@ void test_msp_clear_vtx_table_request(void)
     TEST_ASSERT_EQUAL(22, MSP_REQUEST_PAYLOAD_LENGTH(payloadLength));
     TEST_ASSERT_EQUAL(28, MSP_REQUEST_LENGTH(payloadLength));
 
-    CRSF::SetMspV2Request(vtxConfig, MSP_SET_VTX_CONFIG, payload, payloadLength);
-    CRSF::SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetMspV2Request(vtxConfig, MSP_SET_VTX_CONFIG, payload, payloadLength);
+    crsfEndpoint->SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 

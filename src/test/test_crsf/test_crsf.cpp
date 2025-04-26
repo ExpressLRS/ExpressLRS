@@ -5,12 +5,21 @@
 
 #include "common.h"
 #include "CRSF.h"
+#include "CRSFEndpoint.h"
 
 using namespace std;
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
+    bool handleMessage(const crsf_header_t *message) override { return false; }
+};
+CRSFEndpoint *crsfEndpoint = new MockEndpoint();
 
 void test_ver_to_u32(void)
 {
@@ -43,7 +52,7 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(28, DEVICE_INFORMATION_LENGTH);
 
     CRSF::GetDeviceInformation(deviceInformation, 0);
-    CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) deviceInformation;
 

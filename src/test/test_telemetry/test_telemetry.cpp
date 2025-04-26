@@ -3,15 +3,39 @@
 #include <unity.h>
 
 #include "common.h"
+#include "CRSFEndpoint.h"
+#include "CRSFConnector.h"
 
 Telemetry telemetry;
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint((crsf_addr_e)1) {}
+    bool handleMessage(const crsf_header_t *message) override { return false; }
+};
+
+class MockConnector : public CRSFConnector {
+public:
+    void forwardMessage(const crsf_header_t *message) override {
+        for (int i=0 ; i<message->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES ; i++)
+        {
+            data.push_back(((uint8_t*)message)[i]);
+            telemetry.AppendTelemetryPackage((uint8_t*)message);
+        }
+    }
+    std::vector<uint8_t> data;
+};
+
+CRSFEndpoint *crsfEndpoint = new MockEndpoint();
+MockConnector *connector = new MockConnector();
 
 int sendData(uint8_t *data, int length)
 {
     for(int i = 0; i < length; i++)
     {
-        if (!telemetry.RXhandleUARTin(data[i]))
+        if (!telemetry.RXhandleUARTin(nullptr, data[i]))
         {
             return i;
         }
@@ -24,7 +48,7 @@ int sendDataWithoutCheck(uint8_t *data, int length)
 {
     for(int i = 0; i < length; i++)
     {
-        telemetry.RXhandleUARTin(data[i]);
+        telemetry.RXhandleUARTin(nullptr, data[i]);
     }
 
     return length;
@@ -32,9 +56,8 @@ int sendDataWithoutCheck(uint8_t *data, int length)
 
 void test_function_battery(void)
 {
-    telemetry.ResetState();
-    uint8_t batterySequence[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
-    uint8_t batterySequence2[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
+    uint8_t batterySequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence2[] = {CRSF_ADDRESS_CRSF_RECEIVER,10,CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
     int length = sizeof(batterySequence);
     int sentLength = sendData(batterySequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
@@ -69,9 +92,8 @@ void test_function_battery(void)
 
 void test_function_replace_old(void)
 {
-    telemetry.ResetState();
-    uint8_t batterySequence[] =  {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
-    uint8_t batterySequence2[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
+    uint8_t batterySequence[] =  {CRSF_ADDRESS_CRSF_RECEIVER,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence2[] = {CRSF_ADDRESS_CRSF_RECEIVER,10,CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
 
     sendDataWithoutCheck(batterySequence, sizeof(batterySequence));
 
@@ -91,9 +113,8 @@ void test_function_replace_old(void)
 
 void test_function_do_not_replace_old_locked(void)
 {
-    telemetry.ResetState();
-    uint8_t batterySequence[] =  {0xEC,10, CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
-    uint8_t batterySequence2[] = {0xEC,10, CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
+    uint8_t batterySequence[] =  {CRSF_ADDRESS_CRSF_RECEIVER,10, CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    uint8_t batterySequence2[] = {CRSF_ADDRESS_CRSF_RECEIVER,10, CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
 
     sendDataWithoutCheck(batterySequence, sizeof(batterySequence));
     uint8_t* data;
@@ -110,9 +131,8 @@ void test_function_do_not_replace_old_locked(void)
 
 void test_function_add_type(void)
 {
-    telemetry.ResetState();
-    uint8_t batterySequence[] = {0xEC,10, CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
-    uint8_t attitudeSequence[] = {0xEC,8, CRSF_FRAMETYPE_ATTITUDE,0,0,0,0,0,0,48};
+    uint8_t batterySequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,10, CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    uint8_t attitudeSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,8, CRSF_FRAMETYPE_ATTITUDE,0,0,0,0,0,0,48};
 
     sendData(batterySequence, sizeof(batterySequence));
 
@@ -136,30 +156,27 @@ void test_function_add_type(void)
 
 void test_function_recover_from_junk(void)
 {
-    telemetry.ResetState();
     uint8_t bootloaderSequence[] = {
-        0XEC,0xFF,100,10,10,
-        0XEC,4,100,10,10,4,
-        0xEC,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
+        CRSF_ADDRESS_CRSF_RECEIVER,0xFF,100,10,10,
+        CRSF_ADDRESS_CRSF_RECEIVER,4,100,10,10,4,
+        CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendDataWithoutCheck(bootloaderSequence, length);
-    TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
+    TEST_ASSERT_EQUAL(6, connector->data.size());
 }
 
 void test_function_bootloader_called(void)
 {
-    telemetry.ResetState();
-    uint8_t bootloaderSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
+    uint8_t bootloaderSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendData(bootloaderSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
-    TEST_ASSERT_EQUAL(true, telemetry.ShouldCallBootloader());
+    TEST_ASSERT_EQUAL(6, connector->data.size());
 }
 
 void test_function_store_unknown_type(void)
 {
-    telemetry.ResetState();
-    uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
+    uint8_t unknownSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
     int length = sizeof(unknownSequence);
     int sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
@@ -168,8 +185,7 @@ void test_function_store_unknown_type(void)
 
 void test_function_store_unknown_type_two_slots(void)
 {
-    telemetry.ResetState();
-    uint8_t unknownSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
+    uint8_t unknownSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_PARAMETER_READ,0x62,0x6c,85};
     int length = sizeof(unknownSequence);
     int sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
@@ -186,9 +202,8 @@ void test_function_store_unknown_type_two_slots(void)
 
 void test_function_store_ardupilot_status_text(void)
 {
-    telemetry.ResetState();
-    uint8_t statusSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_STATUS_TEXT,0x6c,60};
-    uint8_t otherSequence[] = {0xEC,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH,0x6c,55};
+    uint8_t statusSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_STATUS_TEXT,0x6c,60};
+    uint8_t otherSequence[] = {CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_ARDUPILOT_RESP,CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH,0x6c,55};
 
     int length = sizeof(otherSequence);
     int sentLength = sendData(otherSequence, length);
@@ -203,19 +218,17 @@ void test_function_store_ardupilot_status_text(void)
 
 void test_function_uart_in(void)
 {
-    telemetry.ResetState();
-    TEST_ASSERT_EQUAL(true, telemetry.RXhandleUARTin(0xEC));
+    TEST_ASSERT_EQUAL(true, telemetry.RXhandleUARTin(nullptr, CRSF_ADDRESS_CRSF_RECEIVER));
 }
 
 void test_function_add_type_with_zero_crc(void)
 {
-    telemetry.ResetState();
     uint8_t sequence[] = {
         0xee,                   // device addr
         32,                     // frame size
         0x29,                   // frame type
         0xee,                   // dest addr
-        0xec,                   // source addr
+        CRSF_ADDRESS_CRSF_RECEIVER,                   // source addr
         'R','a','d','i','o','M','s','t','r',' ','R','P','3', 0, // device name (nul terminated string)
         'E', 'L', 'R', 'S',     // serial no.
         0x00, 0x00, 0x00, 0x00, // hardware version
@@ -225,7 +238,7 @@ void test_function_add_type_with_zero_crc(void)
         0x00                    // CRC
     };
 
-    telemetry.AppendTelemetryPackage(TODO, sequence);
+    telemetry.AppendTelemetryPackage(sequence);
 
     uint8_t* data;
     uint8_t receivedLength;
@@ -238,8 +251,21 @@ void test_function_add_type_with_zero_crc(void)
 }
 
 // Unity setup/teardown
-void setUp() {}
-void tearDown() {}
+void setUp() {
+    crsfEndpoint = new MockEndpoint();
+    connector = new MockConnector();
+
+    crsfEndpoint->addConnector(connector);
+    connector->addDevice(CRSF_ADDRESS_CRSF_RECEIVER);
+
+    telemetry.ResetState();
+}
+
+void tearDown()
+{
+    delete connector;
+    delete crsfEndpoint;
+}
 
 int main(int argc, char **argv)
 {

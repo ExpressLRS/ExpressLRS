@@ -1,11 +1,31 @@
 #include <cstdint>
 #include <iostream>
+#include <vector>
 #include <unity.h>
+#include "CRSFEndpoint.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "mock_serial.h"
 
 #include "CRSF.h"
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint((crsf_addr_e)1) {}
+    bool handleMessage(const crsf_header_t *message) override { return false; }
+};
+
+class MockConnector : public CRSFConnector {
+public:
+    void forwardMessage(const crsf_header_t *message) override {
+        for (int i=0 ; i<message->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES ; i++)
+        {
+            data.push_back(((uint8_t*)message)[i]);
+        }
+    }
+    std::vector<uint8_t> data;
+};
 
 void test_encapsulated_msp_send(void)
 {
@@ -16,7 +36,11 @@ void test_encapsulated_msp_send(void)
     // AND the transcoded packet will be sent to the Stream object associated with the CRSF class
 
     // Make sure no msp messages are in the fifo
-    CRSF::ResetMspQueue();
+    // CRSF::ResetMspQueue();
+    CRSFEndpoint *crsfEndpoint = new MockEndpoint();
+    MockConnector *connector = new MockConnector();
+    connector->addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC
+    crsfEndpoint->addConnector(connector);
 
     // Build an MSP packet with the MSP_SET_VTX_CONFIG cmd
     mspPacket_t packet;
@@ -30,14 +54,12 @@ void test_encapsulated_msp_send(void)
     packet.addByte(0x00);   // don't enable pitmode
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    uint8_t* data;
-    uint8_t len;
-    CRSF::GetMspMessage(&data, &len);
+    auto data = connector->data;
+    uint8_t len = connector->data.size();
 
     // Assert that the correct number of total bytes were sent to the stream
-    TEST_ASSERT_NOT_EQUAL(NULL, data);
     TEST_ASSERT_EQUAL(14, len);
 
     // Assert that each byte sent to the stream matches expected
@@ -66,7 +88,10 @@ void test_encapsulated_msp_send_too_long(void)
     // AND nothing will be sent to the stream
 
     // Make sure no msp messages are in the fifo
-    CRSF::ResetMspQueue();
+    CRSFEndpoint *crsfEndpoint = new MockEndpoint();
+    MockConnector *connector = new MockConnector();
+    connector->addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC
+    crsfEndpoint->addConnector(connector);
 
     // Build an MSP packet with a payload that is too long to send (>4 bytes)
     mspPacket_t packet;
@@ -81,13 +106,8 @@ void test_encapsulated_msp_send_too_long(void)
     packet.addByte(0x05);
 
     // Ask the CRSF class to send the encapsulated packet to the stream
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-
-    uint8_t* data;
-    uint8_t len;
-    CRSF::GetMspMessage(&data, &len);
+    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     // Assert that nothing was sent to the stream
-    TEST_ASSERT_EQUAL(NULL, data);
-    TEST_ASSERT_EQUAL(0, len);
+    TEST_ASSERT_EQUAL(0, connector->data.size());
 }
