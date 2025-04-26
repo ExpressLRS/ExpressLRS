@@ -4,7 +4,18 @@
 #include <string.h>
 #include "SX127xDriver.h"
 
-
+/* ISM High Band */
+static constexpr uint16_t ISM_HIGH_BAND_FREQ_START =  9200;
+static constexpr uint16_t ISM_HIGH_BAND_FREQ_END   = 10200;
+/* STD High Band */
+static constexpr uint16_t STD_HIGH_BAND_FREQ_START = 9035;
+static constexpr uint16_t STD_HIGH_BAND_FREQ_END   = 9269;
+/* LOW High Band */
+static constexpr uint16_t LOW_BAND_FREQ_START = 7850;
+static constexpr uint16_t LOW_BAND_FREQ_END   = 8350;
+/* Total Possible Channels */
+static constexpr uint8_t  TOTAL_CHANNELS_20 = 20;
+static constexpr uint8_t  TOTAL_CHANNELS_40 = 40;
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
@@ -42,23 +53,23 @@ double freqRegValToMHz(uint32_t reg_val) {
 
 #ifdef TX_BAND_HIGH
     /* ISM HIGH BAND */
-    uint16_t startBase  =  9200;
-    uint16_t endBase    = 10200;
-    uint8_t numChannels =    20;
+    uint16_t startBase  = ISM_HIGH_BAND_FREQ_START;
+    uint16_t endBase    = ISM_HIGH_BAND_FREQ_END;
+    uint8_t numChannels = TOTAL_CHANNELS_20;
 
     // TODO: Will fix with new logic to switch HI between both bands
     /* STD HIGH BAND */
-    // uint16_t startBase  = 9035;
-    // uint16_t endBase    = 9269;
-    // uint8_t numChannels =   40;
+    // uint16_t startBase  = STD_HIGH_BAND_FREQ_START;
+    // uint16_t endBase    = STD_HIGH_BAND_FREQ_END;
+    // uint8_t numChannels = TOTAL_CHANNELS_40;
 #elif TX_BAND_LOW
-    uint16_t startBase  = 7850;
-    uint16_t endBase    = 8350;
-    uint8_t numChannels =   20;
+    uint16_t startBase  = LOW_BAND_FREQ_START;
+    uint16_t endBase    = LOW_BAND_FREQ_END;
+    uint8_t numChannels = TOTAL_CHANNELS_20;
 #else /* default to LOW band */
-    uint16_t startBase  =  9200;
-    uint16_t endBase    = 10200;
-    uint8_t numChannels =    20;
+    uint16_t startBase  = LOW_BAND_FREQ_START;
+    uint16_t endBase    = LOW_BAND_FREQ_END;
+    uint8_t numChannels = TOTAL_CHANNELS_20;
 #endif
 
 uint32_t startFrequency=freqHzToRegVal(startBase*100000);
