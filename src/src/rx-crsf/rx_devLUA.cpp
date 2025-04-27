@@ -1,9 +1,11 @@
 #ifdef TARGET_RX
 
-#include "rxtx_devLua.h"
-#include "helpers.h"
-#include "devServoOutput.h"
+#include "POWERMGNT.h"
+#include "config.h"
 #include "deferred.h"
+#include "devServoOutput.h"
+#include "helpers.h"
+#include "rxtx_devLua.h"
 
 #define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
 

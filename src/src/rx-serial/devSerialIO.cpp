@@ -2,11 +2,11 @@
 
 #if defined(TARGET_RX)
 
-#include "common.h"
-#include "device.h"
 #include "SerialIO.h"
-#include "CRSF.h"
+#include "common.h"
 #include "config.h"
+#include "crsf_protocol.h"
+#include "device.h"
 
 #define NO_SERIALIO_INTERVAL 1000
 

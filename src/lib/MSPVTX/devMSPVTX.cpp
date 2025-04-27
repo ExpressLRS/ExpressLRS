@@ -45,7 +45,7 @@ static uint8_t mspState = STOP_MSPVTX;
 
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
-    crsfEndpoint->SetExtendedHeaderAndCrc(mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_FLIGHT_CONTROLLER);
     SendMSPFrameToFC(mspFrame);
 }
 

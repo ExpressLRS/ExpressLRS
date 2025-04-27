@@ -1,5 +1,6 @@
-#include "CRSFConnector.h"
+#include "targets.h"
 
+#include "CRSFConnector.h"
 #include "logging.h"
 
 void CRSFConnector::addDevice(const crsf_addr_e device_id)

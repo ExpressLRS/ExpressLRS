@@ -1,6 +1,5 @@
 #include "TXModuleEndpoint.h"
 
-#include "CRSF.h"
 #include "CRSFHandset.h"
 #include "common.h"
 

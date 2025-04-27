@@ -157,6 +157,6 @@ void SerialGPS::sendTelemetryFrame()
     crsfgps.p.groundspeed = htobe16((uint16_t)(gpsData.speed / 10));
     crsfgps.p.satellites_in_use = gpsData.satellites;
     crsfgps.p.gps_heading = htobe16((uint16_t)gpsData.heading);
-    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
     crsfEndpoint->processMessage(nullptr, &crsfgps.h);
 }

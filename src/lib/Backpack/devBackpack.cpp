@@ -28,7 +28,6 @@ static uint32_t lastPTRValidTimeMs;
 
 #define GPIO_PIN_BOOT0 0
 
-#include "CRSF.h"
 #include "hwTimer.h"
 
 [[noreturn]] static void startPassthrough()
@@ -269,7 +268,7 @@ static void injectBackpackPanTiltRollData()
                     .ch2 = ptrChannelData[2]
                 }
             };
-            crsfEndpoint->SetHeaderAndCrc((uint8_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t)-2, CRSF_ADDRESS_CRSF_TRANSMITTER);
+            crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t) - 2, CRSF_ADDRESS_CRSF_TRANSMITTER);
             crsfEndpoint->processMessage(nullptr, &rcPacket.header);
         }
     }

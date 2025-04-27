@@ -24,7 +24,7 @@ static void ap_send_crsf_passthrough_single(CRSFConnector *origin, uint16_t appi
     crsfpassthrough.p.appid = appid;
     crsfpassthrough.p.data = data;
 
-    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfEndpoint->processMessage(origin, &crsfpassthrough.h);
 }
 
@@ -46,7 +46,7 @@ static void ap_send_crsf_passthrough_text(CRSFConnector *origin, const char *tex
     crsftext.p.severity = severity;
     memcpy(crsftext.p.text, text, sizeof(crsftext.p.text));
 
-    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfEndpoint->processMessage(origin, &crsftext.h);
 }
 
@@ -75,7 +75,7 @@ static void ap_send_crsf_passthrough_multi(CRSFConnector *origin, uint16_t appid
     crsfpassthrough.p.items[1].appid = appid2;
     crsfpassthrough.p.items[1].data = data2;
 
-    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
     crsfEndpoint->processMessage(origin, &crsfpassthrough.h);
 }
 
@@ -131,7 +131,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 if (battery_status.battery_remaining > 0){ // int8_t, -1 means invalid
                     crsfbatt.p.remaining = (uint8_t) battery_status.battery_remaining;
                 }
-                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
                 crsfEndpoint->processMessage(origin, &crsfbatt.h);
 
                 // send the batt1 message to Yaapu Telemetry Script
@@ -156,7 +156,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 crsfgps.p.longitude = htobe32(gps_int.lon);
                 crsfgps.p.gps_heading = htobe16(gps_int.cog);
                 crsfgps.p.satellites_in_use = gps_int.satellites_visible;
-                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
                 crsfEndpoint->processMessage(origin, &crsfgps.h);
 
                 // send the gps_status message to Yaapu Telemetry Script
@@ -184,7 +184,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 // store relative altitude for GPS Alt so we don't have 2 Alt sensors
                 relative_alt_mm = global_pos.relative_alt;
                 crsfvario.p.verticalspd = htobe16(-global_pos.vz); // MAVLink vz is positive down
-                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
                 crsfEndpoint->processMessage(origin, &crsfvario.h);
                 break;
             }
@@ -196,7 +196,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 crsfatt.p.pitch = htobe16(attitude.pitch * 10000); // in Betaflight & INAV, CRSF positive pitch is nose down, but in Ardupilot, it's nose up - we follow Ardupilot
                 crsfatt.p.roll = htobe16(attitude.roll * 10000);
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
-                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
                 crsfEndpoint->processMessage(origin, &crsfatt.h);
 
                 // send the attitude message to Yaapu Telemetry Script
@@ -215,7 +215,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                     crsffm.p.flight_mode[len] = '*';
                     crsffm.p.flight_mode[len + 1] = '\0';
                 }
-                crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+                crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_RADIO_TRANSMITTER);
                 crsfEndpoint->processMessage(origin, &crsffm.h);
 
                 /**

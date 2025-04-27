@@ -1,10 +1,9 @@
 #include "CRSFHandset.h"
-#include "CRSF.h"
-#include "FIFO.h"
-#include "logging.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "CRSFEndPoint.h"
+#include "FIFO.h"
+#include "logging.h"
 
 #if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>

@@ -1,6 +1,5 @@
 #include "TXOTAConnector.h"
 
-#include "CRSF.h"
 #include "common.h"
 #include "stubborn_sender.h"
 

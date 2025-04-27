@@ -1,7 +1,6 @@
 #if defined(TARGET_RX)
 
 #include "SerialMavlink.h"
-#include "CRSF.h"
 #include "CRSFEndpoint.h"
 #include "common.h"
 #include "config.h"

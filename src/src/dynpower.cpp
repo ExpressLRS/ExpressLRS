@@ -1,10 +1,17 @@
-#include "CRSFEndpoint.h"
 
 #include <dynpower.h>
 
+#include "CRSFEndpoint.h"
+#include "POWERMGNT.h"
+#include "config.h"
+#include "logging.h"
+
 #if defined(TARGET_TX)
-#include <LBT.h>
 #include <handset.h>
+#include <LBT.h>
+
+#include "MeanAccumulator.h"
+
 
 // LQ-based boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.

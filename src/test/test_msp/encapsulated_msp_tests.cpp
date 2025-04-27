@@ -7,8 +7,6 @@
 #include "msptypes.h"
 #include "mock_serial.h"
 
-#include "CRSF.h"
-
 class MockEndpoint : public CRSFEndpoint
 {
 public:

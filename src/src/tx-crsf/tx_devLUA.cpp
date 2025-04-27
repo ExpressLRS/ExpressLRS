@@ -1,6 +1,5 @@
 #ifdef TARGET_TX
 
-#include "CRSF.h"
 #include "CRSFHandset.h"
 #include "FHSS.h"
 #include "OTA.h"
@@ -8,6 +7,9 @@
 #include "helpers.h"
 #include "msptypes.h"
 #include "rxtx_devLua.h"
+#include "device.h"
+#include "config.h"
+#include "POWERMGNT.h"
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
 

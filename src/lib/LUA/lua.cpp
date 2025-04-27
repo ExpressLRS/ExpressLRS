@@ -1,7 +1,7 @@
 #include "lua.h"
-#include "CRSF.h"
 #include "CRSFEndpoint.h"
 #include "common.h"
+#include "options.h"
 #include "logging.h"
 
 #ifdef TARGET_RX
@@ -215,14 +215,14 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, ui
   // How many chunks needed to send this field (rounded up)
   uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
-  uint8_t chunkSize = min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
+  uint8_t chunkSize = std::min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
 
   // Move chunkStart back 2 bytes to add (FieldId + ChunksRemain) to each packet
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
   memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
-  crsfEndpoint->SetExtendedHeaderAndCrc(paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin);
+  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin);
   crsfEndpoint->processMessage(nullptr, (crsf_header_t *)paramInformation);
   return chunkCnt - (fieldChunk+1);
 }
@@ -281,7 +281,7 @@ void sendELRSstatus()
     "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
     ""   //critical warning1, reserved for future use
   };
-  const char * warningInfo = "";
+  auto warningInfo = "";
 
   for (int i = 7; i >= 0; i--)
   {
@@ -301,7 +301,7 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
-  crsfEndpoint->SetExtendedHeaderAndCrc(buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin);
+  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin);
   crsfEndpoint->processMessage(nullptr, (crsf_header_t *)buffer);
 }
 
@@ -403,7 +403,7 @@ bool luaHandleUpdateParameter()
     // but the call in Telemetry.ShouldCallEnterBind() only works if serial data is coming in so the
     // whole stack needs a bit of a refactor to not have similar code duplicated all over
     case CRSF_FRAMETYPE_COMMAND:
-      if (parameterIndex == CRSF_COMMAND_SUBCMD_RX && parameterArg == CRSF_COMMAND_SUBCMD_RX_BIND)
+      if (parameterIndex == CRSF_COMMAND_SUBCMD_RX && parameterChunk == CRSF_COMMAND_SUBCMD_RX_BIND)
         EnterBindingModeSafely();
       break;
 #endif
@@ -416,10 +416,68 @@ bool luaHandleUpdateParameter()
   return true;
 }
 
+/***
+ * @brief: Convert `version` (string) to a integer version representation
+ * e.g. "2.2.15 ISM24G" => 0x0002020f
+ * Assumes all version fields are < 256, the number portion
+ * MUST be followed by a space to correctly be parsed
+ ***/
+uint32_t VersionStrToU32(const char *verStr)
+{
+    uint32_t retVal = 0;
+#if !defined(FORCE_NO_DEVICE_VERSION)
+    uint8_t accumulator = 0;
+    char c;
+    bool trailing_data = false;
+    while ((c = *verStr))
+    {
+        ++verStr;
+        // A decimal indicates moving to a new version field
+        if (c == '.')
+        {
+            retVal = (retVal << 8) | accumulator;
+            accumulator = 0;
+            trailing_data = false;
+        }
+        // Else if this is a number add it up
+        else if (c >= '0' && c <= '9')
+        {
+            accumulator = (accumulator * 10) + (c - '0');
+            trailing_data = true;
+        }
+        // Anything except [0-9.] ends the parsing
+        else
+        {
+            break;
+        }
+    }
+    if (trailing_data)
+    {
+        retVal = (retVal << 8) | accumulator;
+    }
+    // If the version ID is < 1.0.0, we could not parse it,
+    // just use the OTA version as the major version number
+    if (retVal < 0x010000)
+    {
+        retVal = OTA_VERSION_ID << 16;
+    }
+#endif
+    return retVal;
+}
+
 void sendLuaDevicePacket(void)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-  CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
-  crsfEndpoint->SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin);
+  const uint8_t size = strlen(device_name)+1;
+  auto *device = (deviceInformationPacket_t *)(deviceInformation + sizeof(crsf_ext_header_t) + size);
+  // Packet starts with device name
+  memcpy(deviceInformation + sizeof(crsf_ext_header_t), device_name, size);
+  // Followed by the device
+  device->serialNo = htobe32(0x454C5253); // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
+  device->hardwareVer = 0; // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
+  device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+  device->fieldCnt = lastLuaField;
+  device->parameterVersion = 0;
+  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin);
   crsfEndpoint->processMessage(nullptr, (crsf_header_t *)deviceInformation);
 }

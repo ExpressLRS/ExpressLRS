@@ -1,6 +1,5 @@
 #include "devAnalogVbat.h"
 
-#include "CRSF.h"
 #include "CRSFEndpoint.h"
 #include "logging.h"
 #include "median.h"
@@ -87,7 +86,7 @@ static void reportVbat()
     crsfbatt.p.voltage = htobe16((uint16_t)vbat);
     // No sensors for current, capacity, or remaining available
 
-    crsfEndpoint->SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
     crsfEndpoint->processMessage(nullptr, &crsfbatt.h);
 }
 

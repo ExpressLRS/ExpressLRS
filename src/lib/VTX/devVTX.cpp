@@ -2,7 +2,6 @@
 #include "common.h"
 #include "device.h"
 
-#include "CRSF.h"
 #include "CRSFEndpoint.h"
 #include "config.h"
 #include "logging.h"

@@ -1,5 +1,4 @@
 #pragma once
-#include <stdint.h>
 #include "targets.h"
 
 #define crclen 256

@@ -2,6 +2,7 @@
 #define CRSF_ENDPOINT_H
 
 #include "CRSFConnector.h"
+#include "crc.h"
 #include "crsf_protocol.h"
 #include "msp.h"
 
@@ -27,8 +28,8 @@ public:
     void addConnector(CRSFConnector *connector);
 
     void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
-    void SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
-    void SetExtendedHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
+    void SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
+    void SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
     void makeLinkStatisticsPacket(uint8_t *buffer);
     void AddMspMessage(const mspPacket_t *packet, uint8_t destination, uint8_t origin);
 

@@ -3,7 +3,6 @@
 #include <unity.h>
 
 #include "common.h"
-#include "CRSF.h"
 #include "msptypes.h"
 #include "CRSFEndpoint.h"
 
@@ -30,7 +29,7 @@ void test_msp_simple_request(void)
     TEST_ASSERT_EQUAL(13, MSP_REQUEST_LENGTH(0));
 
     crsfEndpoint->SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
-    crsfEndpoint->SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 
@@ -59,7 +58,7 @@ void test_msp_clear_vtx_table_request(void)
     TEST_ASSERT_EQUAL(28, MSP_REQUEST_LENGTH(payloadLength));
 
     crsfEndpoint->SetMspV2Request(vtxConfig, MSP_SET_VTX_CONFIG, payload, payloadLength);
-    crsfEndpoint->SetExtendedHeaderAndCrc(vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 

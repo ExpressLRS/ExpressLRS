@@ -65,23 +65,21 @@ void CRSFEndpoint::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *p
     packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
-void CRSFEndpoint::SetHeaderAndCrc(uint8_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
+void CRSFEndpoint::SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
 {
-    auto *header = (crsf_header_t *)frame;
-    header->device_addr = destAddr;
-    header->frame_size = frameSize;
-    header->type = frameType;
+    frame->device_addr = destAddr;
+    frame->frame_size = frameSize;
+    frame->type = frameType;
 
-    uint8_t crc = crsf_crc.calc(&frame[CRSF_FRAME_NOT_COUNTED_BYTES], frameSize - 1, 0);
-    frame[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+    uint8_t crc = crsf_crc.calc((uint8_t *)frame + CRSF_FRAME_NOT_COUNTED_BYTES, frameSize - 1, 0);
+    ((uint8_t*)frame)[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
 }
 
-void CRSFEndpoint::SetExtendedHeaderAndCrc(uint8_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize, const crsf_addr_e destAddr)
+void CRSFEndpoint::SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize, const crsf_addr_e destAddr)
 {
-    auto *header = (crsf_ext_header_t *)frame;
-    header->dest_addr = destAddr;
-    header->orig_addr = device_id;
-    SetHeaderAndCrc(frame, frameType, frameSize, destAddr);
+    frame->dest_addr = destAddr;
+    frame->orig_addr = device_id;
+    SetHeaderAndCrc((crsf_header_t *)frame, frameType, frameSize, destAddr);
 }
 
 void CRSFEndpoint::makeLinkStatisticsPacket(uint8_t *buffer)

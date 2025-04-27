@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include <cmath>
-#include "crc.h"
-#include "options.h"
 
 #if TARGET_TX
 #define CRSF_TX_MODULE 1
