@@ -1,8 +1,9 @@
 #include "CRSFHandset.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
-#include "CRSFEndPoint.h"
+#include "CRSFEndpoint.h"
 #include "FIFO.h"
+#include "helpers.h"
 #include "logging.h"
 
 #if defined(PLATFORM_ESP32)
@@ -171,26 +172,22 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
         DBGLN("Offset %d", offset); // in 10ths of us (OpenTX sync unit)
 #endif
 
-        struct {
-            crsf_ext_header_t header;
-            uint8_t extendedType;
-            uint32_t rate; // Big-Endian
-            uint32_t offset; // Big-Endian
-            uint8_t crc;
-        } PACKED buf = {
-            .header = {
+        CRSF_MK_EXT_FRAME_T(crsf_sync_packet_t) sync_packet = {
+            .h = {
                 CRSF_ADDRESS_RADIO_TRANSMITTER,
                 CRSF_EXT_FRAME_SIZE(9),
                 CRSF_FRAMETYPE_RADIO_ID,
                 CRSF_ADDRESS_RADIO_TRANSMITTER,
                 CRSF_ADDRESS_CRSF_TRANSMITTER,
             },
-            .extendedType = CRSF_FRAMETYPE_OPENTX_SYNC,
-            .rate = htobe32(packetRate),
-            .offset = htobe32(offset),
-            .crc = crsfEndpoint->crsf_crc.calc((uint8_t *)&buf + CRSF_TELEMETRY_TYPE_INDEX, sizeof(buf)-3)
+            .p = {
+                .extendedType = CRSF_FRAMETYPE_OPENTX_SYNC,
+                .rate = htobe32(packetRate),
+                .offset = htobe32(offset)
+            },
+            .crc = crsfEndpoint->crsf_crc.calc((uint8_t *)&sync_packet + CRSF_TELEMETRY_TYPE_INDEX, sizeof(sync_packet)-3)
         };
-        crsfEndpoint->processMessage(nullptr, (crsf_header_t *)&buf);
+        crsfEndpoint->processMessage(nullptr, (crsf_header_t *)&sync_packet);
 
         OpenTXsyncLastSent = now;
     }
@@ -207,22 +204,20 @@ bool CRSFHandset::ProcessPacket()
         if (connected) connected();
     }
 
-    crsfEndpoint->processMessage(this, &inBuffer.asRCPacket_t.header);
+    crsfEndpoint->processMessage(this, (crsf_header_t *)&inBuffer);
 
     return true;
 }
 
 void CRSFHandset::alignBufferToSync(uint8_t startIdx)
 {
-    uint8_t *SerialInBuffer = inBuffer.asUint8_t;
-
     for (unsigned int i=startIdx ; i<SerialInPacketPtr ; i++)
     {
         // If we find a header byte then move that and trailing bytes to the head of the buffer and let's go!
-        if (SerialInBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || SerialInBuffer[i] == CRSF_SYNC_BYTE)
+        if (inBuffer[i] == CRSF_ADDRESS_CRSF_TRANSMITTER || inBuffer[i] == CRSF_SYNC_BYTE)
         {
             SerialInPacketPtr -= i;
-            memmove(SerialInBuffer, &SerialInBuffer[i], SerialInPacketPtr);
+            memmove(inBuffer, &inBuffer[i], SerialInPacketPtr);
             return;
         }
     }
@@ -233,8 +228,6 @@ void CRSFHandset::alignBufferToSync(uint8_t startIdx)
 
 void CRSFHandset::handleInput()
 {
-    uint8_t *SerialInBuffer = inBuffer.asUint8_t;
-
     if (UARTwdt())
     {
         return;
@@ -263,7 +256,7 @@ void CRSFHandset::handleInput()
 
     // Add new data, and then discard bytes until we start with header byte
     auto toRead = std::min(Port.available(), CRSF_MAX_PACKET_LEN - SerialInPacketPtr);
-    SerialInPacketPtr += Port.readBytes(&SerialInBuffer[SerialInPacketPtr], toRead);
+    SerialInPacketPtr += Port.readBytes(&inBuffer[SerialInPacketPtr], toRead);
     alignBufferToSync(0);
 
     // Make sure we have at least a packet header and a length byte
@@ -271,7 +264,7 @@ void CRSFHandset::handleInput()
         return;
 
     // Sanity check: A total packet must be at least [sync][len][type][crc] (if no payload) and at most CRSF_MAX_PACKET_LEN
-    const uint32_t totalLen = SerialInBuffer[1] + 2;
+    const uint32_t totalLen = inBuffer[1] + 2;
     if (totalLen < 4 || totalLen > CRSF_MAX_PACKET_LEN)
     {
         // Start looking for another packet after this start byte
@@ -283,8 +276,8 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < totalLen)
         return;
 
-    uint8_t CalculatedCRC = crsfEndpoint->crsf_crc.calc(&SerialInBuffer[2], totalLen - 3);
-    if (CalculatedCRC == SerialInBuffer[totalLen - 1])
+    uint8_t CalculatedCRC = crsfEndpoint->crsf_crc.calc(&inBuffer[2], totalLen - 3);
+    if (CalculatedCRC == inBuffer[totalLen - 1])
     {
         GoodPktsCount++;
         ProcessPacket();
@@ -297,7 +290,7 @@ void CRSFHandset::handleInput()
     }
 
     SerialInPacketPtr -= totalLen;
-    memmove(SerialInBuffer, &SerialInBuffer[totalLen], SerialInPacketPtr);
+    memmove(inBuffer, &inBuffer[totalLen], SerialInPacketPtr);
 }
 
 void CRSFHandset::handleOutput(const uint32_t receivedBytes)

@@ -40,7 +40,7 @@ public:
     int getMinPacketInterval() const override;
 
 private:
-    inBuffer_U inBuffer = {};
+    uint8_t inBuffer[CRSF_MAX_PACKET_LEN] = {};
 
     /// OpenTX mixer sync ///
     volatile uint32_t dataLastRecv = 0;
