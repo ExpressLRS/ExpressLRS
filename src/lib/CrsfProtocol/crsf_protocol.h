@@ -319,7 +319,7 @@ typedef struct crsf_sensor_airspeed_s
 typedef struct crsf_sensor_rpm_s
 {
     uint8_t rpm_source_id;      // Identifies the source of the RPM data (e.g., 0 = Motor 1, 1 = Motor 2, etc.)
-    int32_t rpm0:24;            // RPM with positive and negative values (e.g., motor running in forward or reverse)
+    int32_t rpm0:24;            // 1 - 19 RPM values with negative ones representing the motor spinning in reverse
     int32_t rpm1:24;
     int32_t rpm2:24;
     int32_t rpm3:24;
@@ -343,15 +343,15 @@ typedef struct crsf_sensor_rpm_s
 // CRSF_FRAMETYPE_TEMP
 typedef struct crsf_sensor_temp_s
 {
-    uint8_t temp_source_id;     // Identifies the source of the temperature data (e.g., 0 = Motor 1, 1 = ESC, 2 = Ambient, etc.)
-    int16_t temperature[20];    // Temperature in tenths of a degree Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
+    uint8_t     temp_source_id;       // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    int16_t     temperature[20];      // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
 } PACKED crsf_sensor_temp_t;
 
 // CRSF_FRAMETYPE_CELLS
 typedef struct crsf_sensor_cells_s
 {
     uint8_t Cell_Sensor_source_id;    // Identifies the source of the Main_battery data (e.g., 0 = battery 1, 1 = battery 2, etc.)
-    uint16_t Cell_Sensor_value[];     // up to 29 cell values in a resolution of a thousandth of a Volt (e.g. 3.850V = 3850)
+    uint16_t Cell_Sensor_value[29];   // up to 29 cell values in a resolution of a thousandth of a Volt (e.g. 3.850V = 3850)
 } PACKED crsf_sensor_cells_t;
 
 // CRSF_FRAMETYPE_VARIO
