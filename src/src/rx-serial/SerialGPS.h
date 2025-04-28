@@ -1,4 +1,8 @@
+#pragma once
+
 #include "SerialIO.h"
+
+#include "device.h"
 
 typedef struct {
     // Latitude in decimal degrees
@@ -18,10 +22,9 @@ typedef struct {
 class SerialGPS : public SerialIO {
 public:
     explicit SerialGPS(Stream &out, Stream &in) : SerialIO(&out, &in) {}
-    virtual ~SerialGPS() {}
+    ~SerialGPS() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
 private:

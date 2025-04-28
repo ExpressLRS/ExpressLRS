@@ -48,8 +48,9 @@ void SerialSmartAudio::sendQueuedData(uint32_t maxBytesToSend)
 #endif
 }
 
-void SerialSmartAudio::queueMSPFrameTransmission(uint8_t *data)
+void SerialSmartAudio::forwardMessage(const crsf_header_t *message)
 {
+    auto data = (uint8_t *)message;
     // What we're handed here is MSP wrapped in CRSF, so our offsets are thrown off
     uint8_t innerLength = data[6];
     if (innerLength < 2)

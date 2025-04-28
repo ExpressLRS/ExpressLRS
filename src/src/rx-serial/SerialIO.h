@@ -2,15 +2,12 @@
 
 #include "targets.h"
 #include "FIFO.h"
-#include "device.h"
 
 /**
  * @brief Abstract class that is to be extended by implementation classes for different serial protocols on the receiver side.
  *
  * At a minimum, a new protocol extension class should implement the following functions
  *
- * * queueLinkStatisticsPacket
- * * queueMSPFrameTransmission
  * * sendRCFrame
  * * sendQueuedData
  * * processBytes
@@ -19,7 +16,7 @@ class SerialIO {
 public:
 
     SerialIO(Stream *output, Stream *input) : _outputPort(output), _inputPort(input) {}
-    virtual ~SerialIO() {}
+    virtual ~SerialIO() = default;
 
     /**
      * @brief Set the Failsafe flag
@@ -40,16 +37,6 @@ public:
      * `sendQueuedData` function is called.
      */
     virtual void queueLinkStatisticsPacket() = 0;
-
-    /**
-     * @brief Signals that the MSP frame should be queued for transmission.
-     *
-     * The MSP frame should be queued as in `queueLinkStatisticsPacket` so it can be
-     * sent after any RC data.
-     *
-     * @param data pointer to the MSP packet
-     */
-    virtual void queueMSPFrameTransmission(uint8_t* data) = 0;
 
     /**
      * @brief send the RC channel data to the serial port stream `_outputPort` member

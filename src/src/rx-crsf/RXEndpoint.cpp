@@ -47,56 +47,42 @@ bool RXEndpoint::handleRaw(uint8_t *message)
 bool RXEndpoint::handleMessage(const crsf_header_t *message)
 {
     const auto extMessage = (crsf_ext_header_t *)message;
-    switch (message->type)
+    // 1. CRSF bind command
+    if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
-    case CRSF_FRAMETYPE_COMMAND:
-        {
-            // 2. CRSF bind command
-            if (extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
-            {
-                EnterBindingModeSafely();
-                return true;
-            }
-        }
-
-    case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
-        if (extMessage->payload[2] == MSP_SET_RX_CONFIG && extMessage->payload[3] == MSP_ELRS_MODEL_ID)
-        {
-            DBGLN("Set ModelId=%u", extMessage->payload[4]);
-            config.SetModelId(extMessage->payload[4]);
-        }
+        EnterBindingModeSafely();
+        return true;
+    }
+    if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_RX_CONFIG && extMessage->payload[3] == MSP_ELRS_MODEL_ID)
+    {
+        DBGLN("Set ModelId=%u", extMessage->payload[4]);
+        config.SetModelId(extMessage->payload[4]);
+    }
 #if defined(PLATFORM_ESP32)
-        else if (extMessage->payload[2] == MSP_SET_VTX_CONFIG)
+    else if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_VTX_CONFIG)
+    {
+        if (OPT_HAS_VTX_SPI)
         {
-            if (OPT_HAS_VTX_SPI)
+            vtxSPIFrequency = getFreqByIdx(extMessage->payload[3]);
+            if (extMessage->payload[1] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
             {
-                vtxSPIFrequency = getFreqByIdx(extMessage->payload[3]);
-                if (extMessage->payload[1] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                {
-                    vtxSPIPowerIdx = extMessage->payload[5];
-                    vtxSPIPitmode = extMessage->payload[6];
-                }
-                devicesTriggerEvent(EVENT_VTX_CHANGE);
+                vtxSPIPowerIdx = extMessage->payload[5];
+                vtxSPIPitmode = extMessage->payload[6];
             }
-            else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO)
-            {
-                // FIXME we should handle this in the serial connector (SET_VTX_CONFIG should be a broadcast message)
-                // serial1IO->queueMSPFrameTransmission(message);
-            }
+            devicesTriggerEvent(EVENT_VTX_CHANGE);
         }
+    }
 #endif
-        break;
-
-    case CRSF_FRAMETYPE_DEVICE_PING:
-    case CRSF_FRAMETYPE_PARAMETER_READ:
-    case CRSF_FRAMETYPE_PARAMETER_WRITE:
+    else if (message->type == CRSF_FRAMETYPE_DEVICE_PING ||
+             message->type == CRSF_FRAMETYPE_PARAMETER_READ ||
+             message->type == CRSF_FRAMETYPE_PARAMETER_WRITE)
+    {
         luaParamUpdateReq(
             extMessage->orig_addr,
             extMessage->type,
             extMessage->payload[0],
             extMessage->payload[1]
         );
-        break;
     }
     return false;
 }

@@ -1,5 +1,8 @@
+#pragma once
+
 #include "SerialIO.h"
-#include "crc.h"
+#include "CRSFEndpoint.h"
+#include "device.h"
 
 #define SMARTAUDIO_MAX_FRAME_SIZE 32
 #define SMARTAUDIO_HEADER_DUMMY 0x00 // Page 2: "The SmartAudio line need to be low before a frame is sent. If the host MCU can’t handle this it can be done by sending a 0x00 dummy byte in front of the actual frame."
@@ -12,7 +15,7 @@
 // band/channel or frequency in MHz (3 bits for band and 3 bits for channel)
 #define VTXCOMMON_MSP_BANDCHAN_CHKVAL ((uint16_t)((7 << 3) + 7))
 
-class SerialSmartAudio : public SerialIO {
+class SerialSmartAudio final : public SerialIO, public CRSFConnector {
 public:
     explicit SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin) : SerialIO(&out, &in) {
 #if defined(PLATFORM_ESP32)
@@ -22,13 +25,15 @@ public:
         halfDuplexPin = serial1TXpin;
 #endif
         setRXMode();
+        crsfEndpoint->addConnector(this);
     }
-    virtual ~SerialSmartAudio() {}
+    ~SerialSmartAudio() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
+
+    void forwardMessage(const crsf_header_t *message) override;
 
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override {};

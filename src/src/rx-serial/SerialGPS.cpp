@@ -12,10 +12,6 @@ void SerialGPS::sendQueuedData(uint32_t maxBytesToSend)
     sendTelemetryFrame();
 }
 
-void SerialGPS::queueMSPFrameTransmission(uint8_t* data)
-{
-}
-
 // Parses a decimal string with optional decimal point and returns the value scaled by the given factor as an integer
 // Ex: "0.442" with scale 100 returns 44
 // Ex: "123.456" with scale 1000 returns 123456

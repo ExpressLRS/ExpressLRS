@@ -54,7 +54,7 @@ void CRSFEndpoint::processMessage(CRSFConnector *connector, const crsf_header_t 
 
 void CRSFEndpoint::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
 {
-    auto *packet = (uint8_t *)(frame + sizeof(crsf_ext_header_t));
+    auto *packet = frame + sizeof(crsf_ext_header_t);
     packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
     packet[1] = 0;             // flags
     packet[2] = function & 0xFF;
@@ -115,11 +115,13 @@ void CRSFEndpoint::AddMspMessage(const mspPacket_t * packet, const uint8_t desti
     outBuffer[5] = 0x30;                // header
     outBuffer[6] = packet->payloadSize; // mspPayloadSize
     outBuffer[7] = packet->function;    // packet->cmd
+
+    // Copy packet payload into outBuffer
     for (uint16_t i = 0; i < packet->payloadSize; ++i)
     {
-        // copy packet payload into outBuffer
         outBuffer[8 + i] = packet->payload[i];
     }
+
     // Encapsulated MSP crc
     outBuffer[totalBufferLen - 2] = CalcCRCMsp(&outBuffer[6], packet->payloadSize + 2);
 

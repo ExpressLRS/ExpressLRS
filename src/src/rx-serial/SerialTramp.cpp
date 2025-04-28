@@ -61,8 +61,9 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 // In Lua, we have 1-8, so we'll define those here and leave 0=0.
 uint16_t powerLevelLUT[9] = { 0, 10, 25, 200, 400, 600, 1000, 1600, 3000 };
 
-void SerialTramp::queueMSPFrameTransmission(uint8_t* data)
+void SerialTramp::forwardMessage(const crsf_header_t *message)
 {
+    auto data = (uint8_t *)message;
     // What we're handed here is MSP wrapped in CRSF, so our offsets are thrown off
     uint8_t innerLength = data[6];
     if (innerLength < 2) {

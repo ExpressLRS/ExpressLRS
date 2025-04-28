@@ -1,6 +1,7 @@
+#pragma once
+
 #include "SerialIO.h"
 #include "FIFO.h"
-#include "telemetry_protocol.h"
 
 #define MAV_INPUT_BUF_LEN       1024
 #define MAV_OUTPUT_BUF_LEN      512
@@ -13,10 +14,9 @@ extern FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 class SerialMavlink : public SerialIO {
 public:
     explicit SerialMavlink(Stream &out, Stream &in);
-    virtual ~SerialMavlink() {}
+    ~SerialMavlink() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t* data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
     int getMaxSerialReadSize() override;

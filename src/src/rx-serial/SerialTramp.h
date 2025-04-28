@@ -1,4 +1,8 @@
+#pragma once
+
 #include "SerialIO.h"
+#include "CRSFEndpoint.h"
+#include "device.h"
 
 #define TRAMP_FRAME_SIZE 16
 #define TRAMP_HEADER 0x0F
@@ -6,7 +10,7 @@
 // band/channel or frequency in MHz (3 bits for band and 3 bits for channel)
 #define VTXCOMMON_MSP_BANDCHAN_CHKVAL ((uint16_t)((7 << 3) + 7))
 
-class SerialTramp : public SerialIO {
+class SerialTramp final : public SerialIO, public CRSFConnector {
 public:
     explicit SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin) : SerialIO(&out, &in) {
 #if defined(PLATFORM_ESP32)
@@ -16,13 +20,15 @@ public:
         halfDuplexPin = serial1TXpin;
 #endif
         setRXMode();
+        crsfEndpoint->addConnector(this);
     }
-    virtual ~SerialTramp() {}
+    ~SerialTramp() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t* data) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
+
+    void forwardMessage(const crsf_header_t *message) override;
 private:
     void processBytes(uint8_t *bytes, uint16_t size) override {};
     void setTXMode();

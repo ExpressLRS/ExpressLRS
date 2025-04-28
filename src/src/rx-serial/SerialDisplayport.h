@@ -11,6 +11,7 @@ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE
 COMPANY SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR 
 CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 ************************************************************************************/
+#pragma once
 
 #if defined(TARGET_RX)
 
@@ -42,10 +43,9 @@ class SerialDisplayport : public SerialIO
 {
 public:
     explicit SerialDisplayport(Stream &out, Stream &in) : SerialIO(&out, &in), m_receivedBytes(0), m_receivedTimestamp(0) {}
-    virtual ~SerialDisplayport() {}
+    ~SerialDisplayport() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t* data) override {};
     void sendQueuedData(uint32_t maxBytesToSend) override {};
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 

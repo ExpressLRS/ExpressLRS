@@ -11,10 +11,9 @@ public:
     {
         crsfEndpoint->addConnector(this);
     }
-    ~SerialCRSF() override {}
+    ~SerialCRSF() override = default;
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
-    void queueMSPFrameTransmission(uint8_t* data) override;
     void queueLinkStatisticsPacket() override;
     void forwardMessage(const crsf_header_t *message) override;
     void sendQueuedData(uint32_t maxBytesToSend) override;

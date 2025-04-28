@@ -7,8 +7,6 @@
 #include "msp2crsf.h"
 #include "telemetry.h"
 
-extern MSP2CROSSFIRE msp2crsf;
-
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
@@ -18,7 +16,16 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
     // No MSP data to the FC if no model match
     if (connectionHasModelMatch && teamraceHasModelMatch)
     {
-        queueMSPFrameTransmission((uint8_t*)message);
+        auto * data = (uint8_t *)message;
+        const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+        if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+        {
+            data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+            _fifo.lock();
+            _fifo.push(totalBufferLen);
+            _fifo.pushBytes(data, totalBufferLen);
+            _fifo.unlock();
+        }
     }
 }
 
@@ -117,19 +124,6 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
     _outputPort->write(crc);
     return DURATION_IMMEDIATELY;
-}
-
-void SerialCRSF::queueMSPFrameTransmission(uint8_t* data)
-{
-    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
-    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
-    {
-        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-        _fifo.lock();
-        _fifo.push(totalBufferLen);
-        _fifo.pushBytes(data, totalBufferLen);
-        _fifo.unlock();
-    }
 }
 
 void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)

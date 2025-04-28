@@ -1310,11 +1310,6 @@ void UpdateModelMatch(uint8_t model)
     config.SetModelId(model);
 }
 
-void SendMSPFrameToFC(uint8_t *mspData)
-{
-    serialIO->queueMSPFrameTransmission(mspData);
-}
-
 /**
  * Process the assembled MSP packet in MspData[]
  **/

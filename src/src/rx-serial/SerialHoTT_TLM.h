@@ -1,6 +1,6 @@
-#if defined(TARGET_RX)
-
 #pragma once
+
+#if defined(TARGET_RX)
 
 #include "SerialIO.h"
 #include "device.h"
@@ -291,10 +291,9 @@ public:
         cmdSendState = HOTT_RECEIVING;
     }
 
-    virtual ~SerialHoTT_TLM() {}
+    ~SerialHoTT_TLM() override = default;
 
     void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t *data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
 
     int getMaxSerialReadSize() override;

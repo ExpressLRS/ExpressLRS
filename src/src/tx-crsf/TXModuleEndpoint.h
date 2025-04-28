@@ -6,6 +6,7 @@
 class TXModuleEndpoint final : public CRSFEndpoint {
 public:
     TXModuleEndpoint();
+    ~TXModuleEndpoint() override = default;
     void begin();
 
     bool handleMessage(const crsf_header_t *message) override;
