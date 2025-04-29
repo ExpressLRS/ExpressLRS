@@ -9,7 +9,8 @@ public:
     ~TXModuleEndpoint() override = default;
     void begin();
 
-    bool handleMessage(const crsf_header_t *message) override;
+    bool handleRaw(const crsf_header_t *message) override;
+    void handleMessage(const crsf_header_t *message) override;
     void RcPacketToChannelsData(const crsf_header_t *message);
 
     void (*RecvModelUpdate)() = nullptr; // called when model id changes, ie command from Radio

@@ -39,7 +39,7 @@ struct msp_status_t
 
 ////////////////////////////
 
-class SerialDisplayport : public SerialIO
+class SerialDisplayport final : public SerialIO
 {
 public:
     explicit SerialDisplayport(Stream &out, Stream &in) : SerialIO(&out, &in), m_receivedBytes(0), m_receivedTimestamp(0) {}

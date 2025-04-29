@@ -16,7 +16,7 @@ class MockEndpoint : public CRSFEndpoint
 {
 public:
     MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
-    bool handleMessage(const crsf_header_t *message) override { return false; }
+    void handleMessage(const crsf_header_t *message) override {}
 };
 CRSFEndpoint *crsfEndpoint = new MockEndpoint();
 

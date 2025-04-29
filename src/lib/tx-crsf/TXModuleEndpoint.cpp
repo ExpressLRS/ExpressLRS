@@ -22,15 +22,19 @@ void TXModuleEndpoint::begin()
 #endif
 }
 
-bool TXModuleEndpoint::handleMessage(const crsf_header_t *message)
+bool TXModuleEndpoint::handleRaw(const crsf_header_t *message)
 {
-    const crsf_frame_type_e packetType = message->type;
-
-    if (packetType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
+    if (message->type == CRSF_FRAMETYPE_RC_CHANNELS_PACKED)
     {
         RcPacketToChannelsData(message);
         return true;    // do NOT forward channel data via CRSF, as we have 'magic' OTA encoding
     }
+    return false;
+}
+
+void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
+{
+    const crsf_frame_type_e packetType = message->type;
 
     const auto extMessage = (crsf_ext_header_t *)message;
     // Enter Binding Mode
@@ -57,7 +61,6 @@ bool TXModuleEndpoint::handleMessage(const crsf_header_t *message)
     {
         if (RecvParameterUpdate) RecvParameterUpdate(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload[1]);
     }
-    return false;
 }
 
 void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // data is packed as 11 bits per channel

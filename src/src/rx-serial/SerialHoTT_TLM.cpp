@@ -27,6 +27,34 @@
 
 extern Telemetry telemetry;
 
+SerialHoTT_TLM::SerialHoTT_TLM(Stream &out, Stream &in, const int8_t serial1TXpin)
+    : SerialIO(&out, &in)
+{
+#if defined(PLATFORM_ESP32)
+    if (serial1TXpin == UNDEF_PIN)
+    {
+        // we are on UART0, use default TX pin for half duplex if not defined otherwise
+        UTXDoutIdx = U0TXD_OUT_IDX;
+        URXDinIdx = U0RXD_IN_IDX;
+        halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+    }
+    else
+    {
+        // we are on UART1, use Serial1 TX assigned pin for half duplex
+        UTXDoutIdx = U1TXD_OUT_IDX;
+        URXDinIdx = U1RXD_IN_IDX;
+        halfDuplexPin = serial1TXpin;
+    }
+#endif
+
+    uint32_t now = millis();
+
+    lastPoll = now;
+    discoveryTimerStart = now;
+
+    cmdSendState = HOTT_RECEIVING;
+}
+
 int SerialHoTT_TLM::getMaxSerialReadSize()
 {
     return HOTT_MAX_BUF_LEN - hottInputBuffer.size();

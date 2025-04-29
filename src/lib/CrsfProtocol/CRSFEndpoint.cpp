@@ -9,7 +9,10 @@ void CRSFEndpoint::addConnector(CRSFConnector *connector)
 
 void CRSFEndpoint::processMessage(CRSFConnector *connector, const crsf_header_t *message)
 {
-    if (handleRaw((uint8_t *)message)) return;
+    if (handleRaw(message))
+    {
+        return;
+    }
 
     const crsf_frame_type_e packetType = message->type;
     const auto extMessage = (crsf_ext_header_t *)message;
@@ -18,23 +21,21 @@ void CRSFEndpoint::processMessage(CRSFConnector *connector, const crsf_header_t 
         connector->addDevice(extMessage->orig_addr);
     }
 
-    const crsf_addr_e destination = packetType < CRSF_FRAMETYPE_DEVICE_PING ? (crsf_addr_e)message->device_addr : extMessage->dest_addr;
-
-    if (packetType < CRSF_FRAMETYPE_DEVICE_PING || destination == device_id || destination == CRSF_ADDRESS_BROADCAST)
+    if (packetType < CRSF_FRAMETYPE_DEVICE_PING || extMessage->dest_addr == device_id || extMessage->dest_addr == CRSF_ADDRESS_BROADCAST)
     {
-        const auto eat_message = handleMessage(message) || destination == device_id;
-        if (eat_message)
+        handleMessage(message);
+        if (packetType >= CRSF_FRAMETYPE_DEVICE_PING && extMessage->dest_addr == device_id)
         {
             return;
         }
     }
 
     // deliver extended header messages to the connector that 'knows' about the destination device address
-    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING)
+    if (packetType >= CRSF_FRAMETYPE_DEVICE_PING && extMessage->dest_addr != CRSF_ADDRESS_BROADCAST)
     {
         for (const auto other : connectors)
         {
-            if (other != connector && other->forwardsTo(destination))
+            if (other != connector && other->forwardsTo(extMessage->dest_addr))
             {
                 other->forwardMessage(message);
                 return;

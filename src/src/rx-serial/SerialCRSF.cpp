@@ -9,7 +9,6 @@
 
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
-extern void UpdateModelMatch(uint8_t model);
 
 void SerialCRSF::forwardMessage(const crsf_header_t *message)
 {
@@ -17,10 +16,9 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
     if (connectionHasModelMatch && teamraceHasModelMatch)
     {
         auto * data = (uint8_t *)message;
-        const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
+        const uint8_t totalBufferLen = data[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES;
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
         {
-            data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
             _fifo.lock();
             _fifo.push(totalBufferLen);
             _fifo.pushBytes(data, totalBufferLen);

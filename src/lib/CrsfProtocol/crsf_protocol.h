@@ -1,5 +1,6 @@
 #pragma once
 
+#include "targets.h"
 #include <cmath>
 #include <cstdint>
 
@@ -11,12 +12,7 @@
 #error "Invalid configuration!"
 #endif
 
-
 #define PACKED __attribute__((packed))
-
-#ifndef ICACHE_RAM_ATTR
-#define ICACHE_RAM_ATTR
-#endif
 
 #define CRSF_CRC_POLY 0xd5
 

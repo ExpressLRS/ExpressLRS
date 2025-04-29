@@ -5,7 +5,25 @@
 #include <hal/uart_ll.h>
 #endif
 
-void SerialTramp::setTXMode()
+#define TRAMP_FRAME_SIZE 16
+#define TRAMP_HEADER 0x0F
+// check value for MSP_SET_VTX_CONFIG to determine if value is encoded
+// band/channel or frequency in MHz (3 bits for band and 3 bits for channel)
+#define VTXCOMMON_MSP_BANDCHAN_CHKVAL ((uint16_t)((7 << 3) + 7))
+
+SerialTramp::SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin) : SerialIO(&out, &in)
+{
+#if defined(PLATFORM_ESP32)
+    // we are on UART1, use Serial1 TX assigned pin for half duplex
+    UTXDoutIdx = U1TXD_OUT_IDX;
+    URXDinIdx = U1RXD_IN_IDX;
+    halfDuplexPin = serial1TXpin;
+#endif
+    setRXMode();
+    crsfEndpoint->addConnector(this);
+}
+
+void SerialTramp::setTXMode() const
 {
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
@@ -14,7 +32,7 @@ void SerialTramp::setTXMode()
 #endif
 }
 
-void SerialTramp::setRXMode()
+void SerialTramp::setRXMode() const
 {
 #if defined(PLATFORM_ESP32)
     pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
@@ -23,7 +41,7 @@ void SerialTramp::setRXMode()
 }
 
 // Calculate tramp protocol checksum of provided buffer
-uint8_t checksum(uint8_t *buf)
+static uint8_t checksum(const uint8_t *buf)
 {
     uint8_t cksum = 0;
 

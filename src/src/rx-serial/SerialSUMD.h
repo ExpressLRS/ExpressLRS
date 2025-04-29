@@ -3,7 +3,7 @@
 #include "SerialIO.h"
 #include "crc.h"
 
-class SerialSUMD : public SerialIO {
+class SerialSUMD final : public SerialIO {
 public:
     explicit SerialSUMD(Stream &out, Stream &in) : SerialIO(&out, &in) { crc2Byte.init(16, 0x1021); }
     ~SerialSUMD() override = default;

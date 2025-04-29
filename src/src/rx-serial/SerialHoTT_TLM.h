@@ -260,37 +260,10 @@ enum {
     HOTT_CMD2SENT
 };
 
-class SerialHoTT_TLM : public SerialIO
+class SerialHoTT_TLM final : public SerialIO
 {
 public:
-    explicit SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN)
-        : SerialIO(&out, &in)
-    {       
-#if defined(PLATFORM_ESP32)
-        if (serial1TXpin == UNDEF_PIN)
-        {
-            // we are on UART0, use default TX pin for half duplex if not defined otherwise
-            UTXDoutIdx = U0TXD_OUT_IDX;
-            URXDinIdx = U0RXD_IN_IDX;
-            halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
-        }
-        else
-        {   
-            // we are on UART1, use Serial1 TX assigned pin for half duplex
-            UTXDoutIdx = U1TXD_OUT_IDX;
-            URXDinIdx = U1RXD_IN_IDX;
-            halfDuplexPin = serial1TXpin;
-        } 
-#endif
-
-        uint32_t now = millis();
-
-        lastPoll = now;
-        discoveryTimerStart = now;
-
-        cmdSendState = HOTT_RECEIVING;
-    }
-
+    SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN);
     ~SerialHoTT_TLM() override = default;
 
     void queueLinkStatisticsPacket() override {}
@@ -338,12 +311,12 @@ private:
     // last received HoTT telemetry packets
     GPSPacket_t gps;
     GeneralAirPacket_t gam;
-    AirESCPacket_t esc;
-    VarioPacket_t vario;
-    ElectricAirPacket_t eam;
+    AirESCPacket_t esc {};
+    VarioPacket_t vario {};
+    ElectricAirPacket_t eam {};
 
     // received HoTT bus fra,e
-    hottBusFrame_t hottBusFrame;
+    hottBusFrame_t hottBusFrame{};
 
     // discoverd devices
     hottDevice_t device[LAST_DEVICE] = {
@@ -357,7 +330,7 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
-    uint8_t nextDeviceID;
+    uint8_t nextDeviceID{};
 
     uint32_t lastPoll;
     uint8_t cmdSendState;

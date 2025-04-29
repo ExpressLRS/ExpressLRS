@@ -25,6 +25,7 @@
 
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
+extern void clearOTAQueue();
 
 static enum VtxSendState_e
 {
@@ -174,8 +175,7 @@ static int timeout()
     }
     else
     {
-        // FIXME
-        // otaConnector.ResetMspQueue();
+        clearOTAQueue();
         VtxSendState = VTXSS_UNKNOWN;
     }
 

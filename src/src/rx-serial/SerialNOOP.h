@@ -2,7 +2,7 @@
 
 #include "SerialIO.h"
 
-class SerialNOOP : public SerialIO {
+class SerialNOOP final : public SerialIO {
 public:
     explicit SerialNOOP() : SerialIO(nullptr, nullptr) {}
     ~SerialNOOP() override = default;

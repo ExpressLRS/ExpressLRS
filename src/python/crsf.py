@@ -135,7 +135,7 @@ def read_param(s: serial.Serial, param: int, chunk: int):
     next_chunk = chunk + 1
     if chunk == 0:
         data = b''
-    send(s, 0xc8, b'\x2C\xEC\xC8' + bytes([param, chunk]))
+    send(s, 0xc8, b'\x2C\xEE\xC8' + bytes([param, chunk]))
 
 
 if __name__ == '__main__':

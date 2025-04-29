@@ -11,7 +11,7 @@
 extern FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
 extern FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 
-class SerialMavlink : public SerialIO {
+class SerialMavlink final : public SerialIO {
 public:
     explicit SerialMavlink(Stream &out, Stream &in);
     ~SerialMavlink() override = default;

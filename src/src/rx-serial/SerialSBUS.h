@@ -4,11 +4,7 @@
 
 class SerialSBUS final : public SerialIO {
 public:
-    explicit SerialSBUS(Stream &out, Stream &in) : SerialIO(&out, &in)
-    {
-        streamOut = &out;
-    }
-
+    explicit SerialSBUS(Stream &out, Stream &in) : SerialIO(&out, &in), streamOut(&out) {}
     ~SerialSBUS() override = default;
 
     void queueLinkStatisticsPacket() override {}

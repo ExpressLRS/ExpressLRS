@@ -19,7 +19,7 @@ typedef struct {
     uint8_t satellites;
 } GpsData;
 
-class SerialGPS : public SerialIO {
+class SerialGPS final : public SerialIO {
 public:
     explicit SerialGPS(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     ~SerialGPS() override = default;

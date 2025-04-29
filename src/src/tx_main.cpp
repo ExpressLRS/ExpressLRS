@@ -31,8 +31,8 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "MAVLink.h"
-#include "tx-crsf/TXOTAConnector.h"
-#include "tx-crsf/TXModuleEndpoint.h"
+#include "TXOTAConnector.h"
+#include "TXModuleEndpoint.h"
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -961,6 +961,11 @@ static void UpdateConnectDisconnectStatus()
     setConnectionState(disconnected);
     connectionHasModelMatch = true;
   }
+}
+
+void clearOTAQueue()
+{
+    otaConnector.ResetMspQueue();
 }
 
 void SetSyncSpam()

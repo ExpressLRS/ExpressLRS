@@ -36,8 +36,8 @@
 #include "devLUA.h"
 #include "devServoOutput.h"
 #include "devWIFI.h"
-#include "rx-crsf/RXEndpoint.h"
-#include "rx-crsf/RXOTAConnector.h"
+#include "RXEndpoint.h"
+#include "RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
 #if defined(PLATFORM_ESP8266)
@@ -1302,12 +1302,6 @@ void ICACHE_RAM_ATTR TXdoneISR()
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
-}
-
-void UpdateModelMatch(uint8_t model)
-{
-    DBGLN("Set ModelId=%u", model);
-    config.SetModelId(model);
 }
 
 /**
