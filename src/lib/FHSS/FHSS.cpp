@@ -4,12 +4,12 @@
 #include <string.h>
 #include "SX127xDriver.h"
 
-/* ISM High Band */
-static constexpr uint16_t ISM_HIGH_BAND_FREQ_START =  9200;
-static constexpr uint16_t ISM_HIGH_BAND_FREQ_END   = 10200;
-/* STD High Band */
-static constexpr uint16_t STD_HIGH_BAND_FREQ_START = 9035;
-static constexpr uint16_t STD_HIGH_BAND_FREQ_END   = 9269;
+/* STD High Band (970) */
+static constexpr uint16_t STD_HIGH_BAND_FREQ_START =  9200;
+static constexpr uint16_t STD_HIGH_BAND_FREQ_END   = 10200;
+/* ISM High Band (915) */
+static constexpr uint16_t ISM_HIGH_BAND_FREQ_START = 9035;
+static constexpr uint16_t ISM_HIGH_BAND_FREQ_END   = 9269;
 /* LOW High Band */
 static constexpr uint16_t LOW_BAND_FREQ_START = 7850;
 static constexpr uint16_t LOW_BAND_FREQ_END   = 8350;
