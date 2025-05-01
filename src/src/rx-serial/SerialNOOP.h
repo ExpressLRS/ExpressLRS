@@ -7,7 +7,6 @@ public:
     explicit SerialNOOP() : SerialIO(nullptr, nullptr) {}
     ~SerialNOOP() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return  DURATION_NEVER; }
 
     void processSerialInput() override {}

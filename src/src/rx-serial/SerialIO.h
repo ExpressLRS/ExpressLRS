@@ -30,15 +30,6 @@ public:
     void setFailsafe(bool failsafe);
 
     /**
-     * @brief Signals the protocol to queue a link statistics packet
-     *
-     * The packet should be queued into the `_fifo` member variable as RC packets
-     * are prioritised and ancillary data is sent after the RC data when the
-     * `sendQueuedData` function is called.
-     */
-    virtual void queueLinkStatisticsPacket() = 0;
-
-    /**
      * @brief send the RC channel data to the serial port stream `_outputPort` member
      * variable.
      *
@@ -97,12 +88,11 @@ protected:
     /// @brief flag that indicates the receiver is in the failsafe state
     bool failsafe = false;
 
-    static const uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
-
+    static constexpr uint32_t SERIAL_OUTPUT_FIFO_SIZE = 256U;
 
     /**
      * @brief the FIFO that should be used to queue serial data to in the
-     * `queueLinkStatisticsPacket` and `queueMSPFrameTransmission` method implementations.
+     * `queueMSPFrameTransmission` method implementations.
      */
     FIFO<SERIAL_OUTPUT_FIFO_SIZE> _fifo;
 

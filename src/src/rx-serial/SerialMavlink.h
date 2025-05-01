@@ -16,7 +16,6 @@ public:
     explicit SerialMavlink(Stream &out, Stream &in);
     ~SerialMavlink() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
     int getMaxSerialReadSize() override;

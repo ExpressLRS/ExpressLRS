@@ -45,7 +45,6 @@ public:
     explicit SerialDisplayport(Stream &out, Stream &in) : SerialIO(&out, &in), m_receivedBytes(0), m_receivedTimestamp(0) {}
     ~SerialDisplayport() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     void sendQueuedData(uint32_t maxBytesToSend) override {};
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 

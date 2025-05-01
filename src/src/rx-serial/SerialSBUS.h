@@ -7,7 +7,6 @@ public:
     explicit SerialSBUS(Stream &out, Stream &in) : SerialIO(&out, &in), streamOut(&out) {}
     ~SerialSBUS() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
 private:

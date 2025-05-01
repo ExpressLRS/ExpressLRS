@@ -24,7 +24,6 @@ public:
     explicit SerialGPS(Stream &out, Stream &in) : SerialIO(&out, &in) {}
     ~SerialGPS() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }
 private:

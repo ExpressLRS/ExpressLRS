@@ -8,7 +8,6 @@ public:
     explicit SerialSUMD(Stream &out, Stream &in) : SerialIO(&out, &in) { crc2Byte.init(16, 0x1021); }
     ~SerialSUMD() override = default;
 
-    void queueLinkStatisticsPacket() override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
 
 private:

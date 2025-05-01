@@ -46,31 +46,6 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
     SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }
 
-void SerialCRSF::queueLinkStatisticsPacket()
-{
-    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
-    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
-
-    constexpr uint8_t outBuffer[] = {
-        payloadLen + 4,
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        CRSF_FRAME_SIZE(payloadLen),
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
-
-    uint8_t crc = crsfEndpoint->crsf_crc.calc(outBuffer[3]);
-    crc = crsfEndpoint->crsf_crc.calc((byte *)&crsfEndpoint->linkStats, payloadLen, crc);
-
-    _fifo.lock();
-    if (_fifo.ensure(outBuffer[0] + 1))
-    {
-        _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-        _fifo.pushBytes((byte *)&crsfEndpoint->linkStats, payloadLen);
-        _fifo.push(crc);
-    }
-    _fifo.unlock();
-}
-
 uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable)

@@ -83,12 +83,12 @@ void CRSFEndpoint::SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, const crsf_
     SetHeaderAndCrc((crsf_header_t *)frame, frameType, frameSize, destAddr);
 }
 
-void CRSFEndpoint::makeLinkStatisticsPacket(uint8_t *buffer)
+void CRSFEndpoint::makeLinkStatisticsPacket(uint8_t *buffer, crsf_addr_e destination)
 {
     // Note: size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
     constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
 
-    buffer[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    buffer[0] = destination;
     buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
     memcpy(&buffer[3], &linkStats, payloadLen);

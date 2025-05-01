@@ -1526,8 +1526,9 @@ void loop()
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
 
-    crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame);
-    crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame); // pretend that the linkStats comes from the RX
+    crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_RADIO_TRANSMITTER);
+    // the linkStats originates from the OTA connector so we don't send it back there.
+    crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }
