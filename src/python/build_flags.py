@@ -29,6 +29,16 @@ def print_error(error):
     time.sleep(3)
     raise Exception('!!! %s !!!' % error)
 
+def print_warning(warning):
+    time.sleep(1)
+    sys.stdout.write("\n\n\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;31m                ExpressLRS Warning Below                \n")
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    sys.stdout.write("\033[47;30m  %s \n" % warning)
+    sys.stdout.write("\033[47;31m%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n")
+    sys.stdout.flush()
+    time.sleep(3)
+
 
 def dequote(str):
     if str[0] == '"' and str[-1] == '"':
@@ -150,7 +160,7 @@ if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     # disallow setting 2400s for 900
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or \
         fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400'):
-        print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X/RADIO_LR1121')
+        print_warning('Regulatory_Domain 2400 not compatible with RADIO_SX127X/RADIO_LR1121')
 
     # require a domain be set for 900
     if not fnmatch.filter(build_flags, '*-DRegulatory_Domain*'):
