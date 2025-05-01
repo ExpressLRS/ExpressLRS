@@ -1,5 +1,3 @@
-#ifdef TARGET_RX
-
 #include "POWERMGNT.h"
 #include "config.h"
 #include "deferred.h"
@@ -641,28 +639,20 @@ static int event()
     LUA_FIELD_HIDE(luaTargetSysId)
   }
 
-  return DURATION_IMMEDIATELY;
-}
-
-static int timeout()
-{
-  luaHandleUpdateParameter();
-  return DURATION_IMMEDIATELY;
+  return DURATION_NEVER;
 }
 
 static int start()
 {
   registerLuaParameters();
   event();
-  return DURATION_IMMEDIATELY;
+  return DURATION_NEVER;
 }
 
-device_t LUA_device = {
+device_t RXLUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout,
+  .timeout = nullptr,
   .subscribe = EVENT_ALL
 };
-
-#endif

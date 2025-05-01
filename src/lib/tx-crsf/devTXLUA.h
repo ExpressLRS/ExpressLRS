@@ -2,8 +2,6 @@
 
 #include "device.h"
 
-extern device_t LUA_device;
+extern device_t TXLUA_device;
 
-#if defined(TARGET_TX)
 void luadevUpdateFolderNames();
-#endif

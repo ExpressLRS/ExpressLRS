@@ -12,7 +12,7 @@
 #include "devHandset.h"
 #include "devADC.h"
 #include "devLED.h"
-#include "devLUA.h"
+#include "devTXLUA.h"
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devVTX.h"
@@ -110,7 +110,7 @@ device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
   {&LED_device, 0},
   {&RGB_device, 0},
-  {&LUA_device, 1},
+  {&TXLUA_device, 1},
   {&ADC_device, 1},
   {&WIFI_device, 0},
   {&Button_device, 0},

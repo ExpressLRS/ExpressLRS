@@ -2,10 +2,13 @@
 
 #include "CRSFHandset.h"
 #include "common.h"
+#include "lua.h"
 
 #if defined(PLATFORM_ESP32)
 RTC_DATA_ATTR int rtcModelId = 0;
 #endif
+
+void SetSyncSpam();
 
 TXModuleEndpoint::TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER), modelId(0)
 {
@@ -59,7 +62,8 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
         || packetType == CRSF_FRAMETYPE_PARAMETER_READ
         || packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        if (RecvParameterUpdate) RecvParameterUpdate(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload[1]);
+        luaParamUpdateReq(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload[1]);
+        SetSyncSpam();
     }
 }
 

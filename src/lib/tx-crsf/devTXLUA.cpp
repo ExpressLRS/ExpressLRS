@@ -997,16 +997,7 @@ static int event()
     setLuaStringValue(&luaBackpackVersion, backpackVersion);
   }
   luadevUpdateFolderNames();
-  return DURATION_IMMEDIATELY;
-}
-
-static int timeout()
-{
-  if (luaHandleUpdateParameter())
-  {
-    SetSyncSpam();
-  }
-  return DURATION_IMMEDIATELY;
+  return DURATION_NEVER;
 }
 
 static int start()
@@ -1015,21 +1006,20 @@ static int start()
   {
     return DURATION_NEVER;
   }
-  crsfTransmitter.RecvParameterUpdate = luaParamUpdateReq;
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);
   luaRegisterDevicePingCallback(&luadevUpdateBadGood);
 
   event();
-  return DURATION_IMMEDIATELY;
+  return DURATION_NEVER;
 }
 
-device_t LUA_device = {
+device_t TXLUA_device = {
   .initialize = nullptr,
   .start = start,
   .event = event,
-  .timeout = timeout,
+  .timeout = nullptr,
   .subscribe = EVENT_ALL
 };
 

@@ -17,10 +17,6 @@ static void (*devicePingCallback)() = nullptr;
 #define LUA_MAX_PARAMS 64
 static bool isElrsCalling = false;
 static crsf_addr_e requestOrigin;
-static uint8_t parameterType;
-static uint8_t parameterIndex;
-static uint8_t parameterChunk;
-static volatile bool UpdateParamReq = false;
 
 static luaItem_folder luaAgentLite = {
     .common = {
@@ -277,7 +273,7 @@ static void updateElrsFlags()
   setLuaWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
 }
 
-void sendELRSstatus()
+static void sendELRSstatus()
 {
   constexpr const char *messages[] = { //higher order = higher priority
     "",                   //status2 = connected status
@@ -320,17 +316,6 @@ void luaRegisterDevicePingCallback(void (*callback)())
 
 #endif
 
-void luaParamUpdateReq(crsf_addr_e origin, uint8_t type, uint8_t index, uint8_t arg)
-{
-  // dodgy hack because 'our' LUA script uses a different origin and we need to reply to the radio!
-  isElrsCalling = origin == CRSF_ADDRESS_ELRS_LUA;
-  requestOrigin = isElrsCalling ? CRSF_ADDRESS_RADIO_TRANSMITTER : origin;
-  parameterType = type;
-  parameterIndex = index;
-  parameterChunk = arg;
-  UpdateParamReq = true;
-}
-
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
@@ -341,12 +326,11 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   paramCallbacks[lastLuaField] = callback;
 }
 
-bool luaHandleUpdateParameter()
+void luaParamUpdateReq(crsf_addr_e origin, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk)
 {
-  if (UpdateParamReq == false)
-  {
-    return false;
-  }
+  // dodgy hack because 'our' LUA script uses a different origin and we need to reply to the radio!
+  isElrsCalling = origin == CRSF_ADDRESS_ELRS_LUA;
+  requestOrigin = isElrsCalling ? CRSF_ADDRESS_RADIO_TRANSMITTER : origin;
 
   switch(parameterType)
   {
@@ -410,9 +394,6 @@ bool luaHandleUpdateParameter()
     default:
       DBGLN("Unknown LUA %x", parameterType);
   }
-
-  UpdateParamReq = false;
-  return true;
 }
 
 /***

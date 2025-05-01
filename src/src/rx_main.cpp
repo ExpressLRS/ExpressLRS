@@ -34,7 +34,7 @@
 #include "devBaro.h"
 #include "devButton.h"
 #include "devLED.h"
-#include "devLUA.h"
+#include "devRXLUA.h"
 #include "devServoOutput.h"
 #include "devWIFI.h"
 #include "RXEndpoint.h"
@@ -87,7 +87,7 @@ device_affinity_t ui_devices[] = {
   {&SerialUpdate_device, 1},
 #endif
   {&LED_device, 0},
-  {&LUA_device, 0},
+  {&RXLUA_device, 0},
   {&RGB_device, 0},
   {&WIFI_device, 0},
   {&Button_device, 0},
