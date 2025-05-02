@@ -49,6 +49,8 @@ public:
      */
     virtual void forwardMessage(const crsf_header_t *message) = 0;
 
+    virtual uint8_t GetMaxPacketBytes() const { return CRSF_MAX_PACKET_LEN; }
+
     /**
      * @brief Logs debugging information for a CRSF message.
      *

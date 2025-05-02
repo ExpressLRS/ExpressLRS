@@ -119,7 +119,7 @@ void CRSFRouter::SetMspV2Request(uint8_t *frame, const uint16_t function, const 
     packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
-void CRSFRouter::AddMspMessage(const mspPacket_t * packet, const uint8_t destination, const uint8_t origin)
+void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const uint8_t destination, const uint8_t origin)
 {
     if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
     {
@@ -130,11 +130,11 @@ void CRSFRouter::AddMspMessage(const mspPacket_t * packet, const uint8_t destina
     uint8_t outBuffer[ENCAPSULATED_MSP_MAX_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES];
 
     // CRSF extended frame header
-    outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                      // address
+    outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                                                 // address
     outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
-    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                    // packet type
-    outBuffer[3] = destination;                                                 // destination
-    outBuffer[4] = origin;                                                      // origin
+    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                                               // packet type
+    outBuffer[3] = destination;                                                                            // destination
+    outBuffer[4] = origin;                                                                                 // origin
 
     // Encapsulated MSP payload
     outBuffer[5] = 0x30;                // header
@@ -153,4 +153,16 @@ void CRSFRouter::AddMspMessage(const mspPacket_t * packet, const uint8_t destina
     // CRSF frame crc
     outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
     deliverMessage(nullptr, (crsf_header_t *)outBuffer);
+}
+uint8_t CRSFRouter::getConnectorMaxPacketSize(crsf_addr_e origin) const
+{
+    uint8_t maxPacketSize = 0;
+    for (const auto connector : connectors)
+    {
+        if (connector->forwardsTo(origin))
+        {
+            return connector->GetMaxPacketBytes();
+        }
+    }
+    return CRSF_MAX_PACKET_LEN;
 }

@@ -4,11 +4,6 @@
 #include "logging.h"
 #include "options.h"
 
-#ifdef TARGET_RX
-#include "telemetry.h"
-#else
-#include "CRSFHandset.h"
-#endif
 static void (*devicePingCallback)() = nullptr;
 
 //LUA VARIABLES//
@@ -205,15 +200,13 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, bool isElrs, uint8_t fieldChunk
   // Maximum number of chunked bytes that can be sent in one response
   // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
   // 2 bytes Lua chunk header: FieldId, ChunksRemain
-#ifdef TARGET_TX
-  uint8_t chunkMax = handset->GetMaxPacketBytes() - 6 - 2;
-#else
-  uint8_t chunkMax = CRSF_MAX_PACKET_LEN - 6 - 2;
-#endif
+  // Ask the endpoint what the maximum size for the packet based on the origin;
+  // this is for slow baud-rates to the handset
+  const uint8_t chunkMax = crsfRouter.getConnectorMaxPacketSize(origin) - 6 - 2;
   // How many chunks needed to send this field (rounded up)
-  uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
+  const uint8_t chunkCnt = (dataSize + chunkMax - 1) / chunkMax;
   // Data left to send is adjustedSize - chunks sent already
-  uint8_t chunkSize = std::min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
+  const uint8_t chunkSize = std::min((uint8_t)(dataSize - (fieldChunk * chunkMax)), chunkMax);
 
   // Move chunkStart back 2 bytes to add (FieldId + ChunksRemain) to each packet
   chunkStart = &chunkBuffer[fieldChunk * chunkMax];

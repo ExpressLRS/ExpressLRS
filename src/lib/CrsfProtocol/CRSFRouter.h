@@ -125,6 +125,8 @@ public:
      */
     void AddMspMessage(const mspPacket_t *packet, uint8_t destination, uint8_t origin);
 
+    uint8_t getConnectorMaxPacketSize(crsf_addr_e origin) const;
+
     GENERIC_CRC8 crsf_crc = GENERIC_CRC8(CRSF_CRC_POLY);
 
 private:
