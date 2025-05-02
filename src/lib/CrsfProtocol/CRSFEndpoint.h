@@ -2,6 +2,11 @@
 #define CRSF_ENDPOINT_H
 
 #include "CRSFConnector.h"
+#include "crc.h"
+#include "lua.h"
+#include "msp.h"
+
+#include <vector>
 
 class CRSFEndpoint {
 public:
@@ -42,8 +47,21 @@ public:
      */
     virtual void handleMessage(const crsf_header_t * message) = 0;
 
+    void luaRegisterDevicePingCallback(void (*callback)());
+
+    virtual void registerParameters() {}
+    virtual void updateParameters() {}
+    void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
+    void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
+    void luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
+
+protected:
+    void sendLuaDevicePacket(crsf_addr_e device_id);
+
 private:
     crsf_addr_e device_id;
+
+    void (*devicePingCallback)() = nullptr;
 };
 
 #endif //CRSF_ENDPOINT_H

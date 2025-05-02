@@ -1,10 +1,8 @@
 #include "lua.h"
+#include "CRSFEndpoint.h"
 #include "CRSFRouter.h"
-#include "common.h"
 #include "logging.h"
 #include "options.h"
-
-static void (*devicePingCallback)() = nullptr;
 
 //LUA VARIABLES//
 
@@ -41,7 +39,7 @@ static uint8_t luaSelectionOptionMax(const char *strOptions)
   }
 }
 
-uint8_t getLabelLength(char *text, char separator){
+static uint8_t getLabelLength(char *text, char separator){
   char *c = (char*)text;
   //get label length up to null or lua separator ;
   while(*c != separator && *c != '\0'){
@@ -231,19 +229,20 @@ static void pushResponseChunk(struct luaItem_command *cmd, bool isElrs) {
   }
 }
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
+void CRSFEndpoint::sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message)
+{
   cmd->step = step;
   cmd->info = message;
   nextStatusChunk = 0;
   pushResponseChunk(cmd, false);
 }
 
-void luaRegisterDevicePingCallback(void (*callback)())
+void CRSFEndpoint::luaRegisterDevicePingCallback(void (*callback)())
 {
   devicePingCallback = callback;
 }
 
-void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
+void CRSFEndpoint::registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
   luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
@@ -253,7 +252,7 @@ void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent
   paramCallbacks[lastLuaField] = callback;
 }
 
-void luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk)
+void CRSFEndpoint::luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk)
 {
   struct luaPropertiesCommon *parameter = paramDefinitions[parameterIndex];
   requestOrigin = origin;
@@ -275,7 +274,7 @@ void luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, u
       break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        devicePingCallback();
+        if (devicePingCallback) devicePingCallback();
 #ifdef TARGET_TX
         sendLuaDevicePacket(CRSF_ADDRESS_CRSF_TRANSMITTER);
 #else
@@ -355,7 +354,7 @@ uint32_t VersionStrToU32(const char *verStr)
     return retVal;
 }
 
-void sendLuaDevicePacket(crsf_addr_e device_id)
+void CRSFEndpoint::sendLuaDevicePacket(const crsf_addr_e device_id)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   const uint8_t size = strlen(device_name)+1;
@@ -369,5 +368,5 @@ void sendLuaDevicePacket(crsf_addr_e device_id)
   device->fieldCnt = lastLuaField;
   device->parameterVersion = 0;
   crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin, device_id);
-  crsfRouter.deliverMessage(nullptr, (crsf_header_t *)deviceInformation);
+  crsfRouter.processMessage(nullptr, (crsf_header_t *)deviceInformation);
 }

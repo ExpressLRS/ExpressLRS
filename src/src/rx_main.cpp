@@ -3,7 +3,6 @@
 #include "rxtx_common.h"
 
 #include "crc.h"
-#include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"

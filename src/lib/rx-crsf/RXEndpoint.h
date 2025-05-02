@@ -7,6 +7,9 @@ public:
     RXEndpoint();
     bool handleRaw(const crsf_header_t *message) override;
     void handleMessage(const crsf_header_t *message) override;
+
+    void registerParameters() override;
+    void updateParameters() override;
 };
 
 #endif //RX_ENDPOINT_H

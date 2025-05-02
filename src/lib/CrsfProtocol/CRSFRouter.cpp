@@ -154,9 +154,9 @@ void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const uint8_t destinat
     outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
     deliverMessage(nullptr, (crsf_header_t *)outBuffer);
 }
+
 uint8_t CRSFRouter::getConnectorMaxPacketSize(crsf_addr_e origin) const
 {
-    uint8_t maxPacketSize = 0;
     for (const auto connector : connectors)
     {
         if (connector->forwardsTo(origin))

@@ -5,7 +5,6 @@
 
 #include "CRSFRouter.h"
 #include "common.h"
-#include "lua.h"
 #include "options.h"
 
 using namespace std;
@@ -19,6 +18,7 @@ class MockEndpoint : public CRSFEndpoint
 public:
     MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
     void handleMessage(const crsf_header_t *message) override {}
+    void fireDevicePacket() { sendLuaDevicePacket(); }
 } crsfEndpoint;
 
 class MockConnector : public CRSFConnector {
@@ -64,8 +64,8 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(22, DEVICE_INFORMATION_PAYLOAD_LENGTH);
     TEST_ASSERT_EQUAL(28, DEVICE_INFORMATION_LENGTH);
 
-    luaParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, 0, 0, 0);
-    sendLuaDevicePacket(CRSF_ADDRESS_CRSF_RECEIVER);
+    crsfEndpoint.luaParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, false, 0, 0, 0);
+    crsfEndpoint.fireDevicePacket();
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) connector.data.data();
 

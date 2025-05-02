@@ -140,16 +140,10 @@ void luaRegisterDevicePingCallback(void (*callback)());
 #define LUA_FIELD_SHOW(fld) { fld.common.type = (crsf_value_type_e)((uint8_t)fld.common.type & ~CRSF_FIELD_HIDDEN); }
 #define LUA_FIELD_VISIBLE(fld, cond) { if (cond) LUA_FIELD_SHOW(fld) else LUA_FIELD_HIDE(fld) }
 
-void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
-
-extern void luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t type, uint8_t index, uint8_t arg);
-
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
-void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
 
 uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value);
 
-void sendLuaDevicePacket(crsf_addr_e device_id);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
     luaStruct->value = newvalue;
 }

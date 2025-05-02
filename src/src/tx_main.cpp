@@ -5,7 +5,6 @@
 #include "lua.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "telemetry_protocol.h"
 #include "stubborn_receiver.h"
 #include "stubborn_sender.h"
 
@@ -469,9 +468,18 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   }
 }
 
-uint8_t adjustPacketRateForBaud(uint8_t rateIndex)
+uint8_t adjustPacketRateForBaud(const uint8_t rateIndex)
 {
-  return rateIndex = get_elrs_HandsetRate_max(rateIndex, handset->getMinPacketInterval());
+  return get_elrs_HandsetRate_max(rateIndex, handset->getMinPacketInterval());
+}
+
+uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize)
+{
+    // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
+    // range for 4ch mode
+    if (packetSize == OTA4_PACKET_SIZE&& eSwitchMode > smHybridOr16ch)
+        return smWideOr8ch;
+    return eSwitchMode;
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
@@ -878,7 +886,7 @@ static void ConfigChangeCommit()
   // Clear the commitInProgress flag so normal processing resumes
   commitInProgress = false;
   // UpdateFolderNames is expensive so it is called directly instead of in event() which gets called a lot
-  luadevUpdateFolderNames();
+  crsfTransmitter.luadevUpdateFolderNames();
   devicesTriggerEvent(changes);
 }
 

@@ -13,6 +13,10 @@ public:
     void handleMessage(const crsf_header_t *message) override;
     void RcPacketToChannelsData(const crsf_header_t *message);
 
+    void luadevUpdateFolderNames();
+    void registerParameters() override;
+    void updateParameters() override;
+
     void (*RecvModelUpdate)() = nullptr; // called when model id changes, ie command from Radio
     void (*OnBindingCommand)() = nullptr; // Called when a binding command is received
 

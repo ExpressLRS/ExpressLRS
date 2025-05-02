@@ -1,8 +1,8 @@
 #pragma once
 
+#include "OTA.h"
 #include "SerialIO.h"
 #include "FIFO.h"
-#include "telemetry_protocol.h"
 
 // Variables / constants for Airport //
 extern FIFO<AP_MAX_BUF_LEN> apInputBuffer;

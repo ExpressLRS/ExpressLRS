@@ -3,7 +3,9 @@
 #include "CRSFHandset.h"
 #include "common.h"
 #include "logging.h"
-#include "lua.h"
+
+#include "device.h"
+#include "config.h"
 
 #if defined(PLATFORM_ESP32)
 RTC_DATA_ATTR int rtcModelId = 0;
@@ -26,6 +28,7 @@ void TXModuleEndpoint::begin()
         if (RecvModelUpdate) RecvModelUpdate();
     }
 #endif
+    registerParameters();
 }
 
 bool TXModuleEndpoint::handleRaw(const crsf_header_t *message)

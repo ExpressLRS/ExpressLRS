@@ -17,9 +17,6 @@
 #include <cstdint>
 #endif // UNIT_TEST
 
-// Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
-// It should be incremented when the OTA packet structure is modified.
-#define OTA_VERSION_ID      4
 #define UID_LEN             6
 
 typedef enum : uint8_t
