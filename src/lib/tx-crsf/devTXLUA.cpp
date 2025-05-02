@@ -41,6 +41,7 @@
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
+extern TXModuleEndpoint crsfTransmitter;
 
 static char version_domain[20+1+6+1];
 char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
@@ -63,6 +64,9 @@ static const char luastrHeadTrackingEnable[] = "Off;On;" STR_LUA_ALLAUX_UPDOWN;
 static const char luastrHeadTrackingStart[] = "EdgeTX;" STR_LUA_ALLAUX;
 static const char luastrOffOn[] = "Off;On";
 static char luastrPacketRates[] = STR_LUA_PACKETRATES;
+
+static char luaBadGoodString[10];
+static uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 
 #if defined(RADIO_LR1121)
 static char luastrRFBands[32];
@@ -306,8 +310,6 @@ static struct luaItem_string luaBackpackVersion = {
 
 //---------------------------- BACKPACK ------------------
 
-static char luaBadGoodString[10];
-
 extern TxConfig config;
 extern void VtxTriggerSend();
 extern void ResetPower();
@@ -320,7 +322,77 @@ extern bool VRxBackpackWiFiReadyToSend;
 extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
 
-extern TXModuleEndpoint crsfTransmitter;
+
+void luaSupressCriticalErrors()
+{
+    // clear the critical error bits of the warning flags
+    luaWarningFlags &= 0b00011111;
+}
+
+/***
+ * @brief: Update the luaBadGoodString with the current bad/good count
+ * This item is hidden on our Lua and only displayed in other systems that don't poll our status
+ ****/
+static void pingCallback()
+{
+    luaSupressCriticalErrors();
+    itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
+    strcat(luaBadGoodString, "/");
+    itoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
+}
+
+
+void setLuaWarningFlag(lua_Flags flag, bool value)
+{
+  if (value)
+  {
+    luaWarningFlags |= 1 << (uint8_t)flag;
+  }
+  else
+  {
+    luaWarningFlags &= ~(1 << (uint8_t)flag);
+  }
+}
+
+void sendELRSstatus(crsf_addr_e origin)
+{
+  constexpr const char *messages[] = { //higher order = higher priority
+    "",                   //status2 = connected status
+    "",                   //status1, reserved for future use
+    "Model Mismatch",     //warning3, model mismatch
+    "[ ! Armed ! ]",      //warning2, AUX1 high / armed
+    "",           //warning1, reserved for future use
+    "Not while connected",  //critical warning3, trying to change a protected value while connected
+    "Baud rate too low",  //critical warning2, changing packet rate and baud rate too low
+    ""   //critical warning1, reserved for future use
+  };
+  auto warningInfo = "";
+
+  for (int i = 7; i >= 0; i--)
+  {
+      if (luaWarningFlags & (1 << i))
+      {
+          warningInfo = messages[i];
+          break;
+      }
+  }
+  const uint8_t payloadSize = sizeof(tagLuaElrsParams) + strlen(warningInfo) + 1;
+  uint8_t buffer[sizeof(crsf_ext_header_t) + payloadSize + 1];
+  const auto params = (struct tagLuaElrsParams *)&buffer[sizeof(crsf_ext_header_t)];
+
+  setLuaWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
+  setLuaWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
+  setLuaWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
+
+  params->pktsBad = CRSFHandset::BadPktsCountResult;
+  params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
+  params->flags = luaWarningFlags;
+  // to support sending a params.msg, buffer should be extended by the strlen of the message
+  // and copied into params->msg (with trailing null)
+  strcpy(params->msg, warningInfo);
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), origin, crsfTransmitter.getDeviceId());
+  crsfRouter.processMessage(nullptr, (crsf_header_t *)buffer);
+}
 
 static void luadevUpdateModelID() {
   itoa(crsfTransmitter.modelId, modelMatchUnit+6, 10);
@@ -555,18 +627,6 @@ static void updateFolderName_VtxAdmin()
     //don't show vtx settings if band is OFF
     luaVtxFolder.dyn_name = NULL;
   }
-}
-
-/***
- * @brief: Update the luaBadGoodString with the current bad/good count
- * This item is hidden on our Lua and only displayed in other systems that don't poll our status
- * Called from luaRegisterDevicePingCallback
- ****/
-static void luadevUpdateBadGood()
-{
-  itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
-  strcat(luaBadGoodString, "/");
-  itoa(CRSFHandset::GoodPktsCountResult, luaBadGoodString + strlen(luaBadGoodString), 10);
 }
 
 /***
@@ -1009,7 +1069,7 @@ static int start()
   registerLuaParameters();
 
   setLuaStringValue(&luaInfo, luaBadGoodString);
-  luaRegisterDevicePingCallback(&luadevUpdateBadGood);
+  luaRegisterDevicePingCallback(&pingCallback);
 
   event();
   return DURATION_NEVER;

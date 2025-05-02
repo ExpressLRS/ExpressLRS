@@ -93,6 +93,7 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
     {
         luaParamUpdateReq(
             extMessage->orig_addr,
+            false,
             extMessage->type,
             extMessage->payload[0],
             extMessage->payload[1]

@@ -2,6 +2,7 @@
 
 #include "CRSFHandset.h"
 #include "common.h"
+#include "logging.h"
 #include "lua.h"
 
 #if defined(PLATFORM_ESP32)
@@ -9,6 +10,8 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
 void SetSyncSpam();
+void sendELRSstatus(crsf_addr_e origin);
+void luaSupressCriticalErrors();
 
 TXModuleEndpoint::TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER), modelId(0)
 {
@@ -62,7 +65,24 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
         || packetType == CRSF_FRAMETYPE_PARAMETER_READ
         || packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        luaParamUpdateReq(extMessage->orig_addr, packetType, extMessage->payload[0], extMessage->payload[1]);
+        // dodgy hack because 'our' LUA script uses a different origin and we need to reply to the radio!
+        bool isElrsCalling = extMessage->orig_addr == CRSF_ADDRESS_ELRS_LUA;
+        crsf_addr_e requestOrigin = isElrsCalling ? CRSF_ADDRESS_RADIO_TRANSMITTER : extMessage->orig_addr;
+
+        if (packetType == CRSF_FRAMETYPE_PARAMETER_WRITE)
+        {
+            if (extMessage->payload[0] == 0)
+            {
+                // special case for elrs linkstat request
+                DBGVLN("ELRS status request");
+                sendELRSstatus(requestOrigin);
+            }
+            else if (extMessage->payload[0] == 0x2E)
+            {
+                luaSupressCriticalErrors();
+            }
+        }
+        luaParamUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);
         SetSyncSpam();
     }
 }
