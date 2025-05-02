@@ -11,20 +11,17 @@ public:
 
     void forwardMessage(const crsf_header_t *message) override;
 
-    void AddMspMessage(uint8_t length, uint8_t *data);
+    void resetOutputQueue();
 
-    void ResetMspQueue();
-
-    void pumpMspSender();
+    void pumpSender();
 
 private:
-    void UnlockMspMessage();
-    void GetMspMessage(uint8_t **data, uint8_t *len);
+    void unlockMessage();
 
     static constexpr auto MSP_SERIAL_OUT_FIFO_SIZE = 256U;
-    FIFO<MSP_SERIAL_OUT_FIFO_SIZE> MspWriteFIFO;
-    uint8_t MspData[ELRS_MSP_BUFFER] = {};
-    uint8_t MspDataLength = 0;
+    FIFO<MSP_SERIAL_OUT_FIFO_SIZE> outputQueue;
+    uint8_t currentTransmissionBuffer[ELRS_MSP_BUFFER] = {};
+    uint8_t currentTransmissionLength = 0;
 };
 
 #endif //TX_OTA_CONNECTOR_H

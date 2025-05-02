@@ -965,7 +965,7 @@ static void UpdateConnectDisconnectStatus()
 
 void clearOTAQueue()
 {
-    otaConnector.ResetMspQueue();
+    otaConnector.resetOutputQueue();
 }
 
 void SetSyncSpam()
@@ -1578,7 +1578,7 @@ void loop()
   }
   else if (!MspSender.IsActive())
   {
-    otaConnector.pumpMspSender();
+    otaConnector.pumpSender();
   }
 
   if (config.GetLinkMode() == TX_MAVLINK_MODE)

@@ -49,6 +49,17 @@ public:
      */
     virtual void forwardMessage(const crsf_header_t *message) = 0;
 
+    /**
+     * @brief Logs debugging information for a CRSF message.
+     *
+     * This method outputs details about a given CRSF message, including
+     * the device address, frame size, and type. If the message type
+     * corresponds to an extended header frame (e.g., `CRSF_FRAMETYPE_DEVICE_PING` or higher),
+     * additional fields such as destination and origin addresses are also logged.
+     *
+     * @param str A prefix or context string to include in the debug output.
+     * @param message A pointer to the CRSF message header structure containing the data to be logged.
+     */
     static void debugCRSF(const char * str, const crsf_header_t * message);
 
 private:

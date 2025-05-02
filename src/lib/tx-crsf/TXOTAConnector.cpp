@@ -12,96 +12,81 @@ TXOTAConnector::TXOTAConnector()
     addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
+void TXOTAConnector::pumpSender()
+{
+    static bool transferActive = false;
+    // sending is done and we need to update our flag
+    if (transferActive)
+    {
+        // unlock buffer for msp messages
+        unlockMessage();
+        transferActive = false;
+    }
+    // we are not sending so look for next msp package
+    if (!transferActive)
+    {
+        // if we have a new msp package start sending
+        if (currentTransmissionLength > 0)
+        {
+            MspSender.SetDataToTransmit(currentTransmissionBuffer, currentTransmissionLength);
+            transferActive = true;
+        }
+    }
+}
+
+void TXOTAConnector::resetOutputQueue()
+{
+    outputQueue.flush();
+    currentTransmissionLength = 0;
+}
+
+void TXOTAConnector::unlockMessage()
+{
+    // the current msp message is sent so restore the next buffered write
+    if (outputQueue.size() > 0)
+    {
+        outputQueue.lock();
+        currentTransmissionLength = outputQueue.pop();
+        outputQueue.popBytes(currentTransmissionBuffer, currentTransmissionLength);
+        outputQueue.unlock();
+    }
+    else
+    {
+        // no msp message is ready to send currently
+        currentTransmissionLength = 0;
+    }
+}
+
 void TXOTAConnector::forwardMessage(const crsf_header_t *message)
 {
     if (connectionState == connected)
     {
         const uint8_t length = message->frame_size + 2;
-        AddMspMessage(length, (uint8_t *)message);
-    }
-}
-
-void TXOTAConnector::pumpMspSender()
-{
-    static bool mspTransferActive = false;
-    // sending is done and we need to update our flag
-    if (mspTransferActive)
-    {
-        // unlock buffer for msp messages
-        UnlockMspMessage();
-        mspTransferActive = false;
-    }
-    // we are not sending so look for next msp package
-    if (!mspTransferActive)
-    {
-        uint8_t* mspData;
-        uint8_t mspLen;
-        GetMspMessage(&mspData, &mspLen);
-        // if we have a new msp package start sending
-        if (mspData != nullptr)
+        if (length > ELRS_MSP_BUFFER)
         {
-            MspSender.SetDataToTransmit(mspData, mspLen);
-            mspTransferActive = true;
+            return;
         }
-    }
-}
 
-void TXOTAConnector::GetMspMessage(uint8_t **data, uint8_t *len)
-{
-    *len = MspDataLength;
-    *data = (MspDataLength > 0) ? MspData : nullptr;
-}
-
-void TXOTAConnector::ResetMspQueue()
-{
-    MspWriteFIFO.flush();
-    MspDataLength = 0;
-    memset(MspData, 0, ELRS_MSP_BUFFER);
-}
-
-void TXOTAConnector::UnlockMspMessage()
-{
-    // the current msp message is sent so restore the next buffered write
-    if (MspWriteFIFO.size() > 0)
-    {
-        MspWriteFIFO.lock();
-        MspDataLength = MspWriteFIFO.pop();
-        MspWriteFIFO.popBytes(MspData, MspDataLength);
-        MspWriteFIFO.unlock();
-    }
-    else
-    {
-        // no msp message is ready to send currently
-        MspDataLength = 0;
-        memset(MspData, 0, ELRS_MSP_BUFFER);
-    }
-}
-
-void TXOTAConnector::AddMspMessage(const uint8_t length, uint8_t* data)
-{
-    if (length > ELRS_MSP_BUFFER)
-    {
-        return;
-    }
-
-    // store next msp message
-    if (MspDataLength == 0)
-    {
-        for (uint8_t i = 0; i < length; i++)
+        // store next msp message
+        const auto data = (uint8_t *)message;
+        if (currentTransmissionLength == 0)
         {
-            MspData[i] = data[i];
+            for (uint8_t i = 0; i < length; i++)
+            {
+                currentTransmissionBuffer[i] = data[i];
+            }
+            currentTransmissionLength = length;
         }
-        MspDataLength = length;
-    }
-    // store all write-requests since an update does send multiple writes
-    else
-    {
-        MspWriteFIFO.lock();
-        if (MspWriteFIFO.ensure(length + 1))
+        // store all write-requests since an update does send multiple writes
+        else
         {
-            MspWriteFIFO.push(length);
-            MspWriteFIFO.pushBytes((const uint8_t *)data, length);
+            outputQueue.lock();
+            if (outputQueue.ensure(length + 1))
+            {
+                outputQueue.push(length);
+                outputQueue.pushBytes((const uint8_t *)data, length);
+            }
+            outputQueue.unlock();
         }
-        MspWriteFIFO.unlock();
     }
 }
