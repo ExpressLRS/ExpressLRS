@@ -1401,11 +1401,12 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    crsfEndpoint = new TXModuleEndpoint();
-    static_cast<TXModuleEndpoint *>(crsfEndpoint)->OnBindingCommand = EnterBindingModeSafely;
-    static_cast<TXModuleEndpoint *>(crsfEndpoint)->RecvModelUpdate = ModelUpdateReq;
-
-    crsfEndpoint->addConnector(&otaConnector);
+    const auto endpoint = new TXModuleEndpoint();
+    crsfEndpoint = endpoint;
+    endpoint->OnBindingCommand = EnterBindingModeSafely;
+    endpoint->RecvModelUpdate = ModelUpdateReq;
+    endpoint->addConnector(&otaConnector);
+    endpoint->begin();
     // When a CRSF handset is detected, it will add itself to the endpoint
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
