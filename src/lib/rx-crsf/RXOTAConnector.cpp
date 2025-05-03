@@ -11,6 +11,5 @@ RXOTAConnector::RXOTAConnector()
 
 void RXOTAConnector::forwardMessage(const crsf_header_t *message)
 {
-    debugCRSF("OTA forward", message);
     telemetry.AppendTelemetryPackage((uint8_t *)message);
 }

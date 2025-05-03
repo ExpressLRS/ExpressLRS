@@ -12,10 +12,10 @@ extern void reset_into_bootloader();
 
 void SerialCRSF::forwardMessage(const crsf_header_t *message)
 {
-    // No MSP data to the FC if no model match
-    if (connectionHasModelMatch && teamraceHasModelMatch)
+    // No MSP data to the FC if team-race is selected and the correct model is not selected
+    if (teamraceHasModelMatch)
     {
-        auto * data = (uint8_t *)message;
+        const auto *data = (uint8_t *)message;
         const uint8_t totalBufferLen = data[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES;
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
         {
