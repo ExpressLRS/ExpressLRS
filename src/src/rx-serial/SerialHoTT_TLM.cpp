@@ -271,13 +271,13 @@ void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
     crsfBaro = {0};
     crsfBaro.p.altitude = htobe16(getHoTTaltitude() * 10 + 5000); // Hott 500 = 0m, ELRS 10000 = 0.0m
     crsfBaro.p.verticalspd = htobe16(getHoTTvv() - 30000);
-    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastVarioSent >= VARIO_MIN_CRSFRATE) || (lastVarioCRC != crsfBaro.crc))
     {
         lastVarioSent = now;
-        crsfEndpoint->processMessage(nullptr, &crsfBaro.h);
+        crsfEndpoint->deliverMessage(nullptr, &crsfBaro.h);
     }
 
     lastVarioCRC = crsfBaro.crc;
@@ -294,13 +294,13 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     crsfGPS.p.gps_heading = htobe16(getHoTTheading() * 100);
     crsfGPS.p.altitude = htobe16(getHoTTMSLaltitude() + 1000); // HoTT 1 = 1m, CRSF: 0m = 1000
     crsfGPS.p.satellites_in_use = getHoTTsatellites();
-    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastGPSSent >= GPS_MIN_CRSFRATE) || (lastGPSCRC != crsfGPS.crc))
     {
         lastGPSSent = now;
-        crsfEndpoint->processMessage(nullptr, &crsfGPS.h);
+        crsfEndpoint->deliverMessage(nullptr, &crsfGPS.h);
     }
 
     lastGPSCRC = crsfGPS.crc;
@@ -318,13 +318,13 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     crsfBatt.p.current = htobe16(getHoTTcurrent());
     crsfBatt.p.capacity = htobe24(getHoTTcapacity() * 10); // HoTT: 1 = 10mAh, CRSF: 1 ? 1 = 1mAh
     crsfBatt.p.remaining = getHoTTremaining();
-    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastBatterySent >= BATT_MIN_CRSFRATE) || (lastBatteryCRC != crsfBatt.crc))
     {
         lastBatterySent = now;
-        crsfEndpoint->processMessage(nullptr, &crsfBatt.h);
+        crsfEndpoint->deliverMessage(nullptr, &crsfBatt.h);
     }
 
     lastBatteryCRC = crsfBatt.crc;

@@ -30,6 +30,14 @@ void CRSFEndpoint::processMessage(CRSFConnector *connector, const crsf_header_t 
         }
     }
 
+    deliverMessage(connector, message);
+}
+
+void CRSFEndpoint::deliverMessage(const CRSFConnector *connector, const crsf_header_t *message) const
+{
+    const crsf_frame_type_e packetType = message->type;
+    const auto extMessage = (crsf_ext_header_t *)message;
+
     // deliver extended header messages to the connector that 'knows' about the destination device address
     if (packetType >= CRSF_FRAMETYPE_DEVICE_PING && extMessage->dest_addr != CRSF_ADDRESS_BROADCAST)
     {
@@ -128,5 +136,5 @@ void CRSFEndpoint::AddMspMessage(const mspPacket_t * packet, const uint8_t desti
 
     // CRSF frame crc
     outBuffer[totalBufferLen - 1] = crsf_crc.calc(&outBuffer[2], packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC - 1);
-    processMessage(nullptr, (crsf_header_t *)outBuffer);
+    deliverMessage(nullptr, (crsf_header_t *)outBuffer);
 }

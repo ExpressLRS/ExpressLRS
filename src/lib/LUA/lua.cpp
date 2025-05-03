@@ -223,7 +223,7 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, ui
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
   memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
   crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin);
-  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)paramInformation);
+  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)paramInformation);
   return chunkCnt - (fieldChunk+1);
 }
 
@@ -302,7 +302,7 @@ void sendELRSstatus()
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
   crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin);
-  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)buffer);
+  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)buffer);
 }
 
 void luaRegisterDevicePingCallback(void (*callback)())
@@ -468,5 +468,5 @@ void sendLuaDevicePacket(void)
   device->fieldCnt = lastLuaField;
   device->parameterVersion = 0;
   crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin);
-  crsfEndpoint->processMessage(nullptr, (crsf_header_t *)deviceInformation);
+  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)deviceInformation);
 }

@@ -1909,7 +1909,7 @@ static void checkSendLinkStatsToFc(uint32_t now)
             uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(linkStatsSize)];
             crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_FLIGHT_CONTROLLER);
             // the linkStats originates from the OTA connector so we don't send it back there.
-            crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+            crsfEndpoint->deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;

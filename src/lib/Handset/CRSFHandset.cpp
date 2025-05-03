@@ -187,7 +187,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
             },
             .crc = crsfEndpoint->crsf_crc.calc((uint8_t *)&sync_packet + CRSF_TELEMETRY_TYPE_INDEX, sizeof(sync_packet)-3)
         };
-        crsfEndpoint->processMessage(nullptr, (crsf_header_t *)&sync_packet);
+        crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)&sync_packet);
 
         OpenTXsyncLastSent = now;
     }

@@ -50,17 +50,30 @@ public:
     virtual void handleMessage(const crsf_header_t * message) = 0;
 
     /**
-     * Processes an incoming CRSF message received by the connector.
+     * Processes a CRSF message received by a connector and determines the appropriate actions.
      *
-     * This function handles CRSF messages by routing them to the appropriate destination,
-     * processing them if necessary, or forwarding them to other connectors as required.
-     * It distinguishes between standard and extended header messages and manages broadcast
-     * and device-specific communications.
+     * This function evaluates the received message to determine whether it should be handled
+     * directly, routed to another device, or delivered to one of the connectors managed by
+     * the CRSFEndpoint instance. It ensures proper routing of messages based on their type
+     * and destination address, including device-based and broadcast scenarios.
      *
      * @param connector Pointer to the CRSFConnector that received the message.
      * @param message Pointer to the CRSF message header structure containing the message data.
      */
     void processMessage(CRSFConnector *connector, const crsf_header_t *message);
+
+    /**
+     * Routes a CRSF message received by a connector to its appropriate destination.
+     *
+     * This function determines whether the message is device-specific or a broadcast message
+     * and forwards it accordingly. For device-specific messages with a known destination address,
+     * the message is delivered to the connector responsible for that address. For broadcast messages
+     * or messages with an unknown destination, the message is forwarded to all other connectors.
+     *
+     * @param connector Pointer to the CRSFConnector that received the message.
+     * @param message Pointer to the CRSF message header structure containing the message data.
+     */
+    void deliverMessage(const CRSFConnector *connector, const crsf_header_t *message) const;
 
     void SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength);
     void SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);

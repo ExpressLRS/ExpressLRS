@@ -25,7 +25,7 @@ static void ap_send_crsf_passthrough_single(CRSFConnector *origin, uint16_t appi
     crsfpassthrough.p.data = data;
 
     crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->processMessage(origin, &crsfpassthrough.h);
+    crsfEndpoint->deliverMessage(origin, &crsfpassthrough.h);
 }
 
 /*
@@ -47,7 +47,7 @@ static void ap_send_crsf_passthrough_text(CRSFConnector *origin, const char *tex
     memcpy(crsftext.p.text, text, sizeof(crsftext.p.text));
 
     crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsftext, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsftext)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->processMessage(origin, &crsftext.h);
+    crsfEndpoint->deliverMessage(origin, &crsftext.h);
 }
 
 /*
@@ -76,7 +76,7 @@ static void ap_send_crsf_passthrough_multi(CRSFConnector *origin, uint16_t appid
     crsfpassthrough.p.items[1].data = data2;
 
     crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfpassthrough, CRSF_FRAMETYPE_ARDUPILOT_RESP, CRSF_FRAME_SIZE(sizeof(crsfpassthrough)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->processMessage(origin, &crsfpassthrough.h);
+    crsfEndpoint->deliverMessage(origin, &crsfpassthrough.h);
 }
 
 void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer, uint8_t count)
@@ -132,7 +132,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                     crsfbatt.p.remaining = (uint8_t) battery_status.battery_remaining;
                 }
                 crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-                crsfEndpoint->processMessage(origin, &crsfbatt.h);
+                crsfEndpoint->deliverMessage(origin, &crsfbatt.h);
 
                 // send the batt1 message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(origin, 0x5003, format_batt1(battery_status.voltages[0], battery_status.current_battery, battery_status.current_consumed));
@@ -157,7 +157,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 crsfgps.p.gps_heading = htobe16(gps_int.cog);
                 crsfgps.p.satellites_in_use = gps_int.satellites_visible;
                 crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-                crsfEndpoint->processMessage(origin, &crsfgps.h);
+                crsfEndpoint->deliverMessage(origin, &crsfgps.h);
 
                 // send the gps_status message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(origin, 0x5002, format_gps_status(gps_int.fix_type, gps_int.alt, gps_int.eph, gps_int.satellites_visible));
@@ -185,7 +185,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 relative_alt_mm = global_pos.relative_alt;
                 crsfvario.p.verticalspd = htobe16(-global_pos.vz); // MAVLink vz is positive down
                 crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfvario, CRSF_FRAMETYPE_VARIO, CRSF_FRAME_SIZE(sizeof(crsf_sensor_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-                crsfEndpoint->processMessage(origin, &crsfvario.h);
+                crsfEndpoint->deliverMessage(origin, &crsfvario.h);
                 break;
             }
             case MAVLINK_MSG_ID_ATTITUDE: {
@@ -197,7 +197,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                 crsfatt.p.roll = htobe16(attitude.roll * 10000);
                 crsfatt.p.yaw = htobe16(attitude.yaw * 10000);
                 crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfatt, CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_attitude_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-                crsfEndpoint->processMessage(origin, &crsfatt.h);
+                crsfEndpoint->deliverMessage(origin, &crsfatt.h);
 
                 // send the attitude message to Yaapu Telemetry Script
                 ap_send_crsf_passthrough_single(origin, 0x5006, format_attiandrng(attitude.pitch, attitude.roll));
@@ -216,7 +216,7 @@ void convert_mavlink_to_crsf_telem(CRSFConnector *origin, uint8_t *CRSFinBuffer,
                     crsffm.p.flight_mode[len + 1] = '\0';
                 }
                 crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsffm, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAME_SIZE(sizeof(crsffm)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-                crsfEndpoint->processMessage(origin, &crsffm.h);
+                crsfEndpoint->deliverMessage(origin, &crsffm.h);
 
                 /**
                  * There is a mandatory order for these message items.
