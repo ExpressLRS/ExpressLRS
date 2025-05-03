@@ -2,11 +2,13 @@
 #define CRSF_ENDPOINT_H
 
 #include "CRSFConnector.h"
+#include "CRSFParameters.h"
 #include "crc.h"
-#include "lua.h"
 #include "msp.h"
 
 #include <vector>
+
+#define LUA_MAX_PARAMS 64
 
 class CRSFEndpoint {
 public:
@@ -47,21 +49,38 @@ public:
      */
     virtual void handleMessage(const crsf_header_t * message) = 0;
 
-    void luaRegisterDevicePingCallback(void (*callback)());
-
     virtual void registerParameters() {}
     virtual void updateParameters() {}
-    void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint8_t parent = 0);
-    void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
-    void luaParamUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
+    void registerDevicePingCallback(void (*callback)());
+    void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message); // FIXME should really be protected
 
 protected:
-    void sendLuaDevicePacket(crsf_addr_e device_id);
+    void registerParameter(void *definition, parameterHandlerCallback callback = nullptr, uint8_t parent = 0);
+    void sendDeviceInformationPacket();
+    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
 
 private:
     crsf_addr_e device_id;
 
+    // CRSF Parameter handling
+    crsf_addr_e requestOrigin;
     void (*devicePingCallback)() = nullptr;
+
+    propertiesCommon *paramDefinitions[LUA_MAX_PARAMS];
+    parameterHandlerCallback paramCallbacks[LUA_MAX_PARAMS] = {nullptr};
+
+    uint8_t lastLuaField = 0;
+    uint8_t nextStatusChunk = 0;
+
+    static uint8_t *textSelectionParameterToArray(const selectionParameter *parameter, uint8_t *next);
+    static uint8_t *commandParameterToArray(const commandParameter *parameter, uint8_t *next);
+    static uint8_t *int8ParameterToArray(const int8Parameter *parameter, uint8_t *next);
+    static uint8_t *int16ParameterToArray(const int16Parameter *parameter, uint8_t *next);
+    static uint8_t *stringParameterToArray(const stringParameter *parameter, uint8_t *next);
+    uint8_t *folderParameterToArray(const folderParameter *parameter, uint8_t *next) const;
+
+    uint8_t sendParameter(crsf_addr_e origin, bool isElrs, crsf_frame_type_e frameType, uint8_t fieldChunk, const propertiesCommon *luaData);
+    void pushResponseChunk(commandParameter *cmd, bool isElrs);
 };
 
 #endif //CRSF_ENDPOINT_H

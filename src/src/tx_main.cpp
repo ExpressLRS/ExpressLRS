@@ -1,8 +1,8 @@
 #include "rxtx_common.h"
 
 #include "CRSFHandset.h"
+#include "CRSFParameters.h"
 #include "dynpower.h"
-#include "lua.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "stubborn_receiver.h"

@@ -20,7 +20,7 @@ extern RXEndpoint crsfReceiver;
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 
-static struct luaItem_selection luaSerialProtocol = {
+static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink;DisplayPort;GPS",
@@ -28,7 +28,7 @@ static struct luaItem_selection luaSerialProtocol = {
 };
 
 #if defined(PLATFORM_ESP32)
-static struct luaItem_selection luaSerial1Protocol = {
+static selectionParameter luaSerial1Protocol = {
     {"Protocol2", CRSF_TEXT_SELECTION},
     0, // value
     "Off;CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;Tramp;SmartAudio;DisplayPort;GPS",
@@ -36,14 +36,14 @@ static struct luaItem_selection luaSerial1Protocol = {
 };
 #endif
 
-static struct luaItem_selection luaSBUSFailsafeMode = {
+static selectionParameter luaSBUSFailsafeMode = {
     {"SBUS failsafe", CRSF_TEXT_SELECTION},
     0, // value
     "No Pulses;Last Pos",
     STR_EMPTYSPACE
 };
 
-static struct luaItem_int8 luaTargetSysId = {
+static int8Parameter luaTargetSysId = {
   {"Target SysID", CRSF_UINT8},
   {
     {
@@ -54,7 +54,7 @@ static struct luaItem_int8 luaTargetSysId = {
   },
   STR_EMPTYSPACE
 };
-static struct luaItem_int8 luaSourceSysId = {
+static int8Parameter luaSourceSysId = {
   {"Source SysID", CRSF_UINT8},
   {
     {
@@ -66,32 +66,32 @@ static struct luaItem_int8 luaSourceSysId = {
   STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaTlmPower = {
+static selectionParameter luaTlmPower = {
     {"Tlm Power", CRSF_TEXT_SELECTION},
     0, // value
     strPowerLevels,
     "mW"
 };
 
-static struct luaItem_selection luaAntennaMode = {
+static selectionParameter luaAntennaMode = {
     {"Ant. Mode", CRSF_TEXT_SELECTION},
     0, // value
     "Antenna A;Antenna B;Diversity",
     STR_EMPTYSPACE
 };
 
-static struct luaItem_folder luaTeamraceFolder = {
+static folderParameter luaTeamraceFolder = {
     {"Team Race", CRSF_FOLDER},
 };
 
-static struct luaItem_selection luaTeamraceChannel = {
+static selectionParameter luaTeamraceChannel = {
     {"Channel", CRSF_TEXT_SELECTION},
     0, // value
     "AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10;AUX11;AUX12",
     STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaTeamracePosition = {
+static selectionParameter luaTeamracePosition = {
     {"Position", CRSF_TEXT_SELECTION},
     0, // value
     "Disabled;1/Low;2;3;Mid;4;5;6/High",
@@ -100,12 +100,12 @@ static struct luaItem_selection luaTeamracePosition = {
 
 //----------------------------Info-----------------------------------
 
-static struct luaItem_string luaModelNumber = {
+static stringParameter luaModelNumber = {
     {"Model Id", CRSF_INFO},
     modelString
 };
 
-static struct luaItem_string luaELRSversion = {
+static stringParameter luaELRSversion = {
     {version, CRSF_INFO},
     commit
 };
@@ -119,11 +119,11 @@ static struct luaItem_string luaELRSversion = {
 
 //---------------------------- Output Mapping -----------------------------
 
-static struct luaItem_folder luaMappingFolder = {
+static folderParameter luaMappingFolder = {
     {"Output Mapping", CRSF_FOLDER},
 };
 
-static struct luaItem_int8 luaMappingChannelOut = {
+static int8Parameter luaMappingChannelOut = {
   {"Output Ch", CRSF_UINT8},
   {
     {
@@ -135,7 +135,7 @@ static struct luaItem_int8 luaMappingChannelOut = {
   STR_EMPTYSPACE
 };
 
-static struct luaItem_int8 luaMappingChannelIn = {
+static int8Parameter luaMappingChannelIn = {
   {"Input Ch", CRSF_UINT8},
   {
     {
@@ -147,21 +147,21 @@ static struct luaItem_int8 luaMappingChannelIn = {
   STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaMappingOutputMode = {
+static selectionParameter luaMappingOutputMode = {
     {"Output Mode", CRSF_TEXT_SELECTION},
     0, // value
     pwmModes,
     STR_EMPTYSPACE
 };
 
-static struct luaItem_selection luaMappingInverted = {
+static selectionParameter luaMappingInverted = {
     {"Invert", CRSF_TEXT_SELECTION},
     0, // value
     "Off;On",
     STR_EMPTYSPACE
 };
 
-static struct luaItem_command luaSetFailsafe = {
+static commandParameter luaSetFailsafe = {
     {"Set Failsafe Pos", CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
@@ -169,20 +169,20 @@ static struct luaItem_command luaSetFailsafe = {
 
 //---------------------------- Output Mapping -----------------------------
 
-static struct luaItem_selection luaBindStorage = {
+static selectionParameter luaBindStorage = {
     {"Bind Storage", CRSF_TEXT_SELECTION},
     0, // value
     "Persistent;Volatile;Returnable;Administered",
     STR_EMPTYSPACE
 };
 
-static struct luaItem_command luaBindMode = {
+static commandParameter luaBindMode = {
     {STR_EMPTYSPACE, CRSF_COMMAND},
     lcsIdle, // step
     STR_EMPTYSPACE
 };
 
-static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 {
     bool sclAssigned = false;
     bool sdaAssigned = false;
@@ -366,7 +366,7 @@ static void luaparamMappingChannelOut(struct luaPropertiesCommon *item, uint8_t 
     setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
 }
 
-static void luaparamMappingChannelIn(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamMappingChannelIn(propertiesCommon *item, uint8_t arg)
 {
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
   rx_config_pwm_t newPwmCh;
@@ -410,7 +410,7 @@ static void configureSerialPin(uint8_t sibling, uint8_t oldMode, uint8_t newMode
   }
 }
 
-static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamMappingOutputMode(propertiesCommon *item, uint8_t arg)
 {
   UNUSED(item);
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
@@ -431,7 +431,7 @@ static void luaparamMappingOutputMode(struct luaPropertiesCommon *item, uint8_t 
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamMappingInverted(propertiesCommon *item, uint8_t arg)
 {
   UNUSED(item);
   const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
@@ -442,9 +442,9 @@ static void luaparamMappingInverted(struct luaPropertiesCommon *item, uint8_t ar
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
+static void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
 {
-  luaCmdStep_e newStep;
+  commandStep_e newStep;
   const char *msg;
   if (arg == lcsClick)
   {
@@ -474,10 +474,10 @@ static void luaparamSetFailsafe(struct luaPropertiesCommon *item, uint8_t arg)
     msg = STR_EMPTYSPACE;
   }
 
-  crsfReceiver.sendLuaCommandResponse((struct luaItem_command *)item, newStep, msg);
+  crsfReceiver.sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
-static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
+static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
 {
   UNUSED(item);
   uint8_t newPower = arg + POWERMGNT::getMinPower();
@@ -492,7 +492,7 @@ static void luaparamSetPower(struct luaPropertiesCommon* item, uint8_t arg)
 
 void RXEndpoint::registerParameters()
 {
-  registerLUAParameter(&luaSerialProtocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerParameter(&luaSerialProtocol, [](propertiesCommon* item, uint8_t arg){
     config.SetSerialProtocol((eSerialProtocol)arg);
     if (config.IsModified()) {
       deferExecutionMillis(100, [](){
@@ -504,7 +504,7 @@ void RXEndpoint::registerParameters()
 #if defined(PLATFORM_ESP32)
   if (RX_HAS_SERIAL1)
   {
-    registerLUAParameter(&luaSerial1Protocol, [](struct luaPropertiesCommon* item, uint8_t arg){
+    registerParameter(&luaSerial1Protocol, [](propertiesCommon* item, uint8_t arg){
       config.SetSerial1Protocol((eSerial1Protocol)arg);
       if (config.IsModified()) {
         deferExecutionMillis(100, [](){
@@ -515,20 +515,20 @@ void RXEndpoint::registerParameters()
   }
 #endif
 
-  registerLUAParameter(&luaSBUSFailsafeMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerParameter(&luaSBUSFailsafeMode, [](propertiesCommon* item, uint8_t arg){
     config.SetFailsafeMode((eFailsafeMode)arg);
   });
 
-  registerLUAParameter(&luaTargetSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerParameter(&luaTargetSysId, [](propertiesCommon* item, uint8_t arg){
     config.SetTargetSysId((uint8_t)arg);
   });
-  registerLUAParameter(&luaSourceSysId, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerParameter(&luaSourceSysId, [](propertiesCommon* item, uint8_t arg){
     config.SetSourceSysId((uint8_t)arg);
   });
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
-    registerLUAParameter(&luaAntennaMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+    registerParameter(&luaAntennaMode, [](propertiesCommon* item, uint8_t arg){
       config.SetAntennaMode(arg);
     });
   }
@@ -536,42 +536,42 @@ void RXEndpoint::registerParameters()
   if (MinPower != MaxPower)
   {
     luadevGeneratePowerOpts(&luaTlmPower);
-    registerLUAParameter(&luaTlmPower, &luaparamSetPower);
+    registerParameter(&luaTlmPower, &luaparamSetPower);
   }
 
   // Teamrace
-  registerLUAParameter(&luaTeamraceFolder);
-  registerLUAParameter(&luaTeamraceChannel, [](struct luaPropertiesCommon* item, uint8_t arg) {
+  registerParameter(&luaTeamraceFolder);
+  registerParameter(&luaTeamraceChannel, [](propertiesCommon* item, uint8_t arg) {
     config.SetTeamraceChannel(arg + AUX2);
   }, luaTeamraceFolder.common.id);
-  registerLUAParameter(&luaTeamracePosition, [](struct luaPropertiesCommon* item, uint8_t arg) {
+  registerParameter(&luaTeamracePosition, [](propertiesCommon* item, uint8_t arg) {
     config.SetTeamracePosition(arg);
   }, luaTeamraceFolder.common.id);
 
   if (OPT_HAS_SERVO_OUTPUT)
   {
     luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
-    registerLUAParameter(&luaMappingFolder);
-    registerLUAParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
-    registerLUAParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerLUAParameter(&luaSetFailsafe, &luaparamSetFailsafe);
+    registerParameter(&luaMappingFolder);
+    registerParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
+    registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
+    registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerParameter(&luaSetFailsafe, &luaparamSetFailsafe);
   }
 
-  registerLUAParameter(&luaBindStorage, [](struct luaPropertiesCommon* item, uint8_t arg) {
+  registerParameter(&luaBindStorage, [](propertiesCommon* item, uint8_t arg) {
     config.SetBindStorage((rx_config_bindstorage_t)arg);
   });
-  registerLUAParameter(&luaBindMode, [](struct luaPropertiesCommon* item, uint8_t arg){
+  registerParameter(&luaBindMode, [](propertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
       deferExecutionMillis(200, EnterBindingModeSafely);
     }
-    crsfReceiver.sendLuaCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
+    crsfReceiver.sendCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
   });
 
-  registerLUAParameter(&luaModelNumber);
-  registerLUAParameter(&luaELRSversion);
+  registerParameter(&luaModelNumber);
+  registerParameter(&luaELRSversion);
 }
 
 static void updateBindModeLabel()

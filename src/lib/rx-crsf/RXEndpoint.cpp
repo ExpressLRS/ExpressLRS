@@ -1,12 +1,12 @@
 #include "RXEndpoint.h"
 
+#include "CRSFParameters.h"
 #include "config.h"
 #include "crsf2msp.h"
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "logging.h"
-#include "lua.h"
 #include "msptypes.h"
 
 #if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
@@ -91,7 +91,7 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
              message->type == CRSF_FRAMETYPE_PARAMETER_READ ||
              message->type == CRSF_FRAMETYPE_PARAMETER_WRITE)
     {
-        luaParamUpdateReq(
+        parameterUpdateReq(
             extMessage->orig_addr,
             false,
             extMessage->type,

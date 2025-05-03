@@ -155,7 +155,7 @@ void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const uint8_t destinat
     deliverMessage(nullptr, (crsf_header_t *)outBuffer);
 }
 
-uint8_t CRSFRouter::getConnectorMaxPacketSize(crsf_addr_e origin) const
+uint8_t CRSFRouter::getConnectorMaxPacketSize(const crsf_addr_e origin) const
 {
     for (const auto connector : connectors)
     {

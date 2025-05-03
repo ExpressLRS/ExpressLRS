@@ -6,11 +6,10 @@ extern TXModuleEndpoint crsfTransmitter;
 
 static int event()
 {
-  if (connectionState > FAILURE_STATES)
+  if (connectionState < FAILURE_STATES)
   {
-    return DURATION_NEVER;
+    crsfTransmitter.updateParameters();
   }
-  crsfTransmitter.updateParameters();
   return DURATION_NEVER;
 }
 

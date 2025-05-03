@@ -4,6 +4,7 @@
 #include "common.h"
 #include "logging.h"
 
+#include "FHSS.h"
 #include "device.h"
 #include "config.h"
 
@@ -85,7 +86,7 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
                 luaSupressCriticalErrors();
             }
         }
-        luaParamUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);
+        parameterUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);
         SetSyncSpam();
     }
 }

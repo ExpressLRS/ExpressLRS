@@ -1,14 +1,14 @@
 #pragma once
 
+#include "CRSFParameters.h"
 #include "common.h"
-#include "lua.h"
 
 // Common functions
-void luadevGeneratePowerOpts(luaItem_selection *luaPower);
+void luadevGeneratePowerOpts(selectionParameter *luaPower);
 
 // Common Lua storage (mutable)
 extern char strPowerLevels[];
 
 // Common Lua storate (constant)
-extern const char STR_EMPTYSPACE[];
+constexpr char STR_EMPTYSPACE[1] = {};
 extern const char STR_LUA_PACKETRATES[];

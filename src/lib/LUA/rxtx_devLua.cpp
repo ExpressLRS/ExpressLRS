@@ -2,9 +2,8 @@
 #include "POWERMGNT.h"
 
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
-const char STR_EMPTYSPACE[] = { 0 };
 
-void luadevGeneratePowerOpts(luaItem_selection *luaPower)
+void luadevGeneratePowerOpts(selectionParameter *luaPower)
 {
 #ifndef UNIT_TEST
   // This function modifies the strPowerLevels in place and must not
