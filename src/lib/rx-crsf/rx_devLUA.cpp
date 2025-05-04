@@ -647,10 +647,7 @@ static int event()
 static int timeout()
 {
   luaHandleUpdateParameter();
-  // Receivers can only `UpdateParamReq == true` every 4th packet due to the transmitter cadence in 1:2
-  // Channels, Downlink Telemetry Slot, Uplink Telemetry (the write command), Downlink Telemetry Slot...
-  // (interval * 4 / 1000) or 1 second if not connected
-  return (connectionState == connected) ? ExpressLRS_currAirRate_Modparams->interval / 250 : 1000;
+  return DURATION_IMMEDIATELY;
 }
 
 static int start()
