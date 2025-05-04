@@ -15,10 +15,13 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
     // No MSP data to the FC if team-race is selected and the correct model is not selected
     if (teamraceHasModelMatch)
     {
-        const auto *data = (uint8_t *)message;
+        auto *data = (uint8_t *)message;
         const uint8_t totalBufferLen = data[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES;
         if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
         {
+            // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+            // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+            data[0] = CRSF_SYNC_BYTE;
             _fifo.lock();
             _fifo.push(totalBufferLen);
             _fifo.pushBytes(data, totalBufferLen);
@@ -85,7 +88,9 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
 
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+        // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+        CRSF_SYNC_BYTE,
         CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
     };

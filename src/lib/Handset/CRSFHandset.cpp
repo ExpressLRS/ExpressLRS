@@ -118,8 +118,12 @@ void CRSFHandset::forwardMessage(const crsf_header_t *message)
         SerialOutFIFO.lock();
         if (SerialOutFIFO.ensure(size + 1))
         {
+            auto data = (uint8_t *)message;
+            // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+            // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+            data[0] = CRSF_SYNC_BYTE;
             SerialOutFIFO.push(size); // length
-            SerialOutFIFO.pushBytes((uint8_t *)message, size);
+            SerialOutFIFO.pushBytes(data, size);
         }
         SerialOutFIFO.unlock();
     }

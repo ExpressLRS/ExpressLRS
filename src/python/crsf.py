@@ -109,6 +109,7 @@ def reader(s: serial.Serial):
                 count -= 1
                 if count == 0:
                     if calc_crc8(command) == ord(b):
+                        print("resp: " + "".join("%02x " % x for x in command))
                         process(command)
                     else:
                         s.flushInput()
@@ -126,7 +127,9 @@ def reader(s: serial.Serial):
 
 
 def send(s: serial.Serial, sync: int, line: bytes):
-    s.write(bytes([sync, 1 + len(line)]) + line + bytes([calc_crc8(line)]))
+    b = bytes([sync, 1 + len(line)]) + line + bytes([calc_crc8(line)])
+    s.write(b)
+    print("req:  " + "".join("%02x " % x for x in b))
 
 
 def read_param(s: serial.Serial, param: int, chunk: int):
@@ -135,7 +138,7 @@ def read_param(s: serial.Serial, param: int, chunk: int):
     next_chunk = chunk + 1
     if chunk == 0:
         data = b''
-    send(s, 0xc8, b'\x2C\xEE\xC8' + bytes([param, chunk]))
+    send(s, 0xc8, b'\x2C\xEC\x80' + bytes([param, chunk]))
 
 
 if __name__ == '__main__':
@@ -150,7 +153,7 @@ if __name__ == '__main__':
         if line.upper().startswith('B'):
             send(s, 0xc8, b'\x32\xEC\xC8\x10\x01')
         if line.upper().startswith('D'):
-            send(s, 0xc8, b'\x28\x00\xC8')
+            send(s, 0xc8, b'\x28\x00\x80')
         if line.upper().startswith('P'):
             param = int(line[1:])
             read_param(s, param, 0)
