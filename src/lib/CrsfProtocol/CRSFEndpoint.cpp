@@ -61,19 +61,6 @@ void CRSFEndpoint::deliverMessage(const CRSFConnector *connector, const crsf_hea
     }
 }
 
-void CRSFEndpoint::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
-{
-    auto *packet = frame + sizeof(crsf_ext_header_t);
-    packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
-    packet[1] = 0;             // flags
-    packet[2] = function & 0xFF;
-    packet[3] = (function >> 8) & 0xFF;
-    packet[4] = payloadLength & 0xFF;
-    packet[5] = (payloadLength >> 8) & 0xFF;
-    memcpy(packet + 6, payload, payloadLength);
-    packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
-}
-
 void CRSFEndpoint::SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr)
 {
     frame->device_addr = destAddr;
@@ -101,6 +88,19 @@ void CRSFEndpoint::makeLinkStatisticsPacket(uint8_t *buffer, crsf_addr_e destina
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
     memcpy(&buffer[3], &linkStats, payloadLen);
     buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
+}
+
+void CRSFEndpoint::SetMspV2Request(uint8_t *frame, uint16_t function, uint8_t *payload, uint8_t payloadLength)
+{
+    auto *packet = frame + sizeof(crsf_ext_header_t);
+    packet[0] = 0x50;          // no error, version 2, beginning of the frame, first frame (0)
+    packet[1] = 0;             // flags
+    packet[2] = function & 0xFF;
+    packet[3] = (function >> 8) & 0xFF;
+    packet[4] = payloadLength & 0xFF;
+    packet[5] = (payloadLength >> 8) & 0xFF;
+    memcpy(packet + 6, payload, payloadLength);
+    packet[6 + payloadLength] = CalcCRCMsp(packet + 1, payloadLength + 5); // crc = flags + function + length + payload
 }
 
 void CRSFEndpoint::AddMspMessage(const mspPacket_t * packet, const uint8_t destination, const uint8_t origin)
