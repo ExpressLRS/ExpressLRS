@@ -9,7 +9,6 @@ extern Telemetry telemetry;
 
 void SerialGPS::sendQueuedData(uint32_t maxBytesToSend)
 {
-    sendTelemetryFrame();
 }
 
 // Parses a decimal string with optional decimal point and returns the value scaled by the given factor as an integer
@@ -106,6 +105,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL) {
             gpsData.alt = parseDecimalToScaled(ptr, 100);
         }
+
+        sendTelemetryFrame();
     }
     else if (sentence[3] == 'V' && sentence[4] == 'T' && sentence[5] == 'G') {
         char *ptr = (char*)sentence;
@@ -125,6 +126,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL && *ptr != ',') {
             gpsData.speed = parseDecimalToScaled(ptr, 100);
         }
+
+        sendTelemetryFrame();
     }
 }
 
