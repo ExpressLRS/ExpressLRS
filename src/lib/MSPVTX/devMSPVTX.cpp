@@ -15,7 +15,7 @@
  * Original author: Jye Smith.
 **/
 
-#define FC_QUERY_PERIOD_MS      200 // poll every 200ms
+#define FC_QUERY_PERIOD_MS      50 // poll every 50ms
 #define MSP_VTX_FUNCTION_OFFSET 7
 #define MSP_VTX_PAYLOAD_OFFSET  11
 #define MSP_VTX_TIMEOUT_NO_CONNECTION 5000

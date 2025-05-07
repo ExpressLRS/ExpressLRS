@@ -245,12 +245,6 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             else // if no TCP client we just want to forward MSP over the link
 #endif
             {
-#if defined(PLATFORM_ESP32)
-                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
-                {
-                    mspVtxProcessPacket(package);
-                }
-#endif
                 // This code is emulating a two slot FIFO with head dropping
                 if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
                 {

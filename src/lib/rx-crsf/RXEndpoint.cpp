@@ -1,6 +1,7 @@
 #include "RXEndpoint.h"
 
 #include "config.h"
+#include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "logging.h"
@@ -57,6 +58,10 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
         config.SetModelId(extMessage->payload[4]);
     }
 #if defined(PLATFORM_ESP32)
+    else if (message->type == CRSF_FRAMETYPE_MSP_RESP)
+    {
+        mspVtxProcessPacket((uint8_t *)message);
+    }
     else if (OPT_HAS_VTX_SPI && message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_VTX_CONFIG)
     {
         vtxSPIFrequency = getFreqByIdx(extMessage->payload[3]);
