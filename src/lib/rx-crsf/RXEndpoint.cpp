@@ -1,12 +1,18 @@
 #include "RXEndpoint.h"
 
 #include "config.h"
+#include "crsf2msp.h"
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "logging.h"
 #include "lua.h"
 #include "msptypes.h"
+
+#if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#include "tcpsocket.h"
+extern TCPSOCKET wifi2tcp;
+#endif
 
 extern void reset_into_bootloader();
 
@@ -48,6 +54,14 @@ bool RXEndpoint::handleRaw(const crsf_header_t *message)
 void RXEndpoint::handleMessage(const crsf_header_t *message)
 {
     const auto extMessage = (crsf_ext_header_t *)message;
+
+    // this needs refactoring in the future; convert the TCPSocket into a CRSFConnector, and this bit would move there
+    if (wifi2tcp.hasClient() && (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+    {
+        DBGLN("Got MSP frame, forwarding to client");
+        crsf2msp.parse((uint8_t *)message);
+    }
+
     if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
         EnterBindingModeSafely();

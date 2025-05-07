@@ -1,18 +1,9 @@
 #include "telemetry.h"
-#include <cstdint>
 #include <cstring>
 
 #include "CRSFEndpoint.h"
-#include "logging.h"
-
-#if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
-#include "tcpsocket.h"
-extern TCPSOCKET wifi2tcp;
-#endif
 
 #if defined(TARGET_RX) || defined(UNIT_TEST)
-#include "devMSPVTX.h"
-
 #if defined(UNIT_TEST)
 #include <iostream>
 using namespace std;
@@ -235,34 +226,23 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
 
-#if defined(TARGET_RX)
-            // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-            if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+            // This code is emulating a two slot FIFO with head dropping
+            if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
             {
-                DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                crsf2msp.parse(package);
+                // Sending the first slot, use the second
+                targetIndex = payloadTypesCount - 1;
             }
-            else // if no TCP client we just want to forward MSP over the link
-#endif
+            else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
             {
-                // This code is emulating a two slot FIFO with head dropping
-                if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
-                {
-                    // Sending the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
-                }
-                else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
-                {
-                    // Sending the second slot, use the first
-                    targetIndex = payloadTypesCount - 2;
-                }
-                else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
-                {
-                    // Previous frame saved to the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
-                }
-                twoslotLastQueueIndex = targetIndex;
+                // Sending the second slot, use the first
+                targetIndex = payloadTypesCount - 2;
             }
+            else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
+            {
+                // Previous frame saved to the first slot, use the second
+                targetIndex = payloadTypesCount - 1;
+            }
+            twoslotLastQueueIndex = targetIndex;
         }
         else
         {
