@@ -2196,7 +2196,7 @@ void loop()
     }
 
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
+    if (!TelemetrySender.IsActive() && otaConnector.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
         TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }

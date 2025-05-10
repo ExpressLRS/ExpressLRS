@@ -1,4 +1,5 @@
 #include "targets.h"
+#if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -648,3 +649,4 @@ void RXEndpoint::updateParameters()
     LUA_FIELD_HIDE(luaTargetSysId)
   }
 }
+#endif

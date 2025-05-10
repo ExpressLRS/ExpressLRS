@@ -1,5 +1,6 @@
 #include "RXEndpoint.h"
 
+#if !defined(UNIT_TEST)
 #include "CRSFParameters.h"
 #include "config.h"
 #include "crsf2msp.h"
@@ -8,11 +9,9 @@
 #include "freqTable.h"
 #include "logging.h"
 #include "msptypes.h"
-
-#if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
+
 extern TCPSOCKET wifi2tcp;
-#endif
 
 extern void reset_into_bootloader();
 
@@ -100,3 +99,4 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
         );
     }
 }
+#endif

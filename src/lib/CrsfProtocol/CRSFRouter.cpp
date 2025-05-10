@@ -21,6 +21,15 @@ void CRSFRouter::addEndpoint(CRSFEndpoint *endpoint)
 
 void CRSFRouter::processMessage(CRSFConnector *connector, const crsf_header_t *message) const
 {
+    if (message->type == CRSF_FRAMETYPE_HEARTBEAT)
+    {
+        if (connector)
+        {
+            // The spec say's the heartbeat payload is a int16_t, so we skip the leading byte; because it's in MSB format
+            connector->addDevice((crsf_addr_e)((uint8_t *)message)[sizeof(crsf_header_t) + 1]);
+        }
+        return;
+    }
     for (const auto endpoint : endpoints)
     {
         if (endpoint->handleRaw(message))

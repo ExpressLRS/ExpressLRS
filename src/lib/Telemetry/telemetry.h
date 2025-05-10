@@ -1,21 +1,6 @@
 #pragma once
 
 #include "CRSFConnector.h"
-#include "crsf_protocol.h"
-#include "FIFO.h"
-
-#if defined(PLATFORM_ESP32)
-#include <mutex>
-#endif
-
-#define TELEMETRY_FIFO_SIZE 512
-typedef FIFO<TELEMETRY_FIFO_SIZE> TelemetryFifo;
-
-enum CustomTelemSubTypeID : uint8_t {
-    CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
-    CRSF_AP_CUSTOM_TELEM_STATUS_TEXT = 0xF1,
-    CRSF_AP_CUSTOM_TELEM_MULTI_PACKET_PASSTHROUGH = 0xF2,
-};
 
 typedef enum {
     TELEMETRY_IDLE = 0,
@@ -23,33 +8,75 @@ typedef enum {
     RECEIVING_DATA
 } telemetry_state_s;
 
+/**
+ * Represents a telemetry management system used for handling communication, processing
+ * data streams over UART, and managing the detection of external telemetry sensors.
+ */
 class Telemetry
 {
 public:
-    Telemetry();
-    bool RXhandleUARTin(CRSFConnector *origin, uint8_t data);
-    void ResetState();
-    void CheckCrsfBatterySensorDetected();
-    void SetCrsfBatterySensorDetected();
-    bool GetCrsfBatterySensorDetected() const { return crsfBatterySensorDetected; }
-    void CheckCrsfBaroSensorDetected();
-    void SetCrsfBaroSensorDetected();
-    bool GetCrsfBaroSensorDetected() const { return crsfBaroSensorDetected; }
-    bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t *payloadData);
-    int UpdatedPayloadCount();
-    void AppendTelemetryPackage(uint8_t *package);
-    uint8_t GetFifoFullPct() { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
-private:
-#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
-    std::mutex mutex;
-#endif
-    TelemetryFifo messagePayloads;
+    Telemetry() = default;
 
-    uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
-    telemetry_state_s telemetry_state;
-    uint8_t currentTelemetryByte;
-    uint8_t prioritizedCount;
-    bool sendDeviceFrame;
-    bool crsfBatterySensorDetected;
-    bool crsfBaroSensorDetected;
+    /**
+     * Handles incoming UART data for telemetry by processing received bytes and managing the current state.
+     * Based on the telemetry state, it validates data and processes packets to extract telemetry information.
+     *
+     * @param origin Pointer to the CRSFConnector object that represents the data source.
+     * @param data The received byte from the UART.
+     * @return True if the data is successfully processed or forwarded for handling, false if the data is ignored
+     *         or invalid.
+     */
+    bool RXhandleUARTin(CRSFConnector *origin, uint8_t data);
+
+    /**
+     * Marks the CRSF battery sensor as detected by setting the corresponding state
+     * variable. This function is used to indicate the presence of an external
+     * battery sensor for telemetry purposes.
+     */
+    void SetCrsfBatterySensorDetected() { crsfBatterySensorDetected = true; }
+
+    /**
+     * Retrieves the current detection status of the CRSF battery sensor.
+     * Indicates whether an external battery sensor for telemetry purposes
+     * has been detected. If an external battery sensor is present, then
+     * any inbuilt battery voltage sensing is effectively disabled.
+     *
+     * @return True if the CRSF battery sensor is detected, false otherwise.
+     */
+    bool GetCrsfBatterySensorDetected() const { return crsfBatterySensorDetected; }
+
+    /**
+     * Marks the CRSF barometric sensor as detected by setting the corresponding state
+     * variable. This function is used to indicate the presence of an external
+     * barometric sensor for telemetry purposes.
+     */
+    void SetCrsfBaroSensorDetected() { crsfBaroSensorDetected = true; }
+
+    /**
+     * Retrieves the detection status of the CRSF barometric sensor.
+     * Indicates whether an external barometric sensor for telemetry
+     * purposes has been detected. If an external barometric sensor is
+     * present, then any inbuilt barometric sensor is effectively disabled.
+     *
+     * @return True if the CRSF barometric sensor is detected, false otherwise.
+     */
+    bool GetCrsfBaroSensorDetected() const { return crsfBaroSensorDetected; }
+
+    // unit testing
+    void Reset()
+    {
+        currentTelemetryByte = 0;
+        telemetry_state = TELEMETRY_IDLE;
+    }
+
+private:
+    void CheckCrsfBatterySensorDetected();
+    void CheckCrsfBaroSensorDetected();
+
+    uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN] {};
+    telemetry_state_s telemetry_state = TELEMETRY_IDLE;
+    uint8_t currentTelemetryByte = 0;
+
+    bool crsfBatterySensorDetected = false;
+    bool crsfBaroSensorDetected = false;
 };

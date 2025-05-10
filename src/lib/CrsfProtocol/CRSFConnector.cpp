@@ -5,7 +5,10 @@
 
 void CRSFConnector::addDevice(const crsf_addr_e device_id)
 {
-    devices.insert(device_id);
+    if (device_id != 0)
+    {
+        devices.insert(device_id);
+    }
 }
 
 bool CRSFConnector::forwardsTo(const crsf_addr_e device_id)
