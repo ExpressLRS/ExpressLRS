@@ -278,7 +278,18 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   // TLM ratio is boosted for one sync cycle when the MspSender goes active
   if (MspSender.IsActive())
   {
+    // default to 1:2 telemetry ratio bump for non-wide modes and
+    // wide mode configured to 1:4
     retVal = TLM_RATIO_1_2;
+
+    if (!OtaIsFullRes && config.GetSwitchMode() == smWideOr8ch)
+    {
+      // avoid crossing the wide switch 7-bit to 6-bit boundary
+      if (ratioConfigured <= TLM_RATIO_1_8 || ratioConfigured == TLM_RATIO_DISARMED)
+      {
+        retVal = TLM_RATIO_1_8;
+      }
+    }
   }
   // If Armed, telemetry is disabled, otherwise use STD
   else if (ratioConfigured == TLM_RATIO_DISARMED)
