@@ -206,6 +206,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     ClearIrqStatus(radioNumber);
 
+    pwrForceUpdate = true;
     SetPaConfig(isSubGHz, radioNumber); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
     CommitOutputPower();
 }
