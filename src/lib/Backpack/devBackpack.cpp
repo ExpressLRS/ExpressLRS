@@ -1,5 +1,6 @@
 #include "targets.h"
 
+#include "CRSFEndpoint.h"
 #include "CRSFHandset.h"
 #include "MAVLink.h"
 #include "common.h"
@@ -27,7 +28,6 @@ static uint32_t lastPTRValidTimeMs;
 
 #define GPIO_PIN_BOOT0 0
 
-#include "CRSF.h"
 #include "hwTimer.h"
 
 [[noreturn]] static void startPassthrough()
@@ -261,15 +261,15 @@ static void injectBackpackPanTiltRollData()
         if (lastPTRSentMs != lastPTRValidTimeMs)
         {
             lastPTRSentMs = lastPTRValidTimeMs;
-            rcPacket_t rcPacket = {
-                .channels = {
+            CRSF_MK_FRAME_T(crsf_channels_t) rcPacket = {
+                .p = {
                     .ch0 = ptrChannelData[0],
                     .ch1 = ptrChannelData[1],
                     .ch2 = ptrChannelData[2]
                 }
             };
-            CRSF::SetHeaderAndCrc((uint8_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket_t)-2, CRSF_ADDRESS_CRSF_TRANSMITTER);
-            handset->sendTelemetryToTX((uint8_t *)&rcPacket);
+            crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
+            crsfEndpoint->deliverMessage(nullptr, &rcPacket.h);
         }
     }
     else

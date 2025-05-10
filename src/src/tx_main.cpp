@@ -31,6 +31,8 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "MAVLink.h"
+#include "TXOTAConnector.h"
+#include "TXModuleEndpoint.h"
 
 #if defined(PLATFORM_ESP32_S3)
 #include "USB.h"
@@ -98,6 +100,9 @@ StubbornReceiver TelemetryReceiver;
 StubbornSender MspSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
+CRSFEndpoint *crsfEndpoint;
+TXOTAConnector otaConnector;
+
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
   {&LED_device, 0},
@@ -140,16 +145,16 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // Antenna is the high bit in the RSSI_1 value
   // RSSI received is signed, inverted polarity (positive value = -dBm)
   // OpenTX's value is signed and will display +dBm and -dBm properly
-  CRSF::LinkStatistics.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
-  CRSF::LinkStatistics.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
-  CRSF::LinkStatistics.uplink_Link_quality = ls->lq;
+  crsfEndpoint->linkStats.uplink_RSSI_1 = -(ls->uplink_RSSI_1);
+  crsfEndpoint->linkStats.uplink_RSSI_2 = -(ls->uplink_RSSI_2);
+  crsfEndpoint->linkStats.uplink_Link_quality = ls->lq;
 #if defined(DEBUG_FREQ_CORRECTION)
   // Don't descale the FreqCorrection value being send in SNR
-  CRSF::LinkStatistics.uplink_SNR = snrScaled;
+  crsfEndpoint->linkStats.uplink_SNR = snrScaled;
 #else
-  CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(snrScaled);
+  crsfEndpoint->linkStats.uplink_SNR = SNR_DESCALE(snrScaled);
 #endif
-  CRSF::LinkStatistics.active_antenna = ls->antenna;
+  crsfEndpoint->linkStats.active_antenna = ls->antenna;
   connectionHasModelMatch = ls->modelMatch;
   // -- downlink_SNR / downlink_RSSI is updated for any packet received, not just Linkstats
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
@@ -188,9 +193,9 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   Radio.GetLastPacketStats();
-  CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
-  CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
-  CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
+  crsfEndpoint->linkStats.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
+  crsfEndpoint->linkStats.downlink_RSSI_1 = Radio.LastPacketRSSI;
+  crsfEndpoint->linkStats.downlink_RSSI_2 = Radio.LastPacketRSSI2;
 
   // Full res mode
   if (OtaIsFullRes)
@@ -440,7 +445,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   // For model match, the last byte of the binding ID is XORed with the inverse of the modelId
   if (!InBindingMode && config.GetModelMatch())
   {
-    syncPtr->UID5 ^= (~CRSFHandset::getModelID()) & MODELMATCH_MASK;
+    syncPtr->UID5 ^= (~static_cast<TXModuleEndpoint *>(crsfEndpoint)->modelId) & MODELMATCH_MASK;
   }
 }
 
@@ -509,7 +514,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
-  CRSF::LinkStatistics.rf_Mode = ModParams->enum_rate;
+  crsfEndpoint->linkStats.rf_Mode = ModParams->enum_rate;
 
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   setConnectionState(disconnected);
@@ -744,9 +749,9 @@ void ICACHE_RAM_ATTR timerCallback()
     TelemetryRcvPhase = ttrpExpectingTelem;
 #if defined(Regulatory_Domain_EU_CE_2400)
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
-    CRSF::LinkStatistics.downlink_Link_quality = LBTSuccessCalc.getLQ();
+    crsfEndpoint->linkStats.downlink_Link_quality = LBTSuccessCalc.getLQ();
 #else
-    CRSF::LinkStatistics.downlink_Link_quality = LQCalc.getLQ();
+    crsfEndpoint->linkStats.downlink_Link_quality = LQCalc.getLQ();
 #endif
     LQCalc.inc();
     return;
@@ -823,7 +828,7 @@ static void ChangeRadioParams()
 void ModelUpdateReq()
 {
   // Force synspam with the current rate parameters in case already have a connection established
-  if (config.SetModelId(CRSFHandset::getModelID()))
+  if (config.SetModelId(static_cast<TXModuleEndpoint *>(crsfEndpoint)->modelId))
   {
     syncSpamCounter = syncSpamAmount;
     syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
@@ -942,7 +947,6 @@ static void UpdateConnectDisconnectStatus()
     if (connectionState != connected)
     {
       setConnectionState(connected);
-      CRSFHandset::ForwardDevicePings = true;
       DBGLN("got downlink conn");
 
       apInputBuffer.flush();
@@ -956,8 +960,12 @@ static void UpdateConnectDisconnectStatus()
   {
     setConnectionState(disconnected);
     connectionHasModelMatch = true;
-    CRSFHandset::ForwardDevicePings = false;
   }
+}
+
+void clearOTAQueue()
+{
+    otaConnector.resetOutputQueue();
 }
 
 void SetSyncSpam()
@@ -1393,7 +1401,15 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected, ModelUpdateReq, EnterBindingModeSafely);
+    const auto endpoint = new TXModuleEndpoint();
+    crsfEndpoint = endpoint;
+    endpoint->OnBindingCommand = EnterBindingModeSafely;
+    endpoint->RecvModelUpdate = ModelUpdateReq;
+    endpoint->addConnector(&otaConnector);
+    endpoint->begin();
+    // When a CRSF handset is detected, it will add itself to the endpoint
+
+    handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
     DBGLN("ExpressLRS TX Module Booted...");
 
@@ -1511,8 +1527,9 @@ void loop()
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
 
-    CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
-    handset->sendTelemetryToTX(linkStatisticsFrame);
+    crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_RADIO_TRANSMITTER);
+    // the linkStats originates from the OTA connector so we don't send it back there.
+    crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }
@@ -1523,12 +1540,12 @@ void loop()
       {
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
         {
-          // raw mavlink data - forward to USB rather than handset
-          uint8_t count = CRSFinBuffer[1];
-          // Convert to CRSF telemetry where we can
-          convert_mavlink_to_crsf_telem(CRSFinBuffer, count, handset);
+          const uint8_t count = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX];
+          // Convert to CRSF telemetry where we can and send to handset
+          convert_mavlink_to_crsf_telem(&otaConnector, CRSFinBuffer, count);
+          // forward raw mavlink data to USB
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-          // If we have a backpack
+          // And to the backpack if we have one
           if (TxUSB != TxBackpack)
           {
             sendMAVLinkTelemetryToBackpack(CRSFinBuffer);
@@ -1538,14 +1555,13 @@ void loop()
       else
       {
         // Send all other tlm to handset
-        handset->sendTelemetryToTX(CRSFinBuffer);
+        crsfEndpoint->processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
       TelemetryReceiver.Unlock();
   }
 
   // only send msp data when binding is not active
-  static bool mspTransferActive = false;
   if (InBindingMode)
   {
 #if defined(RADIO_LR1121)
@@ -1563,26 +1579,7 @@ void loop()
   }
   else if (!MspSender.IsActive())
   {
-    // sending is done and we need to update our flag
-    if (mspTransferActive)
-    {
-      // unlock buffer for msp messages
-      CRSF::UnlockMspMessage();
-      mspTransferActive = false;
-    }
-    // we are not sending so look for next msp package
-    else
-    {
-      uint8_t* mspData;
-      uint8_t mspLen;
-      CRSF::GetMspMessage(&mspData, &mspLen);
-      // if we have a new msp package start sending
-      if (mspData != nullptr)
-      {
-        MspSender.SetDataToTransmit(mspData, mspLen);
-        mspTransferActive = true;
-      }
-    }
+    otaConnector.pumpSender();
   }
 
   if (config.GetLinkMode() == TX_MAVLINK_MODE)

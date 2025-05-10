@@ -32,16 +32,10 @@ void AutoDetect::End()
     rmt_driver_uninstall(PPM_RMT_CHANNEL);
 }
 
-bool AutoDetect::IsArmed()
-{
-    return false;
-}
-
 void AutoDetect::migrateTo(Handset *that) const
 {
     that->setRCDataCallback(RCdataCallback);
-    that->registerParameterUpdateCallback(RecvParameterUpdate);
-    that->registerCallbacks(connected, disconnected, RecvModelUpdate, OnBindingCommand);
+    that->registerCallbacks(connected, disconnected);
     that->Begin();
     that->setPacketInterval(RequestedRCpacketInterval);
     delete this;

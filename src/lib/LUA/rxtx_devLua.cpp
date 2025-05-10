@@ -6,6 +6,7 @@ const char STR_EMPTYSPACE[] = { 0 };
 
 void luadevGeneratePowerOpts(luaItem_selection *luaPower)
 {
+#ifndef UNIT_TEST
   // This function modifies the strPowerLevels in place and must not
   // be called more than once!
   char *out = strPowerLevels;
@@ -39,5 +40,6 @@ void luadevGeneratePowerOpts(luaItem_selection *luaPower)
   // but only if it has more than one power level
   if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
     strcat(strPowerLevels, ";MatchTX ");
+#endif
 #endif
 }

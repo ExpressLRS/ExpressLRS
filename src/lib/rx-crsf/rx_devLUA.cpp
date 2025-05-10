@@ -1,9 +1,11 @@
 #ifdef TARGET_RX
 
-#include "rxtx_devLua.h"
-#include "helpers.h"
-#include "devServoOutput.h"
+#include "POWERMGNT.h"
+#include "config.h"
 #include "deferred.h"
+#include "devServoOutput.h"
+#include "helpers.h"
+#include "rxtx_devLua.h"
 
 #define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
 
@@ -645,10 +647,7 @@ static int event()
 static int timeout()
 {
   luaHandleUpdateParameter();
-  // Receivers can only `UpdateParamReq == true` every 4th packet due to the transmitter cadence in 1:2
-  // Channels, Downlink Telemetry Slot, Uplink Telemetry (the write command), Downlink Telemetry Slot...
-  // (interval * 4 / 1000) or 1 second if not connected
-  return (connectionState == connected) ? ExpressLRS_currAirRate_Modparams->interval / 250 : 1000;
+  return DURATION_IMMEDIATELY;
 }
 
 static int start()

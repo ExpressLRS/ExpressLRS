@@ -1,4 +1,6 @@
 #include "SerialGPS.h"
+
+#include "CRSFEndpoint.h"
 #include "msptypes.h"
 #include <crsf_protocol.h>
 #include <telemetry.h>
@@ -6,11 +8,6 @@
 extern Telemetry telemetry;
 
 void SerialGPS::sendQueuedData(uint32_t maxBytesToSend)
-{
-    sendTelemetryFrame();
-}
-
-void SerialGPS::queueMSPFrameTransmission(uint8_t* data)
 {
 }
 
@@ -108,6 +105,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL) {
             gpsData.alt = parseDecimalToScaled(ptr, 100);
         }
+
+        sendTelemetryFrame();
     }
     else if (sentence[3] == 'V' && sentence[4] == 'T' && sentence[5] == 'G') {
         char *ptr = (char*)sentence;
@@ -127,6 +126,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL && *ptr != ',') {
             gpsData.speed = parseDecimalToScaled(ptr, 100);
         }
+
+        sendTelemetryFrame();
     }
 }
 
@@ -155,6 +156,6 @@ void SerialGPS::sendTelemetryFrame()
     crsfgps.p.groundspeed = htobe16((uint16_t)(gpsData.speed / 10));
     crsfgps.p.satellites_in_use = gpsData.satellites;
     crsfgps.p.gps_heading = htobe16((uint16_t)gpsData.heading);
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-    telemetry.AppendTelemetryPackage((uint8_t *)&crsfgps);
+    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfEndpoint->deliverMessage(nullptr, &crsfgps.h);
 }
