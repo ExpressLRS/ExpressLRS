@@ -428,7 +428,7 @@ enum {
     CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_baro_vario_t),
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = sizeof(crsf_sensor_battery_t),
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_attitude_t),
-    CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
+    CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = (CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_LENGTH_EXT_TYPE_CRC),
     CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = sizeof(crsf_flight_mode_t),
     CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE = sizeof(crsf_sensor_airspeed_t),
     CRSF_FRAME_RPM_PAYLOAD_SIZE = sizeof(crsf_sensor_rpm_t),
