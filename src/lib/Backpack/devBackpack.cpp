@@ -1,8 +1,7 @@
 #include "targets.h"
 
-#include "CRSFEndpoint.h"
 #include "CRSFHandset.h"
-#include "MAVLink.h"
+#include "CRSFRouter.h"
 #include "common.h"
 #include "config.h"
 #include "device.h"
@@ -268,8 +267,8 @@ static void injectBackpackPanTiltRollData()
                     .ch2 = ptrChannelData[2]
                 }
             };
-            crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
-            crsfEndpoint->deliverMessage(nullptr, &rcPacket.h);
+            crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
+            crsfRouter.deliverMessage(nullptr, &rcPacket.h);
         }
     }
     else

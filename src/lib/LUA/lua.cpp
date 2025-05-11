@@ -1,8 +1,8 @@
 #include "lua.h"
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "common.h"
-#include "options.h"
 #include "logging.h"
+#include "options.h"
 
 #ifdef TARGET_RX
 #include "telemetry.h"
@@ -222,8 +222,12 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, ui
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
   memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
-  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin);
-  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)paramInformation);
+#if defined(TARGET_TX)
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_TRANSMITTER);
+#else
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_RECEIVER);
+#endif
+  crsfRouter.deliverMessage(nullptr, (crsf_header_t *)paramInformation);
   return chunkCnt - (fieldChunk+1);
 }
 
@@ -301,8 +305,8 @@ void sendELRSstatus()
   // to support sending a params.msg, buffer should be extended by the strlen of the message
   // and copied into params->msg (with trailing null)
   strcpy(params->msg, warningInfo);
-  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin);
-  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)buffer);
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)buffer, CRSF_FRAMETYPE_ELRS_STATUS, CRSF_EXT_FRAME_SIZE(payloadSize), requestOrigin, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  crsfRouter.deliverMessage(nullptr, (crsf_header_t *)buffer);
 }
 
 void luaRegisterDevicePingCallback(void (*callback)())
@@ -375,8 +379,10 @@ bool luaHandleUpdateParameter()
 #ifdef TARGET_TX
         devicePingCallback();
         luaSupressCriticalErrors();
+        sendLuaDevicePacket(CRSF_ADDRESS_CRSF_TRANSMITTER);
+#else
+        sendLuaDevicePacket(CRSF_ADDRESS_CRSF_RECEIVER);
 #endif
-        sendLuaDevicePacket();
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ:
@@ -454,7 +460,7 @@ uint32_t VersionStrToU32(const char *verStr)
     return retVal;
 }
 
-void sendLuaDevicePacket(void)
+void sendLuaDevicePacket(crsf_addr_e device_id)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   const uint8_t size = strlen(device_name)+1;
@@ -467,6 +473,6 @@ void sendLuaDevicePacket(void)
   device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
   device->fieldCnt = lastLuaField;
   device->parameterVersion = 0;
-  crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin);
-  crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)deviceInformation);
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin, device_id);
+  crsfRouter.deliverMessage(nullptr, (crsf_header_t *)deviceInformation);
 }

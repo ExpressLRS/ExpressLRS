@@ -1,6 +1,6 @@
 #include "msp2crsf.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 
 MSP2CROSSFIRE::MSP2CROSSFIRE() {}
 
@@ -188,8 +188,8 @@ void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, u
 
         header[0] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 2;
         header[2] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
-        uint8_t crc = crsfEndpoint->crsf_crc.calc(&header[3], 4, 0x00); // don't include the MSP header
-        crc = crsfEndpoint->crsf_crc.calc(&data[startIdx], CRSFpktLen, crc);
+        uint8_t crc = crsfRouter.crsf_crc.calc(&header[3], 4, 0x00); // don't include the MSP header
+        crc = crsfRouter.crsf_crc.calc(&data[startIdx], CRSFpktLen, crc);
 
         FIFOout.lock();
         FIFOout.pushBytes(header, sizeof(header));

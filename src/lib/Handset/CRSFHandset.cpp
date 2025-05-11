@@ -2,6 +2,7 @@
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "FIFO.h"
 #include "helpers.h"
 #include "logging.h"
@@ -51,7 +52,7 @@ void CRSFHandset::Begin()
 
     addDevice(CRSF_ADDRESS_ELRS_LUA);
     addDevice(CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->addConnector(this);
+    crsfRouter.addConnector(this);
 
     UARTwdtLastChecked = millis() + UARTwdtInterval; // allows a delay before the first time the UARTwdt() function is called
 
@@ -189,9 +190,9 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
                 .rate = htobe32(packetRate),
                 .offset = htobe32(offset)
             },
-            .crc = crsfEndpoint->crsf_crc.calc((uint8_t *)&sync_packet + CRSF_TELEMETRY_TYPE_INDEX, sizeof(sync_packet)-3)
+            .crc = crsfRouter.crsf_crc.calc((uint8_t *)&sync_packet + CRSF_TELEMETRY_TYPE_INDEX, sizeof(sync_packet)-3)
         };
-        crsfEndpoint->deliverMessage(nullptr, (crsf_header_t *)&sync_packet);
+        crsfRouter.deliverMessage(nullptr, (crsf_header_t *)&sync_packet);
 
         OpenTXsyncLastSent = now;
     }
@@ -208,7 +209,7 @@ bool CRSFHandset::ProcessPacket()
         if (connected) connected();
     }
 
-    crsfEndpoint->processMessage(this, (crsf_header_t *)&inBuffer);
+    crsfRouter.processMessage(this, (crsf_header_t *)&inBuffer);
 
     return true;
 }
@@ -280,7 +281,7 @@ void CRSFHandset::handleInput()
     if (SerialInPacketPtr < totalLen)
         return;
 
-    uint8_t CalculatedCRC = crsfEndpoint->crsf_crc.calc(&inBuffer[2], totalLen - 3);
+    uint8_t CalculatedCRC = crsfRouter.crsf_crc.calc(&inBuffer[2], totalLen - 3);
     if (CalculatedCRC == inBuffer[totalLen - 1])
     {
         GoodPktsCount++;

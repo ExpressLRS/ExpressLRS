@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SerialIO.h"
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "device.h"
 
 class SerialSmartAudio final : public SerialIO, public CRSFConnector {

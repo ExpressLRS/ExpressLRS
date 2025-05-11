@@ -1,15 +1,14 @@
 #pragma once
 #include "SerialIO.h"
 
-#include "CRSFConnector.h"
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 
 class SerialCRSF final : public SerialIO, public CRSFConnector {
 public:
     explicit SerialCRSF(Stream &out, Stream &in)
         : SerialIO(&out, &in)
     {
-        crsfEndpoint->addConnector(this);
+        crsfRouter.addConnector(this);
     }
     ~SerialCRSF() override = default;
 

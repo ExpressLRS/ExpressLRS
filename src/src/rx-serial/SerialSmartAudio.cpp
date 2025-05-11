@@ -1,4 +1,5 @@
 #include "SerialSmartAudio.h"
+
 #include "freqTable.h"
 #include "msptypes.h"
 #if defined(PLATFORM_ESP32)
@@ -27,7 +28,7 @@ SerialSmartAudio::SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin)
     halfDuplexPin = serial1TXpin;
 #endif
     setRXMode();
-    crsfEndpoint->addConnector(this);
+    crsfRouter.addConnector(this);
 }
 
 void SerialSmartAudio::setTXMode() const

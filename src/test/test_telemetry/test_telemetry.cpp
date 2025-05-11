@@ -3,8 +3,7 @@
 #include <unity.h>
 
 #include "common.h"
-#include "CRSFEndpoint.h"
-#include "CRSFConnector.h"
+#include "CRSFRouter.h"
 
 Telemetry telemetry;
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
@@ -14,7 +13,7 @@ class MockEndpoint : public CRSFEndpoint
 public:
     MockEndpoint() : CRSFEndpoint((crsf_addr_e)1) {}
     void handleMessage(const crsf_header_t *message) override {}
-};
+} endpoint;
 
 class MockConnector : public CRSFConnector {
 public:
@@ -26,10 +25,9 @@ public:
         }
     }
     std::vector<uint8_t> data;
-};
+} connector;
 
-CRSFEndpoint *crsfEndpoint = new MockEndpoint();
-MockConnector *connector = new MockConnector();
+CRSFRouter crsfRouter;
 
 int sendData(uint8_t *data, int length)
 {
@@ -162,7 +160,7 @@ void test_function_recover_from_junk(void)
         CRSF_ADDRESS_CRSF_RECEIVER,0x04,CRSF_FRAMETYPE_COMMAND,0x62,0x6c,0x0A};
     int length = sizeof(bootloaderSequence);
     int sentLength = sendDataWithoutCheck(bootloaderSequence, length);
-    TEST_ASSERT_EQUAL(6, connector->data.size());
+    TEST_ASSERT_EQUAL(6, connector.data.size());
 }
 
 void test_function_bootloader_called(void)
@@ -171,7 +169,7 @@ void test_function_bootloader_called(void)
     int length = sizeof(bootloaderSequence);
     int sentLength = sendData(bootloaderSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
-    TEST_ASSERT_EQUAL(6, connector->data.size());
+    TEST_ASSERT_EQUAL(6, connector.data.size());
 }
 
 void test_function_store_unknown_type(void)
@@ -251,24 +249,22 @@ void test_function_add_type_with_zero_crc(void)
 }
 
 // Unity setup/teardown
-void setUp() {
-    crsfEndpoint = new MockEndpoint();
-    connector = new MockConnector();
-
-    crsfEndpoint->addConnector(connector);
-    connector->addDevice(CRSF_ADDRESS_CRSF_RECEIVER);
-
+void setUp()
+{
     telemetry.ResetState();
+    connector.data.clear();
 }
 
 void tearDown()
 {
-    delete connector;
-    delete crsfEndpoint;
 }
 
 int main(int argc, char **argv)
 {
+    crsfRouter.addEndpoint(&endpoint);
+    crsfRouter.addConnector(&connector);
+    connector.addDevice(CRSF_ADDRESS_CRSF_RECEIVER);
+
     UNITY_BEGIN();
     RUN_TEST(test_function_uart_in);
     RUN_TEST(test_function_bootloader_called);

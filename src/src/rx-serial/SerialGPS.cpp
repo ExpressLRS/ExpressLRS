@@ -1,7 +1,6 @@
 #include "SerialGPS.h"
 
-#include "CRSFEndpoint.h"
-#include "msptypes.h"
+#include "CRSFRouter.h"
 #include <crsf_protocol.h>
 #include <telemetry.h>
 
@@ -156,6 +155,6 @@ void SerialGPS::sendTelemetryFrame()
     crsfgps.p.groundspeed = htobe16((uint16_t)(gpsData.speed / 10));
     crsfgps.p.satellites_in_use = gpsData.satellites;
     crsfgps.p.gps_heading = htobe16((uint16_t)gpsData.heading);
-    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->deliverMessage(nullptr, &crsfgps.h);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfgps, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.deliverMessage(nullptr, &crsfgps.h);
 }

@@ -3,7 +3,7 @@
 
 #if defined(TARGET_RX)
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "baro_bmp280.h"
 #include "baro_spl06.h"
 #include "logging.h"
@@ -112,8 +112,8 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet
     if (!telemetry.GetCrsfBaroSensorDetected())
     {
-        crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-        crsfEndpoint->deliverMessage(nullptr, &crsfBaro.h);
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+        crsfRouter.deliverMessage(nullptr, &crsfBaro.h);
     }
 }
 

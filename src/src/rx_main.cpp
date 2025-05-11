@@ -1,5 +1,6 @@
-#include "rxtx_common.h"
+#include "CRSFRouter.h"
 #include "LowPassFilter.h"
+#include "rxtx_common.h"
 
 #include "crc.h"
 #include "telemetry_protocol.h"
@@ -110,7 +111,8 @@ RxConfig config;
 Telemetry telemetry;
 Stream *SerialLogger;
 
-CRSFEndpoint *crsfEndpoint;
+CRSFRouter crsfRouter;
+RXEndpoint crsfReceiver;
 RXOTAConnector otaConnector;
 
 #include "crsf2msp.h"
@@ -273,8 +275,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM2 = (rssiDBM2 > 0) ? 0 : rssiDBM2;
 
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        crsfEndpoint->linkStats.uplink_RSSI_1 = -rssiDBM;
-        crsfEndpoint->linkStats.uplink_RSSI_2 = -rssiDBM2;
+        linkStats.uplink_RSSI_1 = -rssiDBM;
+        linkStats.uplink_RSSI_2 = -rssiDBM2;
         antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
     }
     else if (antenna == 0)
@@ -284,7 +286,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         #endif
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        crsfEndpoint->linkStats.uplink_RSSI_1 = -rssiDBM;
+        linkStats.uplink_RSSI_1 = -rssiDBM;
     }
     else
     {
@@ -294,26 +296,26 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         // May be overwritten below if DEBUG_BF_LINK_STATS is set
-        crsfEndpoint->linkStats.uplink_RSSI_2 = -rssiDBM;
+        linkStats.uplink_RSSI_2 = -rssiDBM;
     }
 
     SnrMean.add(Radio.LastPacketSNRRaw);
 
-    crsfEndpoint->linkStats.active_antenna = antenna;
-    crsfEndpoint->linkStats.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
-    //crsfEndpoint->linkStats.uplink_Link_quality = uplinkLQ; // handled in Tick
-    crsfEndpoint->linkStats.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
-    //DBGLN(crsfEndpoint->linkStats.uplink_RSSI_1);
+    linkStats.active_antenna = antenna;
+    linkStats.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
+    //linkStats.uplink_Link_quality = uplinkLQ; // handled in Tick
+    linkStats.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
+    //DBGLN(linkStats.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    crsfEndpoint->linkStats.downlink_RSSI_1 = debug1;
-    crsfEndpoint->linkStats.downlink_Link_quality = debug2;
-    crsfEndpoint->linkStats.downlink_SNR = debug3;
-    crsfEndpoint->linkStats.uplink_RSSI_2 = debug4;
+    linkStats.downlink_RSSI_1 = debug1;
+    linkStats.downlink_Link_quality = debug2;
+    linkStats.downlink_SNR = debug3;
+    linkStats.uplink_RSSI_2 = debug4;
     #endif
 
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
-    crsfEndpoint->linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
+    linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
     debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
@@ -427,11 +429,11 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     // The value in linkstatistics is "positivized" (inverted polarity)
     // and must be inverted on the TX side. Positive values are used
     // so save a bit to encode which antenna is in use
-    ls->uplink_RSSI_1 = crsfEndpoint->linkStats.uplink_RSSI_1;
-    ls->uplink_RSSI_2 = crsfEndpoint->linkStats.uplink_RSSI_2;
+    ls->uplink_RSSI_1 = linkStats.uplink_RSSI_1;
+    ls->uplink_RSSI_2 = linkStats.uplink_RSSI_2;
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
-    ls->lq = crsfEndpoint->linkStats.uplink_Link_quality;
+    ls->lq = linkStats.uplink_Link_quality;
     ls->tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
@@ -740,7 +742,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalcDVDA.inc();
     }
 
-    crsfEndpoint->linkStats.uplink_Link_quality = uplinkLQ;
+    linkStats.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
         LQCalc.inc();
@@ -1325,7 +1327,7 @@ void MspReceiveComplete()
     default:
         //handle received CRSF package
         const auto receivedHeader = (crsf_header_t *) MspData;
-        crsfEndpoint->processMessage(&otaConnector, receivedHeader);
+        crsfRouter.processMessage(&otaConnector, receivedHeader);
 
     }
 
@@ -1907,9 +1909,9 @@ static void checkSendLinkStatsToFc(uint32_t now)
         {
             size_t linkStatsSize = sizeof(crsfLinkStatistics_t);
             uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(linkStatsSize)];
-            crsfEndpoint->makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            // the linkStats originates from the OTA connector so we don't send it back there.
-            crsfEndpoint->deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+            crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+            // the linkStats 'originates' from the OTA connector so we don't send it back there.
+            crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
@@ -1926,7 +1928,7 @@ static void debugRcvrLinkstats()
 
         // Copy the data out of the ISR-updating bits ASAP
         // While YOLOing (const void *) away the volatile
-        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&crsfEndpoint->linkStats);
+        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&linkStats);
         uint32_t packetCounter = debugRcvrLinkstatsPacketId;
         uint8_t fhss = debugRcvrLinkstatsFhssIdx;
         // actually the previous packet's offset since the update happens in tick, and this will
@@ -2089,8 +2091,8 @@ void setup()
                 }
             }
         }
-        crsfEndpoint = new RXEndpoint();
-        crsfEndpoint->addConnector(&otaConnector);
+        crsfRouter.addEndpoint(&crsfReceiver);
+        crsfRouter.addConnector(&otaConnector);
         setupSerial();
         setupSerial1();
 

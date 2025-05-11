@@ -150,7 +150,7 @@ void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint
 
 uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value);
 
-void sendLuaDevicePacket(void);
+void sendLuaDevicePacket(crsf_addr_e device_id);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
     luaStruct->value = newvalue;
 }

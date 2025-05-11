@@ -2,8 +2,7 @@
 
 #include "unity.h"
 
-#include "CRSFConnector.h" // Include the class header
-#include "CRSFEndpoint.h"  // Include the class header
+#include "CRSFRouter.h"
 #include "crsf_protocol.h" // For CRSF types and constants
 
 // --- Mock CRSFConnector ---
@@ -74,6 +73,7 @@ public:
 };
 
 // --- Test Globals ---
+static CRSFRouter *router;
 static MockEndpoint *testEndpoint = nullptr;
 static MockConnector *connector1 = nullptr;
 static MockConnector *connector2 = nullptr;
@@ -102,14 +102,16 @@ void create_simple_test_message(crsf_header_t *msg, crsf_frame_type_e type, crsf
 // --- Unity Setup and Teardown ---
 void setUp()
 {
+    router = new CRSFRouter();
     testEndpoint = new MockEndpoint(CRSF_ADDRESS_FLIGHT_CONTROLLER);
     connector1 = new MockConnector(CRSF_ADDRESS_RADIO_TRANSMITTER);   // Knows about forwarding messages for CRSF_ADDRESS_RADIO_TRANSMITTER
     connector2 = new MockConnector(CRSF_ADDRESS_CRSF_RECEIVER); // Knows about forwarding messages for CRSF_ADDRESS_CRSF_RECEIVER
     connector3 = new MockConnector();                    // Doesn't specifically forward any address
 
-    testEndpoint->addConnector(connector1);
-    testEndpoint->addConnector(connector2);
-    testEndpoint->addConnector(connector3);
+    router->addEndpoint(testEndpoint);
+    router->addConnector(connector1);
+    router->addConnector(connector2);
+    router->addConnector(connector3);
 
     testEndpoint->reset();
     connector1->reset();
@@ -136,7 +138,7 @@ void test_ProcessMessage_AddressedToEndpoint_Handled()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(nullptr, (crsf_header_t *)&msg);
+    router->processMessage(nullptr, (crsf_header_t *)&msg);
 
     TEST_ASSERT_TRUE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_FLIGHT_CONTROLLER, testEndpoint->lastHandledMessage.dest_addr);
@@ -150,7 +152,7 @@ void test_ProcessMessage_NotAddressedToEndpoint_NotHandled()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_CRSF_TRANSMITTER, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(nullptr, (crsf_header_t *)&msg);
+    router->processMessage(nullptr, (crsf_header_t *)&msg);
 
     TEST_ASSERT_FALSE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_TRUE(connector1->forwardMessageCalled);
@@ -166,7 +168,7 @@ void test_ProcessMessage_AddressedToOther_KnownConnector()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_ADDRESS_CRSF_RECEIVER);
 
-    testEndpoint->processMessage(nullptr, (crsf_header_t *)&msg);
+    router->processMessage(nullptr, (crsf_header_t *)&msg);
 
     TEST_ASSERT_FALSE(testEndpoint->handleMessageCalled); // Not addressed here
     TEST_ASSERT_TRUE(connector1->forwardMessageCalled);   // Should be forwarded to connector1
@@ -181,7 +183,7 @@ void test_ProcessMessage_AddressedToOther_KnownConnector_FromConnector1()
     // Message for CRSF_ADDRESS_CRSF_RECEIVER (handled by connector2), coming *from* connector1
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(connector1, (crsf_header_t *)&msg); // Source connector is connector1
+    router->processMessage(connector1, (crsf_header_t *)&msg); // Source connector is connector1
 
     TEST_ASSERT_FALSE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_FALSE(connector1->forwardMessageCalled); // Not forwarded back to source
@@ -195,7 +197,7 @@ void test_ProcessMessage_AddressedToOther_UnknownConnector()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_ELRS_LUA, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(nullptr, (crsf_header_t *)&msg);
+    router->processMessage(nullptr, (crsf_header_t *)&msg);
 
     TEST_ASSERT_FALSE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_TRUE(connector1->forwardMessageCalled); // Broadcast because destination unknown
@@ -211,7 +213,7 @@ void test_ProcessMessage_Broadcast_FromNull()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(nullptr, (crsf_header_t *)&msg);
+    router->processMessage(nullptr, (crsf_header_t *)&msg);
 
     TEST_ASSERT_TRUE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_TRUE(connector1->forwardMessageCalled);
@@ -225,7 +227,7 @@ void test_ProcessMessage_Broadcast_FromConnector2()
     crsf_ext_header_t msg;
     create_test_message(&msg, CRSF_FRAMETYPE_DEVICE_PING, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_RECEIVER);
 
-    testEndpoint->processMessage(connector2, (crsf_header_t *)&msg); // Source connector is connector2
+    router->processMessage(connector2, (crsf_header_t *)&msg); // Source connector is connector2
 
     TEST_ASSERT_TRUE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_TRUE(connector1->forwardMessageCalled);
@@ -241,7 +243,7 @@ void test_ProcessMessage_ExtendedFrameFromConnector_CallsAddDevice()
 
     TEST_ASSERT_FALSE(connector1->forwardsTo(origin_addr));
 
-    testEndpoint->processMessage(connector1, (crsf_header_t *)&msg);
+    router->processMessage(connector1, (crsf_header_t *)&msg);
 
     TEST_ASSERT_TRUE(connector1->forwardsTo(origin_addr));
     TEST_ASSERT_FALSE(connector2->forwardsTo(origin_addr));
@@ -253,7 +255,7 @@ void test_ProcessMessage_SimpleFrame_AddressedToOther_KnownConnector()
     crsf_header_t msg;
     create_simple_test_message(&msg, CRSF_FRAMETYPE_VARIO, CRSF_ADDRESS_RADIO_TRANSMITTER);
 
-    testEndpoint->processMessage(nullptr, &msg);
+    router->processMessage(nullptr, &msg);
 
     TEST_ASSERT_TRUE(testEndpoint->handleMessageCalled);
     TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_RADIO_TRANSMITTER, testEndpoint->lastHandledMessage.device_addr);

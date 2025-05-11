@@ -1,6 +1,7 @@
 #include "SerialTramp.h"
-#include "msptypes.h"
+
 #include "freqTable.h"
+#include "msptypes.h"
 #if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>
 #endif
@@ -20,7 +21,7 @@ SerialTramp::SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin) : SerialI
     halfDuplexPin = serial1TXpin;
 #endif
     setRXMode();
-    crsfEndpoint->addConnector(this);
+    crsfRouter.addConnector(this);
 }
 
 void SerialTramp::setTXMode() const

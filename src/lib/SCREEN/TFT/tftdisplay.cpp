@@ -7,7 +7,7 @@
 
 #include "tftdisplay.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "common.h"
 #include "logging.h"
 #include "logos.h"
@@ -412,35 +412,35 @@ void TFTDisplay::displayLinkstats()
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
     gfx->print("Uplink");
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    gfx->print(crsfEndpoint->linkStats.uplink_Link_quality);
+    gfx->print(linkStats.uplink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    gfx->print((int8_t)crsfEndpoint->linkStats.uplink_RSSI_1);
-    if (crsfEndpoint->linkStats.uplink_RSSI_2 != 0)
+    gfx->print((int8_t)linkStats.uplink_RSSI_1);
+    if (linkStats.uplink_RSSI_2 != 0)
     {
         gfx->print('/');
-        gfx->print((int8_t)crsfEndpoint->linkStats.uplink_RSSI_2);
+        gfx->print((int8_t)linkStats.uplink_RSSI_2);
     }
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-    gfx->print(crsfEndpoint->linkStats.uplink_SNR);
+    gfx->print(linkStats.uplink_SNR);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    gfx->print(crsfEndpoint->linkStats.active_antenna);
+    gfx->print(linkStats.active_antenna);
 
     // Downlink Linkstats
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
     gfx->print("Downlink");
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    gfx->print(crsfEndpoint->linkStats.downlink_Link_quality);
+    gfx->print(linkStats.downlink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    gfx->print((int8_t)crsfEndpoint->linkStats.downlink_RSSI_1);
+    gfx->print((int8_t)linkStats.downlink_RSSI_1);
     if (isDualRadio())
     {
         gfx->print('/');
-        gfx->print((int8_t)crsfEndpoint->linkStats.downlink_RSSI_2);
+        gfx->print((int8_t)linkStats.downlink_RSSI_2);
     }
 
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-    gfx->print(crsfEndpoint->linkStats.downlink_SNR);
+    gfx->print(linkStats.downlink_SNR);
 }
 
 #endif

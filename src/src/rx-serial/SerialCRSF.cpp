@@ -1,6 +1,5 @@
 #include "SerialCRSF.h"
 
-#include "CRSFEndpoint.h"
 #include "OTA.h"
 #include "common.h"
 #include "device.h"
@@ -54,7 +53,7 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
 
-    crsf_channels_s PackedRCdataOut;
+    crsf_channels_s PackedRCdataOut {};
     PackedRCdataOut.ch0 = channelData[0];
     PackedRCdataOut.ch1 = channelData[1];
     PackedRCdataOut.ch2 = channelData[2];
@@ -79,9 +78,9 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     else
     {
         // Not in 16-channel mode, send LQ and RSSI dBm
-        int32_t rssiDBM = crsfEndpoint->linkStats.active_antenna == 0 ? -crsfEndpoint->linkStats.uplink_RSSI_1 : -crsfEndpoint->linkStats.uplink_RSSI_2;
+        int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
 
-        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(crsfEndpoint->linkStats.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkStats.uplink_Link_quality, 0, 100, 0, 1023));
         PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     }
@@ -95,8 +94,8 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
     };
 
-    uint8_t crc = crsfEndpoint->crsf_crc.calc(outBuffer[2]);
-    crc = crsfEndpoint->crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
+    uint8_t crc = crsfRouter.crsf_crc.calc(outBuffer[2]);
+    crc = crsfRouter.crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
 
     _outputPort->write(outBuffer, sizeof(outBuffer));
     _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));

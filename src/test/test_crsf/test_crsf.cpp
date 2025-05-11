@@ -3,10 +3,10 @@
 #include <unity.h>
 #include "../test_msp/mock_serial.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "common.h"
-#include "options.h"
 #include "lua.h"
+#include "options.h"
 
 using namespace std;
 
@@ -19,8 +19,7 @@ class MockEndpoint : public CRSFEndpoint
 public:
     MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
     void handleMessage(const crsf_header_t *message) override {}
-};
-CRSFEndpoint *crsfEndpoint;
+} crsfEndpoint;
 
 class MockConnector : public CRSFConnector {
 public:
@@ -31,8 +30,9 @@ public:
         }
     }
     std::vector<uint8_t> data;
-};
-MockConnector *connector;
+} connector;
+
+CRSFRouter crsfRouter;
 
 void test_ver_to_u32(void)
 {
@@ -65,12 +65,9 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(28, DEVICE_INFORMATION_LENGTH);
 
     luaParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, 0, 0, 0);
-    sendLuaDevicePacket();
+    sendLuaDevicePacket(CRSF_ADDRESS_CRSF_RECEIVER);
 
-    // CRSF::GetDeviceInformation(deviceInformation, 0);
-    // crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-
-    crsf_ext_header_t *header = (crsf_ext_header_t *) connector->data.data();
+    crsf_ext_header_t *header = (crsf_ext_header_t *) connector.data.data();
 
     TEST_ASSERT_EQUAL(26, header->frame_size);
     TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_DEVICE_INFO, header->type);
@@ -79,31 +76,20 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(CRSF_ADDRESS_CRSF_RECEIVER, header->orig_addr);
     TEST_ASSERT_EQUAL(DEVICE_INFORMATION_FRAME_SIZE, header->frame_size);
 
-    uint8_t *data = connector->data.data() + sizeof(crsf_ext_header_t);
+    uint8_t *data = connector.data.data() + sizeof(crsf_ext_header_t);
     uint8_t compare [] = {'t', 'e', 's', 't', 'i', 'n', 'g', 0x0, 0x45, 0x4c, 0x52, 0x53, 0x0, 0x0, 0x0, 0x0, 0x0, 1, 2, 3, 0x0, 0x0};
 
     TEST_ASSERT_EQUAL_INT8_ARRAY(compare, data, sizeof(compare));
 
-    TEST_ASSERT_EQUAL(test_crc.calc(connector->data.data() + 2, DEVICE_INFORMATION_LENGTH-3), connector->data.data()[DEVICE_INFORMATION_LENGTH - 1]);
-}
-
-// Unity setup/teardown
-void setUp()
-{
-    crsfEndpoint = new MockEndpoint();
-    connector = new MockConnector();
-    connector->addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC
-    crsfEndpoint->addConnector(connector);
-}
-
-void tearDown()
-{
-    delete crsfEndpoint;
-    delete connector;
+    TEST_ASSERT_EQUAL(test_crc.calc(connector.data.data() + 2, DEVICE_INFORMATION_LENGTH-3), connector.data.data()[DEVICE_INFORMATION_LENGTH - 1]);
 }
 
 int main(int argc, char **argv)
 {
+    connector.addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC
+    crsfRouter.addConnector(&connector);
+    crsfRouter.addEndpoint(&crsfEndpoint);
+
     UNITY_BEGIN();
     RUN_TEST(test_ver_to_u32);
     RUN_TEST(test_device_info);

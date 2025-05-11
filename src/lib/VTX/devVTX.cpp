@@ -2,7 +2,7 @@
 #include "common.h"
 #include "device.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "config.h"
 #include "logging.h"
 #include "msp.h"
@@ -74,7 +74,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 }
 
 static void VtxConfigToMSPOut()
@@ -95,7 +95,7 @@ static void VtxConfigToMSPOut()
     }
 
     // we broadcast this so both the FC the RX can process it if it has an SPI based VTX or there are Tramp/SA VTX's connected to the RX
-    crsfEndpoint->AddMspMessage(&packet, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {

@@ -4,7 +4,7 @@
 
 #include "oleddisplay.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
 #include "common.h"
 #include "logging.h"
@@ -359,34 +359,34 @@ void OLEDDisplay::displayLinkstats()
 
     u8g2->drawStr(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST, "Uplink");
     u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    u8g2->print(crsfEndpoint->linkStats.uplink_Link_quality);
+    u8g2->print(linkStats.uplink_Link_quality);
     u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    u8g2->print((int8_t)crsfEndpoint->linkStats.uplink_RSSI_1);
-    if (crsfEndpoint->linkStats.uplink_RSSI_2 != 0)
+    u8g2->print((int8_t)linkStats.uplink_RSSI_1);
+    if (linkStats.uplink_RSSI_2 != 0)
     {
         u8g2->print('/');
-        u8g2->print((int8_t)crsfEndpoint->linkStats.uplink_RSSI_2);
+        u8g2->print((int8_t)linkStats.uplink_RSSI_2);
     }
 
     u8g2->drawStr(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST, "Downlink");
     u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    u8g2->print(crsfEndpoint->linkStats.downlink_Link_quality);
+    u8g2->print(linkStats.downlink_Link_quality);
     u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    u8g2->print((int8_t)crsfEndpoint->linkStats.downlink_RSSI_1);
+    u8g2->print((int8_t)linkStats.downlink_RSSI_1);
     if (isDualRadio())
     {
         u8g2->print('/');
-        u8g2->print((int8_t)crsfEndpoint->linkStats.downlink_RSSI_2);
+        u8g2->print((int8_t)linkStats.downlink_RSSI_2);
     }
 
     if (!OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-        u8g2->print((int8_t)crsfEndpoint->linkStats.uplink_SNR);
+        u8g2->print((int8_t)linkStats.uplink_SNR);
         u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-        u8g2->print((int8_t)crsfEndpoint->linkStats.downlink_SNR);
+        u8g2->print((int8_t)linkStats.downlink_SNR);
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-        u8g2->print(crsfEndpoint->linkStats.active_antenna);
+        u8g2->print(linkStats.active_antenna);
     }
 
     u8g2->sendBuffer();

@@ -2,9 +2,9 @@
 #include <iostream>
 #include <unity.h>
 
+#include "CRSFRouter.h"
 #include "common.h"
 #include "msptypes.h"
-#include "CRSFEndpoint.h"
 
 using namespace std;
 
@@ -19,7 +19,7 @@ public:
     void handleMessage(const crsf_header_t *message) override {}
 };
 CRSFEndpoint *crsfEndpoint = new MockEndpoint();
-
+CRSFRouter crsfRouter;
 
 void test_msp_simple_request(void)
 {
@@ -28,8 +28,8 @@ void test_msp_simple_request(void)
     TEST_ASSERT_EQUAL(7, MSP_REQUEST_PAYLOAD_LENGTH(0));
     TEST_ASSERT_EQUAL(13, MSP_REQUEST_LENGTH(0));
 
-    crsfEndpoint->SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
-    crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfRouter.SetMspV2Request(vtxConfig, MSP_VTX_CONFIG, nullptr, 0);
+    crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(0), CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_RECEIVER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 
@@ -57,8 +57,8 @@ void test_msp_clear_vtx_table_request(void)
     TEST_ASSERT_EQUAL(22, MSP_REQUEST_PAYLOAD_LENGTH(payloadLength));
     TEST_ASSERT_EQUAL(28, MSP_REQUEST_LENGTH(payloadLength));
 
-    crsfEndpoint->SetMspV2Request(vtxConfig, MSP_SET_VTX_CONFIG, payload, payloadLength);
-    crsfEndpoint->SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfRouter.SetMspV2Request(vtxConfig, MSP_SET_VTX_CONFIG, payload, payloadLength);
+    crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t*)vtxConfig, CRSF_FRAMETYPE_MSP_REQ, MSP_REQUEST_FRAME_SIZE(payloadLength), CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_RECEIVER);
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) vtxConfig;
 

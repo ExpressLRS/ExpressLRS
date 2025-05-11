@@ -2,7 +2,7 @@
 #include "logging.h"
 #include "targets.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 
 uint8_t powerToCrsfPower(PowerLevels_e Power)
 {
@@ -272,7 +272,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #endif
 
     CurrentPower = Power;
-    crsfEndpoint->linkStats.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
+    linkStats.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
     devicesTriggerEvent(EVENT_POWER_CHANGED);
 }
 

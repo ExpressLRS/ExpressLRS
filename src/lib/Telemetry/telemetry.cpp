@@ -1,15 +1,13 @@
 #include "telemetry.h"
 #include <cstring>
 
-#include "CRSFEndpoint.h"
-
 #if defined(TARGET_RX) || defined(UNIT_TEST)
 #if defined(UNIT_TEST)
 #include <iostream>
 using namespace std;
 #endif
 
-#include "crsf2msp.h"
+#include "CRSFRouter.h"
 
 Telemetry::Telemetry()
 {
@@ -163,13 +161,13 @@ bool Telemetry::RXhandleUARTin(CRSFConnector *origin, uint8_t data)
             if (CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] == currentTelemetryByte)
             {
                 // exclude first bytes (sync byte + length), skip last byte (submitted crc)
-                uint8_t crc = crsfEndpoint->crsf_crc.calc(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
+                uint8_t crc = crsfRouter.crsf_crc.calc(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX] - CRSF_TELEMETRY_CRC_LENGTH);
                 telemetry_state = TELEMETRY_IDLE;
 
                 if (data == crc)
                 {
                     const crsf_header_t *header = (crsf_header_t *) CRSFinBuffer;
-                    crsfEndpoint->processMessage(origin, header);
+                    crsfRouter.processMessage(origin, header);
 
                     // Special case to check here and not in AppendTelemetryPackage(). devAnalogVbat and vario sends
                     // direct to AppendTelemetryPackage() and we want to detect packets only received through serial.

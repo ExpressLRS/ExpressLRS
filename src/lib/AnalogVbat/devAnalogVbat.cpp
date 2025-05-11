@@ -1,6 +1,6 @@
 #include "devAnalogVbat.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "logging.h"
 #include "median.h"
 #include "telemetry.h"
@@ -86,8 +86,8 @@ static void reportVbat()
     crsfbatt.p.voltage = htobe16((uint16_t)vbat);
     // No sensors for current, capacity, or remaining available
 
-    crsfEndpoint->SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
-    crsfEndpoint->deliverMessage(nullptr, &crsfbatt.h);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.deliverMessage(nullptr, &crsfbatt.h);
 }
 
 static int timeout()

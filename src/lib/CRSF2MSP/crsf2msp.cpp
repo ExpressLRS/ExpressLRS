@@ -1,6 +1,6 @@
 #include "crsf2msp.h"
 
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 
 CROSSFIRE2MSP::CROSSFIRE2MSP()
 {
@@ -130,7 +130,7 @@ uint8_t CROSSFIRE2MSP::getChecksum(const uint8_t *data, const uint32_t len, MSPf
     }
     else if (mspVersion == MSP_FRAME_V2)
     {
-        checkSum = crsfEndpoint->crsf_crc.calc(data, len);
+        checkSum = crsfRouter.crsf_crc.calc(data, len);
     }
     else
     {

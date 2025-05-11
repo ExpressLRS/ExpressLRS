@@ -1,7 +1,7 @@
 #if defined(TARGET_RX)
 
 #include "SerialMavlink.h"
-#include "CRSFEndpoint.h"
+#include "CRSFRouter.h"
 #include "common.h"
 #include "config.h"
 #include "device.h"
@@ -97,10 +97,10 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         const mavlink_radio_status_t radio_status {
             rxerrors: 0,
             fixed: 0,
-            rssi: (uint8_t)((float)crsfEndpoint->linkStats.uplink_Link_quality * 2.55),
-            remrssi: crsfEndpoint->linkStats.uplink_RSSI_1,
+            rssi: (uint8_t)((float)linkStats.uplink_Link_quality * 2.55),
+            remrssi: linkStats.uplink_RSSI_1,
             txbuf: percentage_remaining,
-            noise: (uint8_t)crsfEndpoint->linkStats.uplink_SNR,
+            noise: (uint8_t)linkStats.uplink_SNR,
             remnoise: 0,
         };
 
