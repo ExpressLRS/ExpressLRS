@@ -58,6 +58,10 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_VARIO = 0x07,
     CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
     CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
+    CRSF_FRAMETYPE_AIRSPEED = 0x0A,
+    CRSF_FRAMETYPE_RPM = 0x0C,
+    CRSF_FRAMETYPE_TEMP = 0x0D,
+    CRSF_FRAMETYPE_CELLS = 0x0E,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
     CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
     CRSF_FRAMETYPE_RADIO_ID = 0x3A,
@@ -98,17 +102,6 @@ enum {
     CRSF_FRAME_TX_MSP_FRAME_SIZE = 58,
     CRSF_FRAME_RX_MSP_FRAME_SIZE = 8,
     CRSF_FRAME_ORIGIN_DEST_SIZE = 2,
-};
-
-enum {
-    CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
-    CRSF_FRAME_VARIO_PAYLOAD_SIZE = 2,
-    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 4, // TBS version is 2, ELRS is 4 (combines vario)
-    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
-    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
-    CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = 48,
-    CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = 16,
-    CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
 };
 
 typedef enum : uint8_t
@@ -301,6 +294,51 @@ typedef struct crsf_sensor_baro_vario_s
     int16_t verticalspd;  // Vertical speed in cm/s, BigEndian
 } PACKED crsf_sensor_baro_vario_t;
 
+// CRSF_FRAMETYPE_AIRSPEED
+typedef struct crsf_sensor_airspeed_s
+{
+    uint16_t speed;             // Airspeed in 0.1 * km/h (hectometers/h)
+} PACKED crsf_sensor_airspeed_t;
+
+// CRSF_FRAMETYPE_RPM
+typedef struct crsf_sensor_rpm_s
+{
+    uint8_t source_id;          // Identifies the source of the RPM data (e.g., 0 = Motor 1, 1 = Motor 2, etc.)
+    int32_t rpm0:24;            // 1 - 19 RPM values with negative ones representing the motor spinning in reverse
+    int32_t rpm1:24;
+    int32_t rpm2:24;
+    int32_t rpm3:24;
+    int32_t rpm4:24;
+    int32_t rpm5:24;
+    int32_t rpm6:24;
+    int32_t rpm7:24;
+    int32_t rpm8:24;
+    int32_t rpm9:24;
+    int32_t rpm10:24;
+    int32_t rpm11:24;
+    int32_t rpm12:24;
+    int32_t rpm13:24;
+    int32_t rpm14:24;
+    int32_t rpm15:24;
+    int32_t rpm16:24;
+    int32_t rpm17:24;
+    int32_t rpm18:24;
+} PACKED crsf_sensor_rpm_t;
+
+// CRSF_FRAMETYPE_TEMP
+typedef struct crsf_sensor_temp_s
+{
+    uint8_t source_id;            // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    int16_t temperature[20];      // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
+} PACKED crsf_sensor_temp_t;
+
+// CRSF_FRAMETYPE_CELLS
+typedef struct crsf_sensor_cells_s
+{
+    uint8_t source_id;            // Identifies the source of the Main_battery data (e.g., 0 = battery 1, 1 = battery 2, etc.)
+    uint16_t cell[29];            // up to 29 cell values in a resolution of a thousandth of a Volt (e.g. 3.850V = 3850)
+} PACKED crsf_sensor_cells_t;
+
 // CRSF_FRAMETYPE_VARIO
 typedef struct crsf_sensor_vario_s
 {
@@ -383,6 +421,21 @@ typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
 // } crsfOpenTXsyncFrame_t;
 
 // typedef struct crsfOpenTXsyncFrame_s crsfOpenTXsyncFrame_t;
+
+enum {
+    CRSF_FRAME_GPS_PAYLOAD_SIZE = sizeof(crsf_sensor_gps_t),
+    CRSF_FRAME_VARIO_PAYLOAD_SIZE = sizeof(crsf_sensor_vario_t),
+    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_baro_vario_t),
+    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = sizeof(crsf_sensor_battery_t),
+    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_attitude_t),
+    CRSF_FRAME_DEVICE_INFO_PAYLOAD_SIZE = (CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_LENGTH_EXT_TYPE_CRC),
+    CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = sizeof(crsf_flight_mode_t),
+    CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE = sizeof(crsf_sensor_airspeed_t),
+    CRSF_FRAME_RPM_PAYLOAD_SIZE = sizeof(crsf_sensor_rpm_t),
+    CRSF_FRAME_TEMP_PAYLOAD_SIZE = sizeof(crsf_sensor_temp_t),
+    CRSF_FRAME_CELLS_PAYLOAD_SIZE = sizeof(crsf_sensor_cells_t),
+    CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
+};
 
 /////inline and utility functions//////
 
