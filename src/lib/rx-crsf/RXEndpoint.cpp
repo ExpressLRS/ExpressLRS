@@ -28,7 +28,7 @@ RXEndpoint::RXEndpoint()
  */
 bool RXEndpoint::handleRaw(const crsf_header_t *message)
 {
-    if (message->device_addr == CRSF_ADDRESS_CRSF_RECEIVER && message->frame_size == 4 && message->type == CRSF_FRAMETYPE_COMMAND)
+    if (message->device_addr == CRSF_ADDRESS_CRSF_RECEIVER && message->frame_size >= 4 && message->type == CRSF_FRAMETYPE_COMMAND)
     {
         uint8_t *payload = (uint8_t *)message + sizeof(crsf_header_t);
         // Non CRSF, dest=b src=l -> reboot to bootloader
