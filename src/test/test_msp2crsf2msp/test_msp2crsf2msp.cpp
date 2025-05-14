@@ -1,9 +1,10 @@
+#include "CRSFRouter.h"
+#include "common.h"
+#include "crsf2msp.h"
+#include "msp2crsf.h"
 #include <cstdint>
 #include <iostream>
 #include <unity.h>
-#include "common.h"
-#include "msp2crsf.h"
-#include "crsf2msp.h"
 
 using namespace std;
 
@@ -11,6 +12,8 @@ GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 MSP2CROSSFIRE msp2crsf;
 CROSSFIRE2MSP crsf2msp;
+
+CRSFRouter crsfRouter;
 
 // MSP V2 (function id: 100, payload size: 0)
 const uint8_t MSP_IDENT[] = {0x24, 0x58, 0x3c, 0x00, 0x64, 0x00, 0x00, 0x00, 0x8f};
@@ -153,7 +156,10 @@ void MSPV2_SERIAL_SETTINGS_TEST()
 }
 
 // Unity setup/teardown
-void setUp() {}
+void setUp()
+{
+
+}
 void tearDown() {}
 
 int main(int argc, char **argv)

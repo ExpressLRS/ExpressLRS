@@ -4,16 +4,13 @@
 
 #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
 
+#include "common.h"
+#include "crsf_protocol.h"
+#include "handset.h"
+#include "hwTimer.h"
+#include "options.h"
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include "common.h"
-#include "CRSF.h"
-#include "handset.h"
-#include "POWERMGNT.h"
-#include "hwTimer.h"
-#include "logging.h"
-#include "options.h"
-
 
 #if defined(RADIO_SX127X)
 extern SX127xDriver Radio;

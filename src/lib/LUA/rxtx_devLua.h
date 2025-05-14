@@ -1,10 +1,7 @@
 #pragma once
 
 #include "common.h"
-#include "device.h"
 #include "lua.h"
-#include "config.h"
-#include "POWERMGNT.h"
 
 // Common functions
 void luadevGeneratePowerOpts(luaItem_selection *luaPower);

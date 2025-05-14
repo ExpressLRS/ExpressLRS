@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "targets.h"
 #include "crsf_protocol.h"
 
@@ -143,7 +142,7 @@ void luaRegisterDevicePingCallback(void (*callback)());
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message);
 
-extern void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg);
+extern void luaParamUpdateReq(crsf_addr_e origin, uint8_t type, uint8_t index, uint8_t arg);
 extern bool luaHandleUpdateParameter();
 
 typedef void (*luaCallback)(struct luaPropertiesCommon *item, uint8_t arg);
@@ -151,7 +150,7 @@ void registerLUAParameter(void *definition, luaCallback callback = nullptr, uint
 
 uint8_t findLuaSelectionLabel(const void *luaStruct, char *outarray, uint8_t value);
 
-void sendLuaDevicePacket(void);
+void sendLuaDevicePacket(crsf_addr_e device_id);
 inline void setLuaTextSelectionValue(struct luaItem_selection *luaStruct, uint8_t newvalue) {
     luaStruct->value = newvalue;
 }
