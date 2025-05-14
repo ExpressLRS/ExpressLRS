@@ -6,12 +6,17 @@ elrsLinkStatistics_t linkStats {};
 
 void CRSFRouter::addConnector(CRSFConnector *connector)
 {
-    connectors.push_back(connector);
+    connectors.insert(connector);
+}
+
+void CRSFRouter::removeConnector(CRSFConnector *connector)
+{
+    connectors.erase(connector);
 }
 
 void CRSFRouter::addEndpoint(CRSFEndpoint *endpoint)
 {
-    endpoints.push_back(endpoint);
+    endpoints.insert(endpoint);
 }
 
 void CRSFRouter::processMessage(CRSFConnector *connector, const crsf_header_t *message) const

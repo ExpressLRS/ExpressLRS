@@ -24,6 +24,13 @@ public:
     void addConnector(CRSFConnector *connector);
 
     /**
+     * Removes a CRSFConnector instance from the list of connectors managed by this CRSFRouter.
+     *
+     * @param connector Pointer to the CRSFConnector that will be removed from the endpoint's managed connectors.
+     */
+    void removeConnector(CRSFConnector * connector);
+
+    /**
      * Adds a CRSFEndpoint instance to the list of endpoints managed by this CRSFRouter.
      *
      * Endpoints are the targets of messages and are expected to process the messages that are sent to them.
@@ -123,8 +130,8 @@ public:
     GENERIC_CRC8 crsf_crc = GENERIC_CRC8(CRSF_CRC_POLY);
 
 private:
-    std::vector<CRSFConnector *> connectors;
-    std::vector<CRSFEndpoint *> endpoints;
+    std::set<CRSFConnector *> connectors;
+    std::set<CRSFEndpoint *> endpoints;
 };
 
 // The global instance of the endpoint

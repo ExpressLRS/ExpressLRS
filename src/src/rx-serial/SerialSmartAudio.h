@@ -6,8 +6,8 @@
 
 class SerialSmartAudio final : public SerialIO, public CRSFConnector {
 public:
-    explicit SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin);
-    ~SerialSmartAudio() override = default;
+    SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin);
+    ~SerialSmartAudio() override;
 
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }

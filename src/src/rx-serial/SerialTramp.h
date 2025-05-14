@@ -6,8 +6,8 @@
 
 class SerialTramp final : public SerialIO, public CRSFConnector {
 public:
-    explicit SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin);
-    ~SerialTramp() override = default;
+    SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin);
+    ~SerialTramp() override;
 
     void sendQueuedData(uint32_t maxBytesToSend) override;
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; }

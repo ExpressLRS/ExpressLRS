@@ -7,14 +7,14 @@
 #endif
 
 #define SMARTAUDIO_MAX_FRAME_SIZE 32
-#define SMARTAUDIO_HEADER_DUMMY 0x00 // Page 2: "The SmartAudio line need to be low before a frame is sent. If the host MCU can’t handle this it can be done by sending a 0x00 dummy byte in front of the actual frame."
+#define SMARTAUDIO_HEADER_DUMMY 0x00 // Page 2: "The SmartAudio line needs to be low before a frame is sent. If the host MCU can’t handle this, it can be done by sending a 0x00 dummy byte in front of the actual frame."
 #define SMARTAUDIO_HEADER_1 0xAA
 #define SMARTAUDIO_HEADER_2 0x55
 #define SMARTAUDIO_CRC_POLY 0xD5
 #define SMARTAUDIO_RESPONSE_DELAY_MS 200
 
-// check value for MSP_SET_VTX_CONFIG to determine if value is encoded
-// band/channel or frequency in MHz (3 bits for band and 3 bits for channel)
+// check value for MSP_SET_VTX_CONFIG to determine if the value is encoded
+// band/channel or frequency in MHz (3 bits for the band and 3 bits for the channel)
 #define VTXCOMMON_MSP_BANDCHAN_CHKVAL ((uint16_t)((7 << 3) + 7))
 
 GENERIC_CRC8 crc(SMARTAUDIO_CRC_POLY);
@@ -22,7 +22,7 @@ GENERIC_CRC8 crc(SMARTAUDIO_CRC_POLY);
 SerialSmartAudio::SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin) : SerialIO(&out, &in)
 {
 #if defined(PLATFORM_ESP32)
-    // we are on UART1, use Serial1 TX assigned pin for half duplex
+    // we are on UART1, use Serial1 TX assigned pin for half-duplex
     UTXDoutIdx = U1TXD_OUT_IDX;
     URXDinIdx = U1RXD_IN_IDX;
     halfDuplexPin = serial1TXpin;
@@ -31,11 +31,16 @@ SerialSmartAudio::SerialSmartAudio(Stream &out, Stream &in, int8_t serial1TXpin)
     crsfRouter.addConnector(this);
 }
 
+SerialSmartAudio::~SerialSmartAudio()
+{
+    crsfRouter.removeConnector(this);
+}
+
 void SerialSmartAudio::setTXMode() const
 {
 #if defined(PLATFORM_ESP32)
-    pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
-    digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
+    pinMode(halfDuplexPin, OUTPUT);                                 // set half-duplex GPIO to OUTPUT
+    digitalWrite(halfDuplexPin, HIGH);                              // set half-duplex GPIO to high level
     pinMatrixOutAttach(halfDuplexPin, UTXDoutIdx, false, false);    // attach GPIO as output of UART TX
 #endif
 }
@@ -43,8 +48,8 @@ void SerialSmartAudio::setTXMode() const
 void SerialSmartAudio::setRXMode() const
 {
 #if defined(PLATFORM_ESP32)
-    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
-    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half duplex GPIO as input to UART RX
+    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half-duplex GPIO to INPUT
+    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half-duplex GPIO as input to UART RX
 #endif
 }
 
