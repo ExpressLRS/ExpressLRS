@@ -1429,8 +1429,6 @@ void setup()
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
-    crsfTransmitter.OnBindingCommand = EnterBindingModeSafely;
-    crsfTransmitter.RecvModelUpdate = ModelUpdateReq;
     crsfTransmitter.begin();
     crsfRouter.addConnector(&otaConnector);
     crsfRouter.addEndpoint(&crsfTransmitter);

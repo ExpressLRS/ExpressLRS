@@ -49,6 +49,13 @@ public:
      */
     virtual void forwardMessage(const crsf_header_t *message) = 0;
 
+    /**
+     * @brief Retrieves the maximum allowable packet size for the CRSF connector.
+     *
+     * The size is used to set the chunking size for parameter read responses.
+     *
+     * @return The maximum packet size in bytes supported by the connector.
+     */
     virtual uint8_t GetMaxPacketBytes() const { return CRSF_MAX_PACKET_LEN; }
 
     /**

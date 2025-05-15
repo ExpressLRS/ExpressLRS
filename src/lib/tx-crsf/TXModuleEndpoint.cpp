@@ -12,6 +12,7 @@
 RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
+void ModelUpdateReq();
 void SetSyncSpam();
 void sendELRSstatus(crsf_addr_e origin);
 void luaSupressCriticalErrors();
@@ -26,7 +27,7 @@ void TXModuleEndpoint::begin()
     if (esp_reset_reason() != ESP_RST_POWERON)
     {
         modelId = rtcModelId;
-        if (RecvModelUpdate) RecvModelUpdate();
+        ModelUpdateReq();
     }
 #endif
     registerParameters();
@@ -53,7 +54,7 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
         && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
         && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
-        if (OnBindingCommand) OnBindingCommand();
+        EnterBindingModeSafely();
     }
     else if (packetType == CRSF_FRAMETYPE_COMMAND
         && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
@@ -63,7 +64,7 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
 #if defined(PLATFORM_ESP32)
         rtcModelId = modelId;
 #endif
-        if (RecvModelUpdate) RecvModelUpdate();
+        ModelUpdateReq();
     }
     else if (packetType == CRSF_FRAMETYPE_DEVICE_PING
         || packetType == CRSF_FRAMETYPE_PARAMETER_READ

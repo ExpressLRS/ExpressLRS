@@ -348,7 +348,7 @@ void luaSupressCriticalErrors()
  * @brief: Update the luaBadGoodString with the current bad/good count
  * This item is hidden on our Lua and only displayed in other systems that don't poll our status
  ****/
-static void pingCallback()
+void TXModuleEndpoint::devicePingCalled()
 {
     luaSupressCriticalErrors();
     itoa(CRSFHandset::BadPktsCountResult, luaBadGoodString, 10);
@@ -710,7 +710,6 @@ static void recalculatePacketRateOptions(int minInterval)
 void TXModuleEndpoint::registerParameters()
 {
     setLuaStringValue(&luaInfo, luaBadGoodString);
-    registerDevicePingCallback(&pingCallback);
 
     if (HAS_RADIO) {
 #if defined(RADIO_LR1121)

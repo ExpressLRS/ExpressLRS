@@ -252,11 +252,6 @@ void CRSFEndpoint::sendCommandResponse(commandParameter *cmd, const commandStep_
     pushResponseChunk(cmd, false);
 }
 
-void CRSFEndpoint::registerDevicePingCallback(void (*callback)())
-{
-    devicePingCallback = callback;
-}
-
 void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCallback callback, const uint8_t parent)
 {
     // On the first call we initialise the root folder
@@ -300,10 +295,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
         break;
 
     case CRSF_FRAMETYPE_DEVICE_PING:
-        if (devicePingCallback)
-        {
-            devicePingCallback();
-        }
+        devicePingCalled();
         sendDeviceInformationPacket();
         break;
 

@@ -51,10 +51,10 @@ public:
 
     virtual void registerParameters() {}
     virtual void updateParameters() {}
-    void registerDevicePingCallback(void (*callback)());
     void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message); // FIXME should really be protected
 
 protected:
+    virtual void devicePingCalled() {}
     void registerParameter(void *definition, parameterHandlerCallback callback = nullptr, uint8_t parent = 0);
     void sendDeviceInformationPacket();
     void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
@@ -63,10 +63,9 @@ private:
     crsf_addr_e device_id;
 
     // CRSF Parameter handling
-    crsf_addr_e requestOrigin;
-    void (*devicePingCallback)() = nullptr;
+    crsf_addr_e requestOrigin = CRSF_ADDRESS_BROADCAST;
 
-    propertiesCommon *paramDefinitions[LUA_MAX_PARAMS];
+    propertiesCommon *paramDefinitions[LUA_MAX_PARAMS] {};
     parameterHandlerCallback paramCallbacks[LUA_MAX_PARAMS] = {nullptr};
 
     uint8_t lastLuaField = 0;
