@@ -231,7 +231,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 #endif
     }
 
-    setLuaUint8Value(&luaMappingChannelOut, arg);
+    setUint8Value(&luaMappingChannelOut, arg);
 
     // When the selected output channel changes, update the available PWM modes for that pin
     // Truncate the select options before the ; following On/Off
@@ -361,9 +361,9 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
     // update the related fields to represent the selected channel
     const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
-    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
-    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
-    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+    setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
 }
 
 static void luaparamMappingChannelIn(propertiesCommon *item, uint8_t arg)
@@ -588,56 +588,56 @@ static void updateBindModeLabel()
 
 void RXEndpoint::updateParameters()
 {
-  setLuaTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
+  setTextSelectionValue(&luaSerialProtocol, config.GetSerialProtocol());
 #if defined(PLATFORM_ESP32)
   if (RX_HAS_SERIAL1)
   {
-    setLuaTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
+    setTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
   }
 #endif
   
-  setLuaTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
+  setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
-    setLuaTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+    setTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
   }
 
   if (MinPower != MaxPower)
   {
     // The last item (for MatchTX) will be MaxPower - MinPower + 1
     uint8_t luaPwrVal = (config.GetPower() == PWR_MATCH_TX) ? POWERMGNT::getMaxPower() + 1 : config.GetPower();
-    setLuaTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
+    setTextSelectionValue(&luaTlmPower, luaPwrVal - POWERMGNT::getMinPower());
   }
 
   // Teamrace
-  setLuaTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
-  setLuaTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
+  setTextSelectionValue(&luaTeamraceChannel, config.GetTeamraceChannel() - AUX2);
+  setTextSelectionValue(&luaTeamracePosition, config.GetTeamracePosition());
 
   if (OPT_HAS_SERVO_OUTPUT)
   {
     const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
-    setLuaUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
-    setLuaTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
-    setLuaTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+    setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
+    setTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
+    setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
   }
 
   if (config.GetModelId() == 255)
   {
-    setLuaStringValue(&luaModelNumber, "Off");
+    setStringValue(&luaModelNumber, "Off");
   }
   else
   {
     itoa(config.GetModelId(), modelString, 10);
-    setLuaStringValue(&luaModelNumber, modelString);
+    setStringValue(&luaModelNumber, modelString);
   }
-  setLuaTextSelectionValue(&luaBindStorage, config.GetBindStorage());
+  setTextSelectionValue(&luaBindStorage, config.GetBindStorage());
   updateBindModeLabel();
 
   if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
   {
-    setLuaUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
-    setLuaUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
+    setUint8Value(&luaSourceSysId, config.GetSourceSysId() == 0 ? 255 : config.GetSourceSysId());  //display Source sysID if 0 display 255 to mimic logic in SerialMavlink.cpp
+    setUint8Value(&luaTargetSysId, config.GetTargetSysId() == 0 ? 1 : config.GetTargetSysId());  //display Target sysID if 0 display 1 to mimic logic in SerialMavlink.cpp
     LUA_FIELD_SHOW(luaSourceSysId)
     LUA_FIELD_SHOW(luaTargetSysId)
   }

@@ -1,7 +1,7 @@
 #ifndef TX_OTA_CONNECTOR_H
 #define TX_OTA_CONNECTOR_H
 
-#include "CRSFEndpoint.h"
+#include "CRSFConnector.h"
 #include "FIFO.h"
 #include "telemetry_protocol.h"
 

@@ -690,7 +690,7 @@ static void recalculatePacketRateOptions(int minInterval)
 
 void TXModuleEndpoint::registerParameters()
 {
-    setLuaStringValue(&luaInfo, luaBadGoodString);
+    setStringValue(&luaInfo, luaBadGoodString);
 
     auto wifiBleCallback = [&](propertiesCommon *item, const uint8_t arg) { handleWifiBle(item, arg); };
     auto sendCallback = [&](propertiesCommon *item, const uint8_t arg) { handleSimpleSendCmd(item, arg); };
@@ -985,17 +985,17 @@ void TXModuleEndpoint::updateParameters()
       rfMode = RF_MODE_2G4;
       break;
   }
-  setLuaTextSelectionValue(&luaRFBand, rfMode);
+  setTextSelectionValue(&luaRFBand, rfMode);
 #endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());
-  setLuaTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
+  setTextSelectionValue(&luaAirRate, RATE_MAX - 1 - currentRate);
 
-  setLuaTextSelectionValue(&luaTlmRate, config.GetTlm());
+  setTextSelectionValue(&luaTlmRate, config.GetTlm());
   luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
 
   luaAntenna.options = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? antennamodeOptsDualBand : antennamodeOpts;
 
-  setLuaTextSelectionValue(&luaSwitch, config.GetSwitchMode());
+  setTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   if (isMavlinkMode)
   {
     luaSwitch.options = OtaIsFullRes ? switchmodeOpts8chMav : switchmodeOpts4chMav;
@@ -1007,36 +1007,36 @@ void TXModuleEndpoint::updateParameters()
 
   if (isDualRadio())
   {
-    setLuaTextSelectionValue(&luaAntenna, config.GetAntennaMode());
+    setTextSelectionValue(&luaAntenna, config.GetAntennaMode());
   }
-  setLuaTextSelectionValue(&luaLinkMode, config.GetLinkMode());
+  setTextSelectionValue(&luaLinkMode, config.GetLinkMode());
   updateModelID();
-  setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
-  setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+  setTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
+  setTextSelectionValue(&luaPower, config.GetPower() - MinPower);
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
-    setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
+    setTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());
   }
 
   uint8_t dynamic = config.GetDynamicPower() ? config.GetBoostChannel() + 1 : 0;
-  setLuaTextSelectionValue(&luaDynamicPower, dynamic);
+  setTextSelectionValue(&luaDynamicPower, dynamic);
 
-  setLuaTextSelectionValue(&luaVtxBand, config.GetVtxBand());
-  setLuaUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
-  setLuaTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
+  setTextSelectionValue(&luaVtxBand, config.GetVtxBand());
+  setUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
+  setTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
   // Pit mode can only be sent as part of the power byte
   LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
-  setLuaTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
+  setTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
-    setLuaTextSelectionValue(&luaBackpackEnable, config.GetBackpackDisable() ? 0 : 1);
-    setLuaTextSelectionValue(&luaDvrAux, config.GetBackpackDisable() ? 0 : config.GetDvrAux());
-    setLuaTextSelectionValue(&luaDvrStartDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStartDelay());
-    setLuaTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
-    setLuaTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetBackpackDisable() ? 0 : config.GetPTREnableChannel());
-    setLuaTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
-    setLuaTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
-    setLuaStringValue(&luaBackpackVersion, backpackVersion);
+    setTextSelectionValue(&luaBackpackEnable, config.GetBackpackDisable() ? 0 : 1);
+    setTextSelectionValue(&luaDvrAux, config.GetBackpackDisable() ? 0 : config.GetDvrAux());
+    setTextSelectionValue(&luaDvrStartDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStartDelay());
+    setTextSelectionValue(&luaDvrStopDelay, config.GetBackpackDisable() ? 0 : config.GetDvrStopDelay());
+    setTextSelectionValue(&luaHeadTrackingEnableChannel, config.GetBackpackDisable() ? 0 : config.GetPTREnableChannel());
+    setTextSelectionValue(&luaHeadTrackingStartChannel, config.GetBackpackDisable() ? 0 : config.GetPTRStartChannel());
+    setTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
+    setStringValue(&luaBackpackVersion, backpackVersion);
   }
   updateFolderNames();
 }

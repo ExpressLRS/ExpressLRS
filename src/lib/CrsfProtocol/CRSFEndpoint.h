@@ -1,12 +1,7 @@
 #ifndef CRSF_ENDPOINT_H
 #define CRSF_ENDPOINT_H
 
-#include "CRSFConnector.h"
 #include "CRSFParameters.h"
-#include "crc.h"
-#include "msp.h"
-
-#include <vector>
 
 #define LUA_MAX_PARAMS 64
 
@@ -65,14 +60,6 @@ public:
     virtual void updateParameters() {}
 
 protected:
-    static void setLuaTextSelectionValue(selectionParameter *luaStruct, const uint8_t newValue) { luaStruct->value = newValue; }
-    static void setLuaUint8Value(int8Parameter *luaStruct, const uint8_t newValue) { luaStruct->properties.u.value = newValue; }
-    static void setLuaInt8Value(int8Parameter *luaStruct, const int8_t newValue) { luaStruct->properties.s.value = newValue; }
-    static void setLuaUint16Value(int16Parameter *luaStruct, const uint16_t newValue) { luaStruct->properties.u.value = htobe16(newValue); }
-    static void setLuaInt16Value(int16Parameter *luaStruct, const int16_t newValue) { luaStruct->properties.u.value = htobe16((uint16_t)newValue); }
-    static void setLuaFloatValue(floatParameter *luaStruct, const int32_t newValue) { luaStruct->properties.value = htobe32((uint32_t)newValue); }
-    static void setLuaStringValue(stringParameter *luaStruct, const char *newValue) { luaStruct->value = newValue; }
-
     /**
      * Invoked when a device ping message is received from the CRSF network.
      *
@@ -80,10 +67,100 @@ protected:
      * a ping request. It will be called immediately before the sendDeviceInformationPacket() function.
      */
     virtual void devicePingCalled() {}
+
+    /**
+     * Registers a parameter with the CRSF endpoint.
+     * 
+     * @param definition Pointer to the parameter definition
+     * @param callback Optional callback function to be called when the parameter is updated
+     * @param parent Parent parameter index, defaults to 0 for root level parameters
+     */
     void registerParameter(void *definition, const parameterHandlerCallback &callback = nullptr, uint8_t parent = 0);
+
+    /**
+     * Sends device information to the CRSF network.
+     * Called after receiving a device ping message.
+     */
     void sendDeviceInformationPacket();
+
+    /**
+     * Handles parameter update requests from the CRSF network.
+     * 
+     * @param origin The address of the requesting device
+     * @param isElrs Boolean indicating if this is an ELRS-specific parameter
+     * @param parameterType The type of parameter being updated
+     * @param parameterIndex The index of the parameter to update
+     * @param parameterChunk The chunk number for multi-part parameters
+     */
     void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
+
+    /**
+     * Sends a command response back to the CRSF network.
+     * 
+     * @param cmd Pointer to the command parameter structure
+     * @param step The current step in the command execution
+     * @param message Response message to send
+     */
     void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message);
+
+    /**
+     * Sets the value of a text selection parameter in the CRSF interface.
+     *
+     * @param luaStruct Pointer to the selection parameter structure to modify
+     * @param newValue The new value to set
+     */
+    static void setTextSelectionValue(selectionParameter *luaStruct, const uint8_t newValue) { luaStruct->value = newValue; }
+
+    /**
+     * Sets an unsigned 8-bit integer value in a CRSF parameter structure.
+     *
+     * @param luaStruct Pointer to the int8Parameter structure to modify
+     * @param newValue The new unsigned 8-bit value to set
+     */
+    static void setUint8Value(int8Parameter *luaStruct, const uint8_t newValue) { luaStruct->properties.u.value = newValue; }
+
+    /**
+     * Sets a signed 8-bit integer value in a CRSF parameter structure.
+     *
+     * @param luaStruct Pointer to the int8Parameter structure to modify
+     * @param newValue The new signed 8-bit value to set
+     */
+    static void setInt8Value(int8Parameter *luaStruct, const int8_t newValue) { luaStruct->properties.s.value = newValue; }
+
+    /**
+     * Sets an unsigned 16-bit integer value in a CRSF parameter structure.
+     * Handles endianness conversion to big-endian.
+     *
+     * @param luaStruct Pointer to the int16Parameter structure to modify
+     * @param newValue The new unsigned 16-bit value to set
+     */
+    static void setUint16Value(int16Parameter *luaStruct, const uint16_t newValue) { luaStruct->properties.u.value = htobe16(newValue); }
+
+    /**
+     * Sets a signed 16-bit integer value in a CRSF parameter structure.
+     * Handles endianness conversion to big-endian.
+     *
+     * @param luaStruct Pointer to the int16Parameter structure to modify
+     * @param newValue The new signed 16-bit value to set
+     */
+    static void setInt16Value(int16Parameter *luaStruct, const int16_t newValue) { luaStruct->properties.u.value = htobe16((uint16_t)newValue); }
+
+    /**
+     * Sets a float value in a CRSF parameter structure.
+     * Handles endianness conversion to big-endian.
+     *
+     * @param luaStruct Pointer to the floatParameter structure to modify
+     * @param newValue The new value to set as a 32-bit integer
+     */
+    static void setFloatValue(floatParameter *luaStruct, const int32_t newValue) { luaStruct->properties.value = htobe32((uint32_t)newValue); }
+
+    /**
+     * Sets a string value in a CRSF parameter structure.
+     *
+     * @param luaStruct Pointer to the stringParameter structure to modify
+     * @param newValue The new string value to set
+     */
+    static void setStringValue(stringParameter *luaStruct, const char *newValue) { luaStruct->value = newValue; }
 
 private:
     crsf_addr_e device_id;
