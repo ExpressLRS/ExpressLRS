@@ -4,14 +4,6 @@
 #include <cmath>
 #include <cstdint>
 
-#if TARGET_TX
-#define CRSF_TX_MODULE 1
-#elif TARGET_RX || defined(UNIT_TEST)
-#define CRSF_RX_MODULE 1
-#else
-#error "Invalid configuration!"
-#endif
-
 #define PACKED __attribute__((packed))
 
 #define CRSF_CRC_POLY 0xd5

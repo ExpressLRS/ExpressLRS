@@ -1,6 +1,6 @@
+#if defined(TARGET_TX)
 #include "CRSFHandset.h"
 
-#if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "CRSFEndpoint.h"
 #include "CRSFRouter.h"
 #include "FIFO.h"
@@ -604,5 +604,4 @@ bool CRSFHandset::UARTwdt()
 #endif
     return retval;
 }
-
-#endif // CRSF_TX_MODULE
+#endif
