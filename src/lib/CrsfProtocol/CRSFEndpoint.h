@@ -3,7 +3,7 @@
 
 #include "CRSFParameters.h"
 
-#define LUA_MAX_PARAMS 64
+#define MAX_CRSF_PARAMETERS 64
 
 class CRSFEndpoint {
 public:
@@ -90,9 +90,9 @@ protected:
      * @param isElrs Boolean indicating if this is an ELRS-specific parameter
      * @param parameterType The type of parameter being updated
      * @param parameterIndex The index of the parameter to update
-     * @param parameterChunk The chunk number for multi-part parameters
+     * @param parameterArg The chunk number for multipart parameters or value for 'write' requests
      */
-    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
+    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterArg);
 
     /**
      * Sends a command response back to the CRSF network.
@@ -125,61 +125,61 @@ protected:
     /**
      * Sets the value of a text selection parameter in the CRSF interface.
      *
-     * @param luaStruct Pointer to the selection parameter structure to modify
+     * @param parameter Pointer to the selection parameter structure to modify
      * @param newValue The new value to set
      */
-    static void setTextSelectionValue(selectionParameter *luaStruct, const uint8_t newValue) { luaStruct->value = newValue; }
+    static void setTextSelectionValue(selectionParameter *parameter, const uint8_t newValue) { parameter->value = newValue; }
 
     /**
      * Sets an unsigned 8-bit integer value in a CRSF parameter structure.
      *
-     * @param luaStruct Pointer to the int8Parameter structure to modify
+     * @param parameter Pointer to the int8Parameter structure to modify
      * @param newValue The new unsigned 8-bit value to set
      */
-    static void setUint8Value(int8Parameter *luaStruct, const uint8_t newValue) { luaStruct->properties.u.value = newValue; }
+    static void setUint8Value(int8Parameter *parameter, const uint8_t newValue) { parameter->properties.u.value = newValue; }
 
     /**
      * Sets a signed 8-bit integer value in a CRSF parameter structure.
      *
-     * @param luaStruct Pointer to the int8Parameter structure to modify
+     * @param parameter Pointer to the int8Parameter structure to modify
      * @param newValue The new signed 8-bit value to set
      */
-    static void setInt8Value(int8Parameter *luaStruct, const int8_t newValue) { luaStruct->properties.s.value = newValue; }
+    static void setInt8Value(int8Parameter *parameter, const int8_t newValue) { parameter->properties.s.value = newValue; }
 
     /**
      * Sets an unsigned 16-bit integer value in a CRSF parameter structure.
      * Handles endianness conversion to big-endian.
      *
-     * @param luaStruct Pointer to the int16Parameter structure to modify
+     * @param parameter Pointer to the int16Parameter structure to modify
      * @param newValue The new unsigned 16-bit value to set
      */
-    static void setUint16Value(int16Parameter *luaStruct, const uint16_t newValue) { luaStruct->properties.u.value = htobe16(newValue); }
+    static void setUint16Value(int16Parameter *parameter, const uint16_t newValue) { parameter->properties.u.value = htobe16(newValue); }
 
     /**
      * Sets a signed 16-bit integer value in a CRSF parameter structure.
      * Handles endianness conversion to big-endian.
      *
-     * @param luaStruct Pointer to the int16Parameter structure to modify
+     * @param parameter Pointer to the int16Parameter structure to modify
      * @param newValue The new signed 16-bit value to set
      */
-    static void setInt16Value(int16Parameter *luaStruct, const int16_t newValue) { luaStruct->properties.u.value = htobe16((uint16_t)newValue); }
+    static void setInt16Value(int16Parameter *parameter, const int16_t newValue) { parameter->properties.u.value = htobe16((uint16_t)newValue); }
 
     /**
      * Sets a float value in a CRSF parameter structure.
      * Handles endianness conversion to big-endian.
      *
-     * @param luaStruct Pointer to the floatParameter structure to modify
+     * @param parameter Pointer to the floatParameter structure to modify
      * @param newValue The new value to set as a 32-bit integer
      */
-    static void setFloatValue(floatParameter *luaStruct, const int32_t newValue) { luaStruct->properties.value = htobe32((uint32_t)newValue); }
+    static void setFloatValue(floatParameter *parameter, const int32_t newValue) { parameter->properties.value = htobe32((uint32_t)newValue); }
 
     /**
      * Sets a string value in a CRSF parameter structure.
      *
-     * @param luaStruct Pointer to the stringParameter structure to modify
+     * @param parameter Pointer to the stringParameter structure to modify
      * @param newValue The new string value to set
      */
-    static void setStringValue(stringParameter *luaStruct, const char *newValue) { luaStruct->value = newValue; }
+    static void setStringValue(stringParameter *parameter, const char *newValue) { parameter->value = newValue; }
 
 private:
     crsf_addr_e device_id;
@@ -187,10 +187,10 @@ private:
     // CRSF Parameter handling
     crsf_addr_e requestOrigin = CRSF_ADDRESS_BROADCAST;
 
-    propertiesCommon *paramDefinitions[LUA_MAX_PARAMS] {};
-    parameterHandlerCallback paramCallbacks[LUA_MAX_PARAMS] = {};
+    propertiesCommon *paramDefinitions[MAX_CRSF_PARAMETERS] {};
+    parameterHandlerCallback paramCallbacks[MAX_CRSF_PARAMETERS] = {};
 
-    uint8_t lastLuaField = 0;
+    uint8_t lastParameter = 0;
     uint8_t nextStatusChunk = 0;
 
     static uint8_t *textSelectionParameterToArray(const selectionParameter *parameter, uint8_t *next);
@@ -200,7 +200,7 @@ private:
     static uint8_t *stringParameterToArray(const stringParameter *parameter, uint8_t *next);
     uint8_t *folderParameterToArray(const folderParameter *parameter, uint8_t *next) const;
 
-    uint8_t sendParameter(crsf_addr_e origin, bool isElrs, crsf_frame_type_e frameType, uint8_t fieldChunk, const propertiesCommon *luaData);
+    uint8_t sendParameter(crsf_addr_e origin, bool isElrs, crsf_frame_type_e frameType, uint8_t fieldChunk, const propertiesCommon *parameter);
     void pushResponseChunk(commandParameter *cmd, bool isElrs);
 };
 

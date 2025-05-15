@@ -5,8 +5,6 @@
 #include "logging.h"
 #include "options.h"
 
-// LUA VARIABLES//
-
 static folderParameter paramRootFolder = {
     .common = {
         .name = "HooJ",
@@ -170,7 +168,7 @@ uint8_t *CRSFEndpoint::stringParameterToArray(const stringParameter *parameter, 
 uint8_t *CRSFEndpoint::folderParameterToArray(const folderParameter *parameter, uint8_t *next) const
 {
     auto childParameters = (uint8_t *)stpcpy((char *)next, parameter->dyn_name ? parameter->dyn_name : parameter->common.name) + 1;
-    for (int i = 1; i <= lastLuaField; i++)
+    for (int i = 1; i <= lastParameter; i++)
     {
         if (paramDefinitions[i]->parent == parameter->common.id)
         {
@@ -181,53 +179,53 @@ uint8_t *CRSFEndpoint::folderParameterToArray(const folderParameter *parameter, 
     return childParameters;
 }
 
-uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs, const crsf_frame_type_e frameType, const uint8_t fieldChunk, const propertiesCommon *luaData)
+uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs, const crsf_frame_type_e frameType, const uint8_t fieldChunk, const propertiesCommon *parameter)
 {
-    const uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
+    const uint8_t dataType = parameter->type & CRSF_FIELD_TYPE_MASK;
 
     // 256 max payload + (FieldID + ChunksRemain + Parent + Type)
     // Chunk 1: (FieldID + ChunksRemain + Parent + Type) + fieldChunk0 data
     // Chunk 2-N: (FieldID + ChunksRemain) + fieldChunk1 data
     uint8_t chunkBuffer[256 + 4];
     // Start the field payload at 2 to leave room for (FieldID + ChunksRemain)
-    chunkBuffer[2] = luaData->parent;
+    chunkBuffer[2] = parameter->parent;
     chunkBuffer[3] = dataType;
     // Set the hidden flag
-    chunkBuffer[3] |= luaData->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
+    chunkBuffer[3] |= parameter->type & CRSF_FIELD_HIDDEN ? 0x80 : 0;
     if (isElrs)
     {
-        chunkBuffer[3] |= luaData->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
+        chunkBuffer[3] |= parameter->type & CRSF_FIELD_ELRS_HIDDEN ? 0x80 : 0;
     }
     uint8_t paramInformation[CRSF_MAX_PACKET_LEN];
 
     // Copy the name to the buffer starting at chunkBuffer[4]
-    uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], luaData->name) + 1;
+    uint8_t *chunkStart = (uint8_t *)stpcpy((char *)&chunkBuffer[4], parameter->name) + 1;
     uint8_t *dataEnd;
 
     switch (dataType)
     {
     case CRSF_TEXT_SELECTION:
-        dataEnd = textSelectionParameterToArray((selectionParameter *)luaData, chunkStart);
+        dataEnd = textSelectionParameterToArray((selectionParameter *)parameter, chunkStart);
         break;
     case CRSF_COMMAND:
-        dataEnd = commandParameterToArray((commandParameter *)luaData, chunkStart);
+        dataEnd = commandParameterToArray((commandParameter *)parameter, chunkStart);
         break;
     case CRSF_INT8: // fallthrough
     case CRSF_UINT8:
-        dataEnd = int8ParameterToArray((int8Parameter *)luaData, chunkStart);
+        dataEnd = int8ParameterToArray((int8Parameter *)parameter, chunkStart);
         break;
     case CRSF_INT16: // fallthrough
     case CRSF_UINT16:
-        dataEnd = int16ParameterToArray((int16Parameter *)luaData, chunkStart);
+        dataEnd = int16ParameterToArray((int16Parameter *)parameter, chunkStart);
         break;
     case CRSF_STRING: // fallthrough
     case CRSF_INFO:
-        dataEnd = stringParameterToArray((stringParameter *)luaData, chunkStart);
+        dataEnd = stringParameterToArray((stringParameter *)parameter, chunkStart);
         break;
     case CRSF_FOLDER:
-        // re-fetch the lua data name, because luaFolderStructToArray will decide whether
+        // re-fetch the folder name, because folderStructToArray will decide whether
         // to return the fixed name or dynamic name.
-        dataEnd = folderParameterToArray((folderParameter *)luaData, &chunkBuffer[4]);
+        dataEnd = folderParameterToArray((folderParameter *)parameter, &chunkBuffer[4]);
         break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
@@ -236,12 +234,12 @@ uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs,
     }
 
     // dataEnd points to the end of the last string
-    // -2 bytes Lua chunk header: FieldId, ChunksRemain
+    // -2 bytes chunk header: FieldId, ChunksRemain
     // +1 for the null on the last string
     const uint8_t dataSize = (dataEnd - chunkBuffer) - 2 + 1;
     // Maximum number of chunked bytes that can be sent in one response
     // 6 bytes CRSF header/CRC: Dest, Len, Type, ExtSrc, ExtDst, CRC
-    // 2 bytes Lua chunk header: FieldId, ChunksRemain
+    // 2 bytes chunk header: FieldId, ChunksRemain
     // Ask the endpoint what the maximum size for the packet based on the origin;
     // this is for slow baud-rates to the handset
     const uint8_t chunkMax = crsfRouter.getConnectorMaxPacketSize(origin) - 6 - 2;
@@ -252,7 +250,7 @@ uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs,
 
     // Move chunkStart back 2 bytes to add (FieldId + ChunksRemain) to each packet
     chunkStart = &chunkBuffer[fieldChunk * chunkMax];
-    chunkStart[0] = luaData->id;                 // FieldId
+    chunkStart[0] = parameter->id;                 // FieldId
     chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
     memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, device_id);
@@ -284,21 +282,21 @@ void CRSFEndpoint::sendCommandResponse(commandParameter *cmd, const commandStep_
 void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCallback &callback, const uint8_t parent)
 {
     // On the first call we initialise the root folder
-    if (lastLuaField == 0)
+    if (lastParameter == 0)
     {
         paramDefinitions[0] = (propertiesCommon *)&paramRootFolder;
         paramCallbacks[0] = nullptr;
     }
     // Add the new parameter definition to the list
     const auto p = (propertiesCommon *)definition;
-    lastLuaField++;
-    p->id = lastLuaField;
+    lastParameter++;
+    p->id = lastParameter;
     p->parent = parent;
-    paramDefinitions[lastLuaField] = p;
-    paramCallbacks[lastLuaField] = callback;
+    paramDefinitions[lastParameter] = p;
+    paramCallbacks[lastParameter] = callback;
 }
 
-void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElrs, const uint8_t parameterType, const uint8_t parameterIndex, const uint8_t parameterChunk)
+void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElrs, const uint8_t parameterType, const uint8_t parameterIndex, const uint8_t parameterArg)
 {
     propertiesCommon *parameter = paramDefinitions[parameterIndex];
     requestOrigin = origin;
@@ -306,19 +304,19 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
     switch (parameterType)
     {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-        DBGLN("Set Lua [%s]=%u", parameter->name, parameterChunk);
-        if (parameterIndex < LUA_MAX_PARAMS && paramCallbacks[parameterIndex])
+        DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
+        if (parameterIndex < MAX_CRSF_PARAMETERS && paramCallbacks[parameterIndex])
         {
             // While the command is executing, the handset will send `WRITE state=lcsQuery`.
             // paramCallbacks will set the value when nextStatusChunk == 0, or send any
             // remaining chunks when nextStatusChunk != 0
-            if (parameterChunk == lcsQuery && nextStatusChunk != 0)
+            if (parameterArg == lcsQuery && nextStatusChunk != 0)
             {
                 pushResponseChunk((commandParameter *)parameter, isElrs);
             }
             else
             {
-                paramCallbacks[parameterIndex](parameter, parameterChunk);
+                paramCallbacks[parameterIndex](parameter, parameterArg);
             }
         }
         break;
@@ -329,24 +327,24 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
         break;
 
     case CRSF_FRAMETYPE_PARAMETER_READ: {
-        DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
-        if (parameterIndex < LUA_MAX_PARAMS && parameter)
+        DBGVLN("Read parameter %u %u", fieldId, fieldChunk);
+        if (parameterIndex < MAX_CRSF_PARAMETERS && parameter)
         {
             const auto field = (commandParameter *)parameter;
             const uint8_t dataType = field->common.type & CRSF_FIELD_TYPE_MASK;
             // On first chunk of a command, reset the step/info of the command
-            if (dataType == CRSF_COMMAND && parameterChunk == 0)
+            if (dataType == CRSF_COMMAND && parameterArg == 0)
             {
                 field->step = lcsIdle;
                 field->info = "";
             }
-            sendParameter(origin, isElrs, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterChunk, &field->common);
+            sendParameter(origin, isElrs, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterArg, &field->common);
         }
     }
     break;
 
     default:
-        DBGLN("Unknown LUA %x", parameterType);
+        DBGLN("Unknown command %x", parameterType);
     }
 }
 
@@ -410,7 +408,7 @@ void CRSFEndpoint::sendDeviceInformationPacket()
     device->serialNo = htobe32(0x454C5253);                  // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0;                                 // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
-    device->fieldCnt = lastLuaField;
+    device->fieldCnt = lastParameter;
     device->parameterVersion = 0;
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin, device_id);
     crsfRouter.deliverMessage(nullptr, (crsf_header_t *)deviceInformation);

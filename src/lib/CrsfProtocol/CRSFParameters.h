@@ -134,7 +134,7 @@ struct elrsStatusParameter
 
 typedef std::function<void(propertiesCommon *item, uint8_t arg)> parameterHandlerCallback;
 
-uint8_t findSelectionLabel(const selectionParameter *luaStruct, char *outArray, uint8_t value);
+uint8_t findSelectionLabel(const selectionParameter *parameter, char *outArray, uint8_t value);
 
 constexpr char STR_EMPTYSPACE[1] = {};
 
