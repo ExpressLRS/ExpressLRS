@@ -10,6 +10,10 @@ public:
 
     void registerParameters() override;
     void updateParameters() override;
+
+private:
+    void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg);
+    void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg);
 };
 
 #endif //RX_ENDPOINT_H

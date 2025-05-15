@@ -17,10 +17,6 @@ void SetSyncSpam();
 void sendELRSstatus(crsf_addr_e origin);
 void luaSupressCriticalErrors();
 
-TXModuleEndpoint::TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER), modelId(0)
-{
-}
-
 void TXModuleEndpoint::begin()
 {
 #if defined(PLATFORM_ESP32)
@@ -84,7 +80,7 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
             }
             else if (extMessage->payload[0] == 0x2E)
             {
-                luaSupressCriticalErrors();
+                supressCriticalErrors();
             }
         }
         parameterUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);

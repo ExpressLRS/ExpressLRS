@@ -182,7 +182,7 @@ static commandParameter luaBindMode = {
     STR_EMPTYSPACE
 };
 
-static void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
+void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 {
     bool sclAssigned = false;
     bool sdaAssigned = false;
@@ -442,7 +442,7 @@ static void luaparamMappingInverted(propertiesCommon *item, uint8_t arg)
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }
 
-static void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
+void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
 {
   commandStep_e newStep;
   const char *msg;
@@ -474,7 +474,7 @@ static void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
     msg = STR_EMPTYSPACE;
   }
 
-  crsfReceiver.sendCommandResponse((commandParameter *)item, newStep, msg);
+  sendCommandResponse((commandParameter *)item, newStep, msg);
 }
 
 static void luaparamSetPower(propertiesCommon* item, uint8_t arg)
@@ -552,22 +552,26 @@ void RXEndpoint::registerParameters()
   {
     luaparamMappingChannelOut(&luaMappingOutputMode.common, luaMappingChannelOut.properties.u.value);
     registerParameter(&luaMappingFolder);
-    registerParameter(&luaMappingChannelOut, &luaparamMappingChannelOut, luaMappingFolder.common.id);
+    registerParameter(&luaMappingChannelOut, [&](propertiesCommon* item, uint8_t arg) {
+        luaparamMappingChannelOut(item, arg);
+    }, luaMappingFolder.common.id);
     registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
     registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
     registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
-    registerParameter(&luaSetFailsafe, &luaparamSetFailsafe);
+    registerParameter(&luaSetFailsafe, [&](propertiesCommon* item, uint8_t arg) {
+        luaparamSetFailsafe(item, arg);
+    });
   }
 
   registerParameter(&luaBindStorage, [](propertiesCommon* item, uint8_t arg) {
     config.SetBindStorage((rx_config_bindstorage_t)arg);
   });
-  registerParameter(&luaBindMode, [](propertiesCommon* item, uint8_t arg){
+  registerParameter(&luaBindMode, [this](propertiesCommon* item, uint8_t arg){
     // Complete when TX polls for status i.e. going back to idle, because we're going to lose connection
     if (arg == lcsQuery) {
       deferExecutionMillis(200, EnterBindingModeSafely);
     }
-    crsfReceiver.sendCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
+    sendCommandResponse(&luaBindMode, arg < 5 ? lcsExecuting : lcsIdle, arg < 5 ? "Entering..." : "");
   });
 
   registerParameter(&luaModelNumber);

@@ -4,6 +4,8 @@
 
 #include "crsf_protocol.h"
 
+#include <functional>
+
 struct propertiesCommon
 {
     const char *name; // display name
@@ -130,38 +132,9 @@ struct elrsStatusParameter
             LUA_FIELD_HIDE(fld)      \
     }
 
-typedef void (*parameterHandlerCallback)(propertiesCommon *item, uint8_t arg);
+typedef std::function<void(propertiesCommon *item, uint8_t arg)> parameterHandlerCallback;
 
 uint8_t findSelectionLabel(const selectionParameter *luaStruct, char *outArray, uint8_t value);
-
-inline void setLuaTextSelectionValue(selectionParameter *luaStruct, const uint8_t newValue)
-{
-    luaStruct->value = newValue;
-}
-inline void setLuaUint8Value(int8Parameter *luaStruct, const uint8_t newValue)
-{
-    luaStruct->properties.u.value = newValue;
-}
-inline void setLuaInt8Value(int8Parameter *luaStruct, const int8_t newValue)
-{
-    luaStruct->properties.s.value = newValue;
-}
-inline void setLuaUint16Value(int16Parameter *luaStruct, const uint16_t newValue)
-{
-    luaStruct->properties.u.value = htobe16(newValue);
-}
-inline void setLuaInt16Value(int16Parameter *luaStruct, const int16_t newValue)
-{
-    luaStruct->properties.u.value = htobe16((uint16_t)newValue);
-}
-inline void setLuaFloatValue(floatParameter *luaStruct, const int32_t newValue)
-{
-    luaStruct->properties.value = htobe32((uint32_t)newValue);
-}
-inline void setLuaStringValue(stringParameter *luaStruct, const char *newValue)
-{
-    luaStruct->value = newValue;
-}
 
 #define LUASYM_ARROW_UP "\xc0"
 #define LUASYM_ARROW_DN "\xc1"

@@ -252,7 +252,7 @@ void CRSFEndpoint::sendCommandResponse(commandParameter *cmd, const commandStep_
     pushResponseChunk(cmd, false);
 }
 
-void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCallback callback, const uint8_t parent)
+void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCallback &callback, const uint8_t parent)
 {
     // On the first call we initialise the root folder
     if (lastLuaField == 0)

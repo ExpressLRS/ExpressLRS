@@ -49,15 +49,41 @@ public:
      */
     virtual void handleMessage(const crsf_header_t * message) = 0;
 
+    /**
+     * Registers parameters for the device or system.
+     *
+     * It is intended that implementations of this class call the registerParameter for each parameter
+     * that they wish to expose over the CRSF network.
+     */
     virtual void registerParameters() {}
+
+    /**
+     * Updates parameters for the device or system.
+     *
+     * An implementing class would call the set...Value methods to update the parameters current value.
+     */
     virtual void updateParameters() {}
-    void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message); // FIXME should really be protected
 
 protected:
+    static void setLuaTextSelectionValue(selectionParameter *luaStruct, const uint8_t newValue) { luaStruct->value = newValue; }
+    static void setLuaUint8Value(int8Parameter *luaStruct, const uint8_t newValue) { luaStruct->properties.u.value = newValue; }
+    static void setLuaInt8Value(int8Parameter *luaStruct, const int8_t newValue) { luaStruct->properties.s.value = newValue; }
+    static void setLuaUint16Value(int16Parameter *luaStruct, const uint16_t newValue) { luaStruct->properties.u.value = htobe16(newValue); }
+    static void setLuaInt16Value(int16Parameter *luaStruct, const int16_t newValue) { luaStruct->properties.u.value = htobe16((uint16_t)newValue); }
+    static void setLuaFloatValue(floatParameter *luaStruct, const int32_t newValue) { luaStruct->properties.value = htobe32((uint32_t)newValue); }
+    static void setLuaStringValue(stringParameter *luaStruct, const char *newValue) { luaStruct->value = newValue; }
+
+    /**
+     * Invoked when a device ping message is received from the CRSF network.
+     *
+     * It can be overridden by derived classes to implement specific behavior upon receiving
+     * a ping request. It will be called immediately before the sendDeviceInformationPacket() function.
+     */
     virtual void devicePingCalled() {}
-    void registerParameter(void *definition, parameterHandlerCallback callback = nullptr, uint8_t parent = 0);
+    void registerParameter(void *definition, const parameterHandlerCallback &callback = nullptr, uint8_t parent = 0);
     void sendDeviceInformationPacket();
     void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterChunk);
+    void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message);
 
 private:
     crsf_addr_e device_id;
@@ -66,7 +92,7 @@ private:
     crsf_addr_e requestOrigin = CRSF_ADDRESS_BROADCAST;
 
     propertiesCommon *paramDefinitions[LUA_MAX_PARAMS] {};
-    parameterHandlerCallback paramCallbacks[LUA_MAX_PARAMS] = {nullptr};
+    parameterHandlerCallback paramCallbacks[LUA_MAX_PARAMS] = {};
 
     uint8_t lastLuaField = 0;
     uint8_t nextStatusChunk = 0;
