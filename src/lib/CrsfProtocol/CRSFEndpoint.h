@@ -104,6 +104,25 @@ protected:
     void sendCommandResponse(commandParameter *cmd, commandStep_e step, const char *message);
 
     /**
+     * Filters a set of selectable options within a provided range and modifies
+     * the input string in place.
+     *
+     * This function processes the input string `allOptions` to retain only the
+     * options within the range specified by `min` and `max`. The relevant portion
+     * of the options is then assigned to the `options` member of the provided
+     * `selectionParameter` object.
+     *
+     * @param parameter A pointer to a `selectionParameter` instance that will
+     *                   hold the filtered options.
+     * @param min The minimum index of the selection range to include.
+     * @param max The maximum index of the selection range to include.
+     * @param allOptions A modifiable string containing all available options.
+     *                   Options are separated by semicolons (';'). This string
+     *                   will be modified to exclude options outside of the given range.
+     */
+    static void filterOptions(selectionParameter *parameter, uint8_t min, uint8_t max, char *allOptions);
+
+    /**
      * Sets the value of a text selection parameter in the CRSF interface.
      *
      * @param luaStruct Pointer to the selection parameter structure to modify

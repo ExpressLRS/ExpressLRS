@@ -16,6 +16,35 @@ static folderParameter paramRootFolder = {
     }
 };
 
+void CRSFEndpoint::filterOptions(selectionParameter *parameter, const uint8_t min, const uint8_t max, char *allOptions)
+{
+    // This function modifies the strPowerLevels in place and must not
+    // be called more than once!
+    char *out = allOptions;
+    uint8_t pwr = 0;
+    // Count the semicolons to move `out` to point to the MINth item
+    while (pwr < min)
+    {
+        while (*out++ != ';') {}
+        pwr++;
+    }
+    // There is no min field, compensate by shifting the index when sending/receiving
+    parameter->options = (const char *)out;
+
+    // Continue until after than MAXth item and drop a null in the original
+    // string on the semicolon (not after like the previous loop)
+    while (pwr <= max)
+    {
+        // If out still points to a semicolon from the last loop, move past it
+        if (*out)
+            ++out;
+        while (*out && *out != ';')
+            ++out;
+        pwr++;
+    }
+    *out = '\0';
+}
+
 static uint8_t selectionOptionMax(const char *strOptions)
 {
     // Returns the max index of the semicolon-delimited option string

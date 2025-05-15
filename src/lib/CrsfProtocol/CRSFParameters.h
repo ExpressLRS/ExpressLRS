@@ -136,5 +136,7 @@ typedef std::function<void(propertiesCommon *item, uint8_t arg)> parameterHandle
 
 uint8_t findSelectionLabel(const selectionParameter *luaStruct, char *outArray, uint8_t value);
 
+constexpr char STR_EMPTYSPACE[1] = {};
+
 #define LUASYM_ARROW_UP "\xc0"
 #define LUASYM_ARROW_DN "\xc1"

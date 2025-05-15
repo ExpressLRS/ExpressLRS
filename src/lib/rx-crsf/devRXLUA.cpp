@@ -1,8 +1,5 @@
-#include "CRSFEndpoint.h"
 #include "RXEndpoint.h"
-#include "config.h"
-#include "devServoOutput.h"
-#include "rxtx_devLua.h"
+#include "device.h"
 
 extern RXEndpoint crsfReceiver;
 

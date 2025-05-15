@@ -8,7 +8,6 @@
 #include "config.h"
 #include "helpers.h"
 #include "msptypes.h"
-#include "rxtx_devLua.h"
 
 uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
 
@@ -43,9 +42,10 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 extern char backpackVersion[];
 extern TXModuleEndpoint crsfTransmitter;
 
+static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
 static char version_domain[20+1+6+1];
-char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
-char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
+static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
+static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
 static char tlmBandwidth[] = " (xxxxxbps)";
 static constexpr char folderNameSeparator[2] = {' ',':'};
@@ -793,7 +793,7 @@ void TXModuleEndpoint::registerParameters()
         bool isDisconnected = connectionState == disconnected;
         // Don't allow the switch mode to change if the TX is in mavlink mode
         // Wide switchmode is not compatible with mavlink, and the switchmode is
-        // auto configuredwhen entering mavlink mode
+        // auto-configured when entering mavlink mode
         bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
         if (isDisconnected && !isMavlinkMode)
         {
@@ -848,7 +848,7 @@ void TXModuleEndpoint::registerParameters()
 
     // POWER folder
     registerParameter(&luaPowerFolder);
-    luadevGeneratePowerOpts(&luaPower);
+    filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
     registerParameter(&luaPower, [](propertiesCommon *item, uint8_t arg) {
       config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
       if (!config.IsModified())

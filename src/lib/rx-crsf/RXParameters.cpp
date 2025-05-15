@@ -5,7 +5,6 @@
 #include "deferred.h"
 #include "devServoOutput.h"
 #include "helpers.h"
-#include "rxtx_devLua.h"
 
 #define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
 
@@ -17,6 +16,7 @@ extern bool BindingModeRequest;
 
 extern RXEndpoint crsfReceiver;
 
+static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 
@@ -533,9 +533,10 @@ void RXEndpoint::registerParameters()
     });
   }
 
-  if (MinPower != MaxPower)
+  if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
   {
-    luadevGeneratePowerOpts(&luaTlmPower);
+    filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
+    strcat(strPowerLevels, ";MatchTX ");
     registerParameter(&luaTlmPower, &luaparamSetPower);
   }
 
