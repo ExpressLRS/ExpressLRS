@@ -376,8 +376,9 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
         payloadTypes[targetIndex].updated = true;
+        return true;
     }
 
-    return targetFound;
+    return false;
 }
 #endif
