@@ -81,7 +81,7 @@ void Telemetry::CheckCrsfBaroSensorDetected()
     }
 }
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE, AIRSPEED, RPM, TEMP, CELLS);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, FLIGHT_MODE, VARIO, BARO_ALTITUDE, AIRSPEED, RPM, TEMP, CELLS);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
@@ -376,8 +376,9 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
         payloadTypes[targetIndex].updated = true;
+        return true;
     }
 
-    return targetFound;
+    return false;
 }
 #endif
