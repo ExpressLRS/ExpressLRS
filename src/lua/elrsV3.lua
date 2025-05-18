@@ -6,6 +6,7 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
+local EXITVER = "-- EXIT (Lua v15) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
 local deviceName = "Loading..."
@@ -47,7 +48,7 @@ local function allocateFields()
     fields[i] = { }
   end
   fields[#fields+1] = {id=fields_count+1, name="Other Devices", parent=255, type=16}
-  fields[#fields+1] = {name="----EXIT----", type=14}
+  fields[#fields+1] = {name=EXITVER, type=14}
 end
 
 local function createDeviceFields() -- put other devices in the field list
@@ -362,7 +363,7 @@ local function fieldBackExec(field)
     lineIndex = field.li or 1
     pageOffset = field.po or 0
 
-    field.name = "----EXIT----"
+    field.name = EXITVER
     field.parent = nil
     field.li = nil
     field.po = nil
