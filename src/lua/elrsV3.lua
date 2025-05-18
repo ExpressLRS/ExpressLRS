@@ -8,7 +8,7 @@
 ---- #########################################################################
 local deviceId = 0xEE
 local handsetId = 0xEF
-local deviceName = ""
+local deviceName = "Loading..."
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -19,7 +19,7 @@ local fieldChunk = 0
 local fieldData = nil
 local fields = {}
 local devices = {}
-local goodBadPkt = "?/???    ?"
+local goodBadPkt = ""
 local elrsFlags = 0
 local elrsFlagsInfo = ""
 local fields_count = 0
@@ -373,30 +373,23 @@ local function fieldBackExec(field)
 end
 
 local function changeDeviceId(devId) --change to selected device ID
-  currentFolderId = nil
-  elrsFlags = 0
-  --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
-  if devId == 0xEE then
-    handsetId = 0xEF
-  else --else we would act like the legacy lua
-    handsetId = 0xEA
-  end
-
   local device = getDevice(devId)
-  local fullReload = deviceId ~= devId or fields_count ~= device.fldcnt
-  if fullReload then
-    deviceName = device.name
-    deviceIsELRS_TX = device.isElrs and devId == 0xEE or nil -- ELRS and ID is TX module
-    fields_count = device.fldcnt
-    deviceId = devId
+  if deviceId == devId and fields_count == device.fldcnt then return end
 
-    allocateFields()
-    reloadAllField()
-  end
+  deviceId = devId
+  elrsFlags = 0
+  currentFolderId = nil
+  deviceName = device.name
+  fields_count = device.fldcnt
+  deviceIsELRS_TX = device.isElrs and devId == 0xEE or nil -- ELRS and ID is TX module
+  handsetId = deviceIsELRS_TX and 0xEF or 0xEA -- Address ELRS_LUA vs RADIO_TRANSMITTER
+
+  allocateFields()
+  reloadAllField()
 end
 
 local function fieldDeviceIdSelect(field)
-  changeDeviceId(field.id)
+  return changeDeviceId(field.id)
 end
 
 local function parseDeviceInfoMessage(data)
@@ -561,7 +554,7 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 6 }) -- lcsQuery
       fieldTimeout = time + fieldPopup.timeout
     end
-  elseif time > devicesRefreshTimeout and fields_count < 1 then
+  elseif time > devicesRefreshTimeout and #devices == 0 then
     forceRedraw = true -- handles initial screen draw
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
@@ -613,8 +606,7 @@ local function lcd_title_color()
   if titleShowWarn then
     lcd.drawText(COL1 + 1, barTextSpacing, elrsFlagsInfo, CUSTOM_COLOR)
   else
-    local title = fields_count > 0 and deviceName or "Loading..."
-    lcd.drawText(COL1 + 1, barTextSpacing, title, CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, barTextSpacing, deviceName, CUSTOM_COLOR)
     lcd.drawText(LCD_W - 5, barTextSpacing, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
   end
   -- progress bar
@@ -644,8 +636,7 @@ local function lcd_title_bw()
     if titleShowWarn then
       lcd.drawText(COL1, 1, elrsFlagsInfo, INVERS)
     else
-      local title = fields_count > 0 and deviceName or "Loading..."
-      lcd.drawText(COL1, 1, title, INVERS)
+      lcd.drawText(COL1, 1, deviceName, INVERS)
     end
   end
 end
@@ -698,7 +689,7 @@ local function handleDevicePageEvent(event)
     else
       if currentFolderId == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
         if deviceId ~= 0xEE then
-          changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
+          changeDeviceId(0xEE)
         else
           reloadAllField()
         end
