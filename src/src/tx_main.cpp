@@ -22,6 +22,7 @@
 #include "devThermal.h"
 #include "devPDET.h"
 #include "devBackpack.h"
+#include "version.h"
 
 #include "MAVLink.h"
 
@@ -1353,6 +1354,8 @@ bool setupHardwareFromOptions()
 //Changed this to match how TX stores UID
 static void setupBindingFromConfig()
 {
+    version_info_ts tx_version = {ELRS_VERSION_MAJOR, ELRS_VERSION_MINOR, ELRS_VERSION_PATCH, ELRS_VERSION_RC};
+    CRSF::LinkStatistics.tx_fw_ver = tx_version.version;
     // VolatileBind's only function is to prevent loading the stored UID into RAM
     // which makes the RX boot into bind mode every time
     if(config.GetStartFrequency() == 0){
