@@ -289,19 +289,23 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         return true;
 
     const crsf_header_t *header = (crsf_header_t *) package;
+
+    // Block all telemetry traffic for 10s during parameterinfo
+    if (flightControllerPauseStart && (millis() - flightControllerPauseStart) < 10000)
+    {
+        if (header->type != CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY)
+            return false;
+    }
+    else
+    {
+        flightControllerPauseStart = 0;
+    }
+
     uint8_t targetIndex = 0;
     bool targetFound = false;
-
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-
-        // Block Flight Controller traffic for 10s after a pause request
-        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER
-            && flightControllerPauseStart
-            && (millis() - flightControllerPauseStart) < 10000)
-            return false;
-        flightControllerPauseStart = 0;
 
         if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP)
         {
