@@ -278,6 +278,11 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
     return false;
 }
 
+void Telemetry::RequestFlightControllerPause()
+{
+    flightControllerPauseStart = millis();
+}
+
 bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
     if (processInternalTelemetryPackage(package))
@@ -290,6 +295,13 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
+
+        // Block Flight Controller traffic for 10s after a pause request
+        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER
+            && flightControllerPauseStart
+            && (millis() - flightControllerPauseStart) < 10000)
+            return false;
+        flightControllerPauseStart = 0;
 
         if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP)
         {

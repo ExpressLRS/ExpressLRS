@@ -73,6 +73,7 @@ public:
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     uint8_t UpdatedPayloadCount();
     uint8_t ReceivedPackagesCount();
+    void RequestFlightControllerPause();
     bool AppendTelemetryPackage(uint8_t *package);
 private:
     bool processInternalTelemetryPackage(uint8_t *package);
@@ -91,4 +92,5 @@ private:
     bool crsfBatterySensorDetected;
     bool crsfBaroSensorDetected;
     uint8_t modelMatchId;
+    uint32_t flightControllerPauseStart;
 };
