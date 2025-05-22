@@ -147,9 +147,9 @@ void Telemetry::ResetState()
     twoslotLastQueueIndex = 0;
     receivedPackages = 0;
 
-    uint8_t offset = 0;
+    uint32_t offset = 0;
 
-    for (int8_t i = 0; i < payloadTypesCount; i++)
+    for (unsigned i = 0; i < payloadTypesCount; i++)
     {
         payloadTypes[i].locked = false;
         payloadTypes[i].updated = false;
