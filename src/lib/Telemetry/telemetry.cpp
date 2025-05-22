@@ -2,13 +2,16 @@
 #include <cstring>
 #include "telemetry.h"
 #include "logging.h"
+#include "helpers.h"
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#if CRSF_RX_MODULE
+
+#if defined(USE_MSP_WIFI) // enable MSP2WIFI for RX only at the moment
 #include "tcpsocket.h"
 extern TCPSOCKET wifi2tcp;
 #endif
 
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
+#if defined(HAS_MSP_VTX)
 #include "devMSPVTX.h"
 #endif
 
@@ -16,8 +19,6 @@ extern TCPSOCKET wifi2tcp;
 #include <iostream>
 using namespace std;
 #endif
-
-#if CRSF_RX_MODULE
 
 #include "crsf2msp.h"
 
@@ -81,64 +82,6 @@ void Telemetry::CheckCrsfBaroSensorDetected()
     }
 }
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, FLIGHT_MODE, VARIO, BARO_ALTITUDE, AIRSPEED, RPM, TEMP, CELLS);
-
-bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
-{
-    uint8_t checks = 0;
-    uint8_t oldPayloadIndex = currentPayloadIndex;
-    uint8_t realLength = 0;
-
-    if (payloadTypes[currentPayloadIndex].locked)
-    {
-        payloadTypes[currentPayloadIndex].locked = false;
-        payloadTypes[currentPayloadIndex].updated = false;
-    }
-
-    do
-    {
-        currentPayloadIndex = (currentPayloadIndex + 1) % payloadTypesCount;
-        checks++;
-    } while(!payloadTypes[currentPayloadIndex].updated && checks < payloadTypesCount);
-
-    if (payloadTypes[currentPayloadIndex].updated)
-    {
-        payloadTypes[currentPayloadIndex].locked = true;
-
-        realLength = CRSF_FRAME_SIZE(payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        if (realLength > 0)
-        {
-            *nextPayloadSize = realLength;
-            *payloadData = payloadTypes[currentPayloadIndex].data;
-            return true;
-        }
-    }
-
-    currentPayloadIndex = oldPayloadIndex;
-    *nextPayloadSize = 0;
-    *payloadData = 0;
-    return false;
-}
-
-uint8_t Telemetry::UpdatedPayloadCount()
-{
-    uint8_t count = 0;
-    for (int8_t i = 0; i < payloadTypesCount; i++)
-    {
-        if (payloadTypes[i].updated)
-        {
-            count++;
-        }
-    }
-
-    return count;
-}
-
-uint8_t Telemetry::ReceivedPackagesCount()
-{
-    return receivedPackages;
-}
-
 void Telemetry::ResetState()
 {
     telemetry_state = TELEMETRY_IDLE;
@@ -149,19 +92,8 @@ void Telemetry::ResetState()
 
     uint32_t offset = 0;
 
-    for (unsigned i = 0; i < payloadTypesCount; i++)
-    {
-        payloadTypes[i].locked = false;
-        payloadTypes[i].updated = false;
-        payloadTypes[i].data = PayloadData + offset;
-        offset += payloadTypes[i].size;
-
-        #if defined(UNIT_TEST)
-        if (offset > sizeof(PayloadData)) {
-            cout << "data not large enough\n";
-        }
-        #endif
-    }
+    usedSingletons = 0;
+    messagePayloads.flush();
 }
 
 bool Telemetry::RXhandleUARTin(uint8_t data)
@@ -278,124 +210,118 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
     return false;
 }
 
-void Telemetry::RequestPauseForLuaInfo()
-{
-    luaInfoPauseStart = millis();
-}
-
 bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
     if (processInternalTelemetryPackage(package))
         return true;
 
     const crsf_header_t *header = (crsf_header_t *) package;
-    const uint8_t crsfType = header->type;
 
-    // Block all other telemetry traffic for 10s during deviceinfo and parameterinfo
-    if (luaInfoPauseStart && (millis() - luaInfoPauseStart) < 10000)
-    {
-        if (!(crsfType == CRSF_FRAMETYPE_DEVICE_INFO || crsfType == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY))
-            return false;
-    }
-    else
-    {
-        luaInfoPauseStart = 0;
-    }
-
-    uint8_t targetIndex = 0;
-    bool targetFound = false;
-    if (crsfType >= CRSF_FRAMETYPE_DEVICE_PING)
+    if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-
-        if (crsfType == CRSF_FRAMETYPE_ARDUPILOT_RESP)
+        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
         {
-            // reserve last slot for adrupilot custom frame with the sub type status text: this is needed to make sure the important status messages are not lost
-            if (package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+#if defined(USE_MSP_WIFI)
+            // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
+            if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
             {
-                targetIndex = payloadTypesCount - 1;
+                DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
+                crsf2msp.parse(package);
             }
-            else
-            {
-                targetIndex = payloadTypesCount - 2;
-            }
-            targetFound = true;
-        }
-        else if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-        {
-            targetIndex = payloadTypesCount - 2;
-            targetFound = true;
-
-            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
-                // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-                if (wifi2tcp.hasClient() && (crsfType == CRSF_FRAMETYPE_MSP_RESP || crsfType == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
-                {
-                    DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    crsf2msp.parse(package);
-                }
-                else // if no TCP client we just want to forward MSP over the link
-            #endif
-            {
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
-                if (crsfType == CRSF_FRAMETYPE_MSP_RESP)
-                {
-                    mspVtxProcessPacket(package);
-                }
 #endif
-                // This code is emulating a two slot FIFO with head dropping
-                if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
+#if defined(HAS_MSP_VTX)
+            else if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+            {
+                mspVtxProcessPacket(package);
+            }
+#endif
+        }
+    }
+
+    const uint8_t messageSize = CRSF_FRAME_SIZE(((uint8_t *)package)[CRSF_TELEMETRY_LENGTH_INDEX]);
+
+    messagePayloads.lock();
+    // If this message is a 'singleton', then overwrite the bucket and add it to the sending queue if it's not already there
+    for (int8_t i = 0; i < (int8_t)ARRAY_SIZE(singletonPayloadTypes); i++)
+    {
+        if (header->type == singletonPayloadTypes[i])
+        {
+            // Special case the Ardupilot status text message, which we also treat as a latest-singleton
+            if (header->type != CRSF_FRAMETYPE_ARDUPILOT_RESP || package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+            {
+                memcpy(singletonPayloads[i], package, messageSize);
+                // Add to the packetSource queue if not already on it
+                if ((usedSingletons & 1 << i) == 0 && messagePayloads.available(1))
                 {
-                    // Sending the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
+                    usedSingletons |= 1 << i;
+                    messagePayloads.push(-(i + 1));
                 }
-                else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
-                {
-                    // Sending the second slot, use the first
-                    targetIndex = payloadTypesCount - 2;
-                }
-                else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
-                {
-                    // Previous frame saved to the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
-                }
-                twoslotLastQueueIndex = targetIndex;
+                messagePayloads.unlock();
+                return true;
             }
         }
-        else
-        {
-            targetIndex = payloadTypesCount - 1;
-            targetFound = true;
-        }
+    }
+
+    // IF there's enough room on the FIFO for this message, push it
+    if (messagePayloads.available(messageSize + 1))
+    {
+        messagePayloads.push(messageSize);
+        messagePayloads.pushBytes(package, messageSize);
+    }
+    messagePayloads.unlock();
+    return true;
+}
+
+bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
+{
+    if (messagePayloads.size() == 0)
+    {
+        *nextPayloadSize = 0;
+        *payloadData = nullptr;
+        return false;
+    }
+
+    messagePayloads.lock();
+    const auto byte = (int8_t)messagePayloads.pop();
+    if (byte < 0) {
+        const int fixedIndex = -byte - 1;
+        *nextPayloadSize = CRSF_FRAME_SIZE(singletonPayloads[fixedIndex][CRSF_TELEMETRY_LENGTH_INDEX]);
+        memcpy(currentPayload, singletonPayloads[fixedIndex], *nextPayloadSize);
+        *payloadData = currentPayload;
+        usedSingletons &= ~(1 << fixedIndex); // remove from the usedSingletons set
     }
     else
     {
-        for (int8_t i = 0; i < payloadTypesCount - 2; i++)
+        *nextPayloadSize = byte;
+        messagePayloads.popBytes(currentPayload, *nextPayloadSize);
+        *payloadData = currentPayload;
+    }
+    messagePayloads.unlock();
+    return true;
+}
+
+// This method is only used in unit testing!
+int Telemetry::UpdatedPayloadCount()
+{
+    uint8_t bytes[messagePayloads.size()];
+    int bytePos = 0;
+    int i=0;
+    while (messagePayloads.size() > 0)
+    {
+        i++;
+        auto sz = (int8_t)messagePayloads.pop();
+        bytes[bytePos++] = sz;
+        if (sz > 0)
         {
-            if (crsfType == payloadTypes[i].type)
+            while (sz--)
             {
-                if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
-                {
-                    targetIndex = i;
-                    targetFound = true;
-                }
-                #if defined(UNIT_TEST)
-                else if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) > payloadTypes[i].size)
-                {
-                    cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
-                }
-                #endif
-                break;
+                bytes[bytePos++] = messagePayloads.pop();
             }
         }
     }
-
-    if (targetFound && !payloadTypes[targetIndex].locked)
-    {
-        memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
-        payloadTypes[targetIndex].updated = true;
-        return true;
-    }
-
-    return false;
+    messagePayloads.pushBytes(bytes, bytePos);
+    return i;
 }
+
 #endif
