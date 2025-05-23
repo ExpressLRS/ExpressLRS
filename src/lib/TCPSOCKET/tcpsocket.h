@@ -1,51 +1,39 @@
 #pragma once
 #if defined(TARGET_RX)
 
-#include <cstdint>
-#include <cstring>
-#include "ESPAsyncWebServer.h"
+#if defined(PLATFORM_ESP8266)
+#include "ESPAsyncTCP.h"
+#else
+#include "AsyncTCP.h"
+#endif
+#include "CRSFConnector.h"
 #include "crsf2msp.h"
 #include "msp2crsf.h"
-#include "FIFO.h"
 
-#define BUFFER_OUTPUT_SIZE 1024
-#define BUFFER_INPUT_SIZE 1024
-
-// buffers reads and write to the specified TCP port
-
-class TCPSOCKET
+class TCPSOCKET final : public CRSFConnector
 {
-private:
-    static TCPSOCKET *instance;
-    //std::vector<AsyncClient *> clients; // a list to hold all clients for MSP to WIFI bridge nut not using multi-client for now
+public:
+    TCPSOCKET();
+    void begin();
 
+    void forwardMessage(const crsf_header_t *message) override;
+
+private:
     AsyncServer *TCPserver = nullptr;
     AsyncClient *TCPclient = nullptr;
-    static const uint32_t clientTimeoutS = 2U;
+    CROSSFIRE2MSP crsf2msp;
+    MSP2CROSSFIRE msp2crsf;
 
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);
     static void handleDisconnect(void *arg, AsyncClient *client);
     static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
+    static constexpr uint32_t clientTimeoutS = 2U;
 
-    bool hasClient() const { return (TCPclient != nullptr); }
-    void pumpData();
-    void write(uint8_t *data, uint16_t len);
-    void clientConnect(AsyncClient *client);
+    void clientConnect(AsyncClient * client);
     void clientDisconnect(AsyncClient *client);
-
-    FIFO<BUFFER_OUTPUT_SIZE> *FIFOout = nullptr;
-    FIFO<BUFFER_INPUT_SIZE> *FIFOin = nullptr;
-    CROSSFIRE2MSP *crsf2msp = nullptr;
-    MSP2CROSSFIRE *msp2crsf = nullptr;
-
-public:
-    void begin();
-    void handle();
-    void crsfMspIn(uint8_t *data);
-    uint8_t crsfCrsfOutAvailable(uint32_t maxLen);
-    void crsfCrsfOutPop(uint8_t *data);
+    void processData(AsyncClient * client, void * data, size_t len);
 };
 
 #endif

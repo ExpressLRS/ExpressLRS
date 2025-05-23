@@ -17,7 +17,6 @@ public:
 
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override;
     void forwardMessage(const crsf_header_t *message) override;
-    void sendQueuedData(uint32_t maxBytesToSend) override;
 
     bool sendImmediateRC() override { return true; }
 
