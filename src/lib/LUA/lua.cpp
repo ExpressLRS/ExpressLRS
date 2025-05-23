@@ -245,7 +245,7 @@ static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *lua
   CRSF::SetExtendedHeaderAndCrc(packetBuf, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
       chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
-  telemetry.RequestFlightControllerPause();
+  telemetry.RequestPauseForLuaInfo();
   if (!telemetry.AppendTelemetryPackage(packetBuf))
     return SENDCRSFPARAM_ERROR;
 #endif
