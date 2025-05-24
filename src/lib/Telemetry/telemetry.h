@@ -25,12 +25,6 @@ typedef struct crsf_telemetry_package_t {
     uint8_t *data;
 } crsf_telemetry_package_t;
 
-static constexpr uint8_t singletonPayloadTypes[] = {
-    CRSF_FRAMETYPE_GPS, CRSF_FRAMETYPE_VARIO, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAMETYPE_BARO_ALTITUDE,
-    CRSF_FRAMETYPE_AIRSPEED, CRSF_FRAMETYPE_RPM, CRSF_FRAMETYPE_TEMP, CRSF_FRAMETYPE_CELLS,
-    CRSF_FRAMETYPE_ATTITUDE, CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_FRAMETYPE_ARDUPILOT_RESP
-};
-
 class Telemetry
 {
 public:
@@ -52,10 +46,7 @@ public:
     int UpdatedPayloadCount();
     bool AppendTelemetryPackage(uint8_t *package);
 private:
-    uint32_t usedSingletons = 0;
-    // Make these all CRSF_MAX_PACKET_LEN; the CRSF spec says there can be more data on the end for new versions.
-    uint8_t singletonPayloads[sizeof(singletonPayloadTypes)][CRSF_MAX_PACKET_LEN] {};
-    FIFO<1024> messagePayloads;
+    FIFO<2048> messagePayloads;
 
     uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
 

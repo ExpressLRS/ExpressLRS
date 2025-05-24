@@ -1,8 +1,10 @@
-#include <cstdint>
-#include <cstring>
 #include "telemetry.h"
 #include "logging.h"
-#include "helpers.h"
+#include <cstdint>
+#include <cstring>
+
+#include <functional>
+#include <map>
 
 #if CRSF_RX_MODULE
 
@@ -16,11 +18,57 @@ extern TCPSOCKET wifi2tcp;
 #endif
 
 #if defined(UNIT_TEST)
+#include "native.h"
 #include <iostream>
 using namespace std;
 #endif
 
 #include "crsf2msp.h"
+
+enum action_e
+{
+    ACTION_NEXT,       // skip to the next message in the queue
+    ACTION_IGNORE,     // the message matches; ignore the new one
+    ACTION_OVERWRITE,  // overwrite the queued message with the new one
+    ACTION_APPEND      // append the message to the end of the queue
+};
+
+typedef std::function<action_e(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)> comparator_t;
+
+// For broadcast messages that have a 'source_id' as the first byte of the payload.
+static action_e sourceId(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)
+{
+    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1])
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
+// Comparator for Ardupilot Status Text message
+static action_e statusText(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)
+{
+    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
+    ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
+static std::map<crsf_frame_type_e, comparator_t> comparators = {
+    {CRSF_FRAMETYPE_GPS, nullptr},
+    {CRSF_FRAMETYPE_VARIO, nullptr},
+    {CRSF_FRAMETYPE_BATTERY_SENSOR, nullptr},
+    {CRSF_FRAMETYPE_BARO_ALTITUDE, nullptr},
+    {CRSF_FRAMETYPE_AIRSPEED, nullptr},
+    {CRSF_FRAMETYPE_RPM, sourceId},
+    {CRSF_FRAMETYPE_TEMP, sourceId},
+    {CRSF_FRAMETYPE_CELLS, sourceId},
+    {CRSF_FRAMETYPE_ATTITUDE, nullptr},
+    {CRSF_FRAMETYPE_FLIGHT_MODE, nullptr},
+    {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
+};
 
 Telemetry::Telemetry()
 {
@@ -89,10 +137,6 @@ void Telemetry::ResetState()
     currentPayloadIndex = 0;
     twoslotLastQueueIndex = 0;
     receivedPackages = 0;
-
-    uint32_t offset = 0;
-
-    usedSingletons = 0;
     messagePayloads.flush();
 }
 
@@ -239,35 +283,62 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         }
     }
 
-    const uint8_t messageSize = CRSF_FRAME_SIZE(((uint8_t *)package)[CRSF_TELEMETRY_LENGTH_INDEX]);
+    const uint8_t messageSize = CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]);
 
-    messagePayloads.lock();
-    // If this message is a 'singleton', then overwrite the bucket and add it to the sending queue if it's not already there
-    for (int8_t i = 0; i < (int8_t)ARRAY_SIZE(singletonPayloadTypes); i++)
+    // If this message has a comparator, then find out how we should handle this message
+    auto action = ACTION_APPEND;
+    const auto comparator = comparators.find(header->type);
+    uint16_t messagePosition = 0;
+    if (comparator != comparators.end())
     {
-        if (header->type == singletonPayloadTypes[i])
+        for (uint16_t i = 0; i < messagePayloads.size();)
         {
-            // Special case the Ardupilot status text message, which we also treat as a latest-singleton
-            if (header->type != CRSF_FRAMETYPE_ARDUPILOT_RESP || package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+            const auto size = messagePayloads[i];
+            // If the message at this point in the queue is not deleted, and it matches this comparator, then we check it
+            if (!(size & bit(7)) && messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX] == header->type)
             {
-                memcpy(singletonPayloads[i], package, messageSize);
-                // Add to the packetSource queue if not already on it
-                if ((usedSingletons & 1 << i) == 0 && messagePayloads.available(1))
+                const auto whatToDo = comparator->second == nullptr ? ACTION_OVERWRITE : comparator->second(header, messagePayloads, i + 1);
+                if (whatToDo == ACTION_IGNORE || whatToDo == ACTION_APPEND || whatToDo == ACTION_OVERWRITE)
                 {
-                    usedSingletons |= 1 << i;
-                    messagePayloads.push(-(i + 1));
+                    messagePosition = i;
+                    action = whatToDo;
+                    break;
                 }
-                messagePayloads.unlock();
-                return true;
             }
+            i += 1 + (size & 0x7f);
         }
     }
 
-    // IF there's enough room on the FIFO for this message, push it
-    if (messagePayloads.available(messageSize + 1))
+    messagePayloads.lock();
+    switch (action)
     {
-        messagePayloads.push(messageSize);
-        messagePayloads.pushBytes(package, messageSize);
+    case ACTION_IGNORE:
+        break;
+    case ACTION_OVERWRITE:
+        if (messagePayloads[messagePosition] >= messageSize)
+        {
+            for (uint16_t i = 0 ; i<messageSize; i++)
+            {
+                messagePayloads.set(messagePosition + i + 1, package[i]);
+            }
+            break;
+        }
+        // Mark the current queued entry as deleted
+        messagePayloads.set(messagePosition, messagePayloads[messagePosition] | bit(7));
+        // fallthrough to APPEND
+    default:
+        // If there's enough room on the FIFO for this message, push it
+        if (messagePayloads.available(messageSize + 1))
+        {
+            messagePayloads.push(messageSize);
+            messagePayloads.pushBytes(package, messageSize);
+        }
+        else
+        {
+            messagePayloads.unlock();
+            return false;
+        }
+        break;
     }
     messagePayloads.unlock();
     return true;
@@ -275,30 +346,28 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
-    if (messagePayloads.size() == 0)
+    while (messagePayloads.size() > 0)
     {
-        *nextPayloadSize = 0;
-        *payloadData = nullptr;
-        return false;
+        messagePayloads.lock();
+        const auto size = messagePayloads.pop();
+        if (size & bit(7))
+        {
+            // This message is deleted, skip it
+            messagePayloads.skip(size & 0x7f);
+            messagePayloads.unlock();
+            continue;
+        }
+        messagePayloads.popBytes(currentPayload, size);
+        *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
+        *payloadData = currentPayload;
+        messagePayloads.unlock();
+        return true;
     }
 
-    messagePayloads.lock();
-    const auto byte = (int8_t)messagePayloads.pop();
-    if (byte < 0) {
-        const int fixedIndex = -byte - 1;
-        *nextPayloadSize = CRSF_FRAME_SIZE(singletonPayloads[fixedIndex][CRSF_TELEMETRY_LENGTH_INDEX]);
-        memcpy(currentPayload, singletonPayloads[fixedIndex], *nextPayloadSize);
-        *payloadData = currentPayload;
-        usedSingletons &= ~(1 << fixedIndex); // remove from the usedSingletons set
-    }
-    else
-    {
-        *nextPayloadSize = byte;
-        messagePayloads.popBytes(currentPayload, *nextPayloadSize);
-        *payloadData = currentPayload;
-    }
-    messagePayloads.unlock();
-    return true;
+    *nextPayloadSize = 0;
+    *payloadData = nullptr;
+    return false;
+
 }
 
 // This method is only used in unit testing!
@@ -309,8 +378,11 @@ int Telemetry::UpdatedPayloadCount()
     int i=0;
     while (messagePayloads.size() > 0)
     {
-        i++;
-        auto sz = (int8_t)messagePayloads.pop();
+        auto sz = messagePayloads.pop();
+        if (!(sz & bit(7)))
+        {
+            i++;
+        }
         bytes[bytePos++] = sz;
         if (sz > 0)
         {
