@@ -1,7 +1,5 @@
 #include "telemetry.h"
 #include "logging.h"
-#include <cstdint>
-#include <cstring>
 
 #include <functional>
 #include <map>
@@ -17,12 +15,6 @@ extern TCPSOCKET wifi2tcp;
 #include "devMSPVTX.h"
 #endif
 
-#if defined(UNIT_TEST)
-#include "native.h"
-#include <iostream>
-using namespace std;
-#endif
-
 #include "crsf2msp.h"
 
 enum action_e
@@ -36,7 +28,7 @@ enum action_e
 typedef std::function<action_e(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)> comparator_t;
 
 // For broadcast messages that have a 'source_id' as the first byte of the payload.
-static action_e sourceId(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)
+static action_e sourceId(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1])
     {
@@ -46,7 +38,7 @@ static action_e sourceId(const crsf_header_t *newMessage, FIFO<2048> &payloads, 
 }
 
 // Comparator for Ardupilot Status Text message
-static action_e statusText(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)
+static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
     ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
@@ -69,6 +61,12 @@ static std::map<crsf_frame_type_e, comparator_t> comparators = {
     {CRSF_FRAMETYPE_FLIGHT_MODE, nullptr},
     {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
 };
+
+static int settingsCount = 0;
+inline bool isPrioritised(const crsf_frame_type_e frameType)
+{
+    return frameType >= CRSF_FRAMETYPE_DEVICE_PING && frameType <= CRSF_FRAMETYPE_PARAMETER_WRITE;
+}
 
 Telemetry::Telemetry()
 {
@@ -192,13 +190,6 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     receivedPackages++;
                     return true;
                 }
-                #if defined(UNIT_TEST)
-                if (data != crc)
-                {
-                    cout << "invalid " << (int)crc  << '\n';
-                }
-                #endif
-
                 return false;
             }
 
@@ -308,6 +299,10 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             i += 1 + (size & 0x7f);
         }
     }
+    else if (isPrioritised(header->type))
+    {
+        settingsCount++;
+    }
 
     messagePayloads.lock();
     switch (action)
@@ -346,6 +341,35 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
+    if (settingsCount)
+    {
+        // handle prioritised messages first
+        for (uint16_t i = 0; i < messagePayloads.size();)
+        {
+            const auto size = messagePayloads[i];
+            // If the message at this point in the queue is not deleted, and it's a SETTINGS_ENTRY then we're going to return it
+            if (!(size & bit(7)) && isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
+            {
+                settingsCount--;
+                // Copy the frame to the current payload
+                for (uint16_t pos = 0 ; pos < size ; pos++)
+                {
+                    currentPayload[pos] = messagePayloads[i + 1 + pos];
+                }
+                // Mark the current queued entry as deleted
+                messagePayloads.set(i, size | bit(7));
+                // set the pointers to the payload
+                *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
+                *payloadData = currentPayload;
+                return true;
+            }
+            i += 1 + (size & 0x7f);
+        }
+        // Didn't find one, so we'll reset the counter
+        settingsCount = 0;
+    }
+
+    // return the 'head' of the queue
     while (messagePayloads.size() > 0)
     {
         messagePayloads.lock();
@@ -367,7 +391,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     *nextPayloadSize = 0;
     *payloadData = nullptr;
     return false;
-
 }
 
 // This method is only used in unit testing!

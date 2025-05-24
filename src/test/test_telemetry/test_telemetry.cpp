@@ -1,7 +1,8 @@
 #include <cstdint>
-#include <telemetry.h>
 #include <unity.h>
 
+#include <telemetry.h>
+#include "CRSF.h"
 #include "common.h"
 
 Telemetry telemetry;
@@ -237,6 +238,26 @@ void test_function_add_type_with_zero_crc(void)
     }
 }
 
+void test_prioritised_settings_entry_messages(void)
+{
+    telemetry.ResetState();
+    uint8_t batterySequence[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    sendData(batterySequence, sizeof(batterySequence));
+
+    uint8_t settingsSequence[] = {0xEC,0,0,0,0,0,0,0,0,0,0,0};
+    CRSF::SetExtendedHeaderAndCrc(settingsSequence, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, sizeof(settingsSequence)-CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_RADIO_TRANSMITTER);
+    sendData(settingsSequence, sizeof(settingsSequence));
+
+    uint8_t payloadSize;
+    uint8_t *payload;
+
+    telemetry.GetNextPayload(&payloadSize, &payload);
+    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, payload[CRSF_TELEMETRY_TYPE_INDEX]);
+
+    telemetry.GetNextPayload(&payloadSize, &payload);
+    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_BATTERY_SENSOR, payload[CRSF_TELEMETRY_TYPE_INDEX]);
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -255,6 +276,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_store_unknown_type_two_slots);
     RUN_TEST(test_function_store_ardupilot_status_text);
     RUN_TEST(test_function_add_type_with_zero_crc);
+    RUN_TEST(test_prioritised_settings_entry_messages);
     UNITY_END();
 
     return 0;
