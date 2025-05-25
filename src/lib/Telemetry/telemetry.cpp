@@ -315,7 +315,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             i += 1 + (size & 0x7f);
         }
     }
-    else if (isPrioritised(header->type))
+    if (isPrioritised(header->type))
     {
         settingsCount++;
     }
