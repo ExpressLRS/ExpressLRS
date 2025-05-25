@@ -238,6 +238,37 @@ void test_function_add_type_with_zero_crc(void)
     }
 }
 
+void test_only_one_device_info(void)
+{
+    telemetry.ResetState();
+    uint8_t sequence[] = {
+        0xee,                   // device addr
+        32,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xec,                   // source addr
+        'R','a','d','i','o','M','s','t','r',' ','R','P','3', 0, // device name (nul terminated string)
+        'E', 'L', 'R', 'S',     // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x30, 0x00, 0x00, // software version
+        0x07,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+
+    uint8_t* data;
+    uint8_t receivedLength;
+    telemetry.GetNextPayload(&receivedLength, &data);
+    TEST_ASSERT_NOT_EQUAL(0, data);
+    telemetry.GetNextPayload(&receivedLength, &data);
+    TEST_ASSERT_EQUAL(0, data);
+}
+
 void test_prioritised_settings_entry_messages(void)
 {
     telemetry.ResetState();
@@ -276,6 +307,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_store_unknown_type_two_slots);
     RUN_TEST(test_function_store_ardupilot_status_text);
     RUN_TEST(test_function_add_type_with_zero_crc);
+    RUN_TEST(test_only_one_device_info);
     RUN_TEST(test_prioritised_settings_entry_messages);
     UNITY_END();
 

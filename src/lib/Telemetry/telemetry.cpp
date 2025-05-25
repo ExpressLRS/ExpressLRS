@@ -48,6 +48,15 @@ static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &pa
     return ACTION_NEXT;
 }
 
+static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
+{
+    if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr && payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
 static std::map<crsf_frame_type_e, comparator_t> comparators = {
     {CRSF_FRAMETYPE_GPS, nullptr},
     {CRSF_FRAMETYPE_VARIO, nullptr},
@@ -60,6 +69,7 @@ static std::map<crsf_frame_type_e, comparator_t> comparators = {
     {CRSF_FRAMETYPE_ATTITUDE, nullptr},
     {CRSF_FRAMETYPE_FLIGHT_MODE, nullptr},
     {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
+    {CRSF_FRAMETYPE_DEVICE_INFO, extended_dest_origin},
 };
 
 static int settingsCount = 0;
