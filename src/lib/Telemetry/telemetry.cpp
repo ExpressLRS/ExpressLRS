@@ -62,16 +62,9 @@ static struct
     crsf_frame_type_e type;
     comparator_t comparator;
 } comparators[] = {
-    {CRSF_FRAMETYPE_GPS, nullptr},
-    {CRSF_FRAMETYPE_VARIO, nullptr},
-    {CRSF_FRAMETYPE_BATTERY_SENSOR, nullptr},
-    {CRSF_FRAMETYPE_BARO_ALTITUDE, nullptr},
-    {CRSF_FRAMETYPE_AIRSPEED, nullptr},
     {CRSF_FRAMETYPE_RPM, sourceId},
     {CRSF_FRAMETYPE_TEMP, sourceId},
     {CRSF_FRAMETYPE_CELLS, sourceId},
-    {CRSF_FRAMETYPE_ATTITUDE, nullptr},
-    {CRSF_FRAMETYPE_FLIGHT_MODE, nullptr},
     {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
     {CRSF_FRAMETYPE_DEVICE_INFO, extended_dest_origin},
 };
@@ -289,22 +282,21 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     }
 
     const uint8_t messageSize = CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]);
-
-    // If this message has a comparator, then find out how we should handle this message
     auto action = ACTION_APPEND;
-    bool found = false;
     comparator_t comparator = nullptr;
+
+    // Find the comparator for this message type (if any)
     for (size_t i = 0 ; i < ARRAY_SIZE(comparators) ; i++)
     {
         if (comparators[i].type == header->type)
         {
-            found = true;
             comparator = comparators[i].comparator;
             break;
         }
     }
+    // If we have a comparator or this is a 'broadcast' message we will look for a matching message in the queue and default to overwrite if we find one
     uint16_t messagePosition = 0;
-    if (found)
+    if (comparator != nullptr || header->type < CRSF_FRAMETYPE_DEVICE_PING)
     {
         for (uint16_t i = 0; i < messagePayloads.size();)
         {
