@@ -407,12 +407,10 @@ int Telemetry::UpdatedPayloadCount()
             i++;
         }
         bytes[bytePos++] = sz;
-        if (sz > 0)
+        sz &= 0x7F;
+        while (sz--)
         {
-            while (sz--)
-            {
-                bytes[bytePos++] = messagePayloads.pop();
-            }
+            bytes[bytePos++] = messagePayloads.pop();
         }
     }
     messagePayloads.pushBytes(bytes, bytePos);
