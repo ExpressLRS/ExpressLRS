@@ -1,8 +1,6 @@
 #include "telemetry.h"
-#include "logging.h"
 
 #include <functional>
-#include <map>
 
 #if CRSF_RX_MODULE
 
@@ -16,6 +14,7 @@ extern TCPSOCKET wifi2tcp;
 #endif
 
 #include "crsf2msp.h"
+#include "helpers.h"
 
 enum action_e
 {
@@ -41,7 +40,7 @@ static action_e sourceId(const crsf_header_t *newMessage, const FIFO<2048> &payl
 static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
-    ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+        ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
     {
         return ACTION_OVERWRITE;
     }
@@ -50,14 +49,19 @@ static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &pa
 
 static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
 {
-    if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr && payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
+    if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr &&
+        payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
     {
         return ACTION_OVERWRITE;
     }
     return ACTION_NEXT;
 }
 
-static std::map<crsf_frame_type_e, comparator_t> comparators = {
+static struct
+{
+    crsf_frame_type_e type;
+    comparator_t comparator;
+} comparators[] = {
     {CRSF_FRAMETYPE_GPS, nullptr},
     {CRSF_FRAMETYPE_VARIO, nullptr},
     {CRSF_FRAMETYPE_BATTERY_SENSOR, nullptr},
@@ -288,9 +292,19 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
     // If this message has a comparator, then find out how we should handle this message
     auto action = ACTION_APPEND;
-    const auto comparator = comparators.find(header->type);
+    bool found = false;
+    comparator_t comparator = nullptr;
+    for (size_t i = 0 ; i < ARRAY_SIZE(comparators) ; i++)
+    {
+        if (comparators[i].type == header->type)
+        {
+            found = true;
+            comparator = comparators[i].comparator;
+            break;
+        }
+    }
     uint16_t messagePosition = 0;
-    if (comparator != comparators.end())
+    if (found)
     {
         for (uint16_t i = 0; i < messagePayloads.size();)
         {
@@ -298,7 +312,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             // If the message at this point in the queue is not deleted, and it matches this comparator, then we check it
             if (!(size & bit(7)) && messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX] == header->type)
             {
-                const auto whatToDo = comparator->second == nullptr ? ACTION_OVERWRITE : comparator->second(header, messagePayloads, i + 1);
+                const auto whatToDo = comparator == nullptr ? ACTION_OVERWRITE : comparator(header, messagePayloads, i + 1);
                 if (whatToDo == ACTION_IGNORE || whatToDo == ACTION_APPEND || whatToDo == ACTION_OVERWRITE)
                 {
                     messagePosition = i;
