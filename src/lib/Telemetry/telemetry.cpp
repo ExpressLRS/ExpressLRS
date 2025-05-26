@@ -81,7 +81,7 @@ void Telemetry::CheckCrsfBaroSensorDetected()
     }
 }
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE, AIRSPEED, RPM, TEMP, CELLS);
+PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, FLIGHT_MODE, VARIO, BARO_ALTITUDE, AIRSPEED, RPM, TEMP, CELLS);
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
@@ -147,9 +147,9 @@ void Telemetry::ResetState()
     twoslotLastQueueIndex = 0;
     receivedPackages = 0;
 
-    uint8_t offset = 0;
+    uint32_t offset = 0;
 
-    for (int8_t i = 0; i < payloadTypesCount; i++)
+    for (unsigned i = 0; i < payloadTypesCount; i++)
     {
         payloadTypes[i].locked = false;
         payloadTypes[i].updated = false;
@@ -278,20 +278,37 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
     return false;
 }
 
+void Telemetry::RequestPauseForLuaInfo()
+{
+    luaInfoPauseStart = millis();
+}
+
 bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
     if (processInternalTelemetryPackage(package))
         return true;
 
     const crsf_header_t *header = (crsf_header_t *) package;
+    const uint8_t crsfType = header->type;
+
+    // Block all other telemetry traffic for 10s during deviceinfo and parameterinfo
+    if (luaInfoPauseStart && (millis() - luaInfoPauseStart) < 10000)
+    {
+        if (!(crsfType == CRSF_FRAMETYPE_DEVICE_INFO || crsfType == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY))
+            return false;
+    }
+    else
+    {
+        luaInfoPauseStart = 0;
+    }
+
     uint8_t targetIndex = 0;
     bool targetFound = false;
-
-    if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
+    if (crsfType >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
 
-        if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP)
+        if (crsfType == CRSF_FRAMETYPE_ARDUPILOT_RESP)
         {
             // reserve last slot for adrupilot custom frame with the sub type status text: this is needed to make sure the important status messages are not lost
             if (package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
@@ -311,7 +328,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
             #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
                 // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-                if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+                if (wifi2tcp.hasClient() && (crsfType == CRSF_FRAMETYPE_MSP_RESP || crsfType == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
                 {
                     DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
                     crsf2msp.parse(package);
@@ -320,7 +337,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             #endif
             {
 #if defined(HAS_MSP_VTX) && defined(TARGET_RX)
-                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+                if (crsfType == CRSF_FRAMETYPE_MSP_RESP)
                 {
                     mspVtxProcessPacket(package);
                 }
@@ -354,7 +371,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         for (int8_t i = 0; i < payloadTypesCount - 2; i++)
         {
-            if (header->type == payloadTypes[i].type)
+            if (crsfType == payloadTypes[i].type)
             {
                 if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
                 {
@@ -376,8 +393,9 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
     {
         memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
         payloadTypes[targetIndex].updated = true;
+        return true;
     }
 
-    return targetFound;
+    return false;
 }
 #endif

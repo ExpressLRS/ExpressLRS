@@ -6,9 +6,10 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
+local EXITVER = "-- EXIT (Lua r15) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
-local deviceName = ""
+local deviceName = "Loading..."
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -19,7 +20,7 @@ local fieldChunk = 0
 local fieldData = nil
 local fields = {}
 local devices = {}
-local goodBadPkt = "?/???    ?"
+local goodBadPkt = ""
 local elrsFlags = 0
 local elrsFlagsInfo = ""
 local fields_count = 0
@@ -41,14 +42,26 @@ local textSize
 local barTextSpacing
 
 local function allocateFields()
+  -- fields table is real fields, then the Other Devices item, then devices, then Exit/Back
   fields = {}
-  for i=1, fields_count + 2 + #devices do
+  for i=1, fields_count do
     fields[i] = { }
   end
-  fields[#fields] = {name="----EXIT----", type=14}
+  fields[#fields+1] = {id=fields_count+1, name="Other Devices", parent=255, type=16}
+  fields[#fields+1] = {name=EXITVER, type=14}
+end
+
+local function createDeviceFields() -- put other devices in the field list
+  -- move back button to the end of the list, so it will always show up at the bottom.
+  fields[fields_count + #devices + 2] = fields[#fields]
+  for i=1, #devices do
+    local parent = (devices[i].id == deviceId) and 255 or (fields_count+1)
+    fields[fields_count + 1 + i] = {id=devices[i].id, name=devices[i].name, parent=parent, type=15}
+  end
 end
 
 local function reloadAllField()
+  fieldTimeout = 0
   fieldChunk = 0
   fieldData = nil
   -- loadQ is actually a stack
@@ -155,10 +168,10 @@ local function fieldGetStrOrOpts(data, offset, last, isOpts)
   return (r or opt), offset, vcnt, collectgarbage("collect")
 end
 
-local function getDevice(name)
-  for i=1, #devices do
-    if devices[i].name == name then
-      return devices[i]
+local function getDevice(id)
+  for _, device in ipairs(devices) do
+    if device.id == id then
+      return device
     end
   end
 end
@@ -308,7 +321,9 @@ local function fieldFolderOpen(field)
 end
 
 local function fieldFolderDeviceOpen(field)
-  crossfireTelemetryPush(0x28, { 0x00, 0xEA }) --broadcast with standard handset ID to get all node respond correctly
+  -- crossfireTelemetryPush(0x28, { 0x00, 0xEA }) --broadcast with standard handset ID to get all node respond correctly
+  -- Make sure device fields are in the folder when it opens
+  createDeviceFields()
   return fieldFolderOpen(field)
 end
 
@@ -348,7 +363,7 @@ local function fieldBackExec(field)
     lineIndex = field.li or 1
     pageOffset = field.po or 0
 
-    field.name = "----EXIT----"
+    field.name = EXITVER
     field.parent = nil
     field.li = nil
     field.po = nil
@@ -359,58 +374,43 @@ local function fieldBackExec(field)
 end
 
 local function changeDeviceId(devId) --change to selected device ID
-  currentFolderId = nil
-  deviceIsELRS_TX = nil
-  elrsFlags = 0
-  --if the selected device ID (target) is a TX Module, we use our Lua ID, so TX Flag that user is using our LUA
-  if devId == 0xEE then
-    handsetId = 0xEF
-  else --else we would act like the legacy lua
-    handsetId = 0xEA
-  end
+  local device = getDevice(devId)
+  if deviceId == devId and fields_count == device.fldcnt then return end
+
   deviceId = devId
-  fields_count = 0  --set this because next target wouldn't have the same count, and this trigger to request the new count
+  elrsFlags = 0
+  currentFolderId = nil
+  deviceName = device.name
+  fields_count = device.fldcnt
+  deviceIsELRS_TX = device.isElrs and devId == 0xEE or nil -- ELRS and ID is TX module
+  handsetId = deviceIsELRS_TX and 0xEF or 0xEA -- Address ELRS_LUA vs RADIO_TRANSMITTER
+
+  allocateFields()
+  reloadAllField()
 end
 
 local function fieldDeviceIdSelect(field)
-  local device = getDevice(field.name)
-  changeDeviceId(device.id)
-  crossfireTelemetryPush(0x28, { 0x00, 0xEA })
-end
-
-local function createDeviceFields() -- put other devices in the field list
-  -- move back button to the end of the list, so it will always show up at the bottom.
-  fields[fields_count + 2 + #devices] = fields[#fields]
-  for i=1, #devices do
-    local parent = (devices[i].id == deviceId) and 255 or (fields_count+1)
-    fields[fields_count+1+i] = {name=devices[i].name, parent=parent, type=15}
-  end
+  return changeDeviceId(field.id)
 end
 
 local function parseDeviceInfoMessage(data)
-  local offset
   local id = data[2]
-  local newName
-  newName, offset = fieldGetStrOrOpts(data, 3)
-  local device = getDevice(newName)
+  local newName, offset = fieldGetStrOrOpts(data, 3)
+  local device = getDevice(id)
   if device == nil then
-    device = { id = id, name = newName }
+    device = { id = id }
     devices[#devices + 1] = device
   end
+  device.name = newName
+  device.fldcnt = data[offset + 12]
+  device.isElrs = fieldGetValue(data, offset, 4) == 0x454C5253 -- SerialNumber = 'E L R S'
+
   if deviceId == id then
-    deviceName = newName
-    deviceIsELRS_TX = ((fieldGetValue(data,offset,4) == 0x454C5253) and (deviceId == 0xEE)) or nil -- SerialNumber = 'E L R S' and ID is TX module
-    local newFieldCount = data[offset+12]
-    if newFieldCount ~= fields_count or newFieldCount == 0 then
-      fields_count = newFieldCount
-      allocateFields()
-      reloadAllField()
-      fields[fields_count+1] = {id = fields_count+1, name="Other Devices", parent = 255, type=16} -- add other devices folders
-      if newFieldCount == 0 then
-        -- This device has no fields so the Loading code never starts
-        createDeviceFields()
-      end
-    end
+    changeDeviceId(id)
+  end
+  -- DeviceList change while in Other Devices, refresh list
+  if currentFolderId == fields_count + 1 then
+    createDeviceFields()
   end
 end
 
@@ -486,11 +486,6 @@ local function parseParameterInfoMessage(data)
     fieldChunk = 0
     fieldData = nil
 
-    -- Last field loaded, add the list of devices to the end
-    if #loadQ == 0 then
-      createDeviceFields()
-    end
-
     -- Return value is if the screen should be updated
     -- If deviceId is TX module, then the Bad/Good drives the update; for other
     -- devices update each new item. and always update when the queue empties
@@ -560,21 +555,21 @@ local function refreshNext()
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 6 }) -- lcsQuery
       fieldTimeout = time + fieldPopup.timeout
     end
-  elseif time > devicesRefreshTimeout and fields_count < 1 then
+  elseif time > devicesRefreshTimeout and #devices == 0 then
     forceRedraw = true -- handles initial screen draw
     devicesRefreshTimeout = time + 100 -- 1s
     crossfireTelemetryPush(0x28, { 0x00, 0xEA })
   elseif time > linkstatTimeout then
-    if not deviceIsELRS_TX and #loadQ == 0 then
-      goodBadPkt = ""
-    else
+    if deviceIsELRS_TX then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, 0x0, 0x0 }) --request linkstat
+    else
+      goodBadPkt = ""
     end
     linkstatTimeout = time + 100
   elseif time > fieldTimeout and fields_count ~= 0 then
     if #loadQ > 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, loadQ[#loadQ], fieldChunk })
-      fieldTimeout = time + 50 -- 0.5s
+      fieldTimeout = time + 500 -- 5s
     end
   end
 
@@ -612,8 +607,7 @@ local function lcd_title_color()
   if titleShowWarn then
     lcd.drawText(COL1 + 1, barTextSpacing, elrsFlagsInfo, CUSTOM_COLOR)
   else
-    local title = fields_count > 0 and deviceName or "Loading..."
-    lcd.drawText(COL1 + 1, barTextSpacing, title, CUSTOM_COLOR)
+    lcd.drawText(COL1 + 1, barTextSpacing, deviceName, CUSTOM_COLOR)
     lcd.drawText(LCD_W - 5, barTextSpacing, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
   end
   -- progress bar
@@ -643,8 +637,7 @@ local function lcd_title_bw()
     if titleShowWarn then
       lcd.drawText(COL1, 1, elrsFlagsInfo, INVERS)
     else
-      local title = fields_count > 0 and deviceName or "Loading..."
-      lcd.drawText(COL1, 1, title, INVERS)
+      lcd.drawText(COL1, 1, deviceName, INVERS)
     end
   end
 end
@@ -697,7 +690,7 @@ local function handleDevicePageEvent(event)
     else
       if currentFolderId == nil and #loadQ == 0 then -- only do reload if we're in the root folder and finished loading
         if deviceId ~= 0xEE then
-          changeDeviceId(0xEE) --change device id clear the fields_count, therefore the next ping will do reloadAllField()
+          changeDeviceId(0xEE)
         else
           reloadAllField()
         end
@@ -847,7 +840,7 @@ local function setLCDvar()
   if major ~= 1 then
     popupCompat = popupConfirmation
   end
-  
+
   if (lcd.RGB ~= nil) then
     local ver, radio, maj, minor, rev, osname = getVersion()
 
