@@ -259,6 +259,12 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
 
     const crsf_header_t *header = (crsf_header_t *) package;
 
+    // Just ignore heartbeat messages; certainly don't forward them!
+    if (header->type == CRSF_FRAMETYPE_HEARTBEAT)
+    {
+        return true;
+    }
+
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
