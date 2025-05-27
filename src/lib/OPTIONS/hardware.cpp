@@ -165,22 +165,22 @@ String& getHardware()
 
 static void hardware_ClearAllFields()
 {
-    for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
-        switch (fields[i].type) {
+    for (auto field : fields) {
+        switch (field.type) {
             case INT:
-                hardware[fields[i].position].int_value = -1;
+                hardware[field.position].int_value = -1;
                 break;
             case BOOL:
-                hardware[fields[i].position].bool_value = false;
+                hardware[field.position].bool_value = false;
                 break;
             case FLOAT:
-                hardware[fields[i].position].float_value = 0.0;
+                hardware[field.position].float_value = 0.0;
                 break;
             case ARRAY:
-                hardware[fields[i].position].array_value = nullptr;
+                hardware[field.position].array_value = nullptr;
                 break;
             case COUNT:
-                hardware[fields[i].position].int_value = 0;
+                hardware[field.position].int_value = 0;
                 break;
         }
     }
@@ -188,29 +188,29 @@ static void hardware_ClearAllFields()
 
 static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
 {
-    for (size_t i=0 ; i<ARRAY_SIZE(fields) ; i++) {
-        if (doc.containsKey(fields[i].name)) {
-            switch (fields[i].type) {
+    for (auto field : fields) {
+        if (doc[field.name].is<JsonVariant>()) {
+            switch (field.type) {
                 case INT:
-                    hardware[fields[i].position].int_value = doc[fields[i].name];
+                    hardware[field.position].int_value = doc[field.name];
                     break;
                 case BOOL:
-                    hardware[fields[i].position].bool_value = doc[fields[i].name];
+                    hardware[field.position].bool_value = doc[field.name];
                     break;
                 case FLOAT:
-                    hardware[fields[i].position].float_value = doc[fields[i].name];
+                    hardware[field.position].float_value = doc[field.name];
                     break;
                 case ARRAY:
                     {
-                        JsonArray array = doc[fields[i].name].as<JsonArray>();
-                        hardware[fields[i].position].array_value = new int16_t[array.size()];
-                        copyArray(doc[fields[i].name], hardware[fields[i].position].array_value, array.size());
+                        JsonArray array = doc[field.name].as<JsonArray>();
+                        hardware[field.position].array_value = new int16_t[array.size()];
+                        copyArray(doc[field.name], hardware[field.position].array_value, array.size());
                     }
                     break;
                 case COUNT:
                     {
-                        JsonArray array = doc[fields[i].name].as<JsonArray>();
-                        hardware[fields[i].position].int_value = array.size();
+                        JsonArray array = doc[field.name].as<JsonArray>();
+                        hardware[field.position].int_value = (int)array.size();
                     }
                     break;
             }
@@ -253,22 +253,22 @@ bool hardware_init(EspFlashStream &strmFlash)
     return true;
 }
 
-const int hardware_pin(nameType name)
+int hardware_pin(nameType name)
 {
     return hardware[name].int_value;
 }
 
-const bool hardware_flag(nameType name)
+bool hardware_flag(nameType name)
 {
     return hardware[name].bool_value;
 }
 
-const int hardware_int(nameType name)
+int hardware_int(nameType name)
 {
     return hardware[name].int_value;
 }
 
-const float hardware_float(nameType name)
+float hardware_float(nameType name)
 {
     return hardware[name].float_value;
 }
