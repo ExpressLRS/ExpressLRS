@@ -34,14 +34,12 @@
 #define LOG_LEVEL_WARN     2    /* Warnings and other non-fatal issues */
 #define LOG_LEVEL_INFO     3    /* General information */
 #define LOG_LEVEL_VERBOSE  4    /* More detailed information that is not normally needed */
-#define LOG_LEVEL_DEBUG    5    /* Debugging only */
 
 #define FATAL       LOG_LEVEL_FATAL
 #define ERROR       LOG_LEVEL_ERROR
 #define WARN        LOG_LEVEL_WARN
 #define INFO        LOG_LEVEL_INFO
 #define VERBOSE     LOG_LEVEL_VERBOSE
-#define DBG         LOG_LEVEL_DEBUG
 
 #define MAVLINK_LOG_ADDRESS 1
 #define MAVLINK_STAT_ADDRESS 0
@@ -137,12 +135,6 @@
 #  define LOG_VERBOSE(...)      ((void)0)
 #endif
 
-#if _LOG_LEVEL_ENABLED(LOG_LEVEL_DEBUG) && _LOG_HAS_ANY_BACKEND
-#  define LOG_DEBUG(fmt, ...) _LOG_EMIT("D",  fmt, ##__VA_ARGS__)
-#else
-#  define LOG_DEBUG(...)        ((void)0)
-#endif
-
 /*-------------------------------------------------------------------------*
  * But they were, all of them, deceived, for another Macro was made...     *
  *-------------------------------------------------------------------------*/
@@ -156,7 +148,6 @@
                 else if ((lvl) == LOG_LEVEL_WARN)     LOG_WARN(fmt, ##__VA_ARGS__);     \
                 else if ((lvl) == LOG_LEVEL_INFO)     LOG_INFO(fmt, ##__VA_ARGS__);     \
                 else if ((lvl) == LOG_LEVEL_VERBOSE)  LOG_VERBOSE(fmt, ##__VA_ARGS__);  \
-                else if ((lvl) == LOG_LEVEL_DEBUG)    LOG_DEBUG(fmt, ##__VA_ARGS__);    \
                 else ((void)0);                                                         \
             }                                                                           \
         } while (0)
