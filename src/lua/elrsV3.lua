@@ -526,7 +526,7 @@ local function parseElrsV1Message(data)
   fieldTimeout = getTime() + 0xFFFF
 end
 
-local function refreshNext()
+local function refreshNext(skipPush)
   local command, data, forceRedraw
   repeat
     command, data = crossfireTelemetryPop()
@@ -548,6 +548,9 @@ local function refreshNext()
       forceRedraw = true
     end
   until command == nil
+
+  -- Don't even bother with return value, skipPush implies redraw
+  if skipPush then return end
 
   local time = getTime()
   if fieldPopup then
@@ -672,6 +675,8 @@ local function reloadRelatedFields(field)
   loadQ[#loadQ+1] = field.id
   -- with a short delay to allow the module EEPROM to commit
   fieldTimeout = getTime() + 20
+  -- Also push the next bad/good update further out
+  linkstatTimeout = fieldTimeout + 100
 end
 
 local function handleDevicePageEvent(event)
@@ -934,9 +939,10 @@ local function run(event, touchState)
   if event == nil then return 2 end
   if checkCrsfModule then return checkCrsfModule() end
 
-  local forceRedraw = refreshNext()
-
   event = (touch2evt and touch2evt(event, touchState)) or event
+  -- If ENTER pressed, skip any pushing this loop to reserve queue for the save command
+  local forceRedraw = refreshNext(event == EVT_VIRTUAL_ENTER)
+
   if fieldPopup ~= nil then
     runPopupPage(event)
   elseif event ~= 0 or forceRedraw or edit then
