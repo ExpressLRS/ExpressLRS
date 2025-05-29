@@ -414,6 +414,8 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t num_channels;
     uint8_t uid[6];
     uint8_t bind_phrase[16];
+    uint32_t mast_fw_ver;
+    uint32_t tx_fw_ver;
     uint8_t vtx_channel;
     uint8_t connected;
     int32_t lastTXnb;
