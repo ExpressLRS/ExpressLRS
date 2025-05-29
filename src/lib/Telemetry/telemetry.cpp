@@ -24,10 +24,10 @@ enum action_e
     ACTION_APPEND      // append the message to the end of the queue
 };
 
-typedef std::function<action_e(const crsf_header_t *newMessage, FIFO<2048> &payloads, uint16_t queuePosition)> comparator_t;
+typedef std::function<action_e(const crsf_header_t *newMessage, FIFO<TELEMETRY_FIFO_SIZE> &payloads, uint16_t queuePosition)> comparator_t;
 
 // For broadcast messages that have a 'source_id' as the first byte of the payload.
-static action_e sourceId(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
+static action_e sourceId(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1])
     {
@@ -37,7 +37,7 @@ static action_e sourceId(const crsf_header_t *newMessage, const FIFO<2048> &payl
 }
 
 // Comparator for Ardupilot Status Text message
-static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
+static action_e statusText(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
         ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
@@ -47,7 +47,7 @@ static action_e statusText(const crsf_header_t *newMessage, const FIFO<2048> &pa
     return ACTION_NEXT;
 }
 
-static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO<2048> &payloads, const uint16_t queuePosition)
+static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr &&
         payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
@@ -252,17 +252,12 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
     return false;
 }
 
-bool Telemetry::AppendTelemetryPackage(uint8_t *package)
+void Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
-    if (processInternalTelemetryPackage(package))
-        return true;
-
     const crsf_header_t *header = (crsf_header_t *) package;
-
-    // Just ignore heartbeat messages; certainly don't forward them!
-    if (header->type == CRSF_FRAMETYPE_HEARTBEAT)
+    if (header->type == CRSF_FRAMETYPE_HEARTBEAT || processInternalTelemetryPackage(package))
     {
-        return true;
+        return;
     }
 
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
@@ -344,21 +339,18 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
         messagePayloads.set(messagePosition, messagePayloads[messagePosition] | bit(7));
         // fallthrough to APPEND
     default:
-        // If there's enough room on the FIFO for this message, push it
-        if (messagePayloads.available(messageSize + 1))
+        // If there's NOT enough room on the FIFO for this message, pop until there is
+        while (!messagePayloads.available(messageSize + 1))
         {
-            messagePayloads.push(messageSize);
-            messagePayloads.pushBytes(package, messageSize);
+            uint8_t dummy[CRSF_MAX_PACKET_LEN];
+            const uint8_t sz = messagePayloads.pop() & 0x7F;
+            messagePayloads.popBytes(dummy, sz);
         }
-        else
-        {
-            messagePayloads.unlock();
-            return false;
-        }
+        messagePayloads.push(messageSize);
+        messagePayloads.pushBytes(package, messageSize);
         break;
     }
     messagePayloads.unlock();
-    return true;
 }
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)

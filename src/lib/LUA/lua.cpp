@@ -154,10 +154,9 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
   return childParameters;
 }
 
-#define SENDCRSFPARAM_ERROR (0xff)
 /***
  * @brief: Turn a lua param structure into a chunk of CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY frame and queue it
- * @returns: Number of chunks left to send after this one, or SENDCRSFPARAM_ERROR if there's no space to queue it currently
+ * @returns: Number of chunks left to send after this one
  */
 static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
@@ -245,8 +244,7 @@ static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *lua
   CRSF::SetExtendedHeaderAndCrc(packetBuf, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
       chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
-  if (!telemetry.AppendTelemetryPackage(packetBuf))
-    return SENDCRSFPARAM_ERROR;
+  telemetry.AppendTelemetryPackage(packetBuf);
 #endif
 
   return chunkCnt - (fieldChunk+1);
@@ -260,10 +258,7 @@ static void pushResponseChunk(struct luaItem_command *cmd) {
   {
     nextStatusChunk = 0;
   }
-  else if (ret != SENDCRSFPARAM_ERROR)
-  {
-    nextStatusChunk++;
-  }
+  nextStatusChunk++;
 }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
@@ -419,9 +414,8 @@ bool luaHandleUpdateParameter()
             field->step = lcsIdle;
             field->info = "";
           }
-          // Queue the parameter chunk. If it fails, just keep UpdateParamReq true
-          if (sendCRSFparam(fieldChunk, &field->common) == SENDCRSFPARAM_ERROR)
-            return false;
+          // Queue the parameter chunk.
+          sendCRSFparam(fieldChunk, &field->common);
         }
       }
       break;

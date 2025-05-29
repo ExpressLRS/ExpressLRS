@@ -5,6 +5,8 @@
 #include "CRSF.h"
 #include "FIFO.h"
 
+#define TELEMETRY_FIFO_SIZE 512
+
 enum CustomTelemSubTypeID : uint8_t {
     CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
     CRSF_AP_CUSTOM_TELEM_STATUS_TEXT = 0xF1,
@@ -44,14 +46,13 @@ public:
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     int UpdatedPayloadCount();
-    bool AppendTelemetryPackage(uint8_t *package);
+    void AppendTelemetryPackage(uint8_t *package);
 private:
-    FIFO<2048> messagePayloads;
+    FIFO<TELEMETRY_FIFO_SIZE> messagePayloads;
 
     uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
 
     bool processInternalTelemetryPackage(uint8_t *package);
-    void AppendToPackage(volatile crsf_telemetry_package_t *current);
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
     telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
