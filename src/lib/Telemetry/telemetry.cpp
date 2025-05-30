@@ -334,16 +334,20 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     case ACTION_IGNORE:
         break;
     case ACTION_OVERWRITE:
-        if (messagePayloads[overwritePosition] >= messageSize)
+        // Check again because our initial check was performed without locking
+        if (!IS_DEL(messagePayloads[overwritePosition]))
         {
-            for (uint16_t i = 0 ; i<messageSize; i++)
+            if (messagePayloads[overwritePosition] >= messageSize)
             {
-                messagePayloads.set(overwritePosition + i + 1, package[i]);
+                for (uint16_t i = 0 ; i<messageSize; i++)
+                {
+                    messagePayloads.set(overwritePosition + i + 1, package[i]);
+                }
+                break;
             }
-            break;
+            // Mark the current queued entry as deleted
+            messagePayloads.set(overwritePosition, SET_DEL(messagePayloads[overwritePosition]));
         }
-        // Mark the current queued entry as deleted
-        messagePayloads.set(overwritePosition, SET_DEL(messagePayloads[overwritePosition]));
         // fallthrough to APPEND
     default:
         // If there's NOT enough room on the FIFO for this message, pop until there is
@@ -368,23 +372,34 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
         {
             const auto size = messagePayloads[i];
             // If the message at this point in the queue is not deleted, and it's a SETTINGS_ENTRY then we're going to return it
-            if (!IS_DEL(size) && isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
+            if (isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
             {
-                prioritizedCount--;
-                // If this is the first item in the queue, use pop() below
-                if (i == 0)
-                    break;
-                // Copy the frame to the current payload
-                for (uint16_t pos = 0 ; pos < size ; pos++)
+                messagePayloads.lock();
+                if (!IS_DEL(size))
                 {
-                    currentPayload[pos] = messagePayloads[i + 1 + pos];
+                    prioritizedCount--;
+                    // If this is the first item in the queue, use pop() instead to free the space
+                    if (i == 0)
+                    {
+                        messagePayloads.pop();
+                        messagePayloads.popBytes(currentPayload, size);
+                    }
+                    else // Copy the frame to the current payload
+                    {
+                        for (uint16_t pos = 0 ; pos < size ; pos++)
+                        {
+                            currentPayload[pos] = messagePayloads[i + 1 + pos];
+                        }
+                        // Mark the current queued entry as deleted
+                        messagePayloads.set(i, SET_DEL(size));
+                    }
+                    // set the pointers to the payload
+                    *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
+                    *payloadData = currentPayload;
+                    messagePayloads.unlock();
+                    return true;
                 }
-                // Mark the current queued entry as deleted
-                messagePayloads.set(i, SET_DEL(size));
-                // set the pointers to the payload
-                *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
-                *payloadData = currentPayload;
-                return true;
+                messagePayloads.unlock();
             }
             i += 1 + SIZE(size);
         }
