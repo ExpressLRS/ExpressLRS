@@ -413,7 +413,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 
     *nextPayloadSize = 0;
     *payloadData = nullptr;
-    bzero(currentPayload, sizeof(currentPayload));
     return false;
 }
 
