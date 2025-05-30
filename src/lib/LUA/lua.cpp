@@ -252,13 +252,11 @@ static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *lua
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-
-  uint8_t ret = sendCRSFparam(nextStatusChunk, (struct luaPropertiesCommon *)cmd);
-  if (ret == 0)
-  {
+  if (sendCRSFparam(nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
+  } else {
+    nextStatusChunk++;
   }
-  nextStatusChunk++;
 }
 
 void sendLuaCommandResponse(struct luaItem_command *cmd, luaCmdStep_e step, const char *message) {
@@ -403,7 +401,7 @@ bool luaHandleUpdateParameter()
       {
         uint8_t fieldId = parameterIndex;
         uint8_t fieldChunk = parameterArg;
-        DBGVLN("Read lua param %u %u", fieldId, fieldChunk);
+        DBGLN("Read lua param %u %u", fieldId, fieldChunk);
         if (fieldId < LUA_MAX_PARAMS && paramDefinitions[fieldId])
         {
           struct luaItem_command *field = (struct luaItem_command *)paramDefinitions[fieldId];

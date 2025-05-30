@@ -269,6 +269,48 @@ void test_only_one_device_info(void)
     TEST_ASSERT_EQUAL(0, data);
 }
 
+void test_only_one_device_info_per_source(void)
+{
+    telemetry.ResetState();
+    uint8_t sequenceEC[] = {
+        0xee,                   // device addr
+        32,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xec,                   // source addr
+        'R','a','d','i','o','M','s','t','r',' ','R','P','3', 0, // device name (nul terminated string)
+        'E', 'L', 'R', 'S',     // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x30, 0x00, 0x00, // software version
+        0x07,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+    uint8_t sequenceC8[] = {
+        0xee,                   // device addr
+        29,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xc8,                   // source addr
+        'B','e','t','a','f','l','i','g','h','t', 0, // device name (nul terminated string)
+        0x00, 0x00, 0x00, 0x00, // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x04, 0x05, 0x02, // software version
+        0x00,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+
+    telemetry.AppendTelemetryPackage(sequenceEC);
+    TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceC8);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceEC);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceC8);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+}
+
 void test_prioritised_settings_entry_messages(void)
 {
     telemetry.ResetState();
@@ -308,6 +350,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_store_ardupilot_status_text);
     RUN_TEST(test_function_add_type_with_zero_crc);
     RUN_TEST(test_only_one_device_info);
+    RUN_TEST(test_only_one_device_info_per_source);
     RUN_TEST(test_prioritised_settings_entry_messages);
     UNITY_END();
 

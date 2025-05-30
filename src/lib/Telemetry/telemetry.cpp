@@ -16,20 +16,25 @@ extern TCPSOCKET wifi2tcp;
 #include "crsf2msp.h"
 #include "helpers.h"
 
+// Size byte in FIFO contains bit to indicate if the frame is deleted
+#define IS_DEL(size) (size & bit(7))
+#define SET_DEL(size) (size | bit(7))
+#define SIZE(size) (size & ~bit(7))
+
 enum action_e
 {
-    ACTION_NEXT,       // skip to the next message in the queue
+    ACTION_NEXT,       // continue searching queue for other messages
     ACTION_IGNORE,     // the message matches; ignore the new one
     ACTION_OVERWRITE,  // overwrite the queued message with the new one
     ACTION_APPEND      // append the message to the end of the queue
 };
 
-typedef std::function<action_e(const crsf_header_t *newMessage, FIFO<TELEMETRY_FIFO_SIZE> &payloads, uint16_t queuePosition)> comparator_t;
+typedef std::function<action_e(const crsf_header_t *newMessage, const TelemetryFifo &payloads, uint16_t queuePosition)> comparator_t;
 
 // For broadcast messages that have a 'source_id' as the first byte of the payload.
-static action_e sourceId(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
+static action_e sourceId(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
 {
-    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1])
+    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == newMessage->payload[0])
     {
         return ACTION_OVERWRITE;
     }
@@ -37,17 +42,17 @@ static action_e sourceId(const crsf_header_t *newMessage, const FIFO<TELEMETRY_F
 }
 
 // Comparator for Ardupilot Status Text message
-static action_e statusText(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
+static action_e statusText(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
-        ((uint8_t*)newMessage)[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+        newMessage->payload[0] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
     {
         return ACTION_OVERWRITE;
     }
     return ACTION_NEXT;
 }
 
-static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO<TELEMETRY_FIFO_SIZE> &payloads, const uint16_t queuePosition)
+static action_e extended_dest_origin(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
 {
     if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr &&
         payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
@@ -55,6 +60,11 @@ static action_e extended_dest_origin(const crsf_header_t *newMessage, const FIFO
         return ACTION_OVERWRITE;
     }
     return ACTION_NEXT;
+}
+
+static action_e comp_OVERWRITE(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
+{
+    return ACTION_OVERWRITE;
 }
 
 static struct
@@ -67,9 +77,9 @@ static struct
     {CRSF_FRAMETYPE_CELLS, sourceId},
     {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
     {CRSF_FRAMETYPE_DEVICE_INFO, extended_dest_origin},
+    {CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, comp_OVERWRITE },
 };
 
-static int settingsCount = 0;
 inline bool isPrioritised(const crsf_frame_type_e frameType)
 {
     return frameType >= CRSF_FRAMETYPE_DEVICE_PING && frameType <= CRSF_FRAMETYPE_PARAMETER_WRITE;
@@ -139,9 +149,7 @@ void Telemetry::ResetState()
 {
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
-    currentPayloadIndex = 0;
-    twoslotLastQueueIndex = 0;
-    receivedPackages = 0;
+    prioritizedCount = 0;
     messagePayloads.flush();
 }
 
@@ -194,7 +202,6 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     CheckCrsfBatterySensorDetected();
                     CheckCrsfBaroSensorDetected();
 
-                    receivedPackages++;
                     return true;
                 }
                 return false;
@@ -296,29 +303,29 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         }
     }
     // If we have a comparator or this is a 'broadcast' message we will look for a matching message in the queue and default to overwrite if we find one
-    uint16_t messagePosition = 0;
+    uint16_t overwritePosition = 0;
     if (comparator != nullptr || header->type < CRSF_FRAMETYPE_DEVICE_PING)
     {
         for (uint16_t i = 0; i < messagePayloads.size();)
         {
             const auto size = messagePayloads[i];
             // If the message at this point in the queue is not deleted, and it matches this comparator, then we check it
-            if (!(size & bit(7)) && messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX] == header->type)
+            if (!IS_DEL(size) && messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX] == header->type)
             {
                 const auto whatToDo = comparator == nullptr ? ACTION_OVERWRITE : comparator(header, messagePayloads, i + 1);
-                if (whatToDo == ACTION_IGNORE || whatToDo == ACTION_APPEND || whatToDo == ACTION_OVERWRITE)
+                if (whatToDo != ACTION_NEXT)
                 {
-                    messagePosition = i;
+                    overwritePosition = i;
                     action = whatToDo;
                     break;
                 }
             }
-            i += 1 + (size & 0x7f);
+            i += 1 + SIZE(size);
         }
     }
     if (isPrioritised(header->type))
     {
-        settingsCount++;
+        prioritizedCount++;
     }
 
     messagePayloads.lock();
@@ -327,24 +334,23 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     case ACTION_IGNORE:
         break;
     case ACTION_OVERWRITE:
-        if (messagePayloads[messagePosition] >= messageSize)
+        if (messagePayloads[overwritePosition] >= messageSize)
         {
             for (uint16_t i = 0 ; i<messageSize; i++)
             {
-                messagePayloads.set(messagePosition + i + 1, package[i]);
+                messagePayloads.set(overwritePosition + i + 1, package[i]);
             }
             break;
         }
         // Mark the current queued entry as deleted
-        messagePayloads.set(messagePosition, messagePayloads[messagePosition] | bit(7));
+        messagePayloads.set(overwritePosition, SET_DEL(messagePayloads[overwritePosition]));
         // fallthrough to APPEND
     default:
         // If there's NOT enough room on the FIFO for this message, pop until there is
         while (!messagePayloads.available(messageSize + 1))
         {
-            uint8_t dummy[CRSF_MAX_PACKET_LEN];
-            const uint8_t sz = messagePayloads.pop() & 0x7F;
-            messagePayloads.popBytes(dummy, sz);
+            const uint8_t sz = SIZE(messagePayloads.pop());
+            messagePayloads.skip(sz);
         }
         messagePayloads.push(messageSize);
         messagePayloads.pushBytes(package, messageSize);
@@ -355,32 +361,35 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
-    if (settingsCount)
+    if (prioritizedCount)
     {
         // handle prioritised messages first
         for (uint16_t i = 0; i < messagePayloads.size();)
         {
             const auto size = messagePayloads[i];
             // If the message at this point in the queue is not deleted, and it's a SETTINGS_ENTRY then we're going to return it
-            if (!(size & bit(7)) && isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
+            if (!IS_DEL(size) && isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
             {
-                settingsCount--;
+                prioritizedCount--;
+                // If this is the first item in the queue, use pop() below
+                if (i == 0)
+                    break;
                 // Copy the frame to the current payload
                 for (uint16_t pos = 0 ; pos < size ; pos++)
                 {
                     currentPayload[pos] = messagePayloads[i + 1 + pos];
                 }
                 // Mark the current queued entry as deleted
-                messagePayloads.set(i, size | bit(7));
+                messagePayloads.set(i, SET_DEL(size));
                 // set the pointers to the payload
                 *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
                 *payloadData = currentPayload;
                 return true;
             }
-            i += 1 + (size & 0x7f);
+            i += 1 + SIZE(size);
         }
         // Didn't find one, so we'll reset the counter
-        settingsCount = 0;
+        prioritizedCount = 0;
     }
 
     // return the 'head' of the queue
@@ -388,10 +397,10 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     {
         messagePayloads.lock();
         const auto size = messagePayloads.pop();
-        if (size & bit(7))
+        if (IS_DEL(size))
         {
             // This message is deleted, skip it
-            messagePayloads.skip(size & 0x7f);
+            messagePayloads.skip(SIZE(size));
             messagePayloads.unlock();
             continue;
         }
@@ -404,31 +413,25 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 
     *nextPayloadSize = 0;
     *payloadData = nullptr;
+    bzero(currentPayload, sizeof(currentPayload));
     return false;
 }
 
 // This method is only used in unit testing!
 int Telemetry::UpdatedPayloadCount()
 {
-    uint8_t bytes[messagePayloads.size()];
-    int bytePos = 0;
-    int i=0;
-    while (messagePayloads.size() > 0)
+    int retVal = 0;
+    unsigned pos = 0;
+    while (pos < messagePayloads.size())
     {
-        auto sz = messagePayloads.pop();
-        if (!(sz & bit(7)))
+        uint8_t sz = messagePayloads[pos];
+        if (!IS_DEL(sz))
         {
-            i++;
+            retVal++;
         }
-        bytes[bytePos++] = sz;
-        sz &= 0x7F;
-        while (sz--)
-        {
-            bytes[bytePos++] = messagePayloads.pop();
-        }
+        pos += 1 + SIZE(sz);
     }
-    messagePayloads.pushBytes(bytes, bytePos);
-    return i;
+    return retVal;
 }
 
 #endif

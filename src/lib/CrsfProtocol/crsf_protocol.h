@@ -76,9 +76,7 @@ typedef enum : uint8_t
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
     CRSF_FRAMETYPE_COMMAND = 0x32,
-
-    CRSF_FRAMETYPE_RADIO_ID = 0x3A,
-    CRSF_FRAMETYPE_OPENTX_SYNC = 0x10,
+    CRSF_FRAMETYPE_HANDSET = 0x3A,
 
     // KISS frames
     CRSF_FRAMETYPE_KISS_REQ  = 0x78,
@@ -97,7 +95,8 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
     CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
-    CRSF_COMMAND_MODEL_SELECT_ID = 0x05
+    CRSF_COMMAND_MODEL_SELECT_ID = 0x05,
+    CRSF_HANDSET_SUBCMD_TIMING = 0x10,
 } crsf_subcommand_e;
 
 enum {
@@ -159,6 +158,7 @@ typedef struct crsf_header_s
     uint8_t device_addr; // from crsf_addr_e
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     crsf_frame_type_e type;
+    uint8_t payload[0];
 } PACKED crsf_header_t;
 
 #define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED

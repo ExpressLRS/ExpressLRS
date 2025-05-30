@@ -6,6 +6,7 @@
 #include "FIFO.h"
 
 #define TELEMETRY_FIFO_SIZE 512
+typedef FIFO<TELEMETRY_FIFO_SIZE> TelemetryFifo;
 
 enum CustomTelemSubTypeID : uint8_t {
     CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
@@ -18,14 +19,6 @@ typedef enum {
     RECEIVING_LENGTH,
     RECEIVING_DATA
 } telemetry_state_s;
-
-typedef struct crsf_telemetry_package_t {
-    const uint8_t type;
-    const uint8_t size;
-    volatile bool locked;
-    volatile bool updated;
-    uint8_t *data;
-} crsf_telemetry_package_t;
 
 class Telemetry
 {
@@ -47,8 +40,9 @@ public:
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     int UpdatedPayloadCount();
     void AppendTelemetryPackage(uint8_t *package);
+    uint8_t GetFifoFullPct() { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
 private:
-    FIFO<TELEMETRY_FIFO_SIZE> messagePayloads;
+    TelemetryFifo messagePayloads;
 
     uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
 
@@ -56,10 +50,7 @@ private:
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
     telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
-    uint8_t currentPayloadIndex;
-    uint8_t twoslotLastQueueIndex;
-    volatile crsf_telemetry_package_t *telemetryPackageHead;
-    uint8_t receivedPackages;
+    uint8_t prioritizedCount;
     bool callBootloader;
     bool callEnterBind;
     bool callUpdateModelMatch;
