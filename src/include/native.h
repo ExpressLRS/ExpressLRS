@@ -86,6 +86,7 @@ inline void delay(int32_t time) {
     usleep(time);
 }
 
+#define bit(x) (1 << (x))
 inline unsigned long millis() { return 0; }
 inline void delayMicroseconds(int delay) { }
 inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value); return str; }

@@ -1,7 +1,8 @@
 #include <cstdint>
-#include <telemetry.h>
 #include <unity.h>
 
+#include <telemetry.h>
+#include "CRSF.h"
 #include "common.h"
 
 Telemetry telemetry;
@@ -237,6 +238,99 @@ void test_function_add_type_with_zero_crc(void)
     }
 }
 
+void test_only_one_device_info(void)
+{
+    telemetry.ResetState();
+    uint8_t sequence[] = {
+        0xee,                   // device addr
+        32,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xec,                   // source addr
+        'R','a','d','i','o','M','s','t','r',' ','R','P','3', 0, // device name (nul terminated string)
+        'E', 'L', 'R', 'S',     // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x30, 0x00, 0x00, // software version
+        0x07,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+    telemetry.AppendTelemetryPackage(sequence);
+
+    uint8_t* data;
+    uint8_t receivedLength;
+    telemetry.GetNextPayload(&receivedLength, &data);
+    TEST_ASSERT_NOT_EQUAL(0, data);
+    telemetry.GetNextPayload(&receivedLength, &data);
+    TEST_ASSERT_EQUAL(0, data);
+}
+
+void test_only_one_device_info_per_source(void)
+{
+    telemetry.ResetState();
+    uint8_t sequenceEC[] = {
+        0xee,                   // device addr
+        32,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xec,                   // source addr
+        'R','a','d','i','o','M','s','t','r',' ','R','P','3', 0, // device name (nul terminated string)
+        'E', 'L', 'R', 'S',     // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x30, 0x00, 0x00, // software version
+        0x07,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+    uint8_t sequenceC8[] = {
+        0xee,                   // device addr
+        29,                     // frame size
+        0x29,                   // frame type
+        0xee,                   // dest addr
+        0xc8,                   // source addr
+        'B','e','t','a','f','l','i','g','h','t', 0, // device name (nul terminated string)
+        0x00, 0x00, 0x00, 0x00, // serial no.
+        0x00, 0x00, 0x00, 0x00, // hardware version
+        0x00, 0x04, 0x05, 0x02, // software version
+        0x00,                   // field count
+        0x00,                   // parameter version
+        0x00                    // CRC
+    };
+
+    telemetry.AppendTelemetryPackage(sequenceEC);
+    TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceC8);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceEC);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+    telemetry.AppendTelemetryPackage(sequenceC8);
+    TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
+}
+
+void test_prioritised_settings_entry_messages(void)
+{
+    telemetry.ResetState();
+    uint8_t batterySequence[] = {0xEC,10,CRSF_FRAMETYPE_BATTERY_SENSOR,0,0,0,0,0,0,0,0,109};
+    sendData(batterySequence, sizeof(batterySequence));
+
+    uint8_t settingsSequence[] = {0xEC,0,0,0,0,0,0,0,0,0,0,0};
+    CRSF::SetExtendedHeaderAndCrc(settingsSequence, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, sizeof(settingsSequence)-CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_RADIO_TRANSMITTER);
+    sendData(settingsSequence, sizeof(settingsSequence));
+
+    uint8_t payloadSize;
+    uint8_t *payload;
+
+    telemetry.GetNextPayload(&payloadSize, &payload);
+    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, payload[CRSF_TELEMETRY_TYPE_INDEX]);
+
+    telemetry.GetNextPayload(&payloadSize, &payload);
+    TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_BATTERY_SENSOR, payload[CRSF_TELEMETRY_TYPE_INDEX]);
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -255,6 +349,9 @@ int main(int argc, char **argv)
     RUN_TEST(test_function_store_unknown_type_two_slots);
     RUN_TEST(test_function_store_ardupilot_status_text);
     RUN_TEST(test_function_add_type_with_zero_crc);
+    RUN_TEST(test_only_one_device_info);
+    RUN_TEST(test_only_one_device_info_per_source);
+    RUN_TEST(test_prioritised_settings_entry_messages);
     UNITY_END();
 
     return 0;

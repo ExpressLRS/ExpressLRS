@@ -3,6 +3,10 @@
 #include <cstdint>
 #include "crsf_protocol.h"
 #include "CRSF.h"
+#include "FIFO.h"
+
+#define TELEMETRY_FIFO_SIZE 512
+typedef FIFO<TELEMETRY_FIFO_SIZE> TelemetryFifo;
 
 enum CustomTelemSubTypeID : uint8_t {
     CRSF_AP_CUSTOM_TELEM_SINGLE_PACKET_PASSTHROUGH = 0xF0,
@@ -15,43 +19,6 @@ typedef enum {
     RECEIVING_LENGTH,
     RECEIVING_DATA
 } telemetry_state_s;
-
-typedef struct crsf_telemetry_package_t {
-    const uint8_t type;
-    const uint8_t size;
-    volatile bool locked;
-    volatile bool updated;
-    uint8_t *data;
-} crsf_telemetry_package_t;
-
-#define PAYLOAD_DATA(type0, type1, type2, type3, type4, type5, type6, type7, type8, type9)\
-    uint8_t PayloadData[\
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type0##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type1##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type2##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type3##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type4##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type5##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type6##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type7##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type8##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type9##_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE) + \
-        CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE)]; \
-    crsf_telemetry_package_t payloadTypes[] = {\
-    {CRSF_FRAMETYPE_##type0, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type0##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type1, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type1##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type2, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type2##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type3, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type3##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type4, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type4##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type5, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type5##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type6, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type6##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type7, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type7##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type8, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type8##_PAYLOAD_SIZE), false, false, 0},\
-    {CRSF_FRAMETYPE_##type9, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_##type9##_PAYLOAD_SIZE), false, false, 0},\
-    {0, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE), false, false, 0},\
-    {0, CRSF_TELEMETRY_TOTAL_SIZE(CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE), false, false, 0}};\
-    const uint8_t payloadTypesCount = (sizeof(payloadTypes)/sizeof(crsf_telemetry_package_t))
 
 class Telemetry
 {
@@ -71,20 +38,19 @@ public:
     bool GetCrsfBaroSensorDetected() { return crsfBaroSensorDetected; };
     uint8_t GetUpdatedModelMatch() { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
-    uint8_t UpdatedPayloadCount();
-    uint8_t ReceivedPackagesCount();
-    void RequestPauseForLuaInfo();
-    bool AppendTelemetryPackage(uint8_t *package);
+    int UpdatedPayloadCount();
+    void AppendTelemetryPackage(uint8_t *package);
+    uint8_t GetFifoFullPct() { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
 private:
+    TelemetryFifo messagePayloads;
+
+    uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
+
     bool processInternalTelemetryPackage(uint8_t *package);
-    void AppendToPackage(volatile crsf_telemetry_package_t *current);
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
     telemetry_state_s telemetry_state;
     uint8_t currentTelemetryByte;
-    uint8_t currentPayloadIndex;
-    uint8_t twoslotLastQueueIndex;
-    volatile crsf_telemetry_package_t *telemetryPackageHead;
-    uint8_t receivedPackages;
+    uint8_t prioritizedCount;
     bool callBootloader;
     bool callEnterBind;
     bool callUpdateModelMatch;
@@ -92,5 +58,4 @@ private:
     bool crsfBatterySensorDetected;
     bool crsfBaroSensorDetected;
     uint8_t modelMatchId;
-    uint32_t luaInfoPauseStart;
 };
