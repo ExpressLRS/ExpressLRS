@@ -854,10 +854,6 @@ void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
-    // Use this rate as the initial rate next time if we connected on it
-    if (connectionState == connected)
-        config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
-
     RFmodeCycleMultiplier = 1;
     connectionState = disconnected; //set lost connection
     RXtimerState = tim_disconnected;
@@ -899,6 +895,8 @@ void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
     LPF_Offset.init(0);
     SnrMean.reset();
     RFmodeLastCycled = now; // give another 3 sec for lock to occur
+    // Use this rate as the initial rate next time if we connected on it
+    config.SetRateInitialIdx(ExpressLRS_nextAirRateIndex);
 
     // The caller MUST call hwTimer::resume(). It is not done here because
     // the timer ISR will fire immediately and preempt any other code
