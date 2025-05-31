@@ -302,6 +302,8 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
             break;
         }
     }
+
+    messagePayloads.lock();
     // If we have a comparator or this is a 'broadcast' message we will look for a matching message in the queue and default to overwrite if we find one
     uint16_t overwritePosition = 0;
     if (comparator != nullptr || header->type < CRSF_FRAMETYPE_DEVICE_PING)
@@ -328,7 +330,6 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         prioritizedCount++;
     }
 
-    messagePayloads.lock();
     switch (action)
     {
     case ACTION_IGNORE:
@@ -365,6 +366,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
+    messagePayloads.lock();
     if (prioritizedCount)
     {
         // handle prioritised messages first
@@ -374,7 +376,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
             // If the message at this point in the queue is not deleted, and it's a SETTINGS_ENTRY then we're going to return it
             if (isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
             {
-                messagePayloads.lock();
                 if (!IS_DEL(size))
                 {
                     prioritizedCount--;
@@ -399,7 +400,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
                     messagePayloads.unlock();
                     return true;
                 }
-                messagePayloads.unlock();
             }
             i += 1 + SIZE(size);
         }
@@ -410,13 +410,11 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
     // return the 'head' of the queue
     while (messagePayloads.size() > 0)
     {
-        messagePayloads.lock();
         const auto size = messagePayloads.pop();
         if (IS_DEL(size))
         {
             // This message is deleted, skip it
             messagePayloads.skip(SIZE(size));
-            messagePayloads.unlock();
             continue;
         }
         messagePayloads.popBytes(currentPayload, size);
@@ -428,6 +426,7 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 
     *nextPayloadSize = 0;
     *payloadData = nullptr;
+    messagePayloads.unlock();
     return false;
 }
 
