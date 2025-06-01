@@ -8,10 +8,6 @@
 
 #define MAVLINK_RC_PACKET_INTERVAL 10
 
-// Variables / constants for Mavlink //
-FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
-FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
-
 #define MAVLINK_COMM_NUM_BUFFERS 1
 #include "common/mavlink.h"
 
@@ -141,6 +137,27 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
             _outputPort->write(buf, len);
         }
     }
+}
+
+void SerialMavlink::forwardMessage(const uint8_t *data)
+{
+    mavlinkOutputBuffer.atomicPushBytes(data + 2, data[1]);
+}
+
+bool SerialMavlink::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
+{
+    if (mavlinkInputBuffer.size() == 0)
+    {
+        return false;
+    }
+    const uint16_t count = std::min(mavlinkInputBuffer.size(), (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
+    mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
+    mavlinkSSBuffer[1] = count;
+    // The following 'n' bytes are just raw mavlink
+    mavlinkInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+    *payloadData = mavlinkSSBuffer;
+    *nextPayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+    return true;
 }
 
 #endif // defined(TARGET_RX) && !defined(PLATFORM_STM32)
