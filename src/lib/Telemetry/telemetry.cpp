@@ -303,7 +303,9 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         }
     }
 
-    messagePayloads.lock();
+#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
     // If we have a comparator or this is a 'broadcast' message we will look for a matching message in the queue and default to overwrite if we find one
     uint16_t overwritePosition = 0;
     if (comparator != nullptr || header->type < CRSF_FRAMETYPE_DEVICE_PING)
@@ -361,12 +363,13 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         messagePayloads.pushBytes(package, messageSize);
         break;
     }
-    messagePayloads.unlock();
 }
 
 bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
 {
-    messagePayloads.lock();
+#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
     if (prioritizedCount)
     {
         // handle prioritised messages first
@@ -397,7 +400,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
                     // set the pointers to the payload
                     *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
                     *payloadData = currentPayload;
-                    messagePayloads.unlock();
                     return true;
                 }
             }
@@ -420,13 +422,11 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
         messagePayloads.popBytes(currentPayload, size);
         *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
         *payloadData = currentPayload;
-        messagePayloads.unlock();
         return true;
     }
 
     *nextPayloadSize = 0;
     *payloadData = nullptr;
-    messagePayloads.unlock();
     return false;
 }
 

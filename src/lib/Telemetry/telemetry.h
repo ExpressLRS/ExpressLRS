@@ -1,9 +1,11 @@
 #pragma once
 
-#include <cstdint>
-#include "crsf_protocol.h"
 #include "CRSF.h"
 #include "FIFO.h"
+
+#if defined(PLATFORM_ESP32)
+#include <mutex>
+#endif
 
 #define TELEMETRY_FIFO_SIZE 512
 typedef FIFO<TELEMETRY_FIFO_SIZE> TelemetryFifo;
@@ -32,16 +34,19 @@ public:
     bool ShouldSendDeviceFrame();
     void CheckCrsfBatterySensorDetected();
     void SetCrsfBatterySensorDetected();
-    bool GetCrsfBatterySensorDetected() { return crsfBatterySensorDetected; };
+    bool GetCrsfBatterySensorDetected() const { return crsfBatterySensorDetected; }
     void CheckCrsfBaroSensorDetected();
     void SetCrsfBaroSensorDetected();
-    bool GetCrsfBaroSensorDetected() { return crsfBaroSensorDetected; };
-    uint8_t GetUpdatedModelMatch() { return modelMatchId; }
+    bool GetCrsfBaroSensorDetected() const { return crsfBaroSensorDetected; }
+    uint8_t GetUpdatedModelMatch() const { return modelMatchId; }
     bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
     int UpdatedPayloadCount();
     void AppendTelemetryPackage(uint8_t *package);
     uint8_t GetFifoFullPct() { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
 private:
+#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
+    std::mutex mutex;
+#endif
     TelemetryFifo messagePayloads;
 
     uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
