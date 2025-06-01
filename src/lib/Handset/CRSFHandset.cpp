@@ -260,7 +260,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
 #endif
 
         struct otxSyncData {
-            uint8_t extendedType; // CRSF_FRAMETYPE_OPENTX_SYNC
+            uint8_t subType; // CRSF_HANDSET_SUBCMD_TIMING
             uint32_t rate; // Big-Endian
             uint32_t offset; // Big-Endian
         } PACKED;
@@ -268,11 +268,11 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
         uint8_t buffer[sizeof(otxSyncData)];
         auto * const sync = (struct otxSyncData * const)buffer;
 
-        sync->extendedType = CRSF_FRAMETYPE_OPENTX_SYNC;
+        sync->subType = CRSF_HANDSET_SUBCMD_TIMING;
         sync->rate = htobe32(packetRate);
         sync->offset = htobe32(offset);
 
-        packetQueueExtended(CRSF_FRAMETYPE_RADIO_ID, buffer, sizeof(buffer));
+        packetQueueExtended(CRSF_FRAMETYPE_HANDSET, buffer, sizeof(buffer));
 
         OpenTXsyncLastSent = now;
     }
