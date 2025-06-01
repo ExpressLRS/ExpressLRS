@@ -177,6 +177,7 @@ SerialIO *serialIO = nullptr;
     #define SERIAL1_PROTOCOL_RX Serial1
 #endif
 
+uint8_t currentTelemetryPayload[CRSF_MAX_PACKET_LEN];
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
@@ -2256,17 +2257,16 @@ void loop()
         DBGLN("Timer locked");
     }
 
-    uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
-        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
 
 #if !defined(PLATFORM_STM32)
-    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !TelemetrySender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, &nextPayload))
+    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !TelemetrySender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
-        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
 #endif
 

@@ -1,7 +1,5 @@
 #include "FIFO.h"
 #include "SerialIO.h"
-#include "crsf_protocol.h"
-#include "telemetry_protocol.h"
 
 #define MAV_INPUT_BUF_LEN   1024
 #define MAV_OUTPUT_BUF_LEN  512
@@ -23,7 +21,7 @@ public:
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
     void forwardMessage(const uint8_t *data);
-    bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
+    bool GetNextPayload(uint8_t *nextPayloadSize, uint8_t *payloadData);
 
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
@@ -39,6 +37,4 @@ private:
     // Variables / constants for Mavlink //
     FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
     FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
-
-    uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubborn sender packet (mavlink only)
 };

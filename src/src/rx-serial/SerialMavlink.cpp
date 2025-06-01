@@ -144,18 +144,17 @@ void SerialMavlink::forwardMessage(const uint8_t *data)
     mavlinkOutputBuffer.atomicPushBytes(data + 2, data[1]);
 }
 
-bool SerialMavlink::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
+bool SerialMavlink::GetNextPayload(uint8_t* nextPayloadSize, uint8_t *payloadData)
 {
     if (mavlinkInputBuffer.size() == 0)
     {
         return false;
     }
     const uint16_t count = std::min(mavlinkInputBuffer.size(), (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
-    mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
-    mavlinkSSBuffer[1] = count;
+    payloadData[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
+    payloadData[1] = count;
     // The following 'n' bytes are just raw mavlink
-    mavlinkInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-    *payloadData = mavlinkSSBuffer;
+    mavlinkInputBuffer.popBytes(payloadData + CRSF_FRAME_NOT_COUNTED_BYTES, count);
     *nextPayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
     return true;
 }

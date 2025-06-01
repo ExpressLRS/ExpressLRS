@@ -39,7 +39,7 @@ public:
     void SetCrsfBaroSensorDetected();
     bool GetCrsfBaroSensorDetected() const { return crsfBaroSensorDetected; }
     uint8_t GetUpdatedModelMatch() const { return modelMatchId; }
-    bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData);
+    bool GetNextPayload(uint8_t* nextPayloadSize, uint8_t *payloadData);
     int UpdatedPayloadCount();
     void AppendTelemetryPackage(uint8_t *package);
     uint8_t GetFifoFullPct() { return (TELEMETRY_FIFO_SIZE - messagePayloads.free()) * 100 / TELEMETRY_FIFO_SIZE; }
@@ -48,8 +48,6 @@ private:
     std::mutex mutex;
 #endif
     TelemetryFifo messagePayloads;
-
-    uint8_t currentPayload[CRSF_MAX_PACKET_LEN] {};
 
     bool processInternalTelemetryPackage(uint8_t *package);
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN];
