@@ -79,9 +79,9 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)
 #include "tcpsocket.h"
-TCPSOCKET wifi2tcp; //port 5761 as used by BF configurator
+TCPSOCKET wifi2tcp;
 #endif
 
 #if defined(PLATFORM_ESP8266)

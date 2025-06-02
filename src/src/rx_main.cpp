@@ -127,12 +127,6 @@ Telemetry telemetry;
 Stream *SerialLogger;
 bool hardwareConfigured = true;
 
-#if defined(USE_MSP_WIFI)
-#include "msp2crsf.h"
-
-MSP2CROSSFIRE msp2crsf;
-#endif
-
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;

@@ -33,18 +33,20 @@ private:
     bool hasClient() const { return (TCPclient != nullptr); }
     void pumpData();
     void write(uint8_t *data, uint16_t len);
-    void read(uint8_t *data);
     void clientConnect(AsyncClient *client);
     void clientDisconnect(AsyncClient *client);
 
     FIFO<BUFFER_OUTPUT_SIZE> *FIFOout = nullptr;
     FIFO<BUFFER_INPUT_SIZE> *FIFOin = nullptr;
     CROSSFIRE2MSP *crsf2msp = nullptr;
+    MSP2CROSSFIRE *msp2crsf = nullptr;
 
 public:
     void begin();
     void handle();
     void crsfMspIn(uint8_t *data);
+    uint8_t crsfCrsfOutAvailable(uint32_t maxLen);
+    void crsfCrsfOutPop(uint8_t *data);
 };
 
 #endif

@@ -18,7 +18,7 @@ void TCPSOCKET::begin()
 
 void TCPSOCKET::pumpData()
 {
-    // check is there is any data to write out
+    // Data going from FC -> MSP2CRSF -> socket
     if (crsf2msp->FIFOout.peekSize() > 0)
     {
         const uint16_t len = crsf2msp->FIFOout.popSize();
@@ -27,13 +27,13 @@ void TCPSOCKET::pumpData()
         write(data, len);
     }
 
-    // check if there is any data to read in
+    // Data going from socket -> MSP2CRSF -> FC
     if (FIFOin->peekSize() > 0)
     {
         const uint16_t len = FIFOin->popSize();
         uint8_t data[len];
         FIFOin->popBytes(data, len);
-        msp2crsf.parse(data, len);
+        msp2crsf->parse(data, len);
     }
 }
 
@@ -48,6 +48,39 @@ void TCPSOCKET::crsfMspIn(uint8_t *data)
     }
 
     crsf2msp->parse(data);
+}
+
+/***
+ * @brief Count of bytes waiting to send to FC in CRSF form
+ * @param maxLen maximum length the caller is willing to accept
+ */
+uint8_t TCPSOCKET::crsfCrsfOutAvailable(uint32_t maxLen)
+{
+    if (!hasClient())
+    {
+        return 0;
+    }
+
+    uint8_t len = msp2crsf->FIFOout.peek();
+    if (len >= msp2crsf->FIFOout.size() || len > maxLen)
+    {
+        return 0;
+    }
+
+    return len;
+}
+
+/***
+ * @brief Pop the next packet to send to the FC. There is no size passed
+ * as this function expects the caller to have at least crsfCrsfOutAvailable() bytes
+ * of space available in the data buffer
+ */
+void TCPSOCKET::crsfCrsfOutPop(uint8_t *data)
+{
+    msp2crsf->FIFOout.lock();
+    uint8_t OutPktLen = msp2crsf->FIFOout.pop();
+    msp2crsf->FIFOout.popBytes(data, OutPktLen);
+    msp2crsf->FIFOout.unlock();
 }
 
 void TCPSOCKET::handle()
@@ -106,14 +139,6 @@ void TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it
     }
 }
 
-void TCPSOCKET::read(uint8_t *data)
-{
-    // assume we have already checked that there is data to receive and we know how much
-    // we always recieve a single chunk so no need to give len parameter
-    uint16_t len = FIFOin->popSize();
-    FIFOin->popBytes(data, len);
-}
-
 void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t len)
 {
     instance->clientTimeoutLastData = millis();
@@ -133,18 +158,19 @@ void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t 
 
 void TCPSOCKET::handleError(void *arg, AsyncClient *client, int8_t error)
 {
-    DBGLN("\n connection error %s from client %s \n", client->errorToString(error), client->remoteIP().toString().c_str());
+    DBGLN("\nclient %x connection error %s", client, client->errorToString(error));
+    instance->clientDisconnect(client);
 }
 
 void TCPSOCKET::handleDisconnect(void *arg, AsyncClient *client)
 {
-    DBGLN("\n client %p disconnected \n", client);
+    DBGLN("\nclient %x disconnected", client);
     instance->clientDisconnect(client);
 }
 
 void TCPSOCKET::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
-    DBGLN("\n client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
+    DBGLN("\nclient ACK timeout ip: %s", client->remoteIP().toString().c_str());
 }
 
 void TCPSOCKET::clientConnect(AsyncClient *client)
@@ -160,6 +186,10 @@ void TCPSOCKET::clientConnect(AsyncClient *client)
     if (!crsf2msp)
     {
         crsf2msp = new CROSSFIRE2MSP();
+    }
+    if (!msp2crsf)
+    {
+        msp2crsf = new MSP2CROSSFIRE();
     }
 
     clientTimeoutLastData = millis();
@@ -179,7 +209,7 @@ void TCPSOCKET::clientDisconnect(AsyncClient *client)
 
 void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
 {
-    DBGLN("\n new TCPSOCKET client (%p) connected ip: %s", client, client->remoteIP().toString().c_str());
+    DBGLN("\nTCPSOCKET client (%x) connected ip: %s", client, client->remoteIP().toString().c_str());
 
     instance->clientConnect(client);
 
