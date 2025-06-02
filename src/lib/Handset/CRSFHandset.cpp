@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "helpers.h"
 #include "random.h"
+#include "FHSS.h"
 
 #if defined(CRSF_TX_MODULE) && !defined(UNIT_TEST)
 #include "device.h"
@@ -394,6 +395,12 @@ bool CRSFHandset::ProcessPacket()
     {
         packetReceived = true;
         onTXTelemetryChange(&SerialInBuffer[3]);
+    }
+    else if(packetType == CRSF_FRAMETYPE_HIGH_BAND_CHANGE)
+    {
+        packetReceived = true;
+        updateHighBandChannel(&SerialInBuffer[0]);
+        onBandChange(); // TODO: This function should not need to be called since other functions set the correct flag already.
     }
 
     // check for all extended frames that are a broadcast or a message to the FC

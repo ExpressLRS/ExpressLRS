@@ -75,6 +75,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_VTX_CONFIG = 0x30,
     CRSF_FRAMETYPE_MAST_FORCE_SYNC = 0x31,
     CRSF_FRAMETYPE_TELEM_CHANGE = 0x33,
+    CRSF_FRAMETYPE_HIGH_BAND_CHANGE = 0x36,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 
@@ -155,6 +156,26 @@ typedef enum : uint8_t
     CRSF_VTX = 15,
     CRSF_OUT_OF_RANGE = 127,
 } crsf_value_type_e;
+
+/**
+ * @brief define our own type to not use st code directly.
+ */
+typedef FunctionalState Toggles;
+
+enum TxBoard : uint8_t
+{
+    TX_1 = 0,
+    TX_2 = 1
+};
+
+/**
+ * @brief definition of the allowed high bands
+ */
+enum HighBands : uint8_t
+{
+    ISM_915,
+    EW_970
+};
 
 // These flags are or'ed with the field type above to hide the field from the normal LUA view
 #define CRSF_FIELD_HIDDEN       0x80     // marked as hidden in all LUA responses
@@ -422,6 +443,22 @@ typedef struct crsfPayloadLinkstatistics_s
     int32_t lastRXnb;
     uint8_t otaNonce;
 } PACKED crsfLinkStatistics_t;
+
+/**
+ * @brief Command from PDB to modify ELRS TX
+ * Currently only used to set either ISM or STD high band usage
+ */
+typedef struct PACKED toggleTxCmd_s
+{ // 0x36
+    uint8_t sync;
+    uint8_t size;
+    uint8_t frametype;
+    Toggles toggle_tx_1;
+    Toggles toggle_tx_2;
+    HighBands active_highband;
+    uint8_t crc;
+} toggleTxCmd_t;
+
 #endif
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t

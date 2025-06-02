@@ -654,7 +654,7 @@ void ICACHE_RAM_ATTR otanonceMasterTimerSyncCallback()
     OtaNonce = 0;
   }
   #endif
-} 
+}
 
 void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
 
@@ -664,11 +664,11 @@ void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
     return;
   }
 
-  otanonce_master_last_synched = HAL_GetTick(); // faster. 
+  otanonce_master_last_synched = HAL_GetTick(); // faster.
   timerCallback();
   hwTimer::stop();
   otanonce_master_timer = true;
-  
+
   #endif
 }
 
@@ -831,6 +831,8 @@ uint8_t tempBindPhrase[16]={0};
 
 static void ConfigChangeCommit()
 {
+  fhss_config_t N_FHSSconfig = *getFHSSconfig();
+
   // Adjust the air rate based on teh current baud rate
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
@@ -841,6 +843,17 @@ static void ConfigChangeCommit()
     config.SetBindPhrase(bindPhrase);
     memcpy(CRSF::LinkStatistics.uid, tempUID, UID_LEN);
     memcpy(CRSF::LinkStatistics.bind_phrase, tempBindPhrase, PHRASE_LEN);
+  }
+
+  if(N_FHSSconfig.is_band_changing)
+  {
+    config.SetStartFrequency(startBase);
+    config.SetEndFrequency(endBase);
+    config.SetNumChannels(numChannels);
+    FHSSrandomiseFHSSsequence(uidMacSeedGet());
+    CRSF::LinkStatistics.freq_high = endBase;
+    CRSF::LinkStatistics.freq_low  = startBase;
+    CRSF::LinkStatistics.num_channels = numChannels;
   }
 
   // Write the uncommitted eeprom values (may block for a while)
@@ -862,6 +875,9 @@ static void ConfigChangeCommit()
     ESP.restart();
     #endif
   }
+
+  N_FHSSconfig.is_band_changing = false;
+  bigChange = false;
 }
 
 static void CheckConfigChangePending()
@@ -955,6 +971,11 @@ void onTXTelemetryChange(uint8_t* newConfigPacket){
   else {
     config.SetTlm(newConfigPacket[0]);
   }
+}
+
+void onBandChange()
+{
+  config.SetUID(config.GetUID());
 }
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
@@ -1514,7 +1535,7 @@ void setup()
       attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT), otanonceMasterTimerCallback, HIGH);
       pinMode(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, INPUT);
       attachInterrupt(digitalPinToInterrupt(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA), otanonceMasterTimerSyncCallback, HIGH);
-      
+
 #endif
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
@@ -1547,10 +1568,10 @@ void loop()
 {
   uint32_t now = millis();
   #ifndef SLAVE_TX
- 
+
   if(OtaNonce == 0  && otanonce_slave_interrupted == false   && (now - otanonce_master_last_synched) <= MILLS_3) {
     otanonce_slave_interrupted = true;
-    
+
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, HIGH);
       digitalWrite(GPIO_PIN_SLAVE_INTERRUPT_SYNC_OTA, LOW);
   }else if( OtaNonce > 0 ){

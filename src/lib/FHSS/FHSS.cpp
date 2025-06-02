@@ -3,19 +3,7 @@
 #include "options.h"
 #include <string.h>
 #include "SX127xDriver.h"
-
-/* STD High Band (970) */
-static constexpr uint16_t STD_HIGH_BAND_FREQ_START =  9200;
-static constexpr uint16_t STD_HIGH_BAND_FREQ_END   = 10200;
-/* ISM High Band (915) */
-static constexpr uint16_t ISM_HIGH_BAND_FREQ_START = 9035;
-static constexpr uint16_t ISM_HIGH_BAND_FREQ_END   = 9269;
-/* LOW High Band */
-static constexpr uint16_t LOW_BAND_FREQ_START = 7850;
-static constexpr uint16_t LOW_BAND_FREQ_END   = 8350;
-/* Total Possible Channels */
-static constexpr uint8_t  TOTAL_CHANNELS_20 = 20;
-static constexpr uint8_t  TOTAL_CHANNELS_40 = 40;
+#include "crsf_protocol.h"
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
@@ -43,6 +31,9 @@ bool FHSSuseDualBand = false;
 uint16_t primaryBandCount;
 uint16_t secondaryBandCount;
 
+static toggleTxCmd_t toggle_tx_cmd;
+static fhss_config_t N_FHSSconfig;
+
 uint32_t freqHzToRegVal(double freq) {
     return static_cast<uint32_t>(freq /FREQ_STEP);
 }
@@ -52,16 +43,9 @@ double freqRegValToMHz(uint32_t reg_val) {
 }
 
 #ifdef TX_BAND_HIGH
-    /* ISM HIGH BAND */
-    uint16_t startBase  = ISM_HIGH_BAND_FREQ_START;
-    uint16_t endBase    = ISM_HIGH_BAND_FREQ_END;
-    uint8_t numChannels = TOTAL_CHANNELS_20;
-
-    // TODO: Will fix with new logic to switch HI between both bands
-    /* STD HIGH BAND */
-    // uint16_t startBase  = STD_HIGH_BAND_FREQ_START;
-    // uint16_t endBase    = STD_HIGH_BAND_FREQ_END;
-    // uint8_t numChannels = TOTAL_CHANNELS_40;
+    uint16_t startBase   = ISM_HIGH_BAND_FREQ_START;
+    uint16_t endBase     = ISM_HIGH_BAND_FREQ_END;
+    uint8_t  numChannels = TOTAL_CHANNELS_20;
 #elif TX_BAND_LOW
     uint16_t startBase  = LOW_BAND_FREQ_START;
     uint16_t endBase    = LOW_BAND_FREQ_END;
@@ -72,18 +56,79 @@ double freqRegValToMHz(uint32_t reg_val) {
     uint8_t numChannels = TOTAL_CHANNELS_20;
 #endif
 
-uint32_t startFrequency=freqHzToRegVal(startBase*100000);
-uint32_t endFrequency=freqHzToRegVal(endBase*100000);
-uint32_t midFrequency=915000000;
+uint32_t startFrequency = freqHzToRegVal(startBase*100000);
+uint32_t endFrequency   = freqHzToRegVal(endBase*100000);
+uint32_t midFrequency = 970000000;//915000000;
 
+static void setupFHSS(fhss_config_t *config)
+{
+    config->freq_start = freqHzToRegVal(startBase*100000);
+    config->freq_stop = freqHzToRegVal(endBase*100000);
+    config->num_channels = numChannels;
+
+    if(startBase == ISM_HIGH_BAND_FREQ_START && endBase == ISM_HIGH_BAND_FREQ_END)
+    {
+        config->domain = "ISM_915";
+        config->active_band = ISM_915;
+    }
+    else if(startBase == EW_HIGH_BAND_FREQ_START && endBase == EW_HIGH_BAND_FREQ_END)
+    {
+        config->domain = "EW_970";
+        config->active_band = EW_970;
+    }
+
+    config->is_band_changing = false;
+}
+
+fhss_config_t *getFHSSconfig()
+{
+    return &N_FHSSconfig;
+}
+
+void updateHighBandChannel(uint8_t *bufferIn)
+{
+    fhss_config_t *config = getFHSSconfig();
+
+    memcpy(&toggle_tx_cmd, bufferIn, sizeof(toggle_tx_cmd));
+
+    if(toggle_tx_cmd.active_highband == ISM_915)
+    {
+        startBase   = ISM_HIGH_BAND_FREQ_START;
+        endBase     = ISM_HIGH_BAND_FREQ_END;
+        numChannels = TOTAL_CHANNELS_20;
+        config->active_band = ISM_915;
+        config->domain = "ISM_915";
+    }
+    else if(toggle_tx_cmd.active_highband == EW_970)
+    {
+        startBase   = EW_HIGH_BAND_FREQ_START;
+        endBase     = EW_HIGH_BAND_FREQ_END;
+        numChannels = TOTAL_CHANNELS_40;
+        config->active_band = EW_970;
+        config->domain = "EW_970";
+    }
+
+    config->freq_start = freqHzToRegVal(startBase * 100000);
+    config->freq_stop  = freqHzToRegVal(endBase * 100000);
+    config->num_channels = numChannels;
+    config->is_band_changing = true; // a change is coming
+}
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
-    sync_channel = (numChannels / 2) + 1;
-    freq_spread = (endFrequency- startFrequency) * FREQ_SPREAD_SCALE / (numChannels - 1);
-    primaryBandCount = (FHSS_SEQUENCE_LEN / numChannels) * numChannels;
+    fhss_config_t *config = getFHSSconfig();
+    static bool setupDone = false;
+    if(!setupDone)
+    {
+        setupFHSS(config);
+        setupDone = true;
+    }
 
-    FHSSrandomiseFHSSsequenceBuild(seed, numChannels, sync_channel, FHSSsequence);
+    sync_channel = (config->num_channels / 2) + 1;
+    freq_spread  = (config->freq_stop - config->freq_start) * FREQ_SPREAD_SCALE / (config->num_channels - 1);
+    primaryBandCount = (FHSS_SEQUENCE_LEN / config->num_channels) * config->num_channels;
+
+    FHSSrandomiseFHSSsequenceBuild(seed, config->num_channels, sync_channel, FHSSsequence);
 }
 
 /**
