@@ -18,23 +18,23 @@ void TCPSOCKET::begin()
 
 void TCPSOCKET::pumpData()
 {
-      // check is there is any data to write out
-  if (crsf2msp.FIFOout.peekSize() > 0)
-  {
-    const uint16_t len = crsf2msp.FIFOout.popSize();
-    uint8_t data[len];
-    crsf2msp.FIFOout.popBytes(data, len);
-    write(data, len);
-  }
+    // check is there is any data to write out
+    if (crsf2msp->FIFOout.peekSize() > 0)
+    {
+        const uint16_t len = crsf2msp->FIFOout.popSize();
+        uint8_t data[len];
+        crsf2msp->FIFOout.popBytes(data, len);
+        write(data, len);
+    }
 
-  // check if there is any data to read in
-  const uint16_t inReady = FIFOin->peekSize();
-  if (inReady > 0)
-  {
-    uint8_t data[inReady];
-    read(data);
-    msp2crsf.parse(data, inReady);
-  }
+    // check if there is any data to read in
+    if (FIFOin->peekSize() > 0)
+    {
+        const uint16_t len = FIFOin->popSize();
+        uint8_t data[len];
+        FIFOin->popBytes(data, len);
+        msp2crsf.parse(data, len);
+    }
 }
 
 /***
@@ -47,7 +47,7 @@ void TCPSOCKET::crsfMspIn(uint8_t *data)
         return;
     }
 
-    crsf2msp.parse(data);
+    crsf2msp->parse(data);
 }
 
 void TCPSOCKET::handle()
@@ -78,33 +78,31 @@ void TCPSOCKET::handle()
             FIFOout->popBytes(data, len);
             TCPclient->write((const char *)data, len);
             TCPclient->send();
-            DBGLN("TCP OUT SENT: Sent!: len: %d", len);
+            DBGLN("TCP OUT SENT: Sent!: len: %u", len);
         }
         else
         {
-            DBGLN("TCP OUT SENT: Have data but TCP not ready!: len: %d", len);
+            DBGLN("TCP OUT SENT: Have data but TCP not ready!: len: %u", len);
         }
     }
 }
 
-bool TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it up.
+void TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it up.
 {
-    if (TCPclient == NULL)
+    if (!hasClient())
     {
-        return false; // nothing to do
+        return;
     }
 
     if (FIFOout->available(len + 2))
     {
         FIFOout->pushSize(len);
         FIFOout->pushBytes(data, len);
-        DBGLN("TCP OUT QUE: queued %d bytes", len);
-        return true;
+        DBGLN("TCP OUT QUE: queued %u bytes", len);
     }
     else
     {
-        DBGLN("TCP OUT QUE: No space in FIFOout! len: %d", len);
-        return false;
+        DBGLN("TCP OUT QUE: No space in FIFOout! len: %u", len);
     }
 }
 
@@ -118,18 +116,18 @@ void TCPSOCKET::read(uint8_t *data)
 
 void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t len)
 {
-    instance->TCPclient = client;
     instance->clientTimeoutLastData = millis();
+    instance->TCPclient = client;
 
     if (instance->FIFOin->available(len + 2)) // +2 because it takes 2 bytes to store the size of the FIFO chunk
     {
         instance->FIFOin->pushSize(len);
         instance->FIFOin->pushBytes((uint8_t *)data, len);
-        DBGLN("TCP IN: queued %d bytes", len);
+        DBGLN("TCP IN: queued %u bytes", len);
     }
     else
     {
-        DBGLN("TCP IN: buffer full! wanted: %d, free: %d", (len + 2), instance->FIFOin->free());
+        DBGLN("TCP IN: buffer full! wanted: %u, free: %u", (len + 2), instance->FIFOin->free());
     }
 }
 
@@ -140,18 +138,13 @@ void TCPSOCKET::handleError(void *arg, AsyncClient *client, int8_t error)
 
 void TCPSOCKET::handleDisconnect(void *arg, AsyncClient *client)
 {
-    DBGLN("\n client %s disconnected \n", client->remoteIP().toString().c_str());
+    DBGLN("\n client %p disconnected \n", client);
     instance->clientDisconnect(client);
 }
 
 void TCPSOCKET::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
     DBGLN("\n client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
-}
-
-bool TCPSOCKET::hasClient()
-{
-    return (TCPclient != nullptr);
 }
 
 void TCPSOCKET::clientConnect(AsyncClient *client)
@@ -164,22 +157,29 @@ void TCPSOCKET::clientConnect(AsyncClient *client)
     {
         FIFOout = new FIFO<BUFFER_OUTPUT_SIZE>();
     }
+    if (!crsf2msp)
+    {
+        crsf2msp = new CROSSFIRE2MSP();
+    }
 
-    TCPclient = client;
     clientTimeoutLastData = millis();
+    TCPclient = client;
 }
 
 void TCPSOCKET::clientDisconnect(AsyncClient *client)
 {
-    // NOTE: FIFO buffers stick around because the code doesn't account for multiple clients
-    TCPclient = nullptr;
+    // NOTE: FIFO buffers / crsf2msp / msp2crsf stick around because the code doesn't account for multiple clients
+    if (client == TCPclient)
+    {
+      TCPclient = nullptr;
+    }
     client->close();
     delete client;
 }
 
 void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
 {
-    DBGLN("\n new client has been connected to server, ip: %s", client->remoteIP().toString().c_str());
+    DBGLN("\n new TCPSOCKET client (%p) connected ip: %s", client, client->remoteIP().toString().c_str());
 
     instance->clientConnect(client);
 

@@ -30,19 +30,20 @@ private:
     static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
 
+    bool hasClient() const { return (TCPclient != nullptr); }
     void pumpData();
-    bool write(uint8_t *data, uint16_t len);
+    void write(uint8_t *data, uint16_t len);
     void read(uint8_t *data);
     void clientConnect(AsyncClient *client);
     void clientDisconnect(AsyncClient *client);
 
     FIFO<BUFFER_OUTPUT_SIZE> *FIFOout = nullptr;
     FIFO<BUFFER_INPUT_SIZE> *FIFOin = nullptr;
+    CROSSFIRE2MSP *crsf2msp = nullptr;
 
 public:
     void begin();
     void handle();
-    bool hasClient();
     void crsfMspIn(uint8_t *data);
 };
 

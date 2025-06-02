@@ -128,10 +128,8 @@ Stream *SerialLogger;
 bool hardwareConfigured = true;
 
 #if defined(USE_MSP_WIFI)
-#include "crsf2msp.h"
 #include "msp2crsf.h"
 
-CROSSFIRE2MSP crsf2msp;
 MSP2CROSSFIRE msp2crsf;
 #endif
 
