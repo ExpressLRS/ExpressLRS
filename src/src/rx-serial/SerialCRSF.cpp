@@ -5,8 +5,6 @@
 #include "telemetry.h"
 #if defined(USE_MSP_WIFI)
 #include "msp2crsf.h"
-
-extern MSP2CROSSFIRE msp2crsf;
 #endif
 
 extern Telemetry telemetry;
