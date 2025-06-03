@@ -177,14 +177,13 @@ SerialIO *serialIO = nullptr;
     #define SERIAL1_PROTOCOL_RX Serial1
 #endif
 
+uint8_t currentTelemetryPayload[CRSF_MAX_PACKET_LEN];
 StubbornSender TelemetrySender;
 static uint8_t telemetryBurstCount;
 static uint8_t telemetryBurstMax;
 
 StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
-
-uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon sender packet (mavlink only)
 
 static bool tlmSent = false;
 static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
@@ -1261,7 +1260,10 @@ void MspReceiveComplete()
 #if !defined(PLATFORM_STM32)
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
-        mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
+        if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+        {
+            ((SerialMavlink *)serialIO)->forwardMessage(MspData);
+        }
         break;
 #endif
     default:
@@ -2255,26 +2257,16 @@ void loop()
         DBGLN("Timer locked");
     }
 
-    uint8_t *nextPayload = 0;
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, &nextPayload))
+    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
-        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
 
 #if !defined(PLATFORM_STM32)
-    uint16_t count = mavlinkInputBuffer.size();
-    if (count > 0 && !TelemetrySender.IsActive())
+    if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !TelemetrySender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
-        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX); // Constrain to CRSF max payload size to match SS
-        // First 2 bytes conform to crsf_header_s format
-        mavlinkSSBuffer[0] = CRSF_ADDRESS_USB; // device_addr - used on TX to differentiate between std tlm and mavlink
-        mavlinkSSBuffer[1] = count;
-        // Following n bytes are just raw mavlink
-        mavlinkInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        nextPayload = mavlinkSSBuffer;
-        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
-        TelemetrySender.SetDataToTransmit(nextPayload, nextPlayloadSize);
+        TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
 #endif
 

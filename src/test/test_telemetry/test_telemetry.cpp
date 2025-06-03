@@ -40,9 +40,9 @@ void test_function_battery(void)
     int sentLength = sendData(batterySequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
+    telemetry.GetNextPayload(&receivedLength, data);
     TEST_ASSERT_NOT_EQUAL(0, data);
     for (int i = 0; i < length; i++)
     {
@@ -52,15 +52,15 @@ void test_function_battery(void)
     // simulate sending done + send another message of the same type to make sure that the repeated sending of only one type works
 
     // this unlocks the data but does not send it again since it's not updated
-    TEST_ASSERT_EQUAL(false, telemetry.GetNextPayload(&receivedLength, &data));
+    TEST_ASSERT_EQUAL(false, telemetry.GetNextPayload(&receivedLength, data));
 
     // update data
     sentLength = sendData(batterySequence2, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
     // now it's ready to be sent
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_TRUE(hasData);
 
     for (int i = 0; i < length; i++)
     {
@@ -80,10 +80,11 @@ void test_function_replace_old(void)
     int sentLength = sendData(batterySequence2, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_TRUE(hasData);
+
     for (int i = 0; i < length; i++)
     {
         TEST_ASSERT_EQUAL(batterySequence2[i], data[i]);
@@ -97,12 +98,12 @@ void test_function_do_not_replace_old_locked(void)
     uint8_t batterySequence2[] = {0xEC,10, CRSF_FRAMETYPE_BATTERY_SENSOR,1,0,0,0,0,0,0,0,46};
 
     sendDataWithoutCheck(batterySequence, sizeof(batterySequence));
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
     sendDataWithoutCheck(batterySequence2, sizeof(batterySequence2));
     TEST_ASSERT_EQUAL(1, telemetry.UpdatedPayloadCount());
-    TEST_ASSERT_NOT_EQUAL(0, data);
+    TEST_ASSERT_TRUE(hasData);
     for (int i = 0; i < sizeof(batterySequence); i++)
     {
         TEST_ASSERT_EQUAL(batterySequence[i], data[i]);
@@ -123,12 +124,12 @@ void test_function_add_type(void)
 
     TEST_ASSERT_EQUAL(2, telemetry.UpdatedPayloadCount());
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
+    telemetry.GetNextPayload(&receivedLength, data);
 
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_TRUE(hasData);
     for (int i = 0; i < length; i++)
     {
         TEST_ASSERT_EQUAL(attitudeSequence[i], data[i]);
@@ -175,9 +176,9 @@ void test_function_store_unknown_type_two_slots(void)
     int sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
+    telemetry.GetNextPayload(&receivedLength, data);
 
     sentLength = sendData(unknownSequence, length);
     TEST_ASSERT_EQUAL(length, sentLength);
@@ -228,10 +229,10 @@ void test_function_add_type_with_zero_crc(void)
 
     telemetry.AppendTelemetryPackage(sequence);
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_TRUE(hasData);
     for (int i = 0; i < sizeof(sequence); i++)
     {
         TEST_ASSERT_EQUAL(sequence[i], data[i]);
@@ -261,12 +262,12 @@ void test_only_one_device_info(void)
     telemetry.AppendTelemetryPackage(sequence);
     telemetry.AppendTelemetryPackage(sequence);
 
-    uint8_t* data;
+    uint8_t data[CRSF_MAX_PACKET_LEN];
     uint8_t receivedLength;
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_NOT_EQUAL(0, data);
-    telemetry.GetNextPayload(&receivedLength, &data);
-    TEST_ASSERT_EQUAL(0, data);
+    bool hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_TRUE(hasData);
+    hasData = telemetry.GetNextPayload(&receivedLength, data);
+    TEST_ASSERT_FALSE(hasData);
 }
 
 void test_only_one_device_info_per_source(void)
@@ -322,12 +323,13 @@ void test_prioritised_settings_entry_messages(void)
     sendData(settingsSequence, sizeof(settingsSequence));
 
     uint8_t payloadSize;
-    uint8_t *payload;
+    uint8_t payload[CRSF_MAX_PACKET_LEN];
+;
 
-    telemetry.GetNextPayload(&payloadSize, &payload);
+    telemetry.GetNextPayload(&payloadSize, payload);
     TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, payload[CRSF_TELEMETRY_TYPE_INDEX]);
 
-    telemetry.GetNextPayload(&payloadSize, &payload);
+    telemetry.GetNextPayload(&payloadSize, payload);
     TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_BATTERY_SENSOR, payload[CRSF_TELEMETRY_TYPE_INDEX]);
 }
 

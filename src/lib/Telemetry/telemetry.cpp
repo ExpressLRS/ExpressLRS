@@ -365,7 +365,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     }
 }
 
-bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
+bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t *currentPayload)
 {
 #if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
     std::lock_guard<std::mutex> lock(mutex);
@@ -399,7 +399,6 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
                     }
                     // set the pointers to the payload
                     *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
-                    *payloadData = currentPayload;
                     return true;
                 }
             }
@@ -421,12 +420,9 @@ bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
         }
         messagePayloads.popBytes(currentPayload, size);
         *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
-        *payloadData = currentPayload;
         return true;
     }
 
-    *nextPayloadSize = 0;
-    *payloadData = nullptr;
     return false;
 }
 
