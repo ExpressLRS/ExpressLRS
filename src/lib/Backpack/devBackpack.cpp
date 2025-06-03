@@ -32,7 +32,7 @@ bool lastRecordingState = false;
 #include "CRSF.h"
 #include "hwTimer.h"
 
-[[noreturn]] void startPassthrough()
+[[noreturn]] void startPassthrough(const bool useUSB = false)
 {
     // stop everything
     devicesStop();
@@ -48,7 +48,7 @@ bool lastRecordingState = false;
     {
         #if defined(PLATFORM_ESP32_S3)
         // if UART0 is connected to the backpack then use the USB for the uplink
-        if (GPIO_PIN_DEBUG_RX == 44 && GPIO_PIN_DEBUG_TX == 43)
+        if (useUSB)
         {
             uplink = &Serial;
             Serial.setTxBufferSize(1024);
@@ -172,7 +172,7 @@ void checkBackpackUpdate()
         if (byte == resync[resync_pos])
         {
             resync_pos++;
-            if (resync_pos == sizeof(resync)) startPassthrough();
+            if (resync_pos == sizeof(resync)) startPassthrough(true);
         }
         else
         {
