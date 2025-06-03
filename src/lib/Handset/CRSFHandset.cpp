@@ -78,11 +78,15 @@ void CRSFHandset::Begin()
         if (RecvModelUpdate) RecvModelUpdate();
     }
 #elif defined(PLATFORM_ESP8266)
-    // Uses default UART pins
-    CRSFHandset::Port.begin(UARTrequestedBaud);
-    // Invert RX/TX (not done, connection is full duplex uninverted)
-    //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
-    // No log message because this is our only UART
+    if (!firmwareOptions.is_airport) {
+        // Uses default UART pins
+        CRSFHandset::Port.begin(UARTrequestedBaud);
+        // Invert RX/TX (not done, connection is full duplex uninverted)
+        //USC0(UART0) |= BIT(UCRXI) | BIT(UCTXI);
+        // No log message because this is our only UART
+    } else {
+        CRSFHandset::Port.begin(firmwareOptions.uart_baud);
+    }
 #endif
 }
 
