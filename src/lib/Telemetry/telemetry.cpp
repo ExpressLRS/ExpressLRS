@@ -301,7 +301,7 @@ bool Telemetry::AppendTelemetryPackage(uint8_t *package)
             }
             targetFound = true;
         }
-        else if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+        else if (isValidCrsfAddress(extHeader->orig_addr))
         {
             targetIndex = payloadTypesCount - 2;
             targetFound = true;
