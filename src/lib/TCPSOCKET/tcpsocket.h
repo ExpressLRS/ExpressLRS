@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstring>
 #include "ESPAsyncWebServer.h"
+#include "crsf2msp.h"
+#include "msp2crsf.h"
 #include "FIFO.h"
 
 #define BUFFER_OUTPUT_SIZE 1024
@@ -17,11 +19,10 @@ private:
     static TCPSOCKET *instance;
     //std::vector<AsyncClient *> clients; // a list to hold all clients for MSP to WIFI bridge nut not using multi-client for now
 
-    AsyncServer *TCPserver;
-    AsyncClient *TCPclient = NULL;
-    uint32_t TCPport;
+    AsyncServer *TCPserver = nullptr;
+    AsyncClient *TCPclient = nullptr;
     const uint32_t clientTimeoutPeriod = 2000;
-    uint32_t clientTimeoutLastData;
+    uint32_t clientTimeoutLastData = 0;
 
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);
@@ -29,17 +30,23 @@ private:
     static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
 
-    FIFO<BUFFER_OUTPUT_SIZE> FIFOout;
-    FIFO<BUFFER_INPUT_SIZE> FIFOin;
+    bool hasClient() const { return (TCPclient != nullptr); }
+    void pumpData();
+    void write(uint8_t *data, uint16_t len);
+    void clientConnect(AsyncClient *client);
+    void clientDisconnect(AsyncClient *client);
+
+    FIFO<BUFFER_OUTPUT_SIZE> *FIFOout = nullptr;
+    FIFO<BUFFER_INPUT_SIZE> *FIFOin = nullptr;
+    CROSSFIRE2MSP *crsf2msp = nullptr;
+    MSP2CROSSFIRE *msp2crsf = nullptr;
 
 public:
-    TCPSOCKET(const uint32_t port);
     void begin();
     void handle();
-    bool hasClient();
-    uint16_t bytesReady(); // has x bytes in the input buffer ready
-    bool write(uint8_t *data, uint16_t len);
-    void read(uint8_t *data);
+    void crsfMspIn(uint8_t *data);
+    uint8_t crsfCrsfOutAvailable(uint32_t maxLen);
+    void crsfCrsfOutPop(uint8_t *data);
 };
 
 #endif

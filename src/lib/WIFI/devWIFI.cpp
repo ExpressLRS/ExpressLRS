@@ -79,12 +79,9 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 static IPAddress ipAddress;
 
-#if defined(USE_MSP_WIFI) && defined(TARGET_RX)  //MSP2WIFI in enabled only for RX only at the moment
-#include "crsf2msp.h"
-#include "msp2crsf.h"
-
+#if defined(USE_MSP_WIFI) && defined(TARGET_RX)
 #include "tcpsocket.h"
-TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
+TCPSOCKET wifi2tcp;
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -1243,24 +1240,6 @@ static void HandleWebUpdate()
 void HandleMSP2WIFI()
 {
   #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
-  // check is there is any data to write out
-  if (crsf2msp.FIFOout.peekSize() > 0)
-  {
-    const uint16_t len = crsf2msp.FIFOout.popSize();
-    uint8_t data[len];
-    crsf2msp.FIFOout.popBytes(data, len);
-    wifi2tcp.write(data, len);
-  }
-
-  // check if there is any data to read in
-  const uint16_t bytesReady = wifi2tcp.bytesReady();
-  if (bytesReady > 0)
-  {
-    uint8_t data[bytesReady];
-    wifi2tcp.read(data);
-    msp2crsf.parse(data, bytesReady);
-  }
-
   wifi2tcp.handle();
   #endif
 }

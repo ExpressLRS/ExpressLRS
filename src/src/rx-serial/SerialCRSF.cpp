@@ -4,9 +4,8 @@
 #include "device.h"
 #include "telemetry.h"
 #if defined(USE_MSP_WIFI)
-#include "msp2crsf.h"
-
-extern MSP2CROSSFIRE msp2crsf;
+#include "tcpsocket.h"
+extern TCPSOCKET wifi2tcp;
 #endif
 
 extern Telemetry telemetry;
@@ -17,13 +16,11 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
     #if defined(USE_MSP_WIFI)
-    while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesToSend)
+    uint8_t OutPktLen;
+    while (OutPktLen = wifi2tcp.crsfCrsfOutAvailable(maxBytesToSend - bytesWritten))
     {
-        msp2crsf.FIFOout.lock();
-        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
         uint8_t OutData[OutPktLen];
-        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-        msp2crsf.FIFOout.unlock();
+        wifi2tcp.crsfCrsfOutPop(OutData);
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
         bytesWritten += OutPktLen;
     }

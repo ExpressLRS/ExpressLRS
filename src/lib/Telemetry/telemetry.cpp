@@ -13,7 +13,6 @@ extern TCPSOCKET wifi2tcp;
 #include "devMSPVTX.h"
 #endif
 
-#include "crsf2msp.h"
 #include "helpers.h"
 
 // Size byte in FIFO contains bit to indicate if the frame is deleted
@@ -274,10 +273,9 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
         {
 #if defined(USE_MSP_WIFI)
             // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-            if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+            if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
             {
-                DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                crsf2msp.parse(package);
+                wifi2tcp.crsfMspIn(package);
             }
 #endif
 #if defined(HAS_MSP_VTX)
