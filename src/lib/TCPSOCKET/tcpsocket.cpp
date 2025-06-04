@@ -90,14 +90,6 @@ void TCPSOCKET::handle()
         return;
     }
 
-    // check timeout
-    if (millis() - clientTimeoutLastData > clientTimeoutPeriod)
-    {
-        DBGLN("TCP client timeout");
-        clientDisconnect(TCPclient);
-        return;
-    }
-
     pumpData();
 
     // check if there is data to send out the TCP port
@@ -110,7 +102,6 @@ void TCPSOCKET::handle()
             uint8_t data[len];
             FIFOout->popBytes(data, len);
             TCPclient->write((const char *)data, len);
-            TCPclient->send();
             DBGLN("TCP OUT SENT: Sent!: len: %u", len);
         }
         else
@@ -141,7 +132,6 @@ void TCPSOCKET::write(uint8_t *data, uint16_t len) // doesn't send, just ques it
 
 void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, size_t len)
 {
-    instance->clientTimeoutLastData = millis();
     instance->TCPclient = client;
 
     if (instance->FIFOin->available(len + 2)) // +2 because it takes 2 bytes to store the size of the FIFO chunk
@@ -192,7 +182,10 @@ void TCPSOCKET::clientConnect(AsyncClient *client)
         msp2crsf = new MSP2CROSSFIRE();
     }
 
-    clientTimeoutLastData = millis();
+    if (hasClient())
+    {
+        TCPclient->close();
+    }
     TCPclient = client;
 }
 
@@ -218,6 +211,7 @@ void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
     client->onError(handleError, NULL);
     client->onDisconnect(handleDisconnect, NULL);
     client->onTimeout(handleTimeOut, NULL);
+    client->setRxTimeout(clientTimeoutS);
 }
 
 #endif

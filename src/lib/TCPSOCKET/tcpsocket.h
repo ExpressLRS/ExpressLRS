@@ -21,8 +21,7 @@ private:
 
     AsyncServer *TCPserver = nullptr;
     AsyncClient *TCPclient = nullptr;
-    const uint32_t clientTimeoutPeriod = 2000;
-    uint32_t clientTimeoutLastData = 0;
+    static const uint32_t clientTimeoutS = 2U;
 
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);
