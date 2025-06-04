@@ -17,7 +17,7 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
     uint32_t bytesWritten = 0;
     #if defined(USE_MSP_WIFI)
     uint8_t OutPktLen;
-    while (OutPktLen = wifi2tcp.crsfCrsfOutAvailable(maxBytesToSend - bytesWritten))
+    while ((OutPktLen = wifi2tcp.crsfCrsfOutAvailable(maxBytesToSend - bytesWritten)))
     {
         uint8_t OutData[OutPktLen];
         wifi2tcp.crsfCrsfOutPop(OutData);
