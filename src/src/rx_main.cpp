@@ -48,6 +48,19 @@
 #include "esp_task_wdt.h"
 #endif
 
+#ifdef USE_ENCRYPTION
+#include <string.h>
+#include "encryption.h"
+#include "Crypto.h"
+#include "ChaCha.h"
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
+ChaCha cipher(12);
+#endif
+
 //
 // Code encapsulated by the ARDUINO_CORE_INVERT_FIX #ifdef temporarily fixes EpressLRS issue #2609 which is caused
 // by the Arduino core (see https://github.com/espressif/arduino-esp32/issues/9896) and fixed
@@ -557,6 +570,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     }
 
     OtaGeneratePacketCrc(&otaPkt);
+
+#ifdef USE_ENCRYPTION
+    encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
+#endif
 
     SX12XX_Radio_Number_t transmittingRadio;
     if (config.GetForceTlmOff())
@@ -1125,6 +1142,24 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     uint32_t const beginProcessing = micros();
 
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+#ifdef USE_ENCRYPTION
+    if (otaPktPtr->std.type == PACKET_TYPE_SYNC)
+    {
+        if (OtaIsFullRes)
+        {
+            DBGLN("Not supported - leaving unencrypted!");
+        }
+        else
+        {
+            decryptMsg(3 + Radio.RXdataBuffer, 3 + Radio.RXdataBuffer, 5, otaPktPtr->std.sync.fhssIndex, otaPktPtr->std.sync.nonce);
+        }
+    }
+    else
+    {
+        decryptMsg(Radio.RXdataBuffer, Radio.RXdataBuffer, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce);
+    }
+#endif
+
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
         DBGVLN("CRC error");
@@ -1250,6 +1285,7 @@ void MspReceiveComplete()
         });
 #endif
         break;
+
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
         mavlinkOutputBuffer.atomicPushBytes(&MspData[2], MspData[1]);
@@ -2223,6 +2259,10 @@ void setup()
 #if defined(HAS_BUTTON)
     //registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
+#endif
+
+#ifdef USE_ENCRYPTION
+    initCrypto();
 #endif
 
     devicesStart();

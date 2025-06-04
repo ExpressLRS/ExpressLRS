@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cmath>
 #include "crc.h"
@@ -70,12 +71,14 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
+    /* Neros Shelf */
     CRSF_FRAMETYPE_BIND = 0x0C,
     CRSF_FRAMETYPE_TX_BIND = 0x0D,
     CRSF_FRAMETYPE_VTX_CONFIG = 0x30,
     CRSF_FRAMETYPE_MAST_FORCE_SYNC = 0x31,
     CRSF_FRAMETYPE_TELEM_CHANGE = 0x33,
     CRSF_FRAMETYPE_HIGH_BAND_CHANGE = 0x36,
+    CRSF_FRAMETYPE_CIPHER_SHARE = 0x55,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
 

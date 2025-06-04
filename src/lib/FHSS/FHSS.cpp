@@ -31,8 +31,12 @@ bool FHSSuseDualBand = false;
 uint16_t primaryBandCount;
 uint16_t secondaryBandCount;
 
+#ifdef TARGET_TX
 static toggleTxCmd_t toggle_tx_cmd;
+#endif
+
 static fhss_config_t N_FHSSconfig;
+static bool setupDone = false;
 
 uint32_t freqHzToRegVal(double freq) {
     return static_cast<uint32_t>(freq /FREQ_STEP);
@@ -85,6 +89,7 @@ fhss_config_t *getFHSSconfig()
     return &N_FHSSconfig;
 }
 
+#ifdef TARGET_TX
 void updateHighBandChannel(uint8_t *bufferIn)
 {
     fhss_config_t *config = getFHSSconfig();
@@ -113,11 +118,11 @@ void updateHighBandChannel(uint8_t *bufferIn)
     config->num_channels = numChannels;
     config->is_band_changing = true; // a change is coming
 }
+#endif
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     fhss_config_t *config = getFHSSconfig();
-    static bool setupDone = false;
     if(!setupDone)
     {
         setupFHSS(config);

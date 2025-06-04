@@ -80,6 +80,10 @@ def process_build_flag(define):
             UIDbytes = ",".join(list(map(str, bindingPhraseHash))[0:6])
             define = "-DMY_UID=" + UIDbytes
             sys.stdout.write("\u001b[32mUID bytes: " + UIDbytes + "\n")
+        if "USE_ENCRYPTION" in define:
+            stronghash =  hashlib.sha256(define.encode()).hexdigest()
+            define = "-DUSE_ENCRYPTION=\"" + stronghash[0:32] + "\""
+            sys.stdout.write("\u001b[32mUSE_ENCRYPTION: " + stronghash[0:32] + "\n")
             sys.stdout.flush()
         # TODO: NOT ready to be used yet. There was binding issues with this setup.
         # if "MY_BIND_PHRASE_HIGH" in define:

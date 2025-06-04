@@ -1,5 +1,18 @@
 #include "common.h"
 #include "OTA.h"
+#include "FHSS.h"
+
+#ifdef USE_ENCRYPTION
+#include <string.h>
+#include "encryption.h"
+#include "Crypto.h"
+#include "ChaCha.h"
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif /* defined(ESP8266) || defined(ESP32) */
+#endif /* USE_ENCRYPTION */
 
 #if defined(RADIO_SX127X)
 
@@ -209,3 +222,76 @@ bool ICACHE_RAM_ATTR isDualRadio()
 {
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }
+
+#ifdef USE_ENCRYPTION
+extern ChaCha cipher;
+
+// TODO: There has to be a better way of passing the params.
+// They're all from the same struct but don't always get passed in from the otaPkt
+void ICACHE_RAM_ATTR encryptMsg(uint8_t *output, uint8_t *input, size_t length, uint8_t fhss, uint8_t otaNonce, uint8_t crcLow)
+{
+    //const uint8_t counter[] = {FHSSsequence[FHSSptr], 110, input[0], 112, input[length - 1], 114, OtaNonce, 116};
+    const uint8_t nonce[] = {fhss, 110, 111, crcLow, 113, 114, otaNonce, 116};
+    cipher.setIV(nonce, sizeof(nonce));
+    cipher.encrypt(output + 1, input + 1, length - 2);
+}
+
+void ICACHE_RAM_ATTR decryptMsg(uint8_t *output, uint8_t *input, size_t length, uint8_t fhss, uint8_t otaNonce)
+{
+    uint8_t crcLow = input[length - 1];
+    encryptMsg(output, input, length, fhss, otaNonce, crcLow);
+}
+
+bool initCrypto()
+{
+  constexpr uint8_t rounds = 12; // just like a boxing match
+  constexpr size_t keySize = 16;
+  constexpr size_t nonceSize = 8;
+
+  uint8_t nonce[nonceSize] = {0};
+  uint8_t key[keySize] = {0};
+
+  cipher.clear();
+
+  for (size_t i = 0; i < keySize; ++i) {
+    key[i] = (i < UID_LEN) ? UID[i] : (i + 1);
+  }
+
+  cipher.setNumRounds(rounds);
+  if (!cipher.setKey(key, keySize)) {
+    DBGLN("ERR: Failed to set cipher key. master_key: %s. keySize: %lu", key, keySize);
+    return false;
+  }
+  // This code is here ONLY to check that our assumed nonceSize is supported by the cipher.
+  // Actual nonce will be set before encrypting/decrypting each message.
+  if (!cipher.setIV(nonce, nonceSize)) {
+    DBGLN("ERR: Failed to set cipher nonce. size: %lu", cipher.ivSize())
+    return false;
+  }
+
+  return true;
+}
+
+int hexStr2Arr(uint8_t *output, const char *input, size_t out_len_max)
+{
+    if(!out_len_max)
+        out_len_max = INT_MAX;
+
+    size_t in_len = strnlen(input, out_len_max * 2);
+    if(in_len % 2 != 0)
+        in_len--;
+
+    /* calc actual out len */
+    const size_t out_len = out_len_max < (in_len / 2) ? out_len_max : (in_len / 2);
+
+    for(size_t i = 0; i < out_len; i++)
+    {
+        char ch0 = input[i * 2];
+        char ch1 = input[i * 2 + 1];
+        uint8_t nib0 = ( (ch0 & 0xF) + (ch0 >> 6) ) | ((ch0 >> 3) & 0x8);
+        uint8_t nib1 = ( (ch1 & 0xF) + (ch1 >> 6) ) | ((ch1 >> 3) & 0x8);
+        output[i] = (nib0 << 4) | nib1;
+    }
+    return out_len;
+}
+#endif

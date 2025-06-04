@@ -31,6 +31,13 @@
 #define USBSerial Serial
 #endif
 
+#ifdef USE_ENCRYPTION
+#include <string.h>
+#include "encryption.h"
+#include "ChaCha.h"
+ChaCha cipher(12);
+#endif
+
 //// CONSTANTS ////
 #define MILLS_1 (1)
 #define MILLS_2 (2)
@@ -229,6 +236,16 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+
+#ifdef USE_ENCRYPTION
+  decryptMsg(
+    Radio.RXdataBuffer,
+    Radio.RXdataBuffer,
+    OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
+    FHSSgetCurrIndex(),
+    OtaNonce - 1);
+#endif
+
   if (!OtaValidatePacketCrc(otaPktPtr))
   {
     ////DBGLN("TLM crc error");
@@ -597,12 +614,43 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       NextPacketIsMspData = true;
 
       injectBackpackPanTiltRollData(now);
+
       OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
     }
   }
 
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
+
+#ifdef USE_ENCRYPTION
+  if (otaPkt.std.type == PACKET_TYPE_SYNC)
+  {
+    if (OtaIsFullRes)
+    {
+      DBGLN("Not supported - leaving unencrypted!");
+    }
+    else
+    {
+      // Encryption starts after the header on OtaNonce
+      // The structure is (by byte):
+      // 1) Type + CRC
+      // 2) FHSSgetCurrIndex()
+      // 3) OtaNonce
+      // 4) Different settings
+      // 5) UID byte
+      // 6) UID byte
+      // 7) UID byte
+      // 8) CRC
+      encryptMsg(3 + (uint8_t*)&otaPkt, 3 + (uint8_t*)&otaPkt, 5,
+                 otaPkt.std.sync.fhssIndex, otaPkt.std.sync.nonce, otaPkt.std.crcLow);
+    }
+  }
+  else
+  {
+    encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
+               FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
+  }
+#endif
 
   SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
 
@@ -642,7 +690,6 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   {
     // CRSF::LinkStatistics.lastTXnb = (int32_t)(micros()-firstSyncNonce);
     Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
-
   }
 }
 
@@ -1553,6 +1600,10 @@ void setup()
   // registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
 #endif
 
+#ifdef USE_ENCRYPTION
+  initCrypto();
+#endif
+
   devicesStart();
 
   if (firmwareOptions.is_airport)
@@ -1633,8 +1684,7 @@ void loop()
 
   /* Send TLM updates to handset if connected + reporting period
    * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if (
-      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
+  if ((now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
     CRSFHandset::makeLinkStatisticsPacket(linkStatisticsFrame);
@@ -1675,6 +1725,7 @@ void loop()
 
   // only send msp data when binding is not active
   static bool mspTransferActive = false;
+
   if (InBindingMode)
   {
 #if defined(RADIO_LR1121)
