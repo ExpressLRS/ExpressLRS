@@ -102,7 +102,6 @@ void TCPSOCKET::handle()
             uint8_t data[len];
             FIFOout->popBytes(data, len);
             TCPclient->write((const char *)data, len);
-            TCPclient->send();
             DBGLN("TCP OUT SENT: Sent!: len: %u", len);
         }
         else
