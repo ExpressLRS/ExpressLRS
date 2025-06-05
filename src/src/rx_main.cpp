@@ -36,6 +36,7 @@
 #include "devVTXSPI.h"
 #include "devAnalogVbat.h"
 #include "devSerialUpdate.h"
+#include "devVoltageSensor.h"
 #include "devBaro.h"
 #include "devMSPVTX.h"
 #include "devThermal.h"
@@ -114,6 +115,8 @@ device_affinity_t ui_devices[] = {
 #if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
+  // FIXME: ifdef this
+  {&I2CVoltageSensor, 0},
 };
 
 uint8_t antenna = 0;    // which antenna is currently in use
