@@ -99,10 +99,8 @@ public:
      * @param buffer Pointer to the buffer where the constructed packet will be stored.
      *               It is the caller's responsibility to ensure that the buffer
      *               has sufficient size to hold the generated packet.
-     * @param destination The CRSF address of the receiving device to include
-     *                    in the packet header.
      */
-    void makeLinkStatisticsPacket(uint8_t *buffer, crsf_addr_e destination);
+    void makeLinkStatisticsPacket(uint8_t *buffer);
 
     /**
      * Constructs an MSPv2 request frame and initializes it with the provided function and payload.

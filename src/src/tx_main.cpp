@@ -1528,9 +1528,9 @@ void loop()
   {
     uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
 
-    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame, CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
     // the linkStats originates from the OTA connector so we don't send it back there.
-    crsfRouter.processMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
     sendCRSFTelemetryToBackpack(linkStatisticsFrame);
     TLMpacketReported = now;
   }

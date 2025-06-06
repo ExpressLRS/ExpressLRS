@@ -94,12 +94,12 @@ void CRSFRouter::SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, const crsf_fr
     SetHeaderAndCrc((crsf_header_t *)frame, frameType, frameSize, destAddr);
 }
 
-void CRSFRouter::makeLinkStatisticsPacket(uint8_t *buffer, const crsf_addr_e destination)
+void CRSFRouter::makeLinkStatisticsPacket(uint8_t *buffer)
 {
     // Note: size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
     constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
 
-    buffer[0] = destination;
+    buffer[0] = CRSF_SYNC_BYTE;
     buffer[1] = CRSF_FRAME_SIZE(payloadLen);
     buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
     memcpy(&buffer[3], &linkStats, payloadLen);
