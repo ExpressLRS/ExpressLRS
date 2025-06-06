@@ -31,34 +31,22 @@ public:
      * @param callback
      */
     void setRCDataCallback(void (*callback)()) { RCdataCallback = callback; }
-    /**
-     * @brief register a function to be called when a request to update a parameter is send from the handset
-     * @param callback
-     */
-    void registerParameterUpdateCallback(void (*callback)(uint8_t type, uint8_t index, uint8_t arg)) { RecvParameterUpdate = callback; }
+
     /**
      * Register callback functions for state information about the connection or handset
      * @param connectedCallback called when the protocol detects a stable connection to the handset
      * @param disconnectedCallback called when the protocol loses its connection to the handset
-     * @param RecvModelUpdateCallback called when the handset sends a message to set the current model number
      */
-    void registerCallbacks(void (*connectedCallback)(), void (*disconnectedCallback)(), void (*RecvModelUpdateCallback)(), void (*bindingCommandCallback)())
+    void registerCallbacks(void (*connectedCallback)(), void (*disconnectedCallback)())
     {
         connected = connectedCallback;
         disconnected = disconnectedCallback;
-        RecvModelUpdate = RecvModelUpdateCallback;
-        OnBindingCommand = bindingCommandCallback;
     }
 
     /**
      * @brief Process any pending input data from the handset
      */
     virtual void handleInput() = 0;
-
-    /**
-     * @return true if the protocol detects that the arming state is active
-     */
-    virtual bool IsArmed() = 0;
 
     /**
      * Called to set the expected packet interval from the handset.
@@ -84,16 +72,32 @@ public:
      * This is used to synchronise the packets from the handset to the OTA protocol to minimise latency
      */
     virtual void JustSentRFpacket() {}
+
     /**
-     * Send a telemetry packet back to the handset
-     * @param data
+     * Inform the handset that a valid RC packet has been received
      */
-    virtual void sendTelemetryToTX(uint8_t *data) {}
+    void SetRCDataReceived()
+    {
+        // Call the registered RCdataCallback, if there is one, so it can modify the channel data if it needs to.
+        if (RCdataCallback) RCdataCallback();
+        RCdataLastRecv = micros();
+    }
 
     /**
      * @return the time in microseconds when the last RC packet was received from the handset
      */
     uint32_t GetRCdataLastRecv() const { return RCdataLastRecv; }
+
+    /**
+     * Set the "armed" state of the module.
+     * @param armed true if the module is in the "armed" state
+     */
+    void SetArmed(const bool armed) { moduleArmed = armed; }
+
+    /**
+     * @return true if the protocol detects that the arming state is active
+     */
+    bool IsArmed() const { return moduleArmed; }
 
 #if defined(DEBUG_TX_FREERUN)
     /**
@@ -109,12 +113,12 @@ protected:
     void (*RCdataCallback)() = nullptr;  // called when there is new RC data
     void (*disconnected)() = nullptr;    // called when RC packet stream is lost
     void (*connected)() = nullptr;       // called when RC packet stream is regained
-    void (*RecvModelUpdate)() = nullptr; // called when model id changes, ie command from Radio
-    void (*RecvParameterUpdate)(uint8_t type, uint8_t index, uint8_t arg) = nullptr; // called when recv parameter update req, ie from LUA
-    void (*OnBindingCommand)() = nullptr; // Called when a binding command is received
 
-    volatile uint32_t RCdataLastRecv = 0;
     int32_t RequestedRCpacketInterval = 5000; // default to 200hz as per 'normal'
+
+private:
+    volatile uint32_t RCdataLastRecv = 0;
+    bool moduleArmed = false;
 };
 
 #ifdef TARGET_TX

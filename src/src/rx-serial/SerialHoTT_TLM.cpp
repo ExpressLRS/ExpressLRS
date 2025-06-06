@@ -1,9 +1,11 @@
 #if defined(TARGET_RX)
 
 #include "SerialHoTT_TLM.h"
+
+#include "CRSFRouter.h"
 #include "FIFO.h"
-#include "telemetry.h"
 #include "common.h"
+#include "telemetry.h"
 
 #define NOT_FOUND 0xff          // no device found indicator
 
@@ -24,6 +26,34 @@
 
 
 extern Telemetry telemetry;
+
+SerialHoTT_TLM::SerialHoTT_TLM(Stream &out, Stream &in, const int8_t serial1TXpin)
+    : SerialIO(&out, &in)
+{
+#if defined(PLATFORM_ESP32)
+    if (serial1TXpin == UNDEF_PIN)
+    {
+        // we are on UART0, use default TX pin for half duplex if not defined otherwise
+        UTXDoutIdx = U0TXD_OUT_IDX;
+        URXDinIdx = U0RXD_IN_IDX;
+        halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
+    }
+    else
+    {
+        // we are on UART1, use Serial1 TX assigned pin for half duplex
+        UTXDoutIdx = U1TXD_OUT_IDX;
+        URXDinIdx = U1RXD_IN_IDX;
+        halfDuplexPin = serial1TXpin;
+    }
+#endif
+
+    uint32_t now = millis();
+
+    lastPoll = now;
+    discoveryTimerStart = now;
+
+    cmdSendState = HOTT_RECEIVING;
+}
 
 int SerialHoTT_TLM::getMaxSerialReadSize()
 {
@@ -241,14 +271,13 @@ void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
     crsfBaro = {0};
     crsfBaro.p.altitude = htobe16(getHoTTaltitude() * 10 + 5000); // Hott 500 = 0m, ELRS 10000 = 0.0m
     crsfBaro.p.verticalspd = htobe16(getHoTTvv() - 30000);
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastVarioSent >= VARIO_MIN_CRSFRATE) || (lastVarioCRC != crsfBaro.crc))
     {
         lastVarioSent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+        crsfRouter.deliverMessage(nullptr, &crsfBaro.h);
     }
 
     lastVarioCRC = crsfBaro.crc;
@@ -265,14 +294,13 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     crsfGPS.p.gps_heading = htobe16(getHoTTheading() * 100);
     crsfGPS.p.altitude = htobe16(getHoTTMSLaltitude() + 1000); // HoTT 1 = 1m, CRSF: 0m = 1000
     crsfGPS.p.satellites_in_use = getHoTTsatellites();
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastGPSSent >= GPS_MIN_CRSFRATE) || (lastGPSCRC != crsfGPS.crc))
     {
         lastGPSSent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfGPS);
+        crsfRouter.deliverMessage(nullptr, &crsfGPS.h);
     }
 
     lastGPSCRC = crsfGPS.crc;
@@ -290,14 +318,13 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     crsfBatt.p.current = htobe16(getHoTTcurrent());
     crsfBatt.p.capacity = htobe24(getHoTTcapacity() * 10); // HoTT: 1 = 10mAh, CRSF: 1 ? 1 = 1mAh
     crsfBatt.p.remaining = getHoTTremaining();
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastBatterySent >= BATT_MIN_CRSFRATE) || (lastBatteryCRC != crsfBatt.crc))
     {
         lastBatterySent = now;
-
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBatt);
+        crsfRouter.deliverMessage(nullptr, &crsfBatt.h);
     }
 
     lastBatteryCRC = crsfBatt.crc;

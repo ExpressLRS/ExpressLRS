@@ -12,16 +12,25 @@
 #include <iostream>
 #include <unity.h>
 
-#include "targets.h"
-#include "common.h"
-#include "CRSF.h"
+#include "CRSFEndpoint.h"
 #include "POWERMGNT.h"
-#include <OTA.h>
+#include "common.h"
 #include "crsf_sysmocks.h"
+#include "targets.h"
 
-CRSF crsf;  // need an instance to provide the fields used by the code under test
+#include <OTA.h>
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint((crsf_addr_e)1) {}
+    void handleMessage(const crsf_header_t *message) override {}
+};
+CRSFEndpoint *crsfEndpoint = new MockEndpoint();
+
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 uint8_t UID[6] = {1,2,3,4,5,6};
+elrsLinkStatistics_t linkStats;
 
 void test_crsf_endpoints()
 {
@@ -275,7 +284,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
     }
 
     // Uplink data
-    CRSF::LinkStatistics.uplink_TX_Power = 3; // 100mW
+    linkStats.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
@@ -306,7 +315,7 @@ void test_encodingHybridWide(bool highRes, uint8_t nonce)
 
     // If slot 7, the uplink_TX_Power should be in the low 6 bits
     if (switchIdx == 7)
-        TEST_ASSERT_EQUAL(CRSF::LinkStatistics.uplink_TX_Power, switches & 0b111111);
+        TEST_ASSERT_EQUAL(linkStats.uplink_TX_Power, switches & 0b111111);
     else
     {
         uint16_t ch = ChannelData[5+switchIdx];
@@ -360,7 +369,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     }
 
     // Uplink data
-    CRSF::LinkStatistics.uplink_TX_Power = 3; // 100mW
+    linkStats.uplink_TX_Power = 3; // 100mW
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
@@ -371,7 +380,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
     OtaPackChannelData(otaPktPtr, ChannelData, nonce % 2, tlmDenom);
 
     // Clear the LinkStatistics to receive it from the encoding
-    CRSF::LinkStatistics.uplink_TX_Power = 0;
+    linkStats.uplink_TX_Power = 0;
 
     // run the decoder, results in crsf->PackedRCdataOut
     bool telemResult = OtaUnpackChannelData(otaPktPtr, ChannelData, tlmDenom);
@@ -392,7 +401,7 @@ void test_decodingHybridWide(bool highRes, uint8_t nonce, uint8_t forceSwitch, u
 
     if (switchIdx == 7)
     {
-        TEST_ASSERT_EQUAL(CRSF::LinkStatistics.uplink_TX_Power, 3);
+        TEST_ASSERT_EQUAL(linkStats.uplink_TX_Power, 3);
     }
     else
     {
@@ -442,12 +451,12 @@ void test_encodingFullresPowerLevels()
 
         // This is what we're testing here, just the power
         uint8_t crsfPower = powerToCrsfPower((PowerLevels_e)pwr);
-        CRSF::LinkStatistics.uplink_TX_Power = crsfPower;
+        linkStats.uplink_TX_Power = crsfPower;
 
         OtaPackChannelData(otaPktPtr, ChannelData, false, 0);
         OtaUnpackChannelData(otaPktPtr, ChannelData, 0);
 
-        TEST_ASSERT_EQUAL(crsfPower, CRSF::LinkStatistics.uplink_TX_Power);
+        TEST_ASSERT_EQUAL(crsfPower, linkStats.uplink_TX_Power);
     }
 }
 
@@ -459,7 +468,7 @@ void test_encodingFullres8ch()
     TEST_ASSERT_EQUAL(sizeof(ChannelData), sizeof(ChannelsIn));
 
     fullres_fillChannelData();
-    CRSF::LinkStatistics.uplink_TX_Power = PWR_250mW;
+    linkStats.uplink_TX_Power = PWR_250mW;
 
     // Save the channels since they go into the same place
     memcpy(ChannelsIn, ChannelData, sizeof(ChannelData));
