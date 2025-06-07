@@ -29,6 +29,7 @@ void sendCRSFTelemetryToBackpack(uint8_t *) {}
 void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
+#include "CRSFParser.h"
 #include "CRSFRouter.h"
 #include "MAVLink.h"
 #include "TXModuleEndpoint.h"
@@ -99,6 +100,8 @@ uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 CRSFRouter crsfRouter;
 TXModuleEndpoint crsfTransmitter;
 TXOTAConnector otaConnector;
+TXUSBConnector usbConnector;
+CRSFParser crsfParser;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -1196,9 +1199,6 @@ static void HandleUARTin()
   {
     uint8_t buf[size];
     TxUSB->readBytes(buf, size);
-    uartInputBuffer.lock();
-    uartInputBuffer.pushBytes(buf, size);
-    uartInputBuffer.unlock();
 
     // Lets check if the data is Mav and auto change LinkMode
     // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
@@ -1210,11 +1210,19 @@ static void HandleUARTin()
         UARTconnected();
       }
     }
-
-    if (config.GetLinkMode() != TX_MAVLINK_MODE)
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
     {
-      // Process data as CRSF packet
-
+      uartInputBuffer.lock();
+      uartInputBuffer.pushBytes(buf, size);
+      uartInputBuffer.unlock();
+    }
+    else
+    {
+      // Process data as CRSF bytes
+      for (uint8_t i = 0; i < size; ++i)
+      {
+        crsfParser.processByte(&usbConnector, buf[i]);
+      }
     }
   }
 
@@ -1458,7 +1466,7 @@ void setup()
     crsfTransmitter.begin();
     crsfRouter.addConnector(&otaConnector);
     crsfRouter.addEndpoint(&crsfTransmitter);
-    crsfRouter.addConnector(new TXUSBConnector());
+    crsfRouter.addConnector(&usbConnector);
     // When a CRSF handset is detected, it will add itself to the router
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
