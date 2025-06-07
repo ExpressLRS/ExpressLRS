@@ -3,7 +3,6 @@
 #include "CRSFRouter.h"
 #include "logging.h"
 #include "median.h"
-#include "telemetry.h"
 #include <Arduino.h>
 
 // Sample 5x samples over 500ms (unless SlowUpdate)
@@ -24,7 +23,7 @@ static esp_adc_cal_characteristics_t *vbatAdcUnitCharacterics;
 #endif
 
 /* Shameful externs */
-extern Telemetry telemetry;
+extern bool crsfBatterySensorDetected;
 
 /**
  * @brief: Enable SlowUpdate mode to reduce the frequency Vbat telemetry is sent
@@ -92,7 +91,7 @@ static void reportVbat()
 
 static int timeout()
 {
-    if (telemetry.GetCrsfBatterySensorDetected())
+    if (crsfBatterySensorDetected)
     {
         return DURATION_NEVER;
     }

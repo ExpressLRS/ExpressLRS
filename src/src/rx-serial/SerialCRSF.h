@@ -1,6 +1,7 @@
 #pragma once
 #include "SerialIO.h"
 
+#include "CRSFParser.h"
 #include "CRSFRouter.h"
 
 class SerialCRSF final : public SerialIO, public CRSFConnector {
@@ -21,5 +22,7 @@ public:
     bool sendImmediateRC() override { return true; }
 
 private:
+    CRSFParser crsfParser;
+
     void processBytes(uint8_t *bytes, uint16_t size) override;
 };

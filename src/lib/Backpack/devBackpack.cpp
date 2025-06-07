@@ -7,7 +7,6 @@
 #include "logging.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "telemetry.h"
 
 #define BACKPACK_TIMEOUT 20 // How often to check for backpack commands
 

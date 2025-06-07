@@ -5,7 +5,6 @@
 #include "CRSFRouter.h"
 #include "FIFO.h"
 #include "common.h"
-#include "telemetry.h"
 
 #define NOT_FOUND 0xff          // no device found indicator
 
@@ -29,7 +28,8 @@
 #define VOLT_MIN_CRSFRATE 5000
 #define AIRSPEED_MIN_CRSFRATE 5000
 
-extern Telemetry telemetry;
+extern bool crsfBatterySensorDetected;
+extern bool crsfBaroSensorDetected;
 
 SerialHoTT_TLM::SerialHoTT_TLM(Stream &out, Stream &in, const int8_t serial1TXpin)
     : SerialIO(&out, &in)
@@ -278,7 +278,7 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
 void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBaroSensorDetected();
+    crsfBaroSensorDetected = true;
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t) crsfBaro = {0};
@@ -321,7 +321,7 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
 void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBatterySensorDetected();
+    crsfBatterySensorDetected = true;
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBatt = {0};

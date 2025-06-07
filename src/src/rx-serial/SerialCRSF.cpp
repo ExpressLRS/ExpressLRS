@@ -3,10 +3,11 @@
 #include "OTA.h"
 #include "common.h"
 #include "device.h"
-#include "telemetry.h"
+#include "msp2crsf.h"
 
-extern Telemetry telemetry;
 extern void reset_into_bootloader();
+bool crsfBatterySensorDetected = false;
+bool crsfBaroSensorDetected = false;
 
 void SerialCRSF::forwardMessage(const crsf_header_t *message)
 {
@@ -83,10 +84,20 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     return DURATION_IMMEDIATELY;
 }
 
-void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
+void SerialCRSF::processBytes(uint8_t *bytes, const uint16_t size)
 {
     for (int i=0 ; i<size ; i++)
     {
-        telemetry.RXhandleUARTin(this, bytes[i]);
+        crsfParser.processByte(this, bytes[i], [](const crsf_header_t *message) {
+            if (message->type == CRSF_FRAMETYPE_BATTERY_SENSOR)
+            {
+                crsfBatterySensorDetected = true;
+            }
+            if (message->type == CRSF_FRAMETYPE_BARO_ALTITUDE ||
+                message->type == CRSF_FRAMETYPE_VARIO)
+            {
+                crsfBaroSensorDetected = true;
+            }
+        });
     }
 }

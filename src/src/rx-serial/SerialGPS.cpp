@@ -2,9 +2,6 @@
 
 #include "CRSFRouter.h"
 #include <crsf_protocol.h>
-#include <telemetry.h>
-
-extern Telemetry telemetry;
 
 void SerialGPS::sendQueuedData(uint32_t maxBytesToSend)
 {

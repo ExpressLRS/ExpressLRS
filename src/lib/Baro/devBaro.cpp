@@ -7,13 +7,12 @@
 #include "baro_bmp280.h"
 #include "baro_spl06.h"
 #include "logging.h"
-#include "telemetry.h"
 //#include "baro_bmp085.h"
 
 #define BARO_STARTUP_INTERVAL       100
 
 /* Shameful externs */
-extern Telemetry telemetry;
+extern bool crsfBaroSensorDetected;
 
 /* Local statics */
 static BaroBase *baro;
@@ -110,7 +109,7 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     //DBGLN("diff=%d smooth=%d dT=%u", altitude_diff_cm, verticalspd_smoothed, dT_ms);
 
     // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet
-    if (!telemetry.GetCrsfBaroSensorDetected())
+    if (!crsfBaroSensorDetected)
     {
         crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
         crsfRouter.deliverMessage(nullptr, &crsfBaro.h);
