@@ -30,16 +30,10 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
 #include "CRSFRouter.h"
+#include "MAVLink.h"
 #include "TXModuleEndpoint.h"
 #include "TXOTAConnector.h"
-#include "MAVLink.h"
-
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
-#include "USB.h"
-#define USBSerial Serial
-#elif defined(PLATFORM_ESP8266)
-#include <user_interface.h>
-#endif
+#include "TXUSBConnector.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
@@ -1182,48 +1176,50 @@ static void HandleUARTout()
 
 static void HandleUARTin()
 {
-  // Read from the USB serial port
-  if (TxUSB->available())
+  if (firmwareOptions.is_airport)
   {
-    if (firmwareOptions.is_airport)
+    auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
+    if (size > 0)
     {
-      auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
-      if (size > 0)
-      {
-        uint8_t buf[size];
-        TxUSB->readBytes(buf, size);
+      uint8_t buf[size];
+      TxUSB->readBytes(buf, size);
         apInputBuffer.lock();
         apInputBuffer.pushBytes(buf, size);
         apInputBuffer.unlock();
+    }
+    return;
+  }
+
+  // Read from the USB serial port
+  auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
+  if (size > 0)
+  {
+    uint8_t buf[size];
+    TxUSB->readBytes(buf, size);
+    uartInputBuffer.lock();
+    uartInputBuffer.pushBytes(buf, size);
+    uartInputBuffer.unlock();
+
+    // Lets check if the data is Mav and auto change LinkMode
+    // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+    if (connectionState == noCrossfire)
+    {
+      if (isThisAMavPacket(buf, size))
+      {
+        config.SetLinkMode(TX_MAVLINK_MODE);
+        UARTconnected();
       }
     }
-    else
-    {
-      auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
-      if (size > 0)
-      {
-        uint8_t buf[size];
-        TxUSB->readBytes(buf, size);
-        uartInputBuffer.lock();
-        uartInputBuffer.pushBytes(buf, size);
-        uartInputBuffer.unlock();
 
-        // Lets check if the data is Mav and auto change LinkMode
-        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
-        if (connectionState == noCrossfire)
-        {
-          if (isThisAMavPacket(buf, size))
-          {
-            config.SetLinkMode(TX_MAVLINK_MODE);
-            UARTconnected();
-          }
-        }
-      }
+    if (config.GetLinkMode() != TX_MAVLINK_MODE)
+    {
+      // Process data as CRSF packet
+
     }
   }
 
   // Read from the Backpack serial port
-  if (BackpackOrLogStrm->available())
+  if (BackpackOrLogStrm != TxUSB && BackpackOrLogStrm->available())
   {
     auto size = std::min(uartInputBuffer.free(), (uint16_t)BackpackOrLogStrm->available());
     if (size > 0)
@@ -1251,6 +1247,27 @@ static void HandleUARTin()
 
       // Try to parse any MSP packets from the Backpack
       ParseMSPData(buf, size);
+    }
+  }
+
+  if (config.GetLinkMode() == TX_MAVLINK_MODE)
+  {
+    // Use MspSender for MAVLINK uplink data
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
+    uint16_t count = uartInputBuffer.size();
+    if (count > 0 && !MspSender.IsActive())
+    {
+        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
+        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+        mavlinkSSBuffer[1] = count;
+        // Following n bytes are just raw mavlink
+        uartInputBuffer.lock();
+        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+        uartInputBuffer.unlock();
+        nextPayload = mavlinkSSBuffer;
+        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
   }
 }
@@ -1293,14 +1310,10 @@ static void setupSerial()
 #endif
   BackpackOrLogStrm = serialPort;
 
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
-  Serial.begin(460800);
-#endif
-
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
-  USBSerial.begin(firmwareOptions.uart_baud);
-  TxUSB = &USBSerial;
+#if defined(PLATFORM_ESP32_S3)
+  Serial.begin(firmwareOptions.uart_baud);
+  TxUSB = &Serial;
 #elif defined(PLATFORM_ESP32)
   if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {
@@ -1317,7 +1330,7 @@ static void setupSerial()
   else
   {
     // The backpack is on a separate UART to UART0
-    // Set TxUSB to pins 3, 1 so that we can access TxUSB and BackpackOrLogStrm independantly
+    // Set TxUSB to UART0 default pins so that we can access TxUSB and BackpackOrLogStrm independantly
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
   }
@@ -1445,6 +1458,7 @@ void setup()
     crsfTransmitter.begin();
     crsfRouter.addConnector(&otaConnector);
     crsfRouter.addEndpoint(&crsfTransmitter);
+    crsfRouter.addConnector(new TXUSBConnector());
     // When a CRSF handset is detected, it will add itself to the router
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
@@ -1576,7 +1590,7 @@ void loop()
       }
       else
       {
-        // Send all other tlm to handset
+        // Send all other tlm to CRSF router
         crsfRouter.processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
@@ -1602,26 +1616,5 @@ void loop()
   else if (!MspSender.IsActive())
   {
     otaConnector.pumpSender();
-  }
-
-  if (config.GetLinkMode() == TX_MAVLINK_MODE)
-  {
-    // Use MspSender for MAVLINK uplink data
-    uint8_t *nextPayload = 0;
-    uint8_t nextPlayloadSize = 0;
-    uint16_t count = uartInputBuffer.size();
-    if (count > 0 && !MspSender.IsActive())
-    {
-        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
-        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-        mavlinkSSBuffer[1] = count;
-        // Following n bytes are just raw mavlink
-        uartInputBuffer.lock();
-        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        uartInputBuffer.unlock();
-        nextPayload = mavlinkSSBuffer;
-        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
-        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
-    }
   }
 }
