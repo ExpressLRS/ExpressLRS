@@ -30,6 +30,14 @@ void CRSFRouter::processMessage(CRSFConnector *connector, const crsf_header_t *m
         }
         return;
     }
+
+    const auto extMessage = (crsf_ext_header_t *)message;
+    const crsf_frame_type_e packetType = message->type;
+    if (connector && packetType >= CRSF_FRAMETYPE_DEVICE_PING)
+    {
+        connector->addDevice(extMessage->orig_addr);
+    }
+
     for (const auto endpoint : endpoints)
     {
         if (endpoint->handleRaw(message))
@@ -38,13 +46,6 @@ void CRSFRouter::processMessage(CRSFConnector *connector, const crsf_header_t *m
         }
 
         const crsf_addr_e device_id = endpoint->getDeviceId();
-        const crsf_frame_type_e packetType = message->type;
-        const auto extMessage = (crsf_ext_header_t *)message;
-        if (connector && packetType >= CRSF_FRAMETYPE_DEVICE_PING)
-        {
-            connector->addDevice(extMessage->orig_addr);
-        }
-
         if (packetType < CRSF_FRAMETYPE_DEVICE_PING || extMessage->dest_addr == device_id || extMessage->dest_addr == CRSF_ADDRESS_BROADCAST)
         {
             endpoint->handleMessage(message);
