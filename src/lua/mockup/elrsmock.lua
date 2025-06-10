@@ -19,6 +19,8 @@ return {
   {name='master', id=17, type=16, value='f00fcb'},
   {name='Float Tst', id=18, type=8, value=-15, step=5, prec=1000, min=-50, max=50, unit='flt', fmt='%.3fflt'},
 
+  {name='String', id=19, type=10, value='test'},
+
   {name="----BACK----", type=14, parent=255},
   {name="----EXIT----", type=14, exit = true}
 }, "0/500   C", "ExpressLRS TX"
