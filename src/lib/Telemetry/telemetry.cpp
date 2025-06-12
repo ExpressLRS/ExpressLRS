@@ -269,40 +269,13 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-        {
+        if (isValidCrsfAddress(extHeader->orig_addr))        {
 #if defined(USE_MSP_WIFI)
             // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
             if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
             {
                 wifi2tcp.crsfMspIn(package);
             }
-            else
-            {
-                targetIndex = payloadTypesCount - 2;
-            }
-            targetFound = true;
-        }
-        else if (isValidCrsfAddress(extHeader->orig_addr))
-        {
-            targetIndex = payloadTypesCount - 2;
-            targetFound = true;
-
-            #if defined(USE_MSP_WIFI) && defined(TARGET_RX)
-                // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-                if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
-                {
-                    DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                    crsf2msp.parse(package);
-                }
-                else // if no TCP client we just want to forward MSP over the link
-            #endif
-            {
-#if defined(HAS_MSP_VTX) && defined(TARGET_RX)
-                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
-                {
-                    mspVtxProcessPacket(package);
-                }
 #endif
 #if defined(HAS_MSP_VTX)
             if (header->type == CRSF_FRAMETYPE_MSP_RESP)
