@@ -14,8 +14,8 @@
 
 #define ELRS_VERSION_MAJOR 5
 #define ELRS_VERSION_MINOR 0
-#define ELRS_VERSION_PATCH 0
-#define ELRS_VERSION_RC 1
+#define ELRS_VERSION_PATCH 1
+#define ELRS_VERSION_RC 2
 
 typedef union {
     struct {
