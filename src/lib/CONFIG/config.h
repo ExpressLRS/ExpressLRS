@@ -3,6 +3,7 @@
 #include "targets.h"
 #include "elrs_eeprom.h"
 #include "options.h"
+#include "crsf_protocol.h"
 #include "common.h"
 
 #if defined(PLATFORM_ESP32)
@@ -87,6 +88,7 @@ typedef struct {
     uint32_t        end_frequency;
     uint32_t        mid_frequency;
     uint8_t         num_channels;
+    Toggles         crypto_enable;
     uint32_t        version;
     uint8_t         vtxBand=5;    // 0=Off, else band number
     uint8_t         vtxChannel=1; // 0=Ch1 -> 7=Ch8
@@ -120,6 +122,7 @@ public:
     const uint32_t GetEndFrequency() const { return m_config.end_frequency; }
     const uint32_t GetMidFrequency() const { return m_config.mid_frequency; }
     const uint8_t GetNumChannels() const { return m_config.num_channels; }
+    const Toggles GetCryptoEnable() const { return m_config.crypto_enable; }
     uint8_t GetRate() const { return m_model->rate; }
     uint8_t GetTlm() const { return m_model->tlm; }
     uint8_t GetPower() const { return m_model->power; }
@@ -154,6 +157,7 @@ public:
     void SetMidFrequency(uint32_t mid);
     void SetNumChannels(uint8_t num);
     void SetBindPhrase(const uint8_t *bindPhrase);
+    void SetCryptoEnable(Toggles toggle);
     void SetRate(uint8_t rate);
     void SetTlm(uint8_t tlm);
     void SetPower(uint8_t power);
@@ -235,6 +239,7 @@ typedef struct __attribute__((packed)) {
     uint32_t end_frequency;
     uint32_t mid_frequency;
     uint8_t num_channels;
+    Toggles crypto_enable;
     uint8_t     unused_padding;
     uint8_t     serial1Protocol:4,  // secondary serial protocol
                 serial1Protocol_unused:4;
@@ -276,6 +281,7 @@ public:
     const uint32_t GetEndFrequency() const { return m_config.end_frequency; }
     const uint32_t GetMidFrequency() const { return m_config.mid_frequency; }
     const uint8_t GetNumChannels() const { return m_config.num_channels; }
+    const Toggles GetCryptoEnable() const { return m_config.crypto_enable; }
 
 #if defined(PLATFORM_ESP8266)
     uint8_t  GetPowerOnCounter() const;
@@ -309,6 +315,7 @@ public:
     void SetEndFrequency(uint32_t end);
     void SetMidFrequency(uint32_t mid);
     void SetNumChannels(uint8_t num);
+    void SetCryptoEnable(Toggles toggle);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);

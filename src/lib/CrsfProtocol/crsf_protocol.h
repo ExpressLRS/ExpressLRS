@@ -78,6 +78,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_MAST_FORCE_SYNC = 0x31,
     CRSF_FRAMETYPE_TELEM_CHANGE = 0x33,
     CRSF_FRAMETYPE_HIGH_BAND_CHANGE = 0x36,
+    CRSF_FRAMETYPE_CRYPTO_ENABLE = 0x37,
     CRSF_FRAMETYPE_CIPHER_SHARE = 0x55,
 
     //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
@@ -418,6 +419,7 @@ typedef struct crsfPayloadLinkstatistics_s
     uint8_t num_channels;
     uint8_t uid[6];
     uint8_t bind_phrase[12];
+    Toggles crypto_enable;
 } PACKED crsfLinkStatistics_t;
 #else
 typedef struct crsfPayloadLinkstatistics_s
@@ -445,6 +447,7 @@ typedef struct crsfPayloadLinkstatistics_s
     int32_t lastTXnb;
     int32_t lastRXnb;
     uint8_t otaNonce;
+    Toggles crypto_enable;
 } PACKED crsfLinkStatistics_t;
 
 /**
@@ -461,8 +464,19 @@ typedef struct PACKED toggleTxCmd_s
     HighBands active_highband;
     uint8_t crc;
 } toggleTxCmd_t;
-
 #endif
+
+/**
+ * @brief Command used to enable and disable link encryption
+ */
+struct PACKED enableCryptoCmd_t
+{
+    uint8_t sync;
+    uint8_t size;
+    uint8_t frametype;
+    Toggles crypto_enable;
+    uint8_t crc = 0;
+};
 
 typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
 {
@@ -616,3 +630,9 @@ static inline uint32_t be32toh(uint32_t val)
 #endif
 }
 #endif
+
+/**
+ * @brief
+ * @return
+ */
+enableCryptoCmd_t *getCryptoCmdData();

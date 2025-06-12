@@ -31,6 +31,7 @@
 #define USBSerial Serial
 #endif
 
+extern bool updateCryptoStatus;
 #ifdef USE_ENCRYPTION
 #include <string.h>
 #include "encryption.h"
@@ -238,12 +239,15 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
 
 #ifdef USE_ENCRYPTION
-  decryptMsg(
-    Radio.RXdataBuffer,
-    Radio.RXdataBuffer,
-    OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
-    FHSSgetCurrIndex(),
-    OtaNonce - 1);
+  if(config.GetCryptoEnable() == ENABLE)
+  {
+    decryptMsg(
+      Radio.RXdataBuffer,
+      Radio.RXdataBuffer,
+      OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
+      FHSSgetCurrIndex(),
+      OtaNonce - 1);
+  }
 #endif
 
   if (!OtaValidatePacketCrc(otaPktPtr))
@@ -623,32 +627,35 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   OtaGeneratePacketCrc(&otaPkt);
 
 #ifdef USE_ENCRYPTION
-  if (otaPkt.std.type == PACKET_TYPE_SYNC)
+  if(config.GetCryptoEnable() == ENABLE)
   {
-    if (OtaIsFullRes)
+    if (otaPkt.std.type == PACKET_TYPE_SYNC)
     {
-      DBGLN("Not supported - leaving unencrypted!");
+      if (OtaIsFullRes)
+      {
+        DBGLN("Not supported - leaving unencrypted!");
+      }
+      else
+      {
+        // Encryption starts after the header on OtaNonce
+        // The structure is (by byte):
+        // 1) Type + CRC
+        // 2) FHSSgetCurrIndex()
+        // 3) OtaNonce
+        // 4) Different settings
+        // 5) UID byte
+        // 6) UID byte
+        // 7) UID byte
+        // 8) CRC
+        encryptMsg(3 + (uint8_t*)&otaPkt, 3 + (uint8_t*)&otaPkt, 5,
+        otaPkt.std.sync.fhssIndex, otaPkt.std.sync.nonce, otaPkt.std.crcLow);
+      }
     }
     else
     {
-      // Encryption starts after the header on OtaNonce
-      // The structure is (by byte):
-      // 1) Type + CRC
-      // 2) FHSSgetCurrIndex()
-      // 3) OtaNonce
-      // 4) Different settings
-      // 5) UID byte
-      // 6) UID byte
-      // 7) UID byte
-      // 8) CRC
-      encryptMsg(3 + (uint8_t*)&otaPkt, 3 + (uint8_t*)&otaPkt, 5,
-                 otaPkt.std.sync.fhssIndex, otaPkt.std.sync.nonce, otaPkt.std.crcLow);
+      encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
+      FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
     }
-  }
-  else
-  {
-    encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE,
-               FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
   }
 #endif
 
@@ -879,6 +886,7 @@ uint8_t tempBindPhrase[16]={0};
 static void ConfigChangeCommit()
 {
   fhss_config_t N_FHSSconfig = *getFHSSconfig();
+  enableCryptoCmd_t crypto_enable_cmd = *getCryptoCmdData();
 
   // Adjust the air rate based on teh current baud rate
   auto index = adjustPacketRateForBaud(config.GetRate());
@@ -903,6 +911,12 @@ static void ConfigChangeCommit()
     CRSF::LinkStatistics.num_channels = numChannels;
   }
 
+  if(updateCryptoStatus)
+  {
+    config.SetCryptoEnable(crypto_enable_cmd.crypto_enable);
+    CRSF::LinkStatistics.crypto_enable = crypto_enable_cmd.crypto_enable;
+  }
+
   // Write the uncommitted eeprom values (may block for a while)
   config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
@@ -924,6 +938,7 @@ static void ConfigChangeCommit()
   }
 
   N_FHSSconfig.is_band_changing = false;
+  updateCryptoStatus = false;
   bigChange = false;
 }
 
@@ -1422,6 +1437,7 @@ bool setupHardwareFromOptions()
 //Changed this to match how TX stores UID
 static void setupBindingFromConfig()
 {
+    enableCryptoCmd_t *crypto_config = getCryptoCmdData();
     version_info_ts tx_version = {ELRS_VERSION_MAJOR, ELRS_VERSION_MINOR, ELRS_VERSION_PATCH, ELRS_VERSION_RC};
     CRSF::LinkStatistics.tx_fw_ver = tx_version.version;
     // VolatileBind's only function is to prevent loading the stored UID into RAM
@@ -1475,6 +1491,17 @@ static void setupBindingFromConfig()
       memcpy(bindPhrase, firmwareOptions.bind_phrase, PHRASE_LEN);
       memcpy(CRSF::LinkStatistics.bind_phrase, firmwareOptions.bind_phrase, PHRASE_LEN);
       config.SetBindPhrase(bindPhrase);
+    }
+
+    if(config.GetCryptoEnable() == 0)
+    {
+      config.SetCryptoEnable(DISABLE);
+      CRSF::LinkStatistics.crypto_enable = config.GetCryptoEnable();
+    }
+    else
+    {
+      crypto_config->crypto_enable = config.GetCryptoEnable();
+      CRSF::LinkStatistics.crypto_enable = config.GetCryptoEnable();
     }
 
     //By default we should be on 1_8, only valid options are 1_8 and NO_TLM
@@ -1601,7 +1628,7 @@ void setup()
 #endif
 
 #ifdef USE_ENCRYPTION
-  initCrypto();
+    initCrypto();
 #endif
 
   devicesStart();

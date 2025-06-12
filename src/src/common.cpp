@@ -1,6 +1,7 @@
 #include "common.h"
 #include "OTA.h"
 #include "FHSS.h"
+#include "crsf_protocol.h"
 
 #ifdef USE_ENCRYPTION
 #include <string.h>
@@ -223,8 +224,25 @@ bool ICACHE_RAM_ATTR isDualRadio()
     return GPIO_PIN_NSS_2 != UNDEF_PIN;
 }
 
+static enableCryptoCmd_t enable_crypto_cmd;
+bool updateCryptoStatus = false;
+
+enableCryptoCmd_t *getCryptoCmdData()
+{
+    return &enable_crypto_cmd;
+}
+
+void setCryptoEnable(uint8_t *inBuffer)
+{
+    memcpy(&enable_crypto_cmd, inBuffer, sizeof(enable_crypto_cmd));
+    updateCryptoStatus = true;
+    // Set config.setCryptoEnable(crypto_data.crypto_enable);
+}
+
 #ifdef USE_ENCRYPTION
 extern ChaCha cipher;
+
+
 
 // TODO: There has to be a better way of passing the params.
 // They're all from the same struct but don't always get passed in from the otaPkt

@@ -572,7 +572,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     OtaGeneratePacketCrc(&otaPkt);
 
 #ifdef USE_ENCRYPTION
-    encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
+    if(config.GetCryptoEnable() == ENABLE)
+    {
+        encryptMsg((uint8_t*)&otaPkt, (uint8_t*)&otaPkt, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce, otaPkt.std.crcLow);
+    }
 #endif
 
     SX12XX_Radio_Number_t transmittingRadio;
@@ -1143,20 +1146,23 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
 
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
 #ifdef USE_ENCRYPTION
-    if (otaPktPtr->std.type == PACKET_TYPE_SYNC)
+    if(config.GetCryptoEnable() == ENABLE)
     {
-        if (OtaIsFullRes)
+        if (otaPktPtr->std.type == PACKET_TYPE_SYNC)
         {
-            DBGLN("Not supported - leaving unencrypted!");
+            if (OtaIsFullRes)
+            {
+                DBGLN("Not supported - leaving unencrypted!");
+            }
+            else
+            {
+                decryptMsg(3 + Radio.RXdataBuffer, 3 + Radio.RXdataBuffer, 5, otaPktPtr->std.sync.fhssIndex, otaPktPtr->std.sync.nonce);
+            }
         }
         else
         {
-            decryptMsg(3 + Radio.RXdataBuffer, 3 + Radio.RXdataBuffer, 5, otaPktPtr->std.sync.fhssIndex, otaPktPtr->std.sync.nonce);
+            decryptMsg(Radio.RXdataBuffer, Radio.RXdataBuffer, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce);
         }
-    }
-    else
-    {
-        decryptMsg(Radio.RXdataBuffer, Radio.RXdataBuffer, OtaIsFullRes ? OTA8_PACKET_SIZE : OTA4_PACKET_SIZE, FHSSgetCurrIndex(), OtaNonce);
     }
 #endif
 
@@ -1692,8 +1698,10 @@ void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
     bool anyChange = false;
     uint32_t tempStartFrequency, tempMidFrequency, tempEndFrequency;
     uint8_t tempNumChannels;
+    Toggles tempCryptoEnable;
     //DBGLN("Binding over Serial UART called successfully");
     bool uidChange = false;
+
     for (unsigned i = 0; i < 6; i++)
     {
         if(UID[i] != newConfigPacket[i])
@@ -1730,6 +1738,14 @@ void ICACHE_RAM_ATTR onRXSerialBind(uint8_t* newConfigPacket)
         config.SetNumChannels(tempNumChannels);
         anyChange=true;
     }
+
+    tempCryptoEnable = static_cast<Toggles>(newConfigPacket[13]);
+    if(tempCryptoEnable != config.GetCryptoEnable())
+    {
+        config.SetCryptoEnable(tempCryptoEnable);
+        anyChange = true;
+    }
+
     if(anyChange)
     {
         config.Commit();
@@ -1806,6 +1822,17 @@ static void setupBindingFromConfig()
       memcpy(UID,config.GetUID(),UID_LEN);
       memcpy(CRSF::LinkStatistics.uid, UID, UID_LEN);
     }
+
+    if(config.GetCryptoEnable() == 0)
+    {
+        config.SetCryptoEnable(DISABLE);
+        CRSF::LinkStatistics.crypto_enable = config.GetCryptoEnable();
+    }
+    else
+    {
+        CRSF::LinkStatistics.crypto_enable = config.GetCryptoEnable();
+    }
+
     // if(config.GetBindPhrase()[0] != 0) {
     //   memcpy(bindPhrase,config.GetBindPhrase(),PHRASE_LEN);
     //   memcpy(CRSF::LinkStatistics.bind_phrase, bindPhrase, PHRASE_LEN);

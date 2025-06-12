@@ -5,6 +5,7 @@
 #include "OTA.h"
 #include "helpers.h"
 #include "logging.h"
+#include "crsf_protocol.h"
 
 #if defined(TARGET_TX)
 
@@ -399,6 +400,12 @@ void TxConfig::SetMidFrequency(uint32_t mid)
 void TxConfig::SetNumChannels(uint8_t num)
 {
     m_config.num_channels = num;
+    m_modified |= MAIN_CHANGED;
+}
+
+void TxConfig::SetCryptoEnable(Toggles toggle)
+{
+    m_config.crypto_enable = toggle;
     m_modified |= MAIN_CHANGED;
 }
 
@@ -1067,6 +1074,12 @@ void RxConfig::SetMidFrequency(uint32_t mid)
 void RxConfig::SetNumChannels(uint8_t num)
 {
     m_config.num_channels = num;
+    m_modified = true;
+}
+
+void RxConfig::SetCryptoEnable(Toggles toggle)
+{
+    m_config.crypto_enable = toggle;
     m_modified = true;
 }
 

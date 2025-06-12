@@ -12,10 +12,10 @@
 
 #include <stdint.h>
 
-#define ELRS_VERSION_MAJOR 4
-#define ELRS_VERSION_MINOR 2
-#define ELRS_VERSION_PATCH 2
-#define ELRS_VERSION_RC 2
+#define ELRS_VERSION_MAJOR 5
+#define ELRS_VERSION_MINOR 0
+#define ELRS_VERSION_PATCH 0
+#define ELRS_VERSION_RC 1
 
 typedef union {
     struct {

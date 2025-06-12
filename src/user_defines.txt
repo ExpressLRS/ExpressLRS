@@ -20,7 +20,7 @@
 #-DMY_BINDING_PHRASE_HIGH="hightest"
 
 ### Enable Encryption ###
-#-DUSE_ENCRYPTION
+-DUSE_ENCRYPTION
 
 ### REGULATORY DOMAIN: ###
 

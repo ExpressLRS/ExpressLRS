@@ -58,6 +58,12 @@ void ICACHE_RAM_ATTR decryptMsg(uint8_t *output, uint8_t *input, size_t length, 
 bool initCrypto();
 
 /**
+ * @brief
+ * @param[in] inBuffer
+ */
+void setCryptoEnable(uint8_t *inBuffer);
+
+/**
  * @brief This function takes a hex string and converts it to an arr of hex vals.
  * @param[out] out pointer to output array.
  * @param[in] in pointer to input char array.

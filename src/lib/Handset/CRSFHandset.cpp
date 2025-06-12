@@ -1,5 +1,6 @@
 #include "CRSF.h"
 #include "CRSFHandset.h"
+#include "encryption.h"
 #include "FIFO.h"
 #include "logging.h"
 #include "helpers.h"
@@ -401,6 +402,12 @@ bool CRSFHandset::ProcessPacket()
         packetReceived = true;
         updateHighBandChannel(&SerialInBuffer[0]);
         onBandChange(); // TODO: This function should not need to be called since other functions set the correct flag already.
+    }
+    else if(packetType == CRSF_FRAMETYPE_CRYPTO_ENABLE)
+    {
+        packetReceived = true;
+        setCryptoEnable(&SerialInBuffer[0]);
+        onBandChange();
     }
 
     // check for all extended frames that are a broadcast or a message to the FC
