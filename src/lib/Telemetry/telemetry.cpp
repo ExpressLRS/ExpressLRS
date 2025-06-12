@@ -269,8 +269,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-        {
+        if (isValidCrsfAddress(extHeader->orig_addr))        {
 #if defined(USE_MSP_WIFI)
             // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
             if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
