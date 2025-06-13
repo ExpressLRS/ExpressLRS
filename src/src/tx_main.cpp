@@ -700,13 +700,24 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 }
 
+void ICACHE_RAM_ATTR nonceAdvance()
+{
+  OtaNonce++;
+  if ((OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+  {
+    ++FHSSptr;
+  }
+}
 
 void ICACHE_RAM_ATTR otanonceMasterTimerSyncCallback()
 {
   #ifdef SLAVE_TX
-  if( (HAL_GetTick() - otanonce_master_last_synched) <= MILLS_3){
-    OtaNonce = 0;
-  }
+  // hwTimer::stop();
+  // while( OtaNonce != 0)
+  // {
+  //   nonceAdvance();
+  // }
+  
   #endif
 }
 
@@ -718,22 +729,18 @@ void ICACHE_RAM_ATTR otanonceMasterTimerCallback(){
     return;
   }
 
-  otanonce_master_last_synched = HAL_GetTick(); // faster.
-  timerCallback();
   hwTimer::stop();
-  otanonce_master_timer = true;
+  while( OtaNonce != 0)
+  {
+    nonceAdvance();
+  }
+    hwTimer::isTick = false;
+     hwTimer::resume();
 
   #endif
 }
 
-void ICACHE_RAM_ATTR nonceAdvance()
-{
-  OtaNonce++;
-  if ((OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
-  {
-    ++FHSSptr;
-  }
-}
+
 
 
 /*
@@ -744,10 +751,13 @@ void ICACHE_RAM_ATTR timerCallback()
 {
     #ifndef SLAVE_TX
 
+    
+    if( OtaNonce == 0)
+    {
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
+      digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
+    }
     otanonce_master_last_synched = HAL_GetTick(); // faster.
-    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, HIGH);
-    digitalWrite(GPIO_PIN_SLAVE_INTERRUPT, LOW);
-
     #endif
 
 lastTimerCallbackTime = micros();
