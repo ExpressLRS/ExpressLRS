@@ -24,6 +24,9 @@
 #endif
 #define ICACHE_RAM_ATTR //nothing//
 #else
+#if defined(PLATFORM_ESP32)
+#include <soc/uart_pins.h>
+#endif
 #undef ICACHE_RAM_ATTR //fix to allow both esp32 and esp8266 to use ICACHE_RAM_ATTR for mapping to IRAM
 #define ICACHE_RAM_ATTR IRAM_ATTR
 #endif
