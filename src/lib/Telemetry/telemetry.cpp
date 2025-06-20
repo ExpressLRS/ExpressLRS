@@ -1,22 +1,86 @@
-#include <cstdint>
-#include <cstring>
 #include "telemetry.h"
-#include "logging.h"
+
+#include <functional>
+
+#if CRSF_RX_MODULE
 
 #if defined(TARGET_RX) // enable MSP2WIFI for RX only at the moment
+#include "devMSPVTX.h"
 #include "tcpsocket.h"
+
 extern TCPSOCKET wifi2tcp;
 #endif
 
-#if defined(TARGET_RX) || defined(UNIT_TEST)
-#include "devMSPVTX.h"
+#include "helpers.h"
 
-#if defined(UNIT_TEST)
-#include <iostream>
-using namespace std;
-#endif
+// Size byte in FIFO contains bit to indicate if the frame is deleted
+#define IS_DEL(size) (size & bit(7))
+#define SET_DEL(size) (size | bit(7))
+#define SIZE(size) (size & ~bit(7))
 
-#include "crsf2msp.h"
+enum action_e
+{
+    ACTION_NEXT,       // continue searching queue for other messages
+    ACTION_IGNORE,     // the message matches; ignore the new one
+    ACTION_OVERWRITE,  // overwrite the queued message with the new one
+    ACTION_APPEND      // append the message to the end of the queue
+};
+
+typedef std::function<action_e(const crsf_header_t *newMessage, const TelemetryFifo &payloads, uint16_t queuePosition)> comparator_t;
+
+// For broadcast messages that have a 'source_id' as the first byte of the payload.
+static action_e sourceId(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
+{
+    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == newMessage->payload[0])
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
+// Comparator for Ardupilot Status Text message
+static action_e statusText(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
+{
+    if (payloads[queuePosition + CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT &&
+        newMessage->payload[0] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
+static action_e extended_dest_origin(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
+{
+    if (payloads[queuePosition + 3] == ((crsf_ext_header_t *)newMessage)->dest_addr &&
+        payloads[queuePosition + 4] == ((crsf_ext_header_t *)newMessage)->orig_addr)
+    {
+        return ACTION_OVERWRITE;
+    }
+    return ACTION_NEXT;
+}
+
+static action_e comp_OVERWRITE(const crsf_header_t *newMessage, const TelemetryFifo &payloads, const uint16_t queuePosition)
+{
+    return ACTION_OVERWRITE;
+}
+
+static struct
+{
+    crsf_frame_type_e type;
+    comparator_t comparator;
+} comparators[] = {
+    {CRSF_FRAMETYPE_RPM, sourceId},
+    {CRSF_FRAMETYPE_TEMP, sourceId},
+    {CRSF_FRAMETYPE_CELLS, sourceId},
+    {CRSF_FRAMETYPE_ARDUPILOT_RESP, statusText},
+    {CRSF_FRAMETYPE_DEVICE_INFO, extended_dest_origin},
+    {CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, comp_OVERWRITE },
+};
+
+inline bool isPrioritised(const crsf_frame_type_e frameType)
+{
+    return frameType >= CRSF_FRAMETYPE_DEVICE_PING && frameType <= CRSF_FRAMETYPE_PARAMETER_WRITE;
+}
 
 Telemetry::Telemetry()
 {
@@ -78,87 +142,12 @@ void Telemetry::CheckCrsfBaroSensorDetected()
     }
 }
 
-PAYLOAD_DATA(GPS, BATTERY_SENSOR, ATTITUDE, DEVICE_INFO, FLIGHT_MODE, VARIO, BARO_ALTITUDE);
-
-bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t **payloadData)
-{
-    uint8_t checks = 0;
-    uint8_t oldPayloadIndex = currentPayloadIndex;
-    uint8_t realLength = 0;
-
-    if (payloadTypes[currentPayloadIndex].locked)
-    {
-        payloadTypes[currentPayloadIndex].locked = false;
-        payloadTypes[currentPayloadIndex].updated = false;
-    }
-
-    do
-    {
-        currentPayloadIndex = (currentPayloadIndex + 1) % payloadTypesCount;
-        checks++;
-    } while(!payloadTypes[currentPayloadIndex].updated && checks < payloadTypesCount);
-
-    if (payloadTypes[currentPayloadIndex].updated)
-    {
-        payloadTypes[currentPayloadIndex].locked = true;
-
-        realLength = CRSF_FRAME_SIZE(payloadTypes[currentPayloadIndex].data[CRSF_TELEMETRY_LENGTH_INDEX]);
-        if (realLength > 0)
-        {
-            *nextPayloadSize = realLength;
-            *payloadData = payloadTypes[currentPayloadIndex].data;
-            return true;
-        }
-    }
-
-    currentPayloadIndex = oldPayloadIndex;
-    *nextPayloadSize = 0;
-    *payloadData = 0;
-    return false;
-}
-
-uint8_t Telemetry::UpdatedPayloadCount()
-{
-    uint8_t count = 0;
-    for (int8_t i = 0; i < payloadTypesCount; i++)
-    {
-        if (payloadTypes[i].updated)
-        {
-            count++;
-        }
-    }
-
-    return count;
-}
-
-uint8_t Telemetry::ReceivedPackagesCount()
-{
-    return receivedPackages;
-}
-
 void Telemetry::ResetState()
 {
     telemetry_state = TELEMETRY_IDLE;
     currentTelemetryByte = 0;
-    currentPayloadIndex = 0;
-    twoslotLastQueueIndex = 0;
-    receivedPackages = 0;
-
-    uint8_t offset = 0;
-
-    for (int8_t i = 0; i < payloadTypesCount; i++)
-    {
-        payloadTypes[i].locked = false;
-        payloadTypes[i].updated = false;
-        payloadTypes[i].data = PayloadData + offset;
-        offset += payloadTypes[i].size;
-
-        #if defined(UNIT_TEST)
-        if (offset > sizeof(PayloadData)) {
-            cout << "data not large enough\n";
-        }
-        #endif
-    }
+    prioritizedCount = 0;
+    messagePayloads.flush();
 }
 
 bool Telemetry::RXhandleUARTin(uint8_t data)
@@ -210,16 +199,8 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
                     CheckCrsfBatterySensorDetected();
                     CheckCrsfBaroSensorDetected();
 
-                    receivedPackages++;
                     return true;
                 }
-                #if defined(UNIT_TEST)
-                if (data != crc)
-                {
-                    cout << "invalid " << (int)crc  << '\n';
-                }
-                #endif
-
                 return false;
             }
 
@@ -275,106 +256,187 @@ bool Telemetry::processInternalTelemetryPackage(uint8_t *package)
     return false;
 }
 
-bool Telemetry::AppendTelemetryPackage(uint8_t *package)
+void Telemetry::AppendTelemetryPackage(uint8_t *package)
 {
-    if (processInternalTelemetryPackage(package))
-        return true;
-
     const crsf_header_t *header = (crsf_header_t *) package;
-    uint8_t targetIndex = 0;
-    bool targetFound = false;
+    if (header->type == CRSF_FRAMETYPE_HEARTBEAT || processInternalTelemetryPackage(package))
+    {
+        return;
+    }
 
+#if !defined(UNIT_TEST)
     if (header->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
         const crsf_ext_header_t *extHeader = (crsf_ext_header_t *) package;
-
-        if (header->type == CRSF_FRAMETYPE_ARDUPILOT_RESP)
+        if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
         {
-            // reserve last slot for adrupilot custom frame with the sub type status text: this is needed to make sure the important status messages are not lost
-            if (package[CRSF_TELEMETRY_TYPE_INDEX + 1] == CRSF_AP_CUSTOM_TELEM_STATUS_TEXT)
-            {
-                targetIndex = payloadTypesCount - 1;
-            }
-            else
-            {
-                targetIndex = payloadTypesCount - 2;
-            }
-            targetFound = true;
-        }
-        else if (extHeader->orig_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-        {
-            targetIndex = payloadTypesCount - 2;
-            targetFound = true;
-
-#if defined(TARGET_RX)
             // this probably needs refactoring in the future, I think we should have this telemetry class inside the crsf module
-            if (wifi2tcp.hasClient() && (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+            if (header->type == CRSF_FRAMETYPE_MSP_RESP || header->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
             {
-                DBGLN("Got MSP frame, forwarding to client, len: %d", currentTelemetryByte);
-                crsf2msp.parse(package);
+                wifi2tcp.crsfMspIn(package);
             }
-            else // if no TCP client we just want to forward MSP over the link
-#endif
-            {
 #if defined(PLATFORM_ESP32)
-                if (header->type == CRSF_FRAMETYPE_MSP_RESP)
-                {
-                    mspVtxProcessPacket(package);
-                }
-#endif
-                // This code is emulating a two slot FIFO with head dropping
-                if (currentPayloadIndex == payloadTypesCount - 2 && payloadTypes[currentPayloadIndex].locked)
-                {
-                    // Sending the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
-                }
-                else if (currentPayloadIndex == payloadTypesCount - 1 && payloadTypes[currentPayloadIndex].locked)
-                {
-                    // Sending the second slot, use the first
-                    targetIndex = payloadTypesCount - 2;
-                }
-                else if (twoslotLastQueueIndex == payloadTypesCount - 2 && payloadTypes[twoslotLastQueueIndex].updated)
-                {
-                    // Previous frame saved to the first slot, use the second
-                    targetIndex = payloadTypesCount - 1;
-                }
-                twoslotLastQueueIndex = targetIndex;
+            else if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+            {
+                mspVtxProcessPacket(package);
             }
-        }
-        else
-        {
-            targetIndex = payloadTypesCount - 1;
-            targetFound = true;
+#endif
         }
     }
-    else
+#endif
+
+    const uint8_t messageSize = CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]);
+    auto action = ACTION_APPEND;
+    comparator_t comparator = nullptr;
+
+    // Find the comparator for this message type (if any)
+    for (size_t i = 0 ; i < ARRAY_SIZE(comparators) ; i++)
     {
-        for (int8_t i = 0; i < payloadTypesCount - 2; i++)
+        if (comparators[i].type == header->type)
         {
-            if (header->type == payloadTypes[i].type)
+            comparator = comparators[i].comparator;
+            break;
+        }
+    }
+
+#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
+    // If we have a comparator or this is a 'broadcast' message we will look for a matching message in the queue and default to overwrite if we find one
+    uint16_t overwritePosition = 0;
+    if (comparator != nullptr || header->type < CRSF_FRAMETYPE_DEVICE_PING)
+    {
+        for (uint16_t i = 0; i < messagePayloads.size();)
+        {
+            const auto size = messagePayloads[i];
+            // If the message at this point in the queue is not deleted, and it matches this comparator, then we check it
+            if (!IS_DEL(size) && messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX] == header->type)
             {
-                if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) <= payloadTypes[i].size)
+                const auto whatToDo = comparator == nullptr ? ACTION_OVERWRITE : comparator(header, messagePayloads, i + 1);
+                if (whatToDo != ACTION_NEXT)
                 {
-                    targetIndex = i;
-                    targetFound = true;
+                    overwritePosition = i;
+                    action = whatToDo;
+                    break;
                 }
-                #if defined(UNIT_TEST)
-                else if (CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) > payloadTypes[i].size)
+            }
+            i += 1 + SIZE(size);
+        }
+    }
+    if (isPrioritised(header->type))
+    {
+        prioritizedCount++;
+    }
+
+    switch (action)
+    {
+    case ACTION_IGNORE:
+        break;
+    case ACTION_OVERWRITE:
+        // Check again because our initial check was performed without locking
+        if (!IS_DEL(messagePayloads[overwritePosition]))
+        {
+            if (messagePayloads[overwritePosition] >= messageSize)
+            {
+                for (uint16_t i = 0 ; i<messageSize; i++)
                 {
-                    cout << "buffer not large enough for type " << (int)payloadTypes[i].type  << " with size " << (int)payloadTypes[i].size << " would need " << CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]) << '\n';
+                    messagePayloads.set(overwritePosition + i + 1, package[i]);
                 }
-                #endif
                 break;
             }
+            // Mark the current queued entry as deleted
+            messagePayloads.set(overwritePosition, SET_DEL(messagePayloads[overwritePosition]));
         }
+        // fallthrough to APPEND
+    default:
+        // If there's NOT enough room on the FIFO for this message, pop until there is
+        while (!messagePayloads.available(messageSize + 1))
+        {
+            const uint8_t sz = SIZE(messagePayloads.pop());
+            messagePayloads.skip(sz);
+        }
+        messagePayloads.push(messageSize);
+        messagePayloads.pushBytes(package, messageSize);
+        break;
     }
-
-    if (targetFound && !payloadTypes[targetIndex].locked)
-    {
-        memcpy(payloadTypes[targetIndex].data, package, CRSF_FRAME_SIZE(package[CRSF_TELEMETRY_LENGTH_INDEX]));
-        payloadTypes[targetIndex].updated = true;
-    }
-
-    return targetFound;
 }
+
+bool Telemetry::GetNextPayload(uint8_t* nextPayloadSize, uint8_t *currentPayload)
+{
+#if defined(PLATFORM_ESP32) && SOC_CPU_CORES_NUM > 1
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
+    if (prioritizedCount)
+    {
+        // handle prioritised messages first
+        for (uint16_t i = 0; i < messagePayloads.size();)
+        {
+            const auto size = messagePayloads[i];
+            // If the message at this point in the queue is not deleted, and it's a SETTINGS_ENTRY then we're going to return it
+            if (isPrioritised((crsf_frame_type_e)messagePayloads[i + 1 + CRSF_TELEMETRY_TYPE_INDEX]))
+            {
+                if (!IS_DEL(size))
+                {
+                    prioritizedCount--;
+                    // If this is the first item in the queue, use pop() instead to free the space
+                    if (i == 0)
+                    {
+                        messagePayloads.pop();
+                        messagePayloads.popBytes(currentPayload, size);
+                    }
+                    else // Copy the frame to the current payload
+                    {
+                        for (uint16_t pos = 0 ; pos < size ; pos++)
+                        {
+                            currentPayload[pos] = messagePayloads[i + 1 + pos];
+                        }
+                        // Mark the current queued entry as deleted
+                        messagePayloads.set(i, SET_DEL(size));
+                    }
+                    // set the pointers to the payload
+                    *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
+                    return true;
+                }
+            }
+            i += 1 + SIZE(size);
+        }
+        // Didn't find one, so we'll reset the counter
+        prioritizedCount = 0;
+    }
+
+    // return the 'head' of the queue
+    while (messagePayloads.size() > 0)
+    {
+        const auto size = messagePayloads.pop();
+        if (IS_DEL(size))
+        {
+            // This message is deleted, skip it
+            messagePayloads.skip(SIZE(size));
+            continue;
+        }
+        messagePayloads.popBytes(currentPayload, size);
+        *nextPayloadSize = CRSF_FRAME_SIZE(currentPayload[CRSF_TELEMETRY_LENGTH_INDEX]);
+        return true;
+    }
+
+    return false;
+}
+
+// This method is only used in unit testing!
+int Telemetry::UpdatedPayloadCount()
+{
+    int retVal = 0;
+    unsigned pos = 0;
+    while (pos < messagePayloads.size())
+    {
+        uint8_t sz = messagePayloads[pos];
+        if (!IS_DEL(sz))
+        {
+            retVal++;
+        }
+        pos += 1 + SIZE(sz);
+    }
+    return retVal;
+}
+
 #endif

@@ -1150,6 +1150,10 @@ RxConfig::SetDefaults(bool commit)
             {
                 mode = somSDA;
             }
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == U0RXD_GPIO_NUM || GPIO_PIN_PWM_OUTPUTS[ch] == U0TXD_GPIO_NUM)
+            {
+                mode = somSerial;
+            }
         }
         SetPwmChannel(ch, 512, ch, false, mode, false);
     }

@@ -3,10 +3,9 @@
 #include "OTA.h"
 #include "device.h"
 #include "telemetry.h"
-#include "msp2crsf.h"
+#include "tcpsocket.h"
 
-extern MSP2CROSSFIRE msp2crsf;
-
+extern TCPSOCKET wifi2tcp;
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
 extern void UpdateModelMatch(uint8_t model);
@@ -14,13 +13,11 @@ extern void UpdateModelMatch(uint8_t model);
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
     uint32_t bytesWritten = 0;
-    while (msp2crsf.FIFOout.size() > msp2crsf.FIFOout.peek() && (bytesWritten + msp2crsf.FIFOout.peek()) < maxBytesToSend)
+    uint8_t OutPktLen;
+    while ((OutPktLen = wifi2tcp.crsfCrsfOutAvailable(maxBytesToSend - bytesWritten)))
     {
-        msp2crsf.FIFOout.lock();
-        uint8_t OutPktLen = msp2crsf.FIFOout.pop();
         uint8_t OutData[OutPktLen];
-        msp2crsf.FIFOout.popBytes(OutData, OutPktLen);
-        msp2crsf.FIFOout.unlock();
+        wifi2tcp.crsfCrsfOutPop(OutData);
         noInterrupts();
         this->_outputPort->write(OutData, OutPktLen); // write the packet out
         interrupts();

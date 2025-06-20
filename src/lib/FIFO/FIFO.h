@@ -300,4 +300,42 @@ public:
         }
         return true;
     }
+
+    /**
+     * @brief Access an element in the FIFO at the specified index without removing it.
+     * The index is calculated relative to the current `head` position.
+     *
+     * @param index The zero-based index of the element to access within the FIFO.
+     * @return The value of the element at the specified index in the FIFO.
+     */
+    ICACHE_RAM_ATTR uint8_t operator [](const uint16_t index) const
+    {
+        return buffer[(head + index) % FIFO_SIZE];
+    }
+
+    /**
+     * @brief Sets a value at a specified index in the FIFO buffer.
+     * The index is calculated relative to the current `head` position.
+     *
+     * @param index The zero-based index of the element to access within the FIFO.
+     * @param value The value to be stored in the FIFO buffer at the specified index.
+     */
+    ICACHE_RAM_ATTR void set(const uint16_t index, const uint8_t value)
+    {
+        buffer[(head + index) % FIFO_SIZE] = value;
+    }
+
+    /**
+     * @brief Skip a specified number of elements in the FIFO, adjusting the head index.
+     * This method reduces the number of elements in the FIFO and moves the head
+     * pointer forward by the given length, wrapping around if necessary.
+     *
+     * @param len The number of elements to skip. The actual number skipped will not exceed
+     * the current number of elements in the FIFO.
+     */
+    ICACHE_RAM_ATTR void skip(const uint16_t len)
+    {
+        numElements -= std::min((uint32_t)len, numElements);
+        head = (head + len) % FIFO_SIZE;
+    }
 };
