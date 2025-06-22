@@ -9,6 +9,7 @@ TCPSOCKET::TCPSOCKET(const uint32_t port)
 {
     instance = this;
     TCPport = port;
+    TCPserver = NULL;
 }
 
 void TCPSOCKET::begin()
@@ -143,6 +144,46 @@ void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
     client->onError(handleError, NULL);
     client->onDisconnect(handleDisconnect, NULL);
     client->onTimeout(handleTimeOut, NULL);
+}
+
+void TCPSOCKET::stop()
+{
+    DBGLN("Stopping TCP socket service on port %d", TCPport);
+    
+    // Disconnect any active client
+    if (TCPclient != NULL)
+    {
+        DBGLN("Closing active TCP client connection");
+        // The client will be automatically cleaned up by the handleDisconnect callback
+        // when the connection is closed, which will set TCPclient to NULL and flush buffers
+        TCPclient->close(true); // force close
+        TCPclient = NULL;        // ensure it's cleared immediately
+    }
+    
+    // Clear any remaining data in buffers
+    FIFOin.flush();
+    FIFOout.flush();
+    
+    // Stop and cleanup the TCP server
+    if (TCPserver != NULL)
+    {
+        DBGLN("Stopping TCP server");
+        TCPserver->end();   // Stop accepting new connections
+        delete TCPserver;   // Clean up server instance
+        TCPserver = NULL;   // Ensure pointer is cleared
+    }
+    
+    DBGLN("TCP socket service stopped");
+}
+
+bool TCPSOCKET::isValid()
+{
+    if (TCPserver == NULL)
+    {
+        return false;
+    }
+    
+    return true;
 }
 
 #endif

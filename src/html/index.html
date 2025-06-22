@@ -300,6 +300,52 @@
 								<label for="sbus-failsafe">SBUS Failsafe</label>
 							</div>
 						</div>
+						<div id="wifi-bridge-status" style="display: none;">
+							<h2>WiFi Bridge Status</h2>
+							<div class="mui-panel" style="background-color: #f5f5f5; padding: 15px; margin: 10px 0;">
+								<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+									<span><strong>Active Bridge:</strong></span>
+									<span id="active-bridge-type" class="badge">-</span>
+								</div>
+								<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+									<span><strong>Port:</strong></span>
+									<span id="bridge-port">-</span>
+								</div>
+								<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+									<span><strong>Connection:</strong></span>
+									<span id="bridge-connection" class="badge">-</span>
+								</div>
+								<div id="mavlink-details" style="display: none;">
+									<hr style="margin: 15px 0;">
+									<h3>MAVLink Configuration</h3>
+									<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+										<span><strong>Source System ID:</strong></span>
+										<span id="mavlink-source-id">-</span>
+									</div>
+									<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+										<span><strong>Target System ID:</strong></span>
+										<span id="mavlink-target-id">-</span>
+									</div>
+									<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+										<span><strong>Buffer Usage:</strong></span>
+										<span id="mavlink-buffer-usage">-</span>
+									</div>
+									<div style="font-size: 0.8em; margin-top: 10px;">
+										<strong>Connection Instructions:</strong><br/>
+										• Connect Mission Planner to: <code>TCP://&lt;receiver-ip&gt;:5760</code><br/>
+										• Connect QGroundControl to: <code>&lt;receiver-ip&gt;:5760</code><br/>
+										• Ensure MAVLink protocol is selected above
+									</div>
+								</div>
+								<div id="msp-details" style="display: none;">
+									<div style="font-size: 0.8em; margin-top: 10px;">
+										<strong>Connection Instructions:</strong><br/>
+										• Connect Betaflight Configurator to: <code>&lt;receiver-ip&gt;:5761</code><br/>
+										• Use "Manual port" option in configurator
+									</div>
+								</div>
+							</div>
+						</div>
 
 						<h2>Model Match</h2>
 						Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'

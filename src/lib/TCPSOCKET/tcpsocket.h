@@ -35,6 +35,8 @@ private:
 public:
     TCPSOCKET(const uint32_t port);
     void begin();
+    void stop();
+    bool isValid();
     void handle();
     bool hasClient();
     uint16_t bytesReady(); // has x bytes in the input buffer ready

@@ -386,4 +386,20 @@ body, input, select, textarea {
 	border-radius: 5px;
   }
 
-  @@include("mui.css")
+  .mavlink-badge {
+	background-color: #4CAF50 !important;
+  }
+
+  .msp-badge {
+	background-color: #FF9800 !important;
+  }
+
+  .connected-badge {
+	background-color: #4CAF50 !important;
+  }
+
+  .disconnected-badge {
+	background-color: #F44336 !important;
+  }
+
+@@include("mui.css")
