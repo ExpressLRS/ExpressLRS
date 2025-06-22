@@ -81,9 +81,11 @@ static IPAddress ipAddress;
 #if defined(TARGET_RX)
 #include "crsf2msp.h"
 #include "msp2crsf.h"
+#include "SerialMavlink.h"
 
 #include "tcpsocket.h"
 TCPSOCKET wifi2tcp(5761); //port 5761 as used by BF configurator
+TCPSOCKET mavlink2tcp(5760); //port 5760 as standard MAVLink GCS port
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -101,6 +103,157 @@ static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
+
+// Protocol detection helpers for MAVLink2WiFi
+#if defined(TARGET_RX)
+static bool shouldUseMavlink2Wifi() {
+  return config.GetSerialProtocol() == PROTOCOL_MAVLINK;
+}
+
+// Protocol switching cleanup and safety functions
+static void cleanupMAVLinkBuffers() {
+  mavlinkInputBuffer.flush();
+  mavlinkOutputBuffer.flush();
+  DBGLN("MAVLink buffers cleared");
+}
+
+static void cleanupMSPBuffers() {
+  // Clear MSP FIFOs if they have flush methods, otherwise they'll clear naturally
+  // MSP buffers are managed by crsf2msp and msp2crsf objects
+  DBGLN("MSP buffers cleanup requested");
+}
+
+static void stopMAVLinkService() {
+  if (mavlink2tcp.hasClient()) {
+    DBGLN("Closing MAVLink TCP connections");
+  }
+  mavlink2tcp.stop();
+  cleanupMAVLinkBuffers();
+}
+
+static void stopMSPService() {
+  if (wifi2tcp.hasClient()) {
+    DBGLN("Closing MSP TCP connections");
+  }
+  wifi2tcp.stop();
+  cleanupMSPBuffers();
+}
+
+static bool startMAVLinkService() {
+  stopMSPService(); // Ensure MSP service is stopped first
+  
+  if (mavlink2tcp.begin()) {
+    DBGLN("MAVLink2WiFi service started on port 5760");
+    return true;
+  } else {
+    ERRLN("Failed to start MAVLink2WiFi service");
+    return false;
+  }
+}
+
+static bool startMSPService() {
+  stopMAVLinkService(); // Ensure MAVLink service is stopped first
+  
+  if (wifi2tcp.begin()) {
+    DBGLN("MSP2WiFi service started on port 5761");
+    return true;
+  } else {
+    ERRLN("Failed to start MSP2WiFi service");
+    return false;
+  }
+}
+
+static void handleProtocolSwitch() {
+  static bool lastWasMavlink = false;
+  static bool initialized = false;
+  static uint32_t lastSwitchTime = 0;
+  static uint8_t switchFailureCount = 0;
+  
+  bool currentIsMavlink = shouldUseMavlink2Wifi();
+  
+  // Initialize on first call
+  if (!initialized) {
+    lastWasMavlink = currentIsMavlink;
+    initialized = true;
+    return;
+  }
+  
+  // Check if protocol has changed
+  if (lastWasMavlink != currentIsMavlink) {
+    const uint32_t now = millis();
+    
+    // Implement debouncing to prevent rapid switching
+    if (now - lastSwitchTime < 1000) {
+      DBGLN("Protocol switch debounced, too frequent");
+      return;
+    }
+    
+    // Implement retry mechanism with exponential backoff
+    if (switchFailureCount > 0) {
+      const uint32_t backoffTime = 1000 << (switchFailureCount - 1); // 1s, 2s, 4s, 8s...
+      if (now - lastSwitchTime < backoffTime) {
+        return;
+      }
+    }
+    
+    DBGLN("Protocol switch detected: %s -> %s", 
+          lastWasMavlink ? "MAVLink" : "MSP",
+          currentIsMavlink ? "MAVLink" : "MSP");
+    
+    bool switchSuccess = false;
+    
+    // Perform atomic protocol switch
+    if (currentIsMavlink) {
+      // Switching to MAVLink
+      switchSuccess = startMAVLinkService();
+      if (switchSuccess) {
+        DBGLN("Successfully switched to MAVLink2WiFi");
+        switchFailureCount = 0;
+      }
+    } else {
+      // Switching to MSP
+      switchSuccess = startMSPService();
+      if (switchSuccess) {
+        DBGLN("Successfully switched to MSP2WiFi");
+        switchFailureCount = 0;
+      }
+    }
+    
+    if (switchSuccess) {
+      lastWasMavlink = currentIsMavlink;
+      lastSwitchTime = now;
+    } else {
+      switchFailureCount++;
+      ERRLN("Protocol switch failed (attempt %d)", switchFailureCount);
+      
+      // If switching fails repeatedly, try to restore a working state
+      if (switchFailureCount >= 3) {
+        ERRLN("Multiple protocol switch failures, attempting recovery");
+        
+        // Try to start any working service as fallback
+        if (!startMSPService()) {
+          if (!startMAVLinkService()) {
+            ERRLN("Complete WiFi bridge failure - no services available");
+          } else {
+            lastWasMavlink = true;
+            currentIsMavlink = true;
+          }
+        } else {
+          lastWasMavlink = false;
+          currentIsMavlink = false;
+        }
+        switchFailureCount = 0; // Reset after recovery attempt
+      }
+    }
+  }
+}
+#endif
+
+#if defined(TARGET_TX)
+static bool isTxMavlinkMode() {
+  return config.GetLinkMode() == TX_MAVLINK_MODE;
+}
+#endif
 
 void setWifiUpdateMode()
 {
@@ -371,6 +524,26 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
     json["config"]["vbind"] = config.GetBindStorage();
+    
+    // WiFi bridge status information for MAVLink2WiFi feature
+    if (shouldUseMavlink2Wifi()) {
+      json["config"]["active-wifi-bridge"] = "mavlink";
+      json["config"]["mavlink-port"] = 5760;
+      json["config"]["mavlink-connected"] = mavlink2tcp.hasClient();
+      json["config"]["mavlink-buffer-usage"]["input"] = mavlinkInputBuffer.size();
+      json["config"]["mavlink-buffer-usage"]["input-max"] = MAV_INPUT_BUF_LEN;
+      json["config"]["mavlink-buffer-usage"]["output"] = mavlinkOutputBuffer.size();
+      json["config"]["mavlink-buffer-usage"]["output-max"] = MAV_OUTPUT_BUF_LEN;
+      // Add MAVLink system/component IDs if available
+      if (config.GetSerialProtocol() == PROTOCOL_MAVLINK) {
+        json["config"]["mavlink-system-id"]["source"] = config.GetSourceSysId() ? config.GetSourceSysId() : 255;
+        json["config"]["mavlink-system-id"]["target"] = config.GetTargetSysId() ? config.GetTargetSysId() : 1;
+      }
+    } else {
+      json["config"]["active-wifi-bridge"] = "msp";
+      json["config"]["msp-port"] = 5761;
+      json["config"]["msp-connected"] = wifi2tcp.hasClient();
+    }
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
@@ -1128,7 +1301,23 @@ static void startServices()
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
   #if defined(TARGET_RX)
-  wifi2tcp.begin();
+  // Initialize the appropriate WiFi bridge service based on protocol
+  // Uses enhanced service lifecycle management with fallback mechanisms
+  if (shouldUseMavlink2Wifi()) {
+    if (!startMAVLinkService()) {
+      ERRLN("Failed to start MAVLink2WiFi, falling back to MSP2WiFi");
+      if (!startMSPService()) {
+        ERRLN("Failed to start any WiFi bridge service");
+      }
+    }
+  } else {
+    if (!startMSPService()) {
+      ERRLN("Failed to start MSP2WiFi, falling back to MAVLink2WiFi");
+      if (!startMAVLinkService()) {
+        ERRLN("Failed to start any WiFi bridge service");
+      }
+    }
+  }
   #endif
 }
 
@@ -1259,6 +1448,249 @@ void HandleMSP2WIFI()
   #endif
 }
 
+void HandleMAVLink2WIFI()
+{
+  #if defined(TARGET_RX)
+  // Early return if not in MAVLink protocol mode
+  if (!shouldUseMavlink2Wifi()) {
+    return;
+  }
+  
+  // Check if there is any data to write out from MAVLink input buffer to WiFi TCP
+  if (mavlinkInputBuffer.size() > 0)
+  {
+    const uint16_t len = mavlinkInputBuffer.size();
+    // Enhanced buffer validation and size limits
+    if (len > MAV_INPUT_BUF_LEN) {
+      ERRLN("MAVLink input buffer size exceeded: %d > %d", len, MAV_INPUT_BUF_LEN);
+      return;
+    }
+    
+    // Constrain to reasonable buffer size with multiple safety bounds
+    const uint16_t maxLen = std::min({len, (uint16_t)512, (uint16_t)MAV_INPUT_BUF_LEN});
+    
+    // Validate before stack allocation
+    if (maxLen == 0) {
+      return;
+    }
+    
+    uint8_t data[maxLen];
+    
+    mavlinkInputBuffer.lock();
+    const uint16_t actualRead = mavlinkInputBuffer.popBytes(data, maxLen);
+    mavlinkInputBuffer.unlock();
+    
+    if (actualRead > 0) {
+      const size_t bytesWritten = mavlink2tcp.write(data, actualRead);
+      if (bytesWritten != actualRead) {
+        DBGLN("MAVLink2WiFi: TCP write incomplete %d/%d bytes", bytesWritten, actualRead);
+      }
+    }
+  }
+
+  // Check if there is any data to read in from WiFi TCP to MAVLink output buffer
+  const uint16_t bytesReady = mavlink2tcp.bytesReady();
+  if (bytesReady > 0)
+  {
+    // Enhanced validation before array allocation
+    if (bytesReady > 2048) { // Sanity check for TCP buffer
+      ERRLN("MAVLink2WiFi: Excessive TCP bytes ready: %d", bytesReady);
+      return;
+    }
+    
+    // Respect MAVLink buffer limits and available space
+    const uint16_t currentBufferSize = mavlinkOutputBuffer.size();
+    const uint16_t availableSpace = (currentBufferSize < MAV_OUTPUT_BUF_LEN) ? 
+                                    (MAV_OUTPUT_BUF_LEN - currentBufferSize) : 0;
+    
+    if (availableSpace == 0) {
+      // Buffer overflow protection with graceful degradation
+      static uint32_t lastOverflowWarning = 0;
+      uint32_t now = millis();
+      if (now - lastOverflowWarning > 5000) { // Log warning every 5 seconds max
+        DBGLN("MAVLink output buffer full, dropping TCP data");
+        lastOverflowWarning = now;
+      }
+      return;
+    }
+    
+    // Calculate safe read size with multiple constraints
+    const uint16_t maxBytesToRead = std::min({
+      bytesReady, 
+      (uint16_t)MAV_OUTPUT_BUF_LEN, 
+      availableSpace,
+      (uint16_t)512  // Stack safety limit
+    });
+    
+    if (maxBytesToRead > 0)
+    {
+      uint8_t data[maxBytesToRead];
+      const uint16_t actualRead = mavlink2tcp.read(data);
+      const uint16_t bytesToProcess = std::min(actualRead, maxBytesToRead);
+      
+      if (bytesToProcess > 0) {
+        const bool pushSuccess = mavlinkOutputBuffer.atomicPushBytes(data, bytesToProcess);
+        if (!pushSuccess) {
+          DBGLN("MAVLink2WiFi: Failed to push %d bytes to output buffer", bytesToProcess);
+        }
+        
+        // Log buffer usage statistics periodically
+        static uint32_t lastStatsLog = 0;
+        uint32_t now = millis();
+        if (now - lastStatsLog > 30000) { // Every 30 seconds
+          DBGLN("MAVLink buffers: IN=%d/%d OUT=%d/%d", 
+                mavlinkInputBuffer.size(), MAV_INPUT_BUF_LEN,
+                mavlinkOutputBuffer.size(), MAV_OUTPUT_BUF_LEN);
+          lastStatsLog = now;
+        }
+      }
+    }
+  }
+
+  // Handle TCP connection management
+  mavlink2tcp.handle();
+  #endif
+}
+
+// Graceful shutdown and cleanup functions
+#if defined(TARGET_RX)
+static void shutdownWiFiBridgeServices() {
+  DBGLN("Initiating graceful shutdown of WiFi bridge services");
+  
+  // Stop both services to ensure clean shutdown
+  stopMAVLinkService();
+  stopMSPService();
+  
+  // Additional cleanup for any remaining connections
+  // Allow time for graceful TCP connection closure
+  delay(100);
+  
+  DBGLN("WiFi bridge services shutdown complete");
+}
+
+static bool isWiFiBridgeHealthy() {
+  #if defined(TARGET_RX)
+  if (shouldUseMavlink2Wifi()) {
+    // Check MAVLink service health
+    return mavlink2tcp.isValid() && (mavlink2tcp.hasClient() || millis() > 30000);
+  } else {
+    // Check MSP service health
+    return wifi2tcp.isValid() && (wifi2tcp.hasClient() || millis() > 30000);
+  }
+  #endif
+  return true;
+}
+
+static void performHealthCheck() {
+  static uint32_t lastHealthCheck = 0;
+  static uint8_t consecutiveFailures = 0;
+  
+  const uint32_t now = millis();
+  if (now - lastHealthCheck < 10000) { // Check every 10 seconds
+    return;
+  }
+  
+  lastHealthCheck = now;
+  
+  if (!isWiFiBridgeHealthy()) {
+    consecutiveFailures++;
+    DBGLN("WiFi bridge health check failed (count: %d)", consecutiveFailures);
+    
+    if (consecutiveFailures >= 3) {
+      ERRLN("Multiple health check failures, attempting service restart");
+      
+      // Attempt to restart the appropriate service
+      if (shouldUseMavlink2Wifi()) {
+        if (!startMAVLinkService()) {
+          ERRLN("Failed to restart MAVLink service, trying MSP fallback");
+          startMSPService();
+        }
+      } else {
+        if (!startMSPService()) {
+          ERRLN("Failed to restart MSP service, trying MAVLink fallback");
+          startMAVLinkService();
+        }
+      }
+      
+      consecutiveFailures = 0; // Reset after restart attempt
+    }
+  } else {
+    if (consecutiveFailures > 0) {
+      DBGLN("WiFi bridge health restored");
+      consecutiveFailures = 0;
+    }
+  }
+}
+#endif
+
+#if defined(TARGET_RX) && defined(DEBUG_LOG)
+// Testing and validation functions for protocol switching
+static void forceProtocolSwitchTest() {
+  static bool testMode = false;
+  static uint32_t lastTestSwitch = 0;
+  
+  const uint32_t now = millis();
+  
+  // Enable test mode after 60 seconds of runtime
+  if (!testMode && now > 60000) {
+    testMode = true;
+    DBGLN("Protocol switch test mode enabled");
+  }
+  
+  // Perform test switch every 2 minutes in test mode
+  if (testMode && (now - lastTestSwitch > 120000)) {
+    lastTestSwitch = now;
+    
+    DBGLN("=== PROTOCOL SWITCH TEST ===");
+    DBGLN("Current: %s", shouldUseMavlink2Wifi() ? "MAVLink" : "MSP");
+    
+    // Log current state
+    DBGLN("MAVLink connected: %s", mavlink2tcp.hasClient() ? "YES" : "NO");
+    DBGLN("MSP connected: %s", wifi2tcp.hasClient() ? "YES" : "NO");
+    DBGLN("Buffer sizes - MAV IN: %d, MAV OUT: %d", 
+          mavlinkInputBuffer.size(), mavlinkOutputBuffer.size());
+    
+    // Force protocol switch detection on next timeout
+    handleProtocolSwitch();
+  }
+}
+
+static void validateProtocolSwitchState() {
+  static uint32_t lastValidation = 0;
+  const uint32_t now = millis();
+  
+  if (now - lastValidation < 30000) return; // Validate every 30 seconds
+  lastValidation = now;
+  
+  const bool isMavlink = shouldUseMavlink2Wifi();
+  const bool mavlinkClientConnected = mavlink2tcp.hasClient();
+  const bool mspClientConnected = wifi2tcp.hasClient();
+  
+  // Check for protocol mismatch conditions
+  if (isMavlink && mspClientConnected) {
+    ERRLN("VALIDATION ERROR: MAVLink mode but MSP client connected");
+  }
+  
+  if (!isMavlink && mavlinkClientConnected) {
+    ERRLN("VALIDATION ERROR: MSP mode but MAVLink client connected");
+  }
+  
+  // Check for orphaned connections
+  if (mavlinkClientConnected && mspClientConnected) {
+    ERRLN("VALIDATION ERROR: Both protocols have active connections");
+  }
+  
+  // Log healthy state periodically
+  static uint8_t healthyLogCount = 0;
+  if (++healthyLogCount >= 10) { // Every 5 minutes
+    healthyLogCount = 0;
+    DBGLN("Protocol validation: %s mode, Health: %s", 
+          isMavlink ? "MAVLink" : "MSP",
+          isWiFiBridgeHealthy() ? "OK" : "FAILED");
+  }
+}
+#endif
+
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
@@ -1267,6 +1699,16 @@ static int start()
 
 static int event()
 {
+  #if defined(TARGET_RX)
+  // Handle connection state changes that require WiFi bridge shutdown
+  if (connectionState == serialUpdate) {
+    // Entering serial update mode - shutdown services gracefully
+    DBGLN("Entering serial update mode, shutting down WiFi bridge services");
+    shutdownWiFiBridgeServices();
+    // Continue with normal WiFi handling below
+  }
+  #endif
+  
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
     if (!wifiStarted) {
@@ -1291,7 +1733,28 @@ static int timeout()
   if (wifiStarted)
   {
     HandleWebUpdate();
-    HandleMSP2WIFI();
+    
+    #if defined(TARGET_RX)
+    // Check for protocol switching and handle cleanup
+    handleProtocolSwitch();
+    
+    // Perform periodic health checks
+    performHealthCheck();
+    
+    #if defined(DEBUG_LOG)
+    // Validation and testing functions (debug builds only)
+    validateProtocolSwitchState();
+    forceProtocolSwitchTest();
+    #endif
+    
+    // Protocol-based handler selection for WiFi bridging
+    if (shouldUseMavlink2Wifi()) {
+      HandleMAVLink2WIFI();
+    } else {
+      HandleMSP2WIFI();
+    }
+    #endif
+    
 #if defined(PLATFORM_ESP8266)
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
@@ -1300,7 +1763,7 @@ static int timeout()
       delay(1);
     return DURATION_IMMEDIATELY;
 #else
-    // All the web traffic is async apart from changing modes and MSP2WIFI
+    // All the web traffic is async apart from changing modes and WiFi bridging
     // No need to run balls-to-the-wall; the wifi runs on this core too (0)
     return 2;
 #endif
@@ -1337,5 +1800,5 @@ device_t WIFI_device = {
   .start = start,
   .event = event,
   .timeout = timeout,
-  .subscribe = EVENT_CONNECTION_CHANGED
+  .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_SERIAL_CHANGE
 };

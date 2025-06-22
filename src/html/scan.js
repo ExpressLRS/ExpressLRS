@@ -342,6 +342,50 @@ function updateUIDType(uidtype) {
   _('uid-text').textContent = desc;
 }
 
+function updateWiFiBridgeStatus(data) {
+  if (!_('wifi-bridge-status')) return;
+  
+  const bridgeType = data['active-wifi-bridge'] || 'msp';
+  const isMAVLink = bridgeType === 'mavlink';
+  
+  // Update basic status information
+  _('active-bridge-type').textContent = isMAVLink ? 'MAVLink' : 'MSP';
+  _('active-bridge-type').className = isMAVLink ? 'badge mavlink-badge' : 'badge msp-badge';
+  
+  _('bridge-port').textContent = isMAVLink ? data['mavlink-port'] || '5760' : data['msp-port'] || '5761';
+  
+  const isConnected = isMAVLink ? data['mavlink-connected'] : data['msp-connected'];
+  _('bridge-connection').textContent = isConnected ? 'Connected' : 'Disconnected';
+  _('bridge-connection').className = isConnected ? 'badge connected-badge' : 'badge disconnected-badge';
+  
+  // Show/hide protocol-specific details
+  if (isMAVLink) {
+    _('mavlink-details').style.display = 'block';
+    _('msp-details').style.display = 'none';
+    
+    // Update MAVLink-specific information
+    if (data['mavlink-system-id']) {
+      _('mavlink-source-id').textContent = data['mavlink-system-id']['source'] || '255';
+      _('mavlink-target-id').textContent = data['mavlink-system-id']['target'] || '1';
+    }
+    
+    if (data['mavlink-buffer-usage']) {
+      const inputUsage = data['mavlink-buffer-usage']['input'] || 0;
+      const inputMax = data['mavlink-buffer-usage']['input-max'] || 1;
+      const outputUsage = data['mavlink-buffer-usage']['output'] || 0;
+      const outputMax = data['mavlink-buffer-usage']['output-max'] || 1;
+      
+      const inputPercent = Math.round((inputUsage / inputMax) * 100);
+      const outputPercent = Math.round((outputUsage / outputMax) * 100);
+      
+      _('mavlink-buffer-usage').textContent = `In: ${inputUsage}/${inputMax} (${inputPercent}%), Out: ${outputUsage}/${outputMax} (${outputPercent}%)`;
+    }
+  } else {
+    _('mavlink-details').style.display = 'none';
+    _('msp-details').style.display = 'block';
+  }
+}
+
 function updateConfig(data, options) {
   if (data.product_name) _('product_name').textContent = data.product_name;
   if (data.reg_domain) _('reg_domain').textContent = data.reg_domain;
@@ -377,6 +421,7 @@ function updateConfig(data, options) {
       _('rcvr-uart-baud').value = options['rcvr-uart-baud'];
       _('serial-config').style.display = 'none';
       _('sbus-config').style.display = 'none';
+      if (_('wifi-bridge-status')) _('wifi-bridge-status').style.display = 'none';
       return;
     }
     _('serial-config').style.display = 'block';
@@ -401,6 +446,12 @@ function updateConfig(data, options) {
       _('rcvr-uart-baud').value = '19200';
       _('sbus-config').style.display = 'none';
     }
+    
+    // Show WiFi bridge status for supported protocols
+    if (_('wifi-bridge-status')) {
+      _('wifi-bridge-status').style.display = 'block';
+      updateWiFiBridgeStatus(data);
+    }
   }
 
   _('serial1-protocol').onchange = () => {
@@ -418,6 +469,9 @@ function updateConfig(data, options) {
   _('serial-protocol').onchange();
   _('serial1-protocol').value = data['serial1-protocol'];
   _('serial1-protocol').onchange();
+  
+  // Update WiFi bridge status
+  updateWiFiBridgeStatus(data);
   _('is-airport').onchange = () => {
     _('serial-protocol').onchange();
     _('serial1-protocol').onchange();
