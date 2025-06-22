@@ -1,6 +1,5 @@
-#include "SerialIO.h"
 #include "FIFO.h"
-#include "telemetry_protocol.h"
+#include "SerialIO.h"
 
 #define MAV_INPUT_BUF_LEN       1024
 #define MAV_OUTPUT_BUF_LEN      512
@@ -22,6 +21,9 @@ public:
     int getMaxSerialReadSize() override;
     void sendQueuedData(uint32_t maxBytesToSend) override;
 
+    void forwardMessage(const uint8_t *data);
+    bool GetNextPayload(uint8_t *nextPayloadSize, uint8_t *payloadData);
+
 private:
     void processBytes(uint8_t *bytes, u_int16_t size) override;
 
@@ -32,4 +34,8 @@ private:
     const uint8_t target_component_id;
 
     uint32_t lastSentFlowCtrl = 0;
+
+    // Variables / constants for Mavlink //
+    FIFO<MAV_INPUT_BUF_LEN> mavlinkInputBuffer;
+    FIFO<MAV_OUTPUT_BUF_LEN> mavlinkOutputBuffer;
 };

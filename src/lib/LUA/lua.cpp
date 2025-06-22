@@ -150,7 +150,11 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
   return childParameters;
 }
 
-static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
+/***
+ * @brief: Turn a lua param structure into a chunk of CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY frame and queue it
+ * @returns: Number of chunks left to send after this one
+ */
+static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
@@ -169,7 +173,6 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   }
 #else
   chunkBuffer[3] |= luaData->type;
-  uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
 #endif
 
   // Copy the name to the buffer starting at chunkBuffer[4]
@@ -228,20 +231,24 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
 #ifdef TARGET_TX
-  CRSFHandset::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+  CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, chunkStart, chunkSize + 2);
 #else
-  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
+  // Buffer for just this chunk with header/extheader/CRC
+  uint8_t packetBuf[CRSF_MAX_PACKET_LEN];
+  memcpy(packetBuf + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
 
-  CRSF::SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  CRSF::SetExtendedHeaderAndCrc(packetBuf, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
+      chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
-  telemetry.AppendTelemetryPackage(paramInformation);
+  telemetry.AppendTelemetryPackage(packetBuf);
 #endif
+
   return chunkCnt - (fieldChunk+1);
 }
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -401,7 +408,8 @@ bool luaHandleUpdateParameter()
             field->step = lcsIdle;
             field->info = "";
           }
-          sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
+          // Queue the parameter chunk.
+          sendCRSFparam(fieldChunk, &field->common);
         }
       }
       break;
