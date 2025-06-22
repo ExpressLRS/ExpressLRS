@@ -56,10 +56,10 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
     const auto extMessage = (crsf_ext_header_t *)message;
 
     // this needs refactoring in the future; convert the TCPSocket into a CRSFConnector, and this bit would move there
-    if (wifi2tcp.hasClient() && (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ)) // if we have a client we probs wanna talk to it
+    if (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
     {
         DBGLN("Got MSP frame, forwarding to client");
-        crsf2msp.parse((uint8_t *)message);
+        wifi2tcp.crsfMspIn((uint8_t *)message);
     }
 
     if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)

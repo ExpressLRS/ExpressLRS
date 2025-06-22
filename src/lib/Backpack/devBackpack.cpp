@@ -29,7 +29,7 @@ static uint32_t lastPTRValidTimeMs;
 
 #include "hwTimer.h"
 
-[[noreturn]] static void startPassthrough()
+[[noreturn]] static void startPassthrough(const bool useUSB = false)
 {
     // stop everything
     devicesStop();
@@ -45,7 +45,7 @@ static uint32_t lastPTRValidTimeMs;
     {
 #if defined(PLATFORM_ESP32_S3)
         // if UART0 is connected to the backpack then use the USB for the uplink
-        if (GPIO_PIN_DEBUG_RX == 44 && GPIO_PIN_DEBUG_TX == 43)
+        if (useUSB)
         {
             uplink = &Serial;
             Serial.setTxBufferSize(1024);
@@ -162,7 +162,7 @@ void checkBackpackUpdate()
             if (byte == resync[resync_pos])
             {
                 resync_pos++;
-                if (resync_pos == sizeof(resync)) startPassthrough();
+                if (resync_pos == sizeof(resync)) startPassthrough(true);
             }
             else
             {

@@ -148,7 +148,11 @@ static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
   return childParameters;
 }
 
-static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
+/***
+ * @brief: Turn a lua param structure into a chunk of CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY frame and queue it
+ * @returns: Number of chunks left to send after this one
+ */
+static uint8_t sendCRSFparam(crsf_addr_e origin, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
@@ -223,9 +227,9 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, ui
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
   memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
 #if defined(TARGET_TX)
-  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_TRANSMITTER);
 #else
-  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_RECEIVER);
+  crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, CRSF_ADDRESS_CRSF_RECEIVER);
 #endif
   crsfRouter.deliverMessage(nullptr, (crsf_header_t *)paramInformation);
   return chunkCnt - (fieldChunk+1);
@@ -233,7 +237,7 @@ static uint8_t sendCRSFparam(crsf_addr_e origin, crsf_frame_type_e frameType, ui
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(requestOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(requestOrigin, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -398,7 +402,7 @@ bool luaHandleUpdateParameter()
             field->step = lcsIdle;
             field->info = "";
           }
-          sendCRSFparam(requestOrigin, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, parameterChunk, &field->common);
+          sendCRSFparam(requestOrigin, parameterChunk, &field->common);
         }
       }
       break;

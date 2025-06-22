@@ -180,13 +180,13 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
         CRSF_MK_EXT_FRAME_T(crsf_sync_packet_t) sync_packet = {
             .h = {
                 CRSF_ADDRESS_RADIO_TRANSMITTER,
-                CRSF_EXT_FRAME_SIZE(9),
-                CRSF_FRAMETYPE_RADIO_ID,
+                CRSF_EXT_FRAME_SIZE(sizeof(crsf_sync_packet_t)),
+                CRSF_FRAMETYPE_HANDSET,
                 CRSF_ADDRESS_RADIO_TRANSMITTER,
                 CRSF_ADDRESS_CRSF_TRANSMITTER,
             },
             .p = {
-                .extendedType = CRSF_FRAMETYPE_OPENTX_SYNC,
+                .subType = CRSF_HANDSET_SUBCMD_TIMING,
                 .rate = htobe32(packetRate),
                 .offset = htobe32(offset)
             },

@@ -80,6 +80,7 @@ volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
+static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle;
 ////////////////////////////////////////////////
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
@@ -382,10 +383,27 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   bool updateTelemDenom = true;
 
-  // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
+  // TLM ratio is boosted until there is one complete sync cycle with no BoostRequest
+  if (syncTelemBoostState == stbBoosting)
   {
+    syncTelemBoostState = stbIdle;
+  }
+
+  if (syncTelemBoostState == stbRequested)
+  {
+    syncTelemBoostState = stbBoosting;
+    // default to 1:2 telemetry ratio bump for non-wide modes and
+    // wide mode configured to 1:4
     retVal = TLM_RATIO_1_2;
+
+    if (!OtaIsFullRes && config.GetSwitchMode() == smWideOr8ch)
+    {
+      // avoid crossing the wide switch 7-bit to 6-bit boundary
+      if (ratioConfigured <= TLM_RATIO_1_8 || ratioConfigured == TLM_RATIO_DISARMED)
+      {
+        retVal = TLM_RATIO_1_8;
+      }
+    }
   }
   // If Armed, telemetry is disabled, otherwise use STD
   else if (ratioConfigured == TLM_RATIO_DISARMED)
@@ -644,10 +662,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       NextPacketIsMspData = false;
       // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
       BindingSendCount++;
-      // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
-      // to add bandwidth for the reply
-      if (ExpressLRS_currTlmDenom != 2)
+      // If not in TlmBurst, request a sync packet soon to trigger higher download bandwidth for reply
+      if (syncTelemBoostState == stbIdle)
         syncSpamCounter = 1;
+      syncTelemBoostState = stbRequested;
     }
     else
     {
@@ -1076,7 +1094,7 @@ static void ExitBindingMode()
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
 
   UARTconnected();
-  
+
   SetRFLinkRate(config.GetRate()); //return to original rate
 
   DBGLN("Exiting binding mode");
@@ -1247,12 +1265,12 @@ static void setupSerial()
 // Setup TxBackpack
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
-  
-  if(firmwareOptions.is_airport) 
+
+  if(firmwareOptions.is_airport)
   {
     serialPort = new HardwareSerial(1);
     ((HardwareSerial *)serialPort)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
-  }  
+  }
   else if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   {
     serialPort = new HardwareSerial(2);
