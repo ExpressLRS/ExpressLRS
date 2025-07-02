@@ -66,7 +66,7 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, ui
     return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
 #endif
-  ERRLN("LBT not support on this radio type");
+  ERRLN("LBT not supported on this radio type");
   return 0;
 }
 
@@ -138,7 +138,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
     }
   }
 #endif
-  ERRLN("LBT not support on this radio type");
+  ERRLN("LBT not supported on this radio type");
   return 0;
 }
 
