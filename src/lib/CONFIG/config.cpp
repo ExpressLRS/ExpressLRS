@@ -1098,6 +1098,7 @@ RxConfig::SetDefaults(bool commit)
             {
                 mode = somSerial;
             }
+#if defined(PLATFORM_ESP32)
             else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SERIAL1_RX)
             {
                 mode = somSerial1RX;
@@ -1106,6 +1107,7 @@ RxConfig::SetDefaults(bool commit)
             {
                 mode = somSerial1TX;
             }
+#endif
         }
         const uint16_t failsafe = ch == 2 ? 0 : 512; // ch2 is throttle, failsafe it to 988
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
