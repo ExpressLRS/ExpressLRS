@@ -209,33 +209,22 @@ uint8_t SerialHoTT_TLM::calcFrameCRC(uint8_t *buf)
 
 void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
 {
-    // HoTT combined GPS/Vario -> send GPS and vario packet
+    // HoTT stand alone Vario or GPS/Vario or EAM or GAM -> send vario packet
+    if (device[VARIO].present || device[GPS].present || device[GAM].present || device[EAM].present)
+    {
+        sendCRSFvario(now);
+    }
+
+    // HoTT combined GPS/Vario -> send GPS packet
     if (device[GPS].present)
     {
         sendCRSFgps(now);
-        sendCRSFvario(now);
-    }
-    else
-    {
-        // HoTT stand alone Vario and no GPS/Vario -> just send vario packet
-        if (device[VARIO].present)
-        {
-            sendCRSFvario(now);
-        }
     }
 
-    // HoTT GAM, EAM, ESC -> send battery packet
+    // HoTT GAM, EAM, ESC -> send battery, Rpm, Temp, Cells, Volt, Airspee packet
     if (device[GAM].present || device[EAM].present || device[ESC].present)
     {
         sendCRSFbattery(now);
-
-        // HoTT GAM and EAM but no GPS/Vario or Vario -> send vario packet too
-        if ((!device[GPS].present && !device[VARIO].present) && (device[GAM].present || device[EAM].present))
-        {
-            sendCRSFvario(now);
-        }
-
-        // HoTT GAM, EAM, ESC, -> send Rpm, Temp, Cells, Volt, Airspeed packets
 
         HoTTDevices deviceToUse = GAM;
 
@@ -600,13 +589,13 @@ uint32_t SerialHoTT_TLM::getHoTTcapacity()
 
 int16_t SerialHoTT_TLM::getHoTTaltitude()
 {
-    if (device[GPS].present)
-    {
-        return gps.altitude;
-    }
-    else if (device[VARIO].present)
+    if (device[VARIO].present)
     {
         return vario.altitude;
+    }
+    else if (device[GPS].present)
+    {
+        return gps.altitude;
     }
     else if (device[EAM].present)
     {
@@ -622,13 +611,13 @@ int16_t SerialHoTT_TLM::getHoTTaltitude()
 
 int16_t SerialHoTT_TLM::getHoTTvv()
 {
-    if (device[GPS].present)
-    {
-        return (gps.mPerSec);
-    }
-    else if (device[VARIO].present)
+    if (device[VARIO].present)
     {
         return (vario.mPerSec);
+    }
+    else if (device[GPS].present)
+    {
+        return (gps.mPerSec);
     }
     else if (device[EAM].present)
     {
