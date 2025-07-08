@@ -279,7 +279,7 @@ void Telemetry::AppendTelemetryPackage(uint8_t *package)
             }
 #endif
 #if defined(HAS_MSP_VTX)
-            else if (header->type == CRSF_FRAMETYPE_MSP_RESP)
+            if (header->type == CRSF_FRAMETYPE_MSP_RESP)
             {
                 mspVtxProcessPacket(package);
             }
