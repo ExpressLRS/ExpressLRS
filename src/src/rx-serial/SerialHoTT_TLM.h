@@ -201,7 +201,7 @@ typedef struct HOTT_AIRESC_MSG_s
     uint8_t throttle = 0;                     // 29 throttle in %
     uint8_t becVoltage = 0;                   // 30 BEC voltage
     uint8_t becVoltageMin = 0;                // 31 BEC voltage min
-    uint8_t becCurrent = 0;                   // 32 BEC current
+    uint16_t becCurrent = 0;                  // 32 BEC current
     uint8_t becTemp = 0;                      // 34 BEC temperature
     uint8_t capacitorTemp = 0;                // 35 Capacitor temperature
     uint8_t motorTiming = 0;                  // 36 motor timing
