@@ -19,6 +19,8 @@ private:
 
 #if defined(PLATFORM_ESP32_S3)
 constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_4;
+#elif defined(PLATFORM_ESP32_C3)
+constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_2;
 #else
 constexpr rmt_channel_t PPM_RMT_CHANNEL = RMT_CHANNEL_0;
 #endif
