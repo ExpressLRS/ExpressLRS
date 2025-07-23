@@ -58,7 +58,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
         // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
         if (dshotInstances[ch])
         {
-            dshotInstances[ch]->send_dshot_value(((us - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+            dshotInstances[ch]->send_dshot_value(max(((us - 1000) * 2) + 47, 0)); // Convert PWM signal in us to DShot value
         }
     }
     else
