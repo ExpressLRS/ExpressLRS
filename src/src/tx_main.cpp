@@ -29,6 +29,8 @@
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
 #include "USB.h"
 #define USBSerial Serial
+#elif defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #endif
 
 //// CONSTANTS ////
@@ -1373,6 +1375,8 @@ static void setupBindingFromConfig()
   {
 #ifdef PLATFORM_ESP32
     esp_read_mac(UID, ESP_MAC_WIFI_STA);
+#elif PLATFORM_ESP8266
+    wifi_get_macaddr(STATION_IF, UID);
 #elif PLATFORM_STM32
     UID[0] = (uint8_t)HAL_GetUIDw0();
     UID[1] = (uint8_t)(HAL_GetUIDw0() >> 8);
