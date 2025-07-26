@@ -694,39 +694,9 @@ _('fileselect').addEventListener('change', (e) => {
 
 // =========================================================
 
-function callback(title, msg, url, getdata, success) {
-  return function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-      if (this.readyState === 4) {
-        if (this.status === 200) {
-          if (success) success();
-          cuteAlert({
-            type: 'info',
-            title: title,
-            message: this.responseText
-          });
-        } else {
-          cuteAlert({
-            type: 'error',
-            title: title,
-            message: msg
-          });
-        }
-      }
-    };
-    xmlhttp.open('POST', url, true);
-    if (getdata) data = getdata(xmlhttp);
-    else data = null;
-    xmlhttp.send(data);
-  };
-}
-
 function setupNetwork(event) {
   if (_('nt0').checked) {
-    callback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function() {
+    postWithFeedback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function() {
       return new FormData(_('sethome'));
     }, function() {
       _('wifi-ssid').value = _('network').value;
@@ -734,27 +704,27 @@ function setupNetwork(event) {
     })(event);
   }
   if (_('nt1').checked) {
-    callback('Connect To Network', 'An error occurred connecting to the network', '/sethome', function() {
+    postWithFeedback('Connect To Network', 'An error occurred connecting to the network', '/sethome', function() {
       return new FormData(_('sethome'));
     })(event);
   }
   if (_('nt2').checked) {
-    callback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event);
+    postWithFeedback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event);
   }
   if (_('nt3').checked) {
-    callback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event);
+    postWithFeedback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event);
   }
 }
 
 @@if not isTX:
-_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred reseting model settings', '/reset?model', null));
+_('reset-model').addEventListener('click', postWithFeedback('Reset Model Settings', 'An error occurred reseting model settings', '/reset?model', null));
 @@end
-_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred reseting runtime options', '/reset?options', null));
+_('reset-options').addEventListener('click', postWithFeedback('Reset Runtime Options', 'An error occurred reseting runtime options', '/reset?options', null));
 
 _('sethome').addEventListener('submit', setupNetwork);
-_('connect').addEventListener('click', callback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
+_('connect').addEventListener('click', postWithFeedback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
 if (_('config')) {
-  _('config').addEventListener('submit', callback('Set Configuration', 'An error occurred updating the configuration', '/config',
+  _('config').addEventListener('submit', postWithFeedback('Set Configuration', 'An error occurred updating the configuration', '/config',
       (xmlhttp) => {
         xmlhttp.setRequestHeader('Content-Type', 'application/json');
         return JSON.stringify({

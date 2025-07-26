@@ -108,6 +108,18 @@ jobs:
             mkdir -p $OUTDIR
             mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
+          *LR1121*)
+            # release builds
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400 -DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
+
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
+            ;;
           *)
             # release build
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}

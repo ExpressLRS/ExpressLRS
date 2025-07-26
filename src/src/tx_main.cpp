@@ -649,7 +649,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, transmittingRadio);
   }
 }
 
@@ -771,9 +771,6 @@ void ResetPower()
     POWERMGNT::setPower((PowerLevels_e)config.GetPower());
   }
   // TLM interval is set on the next SYNC packet
-#if defined(Regulatory_Domain_EU_CE_2400)
-  LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
 }
 
 static void ChangeRadioParams()
@@ -781,6 +778,7 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
   ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
+  EnableLBT();
 }
 
 void ModelUpdateReq()

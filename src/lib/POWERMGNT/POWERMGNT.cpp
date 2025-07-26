@@ -81,6 +81,7 @@ int8_t POWERMGNT::CurrentSX1280Power = 0;
 #if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
 static const int16_t *powerValues;
 static const int16_t *powerValuesDual;
+extern bool isUsingPrimaryFreqBand();
 #else
 #if defined(POWER_OUTPUT_VALUES)
 static const int16_t powerValues[] = POWER_OUTPUT_VALUES;
@@ -273,8 +274,20 @@ void POWERMGNT::setDefaultPower()
 void POWERMGNT::setPower(PowerLevels_e Power)
 {
     Power = constrain(Power, getMinPower(), getMaxPower());
+    PowerLevels_e PowerDual = Power;
+
     if (Power == CurrentPower)
         return;
+    
+    CurrentPower = Power;
+
+    // When using SubHGz with CE, limit to a max of 25mW.
+    #if defined(Regulatory_Domain_EU_CE_2400) && defined(RADIO_LR1121)
+    if (Power > PWR_25mW && isUsingPrimaryFreqBand())
+    {
+        Power = (MinPower > PWR_25mW) ? MinPower : PWR_25mW;
+    }
+    #endif
 
 #if defined(POWER_OUTPUT_DAC)
     // DAC is used e.g. for R9M, ES915TX and Voyager
@@ -314,11 +327,10 @@ void POWERMGNT::setPower(PowerLevels_e Power)
 #if defined(RADIO_LR1121)
     if (POWER_OUTPUT_VALUES_DUAL != nullptr)
     {
-        Radio.SetOutputPower(powerValuesDual[Power - MinPower], false); // Set the high frequency power setting.
+        Radio.SetOutputPower(powerValuesDual[PowerDual - MinPower], false); // Set the high frequency power setting.
     }
 #endif
 
-    CurrentPower = Power;
     devicesTriggerEvent();
 }
 

@@ -1,15 +1,21 @@
 #pragma once
 
 #include "targets.h"
-#include "LR1121_Regs.h"
-#include "LR1121_hal.h"
 #include "SX12xxDriverCommon.h"
+#include "LR1121_Regs.h"
 
 #ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
 #define RADIO_SNR_SCALE 4
+
+typedef struct
+{
+    uint8_t hardware;
+    uint8_t type;
+    uint16_t version;
+} __attribute__((packed)) firmware_version_t;
 
 class LR1121Driver: public SX12xxDriverCommon
 {
@@ -40,14 +46,21 @@ public:
     // bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
     bool FrequencyErrorAvailable() const { return false; }
 
-    void TXnb(uint8_t * data, uint8_t size, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX);
+    void TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber);
+    void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX, uint32_t incomingTimeout = 0);
 
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
 
+    void StartRssiInst(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
+
+    // Firmware update methods
+    firmware_version_t GetFirmwareVersion(SX12XX_Radio_Number_t radioNumber, uint16_t command = LR11XX_SYSTEM_GET_VERSION_OC);
+    int BeginUpdate(SX12XX_Radio_Number_t radioNumber, uint32_t expectedSize);
+    int WriteUpdateBytes(const uint8_t *bytes, uint32_t size);
+    int EndUpdate();
 
 private:
     // constant used for no power change pending
@@ -67,7 +80,11 @@ private:
     lr11xx_RadioOperatingModes_t fallBackMode;
     bool useFEC;
 
-    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
+    WORD_ALIGNED_ATTR uint8_t rx_buf[32] = {};
+
+    bool CheckVersion(SX12XX_Radio_Number_t radioNumber);
+
+    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
@@ -85,6 +102,9 @@ private:
     static void IsrCallback_1();
     static void IsrCallback_2();
     static void IsrCallback(SX12XX_Radio_Number_t radioNumber);
+
+    void DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf);
+
     bool RXnbISR(SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR(); // ISR for non-blocking TX routine
     void CommitOutputPower();

@@ -101,7 +101,11 @@ static struct luaItem_selection luaFanThreshold = {
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static struct luaItem_string luaCELimit = {
-    {"100mW CE LIMIT", CRSF_INFO},
+#if defined(RADIO_LR1121)
+    {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
+#else
+    {"100mW 2G4 CE LIMIT", CRSF_INFO},
+#endif
     STR_EMPTYSPACE
 };
 #endif
@@ -903,6 +907,7 @@ static int event()
   luadevUpdateModelID();
   setLuaTextSelectionValue(&luaModelMatch, (uint8_t)config.GetModelMatch());
   setLuaTextSelectionValue(&luaPower, config.GetPower() - MinPower);
+
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN)
   {
     setLuaTextSelectionValue(&luaFanThreshold, config.GetPowerFanThreshold());

@@ -245,6 +245,9 @@ static void HandleReset(AsyncWebServerRequest *request)
   if (request->hasArg("options")) {
     SPIFFS.remove("/options.json");
   }
+  if (request->hasArg("lr1121")) {
+    SPIFFS.remove("/lr1121.txt");
+  }
   if (request->hasArg("model") || request->hasArg("config")) {
     config.SetDefaults(true);
   }

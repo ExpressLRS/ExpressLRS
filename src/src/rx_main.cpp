@@ -401,6 +401,8 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_currAirRate_RFperfParams = RFperf;
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
+
+    EnableLBT();
 }
 
 bool ICACHE_RAM_ATTR HandleFHSS()
@@ -580,7 +582,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
 
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, transmittingRadio);
 
     if (transmittingRadio == SX12XX_Radio_NONE)
     {
@@ -1684,10 +1686,6 @@ static void setupRadio()
 
     DynamicPower_UpdateRx(true);  // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
-
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
@@ -2031,9 +2029,7 @@ static void CheckConfigChangePending()
         LostConnection(false);
         config.Commit();
         devicesTriggerEvent();
-#if defined(Regulatory_Domain_EU_CE_2400)
-        LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
+        EnableLBT();
         Radio.RXnb();
     }
 }

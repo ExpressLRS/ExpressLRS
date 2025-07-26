@@ -18,6 +18,10 @@
 	</header>
 	<br>
 	<div class="mui-container-fluid mui-col-sm-10 mui-col-sm-offset-1">
+		<div id="manual_upload" class="mui-panel" style="display:none; background-color: #FFC107;">
+			LR1121 firmware has been manually flashed before, to revert to the ExpressLRS provided version you can click the button below.<br>
+			<button id="reset" class="mui-btn mui-btn--small">Reset and reboot</button>
+		</div>
 		<div class="mui-panel">
 			<div id="radios" style="display: none;">
 				<div class="mui-radio">
@@ -59,13 +63,11 @@
 					<tr><td>Type</td><td><span id="radio_type1"></span></td><td><span id="radio_type2"></span></td></tr>
 					<tr><td>Hardware</td><td><span id="radio_hardware1"></span></td><td><span id="radio_hardware2"></span></td></tr>
 					<tr><td>Firmware</td><td><span id="radio_firmware1"></span></td><td><span id="radio_firmware2"></span></td></tr>
-<!--				<tr><td>PIN</td><td><span id="radio_pin1"></span></td><td><span id="radio_pin2"></span></td></tr>-->
-<!--				<tr><td>Chip EUI</td><td><span id="radio_ceui1"></span></td><td><span id="radio_ceui2"></span></td></tr>-->
-<!--				<tr><td>Join EUI</td><td><span id="radio_jeui1"></span></td><td><span id="radio_jeui2"></span></td></tr>-->
 				</tbody>
 			</table>
 		</div>
 	</div>
 </body>
+<script src="mui.js"></script>
 <script src="lr1121.js"></script>
 </html>

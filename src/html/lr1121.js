@@ -19,11 +19,14 @@ function dec2hex(i, len) {
   return "0x" + (i+0x10000).toString(16).substr(-len).toUpperCase();
 }
 
+_('reset').addEventListener('click', postWithFeedback('Reset LR1121 Firmware', 'An error occurred resetting the custom firmware flag', '/reset?lr1121', null))
+
 function loadData() {
-  xmlhttp = new XMLHttpRequest();
+  let xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function() {
     if (this.readyState === 4 && this.status === 200) {
       const data = JSON.parse(this.responseText);
+      if (data['manual']) _('manual_upload').style.display = 'block';
       _('radio_type1').textContent = dec2hex(data['radio1']['type'], 2)
       _('radio_hardware1').textContent = dec2hex(data['radio1']['hardware'], 2)
       _('radio_firmware1').textContent = dec2hex(data['radio1']['firmware'], 4)
@@ -68,6 +71,10 @@ function fileSelectHandler(e) {
 }
 
 function uploadFile(file) {
+  mui.overlay('on', {
+    'keyboard': false,
+    'static': true
+  })
   _('upload_btn').disabled = true
   try {
     const formdata = new FormData();
@@ -84,6 +91,7 @@ function uploadFile(file) {
   }
   catch (e) {
     _('upload_btn').disabled = false
+    mui.overlay('off')
   }
 }
 
@@ -94,22 +102,14 @@ function progressHandler(event) {
   _('status').innerHTML = percent + '% uploaded... please wait';
 }
 
-function completeHandler(event) {
+async function completeHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
-  _('upload_btn').disabled = false
   const data = JSON.parse(event.target.responseText);
   if (data.status === 'ok') {
-    function showMessage() {
-      cuteAlert({
-        type: 'success',
-        title: 'Update Succeeded',
-        message: data.msg
-      });
-    }
     // This is basically a delayed display of the success dialog with a fake progress
     let percent = 0;
-    const interval = setInterval(()=>{
+    const interval = setInterval(async ()=>{
       percent = percent + 2;
       _('progressBar').value = percent;
       _('status').innerHTML = percent + '% flashed... please wait';
@@ -117,45 +117,19 @@ function completeHandler(event) {
         clearInterval(interval);
         _('status').innerHTML = '';
         _('progressBar').value = 0;
-        showMessage();
+        _('upload_btn').disabled = false
+        mui.overlay('off')
+        await cuteAlert({
+          type: 'success',
+          title: 'Update Succeeded',
+          message: data.msg
+        });
       }
     }, 100);
-  } else if (data.status === 'mismatch') {
-    cuteAlert({
-      type: 'question',
-      title: 'Targets Mismatch',
-      message: data.msg,
-      confirmText: 'Flash anyway',
-      cancelText: 'Cancel'
-    }).then((e)=>{
-      const xmlhttp = new XMLHttpRequest();
-      xmlhttp.onreadystatechange = function() {
-        if (this.readyState === 4) {
-          _('status').innerHTML = '';
-          _('progressBar').value = 0;
-          if (this.status === 200) {
-            const data = JSON.parse(this.responseText);
-            cuteAlert({
-              type: 'info',
-              title: 'Force Update',
-              message: data.msg
-            });
-          } else {
-            cuteAlert({
-              type: 'error',
-              title: 'Force Update',
-              message: 'An error occurred trying to force the update'
-            });
-          }
-        }
-      };
-      xmlhttp.open('POST', '/forceupdate', true);
-      const data = new FormData();
-      data.append('action', e);
-      xmlhttp.send(data);
-    });
   } else {
-    cuteAlert({
+    _('upload_btn').disabled = false
+    mui.overlay('off')
+    await cuteAlert({
       type: 'error',
       title: 'Update Failed',
       message: data.msg
@@ -167,7 +141,8 @@ function errorHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
   _('upload_btn').disabled = false
-  cuteAlert({
+  mui.overlay('off')
+  return cuteAlert({
     type: 'error',
     title: 'Update Failed',
     message: event.target.responseText
@@ -178,7 +153,8 @@ function abortHandler(event) {
   _('status').innerHTML = '';
   _('progressBar').value = 0;
   _('upload_btn').disabled = false
-  cuteAlert({
+  mui.overlay('off')
+  return cuteAlert({
     type: 'info',
     title: 'Update Aborted',
     message: event.target.responseText
