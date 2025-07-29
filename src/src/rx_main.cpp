@@ -166,9 +166,8 @@ bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
-bool didFHSS = false;
-bool alreadyFHSS = false;
-bool alreadyTLMresp = false;
+static bool didFHSS = false;
+static bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -367,18 +366,19 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 
 bool ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresultFHSS = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    // Always look at what is coming next, as this will ideally be called immediately following packet reception
+    // -OR- on TOCK if there was no packet received (but before the nonce is advanced)
+    const uint8_t upcomingNonce = OtaNonce + 1;
+    uint8_t modresultFHSS = upcomingNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
         return false;
     }
 
-    alreadyFHSS = true;
-
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
+        if (((upcomingNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -398,7 +398,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
-    uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresultTLM = upcomingNonce % ExpressLRS_currTlmDenom;
     if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
@@ -437,7 +437,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresult = OtaNonce % ExpressLRS_currTlmDenom;
 
     if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0) || !teamraceHasModelMatch)
     {
@@ -601,7 +601,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
     // The payloads need to be switch when this happens.
     // GemX does not switch due to the time required to reconfigure the LR1121 params.
-    if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
+    if ((OtaNonce/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
     {
         Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, sendGeminiBuffer, (uint8_t*)&otaPktGemini, transmittingRadio);
     }
@@ -674,10 +674,9 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
         if (RXtimerState == tim_locked)
         {
-            // limit rate of freq offset adjustment, use slot 1
-            // because telemetry can fall on slot 1 and will
-            // never get here
-            if (OtaNonce % 8 == 1)
+            // limit rate of freq offset adjustment
+            // Use slot 0 because telemetry can never fall on slot 0
+            if (OtaNonce % 8 == 0)
             {
                 if (Offset > 0)
                 {
@@ -709,13 +708,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
 {
     updatePhaseLock();
-    OtaNonce++;
-
-    // if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    // {
-    //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    // }
-
 
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
@@ -734,7 +726,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalc.inc();
 
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 }
 
 //////////////////////////////////////////////////////////////
@@ -859,6 +850,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
     didFHSS = false;
 
+    OtaNonce++;
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
 
@@ -886,7 +878,6 @@ void LostConnection(bool resumeRx)
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 
     if (!InBindingMode)
     {
@@ -1144,7 +1135,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         || FHSSgetCurrIndex() != otaSync->fhssIndex
         || connectionHasModelMatch != modelMatched)
     {
-        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
+        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaSync->nonce, otaSync->fhssIndex);
         FHSSsetCurrIndex(otaSync->fhssIndex);
         OtaNonce = otaSync->nonce;
         TentativeConnection(now);
@@ -1600,7 +1591,7 @@ static void setupSerial1()
             Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialDisplayport(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
-        case PROTOCOL_SERIAL1_GPS:        
+        case PROTOCOL_SERIAL1_GPS:
             Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;

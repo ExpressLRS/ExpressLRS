@@ -26,8 +26,15 @@ GeneratePacketCrc_t OtaGeneratePacketCrc;
 
 void OtaUpdateCrcInitFromUid()
 {
+#if OTA_VERSION_ID > 15
+#error "OTA version can't be > 15"
+#endif
+
     OtaCrcInitializer = (UID[4] << 8) | UID[5];
-    OtaCrcInitializer ^= OTA_VERSION_ID;
+
+    // shift OTA_VERSION_ID to the high byte to leave room for
+    // xor-ing in the nonce in the GenerateCRC and ValidateCRC function
+    OtaCrcInitializer ^= (uint16_t)OTA_VERSION_ID << 8;
 }
 
 static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const nonce)
@@ -492,51 +499,35 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 
 bool ICACHE_RAM_ATTR ValidatePacketCrcFull(OTA_Packet_s * const otaPktPtr)
 {
+    uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
     uint16_t const calculatedCRC =
-        ota_crc.calc((uint8_t*)otaPktPtr, OTA8_CRC_CALC_LEN, OtaCrcInitializer);
+        ota_crc.calc((uint8_t*)otaPktPtr, OTA8_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
     return otaPktPtr->full.crc == calculatedCRC;
 }
 
 bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 {
-    uint8_t backupCrcHigh = otaPktPtr->std.crcHigh;
-
     uint16_t const inCRC = ((uint16_t)otaPktPtr->std.crcHigh << 8) + otaPktPtr->std.crcLow;
-    // For smHybrid the CRC only has the packet type in byte 0
-    // For smWide the FHSS slot is added to the CRC in byte 0 on PACKET_TYPE_RCDATAs
-#if defined(TARGET_RX)
-    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr8ch)
-    {
-        otaPktPtr->std.crcHigh = (OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval) + 1;
-    }
-    else
-#endif
-    {
-        otaPktPtr->std.crcHigh = 0;
-    }
-    uint16_t const calculatedCRC =
-        ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer);
 
-    otaPktPtr->std.crcHigh = backupCrcHigh;
+    // Zero the crcHigh bits, as the CRC is calculated before it is ORed in
+    otaPktPtr->std.crcHigh = 0;
     
+    uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
+    uint16_t const calculatedCRC =
+        ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
     return inCRC == calculatedCRC;
 }
 
 void ICACHE_RAM_ATTR GeneratePacketCrcFull(OTA_Packet_s * const otaPktPtr)
 {
-    otaPktPtr->full.crc = ota_crc.calc((uint8_t*)otaPktPtr, OTA8_CRC_CALC_LEN, OtaCrcInitializer);
+    uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
+    otaPktPtr->full.crc = ota_crc.calc((uint8_t*)otaPktPtr, OTA8_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
 }
 
 void ICACHE_RAM_ATTR GeneratePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 {
-#if defined(TARGET_TX)
-    // artificially inject the low bits of the nonce on data packets, this will be overwritten with the CRC after it's calculated
-    if (otaPktPtr->std.type == PACKET_TYPE_RCDATA && OtaSwitchModeCurrent == smWideOr8ch)
-    {
-        otaPktPtr->std.crcHigh = (OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval) + 1;
-    }
-#endif
-    uint16_t crc = ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer);
+    uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
+    uint16_t crc = ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
     otaPktPtr->std.crcHigh = (crc >> 8);
     otaPktPtr->std.crcLow  = crc;
 }
