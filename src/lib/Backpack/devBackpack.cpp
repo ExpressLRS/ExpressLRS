@@ -30,7 +30,6 @@ static uint32_t lastPTRValidTimeMs;
 #include "CRSF.h"
 #include "hwTimer.h"
 
-
 [[noreturn]] static void startPassthrough(const bool useUSB = false)
 {
     // stop everything
