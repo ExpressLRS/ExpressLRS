@@ -10,6 +10,7 @@
 #include "stubborn_sender.h"
 
 #include "devHandset.h"
+#include "devADC.h"
 #include "devLED.h"
 #include "devLUA.h"
 #include "devWIFI.h"
@@ -76,6 +77,7 @@ volatile uint8_t syncSpamCounter = 0;
 volatile uint8_t syncSpamCounterAfterRateChange = 0;
 uint32_t rfModeLastChangedMS = 0;
 uint32_t SyncPacketLastSent = 0;
+static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle;
 ////////////////////////////////////////////////
 
 volatile uint32_t LastTLMpacketRecvMillis = 0;
@@ -102,6 +104,7 @@ device_affinity_t ui_devices[] = {
   {&LED_device, 0},
   {&RGB_device, 0},
   {&LUA_device, 1},
+  {&ADC_device, 1},
   {&WIFI_device, 0},
   {&Button_device, 0},
 #if defined(PLATFORM_ESP32)
@@ -373,10 +376,27 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   expresslrs_tlm_ratio_e retVal = ExpressLRS_currAirRate_Modparams->TLMinterval;
   bool updateTelemDenom = true;
 
-  // TLM ratio is boosted for one sync cycle when the MspSender goes active
-  if (MspSender.IsActive())
+  // TLM ratio is boosted until there is one complete sync cycle with no BoostRequest
+  if (syncTelemBoostState == stbBoosting)
   {
+    syncTelemBoostState = stbIdle;
+  }
+
+  if (syncTelemBoostState == stbRequested)
+  {
+    syncTelemBoostState = stbBoosting;
+    // default to 1:2 telemetry ratio bump for non-wide modes and
+    // wide mode configured to 1:4
     retVal = TLM_RATIO_1_2;
+
+    if (!OtaIsFullRes && config.GetSwitchMode() == smWideOr8ch)
+    {
+      // avoid crossing the wide switch 7-bit to 6-bit boundary
+      if (ratioConfigured <= TLM_RATIO_1_8 || ratioConfigured == TLM_RATIO_DISARMED)
+      {
+        retVal = TLM_RATIO_1_8;
+      }
+    }
   }
   // If Armed, telemetry is disabled, otherwise use STD
   else if (ratioConfigured == TLM_RATIO_DISARMED)
@@ -635,10 +655,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       NextPacketIsMspData = false;
       // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
       BindingSendCount++;
-      // If the telemetry ratio isn't already 1:2, send a sync packet to boost it
-      // to add bandwidth for the reply
-      if (ExpressLRS_currTlmDenom != 2)
+      // If not in TlmBurst, request a sync packet soon to trigger higher download bandwidth for reply
+      if (syncTelemBoostState == stbIdle)
         syncSpamCounter = 1;
+      syncTelemBoostState = stbRequested;
     }
     else
     {
@@ -814,8 +834,8 @@ void ResetPower()
 static void ChangeRadioParams()
 {
   ModelUpdatePending = false;
+  ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
-  ResetPower();
 }
 
 void ModelUpdateReq()
@@ -882,7 +902,8 @@ static void CheckConfigChangePending()
 
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
-  if (LQCalc.currentIsSet())
+  // busyTransmitting is required here to prevent accidental rxdone IRQs due to interference triggering RXdoneISR.
+  if (LQCalc.currentIsSet() || busyTransmitting)
   {
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
   }
@@ -894,7 +915,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     SetClearChannelAssessmentTime();
   }
 #endif
-  busyTransmitting = false;
+
   return packetSuccessful;
 }
 
@@ -945,8 +966,6 @@ static void UpdateConnectDisconnectStatus()
       apInputBuffer.flush();
       apOutputBuffer.flush();
       uartInputBuffer.flush();
-
-      VtxTriggerSend();
     }
   }
   // If past RX_LOSS_CNT, or in awaitingModelId state for longer than DisconnectTimeoutMs, go to disconnected
@@ -1063,8 +1082,10 @@ static void ExitBindingMode()
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
   InBindingMode = false; // Clear binding mode before SetRFLinkRate() for correct IQ
-  
+
   UARTconnected();
+
+  SetRFLinkRate(config.GetRate()); //return to original rate
 
   DBGLN("Exiting binding mode");
 }
@@ -1234,7 +1255,13 @@ static void setupSerial()
 // Setup TxBackpack
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
-  if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
+
+  if(firmwareOptions.is_airport)
+  {
+    serialPort = new HardwareSerial(1);
+    ((HardwareSerial *)serialPort)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
+  }
+  else if (GPIO_PIN_DEBUG_RX != UNDEF_PIN && GPIO_PIN_DEBUG_TX != UNDEF_PIN)
   {
     serialPort = new HardwareSerial(2);
     ((HardwareSerial *)serialPort)->begin(BACKPACK_LOGGING_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -1266,9 +1293,9 @@ static void setupSerial()
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
 #elif defined(PLATFORM_ESP32)
-  if (GPIO_PIN_DEBUG_RX == 3 && GPIO_PIN_DEBUG_TX == 1)
+  if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {
-    // The backpack is already assigned on UART0 (pins 3, 1)
+    // The backpack or Airpoirt is already assigned on UART0 (pins 3, 1)
     // This is also USB on modules that use DIPs
     // Set TxUSB to TxBackpack so that data goes to the same place
     TxUSB = TxBackpack;
@@ -1283,7 +1310,7 @@ static void setupSerial()
     // The backpack is on a separate UART to UART0
     // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
     TxUSB = new HardwareSerial(1);
-    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, 3, 1);
+    ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
   }
 #else
   TxUSB = new NullStream();

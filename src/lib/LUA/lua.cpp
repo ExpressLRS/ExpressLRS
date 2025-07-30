@@ -24,8 +24,18 @@ static uint8_t parameterIndex;
 static uint8_t parameterArg;
 static volatile bool UpdateParamReq = false;
 
-static struct luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {0}; // array of luaItem_*
-static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {0};
+static luaItem_folder luaAgentLite = {
+    .common = {
+        .name = "HooJ",
+        .type = CRSF_FOLDER,
+        .id = 0,
+        .parent = 0
+      },
+  };
+
+static luaPropertiesCommon *paramDefinitions[LUA_MAX_PARAMS] = {(luaPropertiesCommon *)&luaAgentLite, nullptr}; // array of luaItem_*
+static luaCallback paramCallbacks[LUA_MAX_PARAMS] = {nullptr};
+
 static uint8_t lastLuaField = 0;
 static uint8_t nextStatusChunk = 0;
 
@@ -119,16 +129,32 @@ static uint8_t *luaStringStructToArray(const void *luaStruct, uint8_t *next)
   const struct luaItem_string *p1 = (const struct luaItem_string *)luaStruct;
   return (uint8_t *)stpcpy((char *)next, p1->value);
 }
+
 static uint8_t *luaFolderStructToArray(const void *luaStruct, uint8_t *next)
 {
   const struct luaItem_folder *p1 = (const struct luaItem_folder *)luaStruct;
+  uint8_t *childParameters;
   if(p1->dyn_name != NULL){
-    return (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
+    childParameters = (uint8_t *)stpcpy((char *)next, p1->dyn_name) + 1;
   } else {
-    return (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
+    childParameters = (uint8_t *)stpcpy((char *)next, p1->common.name) + 1;
   }
+  for (int i=1;i<=lastLuaField;i++)
+  {
+    if (paramDefinitions[i]->parent == p1->common.id)
+    {
+      *childParameters++ = i;
+    }
+  }
+  *childParameters = 0xFF;
+  return childParameters;
 }
-static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
+
+/***
+ * @brief: Turn a lua param structure into a chunk of CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY frame and queue it
+ * @returns: Number of chunks left to send after this one
+ */
+static uint8_t sendCRSFparam(uint8_t fieldChunk, struct luaPropertiesCommon *luaData)
 {
   uint8_t dataType = luaData->type & CRSF_FIELD_TYPE_MASK;
 
@@ -147,7 +173,6 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   }
 #else
   chunkBuffer[3] |= luaData->type;
-  uint8_t paramInformation[DEVICE_INFORMATION_LENGTH];
 #endif
 
   // Copy the name to the buffer starting at chunkBuffer[4]
@@ -169,17 +194,14 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
     case CRSF_UINT16:
       dataEnd = luaInt16StructToArray(luaData, chunkStart);
       break;
-    case CRSF_STRING: // fallthough
+    case CRSF_STRING: // fallthrough
     case CRSF_INFO:
       dataEnd = luaStringStructToArray(luaData, chunkStart);
       break;
     case CRSF_FOLDER:
       // re-fetch the lua data name, because luaFolderStructToArray will decide whether
-      //to return the fixed name or dynamic name.
-      chunkStart = luaFolderStructToArray(luaData, &chunkBuffer[4]);
-      // subtract 1 because dataSize expects the end to not include the null
-      // which is already accounted for in chunkStart
-      dataEnd = chunkStart - 1;
+      // to return the fixed name or dynamic name.
+      dataEnd = luaFolderStructToArray(luaData, &chunkBuffer[4]);
       break;
     case CRSF_FLOAT:
     case CRSF_OUT_OF_RANGE:
@@ -209,20 +231,24 @@ static uint8_t sendCRSFparam(crsf_frame_type_e frameType, uint8_t fieldChunk, st
   chunkStart[0] = luaData->id;                 // FieldId
   chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
 #ifdef TARGET_TX
-  CRSFHandset::packetQueueExtended(frameType, chunkStart, chunkSize + 2);
+  CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, chunkStart, chunkSize + 2);
 #else
-  memcpy(paramInformation + sizeof(crsf_ext_header_t),chunkStart,chunkSize + 2);
+  // Buffer for just this chunk with header/extheader/CRC
+  uint8_t packetBuf[CRSF_MAX_PACKET_LEN];
+  memcpy(packetBuf + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
 
-  CRSF::SetExtendedHeaderAndCrc(paramInformation, frameType, chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
+  CRSF::SetExtendedHeaderAndCrc(packetBuf, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
+      chunkSize + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + 2, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
-  telemetry.AppendTelemetryPackage(paramInformation);
+  telemetry.AppendTelemetryPackage(packetBuf);
 #endif
+
   return chunkCnt - (fieldChunk+1);
 }
 
 static void pushResponseChunk(struct luaItem_command *cmd) {
   DBGVLN("sending response for [%s] chunk=%u step=%u", cmd->common.name, nextStatusChunk, cmd->step);
-  if (sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
+  if (sendCRSFparam(nextStatusChunk, (struct luaPropertiesCommon *)cmd) == 0) {
     nextStatusChunk = 0;
   } else {
     nextStatusChunk++;
@@ -313,29 +339,7 @@ void luaParamUpdateReq(uint8_t type, uint8_t index, uint8_t arg)
 
 void registerLUAParameter(void *definition, luaCallback callback, uint8_t parent)
 {
-  if (definition == nullptr)
-  {
-    static uint8_t agentLiteFolder[4+LUA_MAX_PARAMS+2] = "HooJ";
-    static struct luaItem_folder luaAgentLite = {
-        {(const char *)agentLiteFolder, CRSF_FOLDER},
-    };
-
-    paramDefinitions[0] = (struct luaPropertiesCommon *)&luaAgentLite;
-    paramCallbacks[0] = 0;
-    uint8_t *pos = agentLiteFolder + 4;
-    for (int i=1;i<=lastLuaField;i++)
-    {
-      if (paramDefinitions[i]->parent == 0)
-      {
-        *pos++ = i;
-      }
-    }
-    *pos++ = 0xFF;
-    *pos++ = 0;
-    return;
-  }
-
-  struct luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
+  luaPropertiesCommon *p = (struct luaPropertiesCommon *)definition;
   lastLuaField++;
   p->id = lastLuaField;
   p->parent = parent;
@@ -404,7 +408,8 @@ bool luaHandleUpdateParameter()
             field->step = lcsIdle;
             field->info = "";
           }
-          sendCRSFparam(CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, fieldChunk, &field->common);
+          // Queue the parameter chunk.
+          sendCRSFparam(fieldChunk, &field->common);
         }
       }
       break;
@@ -432,7 +437,7 @@ void sendLuaDevicePacket(void)
 {
   uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
   CRSF::GetDeviceInformation(deviceInformation, lastLuaField);
-  // does append header + crc again so substract size from length
+  // does append header + crc again so subtract size from length
 #ifdef TARGET_TX
   CRSFHandset::packetQueueExtended(CRSF_FRAMETYPE_DEVICE_INFO, deviceInformation + sizeof(crsf_ext_header_t), DEVICE_INFORMATION_PAYLOAD_LENGTH);
 #else

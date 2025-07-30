@@ -45,6 +45,10 @@ static bool initialize()
         pinMode(GPIO_PIN_FAN_EN, OUTPUT);
         enabled = true;
     }
+    else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+    {
+        enabled = true;
+    }
     return enabled;
 }
 
@@ -246,6 +250,7 @@ device_t Thermal_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONFIG_FAN_CHANGED
 };
 #endif
