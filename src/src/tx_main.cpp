@@ -376,8 +376,17 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   bool invertIQ = InBindingMode || (UID[5] & 0x01);
   OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)config.GetSwitchMode();
 
+  bool subGHz = FHSSgetInitialFreq() < 1000000000;
+#if defined(RADIO_LR1121)
+  if (FHSSuseDualBand && subGHz)
+  {
+      subGHz = FHSSgetInitialGeminiFreq() < 1000000000;
+  }
+#endif
+
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
+    && (subGHz || invertIQ == Radio.IQinverted)
     && (OtaSwitchModeCurrent == newSwitchMode))
     return;
 

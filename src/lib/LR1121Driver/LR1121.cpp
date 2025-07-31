@@ -171,11 +171,12 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     if (radioNumber & SX12XX_Radio_2)
         radio2isSubGHz = isSubGHz;
 
-    IQinverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
-    // IQinverted is always STANDARD for 900 and SX1276
+    IQinverted = InvertIQ;
+    lr11xx_radio_lora_iq_t inverted = InvertIQ ? LR11XX_RADIO_LORA_IQ_INVERTED : LR11XX_RADIO_LORA_IQ_STANDARD;
+    // IQinverted is always STANDARD for 900
     if (isSubGHz)
     {
-        IQinverted = LR11XX_RADIO_LORA_IQ_STANDARD;
+        inverted = LR11XX_RADIO_LORA_IQ_STANDARD;
     }
 
     SetRxTimeoutUs(interval);
@@ -218,7 +219,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR1121_LORA_PACKET_FIXED_LENGTH;
     #endif
 
-        SetPacketParamsLoRa(PreambleLength, packetLengthType, PayloadLength, IQinverted, radioNumber);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, PayloadLength, inverted, radioNumber);
     }
 
     SetFrequencyHz(regfreq, radioNumber);
