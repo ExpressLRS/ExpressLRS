@@ -166,7 +166,6 @@ bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
-static bool didFHSS = false;
 static bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
@@ -364,21 +363,18 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     telemBurstValid = false;
 }
 
-bool ICACHE_RAM_ATTR HandleFHSS()
+static void ICACHE_RAM_ATTR HandleFHSS()
 {
-    // Always look at what is coming next, as this will ideally be called immediately following packet reception
-    // -OR- on TOCK if there was no packet received (but before the nonce is advanced)
-    const uint8_t upcomingNonce = OtaNonce + 1;
-    uint8_t modresultFHSS = upcomingNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    uint8_t modresultFHSS = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
-        return false;
+        return;
     }
 
     if (geminiMode)
     {
-        if (((upcomingNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
+        if (((OtaNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -398,7 +394,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
-    uint8_t modresultTLM = upcomingNonce % ExpressLRS_currTlmDenom;
+    uint8_t modresultTLM = OtaNonce % ExpressLRS_currTlmDenom;
     if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
@@ -407,7 +403,6 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 #if defined(Regulatory_Domain_EU_CE_2400)
     SetClearChannelAssessmentTime();
 #endif
-    return true;
 }
 
 void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
@@ -842,13 +837,8 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
     sendImmediateRC();
 
-    if (!didFHSS)
-    {
-        HandleFHSS();
-    }
-    didFHSS = false;
-
     OtaNonce++;
+    HandleFHSS();
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
     updatePhaseLock();
@@ -1266,8 +1256,6 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
     if (ProcessRFPacket(status))
     {
-        didFHSS = HandleFHSS();
-
         if (doStartTimer)
         {
             doStartTimer = false;
