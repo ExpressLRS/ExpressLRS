@@ -707,8 +707,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
 {
-    updatePhaseLock();
-
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
         // Save the LQ value before the inc() reduces it by 1
@@ -853,6 +851,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     OtaNonce++;
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
+    updatePhaseLock();
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -1171,7 +1170,12 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
+    // The extEvent defines where TOCK timer ISR is to be synced to, i.e. where the packet period begins.
+    // For rates where the TOA is longer than half the packet period schedule the TOCK for rougly 1x TOA before
+    // the TX's end of the period so telemetry is received by the TX in the correct period. For all others,
+    // schedule TOCK to be PACKET_TO_TOCK_SLACK (us) after RX packet reception.
+    int32_t slack = std::max(ExpressLRS_currAirRate_Modparams->interval - 2 * ExpressLRS_currAirRate_RFperfParams->TOA, (int32_t)PACKET_TO_TOCK_SLACK);
+    PFDloop.extEvent(beginProcessing + slack);
 
     doStartTimer = false;
     unsigned long now = millis();
