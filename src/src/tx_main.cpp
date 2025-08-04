@@ -198,17 +198,17 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   {
     OTA_Packet8_s * const ota8 = (OTA_Packet8_s * const)otaPktPtr;
     OTA_Packet8_s * const ota8Second = (OTA_Packet8_s * const)otaPktPtrSecond;
-    
+
     switch (otaPktPtr->std.type)
     {
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
-        }    
+        }
 
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
         {
@@ -233,10 +233,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                 packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
                 memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.ul_link_stats.payload, sizeof(ota8Second->tlm_dl.ul_link_stats.payload));
             }
-            
+
             if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
             {
-                TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES, 
+                TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
                     tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.ul_link_stats.payload));
                 packageIndexRadio1 = 0xFF;
                 packageIndexRadio2 = 0xFF;
@@ -279,11 +279,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                     packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
                     memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.payload, sizeof(ota8Second->tlm_dl.payload));
                 }
-                
+
                 if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
                 {
                     MspSender.ConfirmCurrentPayload(ota8->tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES, 
+                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
                         tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.payload));
                     packageIndexRadio1 = 0xFF;
                     packageIndexRadio2 = 0xFF;
@@ -307,7 +307,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
@@ -344,11 +344,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                     packageIndexRadio1 = otaPktPtrSecond->std.tlm_dl.packageIndex;
                     memcpy(tlmSenderDoubleBuffer, otaPktPtrSecond->std.tlm_dl.payload, sizeof(otaPktPtrSecond->std.tlm_dl.payload));
                 }
-                
+
                 if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
                 {
                     MspSender.ConfirmCurrentPayload(otaPktPtr->std.tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS4_TELEMETRY_MAX_PACKAGES, 
+                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS4_TELEMETRY_MAX_PACKAGES,
                         tlmSenderDoubleBuffer, 2 * sizeof(otaPktPtr->std.tlm_dl.payload));
                     packageIndexRadio1 = 0xFF;
                     packageIndexRadio2 = 0xFF;
@@ -385,18 +385,7 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
   if (syncTelemBoostState == stbRequested)
   {
     syncTelemBoostState = stbBoosting;
-    // default to 1:2 telemetry ratio bump for non-wide modes and
-    // wide mode configured to 1:4
     retVal = TLM_RATIO_1_2;
-
-    if (!OtaIsFullRes && config.GetSwitchMode() == smWideOr8ch)
-    {
-      // avoid crossing the wide switch 7-bit to 6-bit boundary
-      if (ratioConfigured <= TLM_RATIO_1_8 || ratioConfigured == TLM_RATIO_DISARMED)
-      {
-        retVal = TLM_RATIO_1_8;
-      }
-    }
   }
   // If Armed, telemetry is disabled, otherwise use STD
   else if (ratioConfigured == TLM_RATIO_DISARMED)
@@ -665,7 +654,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       // always enable msp after a channel package since the slot is only used if MspSender has data to send
       NextPacketIsMspData = true;
 
-      OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm(), ExpressLRS_currTlmDenom);
+      OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm());
     }
   }
 
