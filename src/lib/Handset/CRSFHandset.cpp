@@ -812,7 +812,7 @@ bool CRSFHandset::UARTwdt()
 #ifdef DEBUG_OPENTX_SYNC
         if (abs((int)((1000000 / (ExpressLRS_currAirRate_Modparams->interval * ExpressLRS_currAirRate_Modparams->numOfSends)) - (int)GoodPktsCount)) > 1)
 #endif
-            DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
+            // DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
         if (retval)

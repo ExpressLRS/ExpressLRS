@@ -9,8 +9,7 @@
 #if defined(TARGET_TX)
 
 #include <MeanAccumulator.h>
-#include <EwmaAccumulator.h>
-#include <NaiveAccumulator.h>
+#include <StdevAccumulator.h>
 
 #define DYNPOWER_UPDATE_NOUPDATE -128
 #define DYNPOWER_UPDATE_MISSED   -127

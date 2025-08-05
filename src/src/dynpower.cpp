@@ -34,10 +34,11 @@ private:
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynpower_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
-static EwmaAccumulator<int8_t, -128> dynpower_ewma_snr;
-static NaiveAccumulator dynpower_naive_snr;
+static StdevAccumulator dynpower_stat_snr;
 static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
+static uint32_t dynpower_last_report;
+static uint32_t dynpower_statistic_snr_count;
 
 static void DynamicPower_SetToConfigPower()
 {
@@ -48,6 +49,8 @@ void DynamicPower_Init()
 {
     dynpower_mavg_lq = 100;
     dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
+    dynpower_last_report = 0;
+    dynpower_statistic_snr_count = 0;
 }
 
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
@@ -55,14 +58,17 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
     dynpower_updated = snrScaled;
 }
 
-void DynamicPower_SnrThresholdUpdate(int8_t snrScaled)
+void DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
 {
-    dynpower_ewma_snr.add(snrScaled);
-    dynpower_naive_snr.add(snrScaled);
+    dynpower_stat_snr.add(rawSnrScaled);
+    dynpower_statistic_snr_count++;
 }
 
 void DynamicPower_Update(uint32_t now)
 {
+  int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
+  int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
+
   int8_t snrScaled = dynpower_updated;
   dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
 
@@ -71,6 +77,23 @@ void DynamicPower_Update(uint32_t now)
 
   int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
 
+  bool isSnrStatReady = dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE;
+
+  if(isSnrStatReady)
+  {
+    int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*8);
+    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);
+    snr_stat_threshold_up = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8);
+    snr_stat_threshold_dn = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*2)/8);
+  }
+
+  if (now - dynpower_last_report > 5000)
+  {
+    DBGLN("%d %d %d %d %d", CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount());
+    dynpower_last_report = now;
+    dynpower_statistic_snr_count = 0;
+  }
+
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
   {
@@ -78,12 +101,11 @@ void DynamicPower_Update(uint32_t now)
     POWERMGNT::decPower();
   }
 
-  if (dynpower_ewma_snr.count() > 30)
-  {
-    DBGLN("SNR EWMA: %d / %d", static_cast<int>(dynpower_ewma_snr.mean()*8), static_cast<int>(dynpower_ewma_snr.standardDeviation()*8));
-    DBGLN("SNR Naive: %d / %d (%d)", static_cast<int>(dynpower_naive_snr.mean()*8), static_cast<int>(dynpower_naive_snr.standardDeviation()*8), dynpower_naive_snr.getCount());
-    dynpower_ewma_snr.setCount(0); 
-  }
+  // if (dynpower_ewma_snr.count() > 30)
+  // {
+  //   DBGLN("SNR Naive: %d / %d (%d)", static_cast<int>(dynpower_naive_snr.mean()*8), static_cast<int>(dynpower_naive_snr.standardDeviation()*8), dynpower_naive_snr.getCount());
+  //   dynpower_ewma_snr.setCount(0);
+  // }
 
   // When not using dynamic power, return here
   if (!config.GetDynamicPower())
@@ -187,13 +209,13 @@ void DynamicPower_Update(uint32_t now)
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
-    if (snrScaled >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
+    if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
       DBGVLN("-power (snr)"); // Verbose because this spams when idle
       POWERMGNT::decPower();
     }
 
-    while ((snrScaled <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
+    while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0))
     {
       DBGLN("+power (snr)");
       POWERMGNT::incPower();
