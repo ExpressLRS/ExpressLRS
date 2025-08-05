@@ -9,6 +9,8 @@
 #if defined(TARGET_TX)
 
 #include <MeanAccumulator.h>
+#include <EwmaAccumulator.h>
+#include <NaiveAccumulator.h>
 
 #define DYNPOWER_UPDATE_NOUPDATE -128
 #define DYNPOWER_UPDATE_MISSED   -127
@@ -19,6 +21,8 @@ void DynamicPower_Init();
 void DynamicPower_Update(uint32_t now);
 // Call DynamicPower_TelemetryUpdate from ISR with DYNPOWER_UPDATE_MISSED or ScaledSNR value
 void DynamicPower_TelemetryUpdate(int8_t snrScaled);
+// Call DynamicPower_SnrThresholdUpdate from LinkStatsFromOta() when LQ >= 99
+void DynamicPower_SnrThresholdUpdate(int8_t snrScaled);
 
 #endif // TARGET_TX
 

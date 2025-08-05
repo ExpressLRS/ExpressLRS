@@ -34,6 +34,8 @@ private:
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynpower_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
+static EwmaAccumulator<int8_t, -128> dynpower_ewma_snr;
+static NaiveAccumulator dynpower_naive_snr;
 static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
 
@@ -53,6 +55,12 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
     dynpower_updated = snrScaled;
 }
 
+void DynamicPower_SnrThresholdUpdate(int8_t snrScaled)
+{
+    dynpower_ewma_snr.add(snrScaled);
+    dynpower_naive_snr.add(snrScaled);
+}
+
 void DynamicPower_Update(uint32_t now)
 {
   int8_t snrScaled = dynpower_updated;
@@ -68,6 +76,13 @@ void DynamicPower_Update(uint32_t now)
   {
     DBGVLN("-power (overload)");
     POWERMGNT::decPower();
+  }
+
+  if (dynpower_ewma_snr.count() > 30)
+  {
+    DBGLN("SNR EWMA: %d / %d", static_cast<int>(dynpower_ewma_snr.mean()*8), static_cast<int>(dynpower_ewma_snr.standardDeviation()*8));
+    DBGLN("SNR Naive: %d / %d (%d)", static_cast<int>(dynpower_naive_snr.mean()*8), static_cast<int>(dynpower_naive_snr.standardDeviation()*8), dynpower_naive_snr.getCount());
+    dynpower_ewma_snr.setCount(0); 
   }
 
   // When not using dynamic power, return here
