@@ -82,9 +82,9 @@ void DynamicPower_Update(uint32_t now)
   if(isSnrStatReady)
   {
     int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*8);
-    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);  // min SNR split: 1 dB
-    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*5)/8);
-    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev/2)/8);
+    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);
+    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8);
+    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev)/8);
     int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/8)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
     int8_t snr_thre_dn_limit = static_cast<int8_t>((snr_stat_mean)/8);
 
