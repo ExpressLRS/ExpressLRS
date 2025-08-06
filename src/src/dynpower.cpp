@@ -39,6 +39,7 @@ static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
 static uint32_t dynpower_last_report;
 static uint32_t dynpower_statistic_snr_count;
+static uint8_t dynpower_curr_rf_idx;
 
 static void DynamicPower_SetToConfigPower()
 {
@@ -51,6 +52,7 @@ void DynamicPower_Init()
     dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
     dynpower_last_report = 0;
     dynpower_statistic_snr_count = 0;
+    dynpower_curr_rf_idx = 0;
 }
 
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
@@ -66,6 +68,12 @@ void DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
 
 void DynamicPower_Update(uint32_t now)
 {
+  if(ExpressLRS_currAirRate_RFperfParams->index != dynpower_curr_rf_idx)
+  {
+    dynpower_curr_rf_idx = ExpressLRS_currAirRate_RFperfParams->index;
+    dynpower_stat_snr.reset();
+  }
+
   int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
   int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
 

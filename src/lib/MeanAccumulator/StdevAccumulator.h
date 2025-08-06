@@ -8,7 +8,7 @@
 class StdevAccumulator
 {
 public:
-    static const size_t WINDOW_SIZE = 64;
+    static const size_t WINDOW_SIZE = 32;
 
     StdevAccumulator()
     {
@@ -127,6 +127,13 @@ public:
         _lastPrintIndex = _index;
     }
 
+    void reset()
+    {
+        _count = 0;
+        _lastMean = 0.0f;
+        _lastStdev = 0.0f;
+        _lastPrintIndex = 0;
+    }
 
 private:
     bool _updated;
