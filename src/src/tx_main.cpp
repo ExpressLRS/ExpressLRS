@@ -170,6 +170,11 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 {
   int8_t snrScaled = ls->SNR;
   DynamicPower_TelemetryUpdate(snrScaled);
+  if (ls->lq >= 99)
+  {
+    DynamicPower_SnrThresholdUpdate(snrScaled);
+  }
+
 
   // Antenna is the high bit in the RSSI_1 value
   // RSSI received is signed, inverted polarity (positive value = -dBm)
@@ -220,11 +225,6 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   CRSF::LinkStatistics.downlink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw);
   CRSF::LinkStatistics.downlink_RSSI_1 = Radio.LastPacketRSSI;
   CRSF::LinkStatistics.downlink_RSSI_2 = Radio.LastPacketRSSI2;
-
-  if (CRSF::LinkStatistics.downlink_Link_quality >= 99)
-  {
-    DynamicPower_SnrThresholdUpdate(Radio.LastPacketSNRRaw);
-  }
 
   // Full res mode
   if (OtaIsFullRes)

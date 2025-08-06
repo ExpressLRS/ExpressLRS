@@ -82,14 +82,20 @@ void DynamicPower_Update(uint32_t now)
   if(isSnrStatReady)
   {
     int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*8);
-    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);
-    snr_stat_threshold_up = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8);
-    snr_stat_threshold_dn = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*2)/8);
+    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);  // min SNR split: 1 dB
+    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*5)/8);
+    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev/2)/8);
+    int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/8)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
+    int8_t snr_thre_dn_limit = static_cast<int8_t>((snr_stat_mean)/8);
+
+    snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
+    snr_stat_threshold_dn = std::max(snr_thre_dn_scaled, snr_thre_dn_limit);
   }
 
   if (now - dynpower_last_report > 5000)
   {
-    DBGLN("%d %d %d %d %d", CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount());
+    dynpower_stat_snr.printBuffer();
+    DBGLN("%d %d %d %d %d %d %d", CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount(), snr_stat_threshold_up, snr_stat_threshold_dn);
     dynpower_last_report = now;
     dynpower_statistic_snr_count = 0;
   }
@@ -211,13 +217,16 @@ void DynamicPower_Update(uint32_t now)
     // Increase the power for each (X) SNR below the threshold
     if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      DBGVLN("-power (snr)"); // Verbose because this spams when idle
+      if(POWERMGNT::currPower() > MinPower)
+      {
+        DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn); // Verbose because this spams when idle
+      }
       POWERMGNT::decPower();
     }
 
     while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0))
     {
-      DBGLN("+power (snr)");
+      DBGLN("+power (snr) %d <= %d", snrScaled, snr_stat_threshold_up);
       POWERMGNT::incPower();
       // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
       snrScaled += SNR_SCALE(2);

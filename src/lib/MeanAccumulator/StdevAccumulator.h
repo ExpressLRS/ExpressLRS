@@ -21,6 +21,7 @@ public:
         _count = 0;
         _lastMean = 0;
         _lastStdev = 0;
+        _lastPrintIndex = 0;
     }
 
     /// @brief Adds a new uint8_t sample into the circular buffer.
@@ -96,6 +97,37 @@ public:
         return _count;
     }
 
+    void printBuffer()
+    {
+        if(_lastPrintIndex == _index || _count == 0)
+        {
+            return;
+        }
+
+        int16_t start = _lastPrintIndex-1;
+        int16_t end = _index-1;
+
+        if(start < 0)
+        {
+            start += WINDOW_SIZE;
+        }
+        if(end < 0)
+        {
+            end += WINDOW_SIZE;
+        }
+
+        // Print from start to end, wrapping if needed
+        int16_t i = start;
+        DBG("BUF: ");
+        while (i != end) {
+            i = (i + 1) % WINDOW_SIZE;
+            DBG("%d ", _buffer[i]);
+        }
+        DBGLN("");
+        _lastPrintIndex = _index;
+    }
+
+
 private:
     bool _updated;
     int8_t _buffer[WINDOW_SIZE];  ///< Circular buffer
@@ -103,4 +135,5 @@ private:
     uint16_t _count;                ///< Valid entry count (≤ 256)
     float _lastMean;
     float _lastStdev;
+    int16_t _lastPrintIndex;
 };
