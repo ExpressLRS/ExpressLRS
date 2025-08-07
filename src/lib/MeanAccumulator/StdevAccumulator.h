@@ -16,7 +16,8 @@ public:
         {
             _buffer[i] = 0;
         }
-        _updated = false;
+        _update_mean = false;
+        _update_stdev = false;
         _index = 0;
         _count = 0;
         _lastMean = 0;
@@ -36,7 +37,8 @@ public:
             ++_count;
         }
 
-        _updated = true;
+        _update_mean = true;
+        _update_stdev = true;
     }
 
     /// @brief Computes and returns the mean of the current buffer contents.
@@ -48,7 +50,7 @@ public:
             return -1.0f;
         }
 
-        if (!_updated)
+        if (!_update_mean)
         {
             return _lastMean;
         }
@@ -60,6 +62,7 @@ public:
         }
 
         _lastMean = static_cast<float>(sum) / _count;
+        _update_mean = false;
         return _lastMean;
     }
 
@@ -72,7 +75,7 @@ public:
             return -1.0f;
         }
 
-        if (!_updated)
+        if (!_update_stdev)
         {
             return _lastStdev;
         }
@@ -88,6 +91,7 @@ public:
 
         variance /= (_count - 1);
         _lastStdev = std::sqrt(variance);
+        _update_stdev = false;
         return _lastStdev;
     }
 
@@ -136,7 +140,7 @@ public:
     }
 
 private:
-    bool _updated;
+    bool _update_mean, _update_stdev;
     int8_t _buffer[WINDOW_SIZE];  ///< Circular buffer
     uint16_t _index;                ///< Write index (oldest value is here)
     uint16_t _count;                ///< Valid entry count (≤ 256)
