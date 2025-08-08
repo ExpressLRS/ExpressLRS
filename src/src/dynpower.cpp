@@ -60,7 +60,7 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
     dynpower_updated = snrScaled;
 }
 
-void DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
+void ICACHE_RAM_ATTR DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
 {
     dynpower_stat_snr.add(rawSnrScaled);
     dynpower_statistic_snr_count++;
@@ -91,19 +91,20 @@ void DynamicPower_Update(uint32_t now)
   {
     int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*8);
     int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);
-    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8);
-    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev)/8);
+
+    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8); // -4 sd
+    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*2)/8); // +2 sd
     int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/8)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
-    int8_t snr_thre_dn_limit = static_cast<int8_t>((snr_stat_mean)/8);
+    // int8_t snr_thre_dn_limit = static_cast<int8_t>((snr_stat_mean)/8);
 
     snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
-    snr_stat_threshold_dn = std::max(snr_thre_dn_scaled, snr_thre_dn_limit);
+    snr_stat_threshold_dn = snr_thre_dn_scaled;
   }
 
   if (now - dynpower_last_report > 5000)
   {
     dynpower_stat_snr.printBuffer();
-    DBGLN("%d %d %d %d %d %d %d", CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount(), snr_stat_threshold_up, snr_stat_threshold_dn);
+    DBGLN("%d %d %d %d %d %d %d %d", POWERMGNT::currPower(), CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount(), snr_stat_threshold_up, snr_stat_threshold_dn);
     dynpower_last_report = now;
     dynpower_statistic_snr_count = 0;
   }
