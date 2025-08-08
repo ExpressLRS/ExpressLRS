@@ -218,7 +218,6 @@ static int start()
         else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
         {
             dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
-            dshotInstances[ch]->send_dshot_value(0);         // Set throttle low so the ESC can continue initialsation
         }
 #endif
     }
