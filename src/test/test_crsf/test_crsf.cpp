@@ -3,14 +3,42 @@
 #include <unity.h>
 #include "../test_msp/mock_serial.h"
 
+#include "CRSFRouter.h"
 #include "common.h"
-#include "CRSF.h"
+#include "options.h"
 
 using namespace std;
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 GENERIC_CRC8 test_crc(CRSF_CRC_POLY);
+
+class MockEndpoint : public CRSFEndpoint
+{
+public:
+    MockEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER) {}
+    void handleMessage(const crsf_header_t *message) override {}
+
+    // mock class helper methods
+    void fireDevicePacket() { sendDeviceInformationPacket(); }
+    void sendParamUpdateReq(crsf_addr_e destAddr, uint8_t paramId, uint8_t paramValue, uint8_t paramValue2)
+    {
+        parameterUpdateReq(destAddr, false, paramId, paramValue, paramValue2);
+    }
+} crsfEndpoint;
+
+class MockConnector : public CRSFConnector {
+public:
+    void forwardMessage(const crsf_header_t *message) override {
+        for (int i=0 ; i<message->frame_size + CRSF_FRAME_NOT_COUNTED_BYTES ; i++)
+        {
+            data.push_back(((uint8_t*)message)[i]);
+        }
+    }
+    std::vector<uint8_t> data;
+} connector;
+
+CRSFRouter crsfRouter;
 
 void test_ver_to_u32(void)
 {
@@ -30,22 +58,22 @@ void test_ver_to_u32(void)
     const struct tagVerItem *ver = VERSION_STRINGS;
     while (ver->verStr[0])
     {
-        TEST_ASSERT_EQUAL_HEX32(ver->verU32, CRSF::VersionStrToU32(ver->verStr));
+        extern uint32_t VersionStrToU32(const char *verStr);
+
+        TEST_ASSERT_EQUAL_HEX32(ver->verU32, VersionStrToU32(ver->verStr));
         ++ver;
     }
 }
 
 void test_device_info(void)
 {
-    uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-
     TEST_ASSERT_EQUAL(22, DEVICE_INFORMATION_PAYLOAD_LENGTH);
     TEST_ASSERT_EQUAL(28, DEVICE_INFORMATION_LENGTH);
 
-    CRSF::GetDeviceInformation(deviceInformation, 0);
-    CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfEndpoint.sendParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, 0, 0, 0);
+    crsfEndpoint.fireDevicePacket();
 
-    crsf_ext_header_t *header = (crsf_ext_header_t *) deviceInformation;
+    crsf_ext_header_t *header = (crsf_ext_header_t *) connector.data.data();
 
     TEST_ASSERT_EQUAL(26, header->frame_size);
     TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_DEVICE_INFO, header->type);
@@ -54,20 +82,20 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(CRSF_ADDRESS_CRSF_RECEIVER, header->orig_addr);
     TEST_ASSERT_EQUAL(DEVICE_INFORMATION_FRAME_SIZE, header->frame_size);
 
-    uint8_t *data = deviceInformation + sizeof(crsf_ext_header_t);
+    uint8_t *data = connector.data.data() + sizeof(crsf_ext_header_t);
     uint8_t compare [] = {'t', 'e', 's', 't', 'i', 'n', 'g', 0x0, 0x45, 0x4c, 0x52, 0x53, 0x0, 0x0, 0x0, 0x0, 0x0, 1, 2, 3, 0x0, 0x0};
 
     TEST_ASSERT_EQUAL_INT8_ARRAY(compare, data, sizeof(compare));
 
-    TEST_ASSERT_EQUAL(test_crc.calc(&deviceInformation[2], DEVICE_INFORMATION_LENGTH-3), deviceInformation[DEVICE_INFORMATION_LENGTH - 1]);
+    TEST_ASSERT_EQUAL(test_crc.calc(connector.data.data() + 2, DEVICE_INFORMATION_LENGTH-3), connector.data.data()[DEVICE_INFORMATION_LENGTH - 1]);
 }
-
-// Unity setup/teardown
-void setUp() {}
-void tearDown() {}
 
 int main(int argc, char **argv)
 {
+    connector.addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC
+    crsfRouter.addConnector(&connector);
+    crsfRouter.addEndpoint(&crsfEndpoint);
+
     UNITY_BEGIN();
     RUN_TEST(test_ver_to_u32);
     RUN_TEST(test_device_info);

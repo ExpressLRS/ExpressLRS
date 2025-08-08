@@ -1,24 +1,10 @@
 #pragma once
 
-#include <cstdint>
+#include "targets.h"
 #include <cmath>
-#include "crc.h"
-#include "options.h"
-
-#if TARGET_TX
-#define CRSF_TX_MODULE 1
-#elif TARGET_RX || defined(UNIT_TEST)
-#define CRSF_RX_MODULE 1
-#else
-#error "Invalid configuration!"
-#endif
-
+#include <cstdint>
 
 #define PACKED __attribute__((packed))
-
-#ifndef ICACHE_RAM_ATTR
-#define ICACHE_RAM_ATTR
-#endif
 
 #define CRSF_CRC_POLY 0xd5
 
@@ -73,7 +59,7 @@ typedef enum : uint8_t
     CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
-    //CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, ELRS good/bad packet count and status flags
+    CRSF_FRAMETYPE_ELRS_STATUS = 0x2E, // ELRS good/bad packet count and status flags
 
     CRSF_FRAMETYPE_COMMAND = 0x32,
     CRSF_FRAMETYPE_HANDSET = 0x3A,
@@ -162,6 +148,7 @@ typedef struct crsf_header_s
 } PACKED crsf_header_t;
 
 #define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
+#define CRSF_MK_EXT_FRAME_T(payload) struct payload##_frame_s { crsf_ext_header_t h; payload p; uint8_t crc; } PACKED
 
 // Used by extended header frames (type in range 0x28 to 0x96)
 typedef struct crsf_ext_header_s
@@ -199,16 +186,6 @@ typedef struct crsf_channels_s
     unsigned ch15 : 11;
 } PACKED crsf_channels_t;
 
-/**
- * Define the shape of a standard packet
- * A 'standard' header followed by the packed channels
- */
-typedef struct rcPacket_s
-{
-    crsf_header_t header;
-    crsf_channels_s channels;
-} PACKED rcPacket_t;
-
 typedef struct deviceInformationPacket_s
 {
     uint32_t serialNo;
@@ -221,6 +198,12 @@ typedef struct deviceInformationPacket_s
 #define DEVICE_INFORMATION_PAYLOAD_LENGTH (sizeof(deviceInformationPacket_t) + strlen(device_name)+1)
 #define DEVICE_INFORMATION_LENGTH (sizeof(crsf_ext_header_t) + DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_CRC_SIZE)
 #define DEVICE_INFORMATION_FRAME_SIZE (DEVICE_INFORMATION_PAYLOAD_LENGTH + CRSF_FRAME_LENGTH_EXT_TYPE_CRC)
+
+typedef struct crsf_sync_packet_s {
+    uint8_t subType;
+    uint32_t rate; // Big-Endian
+    uint32_t offset; // Big-Endian
+} PACKED crsf_sync_packet_t;
 
 // https://github.com/betaflight/betaflight/blob/master/src/main/msp/msp.c#L1949
 typedef struct mspVtxConfigPacket_s
@@ -266,19 +249,6 @@ typedef struct mspVtxBandPacket_s
 #define MSP_SET_VTX_CONFIG_PAYLOAD_LENGTH 15
 #define MSP_SET_VTXTABLE_BAND_PAYLOAD_LENGTH 29
 #define MSP_SET_VTXTABLE_POWERLEVEL_PAYLOAD_LENGTH 7
-/**
- * Union to allow accessing the input buffer as different data shapes
- * without generating compiler warnings (and relying on undefined C++ behaviour!)
- * Each entry in the union provides a different view of the same memory.
- * This is just the defintion of the union, the declaration of the variable that
- * uses it is later in the file.
- */
-union inBuffer_U
-{
-    uint8_t asUint8_t[CRSF_MAX_PACKET_LEN]; // max 64 bytes for CRSF packet serial buffer
-    rcPacket_t asRCPacket_t;    // access the memory as RC data
-                                // add other packet types here
-};
 
 //CRSF_FRAMETYPE_BATTERY_SENSOR
 typedef struct crsf_sensor_battery_s
@@ -407,36 +377,6 @@ typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
 {
     uint8_t downlink_RSSI_2;
 } PACKED elrsLinkStatistics_t;
-
-// typedef struct crsfOpenTXsyncFrame_s
-// {
-//     uint32_t adjustedRefreshRate;
-//     uint32_t lastUpdate;
-//     uint16_t refreshRate;
-//     int8_t refreshRate;
-//     uint16_t inputLag;
-//     uint8_t interval;
-//     uint8_t target;
-//     uint8_t downlink_RSSI;
-//     uint8_t downlink_Link_quality;
-//     int8_t downlink_SNR;
-// } crsfOpenTXsyncFrame_t;
-
-// typedef struct crsfOpenTXsyncFrame_s crsfOpenTXsyncFrame_t;
-
-enum {
-    CRSF_FRAME_GPS_PAYLOAD_SIZE = sizeof(crsf_sensor_gps_t),
-    CRSF_FRAME_VARIO_PAYLOAD_SIZE = sizeof(crsf_sensor_vario_t),
-    CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_baro_vario_t),
-    CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = sizeof(crsf_sensor_battery_t),
-    CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = sizeof(crsf_sensor_attitude_t),
-    CRSF_FRAME_FLIGHT_MODE_PAYLOAD_SIZE = sizeof(crsf_flight_mode_t),
-    CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE = sizeof(crsf_sensor_airspeed_t),
-    CRSF_FRAME_RPM_PAYLOAD_SIZE = sizeof(crsf_sensor_rpm_t),
-    CRSF_FRAME_TEMP_PAYLOAD_SIZE = sizeof(crsf_sensor_temp_t),
-    CRSF_FRAME_CELLS_PAYLOAD_SIZE = sizeof(crsf_sensor_cells_t),
-    CRSF_FRAME_GENERAL_RESP_PAYLOAD_SIZE = CRSF_EXT_FRAME_SIZE(CRSF_FRAME_TX_MSP_FRAME_SIZE)
-};
 
 /////inline and utility functions//////
 

@@ -2,8 +2,8 @@
 
 #include "devServoOutput.h"
 #include "PWM.h"
-#include "CRSF.h"
 #include "config.h"
+#include "crsf_protocol.h"
 #include "logging.h"
 #include "rxtx_intf.h"
 

@@ -1,14 +1,34 @@
 #include "SerialCRSF.h"
-#include "common.h"
+
 #include "OTA.h"
+#include "common.h"
 #include "device.h"
-#include "telemetry.h"
 #include "tcpsocket.h"
+#include "telemetry.h"
 
 extern TCPSOCKET wifi2tcp;
 extern Telemetry telemetry;
 extern void reset_into_bootloader();
-extern void UpdateModelMatch(uint8_t model);
+
+void SerialCRSF::forwardMessage(const crsf_header_t *message)
+{
+    // No MSP data to the FC if team-race is selected and the correct model is not selected
+    if (teamraceHasModelMatch)
+    {
+        auto *data = (uint8_t *)message;
+        const uint8_t totalBufferLen = data[CRSF_TELEMETRY_LENGTH_INDEX] + CRSF_FRAME_NOT_COUNTED_BYTES;
+        if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
+        {
+            // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+            // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+            data[0] = CRSF_SYNC_BYTE;
+            _fifo.lock();
+            _fifo.push(totalBufferLen);
+            _fifo.pushBytes(data, totalBufferLen);
+            _fifo.unlock();
+        }
+    }
+}
 
 void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
 {
@@ -27,37 +47,12 @@ void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
     SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }
 
-void SerialCRSF::queueLinkStatisticsPacket()
-{
-    // Note size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
-    constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
-
-    constexpr uint8_t outBuffer[] = {
-        payloadLen + 4,
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
-        CRSF_FRAME_SIZE(payloadLen),
-        CRSF_FRAMETYPE_LINK_STATISTICS
-    };
-
-    uint8_t crc = crsf_crc.calc(outBuffer[3]);
-    crc = crsf_crc.calc((byte *)&CRSF::LinkStatistics, payloadLen, crc);
-
-    _fifo.lock();
-    if (_fifo.ensure(outBuffer[0] + 1))
-    {
-        _fifo.pushBytes(outBuffer, sizeof(outBuffer));
-        _fifo.pushBytes((byte *)&CRSF::LinkStatistics, payloadLen);
-        _fifo.push(crc);
-    }
-    _fifo.unlock();
-}
-
 uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable)
         return DURATION_IMMEDIATELY;
 
-    crsf_channels_s PackedRCdataOut;
+    crsf_channels_s PackedRCdataOut {};
     PackedRCdataOut.ch0 = channelData[0];
     PackedRCdataOut.ch1 = channelData[1];
     PackedRCdataOut.ch2 = channelData[2];
@@ -82,22 +77,24 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     else
     {
         // Not in 16-channel mode, send LQ and RSSI dBm
-        int32_t rssiDBM = CRSF::LinkStatistics.active_antenna == 0 ? -CRSF::LinkStatistics.uplink_RSSI_1 : -CRSF::LinkStatistics.uplink_RSSI_2;
+        int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
 
-        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(CRSF::LinkStatistics.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkStats.uplink_Link_quality, 0, 100, 0, 1023));
         PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
                                                    ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
     }
 
     constexpr uint8_t outBuffer[] = {
         // No need for length prefix as we aren't using the FIFO
-        CRSF_ADDRESS_FLIGHT_CONTROLLER,
+        // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+        // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+        CRSF_SYNC_BYTE,
         CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
         CRSF_FRAMETYPE_RC_CHANNELS_PACKED
     };
 
-    uint8_t crc = crsf_crc.calc(outBuffer[2]);
-    crc = crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
+    uint8_t crc = crsfRouter.crsf_crc.calc(outBuffer[2]);
+    crc = crsfRouter.crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
 
     _outputPort->write(outBuffer, sizeof(outBuffer));
     _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
@@ -105,43 +102,10 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     return DURATION_IMMEDIATELY;
 }
 
-void SerialCRSF::queueMSPFrameTransmission(uint8_t* data)
-{
-    const uint8_t totalBufferLen = CRSF_FRAME_SIZE(data[1]);
-    if (totalBufferLen <= CRSF_FRAME_SIZE_MAX)
-    {
-        data[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-        _fifo.lock();
-        _fifo.push(totalBufferLen);
-        _fifo.pushBytes(data, totalBufferLen);
-        _fifo.unlock();
-    }
-}
-
 void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
 {
     for (int i=0 ; i<size ; i++)
     {
-        telemetry.RXhandleUARTin(bytes[i]);
-
-        if (telemetry.ShouldCallBootloader())
-        {
-            reset_into_bootloader();
-        }
-        if (telemetry.ShouldCallEnterBind())
-        {
-            EnterBindingModeSafely();
-        }
-        if (telemetry.ShouldCallUpdateModelMatch())
-        {
-            UpdateModelMatch(telemetry.GetUpdatedModelMatch());
-        }
-        if (telemetry.ShouldSendDeviceFrame())
-        {
-            uint8_t deviceInformation[DEVICE_INFORMATION_LENGTH];
-            CRSF::GetDeviceInformation(deviceInformation, 0);
-            CRSF::SetExtendedHeaderAndCrc(deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_FLIGHT_CONTROLLER);
-            queueMSPFrameTransmission(deviceInformation);
-        }
+        telemetry.RXhandleUARTin(this, bytes[i]);
     }
 }

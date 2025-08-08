@@ -4,7 +4,6 @@
 #include <cstddef>
 
 #include "crc.h"
-#include "CRSF.h"
 #include "crsf_protocol.h"
 #include "telemetry_protocol.h"
 #include "FIFO.h"
