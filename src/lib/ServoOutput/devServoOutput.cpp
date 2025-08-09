@@ -269,7 +269,7 @@ static int event()
                 pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
             }
 #if defined(PLATFORM_ESP32)
-            else if ((eServoOutputMode)chConfig->val.mode == somDShot)
+            else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
             {
                 dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
             }
