@@ -59,7 +59,8 @@ static void servoWrite(uint8_t ch, uint16_t us)
         // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
         if (dshotInstances[ch])
         {
-            dshotInstances[ch]->send_dshot_value(((constrain(us, 1000, 2000) - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
+            us = fmap(constrain(us, 1000, 2000), 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+            dshotInstances[ch]->send_dshot_value(us);
         }
     }
     else
@@ -271,7 +272,6 @@ static int event()
             else if ((eServoOutputMode)chConfig->val.mode == somDShot)
             {
                 dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
-                dshotInstances[ch]->send_dshot_value(0);    // Set throttle low so the ESC can continue initialization
             }
 #endif
         }
