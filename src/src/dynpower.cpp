@@ -89,13 +89,12 @@ void DynamicPower_Update(uint32_t now)
 
   if(isSnrStatReady)
   {
-    int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*8);
-    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*8);
+    int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*16);
+    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
 
-    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/8); // -4 sd
-    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*2)/8); // +2 sd
-    int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/8)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
-    // int8_t snr_thre_dn_limit = static_cast<int8_t>((snr_stat_mean)/8);
+    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/16); // -4 sd
+    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
+    int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
 
     snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
     snr_stat_threshold_dn = snr_thre_dn_scaled;
