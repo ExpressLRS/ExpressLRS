@@ -37,8 +37,6 @@ static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
 static StdevAccumulator dynpower_stat_snr;
 static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
-static uint32_t dynpower_last_report;
-static uint32_t dynpower_statistic_snr_count;
 static uint8_t dynpower_curr_rf_idx;
 
 static void DynamicPower_SetToConfigPower()
@@ -50,8 +48,6 @@ void DynamicPower_Init()
 {
     dynpower_mavg_lq = 100;
     dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
-    dynpower_last_report = 0;
-    dynpower_statistic_snr_count = 0;
     dynpower_curr_rf_idx = 0;
 }
 
@@ -63,7 +59,6 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
 void ICACHE_RAM_ATTR DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
 {
     dynpower_stat_snr.add(rawSnrScaled);
-    dynpower_statistic_snr_count++;
 }
 
 void DynamicPower_Update(uint32_t now)
@@ -99,27 +94,12 @@ void DynamicPower_Update(uint32_t now)
     snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
     snr_stat_threshold_dn = snr_thre_dn_scaled;
   }
-
-  if (now - dynpower_last_report > 5000)
-  {
-    dynpower_stat_snr.printBuffer();
-    DBGLN("%d %d %d %d %d %d %d %d", POWERMGNT::currPower(), CRSF::LinkStatistics.uplink_Link_quality, dynpower_statistic_snr_count, static_cast<int>(dynpower_stat_snr.mean()*8), static_cast<int>(dynpower_stat_snr.standardDeviation()*8), dynpower_stat_snr.getCount(), snr_stat_threshold_up, snr_stat_threshold_dn);
-    dynpower_last_report = now;
-    dynpower_statistic_snr_count = 0;
-  }
-
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
   {
     DBGVLN("-power (overload)");
     POWERMGNT::decPower();
   }
-
-  // if (dynpower_ewma_snr.count() > 30)
-  // {
-  //   DBGLN("SNR Naive: %d / %d (%d)", static_cast<int>(dynpower_naive_snr.mean()*8), static_cast<int>(dynpower_naive_snr.standardDeviation()*8), dynpower_naive_snr.getCount());
-  //   dynpower_ewma_snr.setCount(0);
-  // }
 
   // When not using dynamic power, return here
   if (!config.GetDynamicPower())
@@ -225,9 +205,9 @@ void DynamicPower_Update(uint32_t now)
     // Increase the power for each (X) SNR below the threshold
     if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      if(POWERMGNT::currPower() > MinPower)
+      if(POWERMGNT::currPower() > MinPower) // prevent spamming when idle
       {
-        DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn); // Verbose because this spams when idle
+        DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn);
       }
       POWERMGNT::decPower();
     }

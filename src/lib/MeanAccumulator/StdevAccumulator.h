@@ -3,7 +3,8 @@
 #include <cstdint>
 #include <cmath>
 
-#if defined(PLATFORM_ESP32)
+// run in IRAM for speed up when running on ESP32
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP32S3)
 #include "esp_attr.h"
 #define STDEV_INLINE inline IRAM_ATTR
 #else
@@ -17,6 +18,7 @@
 #define FIXED_POINT_MASK (FIXED_POINT_SCALE - 1)
 
 // Fast integer square root using binary search
+// algorithm adopted from https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_(base_2)
 STDEV_INLINE uint16_t fast_sqrt_uint(uint32_t x) {
     if (x == 0) {
         return 0;
@@ -44,9 +46,7 @@ STDEV_INLINE uint16_t fast_sqrt_uint(uint32_t x) {
     return static_cast<uint16_t>(res);
 }
 
-/// @brief Efficient fixed-size accumulator using a circular buffer.
-///        Computes mean and standard deviation over a moving window of the last WINDOW_SIZE samples.
-///        Uses incremental algorithm and fixed-point arithmetic for maximum performance.
+/// @brief Efficient fixed-size mean/stdev incremental accumulator using a circular buffer (of size WINDOW_SIZE).
 class StdevAccumulator
 {
 public:
@@ -54,23 +54,12 @@ public:
 
     StdevAccumulator()
     {
-        for (int i = 0; i < WINDOW_SIZE; ++i)
-        {
-            _buffer[i] = 0;
-        }
-        _index = 0;
-        _count = 0;
-        _sum = 0;
-        _sumSq = 0;
-        _lastMeanFixed = 0;
-        _lastStdevFixed = 0;
-        _lastPrintIndex = 0;
-        _dirty = true;
+        reset();
     }
 
     /// @brief Adds a new int8_t sample into the circular buffer.
     ///        If full, the oldest value is overwritten (moving window).
-    ///        Only minimal work is done here for interrupt safety.
+    ///        Only minimal work should be done here for interrupt safety.
     void ICACHE_RAM_ATTR add(int8_t value)
     {
         int8_t old = _buffer[_index];
@@ -86,8 +75,6 @@ public:
         {
             // Remove the old value, add the new one
             _sum += value - old;
-            // Optimize square calculation for int8_t values
-            // Since int8_t range is -128 to 127, squares fit in int16_t
             int16_t newSq = static_cast<int16_t>(value) * value;
             int16_t oldSq = static_cast<int16_t>(old) * old;
             _sumSq += newSq - oldSq;
@@ -98,12 +85,12 @@ public:
     }
 
     /// @brief Computes and returns the mean of the current buffer contents.
-    /// @return Mean as float, or -1.0f if no data
+    /// @return Mean as float, or 0.0f if no data
     float mean()
     {
         if (_count == 0)
         {
-            return -1.0f;
+            return 0.0f;
         }
 
         if (!_dirty)
@@ -118,12 +105,12 @@ public:
     }
 
     /// @brief Computes and returns the standard deviation of the current buffer contents.
-    /// @return Standard deviation as float, or -1.0f if not enough data
+    /// @return Standard deviation as float, or 0.0f if not enough data
     float standardDeviation()
     {
         if (_count < 2)
         {
-            return -1.0f;
+            return 0.0f;
         }
 
         if (!_dirty)
@@ -145,7 +132,7 @@ public:
         // Variance = E[x^2] - (E[x])^2
         int32_t varianceFixed = ex2Fixed - exFixedSquared;
 
-        // Apply Bessel's correction: multiply by n/(n-1)
+        // Apply Bessel's correction: multiply by n/(n-1) for calculating sample variance
         varianceFixed = (varianceFixed * _count) / (_count - 1);
 
         // Clamp variance to zero if negative due to rounding
@@ -165,62 +152,26 @@ public:
         return _count;
     }
 
-    void printBuffer()
-    {
-        if(_lastPrintIndex == _index || _count == 0)
-        {
-            return;
-        }
-
-        // Ensure indices are within valid range
-        if (_lastPrintIndex >= WINDOW_SIZE || _index >= WINDOW_SIZE)
-        {
-            _lastPrintIndex = 0;
-            return;
-        }
-
-        int16_t start = _lastPrintIndex-1;
-        int16_t end = _index-1;
-
-        if(start < 0)
-        {
-            start += WINDOW_SIZE;
-        }
-        if(end < 0)
-        {
-            end += WINDOW_SIZE;
-        }
-
-        // Print from start to end, wrapping if needed
-        int16_t i = start;
-        DBG("BUF: ");
-        while (i != end) {
-            i = (i + 1) % WINDOW_SIZE;
-            DBG("%d ", _buffer[i]);
-        }
-        DBGLN("");
-        _lastPrintIndex = _index;
-    }
-
+    /// @brief Resets the accumulator to its initial state.
     void reset()
     {
+        std::fill(_buffer, _buffer + WINDOW_SIZE, 0);
+        _index = 0;
         _count = 0;
         _sum = 0;
         _sumSq = 0;
         _lastMeanFixed = 0;
         _lastStdevFixed = 0;
-        _lastPrintIndex = 0;
         _dirty = true;
     }
 
 private:
     int8_t _buffer[WINDOW_SIZE];    ///< Circular buffer
     uint16_t _index;                ///< Write index (next position to write)
-    uint16_t _count;                ///< Valid entry count (≤ WINDOW_SIZE)
+    uint16_t _count;                ///< Valid entry count (<= WINDOW_SIZE)
     int32_t _sum;                   ///< Sum of current buffer values
     int32_t _sumSq;                 ///< Sum of squares of current buffer values
     int32_t _lastMeanFixed;         ///< Last calculated mean in fixed-point format
     int32_t _lastStdevFixed;        ///< Last calculated stdev in fixed-point format
-    int16_t _lastPrintIndex;
-    bool _dirty;                    ///< True if mean/stdev need recalculation
+    bool _dirty;                    ///< True if cached mean/stdev are invalid (set to true when add() is called)
 };
