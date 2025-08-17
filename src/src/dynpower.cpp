@@ -63,15 +63,6 @@ void ICACHE_RAM_ATTR DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
 
 void DynamicPower_Update(uint32_t now)
 {
-  if(ExpressLRS_currAirRate_RFperfParams->index != dynpower_curr_rf_idx)
-  {
-    dynpower_curr_rf_idx = ExpressLRS_currAirRate_RFperfParams->index;
-    dynpower_stat_snr.reset();
-  }
-
-  int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
-  int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
-
   int8_t snrScaled = dynpower_updated;
   dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
 
@@ -81,28 +72,12 @@ void DynamicPower_Update(uint32_t now)
   uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
   int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
 
-  bool isSnrStatReady = dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE;
-
-  if(isSnrStatReady)
+  if(ExpressLRS_currAirRate_RFperfParams->index != dynpower_curr_rf_idx)
   {
-    int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*16);
-    int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
-
-    // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
-    // Base scale factor is 7/2 (3.5), reduce it proportionally when LQ < 100
-    int32_t scale_factor_numerator = 7;
-    if (lq_current < 100) {
-      // scale factor will be 1 (=-0.5 sd for power up threshold) when LQ is 85
-      scale_factor_numerator = std::max((int32_t)(7 - ((100 - lq_current) * 6) / 15), (int32_t)1);
-    }
-
-    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/2)/16); // Dynamic scale based on LQ
-    int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
-    int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
-
-    snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
-    snr_stat_threshold_dn = snr_thre_dn_scaled;
+    dynpower_curr_rf_idx = ExpressLRS_currAirRate_RFperfParams->index;
+    dynpower_stat_snr.reset();
   }
+
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
   {
@@ -208,6 +183,32 @@ void DynamicPower_Update(uint32_t now)
   } // ^^ if RSSI-based
   else
   {
+    // default thresholds from the config (as a fallback)
+    int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
+    int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
+
+    // is SNR stat ready? = is the buffer fully stuffed?
+    if(dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE)
+    {
+      int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*16);
+      int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
+
+      // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
+      // Base scale factor is 7/2 (3.5), reduce it proportionally when LQ < 100
+      int32_t scale_factor_numerator = 7;
+      if (lq_current < 100) {
+        // scale factor will be 1 (=-0.5 sd for power up threshold) when LQ is 85
+        scale_factor_numerator = std::max((int32_t)(7 - ((100 - lq_current) * 6) / 15), (int32_t)1);
+      }
+
+      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/2)/16); // Dynamic scale based on LQ
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
+      int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
+
+      snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
+      snr_stat_threshold_dn = snr_thre_dn_scaled;
+    }
+
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
