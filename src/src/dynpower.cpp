@@ -78,6 +78,7 @@ void DynamicPower_Update(uint32_t now)
   bool newTlmAvail = snrScaled > DYNPOWER_UPDATE_MISSED;
   bool lastTlmMissed = snrScaled == DYNPOWER_UPDATE_MISSED;
 
+  uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
   int8_t rssi = (CRSF::LinkStatistics.active_antenna == 0) ? CRSF::LinkStatistics.uplink_RSSI_1 : CRSF::LinkStatistics.uplink_RSSI_2;
 
   bool isSnrStatReady = dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE;
@@ -87,7 +88,15 @@ void DynamicPower_Update(uint32_t now)
     int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*16);
     int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
 
-    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*4)/16); // -4 sd
+    // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
+    // Base scale factor is 7/2 (3.5), reduce it proportionally when LQ < 100
+    int32_t scale_factor_numerator = 7;
+    if (lq_current < 100) {
+      // scale factor will be 1 (=-0.5 sd for power up threshold) when LQ is 85
+      scale_factor_numerator = std::max((int32_t)(7 - ((100 - lq_current) * 6) / 15), (int32_t)1);
+    }
+
+    int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/2)/16); // Dynamic scale based on LQ
     int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
     int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
 
@@ -156,7 +165,6 @@ void DynamicPower_Update(uint32_t now)
   // =============  LQ-based power boost up ==============
   // Quick boost up of power when detected any emergency LQ drops.
   // It should be useful for bando or sudden lost of LoS cases.
-  uint32_t lq_current = CRSF::LinkStatistics.uplink_Link_quality;
 #if defined(Regulatory_Domain_EU_CE_2400)
   // Scale up receiver LQ for packets not sent because the channel was not clear
   // the calculation could exceed 100% during a rate change or initial connect when the LQs are not synced
