@@ -198,17 +198,17 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   {
     OTA_Packet8_s * const ota8 = (OTA_Packet8_s * const)otaPktPtr;
     OTA_Packet8_s * const ota8Second = (OTA_Packet8_s * const)otaPktPtrSecond;
-    
+
     switch (otaPktPtr->std.type)
     {
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
-        }    
+        }
 
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
         {
@@ -233,10 +233,10 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                 packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
                 memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.ul_link_stats.payload, sizeof(ota8Second->tlm_dl.ul_link_stats.payload));
             }
-            
+
             if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
             {
-                TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES, 
+                TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
                     tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.ul_link_stats.payload));
                 packageIndexRadio1 = 0xFF;
                 packageIndexRadio2 = 0xFF;
@@ -279,11 +279,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                     packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
                     memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.payload, sizeof(ota8Second->tlm_dl.payload));
                 }
-                
+
                 if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
                 {
                     MspSender.ConfirmCurrentPayload(ota8->tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES, 
+                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
                         tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.payload));
                     packageIndexRadio1 = 0xFF;
                     packageIndexRadio2 = 0xFF;
@@ -307,7 +307,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode. 
+        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
         if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
@@ -344,11 +344,11 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
                     packageIndexRadio1 = otaPktPtrSecond->std.tlm_dl.packageIndex;
                     memcpy(tlmSenderDoubleBuffer, otaPktPtrSecond->std.tlm_dl.payload, sizeof(otaPktPtrSecond->std.tlm_dl.payload));
                 }
-                
+
                 if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
                 {
                     MspSender.ConfirmCurrentPayload(otaPktPtr->std.tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS4_TELEMETRY_MAX_PACKAGES, 
+                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS4_TELEMETRY_MAX_PACKAGES,
                         tlmSenderDoubleBuffer, 2 * sizeof(otaPktPtr->std.tlm_dl.payload));
                     packageIndexRadio1 = 0xFF;
                     packageIndexRadio2 = 0xFF;
@@ -490,8 +490,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
+  // timeout is used to take the RF out of receive mode during a telemetry slot before the end of the period,
+  // reducing turnaround time on the following TX. For packet rates with TOA < half interval, extend the timeout
+  // as it begins at the end of the TX, not from TOCK
+  uint32_t timeout = std::max(interval, interval * 3 / 2 - RFperf->TOA);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, timeout
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
