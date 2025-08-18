@@ -4,6 +4,7 @@
 
 #include "CRSF.h"
 #include "CRSFHandset.h"
+#include "NullHandset.h"
 #include "POWERMGNT.h"
 #include "devHandset.h"
 
@@ -21,9 +22,18 @@ static bool initialize()
         handset = new AutoDetect();
         return true;
     }
-#endif
+#elif defined(PLATFORM_ESP8266)
+    // The 8266 only has one UART, so we can't use it for handset and airport
+    if (!firmwareOptions.is_airport) {
+        handset = new CRSFHandset();
+        return true;
+    }
+    handset = new NullHandset();
+    return true;
+#else
     handset = new CRSFHandset();
     return true;
+#endif
 }
 
 static int start()

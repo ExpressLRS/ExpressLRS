@@ -95,6 +95,16 @@ public:
      */
     uint32_t GetRCdataLastRecv() const { return RCdataLastRecv; }
 
+    /**
+     * @brief Called to send raw data to the handset object (if supported)
+     */
+    virtual void write(uint8_t *data, uint8_t len) {}
+
+    /**
+     * @brief Called to read raw data from the handset object (if supported)
+     */
+    virtual uint8_t readBytes(uint8_t *data, uint8_t len) { return 0; }
+
 #if defined(DEBUG_TX_FREERUN)
     /**
      * @brief Can be used to force a connected callback for debugging
