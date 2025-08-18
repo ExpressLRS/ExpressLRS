@@ -99,6 +99,10 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 	return rmt_driver_install(dshot_tx_rmt_config.channel, 0, 0);
 }
 
+void DShotRMT::set_looping(bool x) {
+	rmt_set_tx_loop_mode(rmt_channel, x);
+}
+
 // ...the config part is done, now the calculating and sending part
 void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request) {
 	dshot_packet_t dshot_rmt_packet = { };
