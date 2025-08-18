@@ -827,10 +827,10 @@ static void ChangeRadioParams()
   SetRFLinkRate(config.GetRate());
 }
 
-void ModelUpdateReq()
+void ModelUpdateReqWithId(int modelId)
 {
   // Force synspam with the current rate parameters in case already have a connection established
-  if (config.SetModelId(CRSFHandset::getModelID()))
+  if (config.SetModelId(modelId))
   {
     syncSpamCounter = syncSpamAmount;
     syncSpamCounterAfterRateChange = syncSpamAmountAfterRateChange;
@@ -845,6 +845,18 @@ void ModelUpdateReq()
   {
     setConnectionState(disconnected);
   }
+}
+
+void ModelUpdateReq()
+{
+  ModelUpdateReqWithId(CRSFHandset::getModelID());
+}
+
+void ToggleModelID()
+{
+  // This function is called as a button action to toggle models
+  // It acts as a simple wrapper to ModelUpdateReqWithId, but passes the opposite (odd/even) model ID
+  ModelUpdateReqWithId(config.GetModelId() ^ 1);
 }
 
 static void ConfigChangeCommit()
@@ -1457,6 +1469,7 @@ void setup()
 
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
   registerButtonFunction(ACTION_INCREASE_POWER, cyclePower);
+  registerButtonFunction(ACTION_TOGGLE_MODEL_ID, ToggleModelID);
 
   devicesStart();
 
