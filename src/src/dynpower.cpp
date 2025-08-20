@@ -155,7 +155,9 @@ void DynamicPower_Update(uint32_t now)
       return;
   }
 
+  int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
   PowerLevels_e startPowerLevel = POWERMGNT::currPower();
+
   if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
     // =============  RSSI-based power increment ==============
@@ -165,7 +167,6 @@ void DynamicPower_Update(uint32_t now)
 
     if (dynpower_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
     {
-      int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
       int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
       int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN;
       int8_t avg_rssi = dynpower_mean_rssi.mean(); // resets it too
@@ -195,15 +196,15 @@ void DynamicPower_Update(uint32_t now)
 
       // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
       // Base scale factor is 7/2 (3.5), reduce it proportionally when LQ < 100
-      int32_t scale_factor_numerator = 7;
+      int32_t scale_factor_numerator = 6;
       if (lq_current < 100) {
         // scale factor will be 1 (=-0.5 sd for power up threshold) when LQ is 85
-        scale_factor_numerator = std::max((int32_t)(7 - ((100 - lq_current) * 6) / 15), (int32_t)1);
+        scale_factor_numerator = std::max((int32_t)(6 - ((100 - lq_current) * 5) / 15), (int32_t)1);
       }
 
       int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/2)/16); // Dynamic scale based on LQ
-      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
-      int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.5); // to ensure at least -1.5 dB split between thresholds
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*4/2)/16); // +2 sd
+      int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.0); // to ensure at least -1.0 dB split between thresholds
 
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
       snr_stat_threshold_dn = snr_thre_dn_scaled;
@@ -221,7 +222,10 @@ void DynamicPower_Update(uint32_t now)
       POWERMGNT::decPower();
     }
 
-    while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0))
+    // use RSSI_DN threshold to make sure the signal is still in good range but with some distance for SNR to exhibit a fair distribution
+    bool isSignalBad = (rssi <= (expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN)) || (lq_avg <= 95);
+
+    while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0) && isSignalBad)
     {
       DBGLN("+power (snr) %d <= %d", snrScaled, snr_stat_threshold_up);
       POWERMGNT::incPower();

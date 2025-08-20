@@ -50,7 +50,7 @@ STDEV_INLINE uint16_t fast_sqrt_uint(uint32_t x) {
 class StdevAccumulator
 {
 public:
-    static const size_t WINDOW_SIZE = 32;
+    static const size_t WINDOW_SIZE = 48;
 
     StdevAccumulator()
     {
