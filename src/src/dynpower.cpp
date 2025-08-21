@@ -195,15 +195,15 @@ void DynamicPower_Update(uint32_t now)
       int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
 
       // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
-      // Base scale factor is 7/2 (3.5), reduce it proportionally when LQ < 100
-      int32_t scale_factor_numerator = 6;
+      // Base scale factor is 13/4 (3.25), reduce it proportionally when LQ < 100
+      int32_t scale_factor_numerator = 13;
       if (lq_current < 100) {
-        // scale factor will be 1 (=-0.5 sd for power up threshold) when LQ is 85
-        scale_factor_numerator = std::max((int32_t)(6 - ((100 - lq_current) * 5) / 15), (int32_t)1);
+        // scale factor will be 1 (=-0.25 sd for power up threshold) when LQ is 85
+        scale_factor_numerator = std::max((int32_t)(scale_factor_numerator - ((100 - lq_current) * (scale_factor_numerator-1)) / 15), (int32_t)1);
       }
 
-      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/2)/16); // Dynamic scale based on LQ
-      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*4/2)/16); // +2 sd
+      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/4)/16); // Dynamic scale based on LQ
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
       int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.0); // to ensure at least -1.0 dB split between thresholds
 
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
