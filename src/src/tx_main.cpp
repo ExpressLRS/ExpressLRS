@@ -1009,7 +1009,7 @@ void OnPowerSetCalibration(mspPacket_t *packet)
   uint8_t index = packet->readByte();
   int8_t value = packet->readByte();
 
-  if((index < 0) || (index > PWR_COUNT))
+  if((index < 0) || (index >= PWR_COUNT))
   {
     DBGLN("calibration error index %d out of range", index);
     return;
