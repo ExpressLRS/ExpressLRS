@@ -53,7 +53,7 @@
 
 // Lighting
 #define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led)
-#define GPIO_LED_RED_INVERTED hardware_pin(HARDWARE_led_red_invert)
+#define GPIO_LED_RED_INVERTED hardware_flag(HARDWARE_led_red_invert)
 #define GPIO_PIN_LED_BLUE UNDEF_PIN
 #define GPIO_LED_BLUE_INVERTED false
 #define GPIO_PIN_LED_GREEN UNDEF_PIN
