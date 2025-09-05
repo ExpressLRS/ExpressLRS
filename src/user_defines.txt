@@ -76,11 +76,11 @@
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
 
-# Prints a log line for every channels packet recieved at the RX:
+# Prints a log line for every channels packet received at the RX:
 #    ID,Antenna,RSSI,LQ,SNR,PWR,FHSS,TimingOffset
 # The ID is generated on the TX side and overwrites CH1-CH4 and increments once for every
 # channels packet. Writes directly to Serial, does not require DEBUG_LOG.
-# Flash both TX & RX with this enbled to use it if the ID is required.
+# Flash both TX & RX with this enabled to use it if the ID is required.
 #-DDEBUG_RCVR_LINKSTATS
 
 # This debug option reports dual radio RSSI&SNR, which is useful for validating a TD receiver

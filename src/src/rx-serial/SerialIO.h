@@ -76,7 +76,7 @@ public:
     /**
      * @brief Returns true is the serial protocol driver wants to send RC packets immediately
      * in the "tock" timer callback rather than waiting for the serial timeout. For example,
-     * CRSF protocol uses this to reduce jitter in teh RC commands being sent to the FC.
+     * CRSF protocol uses this to reduce jitter in the RC commands being sent to the FC.
      *
      * @return true of the serial protocol driver wants to send RC packets in "tock"
      */
