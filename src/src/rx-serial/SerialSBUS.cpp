@@ -1,15 +1,15 @@
 #include "SerialSBUS.h"
-#include "CRSF.h"
-#include "device.h"
 #include "config.h"
+#include "crsf_protocol.h"
+#include "device.h"
 
 #if defined(TARGET_RX)
 
-#define SBUS_FLAG_SIGNAL_LOSS       (1 << 2)
-#define SBUS_FLAG_FAILSAFE_ACTIVE   (1 << 3)
+#define SBUS_FLAG_SIGNAL_LOSS     (1 << 2)
+#define SBUS_FLAG_FAILSAFE_ACTIVE (1 << 3)
 
-const auto UNCONNECTED_CALLBACK_INTERVAL_MS = 10;
-const auto SBUS_CALLBACK_INTERVAL_MS = 9;
+constexpr auto UNCONNECTED_CALLBACK_INTERVAL_MS = 10;
+constexpr auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
 uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {

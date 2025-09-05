@@ -7,8 +7,9 @@
  */
 
 #include "OTA.h"
+#include "CRSFRouter.h"
 #include "common.h"
-#include "CRSF.h"
+
 #include <cassert>
 
 static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
@@ -195,7 +196,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
     // There are only 7 switches to round robin through, so the 8th slot is used to send TX power
     if (nextSwitchIndex == 7)
     {
-        value |= CRSF::LinkStatistics.uplink_TX_Power;
+        value |= linkStats.uplink_TX_Power;
     }
     else
     {
@@ -211,7 +212,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     ota8->rc.packetType = PACKET_TYPE_RCDATA;
     ota8->rc.telemetryStatus = TelemetryStatus;
     // uplinkPower has 8 items but only 3 bits, but 0 is 0 power which we never use, shift 1-8 -> 0-7
-    ota8->rc.uplinkPower = constrain(CRSF::LinkStatistics.uplink_TX_Power, 1, 8) - 1;
+    ota8->rc.uplinkPower = constrain(linkStats.uplink_TX_Power, 1, 8) - 1;
     ota8->rc.isHighAux = isHighAux;
     // send armed status to receiver
     #if defined(UNIT_TEST)
@@ -397,7 +398,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
     TelemetryStatus = (switchByte & 0b01000000) >> 6;
     if (switchIndex == 7)
     {
-        CRSF::updateUplinkPower(switchByte & 0b111111);
+        linkStats.uplink_TX_Power = switchByte & 0b111111;
     }
     else
     {
@@ -447,7 +448,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     //channelData[4] = BIT_to_CRSF(isArmed);
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
-    CRSF::updateUplinkPower(ota8->rc.uplinkPower + 1);
+    linkStats.uplink_TX_Power = constrain(ota8->rc.uplinkPower + 1, 1, 8);
     return ota8->rc.telemetryStatus;
 }
 #endif

@@ -3,6 +3,10 @@
 #include <Arduino.h>
 #endif
 
+// Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
+// It should be incremented when the OTA packet structure is modified.
+#define OTA_VERSION_ID      4
+
 #define UNDEF_PIN (-1)
 
 /// General Features ///
