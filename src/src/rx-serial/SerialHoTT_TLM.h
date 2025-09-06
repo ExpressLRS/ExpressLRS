@@ -21,15 +21,15 @@
 
 #define START_OF_CMD_B 0x80    // start byte of HoTT binary cmd sequence
 #define SENSOR_ID_GPS_B 0x8A   // device ID binary mode GPS module
-#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode adressing
+#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode addressing
 #define SENSOR_ID_GAM_B 0x8D   // device ID binary mode GAM module
-#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode adressing
+#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode addressing
 #define SENSOR_ID_EAM_B 0x8E   // device ID binary mode EAM module
-#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode adressing
+#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode addressing
 #define SENSOR_ID_ESC_B 0x8C   // device ID binary mode ESC module
-#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode adressing
+#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode addressing
 #define SENSOR_ID_VARIO_B 0x89 // device ID binary mode VARIO module
-#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode adressing
+#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode addressing
 
 //
 // GAM data frame data structure

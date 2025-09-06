@@ -161,7 +161,7 @@ public:
      * If there are not enough bytes in the FIFO then the FIFO is flushed and the bytes are not read
      *
      * @param data pointer to a buffer where the bytes are popped into
-     * @param len number of bytes to pop from teh FIFO
+     * @param len number of bytes to pop from the FIFO
      */
     ICACHE_RAM_ATTR void popBytes(uint8_t *data, const uint16_t len)
     {
