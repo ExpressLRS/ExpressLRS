@@ -23,7 +23,11 @@
                                 // be expected update rate will by about 150ms due
                                 // to HoTT bus speed if only a HoTT Vario is connected and
                                 // values change every HoTT bus poll cycle.
-
+#define TEMP_MIN_CRSFRATE 5000
+#define RPM_MIN_CRSFRATE 5000
+#define CELLS_MIN_CRSFRATE 5000
+#define VOLT_MIN_CRSFRATE 5000
+#define AIRSPEED_MIN_CRSFRATE 5000
 
 extern Telemetry telemetry;
 
@@ -235,29 +239,39 @@ uint8_t SerialHoTT_TLM::calcFrameCRC(uint8_t *buf)
 
 void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
 {
-    // HoTT combined GPS/Vario -> send GPS and vario packet
+    // HoTT stand alone Vario or GPS/Vario or EAM or GAM -> send vario packet
+    if (device[VARIO].present || device[GPS].present || device[GAM].present || device[EAM].present)
+    {
+        sendCRSFvario(now);
+    }
+
+    // HoTT combined GPS/Vario -> send GPS packet
     if (device[GPS].present)
     {
         sendCRSFgps(now);
-        sendCRSFvario(now);
     }
-    else
-        // HoTT stand alone Vario and no GPS/Vario -> just send vario packet
-        if (device[VARIO].present)
-        {
-            sendCRSFvario(now);
-        }
 
-    // HoTT GAM, EAM, ESC -> send battery packet
+    // HoTT GAM, EAM, ESC -> send battery, Rpm, Temp, Cells, Volt, Airspee packet
     if (device[GAM].present || device[EAM].present || device[ESC].present)
     {
         sendCRSFbattery(now);
 
-        // HoTT GAM and EAM but no GPS/Vario or Vario -> send vario packet too
-        if ((!device[GPS].present && !device[VARIO].present) && (device[GAM].present || device[EAM].present))
+        HoTTDevices deviceToUse = GAM;
+
+        if (device[EAM].present)
         {
-            sendCRSFvario(now);
+            deviceToUse = EAM;
         }
+        else if (device[ESC].present)
+        {
+            deviceToUse = ESC;
+        }
+
+        sendCRSFrpm(now, deviceToUse);
+        sendCRSFtemp(now, deviceToUse);
+        sendCRSFcells(now, deviceToUse);
+        sendCRSFvolt(now, deviceToUse);
+        sendCRSFairspeed(now, deviceToUse);
     }
 }
 
@@ -267,10 +281,9 @@ void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
     telemetry.SetCrsfBaroSensorDetected();
 
     // prepare CRSF telemetry packet
-    CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t)
-    crsfBaro = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t) crsfBaro = {0};
     crsfBaro.p.altitude = htobe16(getHoTTaltitude() * 10 + 5000); // Hott 500 = 0m, ELRS 10000 = 0.0m
-    crsfBaro.p.verticalspd = htobe16(getHoTTvv() - 30000);
+    crsfBaro.p.verticalspd = htobe16(getHoTTvv() - HOTT_VSPD_OFFSET);
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
 
     // send packet only if min rate timer expired or values have changed
@@ -286,8 +299,7 @@ void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
 void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
 {
     // prepare CRSF telemetry packet
-    CRSF_MK_FRAME_T(crsf_sensor_gps_t)
-    crsfGPS = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_gps_t) crsfGPS = {0};
     crsfGPS.p.latitude = htobe32(getHoTTlatitude());
     crsfGPS.p.longitude = htobe32(getHoTTlongitude());
     crsfGPS.p.groundspeed = htobe16(getHoTTgroundspeed() * 10); // Hott 1 = 1 km/h, ELRS 1 = 0.1km/h
@@ -312,8 +324,7 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     telemetry.SetCrsfBatterySensorDetected();
 
     // prepare CRSF telemetry packet
-    CRSF_MK_FRAME_T(crsf_sensor_battery_t)
-    crsfBatt = {0};
+    CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBatt = {0};
     crsfBatt.p.voltage = htobe16(getHoTTvoltage());
     crsfBatt.p.current = htobe16(getHoTTcurrent());
     crsfBatt.p.capacity = htobe24(getHoTTcapacity() * 10); // HoTT: 1 = 10mAh, CRSF: 1 ? 1 = 1mAh
@@ -328,6 +339,224 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     }
 
     lastBatteryCRC = crsfBatt.crc;
+}
+
+void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
+{
+    // prepare CRSF telemetry packet
+    CRSF_MK_FRAME_T(crsf_sensor_rpm_t) crsfRpm = {0};
+
+    crsfRpm.p.source_id = device;
+
+    uint8_t payloadSize = 1 + 2 * 3;
+
+    if (device == EAM)
+    {
+        crsfRpm.p.rpm0 = htobe24(eam.rpm * HOTT_RPM_SCALE);
+
+        payloadSize = 1 + 3;
+    }
+    else if (device == GAM)
+    {
+        crsfRpm.p.rpm0 = htobe24(gam.rpm1 * HOTT_RPM_SCALE);
+        crsfRpm.p.rpm1 = htobe24(gam.rpm2 * HOTT_RPM_SCALE);
+    }
+    else if (device == ESC)
+    {
+        crsfRpm.p.rpm0 = htobe24(esc.rpm * HOTT_RPM_SCALE);
+        crsfRpm.p.rpm1 = htobe24(esc.rpmMax * HOTT_RPM_SCALE);
+    }
+
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfRpm, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+    uint8_t crc = ((uint8_t *)&crsfRpm.p)[payloadSize];
+
+    // send packet only if min rate timer expired or values have changed
+    if ((now - lastRpmSent >= RPM_MIN_CRSFRATE) || (lastRpmCRC != crc))
+    {
+        lastRpmSent = now;
+
+        crsfRouter.deliverMessage(nullptr, &crsfRpm.h);
+    }
+
+    lastRpmCRC = crc;
+}
+
+void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
+{
+    // prepare CRSF telemetry packet
+    CRSF_MK_FRAME_T(crsf_sensor_temp_t) crsfTemp = {0};
+
+    crsfTemp.p.source_id = device;
+
+    uint8_t payloadSize = 1 + 2 * 2;
+
+    if (device == EAM)
+    {
+        crsfTemp.p.temperature[0] = htobe16((eam.temp1 - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);  
+        crsfTemp.p.temperature[1] = htobe16((eam.temp2 - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);  
+    }
+    else if (device == GAM)
+    {
+        crsfTemp.p.temperature[0] = htobe16((gam.temperature1 - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[1] = htobe16((gam.temperature2 - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+    }
+    else if (device == ESC)
+    {
+        crsfTemp.p.temperature[0] = htobe16((esc.escTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[1] = htobe16((esc.becTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[2] = htobe16((esc.motorTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[3] = htobe16((esc.pumpTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[4] = htobe16((esc.auxTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+
+        payloadSize = 1 + 2 * 5;
+    }
+
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfTemp, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+    uint8_t crc = ((uint8_t *)&crsfTemp.p)[payloadSize];
+
+    // send packet only if min rate timer expired or values have changed
+    if ((now - lastTempSent >= TEMP_MIN_CRSFRATE) || (lastTempCRC != crc))
+    {
+        lastTempSent = now;
+
+        crsfRouter.deliverMessage(nullptr, &crsfTemp.h);
+    }
+
+    lastTempCRC = crc;
+}
+
+void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
+{
+    if (device == ESC)
+        return;
+
+    // prepare CRSF telemetry packet
+    CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfCells = {0};
+
+    crsfCells.p.source_id = device;
+
+    uint8_t payloadSize = 1 + 14 * 2;
+
+    if (device == EAM)
+    {
+        crsfCells.p.cell[0] = htobe16(eam.cellL[0] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[1] = htobe16(eam.cellL[1] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[2] = htobe16(eam.cellL[2] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[3] = htobe16(eam.cellL[3] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[4] = htobe16(eam.cellL[4] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[4] = htobe16(eam.cellL[5] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[6] = htobe16(eam.cellL[6] * HOTT_CELL_SCALE);
+
+        crsfCells.p.cell[7] = htobe16(eam.cellH[0] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[8] = htobe16(eam.cellH[1] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[9] = htobe16(eam.cellH[2] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[10] = htobe16(eam.cellH[3] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[11] = htobe16(eam.cellH[4] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[12] = htobe16(eam.cellH[5] * HOTT_CELL_SCALE);
+        crsfCells.p.cell[13] = htobe16(eam.cellH[6] * HOTT_CELL_SCALE);
+    }
+    else if (device == GAM)
+    {
+        crsfCells.p.cell[0] = htobe16(gam.voltageCell1 * HOTT_CELL_SCALE);
+        crsfCells.p.cell[1] = htobe16(gam.voltageCell2 * HOTT_CELL_SCALE);
+        crsfCells.p.cell[2] = htobe16(gam.voltageCell3 * HOTT_CELL_SCALE);
+        crsfCells.p.cell[3] = htobe16(gam.voltageCell4 * HOTT_CELL_SCALE);
+        crsfCells.p.cell[4] = htobe16(gam.voltageCell5 * HOTT_CELL_SCALE);
+        crsfCells.p.cell[5] = htobe16(gam.voltageCell6 * HOTT_CELL_SCALE);
+
+        payloadSize = 1 + 6 * 2;
+    }
+
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfCells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+    uint8_t crc = ((uint8_t *)&crsfCells.p)[payloadSize];
+
+    // send packet only if min rate timer expired or values have changed
+    if ((now - lastCellsSent >= CELLS_MIN_CRSFRATE) || (lastCellsCRC != crc))
+    {
+        lastCellsSent = now;
+
+        crsfRouter.deliverMessage(nullptr, &crsfCells.h);
+    }
+
+    lastCellsCRC = crc;
+}
+
+void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
+{
+    // prepare CRSF telemetry packet
+    CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfVolt = {0};
+
+    crsfVolt.p.source_id = 128 + device;
+
+    uint8_t payloadSize = 1 + 2 * 3;
+
+    if (device == EAM)
+    {
+        crsfVolt.p.cell[0] = htobe16(eam.battVoltage1 * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[1] = htobe16(eam.battVoltage2 * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[2] = htobe16(eam.mainVoltage * HOTT_VOLT_SCALE);
+    }
+    else if (device == GAM)
+    {
+        crsfVolt.p.cell[0] = htobe16(gam.battery1 * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[1] = htobe16(gam.battery2 * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[2] = htobe16(gam.inputVoltage * HOTT_VOLT_SCALE);
+    }
+    else if (device == ESC)
+    {
+        crsfVolt.p.cell[0] = htobe16(esc.inputVoltage * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);
+
+        payloadSize = 1 + 2 * 2;
+    }
+
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfVolt, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+    uint8_t crc = ((uint8_t *)&crsfVolt.p)[payloadSize];
+
+    // send packet only if min rate timer expired or values have changed
+    if ((now - lastVoltSent >= VOLT_MIN_CRSFRATE) || (lastVoltCRC != crc))
+    {
+        lastVoltSent = now;
+
+        crsfRouter.deliverMessage(nullptr, &crsfVolt.h);
+    }
+
+    lastVoltCRC = crc;
+}
+
+void SerialHoTT_TLM::sendCRSFairspeed(uint32_t now, HoTTDevices device)
+{
+    // prepare CRSF telemetry packet
+    CRSF_MK_FRAME_T(crsf_sensor_airspeed_t) crsfAirspeed = {0};
+
+    if (device == EAM)
+    {
+        crsfAirspeed.p.speed = htobe16(eam.speed * HOTT_SPEED_SCALE_EAM);
+    }
+    else if (device == GAM)
+    {
+        crsfAirspeed.p.speed = htobe16(gam.speed * HOTT_SPEED_SCALE_GAM);
+    }
+    else if (device == ESC)
+    {
+        crsfAirspeed.p.speed = htobe16(esc.speed * HOTT_SPEED_SCALE_EAM);
+    }
+
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAirspeed, CRSF_FRAMETYPE_AIRSPEED, CRSF_FRAME_SIZE(sizeof(crsf_sensor_airspeed_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+
+    // send packet only if min rate timer expired or values have changed
+    if ((now - lastAirspeedSent >= AIRSPEED_MIN_CRSFRATE) || (lastAirspeedCRC != crsfAirspeed.crc))
+    {
+        lastAirspeedSent = now;
+
+        crsfRouter.deliverMessage(nullptr, &crsfAirspeed.h);
+    }
+
+    lastAirspeedCRC = crsfAirspeed.crc;
 }
 
 // HoTT telemetry data getters
@@ -387,13 +616,13 @@ uint32_t SerialHoTT_TLM::getHoTTcapacity()
 
 int16_t SerialHoTT_TLM::getHoTTaltitude()
 {
-    if (device[GPS].present)
-    {
-        return gps.altitude;
-    }
-    else if (device[VARIO].present)
+    if (device[VARIO].present)
     {
         return vario.altitude;
+    }
+    else if (device[GPS].present)
+    {
+        return gps.altitude;
     }
     else if (device[EAM].present)
     {
@@ -409,13 +638,13 @@ int16_t SerialHoTT_TLM::getHoTTaltitude()
 
 int16_t SerialHoTT_TLM::getHoTTvv()
 {
-    if (device[GPS].present)
-    {
-        return (gps.mPerSec);
-    }
-    else if (device[VARIO].present)
+    if (device[VARIO].present)
     {
         return (vario.mPerSec);
+    }
+    else if (device[GPS].present)
+    {
+        return (gps.mPerSec);
     }
     else if (device[EAM].present)
     {

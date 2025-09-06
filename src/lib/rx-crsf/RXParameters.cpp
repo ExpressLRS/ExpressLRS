@@ -17,7 +17,15 @@ extern bool BindingModeRequest;
 
 extern RXEndpoint crsfReceiver;
 
-static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+#if defined(Regulatory_Domain_EU_CE_2400)
+#if defined(RADIO_LR1121)
+char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
+#else
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+#endif
+#else
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+#endif
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 

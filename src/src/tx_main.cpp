@@ -34,9 +34,11 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #include "TXOTAConnector.h"
 #include "MAVLink.h"
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
 #include "USB.h"
 #define USBSerial Serial
+#elif defined(PLATFORM_ESP8266)
+#include <user_interface.h>
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -116,10 +118,12 @@ device_affinity_t ui_devices[] = {
 #if defined(PLATFORM_ESP32)
   {&Backpack_device, 0},
   {&BLE_device, 0},
+#if !defined(PLATFORM_ESP32_C3)
   {&Screen_device, 0},
   {&Gsensor_device, 0},
   {&Thermal_device, 0},
   {&PDET_device, 0},
+#endif
 #endif
   {&VTX_device, 0}
 };
@@ -479,9 +483,19 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   bool invertIQ = InBindingMode || (UID[5] & 0x01);
   OtaSwitchMode_e newSwitchMode = (OtaSwitchMode_e)config.GetSwitchMode();
 
+  bool subGHz = FHSSconfig->freq_center < 1000000000;
+#if defined(RADIO_LR1121)
+  if (FHSSuseDualBand && subGHz)
+  {
+      subGHz = FHSSconfigDualBand->freq_center < 1000000000;
+  }
+#endif
+
   if ((ModParams == ExpressLRS_currAirRate_Modparams)
     && (RFperf == ExpressLRS_currAirRate_RFperfParams)
-    && (OtaSwitchModeCurrent == newSwitchMode))
+    && (subGHz || invertIQ == Radio.IQinverted)
+    && (OtaSwitchModeCurrent == newSwitchMode)
+    && (!InBindingMode))  // binding mode must always execute code below to set frequency
     return;
 
   DBGLN("set rate %u", index);
@@ -830,9 +844,6 @@ void ResetPower()
     POWERMGNT::setPower((PowerLevels_e)config.GetPower());
   }
   // TLM interval is set on the next SYNC packet
-#if defined(Regulatory_Domain_EU_CE_2400)
-  LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
 }
 
 static void ChangeRadioParams()
@@ -840,6 +851,7 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
   ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
+  EnableLBT();
 }
 
 void ModelUpdateReq()
@@ -1291,12 +1303,12 @@ static void setupSerial()
 #endif
   TxBackpack = serialPort;
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
   Serial.begin(460800);
 #endif
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
 #elif defined(PLATFORM_ESP32)
@@ -1476,6 +1488,7 @@ void setup()
     // In the failure case we set the logging to the null logger so nothing crashes
     // if it decides to log something
     TxBackpack = new NullStream();
+    TxUSB = TxBackpack;
   }
 
   registerButtonFunction(ACTION_BIND, EnterBindingMode);

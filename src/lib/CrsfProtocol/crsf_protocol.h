@@ -382,7 +382,8 @@ typedef struct elrsLinkStatistics_s : crsfLinkStatistics_t
 
 static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max)
 {
-    return ((x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1) / 2;
+    int32_t result = ((int32_t)(x - in_min) * (out_max - out_min) * 2 / (in_max - in_min) + out_min * 2 + 1)/2;
+    return result < 0 ? 0 : (result > 65535 ? 65535 : result);
 }
 
 // Scale a -100& to +100% crossfire value to 988-2012 (Taranis channel uS)
