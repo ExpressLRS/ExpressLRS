@@ -59,7 +59,7 @@ public:
      * @brief lock the FIFO so no other code should interact with the FIFO.
      * Assumes that critical blocks are wrapped in lock/unlock semantics
      */
-    ICACHE_RAM_ATTR void inline lock()
+    ICACHE_RAM_ATTR void lock()
     {
     #if defined(PLATFORM_ESP32)
         portENTER_CRITICAL(&mux);
@@ -72,7 +72,7 @@ public:
     /**
      * @brief unlock the FIFO
      */
-    ICACHE_RAM_ATTR void inline unlock()
+    ICACHE_RAM_ATTR void unlock()
     {
     #if defined(PLATFORM_ESP32)
         portEXIT_CRITICAL(&mux);
@@ -87,7 +87,7 @@ public:
      *
      * @param data
      */
-    ICACHE_RAM_ATTR void inline push(const uint8_t data)
+    ICACHE_RAM_ATTR void push(const uint8_t data)
     {
         if (numElements == FIFO_SIZE)
         {
@@ -109,7 +109,7 @@ public:
      * @param data pointer to the bytes to be pushed onto the FIFO
      * @param len number of bytes in `data` to push
      */
-    ICACHE_RAM_ATTR void inline pushBytes(const uint8_t *data, uint16_t len)
+    ICACHE_RAM_ATTR void pushBytes(const uint8_t *data, const uint16_t len)
     {
         if (numElements + len > FIFO_SIZE)
         {
@@ -132,7 +132,7 @@ public:
      * @param data pointer to the bytes to be pushed onto the FIFO
      * @param len number of bytes in `data` to push
      */
-    ICACHE_RAM_ATTR void inline atomicPushBytes(const uint8_t *data, uint16_t len)
+    ICACHE_RAM_ATTR void atomicPushBytes(const uint8_t *data, const uint16_t len)
     {
         lock();
         pushBytes(data, len);
@@ -143,7 +143,7 @@ public:
      * @brief Pop a single byte (returns 0 if no bytes left)
      * @return the byte on the head of FIFO
      */
-    ICACHE_RAM_ATTR uint8_t inline pop()
+    ICACHE_RAM_ATTR uint8_t pop()
     {
         if (numElements == 0)
         {
@@ -161,9 +161,9 @@ public:
      * If there are not enough bytes in the FIFO then the FIFO is flushed and the bytes are not read
      *
      * @param data pointer to a buffer where the bytes are popped into
-     * @param len number of bytes to pop from teh FIFO
+     * @param len number of bytes to pop from the FIFO
      */
-    ICACHE_RAM_ATTR void inline popBytes(uint8_t *data, uint16_t len)
+    ICACHE_RAM_ATTR void popBytes(uint8_t *data, const uint16_t len)
     {
         if (numElements < len)
         {
@@ -185,7 +185,7 @@ public:
      *
      * @return uint8_t the fist byte in the FIFO
      */
-    ICACHE_RAM_ATTR uint8_t inline peek()
+    ICACHE_RAM_ATTR uint8_t peek() const
     {
         if (numElements == 0)
         {
@@ -202,7 +202,7 @@ public:
      *
      * @return number of bytes in the FIFO
      */
-    ICACHE_RAM_ATTR uint16_t inline size()
+    ICACHE_RAM_ATTR uint16_t size() const
     {
         return numElements;
     }
@@ -213,7 +213,7 @@ public:
      *
      * @return number of bytes free in the FIFO
      */
-    ICACHE_RAM_ATTR uint16_t inline free()
+    ICACHE_RAM_ATTR uint16_t free() const
     {
         return FIFO_SIZE - numElements;
     }
@@ -223,7 +223,7 @@ public:
      *
      * @param size the size prefix to be pushed to the FIFO
      */
-    ICACHE_RAM_ATTR void inline pushSize(uint16_t size)
+    ICACHE_RAM_ATTR void pushSize(const uint16_t size)
     {
         push(size & 0xFF);
         push((size >> 8) & 0xFF);
@@ -232,9 +232,9 @@ public:
     /**
      * @brief return the size prefix from the head of the FIFO, without removing it from the FIFO
      *
-     * @param size the size prefix from the head of the FIFO
+     * @return the size prefix from the head of the FIFO
      */
-    ICACHE_RAM_ATTR uint16_t inline peekSize()
+    ICACHE_RAM_ATTR uint16_t peekSize() const
     {
         if (size() > 1)
         {
@@ -246,9 +246,9 @@ public:
     /**
      * @brief return the size prefix from the head of the FIFO, also removing it from the FIFO
      *
-     * @param size the size prefix from the head of the FIFO
+     * @return the size prefix from the head of the FIFO
      */
-    ICACHE_RAM_ATTR uint16_t inline popSize()
+    ICACHE_RAM_ATTR uint16_t popSize()
     {
         if (size() > 1)
         {
@@ -260,7 +260,7 @@ public:
     /**
      * @brief reset the FIFO back to empty
      */
-    ICACHE_RAM_ATTR void inline flush()
+    ICACHE_RAM_ATTR void flush()
     {
         head = 0;
         tail = 0;
@@ -272,7 +272,7 @@ public:
      *
      * @return true if the FIFO can accept the number of bytes requested
      */
-    ICACHE_RAM_ATTR bool inline available(uint16_t requiredSize)
+    ICACHE_RAM_ATTR bool available(const uint16_t requiredSize) const
     {
         return (numElements + requiredSize) < FIFO_SIZE;
     }
@@ -286,7 +286,7 @@ public:
      * @param requiredSize the number of bytes required to be available
      * @return true if the required amount of bytes will fit in the FIFO
      */
-    ICACHE_RAM_ATTR bool inline ensure(uint16_t requiredSize)
+    ICACHE_RAM_ATTR bool ensure(const uint16_t requiredSize)
     {
         if(requiredSize > FIFO_SIZE)
         {

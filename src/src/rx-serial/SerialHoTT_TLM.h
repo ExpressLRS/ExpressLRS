@@ -1,6 +1,6 @@
-#if defined(TARGET_RX)
-
 #pragma once
+
+#if defined(TARGET_RX)
 
 #include "SerialIO.h"
 #include "device.h"
@@ -21,15 +21,15 @@
 
 #define START_OF_CMD_B 0x80    // start byte of HoTT binary cmd sequence
 #define SENSOR_ID_GPS_B 0x8A   // device ID binary mode GPS module
-#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode adressing
+#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode addressing
 #define SENSOR_ID_GAM_B 0x8D   // device ID binary mode GAM module
-#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode adressing
+#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode addressing
 #define SENSOR_ID_EAM_B 0x8E   // device ID binary mode EAM module
-#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode adressing
+#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode addressing
 #define SENSOR_ID_ESC_B 0x8C   // device ID binary mode ESC module
-#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode adressing
+#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode addressing
 #define SENSOR_ID_VARIO_B 0x89 // device ID binary mode VARIO module
-#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode adressing
+#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode addressing
 
 //
 // GAM data frame data structure
@@ -260,41 +260,12 @@ enum {
     HOTT_CMD2SENT
 };
 
-class SerialHoTT_TLM : public SerialIO
+class SerialHoTT_TLM final : public SerialIO
 {
 public:
-    explicit SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN)
-        : SerialIO(&out, &in)
-    {       
-#if defined(PLATFORM_ESP32)
-        if (serial1TXpin == UNDEF_PIN)
-        {
-            // we are on UART0, use default TX pin for half duplex if not defined otherwise
-            UTXDoutIdx = U0TXD_OUT_IDX;
-            URXDinIdx = U0RXD_IN_IDX;
-            halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
-        }
-        else
-        {   
-            // we are on UART1, use Serial1 TX assigned pin for half duplex
-            UTXDoutIdx = U1TXD_OUT_IDX;
-            URXDinIdx = U1RXD_IN_IDX;
-            halfDuplexPin = serial1TXpin;
-        } 
-#endif
+    SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN);
+    ~SerialHoTT_TLM() override = default;
 
-        uint32_t now = millis();
-
-        lastPoll = now;
-        discoveryTimerStart = now;
-
-        cmdSendState = HOTT_RECEIVING;
-    }
-
-    virtual ~SerialHoTT_TLM() {}
-
-    void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t *data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
 
     int getMaxSerialReadSize() override;
@@ -339,12 +310,12 @@ private:
     // last received HoTT telemetry packets
     GPSPacket_t gps;
     GeneralAirPacket_t gam;
-    AirESCPacket_t esc;
-    VarioPacket_t vario;
-    ElectricAirPacket_t eam;
+    AirESCPacket_t esc {};
+    VarioPacket_t vario {};
+    ElectricAirPacket_t eam {};
 
     // received HoTT bus fra,e
-    hottBusFrame_t hottBusFrame;
+    hottBusFrame_t hottBusFrame{};
 
     // discoverd devices
     hottDevice_t device[LAST_DEVICE] = {
@@ -358,7 +329,7 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
-    uint8_t nextDeviceID;
+    uint8_t nextDeviceID{};
 
     uint32_t lastPoll;
     uint8_t cmdSendState;

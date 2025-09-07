@@ -4,12 +4,11 @@
 #include <cstddef>
 
 #include "crc.h"
-#include "CRSF.h"
 #include "crsf_protocol.h"
 #include "telemetry_protocol.h"
 #include "FIFO.h"
 
-#if TARGET_RX 
+#if TARGET_RX
 extern bool isArmed;
 #endif
 
@@ -190,7 +189,7 @@ extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
-typedef void (*PackChannelData_t)(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool TelemetryStatus, uint8_t tlmDenom);
+typedef void (*PackChannelData_t)(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool TelemetryStatus);
 extern PackChannelData_t OtaPackChannelData;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx);
@@ -199,7 +198,7 @@ void OtaSetFullResNextChannelSet(bool next);
 #endif
 
 #if defined(TARGET_RX) || defined(UNIT_TEST)
-typedef bool (*UnpackChannelData_t)(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData, uint8_t tlmDenom);
+typedef bool (*UnpackChannelData_t)(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData);
 extern UnpackChannelData_t OtaUnpackChannelData;
 #endif
 
