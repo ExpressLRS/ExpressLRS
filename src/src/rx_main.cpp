@@ -369,9 +369,14 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
 
 bool ICACHE_RAM_ATTR HandleFHSS()
 {
+    if (ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0)
+    {
+        return false;
+    }
+
     uint8_t modresultFHSS = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
+    if (alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
         return false;
     }
