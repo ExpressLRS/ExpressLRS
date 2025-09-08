@@ -117,7 +117,7 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout,
                           bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
@@ -138,7 +138,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         IQinverted = LR11XX_RADIO_LORA_IQ_STANDARD;
     }
 
-    SetRxTimeoutUs(interval);
+    SetRxTimeoutUs(rxtimeout);
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
@@ -365,7 +365,7 @@ void ICACHE_RAM_ATTR LR1121Driver::CommitOutputPower()
 void ICACHE_RAM_ATTR LR1121Driver::WriteOutputPower(uint8_t power, bool isSubGHz, SX12XX_Radio_Number_t radioNumber)
 {
     uint8_t Txbuf[2] = {power, LR11XX_RADIO_RAMP_48_US};
-    
+
     // 9.5.2 SetTxParams
     hal.WriteCommand(LR11XX_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber);
 }
