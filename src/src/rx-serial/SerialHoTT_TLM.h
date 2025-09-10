@@ -31,6 +31,8 @@
 #define SENSOR_ID_VARIO_B 0x89 // device ID binary mode VARIO module
 #define SENSOR_ID_VARIO_T 0x90 // device ID for text mode adressing
 
+#define TURBINE_PROTOCOL 0xC8  // ESC version == 0xC8 --> turbine, ESC otherwise 
+
 #define HOTT_TEMP_OFFSET 20    // HoTT delivers temperature with +20 offset
 #define HOTT_TEMP_SCALE 10
 #define HOTT_RPM_SCALE 10
@@ -367,6 +369,8 @@ private:
         {SENSOR_ID_GAM_B, false},
         {SENSOR_ID_ESC_B, false},
         {SENSOR_ID_VARIO_B, false}};
+
+    bool escIsTurbine;
 
     FIFO<HOTT_MAX_BUF_LEN> hottInputBuffer;
 

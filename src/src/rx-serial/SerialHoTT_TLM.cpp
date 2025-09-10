@@ -235,6 +235,8 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
         else if (device[ESC].present)
         {
             deviceToUse = ESC;
+
+            escIsTurbine = esc.version == TURBINE_PROTOCOL;
         }
 
         sendCRSFrpm(now, deviceToUse);
@@ -336,11 +338,15 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
     }
     else if (device == ESC)
     {
-        crsfRpm.p.rpm0 = htobe24(esc.rpm * HOTT_RPM_SCALE);                                         // VSpeak: rpm
+        crsfRpm.p.rpm0 = htobe24(esc.rpm * HOTT_RPM_SCALE);
         crsfRpm.p.rpm1 = htobe24(esc.rpmMax * HOTT_RPM_SCALE);
-        crsfRpm.p.rpm2 = htobe24(((esc.capacitorTemp << 8) + esc.becTemp) * HOTT_RPM_SCALE);        // VSpeak: fuel in milliliter
 
-        payloadSize = 1 + 3*3;
+        if (escIsTurbine)
+        {
+            crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)) * HOTT_RPM_SCALE);        // turbine: fuel in ml
+            
+            payloadSize = 1 + 3*3;
+        }
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfRpm, CRSF_FRAMETYPE_RPM, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -381,13 +387,23 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
     {
         crsfTemp.p.temperature[0] = htobe16((esc.escTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
         crsfTemp.p.temperature[1] = htobe16((esc.becTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
-        crsfTemp.p.temperature[2] = htobe16((((esc.motortempMax << 8) +  esc.motorTemp) - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE); // VSpeak: EGT
-        crsfTemp.p.temperature[3] = htobe16((esc.pumpTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);                                   
+        crsfTemp.p.temperature[3] = htobe16((esc.pumpTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
         crsfTemp.p.temperature[4] = htobe16((esc.auxTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
-        crsfTemp.p.temperature[5] = htobe16((esc.throttle - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);                               // VSpeak: throttle %
-        crsfTemp.p.temperature[6] = htobe16((esc.turbineNumber - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);                          // VSpeak: status/alarm
 
-        payloadSize = 1 + 2 * 7;
+        if (escIsTurbine)
+        {
+            crsfTemp.p.temperature[2] = htobe16(((esc.motorTemp + (esc.motortempMax << 8)) - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);  // turbine: EGT
+            crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                                                  // turbine: throttle %
+            crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);                                     // turbine: status
+
+            payloadSize = 1 + 2 * 7;
+        } 
+        else
+        {
+            crsfTemp.p.temperature[2] = htobe16(((esc.motorTemp) - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+
+            payloadSize = 1 + 2 * 5;
+        }
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfTemp, CRSF_FRAMETYPE_TEMP, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -485,8 +501,8 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
     }
     else if (device == ESC)
     {
-        crsfVolt.p.cell[0] = htobe16(esc.inputVoltage * HOTT_VOLT_SCALE);   // VSpeak: ECU voltage
-        crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);     // VSpeak: pump voltage
+        crsfVolt.p.cell[0] = htobe16(esc.inputVoltage * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);     // turbine: pump voltage
 
         payloadSize = 1 + 2 * 2;
     }
