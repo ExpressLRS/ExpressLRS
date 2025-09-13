@@ -76,7 +76,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
         }
         else
         {
-            PWM.setMicroseconds(pwmChannels[ch], us / (chConfig->val.narrow + 1));
+            PWM.setMicroseconds(pwmChannels[ch], us);
         }
     }
 }
@@ -90,6 +90,9 @@ static void servosFailsafe()
         if (chConfig->val.failsafeMode == PWMFAILSAFE_SET_POSITION) {
             // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
             uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
+            if (chConfig->val.stretched) {
+                us = fmap(us, SERVO_FAILSAFE_MIN, 2012, 476, 2524);
+            }
             // Always write the failsafe position even if the servo has never been started,
             // so all the servos go to their expected position
             servoWrite(ch, us);
@@ -121,7 +124,13 @@ static void servosUpdate(unsigned long now)
                 continue;
             }
 
-            uint16_t us = CRSF_to_US(crsfVal);
+            uint16_t us;
+            if (chConfig->val.stretched) {
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 476, 2524);
+            }
+            else {
+                us = CRSF_to_US(crsfVal);
+            }
             // Flip the output around the mid-value if inverted
             // (1500 - usOutput) + 1500
             if (chConfig->val.inverted)
