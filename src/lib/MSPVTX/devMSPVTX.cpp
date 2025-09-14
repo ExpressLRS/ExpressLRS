@@ -214,7 +214,7 @@ void mspVtxProcessPacket(uint8_t *packet)
                 setRcePitMode = true;
             }
 
-            if (vtxConfigPacket->lowPowerDisarm) // Force 0mw on boot because BF doesnt send a low power index.
+            if (vtxConfigPacket->lowPowerDisarm) // Force 0mw on boot because BF doesn't send a low power index.
             {
                 power = 1;
             }

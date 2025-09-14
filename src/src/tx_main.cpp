@@ -700,14 +700,14 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
       transmittingRadio = SX12XX_Radio_All; // Gemini mode
       break;
     case TX_RADIO_MODE_ANT_1:
-      transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
+      transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm reception.
       break;
     case TX_RADIO_MODE_ANT_2:
-      transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
+      transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm reception.
       break;
     case TX_RADIO_MODE_SWITCH:
-      if(OtaNonce%2==0)   transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm receiption.
-      else   transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm receiption.
+      if(OtaNonce%2==0)   transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm reception.
+      else   transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm reception.
       break;
     default:
       break;
@@ -764,7 +764,7 @@ void ICACHE_RAM_ATTR timerCallback()
   // Tx Antenna Diversity
   if ((OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == 0 || // Swicth with new packet data
       OtaNonce % ExpressLRS_currAirRate_Modparams->numOfSends == ExpressLRS_currAirRate_Modparams->numOfSends / 2) && // Swicth in the middle of DVDA sends
-      TelemetryRcvPhase == ttrpTransmitting) // Only switch when transmitting.  A diversity rx will send tlm back on the best antenna.  So dont switch away from it.
+      TelemetryRcvPhase == ttrpTransmitting) // Only switch when transmitting.  A diversity rx will send tlm back on the best antenna.  So don't switch away from it.
   {
     switchDiversityAntennas();
   }
@@ -876,7 +876,7 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
-  // Adjust the air rate based on teh current baud rate
+  // Adjust the air rate based on the current baud rate
   auto index = adjustPacketRateForBaud(config.GetRate());
   config.SetRate(index);
 
