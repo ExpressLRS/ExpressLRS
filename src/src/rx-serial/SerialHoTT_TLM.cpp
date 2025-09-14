@@ -343,7 +343,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
 
         if (escIsTurbine)
         {
-            crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)) * HOTT_RPM_SCALE);        // turbine: fuel in ml
+            crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)));        // turbine: fuel in ml
             
             payloadSize = 1 + 3*3;
         }
