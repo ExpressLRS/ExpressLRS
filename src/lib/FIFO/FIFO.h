@@ -335,7 +335,8 @@ public:
      */
     ICACHE_RAM_ATTR void skip(const uint16_t len)
     {
-        numElements -= std::min((uint32_t)len, numElements);
-        head = (head + len) % FIFO_SIZE;
+        uint32_t skipCount = std::min((uint32_t)len, numElements);
+        numElements -= skipCount;
+        head = (head + skipCount) % FIFO_SIZE;
     }
 };
