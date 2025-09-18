@@ -42,7 +42,15 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 extern char backpackVersion[];
 extern TXModuleEndpoint crsfTransmitter;
 
-static char strPowerLevels[] = "10;25;50;100;250;500;1000;2000";
+#if defined(Regulatory_Domain_EU_CE_2400)
+#if defined(RADIO_LR1121)
+char strPowerLevels[] = "10/10;25/25;25/50;25/100;25/250;25/500;25/1000;25/2000;MatchTX ";
+#else
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+#endif
+#else
+char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
+#endif
 static char version_domain[20+1+6+1];
 static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
@@ -124,7 +132,11 @@ static selectionParameter luaFanThreshold = {
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 static stringParameter luaCELimit = {
-    {"100mW CE LIMIT", CRSF_INFO},
+#if defined(RADIO_LR1121)
+    {"25/100mW 868M/2G4 CE LIMIT", CRSF_INFO},
+#else
+    {"100mW 2G4 CE LIMIT", CRSF_INFO},
+#endif
     STR_EMPTYSPACE
 };
 #endif

@@ -442,7 +442,7 @@ void ICACHE_RAM_ATTR CRSFHandset::adjustMaxPacketSize()
     DBGLN("Adjusted max packet size %u-%u", maxPacketBytes, maxPeriodBytes);
 }
 
-#if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
 uint32_t CRSFHandset::autobaud()
 {
     static enum { INIT, MEASURED, INVERTED } state;
