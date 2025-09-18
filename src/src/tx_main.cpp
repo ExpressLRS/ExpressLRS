@@ -508,8 +508,12 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
+  // timeout is used to take the RF out of receive mode during a telemetry slot before the end of the period,
+  // reducing turnaround time on the following TX. For packet rates with TOA < half interval, extend the timeout
+  // as it begins at the end of the TX, not from TOCK
+  uint32_t timeout = std::max(interval, interval * 3 / 2 - RFperf->TOA);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, timeout
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif

@@ -136,7 +136,7 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout,
                           bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
@@ -158,7 +158,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         inverted = LR11XX_RADIO_LORA_IQ_STANDARD;
     }
 
-    SetRxTimeoutUs(interval);
+    SetRxTimeoutUs(rxtimeout);
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
