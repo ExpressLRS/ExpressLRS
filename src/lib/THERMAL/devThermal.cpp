@@ -1,7 +1,7 @@
 #include "targets.h"
 #include "devThermal.h"
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 #include "config.h"
 #include "logging.h"
 

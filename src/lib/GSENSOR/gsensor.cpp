@@ -1,5 +1,6 @@
 #include "targets.h"
 
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 #include "gsensor.h"
 #include "logging.h"
 
@@ -202,3 +203,4 @@ bool Gsensor::isFlipped()
 {
     return is_flipped;
 }
+#endif

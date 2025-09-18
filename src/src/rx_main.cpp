@@ -89,7 +89,7 @@ device_affinity_t ui_devices[] = {
   {&AnalogVbat_device, 0},
   {&ServoOut_device, 1},
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
   {&Thermal_device, 0},
@@ -363,6 +363,8 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_currAirRate_RFperfParams = RFperf;
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
+
+    EnableLBT();
 }
 
 static void ICACHE_RAM_ATTR HandleFHSS()
@@ -1638,10 +1640,6 @@ static void setupRadio()
 
     DynamicPower_UpdateRx(true);  // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-    LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
-
     Radio.RXdoneCallback = &RXdoneISR;
     Radio.TXdoneCallback = &TXdoneISR;
 
@@ -1983,9 +1981,7 @@ static void CheckConfigChangePending()
         LostConnection(false);
         uint32_t changes = config.Commit();
         devicesTriggerEvent(changes);
-#if defined(Regulatory_Domain_EU_CE_2400)
-        LBTEnabled = (config.GetPower() > PWR_10mW);
-#endif
+        EnableLBT();
         Radio.RXnb();
     }
 }

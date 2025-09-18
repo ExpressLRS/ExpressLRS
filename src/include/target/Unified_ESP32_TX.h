@@ -79,6 +79,25 @@
 #define WS2812_BOOT_LEDS hardware_i16_array(HARDWARE_ledidx_rgb_boot)
 #define WS2812_BOOT_LEDS_COUNT hardware_int(HARDWARE_ledidx_rgb_boot_count)
 
+#if defined(PLATFORM_ESP32_C3)
+// No I2C for gyro, thermal or screen
+#define GPIO_PIN_SCL UNDEF_PIN
+#define GPIO_PIN_SDA UNDEF_PIN
+#define OPT_HAS_SCREEN false
+#define OPT_HAS_GSENSOR false
+#define OPT_HAS_THERMAL false
+// No backpack
+#define OPT_USE_TX_BACKPACK false
+#define GPIO_PIN_DEBUG_RX UNDEF_PIN
+#define GPIO_PIN_DEBUG_TX UNDEF_PIN
+#define GPIO_PIN_BACKPACK_EN UNDEF_PIN
+#define GPIO_PIN_BACKPACK_BOOT UNDEF_PIN
+#define BACKPACK_LOGGING_BAUD 0
+#define PASSTHROUGH_BAUD 0
+// No fan
+#define GPIO_PIN_FAN_EN UNDEF_PIN
+#define GPIO_PIN_FAN_PWM UNDEF_PIN
+#else
 // OLED/TFT
 #define OPT_HAS_SCREEN (hardware_int(HARDWARE_screen_type) > 0)
 #define OPT_HAS_OLED_I2C (hardware_int(HARDWARE_screen_type)==1)
@@ -121,6 +140,7 @@
 
 #define OPT_HAS_THERMAL_LM75A hardware_flag(HARDWARE_thermal_lm75a)
 #define OPT_HAS_THERMAL OPT_HAS_THERMAL_LM75A // If any of the sensors are present
+#endif
 
 #define OPT_HAS_VTX_SPI false
 #define GPIO_PIN_SPI_VTX_NSS UNDEF_PIN

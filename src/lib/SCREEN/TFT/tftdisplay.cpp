@@ -1,4 +1,4 @@
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 
 #include <Arduino_GFX_Library.h>
 #include "Pragma_Sans36pt7b.h"
