@@ -208,7 +208,7 @@ static void initialize()
 
 static int start()
 {
-    // Set PWM DShot Pins to OpenDrain with HIGH; i.e. floating output
+    // Set PWM DShot Pins to OpenDrain with LOW; i.e. LOW output
     for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
