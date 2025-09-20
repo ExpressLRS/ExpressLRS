@@ -216,13 +216,13 @@ static int start()
         if (frequency && servoPins[ch] != UNDEF_PIN)
         {
             pinMode(servoPins[ch], OUTPUT_OPEN_DRAIN);
-            digitalWrite(servoPins[ch], HIGH);
+            digitalWrite(servoPins[ch], LOW);
         }
 #if defined(PLATFORM_ESP32)
         else if ((eServoOutputMode)chConfig->val.mode == somDShot)
         {
             pinMode(servoPins[ch], OUTPUT_OPEN_DRAIN);
-            digitalWrite(servoPins[ch], HIGH);
+            digitalWrite(servoPins[ch], LOW);
         }
 #endif
     }
