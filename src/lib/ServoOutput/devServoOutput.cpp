@@ -181,6 +181,7 @@ static void initialize()
                 auto rmtChannel = (rmt_channel_t)rmtCH;
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
+                digitalWrite(pin, LOW);                
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
                 rmtCH++;
             }
@@ -208,12 +209,6 @@ static void initialize()
 
 static int start()
 {
-    // prep PWM Pins
-    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-    {
-        const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        const auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
-    }
     return DURATION_NEVER;
 }
 
