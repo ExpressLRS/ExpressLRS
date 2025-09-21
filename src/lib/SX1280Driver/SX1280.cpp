@@ -158,7 +158,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     {
         DBG("Config FLRC ");
         ConfigModParamsFLRC(bw, cr, sf);
-        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, _PayloadLength, flrcSyncWord, flrcCrcSeed, cr);
+        SetPacketParamsFLRC(SX1280_FLRC_PACKET_FIXED_LENGTH, PreambleLength, flrcSyncWord, flrcCrcSeed, cr);
     }
     else
     {
@@ -169,7 +169,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 #else
         SX1280_RadioLoRaPacketLengthsModes_t packetLengthType = SX1280_LORA_PACKET_FIXED_LENGTH;
 #endif
-        SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
+        SetPacketParamsLoRa(PreambleLength, packetLengthType, InvertIQ);
     }
     SetFrequencyReg(regfreq, SX12XX_Radio_All);
 
@@ -295,8 +295,7 @@ void SX1280Driver::ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr)
     // hal.WriteRegister(SX1280_REG_FREQ_ERR_CORRECTION, 0x03, SX12XX_Radio_All);
 }
 
-void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType,
-                                       uint8_t PayloadLength, uint8_t InvertIQ)
+void SX1280Driver::SetPacketParamsLoRa(uint8_t PreambleLength, SX1280_RadioLoRaPacketLengthsModes_t HeaderType, uint8_t InvertIQ)
 {
     uint8_t buf[7];
 
@@ -322,7 +321,6 @@ void SX1280Driver::ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint8_t bt)
 
 void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
                                        uint8_t PreambleLength,
-                                       uint8_t PayloadLength,
                                        uint32_t syncWord,
                                        uint16_t crcSeed,
                                        uint8_t cr)
@@ -443,7 +441,7 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
 
@@ -491,12 +489,12 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool sendG
     RFAMP.TXenable(radioNumber); // do first to allow PA stablise
     if (sendGeminiBuffer)
     {
-        hal.WriteBuffer(0x00, data, size, SX12XX_Radio_1);
-        hal.WriteBuffer(0x00, dataGemini, size, SX12XX_Radio_2);
+        hal.WriteBuffer(0x00, data, PayloadLength, SX12XX_Radio_1);
+        hal.WriteBuffer(0x00, dataGemini, PayloadLength, SX12XX_Radio_2);
     }
     else
     {
-        hal.WriteBuffer(0x00, data, size, radioNumber);
+        hal.WriteBuffer(0x00, data, PayloadLength, radioNumber);
     }
 
     instance->SetMode(SX1280_MODE_TX, radioNumber);

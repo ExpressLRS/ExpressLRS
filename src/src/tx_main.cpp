@@ -686,7 +686,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   else
 #endif
   {
-    Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, false, (uint8_t*)&otaPkt, transmittingRadio);
+    Radio.TXnb((uint8_t*)&otaPkt, false, (uint8_t*)&otaPkt, transmittingRadio);
   }
 }
 

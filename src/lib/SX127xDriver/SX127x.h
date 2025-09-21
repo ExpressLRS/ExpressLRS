@@ -71,7 +71,7 @@ public:
     void CheckForSecondPacket();
 
     ////////////Non-blocking TX related Functions/////////////////
-    void TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
+    void TXnb(uint8_t * data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
     void RXnb();
 
