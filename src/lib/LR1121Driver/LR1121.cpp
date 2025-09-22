@@ -635,7 +635,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const uint8_t size, const
     }
 
     WORD_ALIGNED_ATTR uint8_t outBuffer[32] = {0};
-    const uint8_t length = size+3;
+    const uint8_t length = PayloadLength+3;
     if (useFEC)
     {
         FECEncode(data, outBuffer);
