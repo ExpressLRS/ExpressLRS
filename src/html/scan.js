@@ -716,9 +716,9 @@ function setupNetwork(event) {
 }
 
 @@if not isTX:
-_('reset-model').addEventListener('click', callback('Reset Model Settings', 'An error occurred resetting model settings', '/reset?model', null));
+_('reset-model').addEventListener('click', postWithFeedback('Reset Model Settings', 'An error occurred resetting model settings', '/reset?model', null));
 @@end
-_('reset-options').addEventListener('click', callback('Reset Runtime Options', 'An error occurred resetting runtime options', '/reset?options', null));
+_('reset-options').addEventListener('click', postWithFeedback('Reset Runtime Options', 'An error occurred resetting runtime options', '/reset?options', null));
 
 _('sethome').addEventListener('submit', setupNetwork);
 _('connect').addEventListener('click', postWithFeedback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null));
