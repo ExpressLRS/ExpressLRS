@@ -50,8 +50,7 @@ public:
     uint32_t GetCurrBandwidthNormalisedShifted();
 
     #define FREQ_STEP 61.03515625
-    void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
-    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool();
@@ -76,7 +75,7 @@ public:
     ////////////Non-blocking TX related Functions/////////////////
     void TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
-    void RXnb();
+    void RXnb(uint32_t incomingTimeout = 0);
 
 private:
     // constant used for no power change pending
