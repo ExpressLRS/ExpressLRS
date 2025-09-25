@@ -32,7 +32,7 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, ui
   }
   if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
   {
-    return 20; // 20us settling time (seems fine when testing)
+    return 40; // 40us settling time; documentation says Twait for 467 kHz bandwidth is 30.68us
   }
 #elif defined(RADIO_SX128X)
   // The necessary wait time from RX start to valid instant RSSI reading

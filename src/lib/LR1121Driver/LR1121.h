@@ -36,7 +36,6 @@ public:
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t rxtimeout, bool setFSKModulation,
                 uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
-    void SetRxTimeoutUs(uint32_t interval);
     void SetOutputPower(int8_t power, bool isSubGHz = true);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
