@@ -392,9 +392,9 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
 
         if (escIsTurbine)
         {
-            crsfTemp.p.temperature[2] = htobe16(((esc.motorTemp + (esc.motortempMax << 8)) - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);  // turbine: EGT
-            crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                                                  // turbine: throttle %
-            crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);                                     // turbine: status
+            crsfTemp.p.temperature[2] = htobe16((esc.motorTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);      // turbine: EGT
+            crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                          // turbine: throttle %
+            crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);             // turbine: status
 
             payloadSize = 1 + 2 * 7;
         } 
