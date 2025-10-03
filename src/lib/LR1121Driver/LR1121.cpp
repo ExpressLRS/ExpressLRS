@@ -721,7 +721,7 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
 
 void ICACHE_RAM_ATTR LR1121Driver::RXnb(uint32_t incomingTimeout)
 {
-    SetMode(LR1121_MODE_RX, SX12XX_Radio_All, incomingTimeout);
+    SetMode(LR1121_MODE_RX_CONT, SX12XX_Radio_All, incomingTimeout);
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
