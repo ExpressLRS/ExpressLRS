@@ -326,7 +326,7 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx)
 {
   currFreq = regfreq;
   SetMode(SX127x_OPMODE_STANDBY, radioNumber);
@@ -341,7 +341,7 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radi
 
   if (doRx)
   {
-    RXnb(rxTime);
+    RXnb();
   }
 }
 
@@ -443,7 +443,7 @@ bool ICACHE_RAM_ATTR SX127xDriver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
   return RXdoneCallback(SX12XX_RX_OK);
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::RXnb(uint32_t incomingTimeout)
+void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   RFAMP.RXenable();
   SetMode(SX127x_OPMODE_RXCONTINUOUS, SX12XX_Radio_All);
@@ -563,12 +563,12 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode, SX12XX_Radi
   currOpmode = mode;
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength, rxtimeout);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength);
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength)
 {
   PayloadLength = _PayloadLength;
   ConfigLoraDefaults();

@@ -145,7 +145,7 @@ void SX1280Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 }
 
 void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout,
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength,
                           uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
 {
     uint8_t const mode = (flrc) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
@@ -372,7 +372,7 @@ void SX1280Driver::SetPacketParamsFLRC(uint8_t HeaderType,
     modeSupportsFei = false;
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
+void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx)
 {
     WORD_ALIGNED_ATTR uint8_t buf[3] = {0};
 
@@ -526,7 +526,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Numb
     return RXdoneCallback(fail);
 }
 
-void ICACHE_RAM_ATTR SX1280Driver::RXnb(uint32_t incomingTimeout)
+void ICACHE_RAM_ATTR SX1280Driver::RXnb()
 {
     RFAMP.RXenable();
     SetMode(SX1280_MODE_RX_CONT, SX12XX_Radio_All);

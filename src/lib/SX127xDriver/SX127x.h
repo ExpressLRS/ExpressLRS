@@ -27,8 +27,8 @@ public:
     bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     bool DetectChip(SX12XX_Radio_Number_t radioNumber);
-    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout);
-    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t rxtimeout);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength);
+    void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength);
     void SetMode(SX127x_RadioOPmodes mode, SX12XX_Radio_Number_t radioNumber);
     void SetTxIdleMode() { SetMode(SX127x_OPMODE_STANDBY, SX12XX_Radio_All); } // set Idle mode used when switching from RX to TX
     void ConfigLoraDefaults();
@@ -47,7 +47,7 @@ public:
     uint32_t GetCurrBandwidthNormalisedShifted();
 
     #define FREQ_STEP 61.03515625
-    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false);
     bool FrequencyErrorAvailable() const { return true; }
     int32_t GetFrequencyError();
     bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
@@ -73,7 +73,7 @@ public:
     ////////////Non-blocking TX related Functions/////////////////
     void TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
     /////////////Non-blocking RX related Functions///////////////
-    void RXnb(uint32_t incomingTimeout = 0);
+    void RXnb();
 
 private:
     // constant used for no power change pending
