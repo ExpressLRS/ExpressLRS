@@ -562,7 +562,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Numb
 void ICACHE_RAM_ATTR SX1280Driver::RXnb(uint32_t incomingTimeout)
 {
     RFAMP.RXenable();
-    SetMode(SX1280_MODE_RX, SX12XX_Radio_All, incomingTimeout);
+    SetMode(SX1280_MODE_RX_CONT, SX12XX_Radio_All, incomingTimeout);
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber)
