@@ -402,7 +402,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, ModParams->interval
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
@@ -415,7 +415,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   if (FHSSuseDualBand)
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval,
+                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
                 (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
                 (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
   }
@@ -879,23 +879,23 @@ void ICACHE_RAM_ATTR TXdoneISR()
         if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
         {
           const uint32_t freqRadio = FHSSgetNextFreq();
-          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx, nextIsTLM ? 0 : getRXWaitTime());
-          Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1, doRx, nextIsTLM ? 0 : getRXWaitTime());
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
+          Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1, doRx);
         }
         else
         {
-          Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, doRx, nextIsTLM ? 0 : getRXWaitTime());
-          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx, nextIsTLM ? 0 : getRXWaitTime());
+          Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, doRx);
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
         }
       }
       else
       {
-        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, doRx, nextIsTLM ? 0 : getRXWaitTime());
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, doRx);
       }
     }
     else if (doRx)
     {
-      Radio.RXnb(nextIsTLM ? 0 : getRXWaitTime());
+      Radio.RXnb();
     }
     // If TLM enabled and next packet is going to be telemetry
     if (nextIsTLM)
