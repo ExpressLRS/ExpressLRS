@@ -20,8 +20,6 @@ public:
     bool headerExplMode;
     bool crcEnabled;
 
-    //// Parameters ////
-    uint16_t timeoutSymbols;
     ///////////////////////////////////
 
     ////////////////Configuration Functions/////////////
@@ -44,7 +42,6 @@ public:
     void SetOutputPower(uint8_t Power);
     void SetPreambleLength(uint8_t PreambleLen);
     void SetSpreadingFactor(SX127x_SpreadingFactor sf);
-    void SetRxTimeoutUs(uint32_t interval);
 
     uint32_t GetCurrBandwidth();
     uint32_t GetCurrBandwidthNormalisedShifted();

@@ -51,7 +51,6 @@ static uint32_t endTX;
 SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
-    timeout = 0xffff;
     currOpmode = SX1280_MODE_SLEEP;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = SX1280_MODE_STDBY_RC;
@@ -174,23 +173,10 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType, _PayloadLength, InvertIQ);
     }
     SetFrequencyReg(regfreq, SX12XX_Radio_All);
-    SetRxTimeoutUs(rxtimeout);
 
     uint16_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
     uint16_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     SetDioIrqParams(irqMask, dio1Mask);
-}
-
-void SX1280Driver::SetRxTimeoutUs(uint32_t interval)
-{
-    if (interval)
-    {
-        timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS; // number of periods for the SX1280 to timeout
-    }
-    else
-    {
-        timeout = 0xFFFF;   // no timeout, continuous mode
-    }
 }
 
 /***
@@ -218,7 +204,7 @@ void ICACHE_RAM_ATTR SX1280Driver::CommitOutputPower()
     hal.WriteCommand(SX1280_RADIO_SET_TXPARAMS, buf, sizeof(buf), SX12XX_Radio_All);
 }
 
-void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout)
+void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
 {
     /*
     Comment out since it is difficult to keep track of dual radios.
@@ -230,7 +216,6 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
     // }
 
     WORD_ALIGNED_ATTR uint8_t buf[3];
-    uint16_t tempTimeout;
 
     switch (OPmode)
     {
@@ -253,14 +238,6 @@ void SX1280Driver::SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
 
     case SX1280_MODE_FS:
         hal.WriteCommand(SX1280_RADIO_SET_FS, (uint8_t)0x00, radioNumber, 70);
-        break;
-
-    case SX1280_MODE_RX:
-        tempTimeout = incomingTimeout ? (incomingTimeout * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS) : timeout;
-        buf[0] = RX_TIMEOUT_PERIOD_BASE;
-        buf[1] = tempTimeout >> 8;
-        buf[2] = tempTimeout & 0xFF;
-        hal.WriteCommand(SX1280_RADIO_SET_RX, buf, sizeof(buf), radioNumber, 100);
         break;
 
     case SX1280_MODE_RX_CONT:
@@ -409,7 +386,7 @@ void ICACHE_RAM_ATTR SX1280Driver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radi
 
     if (doRx)
     {
-        RXnb(rxTime);
+        RXnb();
     }
 }
 
@@ -532,15 +509,6 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, uint8_t size, bool sendG
 
 bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Number_t radioNumber)
 {
-    // In continuous receive mode, the device stays in Rx mode
-    if (timeout != 0xFFFF)
-    {
-        // From table 11-28, pg 81 datasheet rev 3.2
-        // upon successsful receipt, when the timer is active or in single mode, it returns to STDBY_RC
-        // but because we have AUTO_FS enabled we automatically transition to state SX1280_MODE_FS
-        currOpmode = SX1280_MODE_FS;
-    }
-
     rx_status fail = SX12XX_RX_OK;
     // The SYNCWORD_VALID bit isn't set on LoRa, it has no synch (sic) word, and CRC is only on for FLRC
     if (packet_mode == SX1280_PACKET_TYPE_FLRC)
@@ -561,7 +529,7 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Numb
 void ICACHE_RAM_ATTR SX1280Driver::RXnb(uint32_t incomingTimeout)
 {
     RFAMP.RXenable();
-    SetMode(SX1280_MODE_RX, SX12XX_Radio_All, incomingTimeout);
+    SetMode(SX1280_MODE_RX_CONT, SX12XX_Radio_All);
 }
 
 uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber)

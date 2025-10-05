@@ -22,11 +22,6 @@ class LR1121Driver: public SX12xxDriverCommon
 public:
     static LR1121Driver *instance;
 
-    ///////////Radio Variables////////
-    uint32_t timeout;
-
-    ///////////////////////////////////
-
     ////////////////Configuration Functions/////////////
     LR1121Driver();
     bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
@@ -84,7 +79,7 @@ private:
 
     bool CheckVersion(SX12XX_Radio_Number_t radioNumber);
 
-    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
+    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
