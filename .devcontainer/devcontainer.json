@@ -1,0 +1,10 @@
+{
+  "name": "Arch Linux Codespace with Dockerfile",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "csp",
+  "postCreateCommand": {
+  }
+}
+
