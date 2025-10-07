@@ -323,13 +323,13 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
 
     crsfRpm.p.source_id = device;
 
-    uint8_t payloadSize = 1 + 2 * 3;
+    uint8_t payloadSize = 1 + 3 * 2;
 
     if (device == EAM)
     {
         crsfRpm.p.rpm0 = htobe24(eam.rpm * HOTT_RPM_SCALE);
 
-        payloadSize = 1 + 3;
+        payloadSize = 1 + 3 * 1;
     }
     else if (device == GAM)
     {
@@ -347,7 +347,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
             crsfRpm.p.rpm3 = htobe24(esc.becCurrent);                                  // turbine: fuel in ml
             crsfRpm.p.rpm4 = htobe24(esc.inputVoltageMin);                             // turbine: pumpV or pumpPW depending on turbine
             
-            payloadSize = 1 + 5*3;
+            payloadSize = 1 + 3 * 5;
         }
     }
 
@@ -433,7 +433,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
 
     crsfCells.p.source_id = device;
 
-    uint8_t payloadSize = 1 + 14 * 2;
+    uint8_t payloadSize = 1 + 2 * 14;
 
     if (device == EAM)
     {
@@ -462,7 +462,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
         crsfCells.p.cell[4] = htobe16(gam.voltageCell5 * HOTT_CELL_SCALE);
         crsfCells.p.cell[5] = htobe16(gam.voltageCell6 * HOTT_CELL_SCALE);
 
-        payloadSize = 1 + 6 * 2;
+        payloadSize = 1 + 2 * 6;
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfCells, CRSF_FRAMETYPE_CELLS, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -487,7 +487,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
 
     crsfVolt.p.source_id = 128 + device;
 
-    uint8_t payloadSize = 1 + 3 * 2;
+    uint8_t payloadSize = 1 + 2 * 3;
 
     if (device == EAM)
     {
