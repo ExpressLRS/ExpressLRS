@@ -675,7 +675,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
         if (RXtimerState == tim_locked)
         {
             // limit rate of freq offset adjustment
-            // Use slot 0 because telemetry can never fall on slot 0
             if (OtaNonce % 8 == 0)
             {
                 if (Offset > 0)
