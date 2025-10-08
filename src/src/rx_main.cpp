@@ -168,9 +168,7 @@ bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
-bool didFHSS = false;
-bool alreadyFHSS = false;
-bool alreadyTLMresp = false;
+static bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -369,20 +367,19 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     EnableLBT();
 }
 
-bool ICACHE_RAM_ATTR HandleFHSS()
+static void ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresultFHSS = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    uint8_t modresultFHSS = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
-        return false;
+        return;
     }
-
-    alreadyFHSS = true;
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation parameters and HighFreq/LowFreq Tx amps are set during Config.
+        if (((OtaNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
+
         {
             Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
             Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
@@ -402,7 +399,7 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
-    uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresultTLM = OtaNonce % ExpressLRS_currTlmDenom;
     if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
@@ -411,7 +408,6 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 #if defined(Regulatory_Domain_EU_CE_2400)
     SetClearChannelAssessmentTime();
 #endif
-    return true;
 }
 
 void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
@@ -441,7 +437,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresult = OtaNonce % ExpressLRS_currTlmDenom;
 
     if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0) || !teamraceHasModelMatch)
     {
@@ -605,7 +601,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
     // The payloads need to be switch when this happens.
     // GemX does not switch due to the time required to reconfigure the LR1121 params.
-    if (((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
+    if ((OtaNonce/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
     {
         Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, sendGeminiBuffer, (uint8_t*)&otaPktGemini, transmittingRadio);
     }
@@ -678,10 +674,8 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
         if (RXtimerState == tim_locked)
         {
-            // limit rate of freq offset adjustment, use slot 1
-            // because telemetry can fall on slot 1 and will
-            // never get here
-            if (OtaNonce % 8 == 1)
+            // limit rate of freq offset adjustment
+            if (OtaNonce % 8 == 0)
             {
                 if (Offset > 0)
                 {
@@ -712,15 +706,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
 {
-    updatePhaseLock();
-    OtaNonce++;
-
-    // if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    // {
-    //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    // }
-
-
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
         // Save the LQ value before the inc() reduces it by 1
@@ -738,7 +723,6 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalc.inc();
 
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 }
 
 //////////////////////////////////////////////////////////////
@@ -857,14 +841,11 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
     sendImmediateRC();
 
-    if (!didFHSS)
-    {
-        HandleFHSS();
-    }
-    didFHSS = false;
-
+    OtaNonce++;
+    HandleFHSS();
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
+    updatePhaseLock();
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -890,7 +871,6 @@ void LostConnection(bool resumeRx)
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 
     if (!InBindingMode)
     {
@@ -1148,7 +1128,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         || FHSSgetCurrIndex() != otaSync->fhssIndex
         || connectionHasModelMatch != modelMatched)
     {
-        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
+        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaSync->nonce, otaSync->fhssIndex);
         FHSSsetCurrIndex(otaSync->fhssIndex);
         OtaNonce = otaSync->nonce;
         TentativeConnection(now);
@@ -1184,7 +1164,12 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
+    // The extEvent defines where TOCK timer ISR is to be synced to, i.e. where the packet period begins.
+    // For rates where the TOA is longer than half the packet period schedule the TOCK for rougly 1x TOA before
+    // the TX's end of the period so telemetry is received by the TX in the correct period. For all others,
+    // schedule TOCK to be PACKET_TO_TOCK_SLACK (us) after RX packet reception.
+    int32_t slack = std::max(ExpressLRS_currAirRate_Modparams->interval - 2 * ExpressLRS_currAirRate_RFperfParams->TOA, (int32_t)PACKET_TO_TOCK_SLACK);
+    PFDloop.extEvent(beginProcessing + slack);
 
     doStartTimer = false;
     unsigned long now = millis();
@@ -1275,8 +1260,6 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
     if (ProcessRFPacket(status))
     {
-        didFHSS = HandleFHSS();
-
         if (doStartTimer)
         {
             doStartTimer = false;
