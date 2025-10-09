@@ -205,6 +205,7 @@ bool doStartTimer = false;
 ///////////////////////////////////////////////
 
 bool didFHSS = false;
+bool alreadyFHSS = false;
 bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
@@ -408,10 +409,12 @@ bool ICACHE_RAM_ATTR HandleFHSS()
 {
     uint8_t modresultFHSS = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
         return false;
     }
+
+    alreadyFHSS = true;
 
     if (geminiMode)
     {
@@ -705,6 +708,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalc.inc();
 
     alreadyTLMresp = false;
+    alreadyFHSS = false;
 }
 
 //////////////////////////////////////////////////////////////
@@ -854,6 +858,7 @@ void LostConnection(bool resumeRx)
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
+    alreadyFHSS = false;
 
     if (!InBindingMode)
     {
