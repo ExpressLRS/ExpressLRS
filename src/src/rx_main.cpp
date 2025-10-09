@@ -364,7 +364,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
 
-    EnableLBT();
+    LbtEnableIfRequired();
 }
 
 static void ICACHE_RAM_ATTR HandleFHSS()
@@ -405,9 +405,7 @@ static void ICACHE_RAM_ATTR HandleFHSS()
         Radio.RXnb();
     }
 #endif
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
+    LbtCcaTimerStart();
 }
 
 void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
@@ -588,10 +586,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
     }
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-#endif
+    transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
@@ -1274,9 +1269,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
+    LbtCcaTimerStart();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
@@ -1980,7 +1973,7 @@ static void CheckConfigChangePending()
         LostConnection(false);
         uint32_t changes = config.Commit();
         devicesTriggerEvent(changes);
-        EnableLBT();
+        LbtEnableIfRequired();
         Radio.RXnb();
     }
 }
