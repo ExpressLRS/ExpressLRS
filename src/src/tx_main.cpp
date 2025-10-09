@@ -932,14 +932,16 @@ void ICACHE_RAM_ATTR TXdoneISR()
     else if (doRx)
     {
       Radio.RXnb();
-      // Record the CCA start time even if nextIsTLM just to simplify the code. The timer will be reset before the next TX anyway
-      LbtCcaTimerStart();
     }
 
     // If TLM enabled and next packet is going to be telemetry
     if (nextIsTLM)
     {
       TelemetryRcvPhase = ttrpPreReceiveGap;
+    }
+    else if (doRx)
+    {
+      LbtCcaTimerStart();
     }
   }
   busyTransmitting = false;
