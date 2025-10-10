@@ -27,8 +27,6 @@
 #include <set>
 #include <StreamString.h>
 
-#include "ArduinoJson.h"
-#include "AsyncJson.h"
 #include <ESPAsyncWebServer.h>
 
 #include "common.h"
@@ -96,6 +94,8 @@ static bool target_complete = false;
 static bool force_update = false;
 static uint32_t totalSize;
 
+static const char VERSION[] = {LATEST_VERSION, 0};
+
 void setWifiUpdateMode()
 {
   // No need to ExitBindingMode(), the radio will be stopped stopped when start the Wifi service.
@@ -143,30 +143,11 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-static struct {
-  const char *url;
-  const char *contentType;
-  const uint8_t* content;
-  const size_t size;
-} files[] = {
-  {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
-  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
-  {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
-  {"/hardware.html", "text/html", (uint8_t *)HARDWARE_HTML, sizeof(HARDWARE_HTML)},
-  {"/hardware.js", "text/javascript", (uint8_t *)HARDWARE_JS, sizeof(HARDWARE_JS)},
-  {"/cw.html", "text/html", (uint8_t *)CW_HTML, sizeof(CW_HTML)},
-  {"/cw.js", "text/javascript", (uint8_t *)CW_JS, sizeof(CW_JS)},
-#if defined(RADIO_LR1121)
-  {"/lr1121.html", "text/html", (uint8_t *)LR1121_HTML, sizeof(LR1121_HTML)},
-  {"/lr1121.js", "text/javascript", (uint8_t *)LR1121_JS, sizeof(LR1121_JS)},
-#endif
-};
-
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  for (auto & file : files) {
-    if (request->url().equals(file.url)) {
-      AsyncWebServerResponse *response = request->beginResponse(200, file.contentType, file.content, file.size);
+  for (size_t i=0 ; i<WEB_ASSETS_COUNT ; i++) {
+    if (request->url().equals(WEB_ASSETS[i].path)) {
+      AsyncWebServerResponse *response = request->beginResponse_P(200, WEB_ASSETS[i].content_type, WEB_ASSETS[i].data, WEB_ASSETS[i].size);
       response->addHeader("Content-Encoding", "gzip");
       request->send(response);
       return;
@@ -181,21 +162,15 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   { // If captive portal redirect instead of displaying the page.
     return;
   }
-  force_update = request->hasArg("force");
-  AsyncWebServerResponse *response;
+  force_update = request->hasArg("force");  // TODO handle this
   if (connectionState == hardwareUndefined)
   {
-    response = request->beginResponse(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
+    request->redirect("/app.html#hardware");
   }
   else
   {
-    response = request->beginResponse(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+    request->redirect("/app.html");
   }
-  response->addHeader("Content-Encoding", "gzip");
-  response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  response->addHeader("Pragma", "no-cache");
-  response->addHeader("Expires", "-1");
-  request->send(response);
 }
 
 static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -1053,9 +1028,10 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/elrs.css", WebUpdateSendContent);
-  server.on("/mui.js", WebUpdateSendContent);
-  server.on("/scan.js", WebUpdateSendContent);
+  for (auto asset : WEB_ASSETS)
+  {
+      server.on(asset.path, WebUpdateSendContent);
+  }
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
@@ -1069,8 +1045,6 @@ static void startServices()
   server.on("/update", HTTP_OPTIONS, corsPreflightResponse);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/forceupdate", HTTP_OPTIONS, corsPreflightResponse);
-  server.on("/cw.html", WebUpdateSendContent);
-  server.on("/cw.js", WebUpdateSendContent);
   server.on("/cw", HandleContinuousWave);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
@@ -1078,8 +1052,6 @@ static void startServices()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-  server.on("/hardware.html", WebUpdateSendContent);
-  server.on("/hardware.js", WebUpdateSendContent);
   server.on("/hardware.json", getFile).onBody(putFile);
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
@@ -1098,8 +1070,6 @@ static void startServices()
   #endif
 
   #if defined(RADIO_LR1121)
-    server.on("/lr1121.html", WebUpdateSendContent);
-    server.on("/lr1121.js", WebUpdateSendContent);
     server.on("/lr1121", HTTP_OPTIONS, corsPreflightResponse);
     addLR1121Handlers(server);
   #endif
