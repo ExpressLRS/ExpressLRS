@@ -14,8 +14,6 @@ static uint32_t rxStartTime;
 bool LBTEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 
-uint32_t getRXWaitTime() { return validRSSIdelayUs; }
-
 static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_LR1121)
