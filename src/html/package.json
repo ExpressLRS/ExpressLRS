@@ -1,0 +1,29 @@
+{
+  "name": "elrs-ui",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite",
+    "dev:rx": "vite",
+    "clean": "rimraf dist",
+    "build": "npm run clean && vite build",
+    "build:tx": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite build",
+    "build:rx": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_LR1121=false vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@lit-app/state": "^1.0.0",
+    "lit": "^3.3.1",
+    "lit-html": "^3.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/plugin-proposal-decorators": "^7.28.0",
+    "node-zopfli-es": "^2.0.4",
+    "rimraf": "^6.0.1",
+    "vite": "^7.1.9",
+    "vite-plugin-babel": "^1.3.2"
+  }
+}

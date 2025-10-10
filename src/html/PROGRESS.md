@@ -1,0 +1,13 @@
+- [x] Binding
+- [x] Buttons
+- [x] TX Options
+- [x] Import/Export
+- [ ] RX Model/PWM/Outputs
+- [ ] RX Options
+- [x] WiFi
+- [ ] Update
+---
+- [ ] Hardware
+- [ ] Continuous wave
+- [ ] LR1121
+
