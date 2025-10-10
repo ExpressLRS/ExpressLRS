@@ -610,7 +610,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-  transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+  transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 
   if (transmittingRadio == SX12XX_Radio_NONE)
   {
@@ -750,7 +750,7 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
   ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
-  EnableLBT();
+  LbtEnableIfRequired();
 }
 
 void ModelUpdateReq()
@@ -841,9 +841,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
   }
 
-#if defined(Regulatory_Domain_EU_CE_2400)
-  SetClearChannelAssessmentTime();
-#endif
+  LbtCcaTimerStart();
   const bool packetSuccessful = ProcessTLMpacket(status);
   return packetSuccessful;
 }
@@ -857,16 +855,11 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
   if (connectionState != awaitingModelId)
   {
-#if defined(Regulatory_Domain_EU_CE_2400)
-    extern bool LBTEnabled;
-#else
-    constexpr bool LBTEnabled = false;
-#endif
     const uint8_t modResult = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     // If TLM enabled and next packet is going to be telemetry, or in LBT mode, start listening to have a large receive window (time-wise)
     const bool nextIsTLM = ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0;
-    const bool doRx = nextIsTLM || LBTEnabled;
+    const bool doRx = nextIsTLM || LbtIsEnabled;
 
     // If the next packet should be on the next FHSS frequency, do the hop
     if (!InBindingMode && modResult == 0)
@@ -902,12 +895,10 @@ void ICACHE_RAM_ATTR TXdoneISR()
     {
       TelemetryRcvPhase = ttrpPreReceiveGap;
     }
-#if defined(Regulatory_Domain_EU_CE_2400)
     else if (doRx)
     {
-      SetClearChannelAssessmentTime();
+      LbtCcaTimerStart();
     }
-#endif // non-CE
   }
   busyTransmitting = false;
 }
@@ -1474,9 +1465,7 @@ void setup()
       // Set the pkt rate, TLM ratio, and power from the stored eeprom values
       ChangeRadioParams();
 
-  #if defined(Regulatory_Domain_EU_CE_2400)
-      SetClearChannelAssessmentTime();
-  #endif
+      LbtCcaTimerStart();
       hwTimer::init(nullptr, timerCallback);
       connectionState = noCrossfire;
     }

@@ -2,6 +2,7 @@
 #include "common.h"
 #include "logging.h"
 #include "LBT.h"
+#include "POWERMGNT.h"
 #include "config.h"
 
 LQCALC<100> LBTSuccessCalc;
@@ -11,10 +12,10 @@ static uint32_t rxStartTime;
   #define LBT_RSSI_THRESHOLD_OFFSET_DB 0
 #endif
 
-bool LBTEnabled = false;
+bool LbtIsEnabled = false;
 static uint32_t validRSSIdelayUs = 0;
 
-static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
+static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_LR1121)
   if (radio_type == RADIO_TYPE_LR1121_LORA_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
@@ -66,15 +67,14 @@ static uint32_t ICACHE_RAM_ATTR SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, ui
     return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
 #endif
-  ERRLN("LBT not supported on this radio type");
   return 0;
 }
 
-void EnableLBT()
+void LbtEnableIfRequired()
 {
-    LBTEnabled = config.GetPower() > PWR_10mW;
+    LbtIsEnabled = config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121)
-    LBTEnabled = LBTEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL);
+    LbtIsEnabled = LbtIsEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL);
 #endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
@@ -138,26 +138,25 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
     }
   }
 #endif
-  ERRLN("LBT not supported on this radio type");
   return 0;
 }
 
-void ICACHE_RAM_ATTR SetClearChannelAssessmentTime(void)
+void ICACHE_RAM_ATTR LbtCcaTimerStart(void)
 {
-  if (!LBTEnabled)
+  if (!LbtIsEnabled)
     return;
 
   rxStartTime = micros();
 }
 
-SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radioNumber)
+SX12XX_Radio_Number_t ICACHE_RAM_ATTR LbtChannelIsClear(SX12XX_Radio_Number_t radioNumber)
 {
   if (radioNumber == SX12XX_Radio_NONE)
     return SX12XX_Radio_NONE;
 
   LBTSuccessCalc.inc(); // Increment count for every channel check
 
-  if (!LBTEnabled)
+  if (!LbtIsEnabled)
   {
     LBTSuccessCalc.add();
     return radioNumber;
@@ -208,7 +207,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR ChannelIsClear(SX12XX_Radio_Number_t radio
   if (radioNumber & SX12XX_Radio_2)
   {
     rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
-    
+
     if(rssiInst2 < rssiCutOff)
     {
         clearChannelsMask |= SX12XX_Radio_2;
