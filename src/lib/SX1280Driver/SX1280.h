@@ -16,23 +16,15 @@ class SX1280Driver: public SX12xxDriverCommon
 public:
     static SX1280Driver *instance;
 
-
-    ///////////Radio Variables////////
-    uint16_t timeout;
-
-    ///////////////////////////////////
-
     ////////////////Configuration Functions/////////////
     SX1280Driver();
     bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     void SetTxIdleMode() { SetMode(SX1280_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
-                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t rxtimeout,
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength,
                 uint32_t flrcSyncWord=0, uint16_t flrcCrcSeed=0, uint8_t flrc=0);
-    void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
-    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
-    void SetRxTimeoutUs(uint32_t interval);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false);
     void SetOutputPower(int8_t power);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
@@ -41,7 +33,7 @@ public:
     bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
 
     void TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(SX1280_RadioOperatingModes_t rxMode = SX1280_MODE_RX, uint32_t incomingTimeout = 0);
+    void RXnb();
 
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
@@ -65,7 +57,7 @@ private:
     uint8_t pwrPending;
     SX1280_RadioOperatingModes_t fallBackMode;
 
-    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
+    void SetMode(SX1280_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
     void SetFIFOaddr(uint8_t txBaseAddr, uint8_t rxBaseAddr);
 
     // LoRa functions
