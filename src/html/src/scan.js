@@ -1,4 +1,3 @@
-let storedModelId = 255;
 let modeSelectionInit = true;
 
 function getPwmFormData() {
