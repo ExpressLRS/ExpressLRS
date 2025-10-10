@@ -18,10 +18,6 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
-// RxTimeout is expressed in periods of the 32.768kHz RTC
-#define RX_TIMEOUT_PERIOD_BASE_NANOS (1000000000 / 32768)
-#define US_TO_PERIOD(us, defaultPeriod) (us ? std::max(us * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS, (uint32_t)1) : defaultPeriod)
-
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
