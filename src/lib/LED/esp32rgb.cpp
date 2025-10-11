@@ -74,8 +74,10 @@ void ESP32S3LedDriver::Show()
 {
     size_t bytes_written = 0;
     i2s_stop(I2S_NUM);
-    i2s_write(I2S_NUM, out_buffer, out_buffer_size, &bytes_written, portMAX_DELAY);
-    i2s_start(I2S_NUM);
+    if (i2s_write(I2S_NUM, out_buffer, out_buffer_size, &bytes_written, 0) == ESP_OK)
+    {
+        i2s_start(I2S_NUM);
+    }
 }
 
 void ESP32S3LedDriver::ClearTo(RgbColor color, uint16_t first, uint16_t last)
