@@ -1646,7 +1646,6 @@ h4, h5, h6 {
   background-position: right center;
   cursor: pointer;
   color: rgba(0, 0, 0, 0.87);
-  font-size: 16px;
   font-family: inherit;
   line-height: inherit;
   padding: 0 25px 0 0;
@@ -1706,7 +1705,6 @@ h4, h5, h6 {
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   background-color: #FFF;
-  font-size: 16px;
 }
 @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
   .mui-select__menu {
@@ -1722,8 +1720,8 @@ h4, h5, h6 {
 }
 .mui-select__menu > div {
   padding: 0 22px;
-  height: 42px;
-  line-height: 42px;
+  height:36px;
+  line-height: 36px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1875,7 +1873,6 @@ h4, h5, h6 {
   position: absolute;
   -webkit-transform: translate(0px, 15px);
   transform: translate(0px, 15px);
-  font-size: 16px;
   line-height: 32px;
   color: rgba(0, 0, 0, 0.26);
   text-overflow: clip;
@@ -1937,7 +1934,6 @@ h4, h5, h6 {
   -webkit-box-shadow: none;
   box-shadow: none;
   border-radius: 0px;
-  font-size: 16px;
   font-family: inherit;
   line-height: inherit;
   background-image: none;
