@@ -22,22 +22,15 @@ class LR1121Driver: public SX12xxDriverCommon
 public:
     static LR1121Driver *instance;
 
-    ///////////Radio Variables////////
-    uint32_t timeout;
-
-    ///////////////////////////////////
-
     ////////////////Configuration Functions/////////////
     LR1121Driver();
     bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
     void End();
     void SetTxIdleMode() { SetMode(LR1121_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
-                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, uint32_t interval, bool setFSKModulation,
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, bool setFSKModulation,
                 uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
-    void SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
-    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
-    void SetRxTimeoutUs(uint32_t interval);
+    void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
     void SetOutputPower(int8_t power, bool isSubGHz = true);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
@@ -47,7 +40,7 @@ public:
     bool FrequencyErrorAvailable() const { return false; }
 
     void TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber);
-    void RXnb(lr11xx_RadioOperatingModes_t rxMode = LR1121_MODE_RX, uint32_t incomingTimeout = 0);
+    void RXnb();
 
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
@@ -84,7 +77,7 @@ private:
 
     bool CheckVersion(SX12XX_Radio_Number_t radioNumber);
 
-    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout = 0);
+    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
