@@ -10,6 +10,8 @@
 
 </center>
 
+**ExpressLRS** is developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
+
 ## Support ExpressLRS
 You can support ExpressLRS by contributing code, testing new features, sharing your ideas, or helping others get started. We are exceptionally grateful for those who donate their time to our passion.
 
