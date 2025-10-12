@@ -1,11 +1,14 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import '../assets/mui.js';
-import {elrsState} from "../utils/state.js";
+import {elrsState, saveConfig} from "../utils/state.js";
+import {_} from "../utils/libs.js";
 
 @customElement('connections-panel')
 class ConnectionsPanel extends LitElement {
-    modeSelectionInit = true;
+    pinModes = []
+    pinRxIndex = undefined
+    pinTxIndex = undefined
 
     createRenderRoot() {
         return this;
@@ -26,7 +29,7 @@ class ConnectionsPanel extends LitElement {
                     </li>
                     <ul>
                         <li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART
-                            baud</b> on the <b>Options</b> tab
+                            baud</b> on the <b><a href="#serial">Serial</a></b> page in the menu
                         </li>
                     </ul>
                     <li><b>Input:</b> Input channel from the handset</li>
@@ -51,7 +54,7 @@ class ConnectionsPanel extends LitElement {
                         </ul>
                     </li>
                 </ul>
-                <form action="/pwm" id="pwm" method="POST">
+                <form>
                     <div class="mui-panel pwmpnl">
                         <table class="pwmtbl mui-table">
                             <thead>
@@ -64,40 +67,25 @@ class ConnectionsPanel extends LitElement {
                             </tbody>
                         </table>
                     </div>
+                    <button class="mui-btn mui-btn--small mui-btn--primary" @click="${this._savePwmConfig}">Save</button>
                 </form>
             </div>
         `;
     }
 
-    getPwmFormData() {
-        let ch = 0;
-        let inField;
-        const outData = [];
-        while (inField = _(`pwm_${ch}_ch`)) {
-            const inChannel = inField.value;
-            const mode = _(`pwm_${ch}_mode`).value;
-            const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
-            const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
-            const failsafeField = _(`pwm_${ch}_fs`);
-            const failsafeModeField = _(`pwm_${ch}_fsmode`);
-            let failsafe = failsafeField.value;
-            if (failsafe > 2011) failsafe = 2011;
-            if (failsafe < 988) failsafe = 988;
-            failsafeField.value = failsafe;
-            let failsafeMode = failsafeModeField.value;
-
-            const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
-            // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
-            outData.push(raw);
-            ++ch;
-        }
-        return outData;
+    firstUpdated() {
+        elrsState.config.pwm.forEach((item, index) => {
+            const modeField = _(`pwm_${index}_mode`)
+            this._pinModeChange(modeField, index)
+            const failsafeModeField = _(`pwm_${index}_fsmode`)
+            this._failsafeModeChange(failsafeModeField, index)
+        })
     }
 
-    _enumSelectGenerate(id, val, arOptions) {
+    _enumSelectGenerate(id, val, arOptions, onchange) {
         return html`
             <div class="mui-select compact">
-                <select id="${id}" class="pwmitm">
+                <select id="${id}" class="pwmitm" @change="${onchange}">
                     ${arOptions.map((item, idx) => {
                         if (item) {
                             return html`<option value="${idx}" ?selected=${idx === val} ?disabled=${item === 'Disabled'}>${item}</option>`;
@@ -106,7 +94,7 @@ class ConnectionsPanel extends LitElement {
                     })}
                 </select>
             </div>
-        `;
+        `
     }
 
     _generateFeatureBadges(features) {
@@ -126,9 +114,9 @@ class ConnectionsPanel extends LitElement {
     }
 
     _renderConnectionPins() {
-        let pinRxIndex = undefined;
-        let pinTxIndex = undefined;
-        let pinModes = []
+        this.pinRxIndex = undefined;
+        this.pinTxIndex = undefined;
+        this.pinModes = []
         // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bit for narrow/750us
         const htmlFields = [];
         elrsState.config.pwm.forEach((item, index) => {
@@ -150,13 +138,13 @@ class ConnectionsPanel extends LitElement {
                 modes.push(undefined);  // SCL
                 modes.push(undefined);  // SDA
                 modes.push(undefined);  // true PWM
-                pinRxIndex = index;
+                this.pinRxIndex = index;
             } else if (features & 2) {
                 modes.push('Serial RX');
                 modes.push(undefined);  // SCL
                 modes.push(undefined);  // SDA
                 modes.push(undefined);  // true PWM
-                pinTxIndex = index;
+                this.pinTxIndex = index;
             } else {
                 modes.push(undefined);  // Serial
                 if (features & 4) {
@@ -186,7 +174,7 @@ class ConnectionsPanel extends LitElement {
             htmlFields.push(html`
                 <tr><td class="mui--text-center mui--text-title">${index + 1}</td>
                 <td>${this._generateFeatureBadges(features)}</td>
-                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, mode, modes)}</td>
+                <td>${this._enumSelectGenerate(`pwm_${index}_mode`, mode, modes, (e) => {this._pinModeChange(e.target, index)})}</td>
                 <td>${this._enumSelectGenerate(`pwm_${index}_ch`, ch,
                         ['ch1', 'ch2', 'ch3', 'ch4',
                             'ch5 (AUX1)', 'ch6 (AUX2)', 'ch7 (AUX3)', 'ch8 (AUX4)',
@@ -194,21 +182,16 @@ class ConnectionsPanel extends LitElement {
                             'ch13 (AUX9)', 'ch14 (AUX10)', 'ch15 (AUX11)', 'ch16 (AUX12)'])}</td>
                 <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv" ?checked="${inv}"></div></td>
                 <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar" ?checked="${narrow}"}></div></td>
-                <td>${this._enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode, ['Set Position', 'No Pulses', 'Last Position'])}</td>
+                <td>${this._enumSelectGenerate(`pwm_${index}_fsmode`, failsafeMode, ['Set Position', 'No Pulses', 'Last Position'],
+                        (e) => {this._failsafeModeChange(e.target, index)})}</td>
                 <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6" class="pwmitm" /></div></td></tr>
             `);
-            pinModes[index] = mode;
+            this.pinModes[index] = mode;
         });
         return htmlFields;
     }
 
-    updatePwmSettings(arPwm) {
-
-        // const grp = document.createElement('DIV');
-        // grp.setAttribute('class', 'group');
-        // grp.innerHTML = htmlFields.join('');
-
-
+    _pinModeChange(pinMode, index) {
         const setDisabled = (index, onoff) => {
             _(`pwm_${index}_ch`).disabled = onoff;
             _(`pwm_${index}_inv`).disabled = onoff;
@@ -216,84 +199,105 @@ class ConnectionsPanel extends LitElement {
             _(`pwm_${index}_fs`).disabled = onoff;
             _(`pwm_${index}_fsmode`).disabled = onoff;
         }
-        arPwm.forEach((item,index)=>{
-            const pinMode = _(`pwm_${index}_mode`)
-            pinMode.onchange = () => {
-                setDisabled(index, pinMode.value > 9);
-                const updateOthers = (value, enable) => {
-                    if (value > 9) { // disable others
-                        arPwm.forEach((item, other) => {
-                            if (other != index) {
-                                document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
-                                    if (opt.value == value) {
-                                        if (modeSelectionInit)
-                                            opt.disabled = true;
-                                        else
-                                            opt.disabled = enable;
-                                    }
-                                });
+
+        setDisabled(index, pinMode.value > 9);
+        const updateOthers = (value, enable) => {
+            if (value > 9) { // disable others
+                elrsState.config.pwm.forEach((item, other) => {
+                    if (other !== index) {
+                        document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
+                            if (opt.value === value) {
+                                opt.disabled = enable;
                             }
-                        })
+                        });
                     }
-                }
-                updateOthers(pinMode.value, true); // disable others
-                updateOthers(pinModes[index], false); // enable others
-                pinModes[index] = pinMode.value;
-
-                // show Serial2 protocol selection only if Serial2 TX is assigned
-                _('serial1-config').style.display = 'none';
-                if (pinMode.value == 14) // Serial2 TX
-                    _('serial1-config').style.display = 'block';
+                })
             }
-            pinMode.onchange();
-
-            // disable and hide the failsafe position field if not using the set-position failsafe mode
-            const failsafeMode = _(`pwm_${index}_fsmode`);
-            failsafeMode.onchange = () => {
-                const failsafeField = _(`pwm_${index}_fs`);
-                if (failsafeMode.value == 0) {
-                    failsafeField.disabled = false;
-                    failsafeField.style.display = 'block';
-                }
-                else {
-                    failsafeField.disabled = true;
-                    failsafeField.style.display = 'none';
-                }
-            };
-            failsafeMode.onchange();
-        });
-
-        modeSelectionInit = false;
+        }
+        updateOthers(pinMode.value, true); // disable others
+        updateOthers(this.pinModes[index], false); // enable others
+        this.pinModes[index] = pinMode.value;
 
         // put some constraints on pinRx/Tx mode selects
-        if (pinRxIndex !== undefined && pinTxIndex !== undefined) {
-            const pinRxMode = _(`pwm_${pinRxIndex}_mode`);
-            const pinTxMode = _(`pwm_${pinTxIndex}_mode`);
-            pinRxMode.onchange = () => {
-                if (pinRxMode.value == 9) { // Serial
+        if (this.pinRxIndex !== undefined && this.pinTxIndex !== undefined) {
+            const pinRxMode = _(`pwm_${this.pinRxIndex}_mode`);
+            const pinTxMode = _(`pwm_${this.pinTxIndex}_mode`);
+            if (index === this.pinRxIndex) {
+                if (pinRxMode.value === '9') { // Serial
                     pinTxMode.value = 9;
-                    setDisabled(pinRxIndex, true);
-                    setDisabled(pinTxIndex, true);
+                    setDisabled(this.pinRxIndex, true);
+                    setDisabled(this.pinTxIndex, true);
                     pinTxMode.disabled = true;
                 }
                 else {
                     pinTxMode.value = 0;
-                    setDisabled(pinRxIndex, false);
-                    setDisabled(pinTxIndex, false);
+                    setDisabled(this.pinRxIndex, false);
+                    setDisabled(this.pinTxIndex, false);
                     pinTxMode.disabled = false;
                 }
             }
-            pinTxMode.onchange = () => {
-                if (pinTxMode.value == 9) { // Serial
+            if (index === this.pinTxIndex) {
+                if (pinTxMode.value === '9') { // Serial
                     pinRxMode.value = 9;
-                    setDisabled(pinRxIndex, true);
-                    setDisabled(pinTxIndex, true);
+                    setDisabled(this.pinRxIndex, true);
+                    setDisabled(this.pinTxIndex, true);
                     pinTxMode.disabled = true;
                 }
             }
             const pinTx = pinTxMode.value;
-            pinRxMode.onchange();
-            if (pinRxMode.value != 9) pinTxMode.value = pinTx;
+            if (pinRxMode.value !== '9') pinTxMode.value = pinTx;
         }
+
+    }
+
+    _failsafeModeChange(failsafeMode, index) {
+        const failsafeField = _(`pwm_${index}_fs`);
+        if (failsafeMode.value === '0') {
+            failsafeField.disabled = false;
+            failsafeField.style.display = 'block';
+        }
+        else {
+            failsafeField.disabled = true;
+            failsafeField.style.display = 'none';
+        }
+    }
+
+    _getPwmFormData() {
+        let ch = 0;
+        let inField;
+        const outData = [];
+        while (inField = _(`pwm_${ch}_ch`)) {
+            const inChannel = inField.value;
+            const mode = _(`pwm_${ch}_mode`).value;
+            const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
+            const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
+            const failsafeField = _(`pwm_${ch}_fs`);
+            const failsafeModeField = _(`pwm_${ch}_fsmode`);
+            let failsafe = failsafeField.value;
+            if (failsafe > 2011) failsafe = 2011;
+            if (failsafe < 988) failsafe = 988;
+            failsafeField.value = failsafe;
+            let failsafeMode = failsafeModeField.value;
+
+            const raw = (narrow << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
+            // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
+            outData.push(raw);
+            ++ch;
+        }
+        return outData;
+    }
+
+    _savePwmConfig(e) {
+        e.preventDefault();
+        const data = this._getPwmFormData()
+        saveConfig({
+            ...elrsState.config,
+            'pwm': data
+        }, () => {
+            let i = 0
+            elrsState.config.pwm.forEach((item) => {
+                item.config = data[i++]
+            })
+        })
     }
 }

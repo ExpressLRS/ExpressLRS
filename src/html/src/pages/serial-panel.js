@@ -100,13 +100,7 @@ class SerialPanel extends LitElement {
 
     _hasSerial1() {
         for(const pwm of elrsState.config.pwm) {
-            const fs = pwm.config & 0x3FF
-            const fsMode = (pwm.config >> 20) & 0x3
-            const ch = (pwm.config >> 10) & 0xF
-            const inv = (pwm.config >> 14) & 0x1
             const mode = (pwm.config >> 15) & 0xF
-            const narrow = (pwm.config >> 19) & 0x1
-            console.log(fs, fsMode, ch, inv, mode, narrow);
             if (mode === 9 || mode === 10 )
                 return true
         }

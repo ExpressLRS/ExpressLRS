@@ -129,6 +129,12 @@ export function devMockPlugin() {
                         try {
                             const data = JSON.parse(body || '{}')
                             if (data['button-actions']) stubState.config['button-actions'] = data['button-actions']
+                            if (data['pwm']) {
+                                let i = 0
+                                stubState.config['pwm'].forEach((item) => {
+                                    item.config = data['pwm'][i++]
+                                })
+                            }
                         } catch (e) {
                             // ignore parse errors in mock
                         }
