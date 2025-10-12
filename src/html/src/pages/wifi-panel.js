@@ -1,8 +1,8 @@
-import {html, LitElement} from "lit";
-import {customElement, query, state} from "lit/decorators.js";
-import {elrsState} from "../utils/state.js";
-import {postWithFeedback} from "../utils/feedback.js";
-import {autocomplete} from "../utils/autocomplete.js";
+import {html, LitElement} from "lit"
+import {customElement, query, state} from "lit/decorators.js"
+import {elrsState} from "../utils/state.js"
+import {postWithFeedback} from "../utils/feedback.js"
+import {autocomplete} from "../utils/autocomplete.js"
 
 @customElement('wifi-panel')
 class WifiPanel extends LitElement {
@@ -11,27 +11,27 @@ class WifiPanel extends LitElement {
     @query('[name="network"]') accessor network
     @query('[name="password"]') accessor password
 
-    @state() accessor selectedValue = '0';
-    @state() accessor showLoader = true;
+    @state() accessor selectedValue = '0'
+    @state() accessor showLoader = true
 
-    running = false;
+    running = false
 
     constructor() {
-        super();
-        this._getNetworks = this._getNetworks.bind(this);
+        super()
+        this._getNetworks = this._getNetworks.bind(this)
     }
 
     createRenderRoot() {
-        return this;
+        return this
     }
 
     disconnectedCallback() {
-        this.running = false;
+        this.running = false
     }
 
     updated(_) {
-        if (!this.running) this._getNetworks();
-        this.running = true;
+        if (!this.running) this._getNetworks()
+        this.running = true
     }
 
     render() {
@@ -91,64 +91,64 @@ class WifiPanel extends LitElement {
                     Connect to Home network: ${elrsState.options['wifi-ssid']}
                 </a>
             </div>
-        `;
+        `
     }
 
     _handleChange(event) {
-        this.selectedValue = event.target.value;
+        this.selectedValue = event.target.value
     }
 
     _setupNetwork(event) {
-        event.preventDefault();
+        event.preventDefault()
         const self = this
         switch (this.selectedValue) {
             case '0':
                 postWithFeedback('Set Home Network', 'An error occurred setting the home network', '/sethome?save', function () {
-                    return new FormData(self.form);
+                    return new FormData(self.form)
                 }, function () {
                     elrsState.options = {
                         ...elrsState.options,
                         'wifi-ssid': self.network.value,
                         'wifi-password': self.password.value
-                    };
-                })(event);
-                break;
+                    }
+                })(event)
+                break
             case '1':
                 postWithFeedback('Connect To Network', 'An error occurred connecting to the network', '/sethome', function () {
-                    return new FormData(self.form);
-                })(event);
-                break;
+                    return new FormData(self.form)
+                })(event)
+                break
             case '2':
-                postWithFeedback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event);
-                break;
+                postWithFeedback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event)
+                break
             case '3':
-                postWithFeedback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event);
-                break;
+                postWithFeedback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event)
+                break
         }
     }
 
     _getNetworks() {
-        const self = this;
-        const xmlhttp = new XMLHttpRequest();
+        const self = this
+        const xmlhttp = new XMLHttpRequest()
         xmlhttp.onload = function () {
             if (self.running) {
                 if (this.status === 204) {
-                    setTimeout(self._getNetworks, 2000);
+                    setTimeout(self._getNetworks, 2000)
                 } else {
-                    const data = JSON.parse(this.responseText);
+                    const data = JSON.parse(this.responseText)
                     if (data.length > 0) {
-                        self.showLoader = false;
-                        autocomplete(self.network, data);
+                        self.showLoader = false
+                        autocomplete(self.network, data)
                     }
                 }
             }
-        };
+        }
         xmlhttp.onerror = function () {
             if (self.running) {
-                setTimeout(self._getNetworks, 2000);
+                setTimeout(self._getNetworks, 2000)
             }
-        };
-        xmlhttp.open('GET', 'networks.json', true);
-        xmlhttp.send();
+        }
+        xmlhttp.open('GET', 'networks.json', true)
+        xmlhttp.send()
     }
 }

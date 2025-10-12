@@ -1,28 +1,28 @@
-import {LitElement, html, svg} from 'lit';
-import {customElement, query} from "lit/decorators.js";
-import FEATURES from "./features.js";
-import {elrsState} from './utils/state.js';
-import './components/elrs-footer.js';
+import {LitElement, html, svg} from 'lit'
+import {customElement, query} from "lit/decorators.js"
+import FEATURES from "./features.js"
+import {elrsState} from './utils/state.js'
+import './components/elrs-footer.js'
 
-import './pages/info-panel.js';
+import './pages/info-panel.js'
 
 @customElement('elrs-app')
 export class App extends LitElement {
-    @query("#sidedrawer") accessor sidedrawerEl;
-    @query("#main") accessor mainEl;
+    @query("#sidedrawer") accessor sidedrawerEl
+    @query("#main") accessor mainEl
 
     menu = svg`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 512 512"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="48" d="M88 152h336M88 256h336M88 360h336"/></svg>`
 
     constructor() {
-        super();
+        super()
         // Bind methods used as callbacks to preserve `this`
-        this.renderRoute = this.renderRoute.bind(this);
-        this.showSidedrawer = this.showSidedrawer.bind(this);
-        this.hideSidedrawer = this.hideSidedrawer.bind(this);
+        this.renderRoute = this.renderRoute.bind(this)
+        this.showSidedrawer = this.showSidedrawer.bind(this)
+        this.hideSidedrawer = this.hideSidedrawer.bind(this)
     }
 
     createRenderRoot() {
-        return this;
+        return this
     }
 
     render() {
@@ -93,205 +93,205 @@ export class App extends LitElement {
                 <div id="main" class="mui-container-fluid"></div>
             </div>
             <elrs-footer></elrs-footer>
-        `;
+        `
     }
 
     firstUpdated(_changedProperties) {
         ['hardware', 'cw', 'lr1121', 'binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
             .forEach(id => {
-                const el = this.querySelector(`#menu-${id}`);
-                if (el) el.addEventListener('click', () => setTimeout(this.renderRoute));
-            });
+                const el = this.querySelector(`#menu-${id}`)
+                if (el) el.addEventListener('click', () => setTimeout(this.renderRoute))
+            })
 
-        window.addEventListener('hashchange', this.renderRoute);
+        window.addEventListener('hashchange', this.renderRoute)
 
         // Initial load sequence
         this.loadInitialData().catch(() => {
         }).then(() => {
-            this.renderRoute();
-        });
+            this.renderRoute()
+        })
     }
 
     async loadInitialData() {
         try {
-            const resp = await fetch('/config');
-            if (!resp.ok) throw new Error('Failed to load config');
-            const data = await resp.json();
-            elrsState.options = data.options || null;
-            elrsState.config = data.config || null;
+            const resp = await fetch('/config')
+            if (!resp.ok) throw new Error('Failed to load config')
+            const data = await resp.json()
+            elrsState.options = data.options || null
+            elrsState.config = data.config || null
             const r = await fetch("/target").then((resp) => {return resp.json()}).then(r => {elrsState.target = r})
             this.requestUpdate()
         } catch (e) {
-            console.warn('Startup data load failed:', e);
+            console.warn('Startup data load failed:', e)
         }
     }
 
     scrollMainToTop() {
         const doScroll = (behavior = 'smooth') => {
             try {
-                window.scrollTo({top: 0, left: 0, behavior});
+                window.scrollTo({top: 0, left: 0, behavior})
             } catch {
-                window.scrollTo(0, 0);
+                window.scrollTo(0, 0)
             }
-        };
-        requestAnimationFrame(() => requestAnimationFrame(() => doScroll('smooth')));
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => doScroll('smooth')))
     }
 
     setActiveMenu(route) {
         // Sidedrawer may be moved into MUI overlay, making @query return null; resolve robustly
-        const sidedrawer = this.sidedrawerEl || this.querySelector('#sidedrawer') || document.getElementById('sidedrawer');
+        const sidedrawer = this.sidedrawerEl || this.querySelector('#sidedrawer') || document.getElementById('sidedrawer')
         if (sidedrawer) {
-            const links = sidedrawer.querySelectorAll('a[href^="#"]');
-            links.forEach(a => a.classList.remove('active'));
+            const links = sidedrawer.querySelectorAll('a[href^="#"]')
+            links.forEach(a => a.classList.remove('active'))
         }
-        const id = 'menu-' +route;
-        const el = id ? (this.querySelector(`#${id}`) || document.getElementById(id)) : null;
-        if (el) el.classList.add('active');
+        const id = 'menu-' +route
+        const el = id ? (this.querySelector(`#${id}`) || document.getElementById(id)) : null
+        if (el) el.classList.add('active')
     }
 
     buildRouteContent(route) {
         switch (route) {
             case 'info':
-                return '<info-panel></info-panel>';
+                return '<info-panel></info-panel>'
             case 'binding':
-                return '<binding-panel></binding-panel>';
+                return '<binding-panel></binding-panel>'
             case 'options':
-                return FEATURES.IS_TX ? '<tx-options-panel></tx-options-panel>' : '<rx-options-panel></rx-options-panel>';
+                return FEATURES.IS_TX ? '<tx-options-panel></tx-options-panel>' : '<rx-options-panel></rx-options-panel>'
             case 'wifi':
-                return '<wifi-panel></wifi-panel>';
+                return '<wifi-panel></wifi-panel>'
             case 'update':
-                return '<update-panel></update-panel>';
+                return '<update-panel></update-panel>'
             case 'connections':
-                return !FEATURES.IS_TX && elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : '';
+                return !FEATURES.IS_TX && elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : ''
             case 'serial':
-                return !FEATURES.IS_TX ? '<serial-panel></serial-panel>' : '';
+                return !FEATURES.IS_TX ? '<serial-panel></serial-panel>' : ''
             case 'buttons':
-                return FEATURES.IS_TX ? '<buttons-panel></buttons-panel>' : '';
+                return FEATURES.IS_TX ? '<buttons-panel></buttons-panel>' : ''
             case 'hardware':
-                return '<hardware-layout></hardware-layout>';
+                return '<hardware-layout></hardware-layout>'
             case 'cw':
-                return '<continuous-wave></continuous-wave>';
+                return '<continuous-wave></continuous-wave>'
             case 'models':
-                return '<models-panel></models-panel>';
+                return '<models-panel></models-panel>'
             case 'lr1121':
-                return FEATURES.HAS_LR1121 ? '<lr1121-updater></lr1121-updater>' : '';
+                return FEATURES.HAS_LR1121 ? '<lr1121-updater></lr1121-updater>' : ''
             default:
-                return '';
+                return ''
         }
     }
 
-    generalGroupLoaded = false;
-    advancedGroupLoaded = false;
+    generalGroupLoaded = false
+    advancedGroupLoaded = false
 
     async loadGeneralGroup() {
-        if (this.generalGroupLoaded) return;
+        if (this.generalGroupLoaded) return
         try {
             const imports = [
                 import('./pages/binding-panel.js'),
                 import('./pages/wifi-panel.js'),
                 import('./pages/update-panel.js')
-            ];
+            ]
             // FEATURE:IS_TX
-            imports.push(import('./pages/tx-options-panel.js'));
-            imports.push(import('./pages/models-panel.js'));
-            imports.push(import('./pages/buttons-panel.js'));
+            imports.push(import('./pages/tx-options-panel.js'))
+            imports.push(import('./pages/models-panel.js'))
+            imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
-            imports.push(import('./pages/rx-options-panel.js'));
-            imports.push(import('./pages/connections-panel.js'));
-            imports.push(import('./pages/serial-panel.js'));
+            imports.push(import('./pages/rx-options-panel.js'))
+            imports.push(import('./pages/connections-panel.js'))
+            imports.push(import('./pages/serial-panel.js'))
             // /FEATURE:NOT IS_TX
-            await Promise.all(imports);
+            await Promise.all(imports)
         } finally {
-            this.generalGroupLoaded = true;
+            this.generalGroupLoaded = true
         }
     }
 
     async loadAdvancedGroup() {
-        if (this.advancedGroupLoaded) return;
+        if (this.advancedGroupLoaded) return
         try {
             const imports = [
                 import('./pages/hardware-layout.js'),
                 import('./pages/continuous-wave.js')
-            ];
+            ]
             // FEATURE:HAS_LR1121
-            imports.push(import('./pages/lr1121-updater.js'));
+            imports.push(import('./pages/lr1121-updater.js'))
             // /FEATURE:HAS_LR1121
-            await Promise.all(imports);
+            await Promise.all(imports)
         } finally {
-            this.advancedGroupLoaded = true;
+            this.advancedGroupLoaded = true
         }
     }
 
     async ensureLoadedForRoute(route) {
-        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models'];
-        const advancedRoutes = ['hardware', 'cw', 'lr1121'];
+        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
+        const advancedRoutes = ['hardware', 'cw', 'lr1121']
         if (generalRoutes.includes(route)) {
-            await this.loadGeneralGroup();
+            await this.loadGeneralGroup()
         } else if (advancedRoutes.includes(route)) {
-            await this.loadAdvancedGroup();
+            await this.loadAdvancedGroup()
         }
     }
 
     replaceMainWithTransition(newContent) {
         return new Promise(resolve => {
             const onEnd = () => {
-                this.mainEl.removeEventListener('transitionend', onEnd);
+                this.mainEl.removeEventListener('transitionend', onEnd)
                 if (typeof newContent === 'string') {
-                    this.mainEl.innerHTML = newContent;
+                    this.mainEl.innerHTML = newContent
                 } else if (newContent instanceof Node) {
-                    this.mainEl.innerHTML = '';
-                    this.mainEl.appendChild(newContent);
+                    this.mainEl.innerHTML = ''
+                    this.mainEl.appendChild(newContent)
                 } else {
-                    this.mainEl.innerHTML = '';
+                    this.mainEl.innerHTML = ''
                 }
-                this.mainEl.classList.add('route-fade-in');
+                this.mainEl.classList.add('route-fade-in')
                 requestAnimationFrame(() => {
-                    this.mainEl.classList.remove('route-fade-out');
+                    this.mainEl.classList.remove('route-fade-out')
                     requestAnimationFrame(() => {
-                        this.mainEl.classList.remove('route-fade-in');
-                        resolve();
-                    });
-                });
-            };
-            this.mainEl.addEventListener('transitionend', onEnd);
-            this.mainEl.classList.add('route-fade-out');
-            setTimeout(onEnd, 220);
+                        this.mainEl.classList.remove('route-fade-in')
+                        resolve()
+                    })
+                })
+            }
+            this.mainEl.addEventListener('transitionend', onEnd)
+            this.mainEl.classList.add('route-fade-out')
+            setTimeout(onEnd, 220)
         })
     }
 
     async renderRoute() {
-        const route = (location.hash || '#info').replace('#', '');
-        await this.ensureLoadedForRoute(route);
-        this.setActiveMenu(route);
+        const route = (location.hash || '#info').replace('#', '')
+        await this.ensureLoadedForRoute(route)
+        this.setActiveMenu(route)
         try {
-            mui.overlay('off');
+            mui.overlay('off')
         } catch {
         }
-        document.body.classList.remove('hide-sidedrawer');
-        const sd = this.querySelector('#sidedrawer') || document.getElementById('sidedrawer');
-        if (sd) sd.classList.remove('active');
-        const content = this.buildRouteContent(route);
-        await this.replaceMainWithTransition(content);
-        this.scrollMainToTop();
+        document.body.classList.remove('hide-sidedrawer')
+        const sd = this.querySelector('#sidedrawer') || document.getElementById('sidedrawer')
+        if (sd) sd.classList.remove('active')
+        const content = this.buildRouteContent(route)
+        await this.replaceMainWithTransition(content)
+        this.scrollMainToTop()
     }
 
     showSidedrawer() {
-        const sidedrawer = this.sidedrawerEl;
-        if (!sidedrawer) return;
+        const sidedrawer = this.sidedrawerEl
+        if (!sidedrawer) return
         const options = {
             onclose: () => {
-                sidedrawer.classList.remove('active');
+                sidedrawer.classList.remove('active')
                 // Append back into the component so @query can find it again
-                this.appendChild(sidedrawer);
+                this.appendChild(sidedrawer)
             }
-        };
-        const overlayEl = mui.overlay('on', options);
-        overlayEl.appendChild(sidedrawer);
-        setTimeout(() => sidedrawer.classList.add('active'), 20);
+        }
+        const overlayEl = mui.overlay('on', options)
+        overlayEl.appendChild(sidedrawer)
+        setTimeout(() => sidedrawer.classList.add('active'), 20)
     }
 
     hideSidedrawer() {
-        document.body.classList.toggle('hide-sidedrawer');
+        document.body.classList.toggle('hide-sidedrawer')
     }
 }

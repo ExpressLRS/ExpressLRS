@@ -1,20 +1,20 @@
-import {html, LitElement} from 'lit';
-import {customElement, query, state} from 'lit/decorators.js';
+import {html, LitElement} from 'lit'
+import {customElement, query, state} from 'lit/decorators.js'
 import '../assets/mui.js'
 import '../components/filedrag.js'
-import {cuteAlert, postWithFeedback} from "../utils/feedback.js";
+import {cuteAlert, postWithFeedback} from "../utils/feedback.js"
 
 @customElement('lr1121-updater')
 export class LR1121Updater extends LitElement {
-    @query('#radio2') accessor radio2;
+    @query('#radio2') accessor radio2
 
-    @state() accessor data = undefined;
-    @state() accessor status = '';
-    @state() accessor progress = 0;
-    @state() accessor manual = false;
+    @state() accessor data = undefined
+    @state() accessor status = ''
+    @state() accessor progress = 0
+    @state() accessor manual = false
 
     createRenderRoot() {
-        return this;
+        return this
     }
 
     render() {
@@ -40,7 +40,7 @@ export class LR1121Updater extends LitElement {
     }
 
     _renderRadios() {
-        if (!this.data?.radio2) return html``;
+        if (!this.data?.radio2) return html``
         return html`
             <div class="mui-radio">
                 <label>
@@ -54,13 +54,13 @@ export class LR1121Updater extends LitElement {
                     Update Radio 2
                 </label>
             </div>
-        `;
+        `
     }
 
     _renderInfoTable() {
-        if (!this.data) return html``;
-        const r1 = this.data.radio1;
-        const r2 = this.data.radio2;
+        if (!this.data) return html``
+        const r1 = this.data.radio1
+        const r2 = this.data.radio2
         return html`
             <table class="mui-table mui-table--bordered">
                 <thead>
@@ -88,112 +88,112 @@ export class LR1121Updater extends LitElement {
                 </tr>
                 </tbody>
             </table>
-        `;
+        `
     }
 
     connectedCallback() {
-        super.connectedCallback();
-        this._loadData();
+        super.connectedCallback()
+        this._loadData()
     }
 
     _dec2hex(i, len) {
-        if (i === undefined || i === null) return '';
-        return "0x" + (i + 0x10000).toString(16).substr(-len).toUpperCase();
+        if (i === undefined || i === null) return ''
+        return "0x" + (i + 0x10000).toString(16).substr(-len).toUpperCase()
     }
 
     _reset(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return postWithFeedback('LR1121 Reset', 'Reset failed', '/reset?lr1121', null)(e);
+        e.preventDefault()
+        e.stopPropagation()
+        return postWithFeedback('LR1121 Reset', 'Reset failed', '/reset?lr1121', null)(e)
     }
 
     _loadData() {
-        const xmlhttp = new XMLHttpRequest();
+        const xmlhttp = new XMLHttpRequest()
         xmlhttp.onreadystatechange = () => {
             if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-                const data = JSON.parse(xmlhttp.responseText);
-                this.data = data;
-                this.manual = !!data.manual;
+                const data = JSON.parse(xmlhttp.responseText)
+                this.data = data
+                this.manual = !!data.manual
             }
-        };
-        xmlhttp.open('GET', '/lr1121.json', true);
-        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-        xmlhttp.send();
+        }
+        xmlhttp.open('GET', '/lr1121.json', true)
+        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded')
+        xmlhttp.send()
     }
 
     _fileSelected(e) {
-        const files = e.detail.files;
-        if (files && files[0]) this._uploadFile(files[0]);
+        const files = e.detail.files
+        if (files && files[0]) this._uploadFile(files[0])
     }
 
     _uploadFile(file) {
         try {
             // Show overlay
-            mui.overlay('on', {keyboard: false, static: true});
-            const ajax = new XMLHttpRequest();
-            ajax.upload.addEventListener('progress', (event) => this._progressHandler(event), false);
-            ajax.addEventListener('load', (event) => this._completeHandler(event), false);
-            ajax.addEventListener('error', (event) => this._errorHandler(event), false);
-            ajax.addEventListener('abort', (event) => this._abortHandler(event), false);
-            ajax.open('POST', '/lr1121');
-            ajax.setRequestHeader('X-FileSize', file.size);
-            const radio = document.querySelector('input[name=optionsRadio]:checked')?.value || '1';
-            ajax.setRequestHeader('X-Radio', radio);
-            const formdata = new FormData();
-            formdata.append('upload', file, file.name);
-            ajax.send(formdata);
+            mui.overlay('on', {keyboard: false, static: true})
+            const ajax = new XMLHttpRequest()
+            ajax.upload.addEventListener('progress', (event) => this._progressHandler(event), false)
+            ajax.addEventListener('load', (event) => this._completeHandler(event), false)
+            ajax.addEventListener('error', (event) => this._errorHandler(event), false)
+            ajax.addEventListener('abort', (event) => this._abortHandler(event), false)
+            ajax.open('POST', '/lr1121')
+            ajax.setRequestHeader('X-FileSize', file.size)
+            const radio = document.querySelector('input[name=optionsRadio]:checked')?.value || '1'
+            ajax.setRequestHeader('X-Radio', radio)
+            const formdata = new FormData()
+            formdata.append('upload', file, file.name)
+            ajax.send(formdata)
         } catch (e) {
-            this._resetProgress();
-            mui.overlay('off');
+            this._resetProgress()
+            mui.overlay('off')
         }
     }
 
     _progressHandler(event) {
-        const percent = Math.round((event.loaded / event.total) * 100);
-        this.progress = percent;
-        this.status = percent + '% uploaded... please wait';
+        const percent = Math.round((event.loaded / event.total) * 100)
+        this.progress = percent
+        this.status = percent + '% uploaded... please wait'
     }
 
     async _completeHandler(event) {
-        this.status = '';
-        this.progress = 0;
-        const data = JSON.parse(event.target.responseText || '{}');
+        this.status = ''
+        this.progress = 0
+        const data = JSON.parse(event.target.responseText || '{}')
         if (data.status === 'ok') {
             // Simulate flashing progress
-            let percent = 0;
+            let percent = 0
             const interval = setInterval(async () => {
-                percent = percent + 2;
-                this.progress = percent;
-                this.status = percent + '% flashed... please wait';
+                percent = percent + 2
+                this.progress = percent
+                this.status = percent + '% flashed... please wait'
                 if (percent >= 100) {
-                    clearInterval(interval);
-                    await this._showAlert('success', 'Update Succeeded', data.msg);
+                    clearInterval(interval)
+                    await this._showAlert('success', 'Update Succeeded', data.msg)
                 }
-            }, 100);
+            }, 100)
         } else {
-            await this._showAlert('error', 'Update Failed', data.msg || '');
+            await this._showAlert('error', 'Update Failed', data.msg || '')
         }
     }
 
     _errorHandler(event) {
-        return this._showAlert('error', 'Update Failed', event?.target?.responseText || '');
+        return this._showAlert('error', 'Update Failed', event?.target?.responseText || '')
     }
 
     _abortHandler(event) {
-        return this._showAlert('info', 'Update Aborted', event?.target?.responseText || '');
+        return this._showAlert('info', 'Update Aborted', event?.target?.responseText || '')
     }
 
     _resetProgress() {
-        this.status = '';
-        this.progress = 0;
+        this.status = ''
+        this.progress = 0
     }
 
     _showAlert(type, title, message) {
-        this._resetProgress();
+        this._resetProgress()
         try {
-            mui.overlay('off');
+            mui.overlay('off')
         } catch (e) {
         }
-        return cuteAlert({type, title, message});
+        return cuteAlert({type, title, message})
     }
 }

@@ -1,20 +1,20 @@
-import {html, LitElement} from "lit";
-import {customElement, state} from "lit/decorators.js";
-import '../assets/mui.js';
-import {_renderOptions} from "../utils/libs.js";
-import {elrsState, saveOptions} from "../utils/state.js";
-import {postWithFeedback} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement, state} from "lit/decorators.js"
+import '../assets/mui.js'
+import {_renderOptions} from "../utils/libs.js"
+import {elrsState, saveOptions} from "../utils/state.js"
+import {postWithFeedback} from "../utils/feedback.js"
 
 @customElement('rx-options-panel')
 class RxOptionsPanel extends LitElement {
-    @state() accessor domain;
-    @state() accessor baudRate;
-    @state() accessor lockOnFirst;
-    @state() accessor isAirport;
-    @state() accessor djiArmed;
-    @state() accessor enableModelMatch;
-    @state() accessor modelId;
-    @state() accessor forceTlmOff;
+    @state() accessor domain
+    @state() accessor baudRate
+    @state() accessor lockOnFirst
+    @state() accessor isAirport
+    @state() accessor djiArmed
+    @state() accessor enableModelMatch
+    @state() accessor modelId
+    @state() accessor forceTlmOff
 
     createRenderRoot() {
         this.enableModelMatch = elrsState.options.modelid!==undefined && elrsState.options.modelid !== 255
@@ -57,7 +57,7 @@ class RxOptionsPanel extends LitElement {
                     in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
                     <br/>
                     <div class="mui-checkbox">
-                        <input type='checkbox' 
+                        <input type='checkbox'
                                ?checked="${this.enableModelMatch}"
                                @change="${(e) => {this.enableModelMatch = e.target.checked}}"/>
                         <label>Enable Model Match</label>
@@ -94,11 +94,11 @@ class RxOptionsPanel extends LitElement {
                     ` : ''}
                 </form>
             </div>
-        `;
+        `
     }
 
     save(e) {
-        e.preventDefault();
+        e.preventDefault()
         const changes = {
             ...elrsState.options,
             // FEATURE: HAS_SUBGHZ
@@ -118,16 +118,16 @@ class RxOptionsPanel extends LitElement {
     }
 
     hasChanges() {
-        let changed = false;
+        let changed = false
         // FEATURE: HAS_SUBGHZ
-        changed |= this.domain !== elrsState.options['domain'];
+        changed |= this.domain !== elrsState.options['domain']
         // /FEATURE: HAS_SUBGHZ
-        changed |= this.baudRate !== elrsState.options['rcvr-uart-baud'];
-        changed |= this.lockOnFirst !== elrsState.options['lock-on-first-connection'];
-        changed |= this.isAirport !== elrsState.options['is-airport'];
-        changed |= this.djiArmed !== elrsState.options['dji-permanently-armed'];
-        changed |= this.modelId !== elrsState.options['modelid'];
-        changed |= this.forceTlmOff !== elrsState.options['force-tlm'];
+        changed |= this.baudRate !== elrsState.options['rcvr-uart-baud']
+        changed |= this.lockOnFirst !== elrsState.options['lock-on-first-connection']
+        changed |= this.isAirport !== elrsState.options['is-airport']
+        changed |= this.djiArmed !== elrsState.options['dji-permanently-armed']
+        changed |= this.modelId !== elrsState.options['modelid']
+        changed |= this.forceTlmOff !== elrsState.options['force-tlm']
         return changed
     }
 }

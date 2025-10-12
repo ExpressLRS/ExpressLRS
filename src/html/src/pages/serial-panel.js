@@ -1,9 +1,9 @@
-import {html, LitElement} from "lit";
-import {customElement, state} from "lit/decorators.js";
-import '../assets/mui.js';
-import {_renderOptions} from "../utils/libs.js";
-import {elrsState, saveConfig, saveOptions} from "../utils/state.js";
-import {cuteAlert, postJSON} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement, state} from "lit/decorators.js"
+import '../assets/mui.js'
+import {_renderOptions} from "../utils/libs.js"
+import {elrsState, saveConfig, saveOptions} from "../utils/state.js"
+import {cuteAlert, postJSON} from "../utils/feedback.js"
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
@@ -16,19 +16,19 @@ class SerialPanel extends LitElement {
     @state() accessor isAirport
 
     createRenderRoot() {
-        this.isAirport = elrsState.options['is-airport'];
+        this.isAirport = elrsState.options['is-airport']
         this.serial1Protocol = this.isAirport ? 10 : elrsState.config['serial-protocol']
         this.serial2Protocol = elrsState.config['serial1-protocol']
         this.baudRate = elrsState.options['rcvr-uart-baud']
         this.sbusFailsafe = elrsState.config['sbus-failsafe']
         this._saveSerial = this._saveSerial.bind(this)
         this._saveConfig = this._saveConfig.bind(this)
-        return this;
+        return this
     }
 
     render() {
         return html`
-            <div class="mui-panel mui--text-title">Serial/UART Protocols</div>
+            <div class="mui-panel mui--text-title">Serial/UART Options</div>
             ${this._hasSerial1() || this._hasSerial2() ? html`
             <div class="mui-panel">
                 <p>Set the protocol(s) used to communicate with the flight controller or other external devices.</p>
@@ -95,7 +95,7 @@ class SerialPanel extends LitElement {
                 To enable serial IO, go to the <a href="#connections">connections</a> menu and configure one or more pins as Serial RX or TX.
             </div>
             `}
-        `;
+        `
     }
 
     _hasSerial1() {
@@ -117,12 +117,12 @@ class SerialPanel extends LitElement {
     }
 
     _updateSerial1(e) {
-        this.serial1Protocol = parseInt(e.target.value);
-        this.isAirport = this.serial1Protocol === 10;
+        this.serial1Protocol = parseInt(e.target.value)
+        this.isAirport = this.serial1Protocol === 10
     }
 
     _updateSerial2(e) {
-        this.serial2Protocol = parseInt(e.target.value);
+        this.serial2Protocol = parseInt(e.target.value)
     }
 
     _displayBaudRate() {
