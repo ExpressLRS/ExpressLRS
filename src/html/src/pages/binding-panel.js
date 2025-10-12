@@ -20,10 +20,10 @@ class BindingPanel extends LitElement {
     }
 
     firstUpdated(_changedProperties) {
-        this.uid = elrsState.config.uid;
-        this.originalUID = elrsState.config.uid;
-        this.originalUIDType = (elrsState.config && elrsState.config.uidtype) ? elrsState.config.uidtype : '';
-        this._updateUIDType(this.originalUIDType);
+        this.uid = elrsState.config.uid
+        this.originalUID = elrsState.config.uid
+        this.originalUIDType = (elrsState.config && elrsState.config.uidtype) ? elrsState.config.uidtype : ''
+        this._updateUIDType(this.originalUIDType)
     }
 
     render() {
@@ -75,40 +75,40 @@ class BindingPanel extends LitElement {
                     </button>
                 </form>
             </div>
-        `;
+        `
     }
 
 
     _isValidUidByte(s) {
-        let f = parseFloat(s);
-        return !isNaN(f) && isFinite(s) && Number.isInteger(f) && f >= 0 && f < 256;
+        let f = parseFloat(s)
+        return !isNaN(f) && isFinite(s) && Number.isInteger(f) && f >= 0 && f < 256
     }
 
     _uidBytesFromText(text) {
         // If text is 4-6 numbers separated with [commas]/[spaces] use as a literal UID
         // This is a strict parser to not just extract numbers from text, but only accept if text is only UID bytes
         if (/^[0-9, ]+$/.test(text)) {
-            let asArray = text.split(',').filter(this._isValidUidByte).map(Number);
+            let asArray = text.split(',').filter(this._isValidUidByte).map(Number)
             if (asArray.length >= 4 && asArray.length <= 6) {
                 while (asArray.length < 6)
-                    asArray.unshift(0);
-                return asArray;
+                    asArray.unshift(0)
+                return asArray
             }
         }
 
-        const bindingPhraseFull = `-DMY_BINDING_PHRASE="${text}"`;
-        const bindingPhraseHashed = calcMD5(bindingPhraseFull);
-        return [...bindingPhraseHashed.subarray(0, 6)];
+        const bindingPhraseFull = `-DMY_BINDING_PHRASE="${text}"`
+        const bindingPhraseHashed = calcMD5(bindingPhraseFull)
+        return [...bindingPhraseHashed.subarray(0, 6)]
     }
 
     _updateBindingPhrase(e) {
         let text = e.target.value
         if (text.length === 0) {
-            this.uid = this.originalUID;
-            this._updateUIDType(this.originalUIDType);
+            this.uid = this.originalUID
+            this._updateUIDType(this.originalUIDType)
         } else {
-            this.uid = this._uidBytesFromText(text.trim());
-            this._updateUIDType('Modified');
+            this.uid = this._uidBytesFromText(text.trim())
+            this._updateUIDType('Modified')
         }
     }
 
@@ -126,20 +126,20 @@ class BindingPanel extends LitElement {
         // --- RX Fallbacks (Fallback 2) ---
         'RX_NOT_BOUND': { bg: '#FFA000', fg: 'white', uidtype: 'Not bound', desc: 'This receiver is unbound and will boot to binding mode' },
         'RX_BOUND': { bg: '#1976D2', fg: 'white', uidtype: 'Bound', desc: 'This receiver is bound and will boot waiting for connection' }
-    };
+    }
 
     _updateUIDType(uidtype) {
-        let config;
+        let config
 
         if (!uidtype || uidtype.startsWith('Not set')) {
-            config = this.#UID_CONFIG.DEFAULT_NOT_SET;
+            config = this.#UID_CONFIG.DEFAULT_NOT_SET
         }
         else if (this.#UID_CONFIG[uidtype]) {
-            config = this.#UID_CONFIG[uidtype];
+            config = this.#UID_CONFIG[uidtype]
         }
         else {
-            const configKey = this.uid.toString().endsWith('0,0,0,0') ? 'RX_NOT_BOUND' : 'RX_BOUND';
-            config = this.#UID_CONFIG[configKey];
+            const configKey = this.uid.toString().endsWith('0,0,0,0') ? 'RX_NOT_BOUND' : 'RX_BOUND'
+            config = this.#UID_CONFIG[configKey]
         }
 
         this.uidData = {
@@ -147,12 +147,12 @@ class BindingPanel extends LitElement {
             bg: config.bg,
             fg: config.fg,
             desc: config.desc
-        };
+        }
     }
 
     _submitOptions(e) {
-        e.stopPropagation();
-        e.preventDefault();
+        e.stopPropagation()
+        e.preventDefault()
 
         // FEATURE:IS_TX
         let tx_changes = {
@@ -161,11 +161,11 @@ class BindingPanel extends LitElement {
             uid: this.uid
         }
         saveOptions(tx_changes, () => {
-            this.originalUID = this.uid;
-            this.originalUIDType = 'Overridden';
-            this.phrase.value = '';
-            this._updateUIDType(this.originalUIDType);
-            elrsState.options = tx_changes;
+            this.originalUID = this.uid
+            this.originalUIDType = 'Overridden'
+            this.phrase.value = ''
+            this._updateUIDType(this.originalUIDType)
+            elrsState.options = tx_changes
             return this.requestUpdate()
         })
         // /FEATURE:IS_TX
@@ -176,7 +176,7 @@ class BindingPanel extends LitElement {
             vbind: this.bindType
         }
         saveConfig(rx_changes, () => {
-            elrsState.config = rx_changes;
+            elrsState.config = rx_changes
             return this.requestUpdate()
         })
         // /FEATURE:NOT IS_TX

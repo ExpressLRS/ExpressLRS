@@ -1,5 +1,5 @@
-import {html, LitElement, nothing} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import {html, LitElement, nothing} from 'lit'
+import {customElement, state} from 'lit/decorators.js'
 import '../assets/mui.js'
 import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
@@ -8,12 +8,12 @@ import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
 
-    @state() accessor customised = false;
+    @state() accessor customised = false
 
-    static SCHEMA = HARDWARE_SCHEMA;
+    static SCHEMA = HARDWARE_SCHEMA
 
     createRenderRoot() {
-        return this;
+        return this
     }
 
     render() {
@@ -29,7 +29,7 @@ export class HardwareLayout extends LitElement {
                          style="display:${this.customised ? 'block' : 'none'}; background-color: #FFC107;">
                         This hardware configuration has been customized. This can be safely ignored if this is a custom hardware
                         build or for testing purposes.<br>
-                        You can <a download href="/hardware.json">download</a> the configuration or 
+                        You can <a download href="/hardware.json">download</a> the configuration or
                         <a href="/reset?hardware" @click="${postWithFeedback('Hardware Configuration Reset', 'Reset failed', '/reset?hardware')}">reset</a>
                         to pre-configured defaults and reboot.
                     </div>
@@ -42,7 +42,7 @@ export class HardwareLayout extends LitElement {
                     </form>
                 </div>
             </div>
-        `;
+        `
     }
 
     _renderTable() {
@@ -64,111 +64,111 @@ export class HardwareLayout extends LitElement {
                 `)}
                 </tbody>
             </table>
-        `;
+        `
     }
 
     _renderIcon(icon) {
-        if (!icon) return html``;
+        if (!icon) return html``
         if (icon === 'input-output') {
-            return html`<img class="icon-input"/><img class="icon-output"/>`;
+            return html`<img class="icon-input"/><img class="icon-output"/>`
         }
-        return html`<img class="icon-${icon}"/>`;
+        return html`<img class="icon-${icon}"/>`
     }
 
     _renderField(row) {
         switch (row.type) {
             case 'checkbox':
-                return html`<input id="${row.id}" name="${row.id}" type="checkbox"/>`;
+                return html`<input id="${row.id}" name="${row.id}" type="checkbox"/>`
             case 'select':
                 return html`<select id="${row.id}" name="${row.id}">
                     ${row.options?.map(opt => html`
                         <option value="${opt.value}">${opt.label}</option>`)}
-                </select>`;
+                </select>`
             case 'text':
             default:
-                const cls = row.className ? row.className : '';
-                return html`<input size=${row.size ?? nothing} id="${row.id}" name="${row.id}" type="text" class="${cls}"/>`;
+                const cls = row.className ? row.className : ''
+                return html`<input size=${row.size ?? nothing} id="${row.id}" name="${row.id}" type="text" class="${cls}"/>`
         }
     }
 
     connectedCallback() {
-        super.connectedCallback();
+        super.connectedCallback()
         // Add tooltips to icon classes after first paint
-        setTimeout(() => this._initTooltips(), 0);
-        this._loadData();
+        setTimeout(() => this._initTooltips(), 0)
+        this._loadData()
     }
 
     _initTooltips() {
         const add = (cls, label) => {
-            const images = document.querySelectorAll('.' + cls);
-            images.forEach(i => i.setAttribute('title', label));
-        };
-        add('icon-input', 'Digital Input');
-        add('icon-output', 'Digital Output');
-        add('icon-analog', 'Analog Input');
-        add('icon-pwm', 'PWM Output');
+            const images = document.querySelectorAll('.' + cls)
+            images.forEach(i => i.setAttribute('title', label))
+        }
+        add('icon-input', 'Digital Input')
+        add('icon-output', 'Digital Output')
+        add('icon-analog', 'Analog Input')
+        add('icon-pwm', 'PWM Output')
     }
 
     _loadData() {
-        const xmlhttp = new XMLHttpRequest();
+        const xmlhttp = new XMLHttpRequest()
         xmlhttp.onreadystatechange = () => {
             if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-                const data = JSON.parse(xmlhttp.responseText);
-                this.customised = !!data.customised;
-                this._updateHardwareSettings(data);
+                const data = JSON.parse(xmlhttp.responseText)
+                this.customised = !!data.customised
+                this._updateHardwareSettings(data)
             }
-        };
-        xmlhttp.open('GET', '/hardware.json', true);
-        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-        xmlhttp.send();
+        }
+        xmlhttp.open('GET', '/hardware.json', true)
+        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded')
+        xmlhttp.send()
     }
 
     _onFileDrop(e) {
-        const files = e.detail.files;
-        const form = document.getElementById('upload_hardware');
-        if (form) form.reset();
+        const files = e.detail.files
+        const form = document.getElementById('upload_hardware')
+        if (form) form.reset()
         for (const file of files) {
-            const reader = new FileReader();
+            const reader = new FileReader()
             reader.onload = (ev) => {
-                const data = JSON.parse(ev.target.result);
-                this._updateHardwareSettings(data);
-            };
-            reader.readAsText(file);
+                const data = JSON.parse(ev.target.result)
+                this._updateHardwareSettings(data)
+            }
+            reader.readAsText(file)
         }
     }
 
     _updateHardwareSettings(data) {
         for (const [key, value] of Object.entries(data)) {
-            const el = document.getElementById(key);
+            const el = document.getElementById(key)
             if (el) {
                 if (el.type === 'checkbox') {
-                    el.checked = !!value;
+                    el.checked = !!value
                 } else {
-                    if (Array.isArray(value)) el.value = value.toString();
-                    else el.value = value;
+                    if (Array.isArray(value)) el.value = value.toString()
+                    else el.value = value
                 }
             }
         }
     }
 
     _submitConfig() {
-        const form = document.getElementById('upload_hardware');
-        const formData = new FormData(form);
+        const form = document.getElementById('upload_hardware')
+        const formData = new FormData(form)
         // rebuild using original serializer logic
         const body = JSON.stringify(Object.fromEntries(formData), (k, v) => {
-            if (v === '') return undefined;
-            const el = document.getElementById(k);
+            if (v === '') return undefined
+            const el = document.getElementById(k)
             if (el && el.type === 'checkbox') {
-                return v === 'on';
+                return v === 'on'
             }
             if (el && el.classList.contains('array')) {
-                const arr = v.split(',').map((element) => Number(element));
-                return arr.length === 0 ? undefined : arr;
+                const arr = v.split(',').map((element) => Number(element))
+                return arr.length === 0 ? undefined : arr
             }
-            return isNaN(v) ? v : +v;
-        });
+            return isNaN(v) ? v : +v
+        })
         // Use shared helper that prompts for reboot on success
-        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', JSON.parse(body));
-        return false;
+        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', JSON.parse(body))
+        return false
     }
 }

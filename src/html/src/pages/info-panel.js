@@ -6,7 +6,7 @@ import '../assets/mui.js';
 @customElement('info-panel')
 class InfoPanel extends LitElement {
     createRenderRoot() {
-        return this;
+        return this
     }
 
     render() {

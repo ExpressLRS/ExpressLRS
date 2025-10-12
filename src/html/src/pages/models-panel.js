@@ -1,12 +1,12 @@
-import {html, LitElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import '../assets/mui.js';
-import {postWithFeedback} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement} from "lit/decorators.js"
+import '../assets/mui.js'
+import {postWithFeedback} from "../utils/feedback.js"
 
 @customElement('models-panel')
 class ModelsPanel extends LitElement {
     createRenderRoot() {
-        return this;
+        return this
     }
 
     render() {
@@ -30,18 +30,18 @@ class ModelsPanel extends LitElement {
                     </button>
                 </div>
             </div>
-        `;
+        `
     }
 
     upload(e) {
-        const files = e.target.files || e.dataTransfer.files;
-        const reader = new FileReader();
+        const files = e.target.files || e.dataTransfer.files
+        const reader = new FileReader()
         reader.onload = (x) => postWithFeedback(
             'Upload Model Configuration',
             'An error occurred while uploading model configuration file',
             '/import',
             () => {return x.target.result}
         )(e)
-        reader.readAsText(files[0]);
+        reader.readAsText(files[0])
     }
 }

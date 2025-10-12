@@ -1,24 +1,24 @@
-import {html, LitElement} from "lit";
-import {customElement, state} from "lit/decorators.js";
-import {elrsState, saveOptions} from "../utils/state.js";
-import {_renderOptions} from "../utils/libs.js";
-import {postWithFeedback} from "../utils/feedback.js";
+import {html, LitElement} from "lit"
+import {customElement, state} from "lit/decorators.js"
+import {elrsState, saveOptions} from "../utils/state.js"
+import {_renderOptions} from "../utils/libs.js"
+import {postWithFeedback} from "../utils/feedback.js"
 
 @customElement('tx-options-panel')
 class TxOptionsPanel extends LitElement {
-    @state() accessor domain;
-    @state() accessor isAirport;
-    @state() accessor baudRate;
-    @state() accessor tlmInterval;
-    @state() accessor fanRuntime;
+    @state() accessor domain
+    @state() accessor isAirport
+    @state() accessor baudRate
+    @state() accessor tlmInterval
+    @state() accessor fanRuntime
 
     createRenderRoot() {
-        this.domain = elrsState.options.domain;
-        this.isAirport = elrsState.options['is-airport'];
-        this.baudRate = elrsState.options['airport-uart-baud'];
-        this.tlmInterval = elrsState.options['tlm-interval'];
-        this.fanRuntime = elrsState.options['fan-runtime'];
-        return this;
+        this.domain = elrsState.options.domain
+        this.isAirport = elrsState.options['is-airport']
+        this.baudRate = elrsState.options['airport-uart-baud']
+        this.tlmInterval = elrsState.options['tlm-interval']
+        this.fanRuntime = elrsState.options['fan-runtime']
+        return this
     }
 
     render() {
@@ -66,7 +66,7 @@ class TxOptionsPanel extends LitElement {
                         </input>
                         </div>
                     ` : ''}
-    
+
                     <button class="mui-btn mui-btn--primary"
                             ?disabled="${!this.hasChanges()}"
                             @click="${this.save}"
@@ -82,11 +82,11 @@ class TxOptionsPanel extends LitElement {
                     ` : ''}
                 </form>
             </div>
-        `;
+        `
     }
 
     save(e) {
-        e.preventDefault();
+        e.preventDefault()
         const changes = {
             ...elrsState.options,
             // FEATURE: HAS_SUBGHZ
@@ -104,14 +104,14 @@ class TxOptionsPanel extends LitElement {
     }
 
     hasChanges() {
-        let changed = false;
+        let changed = false
         // FEATURE: HAS_SUBGHZ
-        changed |= this.domain !== elrsState.options['domain'];
+        changed |= this.domain !== elrsState.options['domain']
         // /FEATURE: HAS_SUBGHZ
-        changed |= this.tlmInterval !== elrsState.options['tlm-interval'];
-        changed |= this.fanRuntime !== elrsState.options['fan-runtime'];
-        changed |= this.isAirport !== elrsState.options['is-airport'];
-        changed |= this.baudRate !== elrsState.options['airport-uart-baud'];
+        changed |= this.tlmInterval !== elrsState.options['tlm-interval']
+        changed |= this.fanRuntime !== elrsState.options['fan-runtime']
+        changed |= this.isAirport !== elrsState.options['is-airport']
+        changed |= this.baudRate !== elrsState.options['airport-uart-baud']
         return changed
     }
 }
