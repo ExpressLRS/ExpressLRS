@@ -18,9 +18,6 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
-// RxTimeout is expressed in periods of the 32.768kHz RTC
-#define RX_TIMEOUT_PERIOD_BASE_NANOS 1000000000 / 32768 // TODO check for LR1121
-
 #ifdef USE_HARDWARE_DCDC
     #ifndef OPT_USE_HARDWARE_DCDC
         #define OPT_USE_HARDWARE_DCDC true
@@ -44,7 +41,6 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
     instance = this;
-    timeout = 0xFFFFFF;
     lastSuccessfulPacketRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
     useFEC = false;
@@ -152,12 +148,12 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
-    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, 0, false, 0, 0, radioNumber);
+    Config(LR11XX_RADIO_LORA_BW_62, LR11XX_RADIO_LORA_SF6, LR11XX_RADIO_LORA_CR_4_8, freq, 12, false, 8, false, 0, 0, radioNumber);
     hal.WriteCommand(LR11XX_RADIO_SET_TX_CW_OC, radioNumber);
 }
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
-                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval,
+                          uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength,
                           bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
@@ -178,8 +174,6 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     {
         inverted = LR11XX_RADIO_LORA_IQ_STANDARD;
     }
-
-    SetRxTimeoutUs(interval);
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
@@ -222,7 +216,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         SetPacketParamsLoRa(PreambleLength, packetLengthType, PayloadLength, inverted, radioNumber);
     }
 
-    SetFrequencyHz(regfreq, radioNumber);
+    SetFrequencyReg(regfreq, radioNumber, false);
 
     ClearIrqStatus(radioNumber);
 
@@ -301,15 +295,6 @@ void LR1121Driver::SetDioAsRfSwitch()
         switchbuf[7] = 0b00000001; // RfSwWifiCfg - Each bit indicates the state of the relevant RFSW DIO when in Wi-Fi scanning mode or high frequency RX mode (LR1110_H1_UM_V1-7-1.pdf)
     }
     hal.WriteCommand(LR11XX_SYSTEM_SET_DIO_AS_RF_SWITCH_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All);
-}
-
-void LR1121Driver::SetRxTimeoutUs(uint32_t interval)
-{
-    timeout = 0xFFFFFF; // no timeout, continuous mode
-    if (interval)
-    {
-        timeout = interval * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS;
-    }
 }
 
 void LR1121Driver::CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber)
@@ -452,10 +437,9 @@ void ICACHE_RAM_ATTR LR1121Driver::SetPaConfig(bool isSubGHz, SX12XX_Radio_Numbe
     hal.WriteCommand(LR11XX_RADIO_SET_PA_CFG_OC, Pabuf, sizeof(Pabuf), radioNumber);
 }
 
-void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber, uint32_t incomingTimeout)
+void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[5] = {0};
-    uint32_t tempTimeout;
 
     switch (OPmode)
     {
@@ -479,20 +463,6 @@ void LR1121Driver::SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Num
     case LR1121_MODE_FS:
         // 2.1.9.1 SetFs
         hal.WriteCommand(LR11XX_SYSTEM_SET_FS_OC, radioNumber);
-        break;
-
-    case LR1121_MODE_RX:
-        // 7.2.2 SetRx
-        tempTimeout = incomingTimeout ? (incomingTimeout * 1000 / RX_TIMEOUT_PERIOD_BASE_NANOS) : timeout;
-
-        // incomingTimeout is below the minimum period so lets set it to 1.
-        if (incomingTimeout && !tempTimeout)
-            tempTimeout = 1;
-            
-        buf[0] = tempTimeout >> 16;
-        buf[1] = tempTimeout >> 8;
-        buf[2] = tempTimeout & 0xFF;
-        hal.WriteCommand(LR11XX_RADIO_SET_RX_OC, buf, 3, radioNumber);
         break;
 
     case LR1121_MODE_RX_CONT:
@@ -550,22 +520,29 @@ void LR1121Driver::SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaP
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_PARAM_OC, buf, sizeof(buf), radioNumber);
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx, uint32_t rxTime)
 {
-    // 7.2.1 SetRfFrequency
-    uint8_t buf[4];
-    buf[0] = freq >> 24;
-    buf[1] = freq >> 16;
-    buf[2] = freq >> 8;
-    buf[3] = freq & 0xFF;
-    hal.WriteCommand(LR11XX_RADIO_SET_RF_FREQUENCY_OC, buf, sizeof(buf), radioNumber);
+    uint8_t buf[7] = {
+        (uint8_t)(freq >> 24),
+        (uint8_t)(freq >> 16),
+        (uint8_t)(freq >> 8),
+        (uint8_t)(freq),
+        0xFF,
+        0xFF,
+        0xFF,
+    };
+    if (doRx)
+    {
+        // SetRfFrequency_SetRX
+        hal.WriteCommand(LR11XX_RADIO_SET_FREQ_SET_RX, buf, sizeof(buf), radioNumber);
+    }
+    else
+    {
+        // 7.2.1 SetRfFrequency
+        hal.WriteCommand(LR11XX_RADIO_SET_RF_FREQUENCY_OC, buf, 4, radioNumber);
+    }
 
     currFreq = freq;
-}
-
-void ICACHE_RAM_ATTR LR1121Driver::SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
-{
-    SetFrequencyHz(freq, radioNumber);
 }
 
 // 4.1.1 SetDioIrqParams
@@ -724,9 +701,9 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     return true;
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::RXnb(lr11xx_RadioOperatingModes_t rxMode, uint32_t incomingTimeout)
+void ICACHE_RAM_ATTR LR1121Driver::RXnb()
 {
-    SetMode(rxMode, SX12XX_Radio_All, incomingTimeout);
+    SetMode(LR1121_MODE_RX_CONT, SX12XX_Radio_All);
 }
 
 bool ICACHE_RAM_ATTR LR1121Driver::GetFrequencyErrorbool()
