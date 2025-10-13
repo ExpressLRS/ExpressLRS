@@ -207,11 +207,6 @@ static void initialize()
     }
 }
 
-static int start()
-{
-    return DURATION_NEVER;
-}
-
 static int event()
 {
     if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
@@ -270,7 +265,7 @@ static int timeout()
 
 device_t ServoOut_device = {
     .initialize = initialize,
-    .start = start,
+    .start = nullptr,
     .event = event,
     .timeout = timeout,
 };
