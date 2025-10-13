@@ -36,7 +36,7 @@ export class App extends LitElement {
                     <li>
                         <strong>General</strong>
                         <ul>
-                            <li><a id="menu-info" href="#info"><span class="mui--align-middle icon--symbols icon--symbols--bind"></span>Information</a></li>
+                            <li><a id="menu-info" href="#info"><span class="mui--align-middle icon--symbols icon--symbols--info"></span>Information</a></li>
                             <li><a id="menu-binding" href="#binding"><span class="mui--align-middle icon--symbols icon--symbols--bind"></span>Binding</a></li>
                             <li><a id="menu-options" href="#options"><span class="mui--align-middle icon--symbols icon--symbols--options"></span>Options</a></li>
                             <!-- FEATURE:IS_TX -->
