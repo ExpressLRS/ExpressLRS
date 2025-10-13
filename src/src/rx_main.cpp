@@ -325,7 +325,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
+                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
@@ -338,7 +338,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     if (FHSSuseDualBand)
     {
         Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                    ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, 0,
+                    ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
                     ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4,
                     (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
     }
@@ -349,7 +349,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     checkGeminiMode();
     if (geminiMode)
     {
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2, false);
     }
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
@@ -364,7 +364,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
 
-    EnableLBT();
+    LbtEnableIfRequired();
 }
 
 static void ICACHE_RAM_ATTR HandleFHSS()
@@ -381,20 +381,20 @@ static void ICACHE_RAM_ATTR HandleFHSS()
         if (((OtaNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
 
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, false);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, false);
         }
         else
         {
             // Write radio1 first. This optimises the SPI traffic order.
             uint32_t freqRadio2 = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1, false);
+            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2, false);
         }
     }
     else
     {
-        Radio.SetFrequencyReg(FHSSgetNextFreq());
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, false);
     }
 
 #if defined(RADIO_SX127X)
@@ -405,9 +405,7 @@ static void ICACHE_RAM_ATTR HandleFHSS()
         Radio.RXnb();
     }
 #endif
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
+    LbtCcaTimerStart();
 }
 
 void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
@@ -588,10 +586,7 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
     }
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-#endif
+    transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
@@ -1274,9 +1269,7 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
+    LbtCcaTimerStart();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
@@ -1980,7 +1973,7 @@ static void CheckConfigChangePending()
         LostConnection(false);
         uint32_t changes = config.Commit();
         devicesTriggerEvent(changes);
-        EnableLBT();
+        LbtEnableIfRequired();
         Radio.RXnb();
     }
 }

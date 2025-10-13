@@ -508,12 +508,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
   FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
-  // timeout is used to take the RF out of receive mode during a telemetry slot before the end of the period,
-  // reducing turnaround time on the following TX. For packet rates with TOA < half interval, extend the timeout
-  // as it begins at the end of the TX, not from TOCK
-  uint32_t timeout = std::max(interval, interval * 3 / 2 - RFperf->TOA);
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, timeout
+               ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
                , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
@@ -526,7 +522,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   if (FHSSuseDualBand)
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, ModParams->interval,
+                ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
                 (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
                 (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
   }
@@ -536,7 +532,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand) // Gemini mode
   {
-    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+    Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2, false);
   }
 
   // InitialFreq has been set, so lets also reset the FHSS Idx and Nonce.
@@ -554,46 +550,6 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   handset->setPacketInterval(interval * ExpressLRS_currAirRate_Modparams->numOfSends);
   setConnectionState(disconnected);
   rfModeLastChangedMS = millis();
-}
-
-void ICACHE_RAM_ATTR HandleFHSS()
-{
-  uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
-  // If the next packet should be on the next FHSS frequency, do the hop
-  if (!InBindingMode && modresult == 0)
-  {
-    // Gemini mode
-    // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
-    if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
-    {
-        // Optimises the SPI traffic order.
-        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
-        {
-            uint32_t freqRadio = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
-            Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1);
-        }
-        else
-        {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
-        }
-    }
-    else
-    {
-      Radio.SetFrequencyReg(FHSSgetNextFreq());
-    }
-  }
-}
-
-void ICACHE_RAM_ATTR HandlePrepareForTLM()
-{
-  // If TLM enabled and next packet is going to be telemetry, start listening to have a large receive window (time-wise)
-  if (ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0)
-  {
-    Radio.RXnb();
-    TelemetryRcvPhase = ttrpPreReceiveGap;
-  }
 }
 
 void ICACHE_RAM_ATTR SendRCdataToRF()
@@ -719,7 +675,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   }
 
 #if defined(Regulatory_Domain_EU_CE_2400)
-  transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
+  transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 
   if (transmittingRadio == SX12XX_Radio_NONE)
   {
@@ -855,7 +811,7 @@ static void ChangeRadioParams()
   ModelUpdatePending = false;
   ResetPower(); // Call before SetRFLinkRate(). The LR1121 Radio lib can now set the correct output power in Config().
   SetRFLinkRate(config.GetRate());
-  EnableLBT();
+  LbtEnableIfRequired();
 }
 
 void ModelUpdateReq()
@@ -928,14 +884,8 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
   }
 
-  bool packetSuccessful = ProcessTLMpacket(status);
-#if defined(Regulatory_Domain_EU_CE_2400)
-  if (packetSuccessful)
-  {
-    SetClearChannelAssessmentTime();
-  }
-#endif
-
+  LbtCcaTimerStart();
+  const bool packetSuccessful = ProcessTLMpacket(status);
   return packetSuccessful;
 }
 
@@ -948,18 +898,51 @@ void ICACHE_RAM_ATTR TXdoneISR()
 
   if (connectionState != awaitingModelId)
   {
-    HandleFHSS();
-    HandlePrepareForTLM();
-#if defined(Regulatory_Domain_EU_CE_2400)
-    if (TelemetryRcvPhase != ttrpPreReceiveGap)
+    const uint8_t modResult = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+
+    // If TLM enabled and next packet is going to be telemetry, or in LBT mode, start listening to have a large receive window (time-wise)
+    const bool nextIsTLM = ExpressLRS_currTlmDenom != 1 && ((OtaNonce + 1) % ExpressLRS_currTlmDenom) == 0;
+    const bool doRx = nextIsTLM || LbtIsEnabled;
+
+    // If the next packet should be on the next FHSS frequency, do the hop
+    if (!InBindingMode && modResult == 0)
     {
-      // Start RX for Listen Before Talk early because it takes about 100us
-      // from RX enable to valid instant RSSI values are returned.
-      // If rx was already started by TLM prepare above, this call will let RX
-      // continue as normal.
-      SetClearChannelAssessmentTime();
+      // Gemini mode
+      // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
+      if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
+      {
+        // Optimises the SPI traffic order.
+        if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+        {
+          const uint32_t freqRadio = FHSSgetNextFreq();
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
+          Radio.SetFrequencyReg(freqRadio, SX12XX_Radio_1, doRx);
+        }
+        else
+        {
+          Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, doRx);
+          Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, doRx);
+        }
+      }
+      else
+      {
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, doRx);
+      }
     }
-#endif // non-CE
+    else if (doRx)
+    {
+      Radio.RXnb();
+    }
+
+    // If TLM enabled and next packet is going to be telemetry
+    if (nextIsTLM)
+    {
+      TelemetryRcvPhase = ttrpPreReceiveGap;
+    }
+    else if (doRx)
+    {
+      LbtCcaTimerStart();
+    }
   }
   busyTransmitting = false;
 }
@@ -1480,9 +1463,7 @@ void setup()
       // Set the pkt rate, TLM ratio, and power from the stored eeprom values
       ChangeRadioParams();
 
-  #if defined(Regulatory_Domain_EU_CE_2400)
-      SetClearChannelAssessmentTime();
-  #endif
+      LbtCcaTimerStart();
       hwTimer::init(nullptr, timerCallback);
       setConnectionState(noCrossfire);
     }
