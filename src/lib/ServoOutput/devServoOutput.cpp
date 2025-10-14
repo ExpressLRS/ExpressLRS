@@ -181,6 +181,7 @@ static void initialize()
                 auto rmtChannel = (rmt_channel_t)rmtCH;
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
+                digitalWrite(pin, LOW);                
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
                 rmtCH++;
             }
@@ -204,29 +205,6 @@ static void initialize()
             digitalWrite(pin, LOW);
         }
     }
-}
-
-static int start()
-{
-    // Set PWM DShot Pins to OpenDrain with HIGH; i.e. floating output
-    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-    {
-        const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        const auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
-        if (frequency && servoPins[ch] != UNDEF_PIN)
-        {
-            pinMode(servoPins[ch], OUTPUT_OPEN_DRAIN);
-            digitalWrite(servoPins[ch], HIGH);
-        }
-#if defined(PLATFORM_ESP32)
-        else if ((eServoOutputMode)chConfig->val.mode == somDShot)
-        {
-            pinMode(servoPins[ch], OUTPUT_OPEN_DRAIN);
-            digitalWrite(servoPins[ch], HIGH);
-        }
-#endif
-    }
-    return DURATION_NEVER;
 }
 
 static int event()
@@ -287,7 +265,7 @@ static int timeout()
 
 device_t ServoOut_device = {
     .initialize = initialize,
-    .start = start,
+    .start = nullptr,
     .event = event,
     .timeout = timeout,
 };
