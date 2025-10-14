@@ -1,0 +1,6 @@
+# .gitpod.yml
+image:
+  file: Dockerfile
+
+tasks:
+  - init: echo 'Welcome!'
