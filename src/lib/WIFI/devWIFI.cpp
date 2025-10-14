@@ -229,7 +229,6 @@ static void HandleReboot(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   rebootTime = millis() + 100;
 }
 
@@ -250,7 +249,6 @@ static void HandleReset(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   rebootTime = millis() + 100;
 }
 
@@ -612,7 +610,6 @@ static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFi
   AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", msg);
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   changeTime = millis();
   changeMode = mode;
 }
@@ -717,7 +714,6 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
     response->addHeader("Connection", "close");
     request->send(response);
-    request->client()->close();
   } else {
     String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
     if (target_found.length() != 0) {
@@ -875,7 +871,6 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(204);
     response->addHeader("Connection", "close");
     request->send(response);
-    request->client()->close();
 
     Radio.TXdoneCallback = [](){};
     Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
