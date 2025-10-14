@@ -204,7 +204,7 @@ static void hardware_LoadFieldsFromDoc(JsonDocument &doc)
                     {
                         JsonArray array = doc[field.name].as<JsonArray>();
                         hardware[field.position].array_value = new int16_t[array.size()];
-                        copyArray(doc[field.name], hardware[field.position].array_value, array.size());
+                        copyArray(array, hardware[field.position].array_value, array.size());
                     }
                     break;
                 case COUNT:

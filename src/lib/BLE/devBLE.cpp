@@ -49,7 +49,7 @@ void BluetoothJoystickBegin()
     // bleGamepad is null if it hasn't been started yet
     if (bleGamepad != nullptr) return;
 
-    DBGLN("Starting BLE Joystick!");
+    DBGLN("Starting BLE Joystick");
 
     POWERMGNT::setPower(MinPower);
     Radio.End();
