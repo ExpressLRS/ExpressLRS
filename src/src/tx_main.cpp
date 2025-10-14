@@ -1262,6 +1262,7 @@ static void setupSerial()
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
 
+  Serial.end();
   if(firmwareOptions.is_airport)
   {
     serialPort = new HardwareSerial(1);
