@@ -94,13 +94,13 @@ static int event1()
 /***
  * @brief: Convert the current TeamraceChannel value to the appropriate config value for comparison
 */
-static uint8_t teamraceChannelToConfigValue()
+static uint8_t teamraceChannelToConfigValue(uint32_t channelData)
 {
     // SWITCH3b is 1,2,3,4,5,6,x,Mid
     //             0 1 2 3 4 5    7
     // Config values are Disabled,1,2,3,Mid,4,5,6
     //                      0     1 2 3  4  5 6 7
-    uint8_t retVal = CRSF_to_SWITCH3b(ChannelData[config.GetTeamraceChannel()]);
+    uint8_t retVal = CRSF_to_SWITCH3b(channelData);
     switch (retVal)
     {
         case 0: // passthrough
@@ -123,7 +123,7 @@ static uint8_t teamraceChannelToConfigValue()
  * @brief: Determine if FrameAvailable and it should be sent to FC
  * @return: TRUE if a new frame is available and should be processed
 */
-static bool confirmFrameAvailable(devserial_ctx_t *ctx)
+static bool confirmFrameAvailable(devserial_ctx_t *ctx, uint32_t channelData[CRSF_NUM_CHANNELS])
 {
     if (!ctx->frameAvailable)
         return false;
@@ -145,7 +145,7 @@ static bool confirmFrameAvailable(devserial_ctx_t *ctx)
     // troiDisableAwaitConfirm (keep sending channels until the teamracepos stabilizes)
     bool retVal = ctx->teamraceOutputInhibitState < troiInhibit;
 
-    uint8_t newTeamracePosition = teamraceChannelToConfigValue();
+    uint8_t newTeamracePosition = teamraceChannelToConfigValue(channelData[config.GetTeamraceChannel()]);
 
     switch (ctx->teamraceOutputInhibitState)
     {
@@ -224,23 +224,35 @@ static int timeout(devserial_ctx_t *ctx)
     ctx->frameMissed = false;
     interrupts();
 
+    uint32_t ChannelData[CRSF_NUM_CHANNELS];
+    getChannelData(ChannelData);
+
+    bool sendChannels = true;
     // Verify there is new ChannelData and they should be sent on
-    bool sendChannels = confirmFrameAvailable(ctx);
+    if (!ctx->frameAvailable)
+    {
+        sendChannels = false;
+    }
+    else
+    {
+        sendChannels = confirmFrameAvailable(ctx, ChannelData);
+    }
+    ctx->frameAvailable = false;
 
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 }
 
-void sendImmediateRC()
+void sendImmediateRC(uint32_t ReceivedChannelData[CRSF_NUM_CHANNELS])
 {
     if (*(serial0.io) != nullptr && (*(serial0.io))->sendImmediateRC() && connectionState != serialUpdate)
     {
         bool missed = serial0.frameMissed;
         serial0.frameMissed = false;
 
-        // Verify there is new ChannelData and they should be sent on
-        bool sendChannels = confirmFrameAvailable(&serial0);
+        // Verify the new channel data should be sent on
+        bool sendChannels = confirmFrameAvailable(&serial0, ReceivedChannelData);
 
-        (*(serial0.io))->sendRCFrame(sendChannels, missed, ChannelData);
+        (*(serial0.io))->sendRCFrame(sendChannels, missed, ReceivedChannelData);
     }
 }
 

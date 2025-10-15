@@ -111,6 +111,8 @@ static void servosUpdate(unsigned long now)
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
+        uint32_t ChannelData[CRSF_NUM_CHANNELS];
+        getChannelData(ChannelData);
         lastUpdate = now;
         for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
         {

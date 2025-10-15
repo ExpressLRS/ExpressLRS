@@ -467,6 +467,8 @@ void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
     newStep = lcsExecuting;
     msg = "Setting failsafe";
 
+    uint32_t ChannelData[CRSF_NUM_CHANNELS];
+    getChannelData(ChannelData);
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;

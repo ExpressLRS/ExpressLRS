@@ -325,7 +325,12 @@ extern bool InBindingMode;
 extern uint8_t ExpressLRS_currTlmDenom;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
+
+#if defined(TARGET_TX)
 extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
+#else
+void getChannelData(uint32_t local[CRSF_NUM_CHANNELS]);
+#endif
 
 extern connectionState_e connectionState;
 #if !defined(UNIT_TEST)

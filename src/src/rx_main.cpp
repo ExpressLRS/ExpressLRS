@@ -808,6 +808,49 @@ static void ICACHE_RAM_ATTR updateDiversity()
     }
 }
 
+static volatile bool newRCFrameAvailable = false;
+static uint32_t ReceivedChannelData[CRSF_NUM_CHANNELS];
+static uint32_t LatchedChannelData[CRSF_NUM_CHANNELS];
+
+#if defined(PLATFORM_ESP32)
+static portMUX_TYPE channelLock = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
+static void handleRCFrameAvailable()
+{
+    if (!newRCFrameAvailable) return;
+    newRCFrameAvailable = false;
+
+#if defined(PLATFORM_ESP32)
+    taskENTER_CRITICAL(&channelLock);
+    memcpy(LatchedChannelData, ReceivedChannelData, sizeof(LatchedChannelData));
+    taskEXIT_CRITICAL(&channelLock);
+#else
+    noInterrupts();
+    memcpy(LatchedChannelData, ReceivedChannelData, sizeof(LatchedChannelData));
+    interrupts();
+#endif
+
+    crsfRCFrameAvailable();
+    // teamrace is only checked for servos because the teamrace model select logic only runs
+    // when new frames are available, and will decide later if the frame will be forwarded
+    if (teamraceHasModelMatch)
+        servoNewChannelsAvailable();
+}
+
+void getChannelData(uint32_t local[CRSF_NUM_CHANNELS])
+{
+#if defined(PLATFORM_ESP32)
+    taskENTER_CRITICAL(&channelLock);
+    memcpy(local, LatchedChannelData, sizeof(LatchedChannelData));
+    taskEXIT_CRITICAL(&channelLock);
+#else
+    noInterrupts();
+    memcpy(local, LatchedChannelData, sizeof(LatchedChannelData));
+    interrupts();
+#endif
+}
+
 void ICACHE_RAM_ATTR HWtimerCallbackTock()
 {
     PFDloop.intEvent(micros()); // our internal osc just fired
@@ -816,9 +859,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     {
         if (LQCalcDVDA.currentIsSet())
         {
-            crsfRCFrameAvailable();
-            if (teamraceHasModelMatch)
-                servoNewChannelsAvailable();
+            newRCFrameAvailable = true;
         }
         else
         {
@@ -834,7 +875,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     }
 
     // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
-    sendImmediateRC();
+    sendImmediateRC(ReceivedChannelData);
 
     OtaNonce++;
     HandleFHSS();
@@ -937,7 +978,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     if (connectionState != connected || SwitchModePending)
         return;
 
-    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData);
+    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ReceivedChannelData);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // No channels packets to the FC or PWM pins if no model match
@@ -945,11 +986,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     {
         if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
         {
-            crsfRCFrameAvailable();
-            // teamrace is only checked for servos because the teamrace model select logic only runs
-            // when new frames are available, and will decide later if the frame will be forwarded
-            if (teamraceHasModelMatch)
-                servoNewChannelsAvailable();
+            newRCFrameAvailable = true;
         }
         else if (!LQCalcDVDA.currentIsSet())
         {
@@ -2105,6 +2142,7 @@ void loop()
         MspReceiveComplete();
     }
 
+    handleRCFrameAvailable();
     devicesUpdate(now);
 
     // read and process any data from serial ports, send any queued non-RC data
