@@ -235,9 +235,9 @@ static int timeout(devserial_ctx_t *ctx)
     }
     else
     {
+        ctx->frameAvailable = false;
         sendChannels = confirmFrameAvailable(ctx, ChannelData);
     }
-    ctx->frameAvailable = false;
 
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
 }
@@ -254,6 +254,18 @@ void sendImmediateRC(uint32_t ReceivedChannelData[CRSF_NUM_CHANNELS])
 
         (*(serial0.io))->sendRCFrame(sendChannels, missed, ReceivedChannelData);
     }
+#if defined(PLATFORM_ESP32)
+    if (*(serial1.io) != nullptr && (*(serial1.io))->sendImmediateRC() && connectionState != serialUpdate)
+    {
+        bool missed = serial1.frameMissed;
+        serial1.frameMissed = false;
+
+        // Verify the new channel data should be sent on
+        bool sendChannels = confirmFrameAvailable(&serial1, ReceivedChannelData);
+
+        (*(serial1.io))->sendRCFrame(sendChannels, missed, ReceivedChannelData);
+    }
+#endif
 }
 
 void handleSerialIO()
