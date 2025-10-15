@@ -6,7 +6,7 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
-local EXITVER = "-- EXIT (Lua r15) --"
+local EXITVER = "-- EXIT (Lua r16) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
 local deviceName = "Loading..."
@@ -572,7 +572,7 @@ local function refreshNext(skipPush)
   elseif time > fieldTimeout and fields_count ~= 0 then
     if #loadQ > 0 then
       crossfireTelemetryPush(0x2C, { deviceId, handsetId, loadQ[#loadQ], fieldChunk })
-      fieldTimeout = time + 500 -- 5s
+      fieldTimeout = time + (deviceIsELRS_TX and 50 or 500) -- 0.5s for local / 5s for remote devices
     end
   end
 
