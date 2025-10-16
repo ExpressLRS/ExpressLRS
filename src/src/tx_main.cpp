@@ -1262,7 +1262,6 @@ static void setupSerial()
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
 
-  Serial.end();
   if(firmwareOptions.is_airport)
   {
     serialPort = new HardwareSerial(1);
@@ -1330,6 +1329,14 @@ static void setupSerial()
  ***/
 static void setupTarget()
 {
+#if defined(PLATFORM_ESP32)
+  // arduino-espressif32 HardwareSerial's constructor for UART0 saves and attaches to GPIO 1 and 3, which
+  // will reset any other use of them when begin() is actually called for UART0 by CRSFHandset/SerialIO.
+  // Calling end() here, will call _uartDetachPins() on the underlying UART implementation so they won't
+  // be saved later (fixed upstream, coming someday)
+  Serial.end();
+#endif
+
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
