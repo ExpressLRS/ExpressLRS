@@ -51,7 +51,7 @@
 #define GPIO_LED_BLUE_INVERTED hardware_flag(HARDWARE_led_blue_invert)
 #define GPIO_PIN_LED_GREEN hardware_pin(HARDWARE_led_green)
 #define GPIO_LED_GREEN_INVERTED hardware_flag(HARDWARE_led_green_invert)
-#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led)
+#define GPIO_PIN_LED_RED hardware_pin(HARDWARE_led_red)
 #define GPIO_LED_RED_INVERTED hardware_flag(HARDWARE_led_red_invert)
 
 #define GPIO_PIN_LED_WS2812 hardware_pin(HARDWARE_led_rgb)
