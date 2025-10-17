@@ -895,7 +895,10 @@ local function checkCrsfModule()
   for modIdx = 0, 1 do
     local mod = model.getModule(modIdx)
     if mod and (mod.Type == nil or mod.Type == 5) then
-      -- CRSF found
+      -- CRSF found, put module type in Loading message
+      local modDescrip = (mod.Type == nil) and " awaiting" or (modIdx == 0) and " Internal" or " External"
+      -- Prefix with "Lua rXXX" from between EXITVER parens
+      deviceName = string.match(EXITVER, "%((.*)%)") .. modDescrip .. " TX..."
       checkCrsfModule = nil
       return 0
     end
@@ -932,8 +935,6 @@ local function init()
   setMock()
   setLCDvar = nil
   setMock = nil
-  -- Extract the "Lua rXXX" from the parens
-  deviceName = string.match(EXITVER, "%((.*)%)") .. " loading..."
 end
 
 -- Main
