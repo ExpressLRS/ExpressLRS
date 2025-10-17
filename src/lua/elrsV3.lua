@@ -9,7 +9,7 @@
 local EXITVER = "-- EXIT (Lua r16) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
-local deviceName = "Loading..."
+local deviceName = nil
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -932,6 +932,8 @@ local function init()
   setMock()
   setLCDvar = nil
   setMock = nil
+  -- Extract the "Lua rXXX" from the parens
+  deviceName = string.match(EXITVER, "%((.*)%)") .. " loading..."
 end
 
 -- Main
