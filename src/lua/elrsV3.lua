@@ -6,10 +6,11 @@
 ---- # License GPLv2: http://www.gnu.org/licenses/gpl-2.0.html               #
 ---- #                                                                       #
 ---- #########################################################################
-local EXITVER = "-- EXIT (Lua r16) --"
+local VER = "Lua r16"
+local EXITVER = "-- EXIT ("..VER..") --"
 local deviceId = 0xEE
 local handsetId = 0xEF
-local deviceName = "Loading..."
+local deviceName = VER.." loading..."
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
