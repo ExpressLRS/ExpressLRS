@@ -598,11 +598,11 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     // GemX does not switch due to the time required to reconfigure the LR1121 params.
     if ((OtaNonce/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
     {
-        Radio.TXnb((uint8_t*)&otaPkt, ExpressLRS_currAirRate_Modparams->PayloadLength, sendGeminiBuffer, (uint8_t*)&otaPktGemini, transmittingRadio);
+        Radio.TXnb((uint8_t*)&otaPkt, sendGeminiBuffer, (uint8_t*)&otaPktGemini, transmittingRadio);
     }
     else
     {
-        Radio.TXnb((uint8_t*)&otaPktGemini, ExpressLRS_currAirRate_Modparams->PayloadLength, sendGeminiBuffer, (uint8_t*)&otaPkt, transmittingRadio);
+        Radio.TXnb((uint8_t*)&otaPktGemini, sendGeminiBuffer, (uint8_t*)&otaPkt, transmittingRadio);
     }
 
     if (transmittingRadio == SX12XX_Radio_NONE)

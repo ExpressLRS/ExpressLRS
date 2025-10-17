@@ -39,7 +39,7 @@ public:
     // bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
     bool FrequencyErrorAvailable() const { return false; }
 
-    void TXnb(uint8_t *data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
+    void TXnb(uint8_t *data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
     void RXnb();
 
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);

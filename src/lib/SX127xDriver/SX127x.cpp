@@ -390,7 +390,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -422,12 +422,12 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, uint8_t size, bool sendG
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
   if (sendGeminiBuffer)
   {
-    hal.writeRegister(SX127X_REG_FIFO, data, size, SX12XX_Radio_1);
-    hal.writeRegister(SX127X_REG_FIFO, dataGemini, size, SX12XX_Radio_2);
+    hal.writeRegister(SX127X_REG_FIFO, data, PayloadLength, SX12XX_Radio_1);
+    hal.writeRegister(SX127X_REG_FIFO, dataGemini, PayloadLength, SX12XX_Radio_2);
   }
   else
   {
-    hal.writeRegister(SX127X_REG_FIFO, data, size, radioNumber);
+    hal.writeRegister(SX127X_REG_FIFO, data, PayloadLength, radioNumber);
   }
 
   SetMode(SX127x_OPMODE_TX, radioNumber);

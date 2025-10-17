@@ -566,7 +566,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnbISR()
     TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const uint8_t size, const bool sendGeminiBuffer, uint8_t *dataGemini, const SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuffer, uint8_t *dataGemini, const SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
 
