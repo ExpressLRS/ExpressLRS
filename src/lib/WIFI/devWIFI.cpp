@@ -54,10 +54,7 @@
 #if defined(TARGET_TX)
 #include "wifiJoystick.h"
 
-extern TxConfig config;
 extern void setButtonColors(uint8_t b1, uint8_t b2);
-#else
-extern RxConfig config;
 #endif
 
 extern unsigned long rebootTime;
@@ -167,9 +164,9 @@ static struct {
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
-    if (request->url().equals(files[i].url)) {
-      AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
+  for (auto & file : files) {
+    if (request->url().equals(file.url)) {
+      AsyncWebServerResponse *response = request->beginResponse(200, file.contentType, file.content, file.size);
       response->addHeader("Content-Encoding", "gzip");
       request->send(response);
       return;
@@ -188,11 +185,11 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response;
   if (connectionState == hardwareUndefined)
   {
-    response = request->beginResponse_P(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
+    response = request->beginResponse(200, "text/html", (uint8_t*)HARDWARE_HTML, sizeof(HARDWARE_HTML));
   }
   else
   {
-    response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
+    response = request->beginResponse(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
   }
   response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -232,7 +229,6 @@ static void HandleReboot(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   rebootTime = millis() + 100;
 }
 
@@ -253,7 +249,6 @@ static void HandleReset(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   rebootTime = millis() + 100;
 }
 
@@ -294,7 +289,7 @@ static const char *GetConfigUidType(const JsonObject json)
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   bool exportMode = request->hasArg("export");
-  AsyncJsonResponse *response = new AsyncJsonResponse();
+  auto *response = new AsyncJsonResponse();
   JsonObject json = response->getRoot();
 
   if (!exportMode)
@@ -405,7 +400,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 #if defined(TARGET_TX)
 static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  if (json.containsKey("button-actions")) {
+  if (json["button-actions"].is<JsonVariant>()) {
     const JsonArray &array = json["button-actions"].as<JsonArray>();
     for (size_t button=0 ; button<array.size() ; button++)
     {
@@ -426,31 +421,31 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
 
 static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &json)
 {
-  if (json.containsKey("config"))
+  if (json["config"].is<JsonVariant>())
   {
     json = json["config"];
   }
 
-  if (json.containsKey("fan-mode")) config.SetFanMode(json["fan-mode"]);
-  if (json.containsKey("power-fan-threshold")) config.SetPowerFanThreshold(json["power-fan-threshold"]);
-  if (json.containsKey("motion-mode")) config.SetMotionMode(json["motion-mode"]);
+  if (json["fan-mode"].is<JsonVariant>()) config.SetFanMode(json["fan-mode"]);
+  if (json["power-fan-threshold"].is<JsonVariant>()) config.SetPowerFanThreshold(json["power-fan-threshold"]);
+  if (json["motion-mode"].is<JsonVariant>()) config.SetMotionMode(json["motion-mode"]);
 
-  if (json.containsKey("vtx-admin"))
+  if (json["vtx-admin"].is<JsonVariant>())
   {
-    if (json["vtx-admin"].containsKey("band")) config.SetVtxBand(json["vtx-admin"]["band"]);
-    if (json["vtx-admin"].containsKey("channel")) config.SetVtxChannel(json["vtx-admin"]["channel"]);
-    if (json["vtx-admin"].containsKey("pitmode")) config.SetVtxPitmode(json["vtx-admin"]["pitmode"]);
-    if (json["vtx-admin"].containsKey("power")) config.SetVtxPower(json["vtx-admin"]["power"]);
+    if (json["vtx-admin"]["band"].is<JsonVariant>()) config.SetVtxBand(json["vtx-admin"]["band"]);
+    if (json["vtx-admin"]["channel"].is<JsonVariant>()) config.SetVtxChannel(json["vtx-admin"]["channel"]);
+    if (json["vtx-admin"]["pitmode"].is<JsonVariant>()) config.SetVtxPitmode(json["vtx-admin"]["pitmode"]);
+    if (json["vtx-admin"]["power"].is<JsonVariant>()) config.SetVtxPower(json["vtx-admin"]["power"]);
   }
 
-  if (json.containsKey("backpack"))
+  if (json["backpack"].is<JsonVariant>())
   {
-    if (json["backpack"].containsKey("dvr-start-delay")) config.SetDvrStartDelay(json["backpack"]["dvr-start-delay"]);
-    if (json["backpack"].containsKey("dvr-stop-delay")) config.SetDvrStopDelay(json["backpack"]["dvr-stop-delay"]);
-    if (json["backpack"].containsKey("dvr-aux-channel")) config.SetDvrAux(json["backpack"]["dvr-aux-channel"]);
+    if (json["backpack"]["dvr-start-delay"].is<JsonVariant>()) config.SetDvrStartDelay(json["backpack"]["dvr-start-delay"]);
+    if (json["backpack"]["dvr-stop-delay"].is<JsonVariant>()) config.SetDvrStopDelay(json["backpack"]["dvr-stop-delay"]);
+    if (json["backpack"]["dvr-aux-channel"].is<JsonVariant>()) config.SetDvrAux(json["backpack"]["dvr-aux-channel"]);
   }
 
-  if (json.containsKey("model"))
+  if (json["model"].is<JsonVariant>())
   {
     for(JsonPair kv : json["model"].as<JsonObject>())
     {
@@ -458,17 +453,17 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
       JsonObject modelJson = kv.value();
 
       config.SetModelId(model);
-      if (modelJson.containsKey("packet-rate")) config.SetRate(modelJson["packet-rate"]);
-      if (modelJson.containsKey("telemetry-ratio")) config.SetTlm(modelJson["telemetry-ratio"]);
-      if (modelJson.containsKey("switch-mode")) config.SetSwitchMode(modelJson["switch-mode"]);
-      if (modelJson.containsKey("power"))
+      if (modelJson["packet-rate"].is<JsonVariant>()) config.SetRate(modelJson["packet-rate"]);
+      if (modelJson["telemetry-ratio"].is<JsonVariant>()) config.SetTlm(modelJson["telemetry-ratio"]);
+      if (modelJson["switch-mode"].is<JsonVariant>()) config.SetSwitchMode(modelJson["switch-mode"]);
+      if (modelJson["power"].is<JsonVariant>())
       {
-        if (modelJson["power"].containsKey("max-power")) config.SetPower(modelJson["power"]["max-power"]);
-        if (modelJson["power"].containsKey("dynamic-power")) config.SetDynamicPower(modelJson["power"]["dynamic-power"]);
-        if (modelJson["power"].containsKey("boost-channel")) config.SetBoostChannel(modelJson["power"]["boost-channel"]);
+        if (modelJson["power"]["max-power"].is<JsonVariant>()) config.SetPower(modelJson["power"]["max-power"]);
+        if (modelJson["power"]["dynamic-power"].is<JsonVariant>()) config.SetDynamicPower(modelJson["power"]["dynamic-power"]);
+        if (modelJson["power"]["boost-channel"].is<JsonVariant>()) config.SetBoostChannel(modelJson["power"]["boost-channel"]);
       }
-      if (modelJson.containsKey("model-match")) config.SetModelMatch(modelJson["model-match"]);
-      // if (modelJson.containsKey("tx-antenna")) config.SetTxAntenna(modelJson["tx-antenna"]);
+      if (modelJson["model-match"].is<JsonVariant>()) config.SetModelMatch(modelJson["model-match"]);
+      // if (modelJson["tx-antenna"].is<JsonVariant>()) config.SetTxAntenna(modelJson["tx-antenna"]);
       // have to commmit after each model is updated
       config.Commit();
     }
@@ -615,7 +610,6 @@ static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFi
   AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", msg);
   response->addHeader("Connection", "close");
   request->send(response);
-  request->client()->close();
   changeTime = millis();
   changeMode = mode;
 }
@@ -720,7 +714,6 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", msg);
     response->addHeader("Connection", "close");
     request->send(response);
-    request->client()->close();
   } else {
     String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
     if (target_found.length() != 0) {
@@ -878,7 +871,6 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse(204);
     response->addHeader("Connection", "close");
     request->send(response);
-    request->client()->close();
 
     Radio.TXdoneCallback = [](){};
     Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
@@ -1100,7 +1092,9 @@ static void startServices()
   server.addHandler(new AsyncCallbackJsonWebHandler("/options.json", UpdateSettings));
   #if defined(TARGET_TX)
     server.addHandler(new AsyncCallbackJsonWebHandler("/buttons", WebUpdateButtonColors));
-    server.addHandler(new AsyncCallbackJsonWebHandler("/import", ImportConfiguration, 32768U));
+    auto *handler = new AsyncCallbackJsonWebHandler("/import", ImportConfiguration);
+    handler->setMaxContentLength(32768);
+    server.addHandler(handler);
   #endif
 
   #if defined(RADIO_LR1121)

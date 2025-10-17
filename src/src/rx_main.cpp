@@ -2029,6 +2029,14 @@ void setup()
     }
     else
     {
+#if defined(PLATFORM_ESP32)
+        // arduino-espressif32 HardwareSerial's constructor for UART0 saves and attaches to GPIO 1 and 3, which
+        // will reset any other use of them when begin() is actually called for UART0 by CRSFHandset/SerialIO.
+        // Calling end() here, will call _uartDetachPins() on the underlying UART implementation so they won't
+        // be saved later (fixed upstream, coming someday)
+        Serial.end();
+#endif
+
         // default to CRSF protocol and the compiled baud rate
         serialBaud = firmwareOptions.uart_baud;
 
