@@ -227,7 +227,15 @@ static int timeout(devserial_ctx_t *ctx)
     // Verify there is new ChannelData and they should be sent on
     bool sendChannels = confirmFrameAvailable(ctx);
 
-    return (*(ctx->io))->sendRCFrame(sendChannels, missed, ChannelData);
+    // Copy the current ChannelData to a local buffer as we don't know how many accesses
+    // there will be to each channel slot in the array, and the global buffer may be updated
+    // in-between access to each channel slot.
+    WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS];
+    for (int i = 0; i < CRSF_NUM_CHANNELS; i++)
+    {
+        localChannelData[i] = ChannelData[i];
+    }
+    return (*(ctx->io))->sendRCFrame(sendChannels, missed, localChannelData);
 }
 
 void sendImmediateRC()
