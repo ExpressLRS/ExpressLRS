@@ -963,6 +963,11 @@ void RxConfig::UpgradeEepromV9()
         m_config.forceTlmOff = v9Config.forceTlmOff;
         m_config.rateInitialIdx = v9Config.rateInitialIdx;
     }
+    for (unsigned ch=0; ch<16; ++ch)
+    {
+        if (m_config.pwmChannels[ch].val.mode > somDShot)
+            m_config.pwmChannels[ch].val.mode += 1;
+    }
 }
 
 void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
