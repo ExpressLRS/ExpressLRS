@@ -234,14 +234,26 @@ void sendImmediateRC()
 {
     if (*(serial0.io) != nullptr && (*(serial0.io))->sendImmediateRC() && connectionState != serialUpdate)
     {
-        bool missed = serial0.frameMissed;
+        const bool missed = serial0.frameMissed;
         serial0.frameMissed = false;
 
         // Verify there is new ChannelData and they should be sent on
-        bool sendChannels = confirmFrameAvailable(&serial0);
+        const bool sendChannels = confirmFrameAvailable(&serial0);
 
         (*(serial0.io))->sendRCFrame(sendChannels, missed, ChannelData);
     }
+#if defined(PLATFORM_ESP32)
+    if (*(serial1.io) != nullptr && (*(serial1.io))->sendImmediateRC() && connectionState != serialUpdate)
+    {
+        const bool missed = serial1.frameMissed;
+        serial1.frameMissed = false;
+
+        // Verify the new channel data should be sent on
+        const bool sendChannels = confirmFrameAvailable(&serial1);
+
+        (*(serial1.io))->sendRCFrame(sendChannels, missed, ChannelData);
+    }
+#endif
 }
 
 void handleSerialIO()
