@@ -956,7 +956,7 @@ static void UpdateConnectDisconnectStatus()
     (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
     ) + 2U;
   // Capture the last before now so it will always be <= now
-  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  const uint32_t lastTlmMillis = LastTLMpacketRecv_Ms;
   const uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
