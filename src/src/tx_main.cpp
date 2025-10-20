@@ -88,7 +88,7 @@ volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 static bool commitInProgress = false;
 
-LQCALC<25> LQCalc;
+LQCALC<100> LqTQly;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
@@ -187,7 +187,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   LastTLMpacketRecvMillis = millis();
-  LQCalc.add();
+  LqTQly.add();
 
   Radio.CheckForSecondPacket();
   if (Radio.hasSecondRadioGotData)
@@ -742,12 +742,12 @@ void ICACHE_RAM_ATTR timerCallback()
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
     linkStats.downlink_Link_quality = LBTSuccessCalc.getLQ();
 #else
-    linkStats.downlink_Link_quality = LQCalc.getLQ();
+    linkStats.downlink_Link_quality = LqTQly.getLQ();
 #endif
-    LQCalc.inc();
+    LqTQly.inc();
     return;
   }
-  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet())
+  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LqTQly.currentIsSet())
   {
     // Indicate no telemetry packet received to the DP system
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
@@ -879,7 +879,7 @@ static void CheckConfigChangePending()
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
   // busyTransmitting is required here to prevent accidental rxdone IRQs due to interference triggering RXdoneISR.
-  if (LQCalc.currentIsSet() || busyTransmitting)
+  if (LqTQly.currentIsSet() || busyTransmitting)
   {
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
   }
