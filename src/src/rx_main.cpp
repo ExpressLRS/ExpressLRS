@@ -1608,7 +1608,7 @@ static void setupBindingFromConfig()
         memcpy(UID, config.GetUID(), UID_LEN);
     }
 
-    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+    DBGLN("UID=(%u, %u, %u, %u, %u, %u) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
