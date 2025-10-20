@@ -104,7 +104,6 @@ Crc2Byte ota_crc;
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
-Stream *SerialLogger;
 
 CRSFRouter crsfRouter;
 RXEndpoint crsfReceiver;
@@ -1320,13 +1319,13 @@ static void setupSerial()
         #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
         // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
         USBSerial.begin(serialBaud);
-        SerialLogger = &USBSerial;
+        BackpackOrLogStrm = &USBSerial;
         #else
         Serial.begin(serialBaud);
-        SerialLogger = &Serial;
+        BackpackOrLogStrm = &Serial;
         #endif
         #else
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
         #endif
         serialIO = new SerialNOOP();
         return;
@@ -1439,12 +1438,12 @@ static void setupSerial()
 #if defined(DEBUG_ENABLED)
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
-    SerialLogger = &USBSerial;
+    BackpackOrLogStrm = &USBSerial;
 #else
-    SerialLogger = &Serial;
+    BackpackOrLogStrm = &Serial;
 #endif
 #else
-    SerialLogger = new NullStream();
+    BackpackOrLogStrm = new NullStream();
 #endif
 }
 
@@ -1546,7 +1545,7 @@ void reconfigureSerial1()
 
 static void serialShutdown()
 {
-    SerialLogger = new NullStream();
+    BackpackOrLogStrm = new NullStream();
     if(serialIO != nullptr)
     {
         Serial.end();
@@ -2016,7 +2015,7 @@ void setup()
     {
         // In the failure case we set the logging to the null logger so nothing crashes
         // if it decides to log something
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
 
         // Register the WiFi with the framework
         static device_affinity_t wifi_device[] = {
@@ -2044,9 +2043,9 @@ void setup()
         // to the serial port and they'll block if the buffer fills
         #if defined(DEBUG_LOG)
         Serial.begin(serialBaud);
-        SerialLogger = &Serial;
+        BackpackOrLogStrm = &Serial;
         #else
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
         #endif
 
         // Init EEPROM and load config, checking powerup count
