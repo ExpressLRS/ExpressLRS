@@ -10,6 +10,8 @@
 
 </center>
 
+**ExpressLRS** is developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
+
 ## Support ExpressLRS
 You can support ExpressLRS by contributing code, testing new features, sharing your ideas, or helping others get started. We are exceptionally grateful for those who donate their time to our passion.
 
@@ -55,7 +57,7 @@ with many more features on the way!
 
 ExpressLRS currently supports hardware from a wide range of manufacturers. In principle, the targets listed in the [ExpressLRS Configurator](https://github.com/ExpressLRS/ExpressLRS-Configurator/releases/) are tested and supported hardware.
 
-Please refer to the [Hardware Selection] page (https://www.expresslrs.org/hardware/hardware-selection/) on the website for guidance. We do not manufacture any of our hardware, so we can only provide limited support for faulty hardware.
+See [Hardware Selection](https://www.expresslrs.org/hardware/hardware-selection/) for guidance. We do not manufacture any of our hardware, so we can only provide limited support for faulty hardware.
 
 ## Developers
 

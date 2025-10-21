@@ -1139,7 +1139,7 @@ RxConfig::SetDefaults(bool commit)
     for (int ch=0; ch<PWM_MAX_CHANNELS; ++ch)
     {
         uint8_t mode = som50Hz;
-        // setup defaults for hardware defined I2C pins that are also IO pins
+        // setup defaults for hardware-defined I2C & Serial pins that are also IO pins
         if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
         {
             if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
@@ -1150,10 +1150,25 @@ RxConfig::SetDefaults(bool commit)
             {
                 mode = somSDA;
             }
+            else if ((GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_PWM_OUTPUTS[ch] == U0RXD_GPIO_NUM) ||
+                     (GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM && GPIO_PIN_PWM_OUTPUTS[ch] == U0TXD_GPIO_NUM))
+            {
+                mode = somSerial;
+            }
+#if defined(PLATFORM_ESP32)
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SERIAL1_RX)
+            {
+                mode = somSerial1RX;
+            }
+            else if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SERIAL1_TX)
+            {
+                mode = somSerial1TX;
+            }
+#endif
         }
-        SetPwmChannel(ch, 512, ch, false, mode, false);
+        const uint16_t failsafe = ch == 2 ? 0 : 512; // ch2 is throttle, failsafe it to 988
+        SetPwmChannel(ch, failsafe, ch, false, mode, false);
     }
-    SetPwmChannel(2, 0, 2, false, 0, false); // ch2 is throttle, failsafe it to 988
 
     m_config.teamraceChannel = AUX7; // CH11
 

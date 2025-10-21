@@ -1,4 +1,4 @@
-#if defined(PLATFORM_ESP32)
+#if defined(TARGET_RX) && defined(PLATFORM_ESP32)
 //
 // Name:		DShotRMT.cpp
 // Created: 	20.03.2021 00:49:15
@@ -102,17 +102,13 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 // ...the config part is done, now the calculating and sending part
 void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request) {
 	dshot_packet_t dshot_rmt_packet = { };
-
-	if (throttle_value < DSHOT_THROTTLE_MIN) {
-		throttle_value = DSHOT_THROTTLE_MIN;
+	
+	if (throttle_value == DSHOT_THROTTLE_MIN) {
+		dshot_rmt_packet.throttle_value = 0;
+	} else {
+		// ...packets are the same for bidirectional mode
+		dshot_rmt_packet.throttle_value = throttle_value;
 	}
-
-	if (throttle_value > DSHOT_THROTTLE_MAX) {
-		throttle_value = DSHOT_THROTTLE_MAX;
-	}
-
-	// ...packets are the same for bidirectional mode
-	dshot_rmt_packet.throttle_value = throttle_value;
 	dshot_rmt_packet.telemetric_request = telemetric_request;
 	dshot_rmt_packet.checksum = this->calc_dshot_chksum(dshot_rmt_packet);
 

@@ -1,14 +1,14 @@
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 
 #include <U8g2lib.h> // Needed for the OLED drivers, this is a arduino package. It is maintained by platformIO
 
 #include "oleddisplay.h"
 
+#include "CRSFRouter.h"
 #include "XBMStrings.h" // Contains all the ELRS logos and animations for the UI
-#include "options.h"
-#include "logging.h"
 #include "common.h"
-#include "CRSF.h"
+#include "logging.h"
+#include "options.h"
 
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
@@ -359,34 +359,34 @@ void OLEDDisplay::displayLinkstats()
 
     u8g2->drawStr(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST, "Uplink");
     u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    u8g2->print(CRSF::LinkStatistics.uplink_Link_quality);
+    u8g2->print(linkStats.uplink_Link_quality);
     u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
-    if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
+    u8g2->print((int8_t)linkStats.uplink_RSSI_1);
+    if (linkStats.uplink_RSSI_2 != 0)
     {
         u8g2->print('/');
-        u8g2->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+        u8g2->print((int8_t)linkStats.uplink_RSSI_2);
     }
 
     u8g2->drawStr(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST, "Downlink");
     u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    u8g2->print(CRSF::LinkStatistics.downlink_Link_quality);
+    u8g2->print(linkStats.downlink_Link_quality);
     u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
+    u8g2->print((int8_t)linkStats.downlink_RSSI_1);
     if (isDualRadio())
     {
         u8g2->print('/');
-        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
+        u8g2->print((int8_t)linkStats.downlink_RSSI_2);
     }
 
     if (!OPT_HAS_OLED_SPI_SMALL)
     {
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-        u8g2->print((int8_t)CRSF::LinkStatistics.uplink_SNR);
+        u8g2->print((int8_t)linkStats.uplink_SNR);
         u8g2->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-        u8g2->print((int8_t)CRSF::LinkStatistics.downlink_SNR);
+        u8g2->print((int8_t)linkStats.downlink_SNR);
         u8g2->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-        u8g2->print(CRSF::LinkStatistics.active_antenna);
+        u8g2->print(linkStats.active_antenna);
     }
 
     u8g2->sendBuffer();

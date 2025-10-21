@@ -13,12 +13,10 @@
 #else
 #error "Radio configuration is not valid!"
 #endif
-
+#else
+#include <cstdint>
 #endif // UNIT_TEST
 
-// Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
-// It should be incremented when the OTA packet structure is modified.
-#define OTA_VERSION_ID      4
 #define UID_LEN             6
 
 typedef enum : uint8_t
@@ -112,7 +110,7 @@ typedef enum : uint8_t
     RATE_FSK_2G4_250HZ_DVDA,
     RATE_FSK_2G4_500HZ_DVDA,
     RATE_FSK_2G4_1000HZ,
-    
+
     RATE_LORA_DUAL_100HZ_8CH = 100,
     RATE_LORA_DUAL_150HZ,
 } expresslrs_RFrates_e;

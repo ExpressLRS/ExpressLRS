@@ -2,33 +2,38 @@
 #include "common.h"
 #include "device.h"
 
+#include "CRSFRouter.h"
 #include "config.h"
-#include "CRSF.h"
-#include "msp.h"
 #include "logging.h"
+#include "msp.h"
 
 #include "devButton.h"
 #include "handset.h"
+#include "msptypes.h"
 
 #define PITMODE_NOT_INITIALISED    -1
 #define PITMODE_OFF                 0
 #define PITMODE_ON                  1
 
-// Delay after disconnect to preserve the VTXSS_CONFIRMED status
+// Period after a disconnect to wait in the VTXSS_DEBUOUNCING state so if
+// we get a connection we don't resend the VTX commands.
 // Needs to be long enough to reconnect, but short enough to
-// reset between the user switching equipment
-#define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
+// reset between the user switching equipment. This is so we don't get into
+// a loop of connect -> send -> write eeprom -> disconnect -> ...
+// See https://github.com/ExpressLRS/ExpressLRS/issues/2976
+#define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
 
-extern Stream *TxBackpack;
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
+extern void clearOTAQueue();
 
 static enum VtxSendState_e
 {
   VTXSS_UNKNOWN,   // Status of the remote side is unknown, so we should send immediately if connected
-  VTXSS_MODIFIED,  // Config is editied, should always be sent regardless of connect state
+  VTXSS_MODIFIED,  // Config is edited, should always be sent regardless of connect state
   VTXSS_SENDING1, VTXSS_SENDING2, VTXSS_SENDING3,  VTXSS_SENDINGDONE, // Send the config 3x
-  VTXSS_CONFIRMED  // Status of remote side is consistent with our config
+  VTXSS_CONFIRMED, // Status of remote side is consistent with our config
+  VTXSS_DEBOUNCING // After a disconnect, go to debouncing state so a reconnect during the debounce period won't re-send the VTX command and eeprom write and get another disconnect
 } VtxSendState;
 
 void VtxTriggerSend()
@@ -57,8 +62,9 @@ void VtxPitmodeSwitchUpdate()
     else if (pitmodeAuxState != newPitmodeAuxState)
     {
         pitmodeAuxState = newPitmodeAuxState;
-        sendEepromWrite = false;
         VtxTriggerSend();
+        // No forced EEPROM saving of Pit Mode
+        sendEepromWrite = false;
     }
 }
 
@@ -68,7 +74,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 }
 
 static void VtxConfigToMSPOut()
@@ -88,7 +94,8 @@ static void VtxConfigToMSPOut()
         packet.addByte(pitmodeAuxState);
     }
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    // we broadcast this so both the FC the RX can process it if it has an SPI based VTX or there are Tramp/SA VTX's connected to the RX
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
@@ -104,6 +111,13 @@ static bool initialize()
 
 static int event()
 {
+    // 0 = VTX Admin disabled in the configuration
+    if (config.GetVtxBand() == 0)
+    {
+        VtxSendState = VTXSS_CONFIRMED;
+        return DURATION_NEVER;
+    }
+
     if (VtxSendState == VTXSS_MODIFIED ||
         (VtxSendState == VTXSS_UNKNOWN && connectionState == connected))
     {
@@ -111,20 +125,10 @@ static int event()
         return 1000;
     }
 
-    if (connectionState == disconnected)
+    if (connectionState == disconnected && VtxSendState != VTXSS_DEBOUNCING && VtxSendState != VTXSS_UNKNOWN)
     {
-        // If the VtxSend has completed, wait before going back to VTXSS_UNKNOWN
-        // to ignore a temporary disconnect after saving EEPROM
-        if (VtxSendState == VTXSS_CONFIRMED)
-        {
-            VtxSendState = VTXSS_CONFIRMED;
-            return VTX_DISCONNECT_DEBOUNCE_MS;
-        }
-        VtxSendState = VTXSS_UNKNOWN;
-    }
-    else if (VtxSendState == VTXSS_CONFIRMED && connectionState == connected)
-    {
-        return DURATION_NEVER;
+        VtxSendState = VTXSS_DEBOUNCING;
+        return VTX_DISCONNECT_DEBOUNCE_MS;
     }
 
     return DURATION_IGNORE;
@@ -132,17 +136,23 @@ static int event()
 
 static int timeout()
 {
-    // 0 = off in the lua Band field
-    if (config.GetVtxBand() == 0)
+    if (VtxSendState == VTXSS_DEBOUNCING)
     {
-        VtxSendState = VTXSS_CONFIRMED;
-        return DURATION_NEVER;
+        if (connectionState == disconnected)
+        {
+            // Still disconnected after the debounce, assume this is a new connection on next connect
+            VtxSendState = VTXSS_UNKNOWN;
+            sendEepromWrite = true;
+        }
+        else
+        {
+            // Reconnect within the debounce, move back to CONFIRMED
+            VtxSendState = VTXSS_CONFIRMED;
+        }
     }
 
-    // Can only get here in VTXSS_CONFIRMED state if still disconnected
-    if (VtxSendState == VTXSS_CONFIRMED)
+    if (VtxSendState == VTXSS_UNKNOWN || VtxSendState == VTXSS_MODIFIED || VtxSendState == VTXSS_CONFIRMED)
     {
-        VtxSendState = VTXSS_UNKNOWN;
         return DURATION_NEVER;
     }
 
@@ -150,22 +160,24 @@ static int timeout()
 
     VtxSendState = (VtxSendState_e)((int)VtxSendState + 1);
     if (VtxSendState < VTXSS_SENDINGDONE)
+    {
         return 500; // repeat send in 500ms
+    }
 
     if (connectionState == connected)
     {
         // Connected while sending, assume the MSP got to the RX
         VtxSendState = VTXSS_CONFIRMED;
         if (sendEepromWrite)
+        {
             eepromWriteToMSPOut();
+        }
         sendEepromWrite = true;
     }
     else
     {
+        clearOTAQueue();
         VtxSendState = VTXSS_UNKNOWN;
-        // Never received a connection, clear the queue which now
-        // has multiple VTX config packets in it
-        CRSF::ResetMspQueue();
     }
 
     return DURATION_NEVER;
@@ -173,7 +185,7 @@ static int timeout()
 
 device_t VTX_device = {
     .initialize = initialize,
-    .start = NULL,
+    .start = nullptr,
     .event = event,
     .timeout = timeout,
     .subscribe = EVENT_CONNECTION_CHANGED | EVENT_VTX_CHANGE

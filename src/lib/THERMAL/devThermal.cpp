@@ -1,7 +1,7 @@
 #include "targets.h"
 #include "devThermal.h"
 
-#if defined(PLATFORM_ESP32)
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 #include "config.h"
 #include "logging.h"
 
@@ -43,6 +43,10 @@ static bool initialize()
     if (GPIO_PIN_FAN_EN != UNDEF_PIN)
     {
         pinMode(GPIO_PIN_FAN_EN, OUTPUT);
+        enabled = true;
+    }
+    else if (GPIO_PIN_FAN_PWM != UNDEF_PIN)
+    {
         enabled = true;
     }
     return enabled;
@@ -246,6 +250,7 @@ device_t Thermal_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONFIG_FAN_CHANGED
 };
 #endif

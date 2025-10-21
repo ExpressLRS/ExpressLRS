@@ -108,6 +108,18 @@ jobs:
             mkdir -p $OUTDIR
             mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
             ;;
+          *LR1121*)
+            # release builds
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_EU_CE_2400 -DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/LBT/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
+
+            PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
+            OUTDIR=~/artifacts/firmware/FCC/`echo ${{ matrix.target }} | sed s/_via.*//`
+            mkdir -p $OUTDIR
+            mv .pio/build/${{ matrix.target }}/*.{elrs,bin} $OUTDIR >& /dev/null || :
+            ;;
           *)
             # release build
             PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_FCC_915" pio run -e ${{ matrix.target }}
@@ -181,6 +193,11 @@ jobs:
           cd dist
           zip -r -9 ../firmware.zip ./firmware
 
+      - name: Install downgraded AWS CLI
+        uses: unfor19/install-aws-cli-action@master
+        with:
+          version: "2.22.35"
+
       - name: Upload firmware bundle to ExpressLRS artifactory
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -188,6 +205,7 @@ jobs:
           AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
           AWS_REGION: "auto"
         run: |
+          aws --version
           if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
             echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
             exit 0

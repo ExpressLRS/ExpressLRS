@@ -1,6 +1,6 @@
-#if defined(TARGET_RX)
-
 #pragma once
+
+#if defined(TARGET_RX)
 
 #include "SerialIO.h"
 #include "device.h"
@@ -21,15 +21,24 @@
 
 #define START_OF_CMD_B 0x80    // start byte of HoTT binary cmd sequence
 #define SENSOR_ID_GPS_B 0x8A   // device ID binary mode GPS module
-#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode adressing
+#define SENSOR_ID_GPS_T 0xA0   // device ID for text mode addressing
 #define SENSOR_ID_GAM_B 0x8D   // device ID binary mode GAM module
-#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode adressing
+#define SENSOR_ID_GAM_T 0xD0   // device ID for text mode addressing
 #define SENSOR_ID_EAM_B 0x8E   // device ID binary mode EAM module
-#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode adressing
+#define SENSOR_ID_EAM_T 0xE0   // device ID for text mode addressing
 #define SENSOR_ID_ESC_B 0x8C   // device ID binary mode ESC module
-#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode adressing
+#define SENSOR_ID_ESC_T 0xC0   // device ID for text mode addressing
 #define SENSOR_ID_VARIO_B 0x89 // device ID binary mode VARIO module
-#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode adressing
+#define SENSOR_ID_VARIO_T 0x90 // device ID for text mode addressing
+
+#define HOTT_TEMP_OFFSET 20    // HoTT delivers temperature with +20 offset
+#define HOTT_TEMP_SCALE 10
+#define HOTT_RPM_SCALE 10
+#define HOTT_VSPD_OFFSET 30000
+#define HOTT_CELL_SCALE 20
+#define HOTT_VOLT_SCALE 100
+#define HOTT_SPEED_SCALE_EAM 10
+#define HOTT_SPEED_SCALE_GAM 20
 
 //
 // GAM data frame data structure
@@ -192,7 +201,7 @@ typedef struct HOTT_AIRESC_MSG_s
     uint8_t throttle = 0;                     // 29 throttle in %
     uint8_t becVoltage = 0;                   // 30 BEC voltage
     uint8_t becVoltageMin = 0;                // 31 BEC voltage min
-    uint8_t becCurrent = 0;                   // 32 BEC current
+    uint16_t becCurrent = 0;                  // 32 BEC current
     uint8_t becTemp = 0;                      // 34 BEC temperature
     uint8_t capacitorTemp = 0;                // 35 Capacitor temperature
     uint8_t motorTiming = 0;                  // 36 motor timing
@@ -260,41 +269,12 @@ enum {
     HOTT_CMD2SENT
 };
 
-class SerialHoTT_TLM : public SerialIO
+class SerialHoTT_TLM final : public SerialIO
 {
 public:
-    explicit SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN)
-        : SerialIO(&out, &in)
-    {       
-#if defined(PLATFORM_ESP32)
-        if (serial1TXpin == UNDEF_PIN)
-        {
-            // we are on UART0, use default TX pin for half duplex if not defined otherwise
-            UTXDoutIdx = U0TXD_OUT_IDX;
-            URXDinIdx = U0RXD_IN_IDX;
-            halfDuplexPin = GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN ? U0TXD_GPIO_NUM : GPIO_PIN_RCSIGNAL_TX;
-        }
-        else
-        {   
-            // we are on UART1, use Serial1 TX assigned pin for half duplex
-            UTXDoutIdx = U1TXD_OUT_IDX;
-            URXDinIdx = U1RXD_IN_IDX;
-            halfDuplexPin = serial1TXpin;
-        } 
-#endif
+    SerialHoTT_TLM(Stream &out, Stream &in, int8_t serial1TXpin = UNDEF_PIN);
+    ~SerialHoTT_TLM() override = default;
 
-        uint32_t now = millis();
-
-        lastPoll = now;
-        discoveryTimerStart = now;
-
-        cmdSendState = HOTT_RECEIVING;
-    }
-
-    virtual ~SerialHoTT_TLM() {}
-
-    void queueLinkStatisticsPacket() override {}
-    void queueMSPFrameTransmission(uint8_t *data) override {}
     uint32_t sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) override { return DURATION_IMMEDIATELY; };
 
     int getMaxSerialReadSize() override;
@@ -320,6 +300,11 @@ private:
     void sendCRSFvario(uint32_t now);
     void sendCRSFgps(uint32_t now);
     void sendCRSFbattery(uint32_t now);
+    void sendCRSFrpm(uint32_t now, HoTTDevices device);
+    void sendCRSFtemp(uint32_t now, HoTTDevices device);
+    void sendCRSFcells(uint32_t now, HoTTDevices device);
+    void sendCRSFvolt(uint32_t now, HoTTDevices device);
+    void sendCRSFairspeed(uint32_t now, HoTTDevices device);
 
     uint16_t getHoTTvoltage();
     uint16_t getHoTTcurrent();
@@ -339,12 +324,12 @@ private:
     // last received HoTT telemetry packets
     GPSPacket_t gps;
     GeneralAirPacket_t gam;
-    AirESCPacket_t esc;
-    VarioPacket_t vario;
-    ElectricAirPacket_t eam;
+    AirESCPacket_t esc {};
+    VarioPacket_t vario {};
+    ElectricAirPacket_t eam {};
 
     // received HoTT bus fra,e
-    hottBusFrame_t hottBusFrame;
+    hottBusFrame_t hottBusFrame{};
 
     // discoverd devices
     hottDevice_t device[LAST_DEVICE] = {
@@ -358,7 +343,7 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
-    uint8_t nextDeviceID;
+    uint8_t nextDeviceID{};
 
     uint32_t lastPoll;
     uint8_t cmdSendState;
@@ -370,6 +355,16 @@ private:
     uint32_t lastGPSCRC = 0;
     uint32_t lastBatterySent = 0;
     uint32_t lastBatteryCRC = 0;
+    uint32_t lastRpmSent = 0;
+    uint32_t lastRpmCRC = 0;
+    uint32_t lastTempSent = 0;
+    uint32_t lastTempCRC = 0;
+    uint32_t lastCellsSent = 0;
+    uint32_t lastCellsCRC = 0;
+    uint32_t lastVoltSent = 0;
+    uint32_t lastVoltCRC = 0;
+    uint32_t lastAirspeedSent = 0;
+    uint32_t lastAirspeedCRC = 0;
 
     const uint8_t DegMinScale = 100;
     const uint8_t SecScale = 100;

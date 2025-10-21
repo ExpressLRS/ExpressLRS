@@ -83,7 +83,6 @@ typedef enum
     LR1121_MODE_STDBY_RC,     //! The radio is in standby mode with RC oscillator
     LR1121_MODE_STDBY_XOSC,   //! The radio is in standby mode with XOSC oscillator
     LR1121_MODE_FS,           //! The radio is in frequency synthesis mode
-    LR1121_MODE_RX,           //! The radio is in receive mode
     LR1121_MODE_RX_CONT,      //! The radio is in continuous receive mode
     LR1121_MODE_TX,           //! The radio is in transmit mode
     LR1121_MODE_CAD           //! The radio is in channel activity detection mode
@@ -126,6 +125,13 @@ enum
     LR11XX_RADIO_CFG_BLE_BEACON_OC            = 0x022E,
     LR11XX_RADIO_GET_LORA_RX_INFO_OC          = 0x0230,
     LR11XX_RADIO_BLE_BEACON_SEND_OC           = 0x0231,
+    // Experimental firmware commands
+    LR11XX_RADIO_GET_PACKET                   = 0x0700,
+    LR11XX_RADIO_SET_FREQ_SET_RX              = 0x0701,
+    LR11XX_RADIO_SET_RX_GET_PACKET            = 0x0702,
+    LR11XX_RADIO_SET_FREQ_SET_RX_GET_PACKET   = 0x0703,
+    LR11XX_RADIO_WRITE_BUFFER8_SET_TX         = 0x0704,
+    LR11XX_RADIO_WRITE_BUFFER8_SET_FREQ_SET_TX = 0x0705,
 };
 
 enum
