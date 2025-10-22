@@ -165,11 +165,11 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   force_update = request->hasArg("force");  // TODO handle this
   if (connectionState == hardwareUndefined)
   {
-    request->redirect("/app.html#hardware");
+    request->redirect("/index.html#hardware");
   }
   else
   {
-    request->redirect("/app.html");
+    request->redirect("/index.html");
   }
 }
 
