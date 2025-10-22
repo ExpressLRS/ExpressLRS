@@ -190,6 +190,20 @@ typedef struct {
 
 // V8 is just V7 except PWM config inserted 10khz PWM in the middle
 
+// V9
+typedef union {
+    struct {
+        uint32_t failsafe:11,    // us output during failsafe +500
+                 inputChannel:4, // 0-based input channel
+                 inverted:1,     // invert channel output
+                 mode:4,         // Output mode (eServoOutputMode)
+                 narrow:1,       // Narrow output mode (half pulse width)
+                 failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
+                 unused:9;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+    } val;
+    uint32_t raw;
+} v9_rx_config_pwm_t;
+
 typedef struct {
     uint32_t    version;
     uint8_t     uid[UID_LEN];
@@ -211,7 +225,7 @@ typedef struct {
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
                 unused:2;
-    v6_rx_config_pwm_t pwmChannels[16];
+    v9_rx_config_pwm_t pwmChannels[16];
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model

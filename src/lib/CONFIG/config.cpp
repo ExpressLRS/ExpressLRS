@@ -952,6 +952,16 @@ void RxConfig::UpgradeEepromV7V8()
 // ========================================================
 // V9 Upgrade
 
+static void PwmConfigV9(v9_rx_config_pwm_t const * const v9, rx_config_pwm_t * const current)
+{
+    current->val.failsafe = v9->val.failsafe;
+    current->val.inputChannel = v9->val.inputChannel;
+    current->val.inverted = v9->val.inverted;
+    current->val.mode = v9->val.mode;
+    current->val.narrow = v9->val.narrow;
+    current->val.failsafeMode = v9->val.failsafeMode;
+}
+
 void RxConfig::UpgradeEepromV9()
 {
     v9_rx_config_t v9Config;
@@ -962,6 +972,11 @@ void RxConfig::UpgradeEepromV9()
         m_config.powerOnCounter = v9Config.powerOnCounter;
         m_config.forceTlmOff = v9Config.forceTlmOff;
         m_config.rateInitialIdx = v9Config.rateInitialIdx;
+
+        for (unsigned ch=0; ch<16; ++ch)
+        {
+            PwmConfigV9(&v9Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
+        }
     }
 }
 
@@ -1166,7 +1181,8 @@ RxConfig::SetDefaults(bool commit)
             }
 #endif
         }
-        const uint16_t failsafe = ch == 2 ? 0 : 512; // ch2 is throttle, failsafe it to 988
+        const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN : 
+                                            CHANNEL_VALUE_FS_US_MID - CHANNEL_VALUE_FS_US_MIN; // ch2 is throttle, failsafe it to 885
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
     }
 
