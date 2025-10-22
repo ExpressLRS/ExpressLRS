@@ -42,7 +42,7 @@ export function devMockPlugin() {
             uidtype: 'Flashed',
             mode: 'AP',
             ssid: 'ExpressLRS TX',
-            modelid: 255,
+            modelid: 62,
             'force-tlm': false,
             'serial-protocol': 1,
             'serial1-protocol': 0,

@@ -170,7 +170,7 @@ export default defineConfig(({ command, mode }) => {
     build: {
       rollupOptions: {
         input: {
-          app: path.resolve(__dirname, 'app.html'),
+          app: path.resolve(__dirname, 'index.html'),
         },
         output: {
           entryFileNames: 'assets/[name]-[hash].js',
