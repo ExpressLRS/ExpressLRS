@@ -130,6 +130,11 @@ device_affinity_t ui_devices[] = {
 
 static bool diversityAntennaState = LOW;
 
+static bool inGeminiMode()
+{
+    return isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI;
+}
+
 void switchDiversityAntennas()
 {
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
@@ -215,12 +220,12 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
 
         // The Rx only has a single radio.  Force the Tx out of Gemini mode.
-        if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
+        if (inGeminiMode() && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
         }
 
-        if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
+        if (inGeminiMode())
         {
             if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
             {
@@ -266,7 +271,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         }
         else
         {
-            if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
+            if (inGeminiMode())
             {
                 if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
                 {
@@ -318,7 +323,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
 
         // The Rx only has a single radio.  Force the Tx out of Gemini mode.
-        if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
+        if (inGeminiMode() && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
         {
             config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
         }
@@ -331,7 +336,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         }
         else
         {
-            if (config.GetAntennaMode() == TX_RADIO_MODE_GEMINI)
+            if (inGeminiMode())
             {
                 if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
                 {
@@ -449,7 +454,7 @@ void ICACHE_RAM_ATTR GenerateSyncPacketData(OTA_Sync_s * const syncPtr)
   syncPtr->rfRateEnum = get_elrs_airRateConfig(Index)->enum_rate;
   syncPtr->switchEncMode = SwitchEncMode;
   syncPtr->newTlmRatio = newTlmRatio - TLM_RATIO_NO_TLM;
-  syncPtr->geminiMode = isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI;
+  syncPtr->geminiMode = inGeminiMode();
   syncPtr->otaProtocol = config.GetLinkMode();
   syncPtr->UID4 = UID[4];
   syncPtr->UID5 = UID[5];
@@ -530,7 +535,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
   Radio.FuzzySNRThreshold = (RFperf->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE) ? 0 : (RFperf->DynpowerSnrThreshUp - RFperf->DynpowerSnrThreshDn);
 
-  if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand) // Gemini mode
+  if (inGeminiMode() || FHSSuseDualBand)
   {
     Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2, false);
   }
@@ -909,7 +914,7 @@ void ICACHE_RAM_ATTR TXdoneISR()
     {
       // Gemini mode
       // If using DualBand always set the correct frequency band to the radios.  The HighFreq/LowFreq Tx amp is set during config.
-      if ((isDualRadio() && config.GetAntennaMode() == TX_RADIO_MODE_GEMINI) || FHSSuseDualBand)
+      if (inGeminiMode() || FHSSuseDualBand)
       {
         // Optimises the SPI traffic order.
         if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
