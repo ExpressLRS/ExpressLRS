@@ -786,29 +786,27 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
 {
-    if (digitalRead(GPIO_PIN_DIO1))
-    {
-        IsrCallback(SX12XX_Radio_1);
-    }
+    IsrCallback(SX12XX_Radio_1);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 {
-    if (digitalRead(GPIO_PIN_DIO1_2))
-    {
-        IsrCallback(SX12XX_Radio_2);
-    }
+    IsrCallback(SX12XX_Radio_2);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
+    const SX12XX_Radio_Number_t otherRadioNumber = radioNumber == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
     const uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
-        instance->ClearIrqStatus(SX12XX_Radio_All);
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        {
+            instance->ClearIrqStatus(otherRadioNumber);
+        }
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
