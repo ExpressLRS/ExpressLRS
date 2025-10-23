@@ -2,12 +2,12 @@
 - [x] Buttons
 - [x] TX Options
 - [x] Import/Export
-- [ ] RX Model/PWM/Outputs
-- [ ] RX Options
+- [x] RX Model/PWM/Outputs
+- [x] RX Options
 - [x] WiFi
-- [ ] Update
+- [x] Update
 ---
-- [ ] Hardware
-- [ ] Continuous wave
-- [ ] LR1121
+- [x] Hardware
+- [x] Continuous wave
+- [x] LR1121
 
