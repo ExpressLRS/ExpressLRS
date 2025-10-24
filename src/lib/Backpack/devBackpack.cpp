@@ -10,7 +10,15 @@
 #include "msptypes.h"
 #include "telemetry.h"
 
-#define BACKPACK_TIMEOUT 20 // How often to check for backpack commands
+// How often to check for backpack commands
+#define BACKPACK_PERIOD_MS  20
+// value in ptrChannelData that means "don't replace value in ChannelData"
+#define HT_DO_NOT_UPDATE    0xffff
+// EdgeTX doesn't support not updating a value, so 0 might be a safer value?
+// it always takes (11-bits) - CRSF_CHANNEL_VALUE_MID * 5/8
+#define HT_EDGETX_NO_VALUE  0
+// Stop overriding channels with PTR data if older than this
+#define HT_STALE_TIMEOUT_MS 1000
 
 extern char backpackVersion[];
 
@@ -19,7 +27,7 @@ bool VRxBackpackWiFiReadyToSend = false;
 bool BackpackTelemReadyToSend = false;
 bool lastRecordingState = false;
 
-static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
+static uint16_t ptrChannelData[CRSF_NUM_CHANNELS];
 static bool headTrackingEnabled = false;
 static uint32_t lastPTRValidTimeMs;
 
@@ -239,17 +247,36 @@ static void BackpackBinding()
     MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
+/***
+ * @brief:  Read 16-bit CRSF value channels from the packet payload and store them for head-tracking/trainer.
+ *          Process as many values as there are payload bytes available. A value of 0xffff will not overwrite that channel
+ */
 void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
 {
-    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
-    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
-    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    unsigned chStart = (config.GetPTRStartChannel() == HT_START_EDGETX) ? 0 : (config.GetPTRStartChannel() - HT_START_AUX1 + AUX1);
+    unsigned payloadPos = 0;
+    // Any time a PTR packet is received, all channels are returned to HT_DO_NOT_UPDATE unless they are in this packet
+    for (unsigned ch=0; ch<CRSF_NUM_CHANNELS; ++ch)
+    {
+        uint16_t chVal;
+        if (ch >= chStart && payloadPos < (packet->payloadSize - 1))
+        {
+            chVal = packet->payload[payloadPos] | (packet->payload[payloadPos+1] << 8);
+            payloadPos += 2;
+        }
+        else
+        {
+            chVal = HT_DO_NOT_UPDATE;
+        }
+        ptrChannelData[ch] = chVal;
+    }
+
     lastPTRValidTimeMs = now;
 }
 
 static void injectBackpackPanTiltRollData()
 {
-    if (!headTrackingEnabled || config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
+    if (!headTrackingEnabled || backpackVersion[0] == 0)
     {
         return;
     }
@@ -257,51 +284,63 @@ static void injectBackpackPanTiltRollData()
     if (config.GetPTRStartChannel() == HT_START_EDGETX)
     {
         static uint32_t lastPTRSentMs = 0;
-        if (lastPTRSentMs != lastPTRValidTimeMs)
+        if (lastPTRSentMs == lastPTRValidTimeMs)
+            return;
+        lastPTRSentMs = lastPTRValidTimeMs;
+
+        CRSF_MK_FRAME_T(crsf_channels_t) rcPacket; // not zeroed, entire packet will be filled
+        // Pack the ptrChannelData into 11 bits for the crsf_channels_t packet
+        constexpr unsigned dstBits = 11;
+        uint8_t *dst = reinterpret_cast<uint8_t *>(&rcPacket.p);
+        uint32_t accumulator = 0;
+        uint32_t bitCnt = 0;
+        for (unsigned ch=0; ch<CRSF_NUM_CHANNELS; ++ch)
         {
-            lastPTRSentMs = lastPTRValidTimeMs;
-            CRSF_MK_FRAME_T(crsf_channels_t) rcPacket = {
-                .p = {
-                    .ch0 = ptrChannelData[0],
-                    .ch1 = ptrChannelData[1],
-                    .ch2 = ptrChannelData[2]
-                }
-            };
-            crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
-            crsfRouter.deliverMessage(nullptr, &rcPacket.h);
+            uint32_t val = ptrChannelData[ch] == HT_DO_NOT_UPDATE ? HT_EDGETX_NO_VALUE : ptrChannelData[ch];
+            accumulator |= val << bitCnt;
+            bitCnt += dstBits;
+            while (bitCnt >= 8)
+            {
+
+                *dst++ = accumulator;
+                accumulator >>= 8;
+                bitCnt -= 8;
+            }
         }
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
+        crsfRouter.deliverMessage(nullptr, &rcPacket.h);
     }
-    else
+
+    else if (millis() - lastPTRValidTimeMs < HT_STALE_TIMEOUT_MS)
     {
-        const uint8_t ptrStartChannel = config.GetPTRStartChannel() - HT_START_AUX1;
-        // If enabled and this packet is less than 1 second old then use it
-        if (millis() - lastPTRValidTimeMs < 1000)
+        for (unsigned ch=0; ch<CRSF_NUM_CHANNELS; ++ch)
         {
-            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
-            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
-            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
+            const auto val = ptrChannelData[ch];
+            if (val != HT_DO_NOT_UPDATE)
+                ChannelData[ch] = val;
         }
     }
 }
 
 static void AuxStateToMSPOut()
 {
-    auto enable = config.GetPTREnableChannel() == HT_ON;
-    if (config.GetPTREnableChannel() == HT_OFF)
+    bool enable;
+    switch (config.GetPTREnableChannel())
     {
-        enable = false;
-    }
-    else if (!enable)
-    {
-        const auto chan = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
-        enable |= config.GetPTREnableChannel() % 2 == 0 ? chan : !chan;
+        case HT_OFF:
+            enable = false; break;
+        case HT_ON:
+            enable = true; break;
+        default:
+            enable = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
+            if (config.GetPTREnableChannel() % 2)
+                enable = !enable;
     }
     if (enable != headTrackingEnabled)
     {
         headTrackingEnabled = enable;
         BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
-    injectBackpackPanTiltRollData();
 
     if (config.GetDvrAux() != 0)
     {
@@ -385,7 +424,9 @@ static bool initialize()
             delay(20);
             // Rely on event() to boot
         }
-        handset->setRCDataCallback(AuxStateToMSPOut);
+        handset->setRCDataCallback(&injectBackpackPanTiltRollData);
+        // Set all channels of PTR data to "do not override" (0xffff)
+        memset(ptrChannelData, 0xff, sizeof(ptrChannelData));
     }
     return OPT_USE_TX_BACKPACK;
 }
@@ -435,7 +476,7 @@ static int timeout()
         AuxStateToMSPOut();
     }
 
-    return BACKPACK_TIMEOUT;
+    return BACKPACK_PERIOD_MS;
 }
 
 static int event()
@@ -452,7 +493,7 @@ static int event()
         BackpackBinding();
     }
 
-    return disabled ? DURATION_NEVER : BACKPACK_TIMEOUT;
+    return disabled ? DURATION_NEVER : BACKPACK_PERIOD_MS;
 }
 
 device_t Backpack_device = {
