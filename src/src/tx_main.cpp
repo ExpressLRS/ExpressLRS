@@ -1138,7 +1138,7 @@ void ProcessMSPPacket(uint32_t now, mspPacket_t *packet)
 
     VtxTriggerSend();
   }
-  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && packet->payloadSize == 6)
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR)
   {
     processPanTiltRollPacket(now, packet);
   }
