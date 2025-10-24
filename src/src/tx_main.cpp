@@ -649,24 +649,21 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+  SX12XX_Radio_Number_t transmittingRadio = SX12XX_Radio_All;
 
   if (isDualRadio())
   {
+    // Single antenna modes: tx on one antenna, and true diversity rx for tlm reception.
     switch (config.GetAntennaMode())
     {
-    case TX_RADIO_MODE_GEMINI:
-      transmittingRadio = SX12XX_Radio_All; // Gemini mode
-      break;
     case TX_RADIO_MODE_ANT_1:
-      transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm reception.
+      transmittingRadio = SX12XX_Radio_1;
       break;
     case TX_RADIO_MODE_ANT_2:
-      transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm reception.
+      transmittingRadio = SX12XX_Radio_2;
       break;
     case TX_RADIO_MODE_SWITCH:
-      if(OtaNonce%2==0)   transmittingRadio = SX12XX_Radio_1; // Single antenna tx and true diversity rx for tlm reception.
-      else   transmittingRadio = SX12XX_Radio_2; // Single antenna tx and true diversity rx for tlm reception.
+      transmittingRadio = OtaNonce%2 == 0 ? SX12XX_Radio_1 : SX12XX_Radio_2;
       break;
     default:
       break;
