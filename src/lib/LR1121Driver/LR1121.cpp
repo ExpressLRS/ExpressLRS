@@ -630,14 +630,16 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
     }
     else
     {
+        memcpy(outBuffer, data, PayloadLength);
         if (sendGeminiBuffer)
         {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, data, length, SX12XX_Radio_1);
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, dataGemini, length, SX12XX_Radio_2);
+            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_1);
+            memcpy(outBuffer, dataGemini, PayloadLength);
+            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_2);
         }
         else
         {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, data, length, radioNumber);
+            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, radioNumber);
         }
     }
 #ifdef DEBUG_LLCC68_OTA_TIMING
