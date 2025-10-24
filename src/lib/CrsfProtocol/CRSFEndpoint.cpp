@@ -304,9 +304,9 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
     switch (parameterType)
     {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-        DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
         if (parameterIndex < MAX_CRSF_PARAMETERS && paramCallbacks[parameterIndex])
         {
+            DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
             // While the command is executing, the handset will send `WRITE state=lcsQuery`.
             // paramCallbacks will set the value when nextStatusChunk == 0, or send any
             // remaining chunks when nextStatusChunk != 0
