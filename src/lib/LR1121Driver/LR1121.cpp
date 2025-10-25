@@ -722,17 +722,12 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR LR1121Driver::CheckForSecondPacket()
 {
-    constexpr SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    const uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
-    const uint8_t secondRadioIdx = !processingRadioIdx;
-
-    // processingRadio always passed the sanity check here
-    gotRadio[processingRadioIdx] = true;
-    gotRadio[secondRadioIdx] = false;
-
     hasSecondRadioGotData = false;
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
+        constexpr SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+        const uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+        const uint8_t secondRadioIdx = !processingRadioIdx;
         const uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
