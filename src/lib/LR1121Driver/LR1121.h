@@ -17,6 +17,14 @@ typedef struct
     uint16_t version;
 } __attribute__((packed)) firmware_version_t;
 
+class BufferCodec
+{
+public:
+    virtual ~BufferCodec() {}
+    virtual void encode(uint8_t *out, uint8_t *in, uint32_t len);
+    virtual void decode(uint8_t *out, uint8_t *in, uint32_t len);
+};
+
 class LR1121Driver: public SX12xxDriverCommon
 {
 public:
@@ -72,7 +80,7 @@ private:
     bool radio1isSubGHz;
     bool radio2isSubGHz;
     lr11xx_RadioOperatingModes_t fallBackMode;
-    bool useFEC;
+    BufferCodec *codec;
 
     WORD_ALIGNED_ATTR uint8_t rx_buf[32] = {};
     WORD_ALIGNED_ATTR uint8_t rx2_buf[32] = {};
