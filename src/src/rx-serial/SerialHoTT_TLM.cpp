@@ -344,10 +344,9 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
         if (escIsTurbine)
         {
             crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)));        // turbine: fuel in ml
-            crsfRpm.p.rpm3 = htobe24(esc.becCurrent);                                  // turbine: fuel in ml
-            crsfRpm.p.rpm4 = htobe24(esc.inputVoltageMin);                             // turbine: pumpV or pumpPW depending on turbine
-            
-            payloadSize = 1 + 3 * 5;
+            crsfRpm.p.rpm3 = htobe24(esc.becCurrent);                                  // turbine: fuel flow in ml/min
+ 
+            payloadSize = 1 + 3 * 4;
         }
     }
 
@@ -504,7 +503,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
     else if (device == ESC)
     {
         crsfVolt.p.cell[0] = htobe16(esc.inputVoltage * HOTT_VOLT_SCALE);                   // turbine: ECU voltage
-        crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);
+        crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);                     // turbine: pumpV or pumpPW depending on turbine
 
         payloadSize = 1 + 2 * 2;
     }
