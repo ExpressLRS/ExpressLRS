@@ -70,7 +70,7 @@ static uint32_t lastPTRValidTimeMs;
     }
     disableLoopWDT();
 
-    const auto backpack = (HardwareSerial *)TxBackpack;
+    const auto backpack = (HardwareSerial *)BackpackOrLogStrm;
     if (baud != BACKPACK_LOGGING_BAUD)
     {
         backpack->begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -180,7 +180,7 @@ static void BackpackWiFiToMSPOut(const uint16_t command)
     packet.function = command;
     packet.addByte(0);
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 static void BackpackHTFlagToMSPOut(const uint8_t arg)
@@ -191,7 +191,7 @@ static void BackpackHTFlagToMSPOut(const uint8_t arg)
     packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
     packet.addByte(arg);
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 static uint8_t GetDvrDelaySeconds(const uint8_t index)
@@ -221,7 +221,7 @@ static void BackpackDvrRecordingStateMSPOut(bool recordingState)
     packet.addByte(delay & 0xFF); // delay byte 1
     packet.addByte(delay >> 8);   // delay byte 2
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 static void BackpackBinding()
@@ -235,7 +235,7 @@ static void BackpackBinding()
         packet.addByte(b);
     }
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
@@ -345,7 +345,7 @@ void sendCRSFTelemetryToBackpack(const uint8_t *data)
         packet.addByte(data[i]);
     }
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
@@ -357,7 +357,7 @@ void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
     }
 
     const uint8_t count = data[1];
-    TxBackpack->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+    BackpackOrLogStrm->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
 }
 
 static void sendConfigToBackpack()
@@ -369,7 +369,7 @@ static void sendConfigToBackpack()
     packet.function = MSP_ELRS_BACKPACK_CONFIG;
     packet.addByte(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE); // Backpack tlm mode
     packet.addByte(config.GetBackpackTlmMode());
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
 static bool initialize()
@@ -411,7 +411,7 @@ static int timeout()
         out.reset();
         out.makeCommand();
         out.function = MSP_ELRS_GET_BACKPACK_VERSION;
-        MSP::sendPacket(&out, TxBackpack);
+        MSP::sendPacket(&out, BackpackOrLogStrm);
         DBGLN("Sending get backpack version command");
     }
 

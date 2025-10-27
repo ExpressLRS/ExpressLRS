@@ -52,7 +52,6 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
-Stream *TxBackpack;
 Stream *TxUSB;
 
 // Variables / constants for Airport //
@@ -88,7 +87,7 @@ volatile uint32_t LastTLMpacketRecvMillis = 0;
 uint32_t TLMpacketReported = 0;
 static bool commitInProgress = false;
 
-LQCALC<25> LQCalc;
+LQCALC<100> LqTQly;
 
 volatile bool busyTransmitting;
 static volatile bool ModelUpdatePending;
@@ -187,7 +186,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
   }
 
   LastTLMpacketRecvMillis = millis();
-  LQCalc.add();
+  LqTQly.add();
 
   Radio.CheckForSecondPacket();
   if (Radio.hasSecondRadioGotData)
@@ -742,12 +741,12 @@ void ICACHE_RAM_ATTR timerCallback()
     // Use downlink LQ for LBT success ratio instead for EU/CE reg domain
     linkStats.downlink_Link_quality = LBTSuccessCalc.getLQ();
 #else
-    linkStats.downlink_Link_quality = LQCalc.getLQ();
+    linkStats.downlink_Link_quality = LqTQly.getLQ();
 #endif
-    LQCalc.inc();
+    LqTQly.inc();
     return;
   }
-  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LQCalc.currentIsSet())
+  else if (TelemetryRcvPhase == ttrpExpectingTelem && !LqTQly.currentIsSet())
   {
     // Indicate no telemetry packet received to the DP system
     DynamicPower_TelemetryUpdate(DYNPOWER_UPDATE_MISSED);
@@ -879,7 +878,7 @@ static void CheckConfigChangePending()
 bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 {
   // busyTransmitting is required here to prevent accidental rxdone IRQs due to interference triggering RXdoneISR.
-  if (LQCalc.currentIsSet() || busyTransmitting)
+  if (LqTQly.currentIsSet() || busyTransmitting)
   {
     return false; // Already received tlm, do not run ProcessTLMpacket() again.
   }
@@ -1220,13 +1219,13 @@ static void HandleUARTin()
   }
 
   // Read from the Backpack serial port
-  if (TxBackpack->available())
+  if (BackpackOrLogStrm->available())
   {
-    auto size = std::min(uartInputBuffer.free(), (uint16_t)TxBackpack->available());
+    auto size = std::min(uartInputBuffer.free(), (uint16_t)BackpackOrLogStrm->available());
     if (size > 0)
     {
       uint8_t buf[size];
-      TxBackpack->readBytes(buf, size);
+      BackpackOrLogStrm->readBytes(buf, size);
 
       // If the TX is in Mavlink mode, push the bytes into the fifo buffer
       if (config.GetLinkMode() == TX_MAVLINK_MODE)
@@ -1258,7 +1257,7 @@ static void setupSerial()
    * This is always done because we need a place to send data even if there is no backpack!
    */
 
-// Setup TxBackpack
+// Setup BackpackOrLogStrm
 #if defined(PLATFORM_ESP32)
   Stream *serialPort;
 
@@ -1288,7 +1287,7 @@ static void setupSerial()
     serialPort = new NullStream();
   }
 #endif
-  TxBackpack = serialPort;
+  BackpackOrLogStrm = serialPort;
 
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
   Serial.begin(460800);
@@ -1303,8 +1302,8 @@ static void setupSerial()
   {
     // The backpack or Airpoirt is already assigned on UART0 (pins 3, 1)
     // This is also USB on modules that use DIPs
-    // Set TxUSB to TxBackpack so that data goes to the same place
-    TxUSB = TxBackpack;
+    // Set TxUSB to BackpackOrLogStrm so that data goes to the same place
+    TxUSB = BackpackOrLogStrm;
   }
   else if (GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM && GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM)
   {
@@ -1314,7 +1313,7 @@ static void setupSerial()
   else
   {
     // The backpack is on a separate UART to UART0
-    // Set TxUSB to pins 3, 1 so that we can access TxUSB and TxBackpack independantly
+    // Set TxUSB to pins 3, 1 so that we can access TxUSB and BackpackOrLogStrm independantly
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
   }
@@ -1384,7 +1383,7 @@ static void setupBindingFromConfig()
 #endif
   }
 
-  DBGLN("UID=(%d, %d, %d, %d, %d, %d)",
+  DBGLN("UID=(%u, %u, %u, %u, %u, %u)",
     UID[0], UID[1], UID[2], UID[3], UID[4], UID[5]);
 
   OtaUpdateCrcInitFromUid();
@@ -1432,8 +1431,6 @@ void setup()
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
 
-    DBGLN("ExpressLRS TX Module Booted...");
-
     eeprom.Begin(); // Init the eeprom
     config.SetStorageProvider(&eeprom); // Pass pointer to the Config class for access to storage
     config.Load(); // Load the stored values from eeprom
@@ -1480,8 +1477,8 @@ void setup()
   {
     // In the failure case we set the logging to the null logger so nothing crashes
     // if it decides to log something
-    TxBackpack = new NullStream();
-    TxUSB = TxBackpack;
+    BackpackOrLogStrm = new NullStream();
+    TxUSB = BackpackOrLogStrm;
   }
 
   registerButtonFunction(ACTION_BIND, EnterBindingMode);
@@ -1566,7 +1563,7 @@ void loop()
           // forward raw mavlink data to USB
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           // And to the backpack if we have one
-          if (TxUSB != TxBackpack)
+          if (TxUSB != BackpackOrLogStrm)
           {
             sendMAVLinkTelemetryToBackpack(CRSFinBuffer);
           }

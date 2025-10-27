@@ -9,7 +9,7 @@
 local EXITVER = "-- EXIT (Lua r16) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
-local deviceName = "Loading..."
+local deviceName = nil
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -895,7 +895,10 @@ local function checkCrsfModule()
   for modIdx = 0, 1 do
     local mod = model.getModule(modIdx)
     if mod and (mod.Type == nil or mod.Type == 5) then
-      -- CRSF found
+      -- CRSF found, put module type in Loading message
+      local modDescrip = (mod.Type == nil) and " awaiting" or (modIdx == 0) and " Internal" or " External"
+      -- Prefix with "Lua rXXX" from between EXITVER parens
+      deviceName = string.match(EXITVER, "%((.*)%)") .. modDescrip .. " TX..."
       checkCrsfModule = nil
       return 0
     end
