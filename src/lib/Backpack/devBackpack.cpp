@@ -2,7 +2,6 @@
 
 #include "CRSFHandset.h"
 #include "CRSFRouter.h"
-#include "common.h"
 #include "config.h"
 #include "device.h"
 #include "logging.h"
@@ -247,40 +246,43 @@ void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
     lastPTRValidTimeMs = now;
 }
 
-static void injectBackpackPanTiltRollData()
+static void headtrackPublishChannelsToEdgeTX()
 {
-    if (!headTrackingEnabled || config.GetPTREnableChannel() == HT_OFF || backpackVersion[0] == 0)
+    if (!headTrackingEnabled || config.GetPTRStartChannel() != HT_START_EDGETX || backpackVersion[0] == 0)
     {
         return;
     }
 
-    if (config.GetPTRStartChannel() == HT_START_EDGETX)
+    static uint32_t lastPTRSentMs = 0;
+    if (lastPTRSentMs != lastPTRValidTimeMs)
     {
-        static uint32_t lastPTRSentMs = 0;
-        if (lastPTRSentMs != lastPTRValidTimeMs)
-        {
-            lastPTRSentMs = lastPTRValidTimeMs;
-            CRSF_MK_FRAME_T(crsf_channels_t) rcPacket = {
-                .p = {
-                    .ch0 = ptrChannelData[0],
-                    .ch1 = ptrChannelData[1],
-                    .ch2 = ptrChannelData[2]
-                }
-            };
-            crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
-            crsfRouter.deliverMessage(nullptr, &rcPacket.h);
-        }
+        lastPTRSentMs = lastPTRValidTimeMs;
+        CRSF_MK_FRAME_T(crsf_channels_t) rcPacket = {
+            .p = {
+                .ch0 = ptrChannelData[0],
+                .ch1 = ptrChannelData[1],
+                .ch2 = ptrChannelData[2]
+            }
+        };
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
+        crsfRouter.deliverMessage(nullptr, &rcPacket.h);
     }
-    else
+}
+
+static void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)
+{
+    if (!headTrackingEnabled || config.GetPTRStartChannel() == HT_START_EDGETX || backpackVersion[0] == 0)
     {
-        const uint8_t ptrStartChannel = config.GetPTRStartChannel() - HT_START_AUX1;
-        // If enabled and this packet is less than 1 second old then use it
-        if (millis() - lastPTRValidTimeMs < 1000)
-        {
-            ChannelData[ptrStartChannel + 4] = ptrChannelData[0];
-            ChannelData[ptrStartChannel + 5] = ptrChannelData[1];
-            ChannelData[ptrStartChannel + 6] = ptrChannelData[2];
-        }
+        return;
+    }
+
+    const uint8_t ptrStartChannel = config.GetPTRStartChannel() - HT_START_AUX1;
+    // If enabled and this packet is less than 1 second old then use it
+    if (millis() - lastPTRValidTimeMs < 1000)
+    {
+        if (ptrStartChannel + 4 < channelCount) channels[ptrStartChannel + 4] = ptrChannelData[0];
+        if (ptrStartChannel + 5 < channelCount) channels[ptrStartChannel + 5] = ptrChannelData[1];
+        if (ptrStartChannel + 6 < channelCount) channels[ptrStartChannel + 6] = ptrChannelData[2];
     }
 }
 
@@ -301,7 +303,7 @@ static void AuxStateToMSPOut()
         headTrackingEnabled = enable;
         BackpackHTFlagToMSPOut(headTrackingEnabled);
     }
-    injectBackpackPanTiltRollData();
+    headtrackPublishChannelsToEdgeTX();
 
     if (config.GetDvrAux() != 0)
     {
@@ -385,6 +387,7 @@ static bool initialize()
             delay(20);
             // Rely on event() to boot
         }
+        handset->setRcChannelsOverrideCallback(headtrackOverrideChannels);
         handset->setRCDataCallback(AuxStateToMSPOut);
     }
     return OPT_USE_TX_BACKPACK;

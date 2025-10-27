@@ -332,13 +332,14 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
     debugRcvrLinkstatsPacketId = ota4->dbg_linkstats.packetNum;
 #else
     // The analog channels, encoded as 10bit where 0 = 998us and 1023 = 2012us
-    UnpackChannels4x10ToUInt11(&ota4->rc.ch, &channelData[0]);
+    uint32_t rawChannelData[4];
+    UnpackChannels4x10ToUInt11(&ota4->rc.ch, rawChannelData);
     // The unpacker simply does a << 1 to convert 10 to 11bit, but Hybrid/Wide modes
     // only pack a subset of the full range CRSF data, so properly expand it
     // This is ~80 bytes less code than passing an 10-to-11 expander fn to the unpacker
     for (unsigned ch=0; ch<4; ++ch)
     {
-        channelData[ch] = UINT10_to_CRSF(channelData[ch] >> 1);
+        channelData[ch] = UINT10_to_CRSF(rawChannelData[ch] >> 1);
     }
     channelData[4] = BIT_to_CRSF(isArmed);
 #endif

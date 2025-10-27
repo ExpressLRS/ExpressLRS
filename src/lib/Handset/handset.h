@@ -1,6 +1,8 @@
 #pragma once
 
-#include "targets.h"
+#include "common.h"
+
+typedef void (*RcChannelsOverrideCallback_fn)(uint32_t channels[], size_t channelCnt);
 
 /**
  * @brief Abstract class that is extended to provide an interface to a handset.
@@ -25,6 +27,12 @@ public:
      * @brief End the handset protocol
      */
     virtual void End() = 0;
+
+    /**
+     * @brief  Register callback used to allow overriding of channels when received before any actions are taken with them
+     *         and before RCDataCallback
+     */
+    void setRcChannelsOverrideCallback(RcChannelsOverrideCallback_fn callback) { RcChannelsOverrideCallback = callback; }
 
     /**
      * @brief register a function to be called when the protocol has read an RC data packet from the handset
@@ -74,13 +82,25 @@ public:
     virtual void JustSentRFpacket() {}
 
     /**
+     * @brief Run any RcChannelsOverride callback
+     *        Should be called by incoming ChannelData generators before RCDataReceived()
+     */
+    void PerformChannelOverrides(uint32_t channels[], size_t channelCount)
+    {
+        if (RcChannelsOverrideCallback)
+            RcChannelsOverrideCallback(channels, channelCount);
+    }
+
+    /**
      * Inform the handset that a valid RC packet has been received
      */
-    void SetRCDataReceived()
+    void RCDataReceived(uint32_t channels[], size_t channelCount)
     {
-        // Call the registered RCdataCallback, if there is one, so it can modify the channel data if it needs to.
-        if (RCdataCallback) RCdataCallback();
         RCdataLastRecv = micros();
+        for (unsigned ch=0; ch<channelCount; ++ch)
+            ChannelData[ch] = channels[ch];
+        if (RCdataCallback)
+            RCdataCallback();
     }
 
     /**
@@ -110,6 +130,7 @@ protected:
     virtual ~Handset() = default;
 
     bool controllerConnected = false;
+    RcChannelsOverrideCallback_fn RcChannelsOverrideCallback = nullptr;
     void (*RCdataCallback)() = nullptr;  // called when there is new RC data
     void (*disconnected)() = nullptr;    // called when RC packet stream is lost
     void (*connected)() = nullptr;       // called when RC packet stream is regained
