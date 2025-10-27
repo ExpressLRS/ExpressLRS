@@ -101,7 +101,7 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform, devi
             for k in jmespath.search(f'[*."{moduletype}_900".*][][?platform==`{platform}`][]', targets):
                 if '_LR1121_' in k['firmware']:
                     products.append(k)
-        # Sort the list by product name, case insenstive, and print the list
+        # Sort the list by product name, case insensitive, and print the list
         products = sorted(products, key=lambda p: p['product_name'].casefold())
         for i, p in enumerate(products):
             print(f"{i+1}) {p['product_name']}")
