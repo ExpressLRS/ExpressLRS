@@ -83,8 +83,8 @@ uint32_t SyncPacketLastSent = 0;
 static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle;
 ////////////////////////////////////////////////
 
-volatile uint32_t LastTLMpacketRecvMillis = 0;
-uint32_t TLMpacketReported = 0;
+static uint32_t LastTLMpacketRecv_Ms = 0;
+static uint32_t LinkStatsLastReported_Ms = 0;
 static bool commitInProgress = false;
 
 LQCALC<100> LqTQly;
@@ -190,7 +190,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     return false;
   }
 
-  LastTLMpacketRecvMillis = millis();
+  LastTLMpacketRecv_Ms = millis();
   LqTQly.add();
 
   Radio.CheckForSecondPacket();
@@ -422,7 +422,7 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
     uint8_t newTlmDenom = TLMratioEnumToValue(retVal);
     // Delay going into disconnected state when the TLM ratio increases
     if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
-      LastTLMpacketRecvMillis = SyncPacketLastSent;
+      LastTLMpacketRecv_Ms = SyncPacketLastSent;
     ExpressLRS_currTlmDenom = newTlmDenom;
   }
 
@@ -957,7 +957,7 @@ static void UpdateConnectDisconnectStatus()
     (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
     ) + 2U;
   // Capture the last before now so it will always be <= now
-  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  const uint32_t lastTlmMillis = LastTLMpacketRecv_Ms;
   const uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
@@ -976,6 +976,8 @@ static void UpdateConnectDisconnectStatus()
     (connectionState == awaitingModelId && (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs))
   {
     setConnectionState(disconnected);
+    linkStats.uplink_Link_quality = 0;
+    LinkStatsLastReported_Ms = 0; // Notify immediately
     connectionHasModelMatch = true;
   }
 }
@@ -1409,6 +1411,20 @@ static void cyclePower()
   }
 }
 
+static void checkSendLinkStatsToHandset(uint32_t now)
+{
+  if ((now - LinkStatsLastReported_Ms) > firmwareOptions.tlm_report_interval)
+  {
+    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
+
+    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+    // the linkStats originates from the OTA connector so we don't send it back there.
+    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
+    LinkStatsLastReported_Ms = now;
+  }
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1538,20 +1554,7 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
-
-  /* Send TLM updates to handset if connected + reporting period
-   * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
-      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
-  {
-    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
-
-    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
-    // the linkStats originates from the OTA connector so we don't send it back there.
-    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
-    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
-    TLMpacketReported = now;
-  }
+  checkSendLinkStatsToHandset(now);
 
   if (TelemetryReceiver.HasFinishedData())
   {
