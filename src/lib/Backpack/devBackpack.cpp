@@ -341,11 +341,11 @@ static void BackpackPollAuxStates()
         headTrackingEnabled = enable;
         BackpackHTFlagToMSPOut(headTrackingEnabled);
 
-        auto rcdata_cb = (enable && config.GetPTRStartChannel() == HT_START_EDGETX) ? &headtrackPublishChannelsToEdgeTX : nullptr;
-        handset->setRCDataCallback(rcdata_cb);
-
         auto rcchannelsoverride_cb = (enable && config.GetPTRStartChannel() != HT_START_EDGETX) ? &headtrackOverrideChannels : nullptr;
         handset->setRcChannelsOverrideCallback(rcchannelsoverride_cb);
+
+        auto rcdata_cb = (enable && config.GetPTRStartChannel() == HT_START_EDGETX) ? &headtrackPublishChannelsToEdgeTX : nullptr;
+        handset->setRCDataCallback(rcdata_cb);
     }
 
     // DVR recording enable
@@ -497,6 +497,16 @@ static int event()
     if (InBindingMode)
     {
         BackpackBinding();
+    }
+
+    if (disabled && headTrackingEnabled)
+    {
+        // Disconnect any handlers that might be active. This is done blindly and will disconnect callbacks from other
+        // devices if they are assigned in their own event() handlers that fire before this!
+        // Note there's no MSP_ELRS_BACKPACK_SET_PTR sent either, as the backpack is disabled above
+        headTrackingEnabled = false;
+        handset->setRcChannelsOverrideCallback(nullptr);
+        handset->setRCDataCallback(nullptr);
     }
 
     return disabled ? DURATION_NEVER : BACKPACK_PERIOD_MS;
