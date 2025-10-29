@@ -34,6 +34,7 @@ void AutoDetect::End()
 
 void AutoDetect::migrateTo(Handset *that) const
 {
+    that->setRcChannelsOverrideCallback(RcChannelsOverrideCallback);
     that->setRCDataCallback(RCdataCallback);
     that->registerCallbacks(connected, disconnected);
     that->Begin();
