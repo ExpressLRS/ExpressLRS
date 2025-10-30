@@ -417,7 +417,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
     ls->lq = linkStats.uplink_Link_quality;
-    ls->tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+    ls->trueDiversityAvailable = isDualRadio();
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
@@ -467,35 +467,33 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         // Note the use of `ul_link_stats.payload` vs just `payload`
         if (OtaIsFullRes)
         {
-            ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
-            otaPkt.full.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
-
-            otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+            ls = &otaPkt.full.data_dl.ul_link_stats.stats;
+            otaPkt.full.data_dl.tlmConfirm = MspReceiver.GetCurrentConfirm();
 
             if (geminiMode)
             {
                 sendGeminiBuffer = true;
-                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload)] = {0};
+                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.data_dl.ul_link_stats.payload)] = {0};
 
-                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
-                memcpy(otaPkt.full.tlm_dl.ul_link_stats.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+                otaPkt.full.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                memcpy(otaPkt.full.data_dl.ul_link_stats.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.data_dl.ul_link_stats.payload));
                 LinkStatsToOta(ls);
 
                 otaPktGemini = otaPkt;
-                memcpy(otaPktGemini.full.tlm_dl.ul_link_stats.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.tlm_dl.ul_link_stats.payload)], sizeof(otaPktGemini.full.tlm_dl.ul_link_stats.payload));
+                memcpy(otaPktGemini.full.data_dl.ul_link_stats.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.data_dl.ul_link_stats.payload)], sizeof(otaPktGemini.full.data_dl.ul_link_stats.payload));
             }
             else
             {
-                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.full.tlm_dl.ul_link_stats.payload,
-                    sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+                otaPkt.full.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.full.data_dl.ul_link_stats.payload,
+                    sizeof(otaPkt.full.data_dl.ul_link_stats.payload));
                 LinkStatsToOta(ls);
             }
         }
         else
         {
-            ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
-            otaPkt.std.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
+            ls = &otaPkt.std.data_dl.ul_link_stats.stats;
+            otaPkt.std.data_dl.tlmConfirm = MspReceiver.GetCurrentConfirm();
             LinkStatsToOta(ls);
         }
 
@@ -525,42 +523,42 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         {
             if (OtaIsFullRes)
             {
-                otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+                otaPkt.full.data_dl.tlmConfirm = MspReceiver.GetCurrentConfirm();
 
                 if (geminiMode)
                 {
                     sendGeminiBuffer = true;
-                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.tlm_dl.payload)] = {0};
+                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.data_dl.payload)] = {0};
 
-                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
-                    memcpy(otaPkt.full.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.tlm_dl.payload));
+                    otaPkt.full.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                    memcpy(otaPkt.full.data_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.data_dl.payload));
 
                     otaPktGemini = otaPkt;
-                    memcpy(otaPktGemini.full.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.tlm_dl.payload)], sizeof(otaPktGemini.full.tlm_dl.payload));
+                    memcpy(otaPktGemini.full.data_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.data_dl.payload)], sizeof(otaPktGemini.full.data_dl.payload));
                 }
                 else
                 {
-                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.full.tlm_dl.payload, sizeof(otaPkt.full.tlm_dl.payload));
+                    otaPkt.full.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.full.data_dl.payload, sizeof(otaPkt.full.data_dl.payload));
                 }
             }
             else
             {
-                otaPkt.std.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+                otaPkt.std.data_dl.tlmConfirm = MspReceiver.GetCurrentConfirm();
 
                 if (geminiMode)
                 {
                     sendGeminiBuffer = true;
-                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.std.tlm_dl.payload)] = {0};
+                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.std.data_dl.payload)] = {0};
 
-                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
-                    memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
+                    otaPkt.std.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                    memcpy(otaPkt.std.data_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.data_dl.payload));
 
                     otaPktGemini = otaPkt;
-                    memcpy(otaPktGemini.std.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.tlm_dl.payload)], sizeof(otaPktGemini.std.tlm_dl.payload));
+                    memcpy(otaPktGemini.std.data_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.data_dl.payload)], sizeof(otaPktGemini.std.data_dl.payload));
                 }
                 else
                 {
-                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.std.tlm_dl.payload, sizeof(otaPkt.std.tlm_dl.payload));
+                    otaPkt.std.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.std.data_dl.payload, sizeof(otaPkt.std.data_dl.payload));
                 }
             }
         }
@@ -984,12 +982,12 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     uint8_t dataLen;
     if (OtaIsFullRes)
     {
-        packageIndex = otaPktPtr->full.msp_ul.packageIndex;
-        payload = otaPktPtr->full.msp_ul.payload;
-        dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
+        packageIndex = otaPktPtr->full.data_ul.packageIndex;
+        payload = otaPktPtr->full.data_ul.payload;
+        dataLen = sizeof(otaPktPtr->full.data_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmConfirm);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.data_ul.tlmConfirm);
         }
         else
         {
@@ -998,12 +996,12 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
     }
     else
     {
-        packageIndex = otaPktPtr->std.msp_ul.packageIndex;
-        payload = otaPktPtr->std.msp_ul.payload;
-        dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
+        packageIndex = otaPktPtr->std.data_ul.packageIndex;
+        payload = otaPktPtr->std.data_ul.payload;
+        dataLen = sizeof(otaPktPtr->std.data_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmConfirm);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.data_ul.tlmConfirm);
         }
         else
         {
