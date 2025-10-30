@@ -3,7 +3,6 @@
 #include "rxtx_common.h"
 
 #include "crc.h"
-#include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
@@ -103,7 +102,6 @@ PFD PFDloop;
 Crc2Byte ota_crc;
 ELRS_EEPROM eeprom;
 RxConfig config;
-Telemetry telemetry;
 
 CRSFRouter crsfRouter;
 RXEndpoint crsfReceiver;

@@ -2,7 +2,6 @@
 #include "common.h"
 #include "crsf2msp.h"
 #include "msp2crsf.h"
-#include <cstdint>
 #include <iostream>
 #include <unity.h>
 
@@ -14,6 +13,20 @@ MSP2CROSSFIRE msp2crsf;
 CROSSFIRE2MSP crsf2msp;
 
 CRSFRouter crsfRouter;
+class MockConnector : public CRSFConnector
+{
+public:
+    MockConnector()
+    {
+        addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER);
+        crsfRouter.addConnector(this);
+    }
+
+    void forwardMessage(const crsf_header_t *message) override
+    {
+        crsf2msp.parse((uint8_t *)message, [](const uint8_t *, const uint32_t){});
+    }
+} crsfConnector;
 
 // MSP V2 (function id: 100, payload size: 0)
 const uint8_t MSP_IDENT[] = {0x24, 0x58, 0x3c, 0x00, 0x64, 0x00, 0x00, 0x00, 0x8f};
@@ -33,33 +46,7 @@ const uint8_t MSP_BOARD_INFO_81[] = {36, 77, 62, 75, 4, 83, 52, 48, 53, 0, 0, 2,
 // MSPV2 46b
 const uint8_t MSPV2_SERIAL_SETTINGS[] = {0x24, 0x58, 0x3C, 0x00, 0x0A, 0x10, 0x25, 0x00, 0x04, 0x14, 0x01, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x00, 0x40, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x05, 0x00, 0x00, 0x00, 0x00, 0x05, 0x04, 0x00, 0x05, 0x7B};
 
-void printBufferhex(const uint8_t *buf, int len)
-{
-    cout << "len: " << dec << (int)len << " [ ";
-    for (int i = 0; i < len; i++)
-    {
-        cout << "0x" << hex << (int)buf[i] << " ";
-    }
-    cout << "]" << endl;
-}
-
-void printFIFOhex()
-{
-    while (msp2crsf.FIFOout.peek())
-    {
-        uint8_t len = msp2crsf.FIFOout.pop();
-        cout << "len: " << dec << (int)len << " [ ";
-
-        for (int i = 0; i < len; i++)
-        {
-            cout << "0x";
-            cout << hex << (int)msp2crsf.FIFOout.pop() << " ";
-        }
-        cout << "]" << endl;
-    }
-}
-
-void runTest(const uint8_t *frame, int frameLen)
+void runTest(const uint8_t *frame, const int frameLen)
 {
     cout << "MSP In Len: " << dec << (int)frameLen << endl;
 
@@ -70,14 +57,7 @@ void runTest(const uint8_t *frame, int frameLen)
     // cout << "CRSF(MSP())          ";
     // printFIFOhex();
 
-    msp2crsf.parse(frame, frameLen); // do again cause we pop'd the buffer
-    while (msp2crsf.FIFOout.peek() > 0)
-    {
-        uint8_t sizeOut = msp2crsf.FIFOout.pop();
-        uint8_t crsfFrame[64];
-        msp2crsf.FIFOout.popBytes(crsfFrame, sizeOut);
-        crsf2msp.parse(crsfFrame);
-    }
+    msp2crsf.parse(nullptr, frame, frameLen); // do again because we pop'd the buffer
 
     // if (crsf2msp.isFrameReady())
     // {
@@ -88,7 +68,7 @@ void runTest(const uint8_t *frame, int frameLen)
     // {
     //     cout << "Frame not ready\n";
     // }
-    cout << "MSP Out Len: " << dec << (int)crsf2msp.getFrameLen() << endl;
+    cout << "MSP Out Len: " << dec << crsf2msp.getFrameLen() << endl;
     TEST_ASSERT_EQUAL_HEX8_ARRAY(frame, crsf2msp.getFrame(), frameLen);
 }
 

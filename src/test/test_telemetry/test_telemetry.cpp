@@ -1,13 +1,13 @@
+
 #include <cstdint>
 #include <iostream>
-#include <telemetry.h>
 #include <unity.h>
 
 #include "CRSFRouter.h"
+#include "CRSFParser.h"
 #include "RXOTAConnector.h"
 #include "common.h"
 
-Telemetry telemetry;
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
 
 class MockEndpoint : public CRSFEndpoint
@@ -66,13 +66,14 @@ public:
     std::vector<uint8_t> data;
 } connector;
 
+CRSFParser parser;
 CRSFRouter crsfRouter;
 
 int sendData(uint8_t *data, int length)
 {
     for(int i = 0; i < length; i++)
     {
-        if (!telemetry.RXhandleUARTin(nullptr, data[i]))
+        if (!parser.processByte(nullptr, data[i]))
         {
             return i;
         }
@@ -85,7 +86,7 @@ int sendDataWithoutCheck(uint8_t *data, int length)
 {
     for(int i = 0; i < length; i++)
     {
-        telemetry.RXhandleUARTin(nullptr, data[i]);
+        parser.processByte(nullptr, data[i]);
     }
 
     return length;
@@ -255,7 +256,7 @@ void test_function_store_ardupilot_status_text(void)
 
 void test_function_uart_in(void)
 {
-    TEST_ASSERT_EQUAL(true, telemetry.RXhandleUARTin(nullptr, CRSF_ADDRESS_CRSF_RECEIVER));
+    TEST_ASSERT_EQUAL(true, parser.processByte(nullptr, CRSF_ADDRESS_CRSF_RECEIVER));
 }
 
 void test_function_add_type_with_zero_crc(void)
@@ -383,7 +384,7 @@ void setUp()
     connector.ResetState();
     connector.data.clear();
     endpoint.data.clear();
-    telemetry.Reset();
+    parser.Reset();
 }
 
 void tearDown()

@@ -7,7 +7,6 @@
 #include "logging.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "telemetry.h"
 
 #define BACKPACK_TIMEOUT 20 // How often to check for backpack commands
 
@@ -264,8 +263,8 @@ static void headtrackPublishChannelsToEdgeTX()
                 .ch2 = ptrChannelData[2]
             }
         };
-        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
-        crsfRouter.deliverMessage(nullptr, &rcPacket.h);
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &rcPacket.h);
     }
 }
 

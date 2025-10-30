@@ -1228,13 +1228,6 @@ static void HandleWebUpdate()
   }
 }
 
-void HandleMSP2WIFI()
-{
-  #if defined(TARGET_RX)
-  wifi2tcp.handle();
-  #endif
-}
-
 static int start()
 {
   ipAddress.fromString(wifi_ap_address);
@@ -1267,7 +1260,6 @@ static int timeout()
   if (wifiStarted)
   {
     HandleWebUpdate();
-    HandleMSP2WIFI();
 #if defined(PLATFORM_ESP8266)
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt

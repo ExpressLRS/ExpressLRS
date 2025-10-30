@@ -66,6 +66,17 @@ public:
     void deliverMessage(const CRSFConnector *connector, const crsf_header_t *message) const;
 
     /**
+     * Routes a CRSF message to a connector that is known to deliver messages to the given device id.
+     *
+     * The message is delivered to the connector responsible for the provided destination address. For broadcast messages
+     * or messages with an unknown destination, the message is forwarded to all other connectors.
+     *
+     * @param destination The device_id of the target for this message.
+     * @param message Pointer to the CRSF message header structure containing the message data.
+     */
+    void deliverMessageTo(const crsf_addr_e destination, const crsf_header_t *message) const;
+
+    /**
      * Sets the header fields and calculates the CRC for a CRSF frame.
      *
      * This function populates the provided CRSF frame header with the specified frame type,
@@ -74,9 +85,8 @@ public:
      * @param frame Pointer to the CRSF frame header structure that will be populated and updated.
      * @param frameType The type of the CRSF frame to be set in the header.
      * @param frameSize The size of the CRSF frame, including payload and header fields (type and CRC).
-     * @param destAddr The destination address for the CRSF frame, as defined in the CRSF addressing scheme.
      */
-    void SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize, crsf_addr_e destAddr);
+    void SetHeaderAndCrc(crsf_header_t *frame, crsf_frame_type_e frameType, uint8_t frameSize);
 
     /**
      * Sets the extended header fields and calculates the CRC for a CRSF frame.
@@ -123,7 +133,7 @@ public:
      * @param destination The target address within the CRSF system to which the message is directed.
      * @param origin The identifier indicating the source of the MSP message within the CRSF system.
      */
-    void AddMspMessage(const mspPacket_t *packet, uint8_t destination, uint8_t origin);
+    void AddMspMessage(const mspPacket_t *packet, crsf_addr_e destination, crsf_addr_e origin);
 
     uint8_t getConnectorMaxPacketSize(crsf_addr_e origin) const;
 

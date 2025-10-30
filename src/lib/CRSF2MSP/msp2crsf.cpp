@@ -2,31 +2,29 @@
 
 #include "CRSFRouter.h"
 
-MSP2CROSSFIRE::MSP2CROSSFIRE() {}
-
-void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, uint8_t seqNumber)
+void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, const uint8_t seqNumber)
 {
-    uint8_t seqNumberContrained = seqNumber & 0b1111; // constrain to bounds
-    data &= ~(0b1111);                                // clear seq number
-    data |= seqNumberContrained;                      // set seq number
+    const uint8_t seqNumberConstrained = seqNumber & 0b1111; // constrain to bounds
+    data = (data & ~0b1111) | seqNumberConstrained;
 }
 
 void MSP2CROSSFIRE::setNewFrame(uint8_t &data, bool isNewFrame)
 {
     if (isNewFrame)
     {
-        data |= 0b10000; // set bit 4
+        data |= bit(4);
     }
     else
     {
-        data &= ~(0b10000); // clear bit 4
+        data &= ~bit(4);
     }
 }
 
-void MSP2CROSSFIRE::setVersion(uint8_t &data, MSPframeType_e version)
+void MSP2CROSSFIRE::setVersion(uint8_t &data, const MSPframeType_e version)
 {
     uint8_t val;
 
+    data &= ~(0b11 << 5); // clear version
     if (version == MSP_FRAME_V1 || version == MSP_FRAME_V1_JUMBO)
     {
         val = 1;
@@ -40,39 +38,35 @@ void MSP2CROSSFIRE::setVersion(uint8_t &data, MSPframeType_e version)
         setError(data, true);
         return;
     }
-    data &= ~(0b11 << 5); // clear version
-    data |= (val << 5);   // set version
+    data |= val << 5;   // set version
 }
 
-uint8_t MSP2CROSSFIRE::getHeaderDir(uint8_t headerDir)
+crsf_frame_type_e MSP2CROSSFIRE::getHeaderDir(const uint8_t headerDir)
 {
     if (headerDir == '<')
     {
-        return 0x7A;
+        return CRSF_FRAMETYPE_MSP_REQ;
     }
-    else if (headerDir == '>')
+    if (headerDir == '>')
     {
-        return 0x7B;
+        return CRSF_FRAMETYPE_MSP_RESP;
     }
-    else
-    {
-        return 0;
-    }
+    return (crsf_frame_type_e)0;
 }
 
-void MSP2CROSSFIRE::setError(uint8_t &data, bool isError)
+void MSP2CROSSFIRE::setError(uint8_t &data, const bool isError)
 {
     if (isError)
     {
-        data |= 0b10000000; // set bit 7
+        data |= bit(7);
     }
     else
     {
-        data &= ~(0b10000000); // clear bit 7
+        data &= ~bit(7);
     }
 }
 
-uint32_t MSP2CROSSFIRE::getFrameLen(uint32_t payloadLen, uint8_t mspVersion)
+uint32_t MSP2CROSSFIRE::getFrameLen(const uint32_t payloadLen, const uint8_t mspVersion)
 {
     uint32_t frameLen = 0;
     switch (mspVersion)
@@ -97,7 +91,7 @@ uint32_t MSP2CROSSFIRE::getFrameLen(uint32_t payloadLen, uint8_t mspVersion)
     return frameLen;
 }
 
-uint32_t MSP2CROSSFIRE::getPayloadLen(const uint8_t *data, MSPframeType_e mspVersion)
+uint32_t MSP2CROSSFIRE::getPayloadLen(const uint8_t *data, const MSPframeType_e mspVersion)
 {
     uint32_t packetLen = 0;
     uint8_t lowByte;
@@ -105,104 +99,73 @@ uint32_t MSP2CROSSFIRE::getPayloadLen(const uint8_t *data, MSPframeType_e mspVer
 
     switch (mspVersion)
     {
-        {
-        case MSP_FRAME_V1:
-            packetLen = data[3];
-            break;
+    case MSP_FRAME_V1:
+        packetLen = data[3];
+        break;
 
-        case MSP_FRAME_V2:
-            lowByte = data[6];
-            highByte = data[7];
-            packetLen = (highByte << 8) | lowByte;
-            break;
+    case MSP_FRAME_V2:
+        lowByte = data[6];
+        highByte = data[7];
+        packetLen = (highByte << 8) | lowByte;
+        break;
 
-        case MSP_FRAME_V1_JUMBO:
-            lowByte = data[5];
-            highByte = data[6];
-            packetLen = (highByte << 8) | lowByte;
-            break;
+    case MSP_FRAME_V1_JUMBO:
+        lowByte = data[5];
+        highByte = data[6];
+        packetLen = (highByte << 8) | lowByte;
+        break;
 
-        default:
-            break;
-        }
+    default:
+        break;
     }
     return packetLen;
 }
 
 MSPframeType_e MSP2CROSSFIRE::getVersion(const uint8_t *data)
 {
-    MSPframeType_e frameType;
-
     if (data[1] == 'M') // detect if V1 or V2
     {
         if (data[3] == 0xFF)
         {
-            frameType = MSP_FRAME_V1_JUMBO;
+            return MSP_FRAME_V1_JUMBO;
         }
-        else
-        {
-            frameType = MSP_FRAME_V1;
-        }
+        return MSP_FRAME_V1;
     }
-    else if (data[1] == 'X')
+    if (data[1] == 'X')
     {
-        frameType = MSP_FRAME_V2;
+        return MSP_FRAME_V2;
     }
-    else
-    {
-        frameType = MSP_FRAME_UNKNOWN;
-    }
-    return frameType;
+    return MSP_FRAME_UNKNOWN;
 }
 
-void MSP2CROSSFIRE::parse(const uint8_t *data, uint32_t frameLen, uint8_t src, uint8_t dest)
+void MSP2CROSSFIRE::parse(CRSFConnector *connector, const uint8_t *data, uint32_t frameLen, const crsf_addr_e src, const crsf_addr_e dest)
 {
-    MSPframeType_e mspVersion = getVersion(data);
-    uint32_t MSPpayloadLen = getPayloadLen(data, mspVersion);
-    uint32_t MSPframeLen = getFrameLen(MSPpayloadLen, mspVersion);
-    uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // gotta count the first chunk!
-    uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
-
-    uint8_t header[7];
-    // first element has to be size of the fifo chunk (can't be bigger than CRSF_MAX_PACKET_LEN)
-    header[0] = 0; // CRSFpktLen; will be set later
-    header[1] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    header[2] = 0;                     // CRSFpktLen - CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
-    header[3] = getHeaderDir(data[2]); // 3rd byte is the header direction < or >
-    header[4] = dest;
-    header[5] = src;
-    header[6] = 0;
-
-    setVersion(header[6], mspVersion);
+    const MSPframeType_e mspVersion = getVersion(data);
+    const uint32_t mspPayloadLen = getPayloadLen(data, mspVersion);
+    const uint32_t MSPframeLen = getFrameLen(mspPayloadLen, mspVersion);
+    const uint8_t numChunks = (MSPframeLen / CRSF_MSP_MAX_BYTES_PER_CHUNK) + 1; // count the first chunk!
+    const uint8_t chunkRemainder = MSPframeLen % CRSF_MSP_MAX_BYTES_PER_CHUNK;
 
     for (uint8_t i = 0; i < numChunks; i++)
     {
-        setSeqNumber(header[6], (seqNum++ & 0b1111));
-        setNewFrame(header[6], (i == 0 ? true : false)); // if first chunk then set to true, else false
-        setError(header[6], false);
+        uint8_t packet[CRSF_MAX_PACKET_LEN];
+        setError(packet[5], false);
+        setVersion(packet[5], mspVersion);
+        setSeqNumber(packet[5], seqNum++);
+        setNewFrame(packet[5], i == 0); // set to true if this is the first chunk
 
-        uint32_t startIdx = (i * CRSF_MSP_MAX_BYTES_PER_CHUNK) + 3; // we don't xmit the MSP header
-        uint8_t CRSFpktLen;                                         // TOTAL length of the CRSF packet, (what the FIFO cares about)
+        const uint32_t startIdx = (i * CRSF_MSP_MAX_BYTES_PER_CHUNK) + 3; // we don't transmit the MSP header
+        const uint8_t CRSFpktLen = (i == (numChunks - 1)) ? chunkRemainder : (CRSF_MSP_MAX_BYTES_PER_CHUNK);
 
-        CRSFpktLen = (i == (numChunks - 1)) ? chunkRemainder : (CRSF_MSP_MAX_BYTES_PER_CHUNK);
-
-        header[0] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET + 2;
-        header[2] = CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET;
-        uint8_t crc = crsfRouter.crsf_crc.calc(&header[3], 4, 0x00); // don't include the MSP header
-        crc = crsfRouter.crsf_crc.calc(&data[startIdx], CRSFpktLen, crc);
-
-        FIFOout.lock();
-        FIFOout.pushBytes(header, sizeof(header));
-        FIFOout.pushBytes(&data[startIdx], CRSFpktLen);
-        FIFOout.push(crc);
-        FIFOout.unlock();
+        memcpy(&packet[6], &data[startIdx], CRSFpktLen);
+        crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)packet, getHeaderDir(data[2]), CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET, dest, src);
+        crsfRouter.processMessage(connector, (crsf_header_t *)packet);
     }
 }
 
-bool MSP2CROSSFIRE::validate(const uint8_t *data, uint32_t expectLen)
+bool MSP2CROSSFIRE::validate(const uint8_t *data, const uint32_t expectLen)
 {
-    MSPframeType_e version = getVersion(data);
-    uint32_t FrameLen = getFrameLen(getPayloadLen(data, version), version);
-    FrameLen += 4; // +3 header, +1 crc;
-    return (expectLen == FrameLen) ? true : false;
+    const MSPframeType_e version = getVersion(data);
+    const uint32_t FrameLen = getFrameLen(getPayloadLen(data, version), version) + 4; // +3 header, +1 crc;
+    return expectLen == FrameLen;
 }
