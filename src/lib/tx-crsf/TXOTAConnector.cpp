@@ -3,7 +3,7 @@
 #include "common.h"
 #include "stubborn_sender.h"
 
-extern StubbornSender MspSender;
+extern StubbornSender DataUlSender;
 
 TXOTAConnector::TXOTAConnector()
 {
@@ -28,7 +28,7 @@ void TXOTAConnector::pumpSender()
         // if we have a new msp package start sending
         if (currentTransmissionLength > 0)
         {
-            MspSender.SetDataToTransmit(currentTransmissionBuffer, currentTransmissionLength);
+            DataUlSender.SetDataToTransmit(currentTransmissionBuffer, currentTransmissionLength);
             transferActive = true;
         }
     }
@@ -62,7 +62,7 @@ void TXOTAConnector::forwardMessage(const crsf_header_t *message)
     if (connectionState == connected)
     {
         const uint8_t length = message->frame_size + 2;
-        if (length > ELRS_MSP_BUFFER)
+        if (length > ELRS_DATA_UL_BUFFER)
         {
             return;
         }
