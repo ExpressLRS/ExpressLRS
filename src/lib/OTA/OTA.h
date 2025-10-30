@@ -64,7 +64,7 @@ typedef struct {
         /** PACKET_TYPE_RCDATA **/
         struct {
             OTA_Channels_4x10 ch;
-            uint8_t switches:7, // includes tlmConfirm
+            uint8_t switches:7, // includes stubbornAck
                     isArmed:1;
         } rc;
         /** PACKET_TYPE_RCDATA w/ DEBUG_RCVR_LINKSTATS **/
@@ -75,7 +75,7 @@ typedef struct {
         /** PACKET_TYPE_DATA uplink (to RX) **/
         struct {
             uint8_t packageIndex:7,
-                    tlmConfirm:1;
+                    stubbornAck:1;
             uint8_t payload[ELRS4_DATA_UL_BYTES_PER_CALL];
         } data_ul;
         /** PACKET_TYPE_SYNC **/
@@ -83,7 +83,7 @@ typedef struct {
         /** PACKET_TYPE_DATA / PACKET_TYPE_LINKSTATS downlink (to TX) **/
         struct {
             uint8_t packageIndex:7,
-                    tlmConfirm:1;
+                    stubbornAck:1;
             union {
                 struct {
                     OTA_LinkStats_s stats;
@@ -110,7 +110,7 @@ typedef struct {
         /** PACKET_TYPE_RCDATA **/
         struct {
             uint8_t packetType: 2,
-                    tlmConfirm: 1,
+                    stubbornAck: 1,
                     uplinkPower: 3,     // CRSF_power_level - 1 (1-8 is 0-7 in the air)
                     isHighAux: 1,       // true if chHigh are AUX6-9
                     isArmed: 1;         // Arm
@@ -126,7 +126,7 @@ typedef struct {
         /** PACKET_TYPE_DATA uplink (to RX) **/
         struct {
             uint8_t packetType: 2,
-                    tlmConfirm: 1,
+                    stubbornAck: 1,
                     packageIndex: 5;
             uint8_t payload[ELRS8_DATA_UL_BYTES_PER_CALL];
         } data_ul;
@@ -139,7 +139,7 @@ typedef struct {
         /** PACKET_TYPE_DATA / PACKET_TYPE_LINKSTATS downlink (to TX) **/
         struct {
             uint8_t packetType: 2,
-                    tlmConfirm: 1,
+                    stubbornAck: 1,
                     packageIndex: 5;
             union {
                 struct {
@@ -187,7 +187,7 @@ extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
-typedef void (*PackChannelData_t)(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool tlmConfirm);
+typedef void (*PackChannelData_t)(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool stubbornAck);
 extern PackChannelData_t OtaPackChannelData;
 #if defined(UNIT_TEST)
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx);

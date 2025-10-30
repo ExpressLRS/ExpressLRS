@@ -179,9 +179,9 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
  * @param data1 pointer to payload from Radio.RXdataBuffer
  * @param data2 pointer to payload from Radio.RXdataBufferSecond (not used if not Gemini)
  * @param dataLen sizeof payload data in both data1 and data2
- * @param tlmConfirm Telemetry confirm bit from either buffer (should be same)
+ * @param stubbornAck StubbornSender ack bit from either buffer (should be same)
  */
-void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, uint8_t *data2, size_t dataLen, bool tlmConfirm)
+void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, uint8_t *data2, size_t dataLen, bool stubbornAck)
 {
   static uint8_t packageIndexRadio1 = 0xFF;
   static uint8_t packageIndexRadio2 = 0xFF;
@@ -216,7 +216,7 @@ void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, 
 
       if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
       {
-          DataUlSender.ConfirmCurrentPayload(tlmConfirm);
+          DataUlSender.ConfirmCurrentPayload(stubbornAck);
           DataDlReceiver.ReceiveData(packageIndexRadio1, geminiSpanBuffer, 2 * dataLen);
           packageIndexRadio1 = 0xFF;
           packageIndexRadio2 = 0xFF;
@@ -224,7 +224,7 @@ void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, 
   }
   else
   {
-      DataUlSender.ConfirmCurrentPayload(tlmConfirm);
+      DataUlSender.ConfirmCurrentPayload(stubbornAck);
       DataDlReceiver.ReceiveData(pi1, data1, dataLen);
   }
 }
@@ -279,7 +279,7 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
           ota8->data_dl.ul_link_stats.payload,
           ota8Second->data_dl.ul_link_stats.payload,
           sizeof(ota8->data_dl.ul_link_stats.payload),
-          ota8->data_dl.tlmConfirm
+          ota8->data_dl.stubbornAck
         );
         break;
 
@@ -295,7 +295,7 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
             ota8->data_dl.payload,
             ota8Second->data_dl.payload,
             sizeof(ota8->data_dl.payload),
-            ota8->data_dl.tlmConfirm
+            ota8->data_dl.stubbornAck
           );
         }
         break;
@@ -314,7 +314,7 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
           otaPktPtr->std.data_dl.ul_link_stats.payload,
           otaPktPtrSecond->std.data_dl.ul_link_stats.payload,
           sizeof(otaPktPtr->std.data_dl.ul_link_stats.payload),
-          otaPktPtr->std.data_dl.tlmConfirm
+          otaPktPtr->std.data_dl.stubbornAck
         );
         break;
 
@@ -330,7 +330,7 @@ static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status 
             otaPktPtr->std.data_dl.payload,
             otaPktPtrSecond->std.data_dl.payload,
             sizeof(otaPktPtr->std.data_dl.payload),
-            otaPktPtr->std.data_dl.tlmConfirm
+            otaPktPtr->std.data_dl.stubbornAck
           );
         }
         break;
@@ -579,7 +579,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
           otaPkt.full.data_ul.payload,
           sizeof(otaPkt.full.data_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.full.data_ul.tlmConfirm = DataDlReceiver.GetCurrentConfirm();
+          otaPkt.full.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
       else
       {
@@ -587,7 +587,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
           otaPkt.std.data_ul.payload,
           sizeof(otaPkt.std.data_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.std.data_ul.tlmConfirm = DataDlReceiver.GetCurrentConfirm();
+          otaPkt.std.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
 
       // send channel data next so the channel messages also get sent during data uplink transmissions

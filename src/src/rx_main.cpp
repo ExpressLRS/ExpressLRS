@@ -433,7 +433,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 #define GenerateOtaDataDl(ota, member, ls)  {\
    const size_t dataLen = sizeof(otaPkt.ota.member.payload); \
-   otaPkt.ota.data_dl.tlmConfirm = DataUlReceiver.GetCurrentConfirm(); \
+   otaPkt.ota.data_dl.stubbornAck = DataUlReceiver.GetCurrentConfirm(); \
    if (geminiMode) \
     { \
         sendGeminiBuffer = true; \
@@ -948,7 +948,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_DataUl(OTA_Packet_s const * const ot
         dataLen = sizeof(otaPktPtr->full.data_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            DataDlSender.ConfirmCurrentPayload(otaPktPtr->full.data_ul.tlmConfirm);
+            DataDlSender.ConfirmCurrentPayload(otaPktPtr->full.data_ul.stubbornAck);
         }
     }
     else
@@ -958,7 +958,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_DataUl(OTA_Packet_s const * const ot
         dataLen = sizeof(otaPktPtr->std.data_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            DataDlSender.ConfirmCurrentPayload(otaPktPtr->std.data_ul.tlmConfirm);
+            DataDlSender.ConfirmCurrentPayload(otaPktPtr->std.data_ul.stubbornAck);
         }
     }
 
