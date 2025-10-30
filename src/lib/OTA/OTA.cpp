@@ -556,13 +556,13 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *in
     uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
-        count = std::min(count, (uint8_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint8_t)ELRS8_DATA_DL_BYTES_PER_CALL);
         otaPktPtr->full.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
-        count = std::min(count, (uint8_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint8_t)ELRS4_DATA_DL_BYTES_PER_CALL);
         otaPktPtr->std.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
     }

@@ -76,28 +76,27 @@ typedef struct {
         struct {
             uint8_t packageIndex:7,
                     tlmConfirm:1;
-            uint8_t payload[ELRS4_MSP_BYTES_PER_CALL];
+            uint8_t payload[ELRS4_DATA_UL_BYTES_PER_CALL];
         } data_ul;
         /** PACKET_TYPE_SYNC **/
         OTA_Sync_s sync;
         /** PACKET_TYPE_DATA / PACKET_TYPE_LINKSTATS downlink (to TX) **/
         struct {
-            uint8_t packageIndex:6,
-                    free:1,
+            uint8_t packageIndex:7,
                     tlmConfirm:1;
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
+                    uint8_t payload[ELRS4_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
                 } PACKED ul_link_stats;
-                uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
+                uint8_t payload[ELRS4_DATA_DL_BYTES_PER_CALL];
             };
         } data_dl;
         /** PACKET_TYPE_DATA w/ firmwareOptions.is_airport **/
         struct {
             uint8_t free:2,
                     count:6;
-            uint8_t payload[ELRS4_TELEMETRY_BYTES_PER_CALL];
+            uint8_t payload[ELRS4_DATA_DL_BYTES_PER_CALL];
         } PACKED airport;
     };
     uint8_t crcLow;
@@ -129,13 +128,13 @@ typedef struct {
             uint8_t packetType: 2,
                     tlmConfirm: 1,
                     packageIndex: 5;
-            uint8_t payload[ELRS8_MSP_BYTES_PER_CALL];
+            uint8_t payload[ELRS8_DATA_UL_BYTES_PER_CALL];
         } data_ul;
         /** PACKET_TYPE_SYNC **/
         struct {
             uint8_t packetType; // only low 2 bits
             OTA_Sync_s sync;
-            uint8_t free[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_Sync_s)]; // 4
+            uint8_t free[ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_Sync_s)]; // 4
         } PACKED sync;
         /** PACKET_TYPE_DATA / PACKET_TYPE_LINKSTATS downlink (to TX) **/
         struct {
@@ -145,9 +144,9 @@ typedef struct {
             union {
                 struct {
                     OTA_LinkStats_s stats;
-                    uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
+                    uint8_t payload[ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s)];
                 } PACKED ul_link_stats;
-                uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
+                uint8_t payload[ELRS8_DATA_DL_BYTES_PER_CALL];
             };
         } PACKED data_dl;
         /** PACKET_TYPE_DATA w/ firmwareOptions.is_airport **/
@@ -155,7 +154,7 @@ typedef struct {
             uint8_t packetType: 2,
                     free: 1,
                     count: 5;
-            uint8_t payload[ELRS8_TELEMETRY_BYTES_PER_CALL];
+            uint8_t payload[ELRS8_DATA_DL_BYTES_PER_CALL];
         } PACKED airport;
     };
     uint16_t crc;  // crc16 LittleEndian
