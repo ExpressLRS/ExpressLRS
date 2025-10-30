@@ -82,9 +82,9 @@ typedef struct {
         OTA_Sync_s sync;
         /** PACKET_TYPE_DATA / PACKET_TYPE_LINKSTATS downlink (to TX) **/
         struct {
-            uint8_t free:1,
-                    tlmConfirm: 1,
-                    packageIndex:6;
+            uint8_t packageIndex:6,
+                    free:1,
+                    tlmConfirm:1;
             union {
                 struct {
                     OTA_LinkStats_s stats;

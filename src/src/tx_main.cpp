@@ -311,6 +311,14 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     {
       case PACKET_TYPE_LINKSTATS:
         LinkStatsFromOta(&otaPktPtr->std.data_dl.ul_link_stats.stats);
+
+        ProcessOtaDataDl(
+          otaPktPtr->std.data_dl.packageIndex, otaPktPtrSecond->std.data_dl.packageIndex,
+          otaPktPtr->std.data_dl.ul_link_stats.payload,
+          otaPktPtrSecond->std.data_dl.ul_link_stats.payload,
+          sizeof(otaPktPtr->std.data_dl.ul_link_stats.payload),
+          otaPktPtr->std.data_dl.tlmConfirm
+        );
         break;
 
       case PACKET_TYPE_DATA:

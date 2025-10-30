@@ -494,7 +494,26 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         {
             ls = &otaPkt.std.data_dl.ul_link_stats.stats;
             otaPkt.std.data_dl.tlmConfirm = MspReceiver.GetCurrentConfirm();
-            LinkStatsToOta(ls);
+
+            if (geminiMode)
+            {
+                sendGeminiBuffer = true;
+                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.std.data_dl.ul_link_stats.payload)] = {0};
+
+                otaPkt.std.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                memcpy(otaPkt.std.data_dl.ul_link_stats.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.data_dl.ul_link_stats.payload));
+                LinkStatsToOta(ls);
+
+                otaPktGemini = otaPkt;
+                memcpy(otaPktGemini.std.data_dl.ul_link_stats.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.data_dl.ul_link_stats.payload)], sizeof(otaPktGemini.std.data_dl.ul_link_stats.payload));
+            }
+            else
+            {
+                otaPkt.std.data_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.std.data_dl.ul_link_stats.payload,
+                    sizeof(otaPkt.std.data_dl.ul_link_stats.payload));
+                LinkStatsToOta(ls);
+            }
         }
 
         NextTelemetryType = PACKET_TYPE_DATA;
