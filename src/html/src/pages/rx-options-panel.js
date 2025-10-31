@@ -29,7 +29,7 @@ class RxOptionsPanel extends LitElement {
         return html`
             <div class="mui-panel mui--text-title">Runtime Options</div>
             <div class="mui-panel">
-                <p>This form <b>overrides</b> the options provided when the firmware was flashed. These changes will
+                <p><b>Override</b> options provided when the firmware was flashed. These changes will
                     persist across reboots, but <b>will be reset</b> when the firmware is reflashed.</p>
                 <form id='upload_options' method='POST' action="/options">
                     <!-- FEATURE:HAS_SUBGHZ -->

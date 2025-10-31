@@ -26,8 +26,8 @@ class TxOptionsPanel extends LitElement {
             <div class="mui-panel mui--text-title">Runtime Options</div>
             <div class="mui-panel">
                 <form class="mui-form">
-                    <p>This form <b>overrides</b> the options provided when the firmware was flashed. These changes will
-                    persist across reboots, but <b>will be reset</b> when the firmware is reflashed.</p>
+                    <p><b>Override</b> options provided when the firmware was flashed. These changes will
+                        persist across reboots, but <b>will be reset</b> when the firmware is reflashed.</p>
                     <!-- FEATURE:HAS_SUBGHZ -->
                     <div class="mui-select">
                         <select @change="${(e) => this.domain = parseInt(e.target.value)}">
@@ -53,7 +53,7 @@ class TxOptionsPanel extends LitElement {
                     <div class="mui-checkbox">
                         <input type='checkbox'
                                @change="${(e) => this.isAirport = e.target.checked}"
-                               checked="${this.isAirport}">
+                               ?checked="${this.isAirport}">
                         <label>Use as AirPort Serial device</label>
                         </input>
                     </div>
