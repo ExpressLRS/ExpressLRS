@@ -3,6 +3,7 @@ import babel from 'vite-plugin-babel'
 import { promises as fs } from 'fs'
 import path from 'path'
 import Zopfli from 'node-zopfli-es'
+import { minifyTemplateLiterals } from 'rollup-plugin-minify-template-literals';
 
 function toCIdentifier(p) {
   // Make a valid C identifier from a file path
@@ -153,6 +154,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [
+      minifyTemplateLiterals(),
       htmlFeatureBlocksPlugin(env),
       viteEsp32HeaderPlugin(),
       babel({
@@ -167,6 +169,9 @@ export default defineConfig(({ command, mode }) => {
       }),
       ...(command === 'serve' ? [devMockPlugin()] : []),
     ],
+    esbuild: {
+      legalComments: 'none'
+    },
     build: {
       rollupOptions: {
         input: {
