@@ -74,7 +74,7 @@ button {
 }
 
 
-@media (min-width: 768px) {
+@media (min-width: 48em) and (hover: hover) and (pointer: fine) {
     #header {
         left: var(--drawer-width);
     }
@@ -202,3 +202,50 @@ button {
     opacity: 0;
     transform: translateY(6px);
 }
+
+/* On touch/coarse devices below 64em, force the mobile hamburger to show */
+@media (max-width: 63.99em) and (hover: none), (max-width: 63.99em) and (pointer: coarse) {
+    a.sidedrawer-toggle.js-show-sidedrawer {
+        display: inline-block !important;
+    }
+    a.sidedrawer-toggle.js-hide-sidedrawer {
+        display: none !important;
+    }
+}
+
+
+/* Wide screens (>=1024px): make sidedrawer persistent on all devices */
+@media (min-width: 64em) {
+    #header {
+        left: var(--drawer-width);
+    }
+
+    #sidedrawer {
+        transform: translate(var(--drawer-width));
+    }
+
+    #content-wrapper {
+        margin-left: var(--drawer-width);
+    }
+
+    #footer {
+        margin-left: var(--drawer-width);
+    }
+
+    body.hide-sidedrawer #header {
+        left: 0;
+    }
+
+    body.hide-sidedrawer #sidedrawer {
+        transform: translate(0px);
+    }
+
+    body.hide-sidedrawer #content-wrapper {
+        margin-left: 0;
+    }
+
+    body.hide-sidedrawer #footer {
+        margin-left: 0;
+    }
+}
+
