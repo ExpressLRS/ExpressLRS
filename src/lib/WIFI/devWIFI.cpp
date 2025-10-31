@@ -608,6 +608,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
 {
   String ssid = request->arg("network");
   String password = request->arg("password");
+  String onInterval = request->arg("wifi-on-interval");
 
   DBGLN("Setting network %s", ssid.c_str());
   strcpy(station_ssid, ssid.c_str());
@@ -615,6 +616,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   if (request->hasArg("save")) {
     strlcpy(firmwareOptions.home_wifi_ssid, ssid.c_str(), sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, password.c_str(), sizeof(firmwareOptions.home_wifi_password));
+    firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() ? -1 : onInterval.toInt()) * 1000;
     saveOptions();
   }
   WebUpdateConnect(request);

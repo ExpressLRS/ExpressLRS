@@ -13,6 +13,7 @@ class WifiPanel extends LitElement {
 
     @state() accessor selectedValue = '0'
     @state() accessor showLoader = true
+    @state() accessor wifiOnInterval
 
     running = false
 
@@ -22,6 +23,7 @@ class WifiPanel extends LitElement {
     }
 
     createRenderRoot() {
+        this.wifiOnInterval = elrsState.options['wifi-on-interval'] === undefined ? 60 : elrsState.options['wifi-on-interval']
         return this
     }
 
@@ -53,20 +55,23 @@ class WifiPanel extends LitElement {
                     </div>
                     <div class="mui-radio">
                         <input type="radio" name="networktype" value="1" @change="${this._handleChange}">
-                        <label>One-time connect to network, retain current home network setting</label>
+                        <label>Temporarily connect to a network, retain current home network setting</label>
                     </div>
                     <div class="mui-radio">
                         <input type="radio" name="networktype" value="2" @change="${this._handleChange}">
-                        <label>Start AP mode, retain current home network setting</label>
+                        <label>Temporarily enable "Access Point" mode, retain current home network setting</label>
                     </div>
                     <div class="mui-radio">
                         <input type="radio" name="networktype" value="3" @change="${this._handleChange}">
-                        <label>Forget home network setting, always use AP mode</label>
+                        <label>Forget home network setting, always use "Access Point" mode</label>
                     </div>
                     <br/>
                     <div ?hidden="${this.selectedValue !== '0'}">
                         <div class="mui-textfield">
-                            <input size='3' name='wifi-on-interval' type='text' placeholder="Disabled"/>
+                            <input size='3' name='wifi-on-interval' type='text' placeholder="Disabled"
+                                   @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
+                                   value="${this.wifiOnInterval}"
+                            />
                             <label for="wifi-on-interval">WiFi "auto on" interval in seconds (leave blank to
                                 disable)</label>
                         </div>
@@ -74,7 +79,7 @@ class WifiPanel extends LitElement {
                     <div id="credentials" ?hidden="${this.selectedValue === '2' || this.selectedValue === '3'}">
                         <div class="autocomplete mui-textfield" style="position:relative;">
                             <div style="display: ${this.showLoader ? 'block' : 'none'};" class="loader"></div>
-                            <input name="network" type="text" placeholder="SSID"/>
+                            <input name="network" type="text" placeholder="SSID" autocomplete="off"/>
                             <label for="network">WiFi SSID</label>
                         </div>
                         <div class="mui-textfield">
@@ -82,7 +87,7 @@ class WifiPanel extends LitElement {
                             <label for="password">WiFi password</label>
                         </div>
                     </div>
-                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Confirm</button>
+                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Save</button>
                 </form>
             </div>
             <div class="mui-panel" ?hidden="${elrsState.config.mode === 'STA'}">
@@ -109,7 +114,8 @@ class WifiPanel extends LitElement {
                     elrsState.options = {
                         ...elrsState.options,
                         'wifi-ssid': self.network.value,
-                        'wifi-password': self.password.value
+                        'wifi-password': self.password.value,
+                        'wifi-on-interval': self.wifiOnInterval,
                     }
                 })(event)
                 break
