@@ -17,10 +17,22 @@ class ConnectionsPanel extends LitElement {
     render() {
         return html`
             <style>
+                .connections-panel-root { container-type: inline-size; }
+
                 .connections-panel-root .connections-mobile-warning { display: none; }
-                @media (max-width: 768px) and (orientation: portrait) {
+
+                /* If the container is too narrow in terms of characters, show the warning and hide the table */
+                @container (max-width: 80ch) {
                     .connections-panel-root .connections-mobile-warning { display: block; }
                     .connections-panel-root .connections-panel { display: none !important; }
+                }
+
+                /* Fallback for browsers without container queries: use an em-based viewport rule */
+                @supports not (container-type: inline-size) {
+                    @media (max-width: 48em) {
+                        .connections-panel-root .connections-mobile-warning { display: block; }
+                        .connections-panel-root .connections-panel { display: none !important; }
+                    }
                 }
             </style>
             <div class="connections-panel-root">
@@ -49,6 +61,7 @@ class ConnectionsPanel extends LitElement {
                         </div>
                         <button class="mui-btn mui-btn--small mui-btn--primary" @click="${this._savePwmConfig}">Save</button>
                     </form>
+                    <div class="mui-divider"></div>
                     <ul>
                         <li><b>Output:</b> Receiver output pin</li>
                         <li><b>Features:</b> If an output is capable of supporting another function, that is indicated
