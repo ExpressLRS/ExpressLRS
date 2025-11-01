@@ -388,23 +388,19 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
     {
         crsfTemp.p.temperature[0] = htobe16((esc.escTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
         crsfTemp.p.temperature[1] = htobe16((esc.becTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
+        crsfTemp.p.temperature[2] = htobe16((esc.motorTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);          // turbine: EGT
         crsfTemp.p.temperature[3] = htobe16((esc.pumpTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
         crsfTemp.p.temperature[4] = htobe16((esc.auxTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
 
+        payloadSize = 1 + 2 * 5;
+
         if (escIsTurbine)
         {
-            crsfTemp.p.temperature[2] = htobe16((esc.motorTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);      // turbine: EGT
             crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                          // turbine: throttle %
             crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);             // turbine: status
 
             payloadSize = 1 + 2 * 7;
         } 
-        else
-        {
-            crsfTemp.p.temperature[2] = htobe16(((esc.motorTemp) - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
-
-            payloadSize = 1 + 2 * 5;
-        }
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfTemp, CRSF_FRAMETYPE_TEMP, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
