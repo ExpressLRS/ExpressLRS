@@ -68,7 +68,7 @@ class WifiPanel extends LitElement {
                     <br/>
                     <div ?hidden="${this.selectedValue !== '0'}">
                         <div class="mui-textfield">
-                            <input size='3' name='wifi-on-interval' type='text' placeholder="Disabled"
+                            <input size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
                                    @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
                                    value="${this.wifiOnInterval}"
                             />
