@@ -154,8 +154,8 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [
-      minifyTemplateLiterals(),
       htmlFeatureBlocksPlugin(env),
+      minifyTemplateLiterals(),
       viteEsp32HeaderPlugin(),
       babel({
         babelConfig: {
