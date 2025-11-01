@@ -66,7 +66,7 @@ class WifiPanel extends LitElement {
                         <label>Forget home network setting, always use "Access Point" mode</label>
                     </div>
                     <br/>
-                    <div ?hidden="${this.selectedValue !== '0'}">
+                    <div ?hidden="${this.selectedValue !== '0' && this.selectedValue !== '3'}">
                         <div class="mui-textfield">
                             <input size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
                                    @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
@@ -128,7 +128,14 @@ class WifiPanel extends LitElement {
                 postWithFeedback('Start Access Point', 'An error occurred starting the Access Point', '/access', null)(event)
                 break
             case '3':
-                postWithFeedback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', null)(event)
+                postWithFeedback('Forget Home Network', 'An error occurred forgetting the home network', '/forget', function () {
+                    return new FormData(self.form)
+                }, function () {
+                    elrsState.options = {
+                        ...elrsState.options,
+                        'wifi-ssid': self.network.value
+                    }
+                })(event)
                 break
         }
     }
