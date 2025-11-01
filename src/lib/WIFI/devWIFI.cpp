@@ -625,8 +625,10 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
 static void WebUpdateForget(AsyncWebServerRequest *request)
 {
   DBGLN("Forget network");
+  String onInterval = request->arg("wifi-on-interval");
   firmwareOptions.home_wifi_ssid[0] = 0;
   firmwareOptions.home_wifi_password[0] = 0;
+  firmwareOptions.wifi_auto_on_interval = (onInterval.isEmpty() ? -1 : onInterval.toInt()) * 1000;
   saveOptions();
   station_ssid[0] = 0;
   station_password[0] = 0;
