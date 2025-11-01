@@ -1,20 +1,18 @@
 import {html, LitElement} from 'lit';
 import {customElement, property} from "lit/decorators.js";
-import {unsafeHTML} from 'lit-html/directives/unsafe-html.js';
 
 @customElement('file-drop')
 export class FileDrop extends LitElement {
     @property()
     accessor label
 
-    // Preserve light DOM rendering to keep bundle small
-    createRenderRoot() {
-        return this;
-    }
-
     constructor() {
         super();
         this._projectedHTML = '';
+    }
+
+    createRenderRoot() {
+        return this;
     }
 
     connectedCallback() {
@@ -28,12 +26,11 @@ export class FileDrop extends LitElement {
     }
 
     render() {
-        const fallback = 'Drop files here';
         return html`
             <button class="mui-btn mui-btn--small mui-btn--primary upload">
                 <label>
                     ${this.label}
-                    <input type="file" id="fileselect" name="fileselect[]" @change=${this._selectFiles}/>
+                    <input type="file" id="fileselect" name="fileselect[]" @change=${this._selectFiles} />
                 </label>
             </button>
             <div
@@ -42,7 +39,7 @@ export class FileDrop extends LitElement {
                     @dragleave=${this._handleDragLeave}
                     @drop=${this._handleDrop}
             >
-                ${this._projectedHTML ? unsafeHTML(this._projectedHTML) : fallback}
+                ${this._projectedHTML}
             </div>
         `;
     }
