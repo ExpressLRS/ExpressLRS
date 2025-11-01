@@ -33,12 +33,12 @@ export class HardwareLayout extends LitElement {
                         <a href="/reset?hardware" @click="${postWithFeedback('Hardware Configuration Reset', 'Reset failed', '/reset?hardware')}">reset</a>
                         to pre-configured defaults and reboot.
                     </div>
-                    <form class="mui-form">
+                    <form id="upload_hardware" class="mui-form">
                         <input type="hidden" id="customised" name="customised" value="true"/>
                         ${this._renderTable()}
                         <br>
                         <input type="button" value="Save Target Configuration"
-                               class="mui-btn mui-btn--primary" @click=${this._submitConfig}/>
+                               class="mui-btn mui-btn--primary" @click=${this._submitConfig} />
                     </form>
                 </div>
             </div>
