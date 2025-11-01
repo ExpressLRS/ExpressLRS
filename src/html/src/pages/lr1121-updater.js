@@ -31,7 +31,7 @@ export class LR1121Updater extends LitElement {
                 <file-drop label="Upload" @file-drop=${this._fileSelected}>or drop firmware file here</file-drop>
                 <br/>
                 <h3>${this.status}</h3>
-                <progress value="${this.progress}" max="100" style="width:100%;"></progress>
+                <progress .value="${this.progress}" max="100" style="width:100%;"></progress>
             </div>
             <div class="mui-panel">
                 ${this._renderInfoTable()}

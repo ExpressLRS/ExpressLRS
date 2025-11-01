@@ -57,7 +57,7 @@ class SerialPanel extends LitElement {
                     <div class="mui-textfield">
                         <input size='7' type='number'
                                @input=${(e) => this.baudRate = parseInt(e.target.value)}
-                               value=${this.baudRate}/>
+                               .value="${this.baudRate}" />
                         <label>CRSF/Airport baud</label>
                     </div>
                     ` : ''}
@@ -119,6 +119,10 @@ class SerialPanel extends LitElement {
     _updateSerial1(e) {
         this.serial1Protocol = parseInt(e.target.value)
         this.isAirport = this.serial1Protocol === 10
+        if (this.serial1Protocol === 0 || this.serial1Protocol === 1) {
+            this.baudRate = 420000
+            this.requestUpdate()
+        }
     }
 
     _updateSerial2(e) {

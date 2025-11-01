@@ -39,14 +39,14 @@ class TxOptionsPanel extends LitElement {
                     <div class="mui-textfield">
                         <input size='5' type='number'
                                @input="${(e) => this.tlmInterval = parseInt(e.target.value)}"
-                               value="${this.tlmInterval}">
+                               .value="${this.tlmInterval}">
                             <label>TLM report interval (ms)</label>
                         </input>
                     </div>
                     <div class="mui-textfield">
                         <input size='3' type='number'
                                @input="${(e) => this.fanRuntime = parseInt(e.target.value)}"
-                               value="${this.fanRuntime}">
+                               .value="${this.fanRuntime}">
                         <label>Fan runtime (s)</label>
                         </input>
                     </div>
@@ -61,7 +61,7 @@ class TxOptionsPanel extends LitElement {
                         <div class="mui-textfield"">
                         <input size='7' type='number'
                                @input="${(e) => this.baudRate = parseInt(e.target.value)}"
-                               value="${this.baudRate}">
+                               .value="${this.baudRate}">
                         <label>AirPort UART baud</label>
                         </input>
                         </div>
