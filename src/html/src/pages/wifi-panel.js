@@ -70,7 +70,7 @@ class WifiPanel extends LitElement {
                         <div class="mui-textfield">
                             <input size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
                                    @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
-                                   value="${this.wifiOnInterval}"
+                                   .value="${this.wifiOnInterval}"
                             />
                             <label for="wifi-on-interval">WiFi "auto on" interval in seconds (leave blank to
                                 disable)</label>

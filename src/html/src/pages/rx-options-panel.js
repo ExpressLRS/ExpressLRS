@@ -8,15 +8,14 @@ import {postWithFeedback} from "../utils/feedback.js"
 @customElement('rx-options-panel')
 class RxOptionsPanel extends LitElement {
     @state() accessor domain
-    @state() accessor baudRate
-    @state() accessor lockOnFirst
-    @state() accessor isAirport
-    @state() accessor djiArmed
     @state() accessor enableModelMatch
+    @state() accessor lockOnFirst
+    @state() accessor djiArmed
     @state() accessor modelId
     @state() accessor forceTlmOff
 
     createRenderRoot() {
+        this.domain = elrsState.options.domain
         this.enableModelMatch = elrsState.options.modelid!==undefined && elrsState.options.modelid !== 255
         this.lockOnFirst = elrsState.options['lock-on-first-connection']
         this.djiArmed = elrsState.options['dji-permanently-armed']
@@ -66,7 +65,7 @@ class RxOptionsPanel extends LitElement {
                     <div class="mui-textfield">
                         <input type='text' required
                                @change="${(e) => this.modelId = parseInt(e.target.value)}"
-                               value="${this.modelId}"/>
+                               .value="${this.modelId}"/>
                         <label>Model ID</label>
                     </div>
                     ` : ''}
@@ -104,9 +103,7 @@ class RxOptionsPanel extends LitElement {
             // FEATURE: HAS_SUBGHZ
             'domain': this.domain,
             // /FEATURE: HAS_SUBGHZ
-            'rcvr-uart-baud': this.baudRate,
             'lock-on-first-connection': this.lockOnFirst,
-            'is-airport': this.isAirport,
             'dji-permanently-armed': this.djiArmed,
             'modelid': this.enableModelMatch ? this.modelId : 255,
             'force-tlm': this.forceTlmOff
@@ -122,9 +119,7 @@ class RxOptionsPanel extends LitElement {
         // FEATURE: HAS_SUBGHZ
         changed |= this.domain !== elrsState.options['domain']
         // /FEATURE: HAS_SUBGHZ
-        changed |= this.baudRate !== elrsState.options['rcvr-uart-baud']
         changed |= this.lockOnFirst !== elrsState.options['lock-on-first-connection']
-        changed |= this.isAirport !== elrsState.options['is-airport']
         changed |= this.djiArmed !== elrsState.options['dji-permanently-armed']
         changed |= this.modelId !== elrsState.options['modelid']
         changed |= this.forceTlmOff !== elrsState.options['force-tlm']
