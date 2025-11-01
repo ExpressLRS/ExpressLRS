@@ -27,7 +27,7 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
 static char modelString[] = "000";
-static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
+static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;DShot 3D;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
 
 static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -202,7 +202,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
     const char *no1Option    = ";";
     const char *no2Options   = ";;";
-    const char *dshot        = ";DShot";
+    const char *dshot        = ";DShot;DShot 3D";
     const char *serial_RX    = ";Serial RX";
     const char *serial_TX    = ";Serial TX";
     const char *i2c_SCL      = ";I2C SCL;";
@@ -247,8 +247,8 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     pwmModes[50] = '\0';
 
 #if defined(PLATFORM_ESP32)
-    // DShot output (1 option)
-    // ;DShot
+    // DShot output (2 options)
+    // ;DShot;DShot3D
     // ESP8266 enum skips this, so it is never present
     if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)   // DShot doesn't work with GPIO0, exclude it
     {
@@ -257,7 +257,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     else
 #endif
     {
-        pModeString = no1Option;
+        pModeString = no2Options;
     }
     strcat(pwmModes, pModeString);
 
