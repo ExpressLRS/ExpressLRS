@@ -1,11 +1,9 @@
-#ifdef HAS_THERMAL
 #include "thermal.h"
 #include "logging.h"
 
-#ifdef HAS_THERMAL_LM75A
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 #include "lm75a.h"
 LM75A lm75a;
-#endif
 #if defined(PLATFORM_ESP32_S3)
 #include "driver/temp_sensor.h"
 #endif
@@ -101,5 +99,4 @@ void Thermal::update_threshold(int index)
         lm75a.update_lm75a_threshold(high, low);
     }
 }
-
 #endif

@@ -1,38 +1,34 @@
 #include "targets.h"
 
-#include "common.h"
+#include "CRSFHandset.h"
+#include "CRSFRouter.h"
+#include "config.h"
 #include "device.h"
+#include "logging.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "CRSFHandset.h"
-#include "config.h"
-#include "logging.h"
-#include "MAVLink.h"
+#include "telemetry.h"
 
-#define BACKPACK_TIMEOUT 20    // How often to check for backpack commands
+#define BACKPACK_TIMEOUT 20 // How often to check for backpack commands
 
 extern char backpackVersion[];
-extern bool headTrackingEnabled;
 
 bool TxBackpackWiFiReadyToSend = false;
 bool VRxBackpackWiFiReadyToSend = false;
-bool HTEnableFlagReadyToSend = false;
 bool BackpackTelemReadyToSend = false;
-
 bool lastRecordingState = false;
 
-#if defined(GPIO_PIN_BACKPACK_EN)
+static uint16_t ptrChannelData[3] = {CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID, CRSF_CHANNEL_VALUE_MID};
+static bool headTrackingEnabled = false;
+static uint32_t lastPTRValidTimeMs;
 
-#ifndef PASSTHROUGH_BAUD
-#define PASSTHROUGH_BAUD BACKPACK_LOGGING_BAUD
-#endif
+#if defined(PLATFORM_ESP32)
 
 #define GPIO_PIN_BOOT0 0
 
-#include "CRSF.h"
 #include "hwTimer.h"
 
-[[noreturn]] void startPassthrough(const bool useUSB = false)
+[[noreturn]] static void startPassthrough(const bool useUSB = false)
 {
     // stop everything
     devicesStop();
@@ -46,7 +42,7 @@ bool lastRecordingState = false;
     // get ready for passthrough
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
-        #if defined(PLATFORM_ESP32_S3)
+#if defined(PLATFORM_ESP32_S3)
         // if UART0 is connected to the backpack then use the USB for the uplink
         if (useUSB)
         {
@@ -56,15 +52,15 @@ bool lastRecordingState = false;
         }
         else
         {
-            CRSFHandset::Port.begin(baud, SERIAL_8N1, 44, 43);  // pins are configured as 44 and 43
+            CRSFHandset::Port.begin(baud, SERIAL_8N1, 44, 43); // pins are configured as 44 and 43
             CRSFHandset::Port.setTxBufferSize(1024);
             CRSFHandset::Port.setRxBufferSize(16384);
         }
-        #else
-        CRSFHandset::Port.begin(baud, SERIAL_8N1, 3, 1);  // default pin configuration 3 and 1
+#else
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, 3, 1); // default pin configuration 3 and 1
         CRSFHandset::Port.setTxBufferSize(1024);
         CRSFHandset::Port.setRxBufferSize(16384);
-        #endif
+#endif
     }
     else
     {
@@ -74,7 +70,7 @@ bool lastRecordingState = false;
     }
     disableLoopWDT();
 
-    const auto backpack = (HardwareSerial*)TxBackpack;
+    const auto backpack = (HardwareSerial *)BackpackOrLogStrm;
     if (baud != BACKPACK_LOGGING_BAUD)
     {
         backpack->begin(PASSTHROUGH_BAUD, SERIAL_8N1, GPIO_PIN_DEBUG_RX, GPIO_PIN_DEBUG_TX);
@@ -102,41 +98,37 @@ bool lastRecordingState = false;
     // go hard!
     for (;;)
     {
-        int available_bytes = uplink->available();
-        if (available_bytes > sizeof(buf))
-            available_bytes = sizeof(buf);
+        int available_bytes = min(uplink->available(), static_cast<int>(sizeof(buf)));
         auto bytes_read = uplink->readBytes(buf, available_bytes);
         backpack->write(buf, bytes_read);
 
-        available_bytes = backpack->available();
-        if (available_bytes > sizeof(buf))
-            available_bytes = sizeof(buf);
+        available_bytes = min(backpack->available(), static_cast<int>(sizeof(buf)));
         bytes_read = backpack->readBytes(buf, available_bytes);
         uplink->write(buf, bytes_read);
     }
 }
-#endif
 
-#if defined(GPIO_PIN_BACKPACK_EN)
-
-static int debouncedRead(int pin) {
-    static const uint8_t min_matches = 100;
+static int debouncedRead(int pin)
+{
+    static constexpr uint8_t min_matches = 100;
 
     static int last_state = -1;
     static uint8_t matches = 0;
 
-    int current_state;
-
-    current_state = digitalRead(pin);
-    if (current_state == last_state) {
-        matches = min(min_matches, (uint8_t)(matches + 1));
-    } else {
+    const int current_state = digitalRead(pin);
+    if (current_state == last_state)
+    {
+        matches = min(min_matches, static_cast<uint8_t>(matches + 1));
+    }
+    else
+    {
         // We are bouncing. Reset the match counter.
         matches = 0;
         DBGLN("Bouncing!, current state: %d, last_state: %d, matches: %d", current_state, last_state, matches);
     }
 
-    if (matches == min_matches) {
+    if (matches == min_matches)
+    {
         // We have a stable state and report it.
         return current_state;
     }
@@ -146,44 +138,41 @@ static int debouncedRead(int pin) {
     // We don't have a definitive state we could report.
     return -1;
 }
-#endif
 
 void checkBackpackUpdate()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        if (debouncedRead(GPIO_PIN_BOOT0) == 0)
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN && debouncedRead(GPIO_PIN_BOOT0) == 0)
         {
             startPassthrough();
         }
-    }
 #if defined(PLATFORM_ESP32_S3)
-    // Start passthrough mode if an Espressif resync packet is detected on the USB port
-    static const uint8_t resync[] = {
-        0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
-        0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
-    };
-    static int resync_pos = 0;
-    while(Serial.available())
-    {
-        int byte = Serial.read();
-        if (byte == resync[resync_pos])
+        // Start passthrough mode if an Espressif resync packet is detected on the USB port
+        static const uint8_t resync[] = {
+            0xc0,0x00,0x08,0x24,0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x12,0x20,0x55,0x55,0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55, 0x55,0x55,
+            0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
+        };
+        static int resync_pos = 0;
+        while(Serial.available())
         {
-            resync_pos++;
-            if (resync_pos == sizeof(resync)) startPassthrough(true);
+            int byte = Serial.read();
+            if (byte == resync[resync_pos])
+            {
+                resync_pos++;
+                if (resync_pos == sizeof(resync)) startPassthrough(true);
+            }
+            else
+            {
+                resync_pos = 0;
+            }
         }
-        else
-        {
-            resync_pos = 0;
-        }
+#endif
     }
-#endif
-#endif
 }
 
-static void BackpackWiFiToMSPOut(uint16_t command)
+static void BackpackWiFiToMSPOut(const uint16_t command)
 {
     mspPacket_t packet;
     packet.reset();
@@ -191,10 +180,10 @@ static void BackpackWiFiToMSPOut(uint16_t command)
     packet.function = command;
     packet.addByte(0);
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
-static void BackpackHTFlagToMSPOut(uint8_t arg)
+static void BackpackHTFlagToMSPOut(const uint8_t arg)
 {
     mspPacket_t packet;
     packet.reset();
@@ -202,49 +191,27 @@ static void BackpackHTFlagToMSPOut(uint8_t arg)
     packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
     packet.addByte(arg);
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
-void BackpackBinding()
-{
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeCommand();
-    packet.function = MSP_ELRS_BIND;
-    for (unsigned b=0; b<UID_LEN; ++b)
-        packet.addByte(UID[b]);
-
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
-}
-
-uint8_t GetDvrDelaySeconds(uint8_t index)
+static uint8_t GetDvrDelaySeconds(const uint8_t index)
 {
     constexpr uint8_t delays[] = {0, 5, 15, 30, 45, 60, 120};
     return delays[index >= sizeof(delays) ? 0 : index];
 }
 
-static void AuxStateToMSPOut()
+static void BackpackDvrRecordingStateMSPOut(bool recordingState)
 {
-#if defined(USE_TX_BACKPACK)
-    if (config.GetDvrAux() == 0)
+    uint16_t delay = 0;
+
+    if (recordingState)
     {
-        // DVR AUX control is off
-        return;
+        delay = GetDvrDelaySeconds(config.GetDvrStartDelay());
     }
-
-    const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
-    const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
-
-    const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
-
-    if (recordingState == lastRecordingState)
+    else
     {
-        // Channel state has not changed since we last checked
-        return;
+        delay = GetDvrDelaySeconds(config.GetDvrStopDelay());
     }
-    lastRecordingState = recordingState;
-
-    const uint16_t delay = GetDvrDelaySeconds(recordingState ? config.GetDvrStartDelay() : config.GetDvrStopDelay());
 
     mspPacket_t packet;
     packet.reset();
@@ -252,23 +219,112 @@ static void AuxStateToMSPOut()
     packet.function = MSP_ELRS_BACKPACK_SET_RECORDING_STATE;
     packet.addByte(recordingState);
     packet.addByte(delay & 0xFF); // delay byte 1
-    packet.addByte(delay >> 8); // delay byte 2
+    packet.addByte(delay >> 8);   // delay byte 2
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
-#endif // USE_TX_BACKPACK
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
-void sendCRSFTelemetryToBackpack(uint8_t *data)
+static void BackpackBinding()
 {
-    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BIND;
+    for (const uint8_t b : UID)
     {
-        // Backpack telem is off
+        packet.addByte(b);
+    }
+
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
+}
+
+void processPanTiltRollPacket(const uint32_t now, const mspPacket_t *packet)
+{
+    ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+    ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+    ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+    lastPTRValidTimeMs = now;
+}
+
+static void headtrackPublishChannelsToEdgeTX()
+{
+    if (!headTrackingEnabled || config.GetPTRStartChannel() != HT_START_EDGETX || backpackVersion[0] == 0)
+    {
         return;
     }
 
-    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    static uint32_t lastPTRSentMs = 0;
+    if (lastPTRSentMs != lastPTRValidTimeMs)
     {
-        // Tx is in MAVLink mode, don't forward CRSF telemetry
+        lastPTRSentMs = lastPTRValidTimeMs;
+        CRSF_MK_FRAME_T(crsf_channels_t) rcPacket = {
+            .p = {
+                .ch0 = ptrChannelData[0],
+                .ch1 = ptrChannelData[1],
+                .ch2 = ptrChannelData[2]
+            }
+        };
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
+        crsfRouter.deliverMessage(nullptr, &rcPacket.h);
+    }
+}
+
+static void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)
+{
+    if (!headTrackingEnabled || config.GetPTRStartChannel() == HT_START_EDGETX || backpackVersion[0] == 0)
+    {
+        return;
+    }
+
+    const uint8_t ptrStartChannel = config.GetPTRStartChannel() - HT_START_AUX1;
+    // If enabled and this packet is less than 1 second old then use it
+    if (millis() - lastPTRValidTimeMs < 1000)
+    {
+        if (ptrStartChannel + 4 < channelCount) channels[ptrStartChannel + 4] = ptrChannelData[0];
+        if (ptrStartChannel + 5 < channelCount) channels[ptrStartChannel + 5] = ptrChannelData[1];
+        if (ptrStartChannel + 6 < channelCount) channels[ptrStartChannel + 6] = ptrChannelData[2];
+    }
+}
+
+static void AuxStateToMSPOut()
+{
+    auto enable = config.GetPTREnableChannel() == HT_ON;
+    if (config.GetPTREnableChannel() == HT_OFF)
+    {
+        enable = false;
+    }
+    else if (!enable)
+    {
+        const auto chan = CRSF_to_BIT(ChannelData[config.GetPTREnableChannel() / 2 + 3]);
+        enable |= config.GetPTREnableChannel() % 2 == 0 ? chan : !chan;
+    }
+    if (enable != headTrackingEnabled)
+    {
+        headTrackingEnabled = enable;
+        BackpackHTFlagToMSPOut(headTrackingEnabled);
+    }
+    headtrackPublishChannelsToEdgeTX();
+
+    if (config.GetDvrAux() != 0)
+    {
+        // DVR AUX control is on
+        const uint8_t auxNumber = (config.GetDvrAux() - 1) / 2 + 4;
+        const uint8_t auxInverted = (config.GetDvrAux() + 1) % 2;
+
+        const bool recordingState = CRSF_to_BIT(ChannelData[auxNumber]) ^ auxInverted;
+        if (recordingState != lastRecordingState)
+        {
+            // Channel state has changed since we last checked, so schedule a MSP send
+            lastRecordingState = recordingState;
+            BackpackDvrRecordingStateMSPOut(recordingState);
+        }
+    }
+}
+
+void sendCRSFTelemetryToBackpack(const uint8_t *data)
+{
+    if (config.GetBackpackDisable() || config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF || config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
         return;
     }
 
@@ -286,25 +342,25 @@ void sendCRSFTelemetryToBackpack(uint8_t *data)
 
     for (uint8_t i = 0; i < size; ++i)
     {
-      packet.addByte(data[i]);
+        packet.addByte(data[i]);
     }
 
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
-void sendMAVLinkTelemetryToBackpack(uint8_t *data)
+void sendMAVLinkTelemetryToBackpack(const uint8_t *data)
 {
-    if (config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
+    if (config.GetBackpackDisable() || config.GetBackpackTlmMode() == BACKPACK_TELEM_MODE_OFF)
     {
-        // Backpack telem is off
+        // Backpack telemetry is off
         return;
     }
 
-    uint8_t count = data[1];
-    TxBackpack->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+    const uint8_t count = data[1];
+    BackpackOrLogStrm->write(data + CRSF_FRAME_NOT_COUNTED_BYTES, count);
 }
 
-void sendConfigToBackpack()
+static void sendConfigToBackpack()
 {
     // Send any config values to the tx-backpack, as one key/value pair per MSP msg
     mspPacket_t packet;
@@ -313,34 +369,33 @@ void sendConfigToBackpack()
     packet.function = MSP_ELRS_BACKPACK_CONFIG;
     packet.addByte(MSP_ELRS_BACKPACK_CONFIG_TLM_MODE); // Backpack tlm mode
     packet.addByte(config.GetBackpackTlmMode());
-    MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+    MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
 }
 
-static void initialize()
+static bool initialize()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    if (OPT_USE_TX_BACKPACK)
     {
-        pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pinchange for passthrough mode
-        pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
-        pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
-        // Shut down the backpack via EN pin and hold it there until the first event()
-        digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
-        digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
-        delay(20);
-        // Rely on event() to boot
+        if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+        {
+            pinMode(GPIO_PIN_BOOT0, INPUT); // setup so we can detect pin-change for passthrough mode
+            pinMode(GPIO_PIN_BACKPACK_BOOT, OUTPUT);
+            pinMode(GPIO_PIN_BACKPACK_EN, OUTPUT);
+            // Shut down the backpack via EN pin and hold it there until the first event()
+            digitalWrite(GPIO_PIN_BACKPACK_EN, LOW);   // enable low
+            digitalWrite(GPIO_PIN_BACKPACK_BOOT, LOW); // bootloader pin high
+            delay(20);
+            // Rely on event() to boot
+        }
+        handset->setRcChannelsOverrideCallback(headtrackOverrideChannels);
+        handset->setRCDataCallback(AuxStateToMSPOut);
     }
-#endif
-    handset->setRCDataCallback(AuxStateToMSPOut);
+    return OPT_USE_TX_BACKPACK;
 }
 
 static int start()
 {
-    if (OPT_USE_TX_BACKPACK)
-    {
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    return config.GetBackpackDisable() ? DURATION_NEVER : DURATION_IMMEDIATELY;
 }
 
 static int timeout()
@@ -348,45 +403,39 @@ static int timeout()
     static uint8_t versionRequestTries = 0;
     static uint32_t lastVersionTryTime = 0;
 
-    if (InBindingMode)
+    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000))
     {
-        BackpackBinding();
-        return 1000;        // don't check for another second so we don't spam too hard :-)
-    }
-
-    if (versionRequestTries < 10 && strlen(backpackVersion) == 0 && (lastVersionTryTime == 0 || millis() - lastVersionTryTime > 1000)) {
         lastVersionTryTime = millis();
         versionRequestTries++;
         mspPacket_t out;
         out.reset();
         out.makeCommand();
         out.function = MSP_ELRS_GET_BACKPACK_VERSION;
-        MSP::sendPacket(&out, TxBackpack);
+        MSP::sendPacket(&out, BackpackOrLogStrm);
         DBGLN("Sending get backpack version command");
     }
 
-    if (TxBackpackWiFiReadyToSend && connectionState < MODE_STATES)
+    if (connectionState < MODE_STATES && !config.GetBackpackDisable())
     {
-        TxBackpackWiFiReadyToSend = false;
-        BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
-    }
+        if (TxBackpackWiFiReadyToSend)
+        {
+            TxBackpackWiFiReadyToSend = false;
+            BackpackWiFiToMSPOut(MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE);
+        }
 
-    if (VRxBackpackWiFiReadyToSend && connectionState < MODE_STATES)
-    {
-        VRxBackpackWiFiReadyToSend = false;
-        BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
-    }
+        if (VRxBackpackWiFiReadyToSend)
+        {
+            VRxBackpackWiFiReadyToSend = false;
+            BackpackWiFiToMSPOut(MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE);
+        }
 
-    if (HTEnableFlagReadyToSend && connectionState < MODE_STATES)
-    {
-        HTEnableFlagReadyToSend = false;
-        BackpackHTFlagToMSPOut(headTrackingEnabled);
-    }
+        if (BackpackTelemReadyToSend)
+        {
+            BackpackTelemReadyToSend = false;
+            sendConfigToBackpack();
+        }
 
-    if (BackpackTelemReadyToSend && connectionState < MODE_STATES)
-    {
-        BackpackTelemReadyToSend = false;
-        sendConfigToBackpack();
+        AuxStateToMSPOut();
     }
 
     return BACKPACK_TIMEOUT;
@@ -394,20 +443,26 @@ static int timeout()
 
 static int event()
 {
-#if defined(GPIO_PIN_BACKPACK_EN)
-    if (OPT_USE_TX_BACKPACK && GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
+    const bool disabled = config.GetBackpackDisable() || connectionState == bleJoystick || connectionState == wifiUpdate;
+    if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN)
     {
         // EN should be HIGH to be active
-        digitalWrite(GPIO_PIN_BACKPACK_EN, config.GetBackpackDisable() ? LOW : HIGH);
+        digitalWrite(GPIO_PIN_BACKPACK_EN, disabled ? LOW : HIGH);
     }
-#endif
 
-    return DURATION_IGNORE;
+    if (InBindingMode)
+    {
+        BackpackBinding();
+    }
+
+    return disabled ? DURATION_NEVER : BACKPACK_TIMEOUT;
 }
 
 device_t Backpack_device = {
     .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_ENTER_BIND_MODE
 };
+#endif

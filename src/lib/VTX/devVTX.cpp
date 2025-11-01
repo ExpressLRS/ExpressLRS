@@ -2,13 +2,14 @@
 #include "common.h"
 #include "device.h"
 
+#include "CRSFRouter.h"
 #include "config.h"
-#include "CRSF.h"
-#include "msp.h"
 #include "logging.h"
+#include "msp.h"
 
 #include "devButton.h"
 #include "handset.h"
+#include "msptypes.h"
 
 #define PITMODE_NOT_INITIALISED    -1
 #define PITMODE_OFF                 0
@@ -22,9 +23,9 @@
 // See https://github.com/ExpressLRS/ExpressLRS/issues/2976
 #define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
 
-extern Stream *TxBackpack;
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
+extern void clearOTAQueue();
 
 static enum VtxSendState_e
 {
@@ -39,7 +40,7 @@ void VtxTriggerSend()
 {
     VtxSendState = VTXSS_MODIFIED;
     sendEepromWrite = true;
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_VTX_CHANGE);
 }
 
 void VtxPitmodeSwitchUpdate()
@@ -73,7 +74,7 @@ static void eepromWriteToMSPOut()
     packet.reset();
     packet.function = MSP_EEPROM_WRITE;
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 }
 
 static void VtxConfigToMSPOut()
@@ -93,17 +94,19 @@ static void VtxConfigToMSPOut()
         packet.addByte(pitmodeAuxState);
     }
 
-    CRSF::AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    // we broadcast this so both the FC the RX can process it if it has an SPI based VTX or there are Tramp/SA VTX's connected to the RX
+    crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
-        MSP::sendPacket(&packet, TxBackpack); // send to tx-backpack as MSP
+        MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     registerButtonFunction(ACTION_SEND_VTX, VtxTriggerSend);
+    return true;
 }
 
 static int event()
@@ -173,7 +176,7 @@ static int timeout()
     }
     else
     {
-        CRSF::ResetMspQueue();
+        clearOTAQueue();
         VtxSendState = VTXSS_UNKNOWN;
     }
 
@@ -184,5 +187,6 @@ device_t VTX_device = {
     .initialize = initialize,
     .start = nullptr,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED | EVENT_VTX_CHANGE
 };

@@ -30,9 +30,6 @@
 
 ### PERFORMANCE OPTIONS: ###
 
-#unlocks >250mw output power for R9M and Happy Model ES915TX (Fan mod suggested: https://github.com/AlessandroAU/ExpressLRS/wiki/R9M-Fan-Mod-Cover)
-#-DUNLOCK_HIGHER_POWER
-
 -DLOCK_ON_FIRST_CONNECTION
 
 # For TX devices with fans, FAN_MIN_RUNTIME keeps the fan running even after the power level has
@@ -48,12 +45,6 @@
 # If not defined, will default to 420000
 #-DRCVR_UART_BAUD=400000
 
-# Invert the TX pin in the receiver code to allow an inverted RX pin on the
-# FC to be used (usually labeled SBUS input or RXI). Inverted CRSF output.
-# RX pin (telemetry) is unaffected. Update via_BetaflightPassthrough will
-# not work, only via_Wifi. ESP8266/8285 targets only
-#-DRCVR_INVERT_TX
-
 #-DTLM_REPORT_INTERVAL_MS=240LU
 
 ### OTHER OPTIONS: ###
@@ -62,22 +53,6 @@
 #-DHOME_WIFI_SSID=""
 #-DHOME_WIFI_PASSWORD=""
 
-# Enables code for talking to a connected ESP8266 backpack on the TX module, and associated Lua params
-# The device target should enable this automatically for devices that come with this, but can be added
-# to any device.
-#-DUSE_TX_BACKPACK
-
-# Silence the buzzer
-#-DDISABLE_ALL_BEEPS
-# Disables the startup tune and crsf connect/disconnct do beep-boop
-#-DDISABLE_STARTUP_BEEP
-# Startup is beep-boop, and crsf connect/disconnct do similar
-#-DJUST_BEEP_ONCE
-# Startup plays you own custom tune and crsf connect/disconnct do beep-boop
-#-DMY_STARTUP_MELODY="B5 16 P16 B5 16 P16 B5 16 P16 B5 2 G5 2 A5 2 B5 8 P4 A5 8 B5 1|140|-3"
-
-#If commented out the LED is RGB otherwise GRB
-#-DWS2812_IS_GRB
 
 ### Debugging options ###
 
@@ -101,11 +76,11 @@
 # These debugging options send extra information to BetaFlight in the LinkStatistics packet
 #-DDEBUG_BF_LINK_STATS
 
-# Prints a log line for every channels packet recieved at the RX:
+# Prints a log line for every channels packet received at the RX:
 #    ID,Antenna,RSSI,LQ,SNR,PWR,FHSS,TimingOffset
 # The ID is generated on the TX side and overwrites CH1-CH4 and increments once for every
 # channels packet. Writes directly to Serial, does not require DEBUG_LOG.
-# Flash both TX & RX with this enbled to use it if the ID is required.
+# Flash both TX & RX with this enabled to use it if the ID is required.
 #-DDEBUG_RCVR_LINKSTATS
 
 # This debug option reports dual radio RSSI&SNR, which is useful for validating a TD receiver

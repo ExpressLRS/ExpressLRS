@@ -94,7 +94,6 @@ td img.icon-pwm {
 					<tr><td></td><td>BUSY pin<img class="icon-input"/></td><td><input size='3' id='radio_busy' name='radio_busy' type='text'/></td><td>GPIO Input connected to SX128x busy pin</td></tr>
 					<tr><td></td><td>DIO0 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio0' name='radio_dio0' type='text'/></td><td>Unused on SX128x, Interrupt pin for SX127x</td></tr>
 					<tr><td></td><td>DIO1 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio1' name='radio_dio1' type='text'/></td><td>Interrupt pin for SX128x</td></tr>
-					<tr><td></td><td>DIO2 pin<img class="icon-input"/></td><td><input size='3' id='radio_dio2' name='radio_dio2' type='text'/></td><td>Unused on SX128x and 127x</td></tr>
 					<tr><td></td><td>MISO pin<img class="icon-input"/></td><td><input size='3' id='radio_miso' name='radio_miso' type='text'/></td><td>MISO connected to (possibly) multiple SX1280/127x</td></tr>
 					<tr><td></td><td>MOSI pin<img class="icon-output"/></td><td><input size='3' id='radio_mosi' name='radio_mosi' type='text'/></td><td>MOSI connected to (possibly) multiple SX1280/127x</td></tr>
 					<tr><td></td><td>NSS pin<img class="icon-output"/></td><td><input size='3' id='radio_nss' name='radio_nss' type='text'/></td><td>Chip select pin for first SX1280/127x</td></tr>
@@ -115,7 +114,6 @@ td img.icon-pwm {
 
 					<tr><td colspan='2'><b>Radio Power</td></tr>
 					<tr><td></td><td>PA enable pin<img class="icon-output"/></td><td><input size='3' id='power_enable' name='power_enable' type='text'/></td><td>Enable the power amplifier (active high)</td></tr>
-					<tr><td></td><td>APC1 pin<img class="icon-output"/></td><td><input size='3' id='power_apc1' name='power_apc1' type='text'/></td><td>Power amplifier control voltage</td></tr>
 					<tr><td></td><td>APC2 pin<img class="icon-output"/></td><td><input size='3' id='power_apc2' name='power_apc2' type='text'/></td><td>Power amplifier control voltage</td></tr>
 					<tr><td></td><td>RXEN pin<img class="icon-output"/></td><td><input size='3' id='power_rxen' name='power_rxen' type='text'/></td><td>Enable RX mode LNA (active high)</td></tr>
 					<tr><td></td><td>TXEN pin<img class="icon-output"/></td><td><input size='3' id='power_txen' name='power_txen' type='text'/></td><td>Enable TX mode PA (active high)</td></tr>
@@ -172,8 +170,6 @@ td img.icon-pwm {
 					<tr><td></td><td>Power Level control</td><td>
 						<select id='power_control' name='power_control'>
 							<option value='0'>via SEMTECH</option>
-							<!--<option value='1'>ANALOG</option>
-							<option value='2'>DAC</option>-->
 							<option value='3'>via ESP DACWRITE</option>
 						</select>
 					</td><td>How the power level is set</td></tr>
@@ -211,10 +207,6 @@ td img.icon-pwm {
 					<tr><td></td><td>Green LED inverted</td><td><input size='3' id='led_green_invert' name='led_green_invert' type='checkbox'/></td><td>Check if the LED is active HIGH</td></tr>
 					<tr><td></td><td>Blue LED pin<img class="icon-output"/></td><td><input size='3' id='led_blue' name='led_blue' type='text'/></td><td>Pin for a 3rd, BLUE, LED!</td></tr>
 					<tr><td></td><td>Blue LED inverted</td><td><input size='3' id='led_blue_invert' name='led_blue_invert' type='checkbox'/></td><td>Check if the LED is active HIGH</td></tr>
-					<!-- SIYI things!
-					<tr><td></td><td>Green/Red LED pin<img class="icon-output"/></td><td><input size='3' id='led_green_red' name='led_green_red' type='text'/></td></tr>
-					<tr><td></td><td>Red/Green LED pin<img class="icon-output"/></td><td><input size='3' id='led_red_green' name='led_red_green' type='text'/></td></tr>
-					-->
 					<tr><td colspan='2'><b>Button(s)</td></tr>
 					<tr><td></td><td>Button 1 pin<img class="icon-output"/></td><td><input size='3' id='button' name='button' type='text'/></td><td>Single/first (active low) button</td></tr>
 					<tr><td></td><td>Button 1 RGB Index</td><td><input size='3' id='button_led_index' name='button_led_index' type='text'/></td><td>Index of button LED in RGB string, leave empty for no RGB LED</td></tr>
@@ -252,7 +244,6 @@ td img.icon-pwm {
 					<tr><td colspan='2'><b>I2C & Misc Devices</td></tr>
 					<tr><td></td><td>SCL pin<img class="icon-output"/></td><td><input size='3' id='i2c_scl' name='i2c_scl' type='text'/></td><td>I2C clock pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
 					<tr><td></td><td>SDA pin<img class="icon-input"/><img class="icon-output"/></td><td><input size='3' id='i2c_sda' name='i2c_sda' type='text'/></td><td>I2C data pin used to communicate with I2C devices (may be the same as OLED I2C)</td></tr>
-					<!-- <tr><td></td><td>Buzzer pin</td><td><input size='3' id='misc_buzzer' name='misc_buzzer' type='text'/></td><td>Pin connected to a PWM controlled buzzer</td></tr> -->
 					<tr><td></td><td>Fan enable pin<img class="icon-output"/></td><td><input size='3' id='misc_fan_en' name='misc_fan_en' type='text'/></td><td>Pin used to enable a cooling FAN (active HIGH)</td></tr>
 					<tr><td></td><td>Fan PWM pin<img class="icon-pwm"/></td><td><input size='3' id='misc_fan_pwm' name='misc_fan_pwm' type='text'/></td><td>If the fan is controlled by PWM</td></tr>
 					<tr><td></td><td>Fan PWM output values</td><td><input size='40' id='misc_fan_speeds' name='misc_fan_speeds' type='text' class='array'/></td><td>If the fan is PWM controlled, then this is the list of values for the PWM output for the matching power output levels</td></tr>

@@ -1,20 +1,20 @@
-#include "rxtx_common.h"
+#include "CRSFRouter.h"
 #include "LowPassFilter.h"
+#include "rxtx_common.h"
 
 #include "crc.h"
-#include "telemetry_protocol.h"
 #include "telemetry.h"
 #include "stubborn_sender.h"
 #include "stubborn_receiver.h"
 
-#include "lua.h"
+#include "CRSFParameters.h"
+#include "MeanAccumulator.h"
+#include "PFD.h"
+#include "dynpower.h"
+#include "freqTable.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "PFD.h"
 #include "options.h"
-#include "dynpower.h"
-#include "MeanAccumulator.h"
-#include "freqTable.h"
 
 #include "rx-serial/SerialIO.h"
 #include "rx-serial/SerialNOOP.h"
@@ -26,24 +26,28 @@
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
+#include "rx-serial/SerialDisplayport.h"
+#include "rx-serial/SerialGPS.h"
 
-#include "rx-serial/devSerialIO.h"
-#include "devLED.h"
-#include "devLUA.h"
-#include "devWIFI.h"
-#include "devButton.h"
-#include "devServoOutput.h"
-#include "devVTXSPI.h"
 #include "devAnalogVbat.h"
-#include "devSerialUpdate.h"
 #include "devBaro.h"
-#include "devMSPVTX.h"
-#include "devThermal.h"
+#include "devButton.h"
+#include "devLED.h"
+#include "devRXLUA.h"
+#include "devServoOutput.h"
+#include "devWIFI.h"
+#include "RXEndpoint.h"
+#include "RXOTAConnector.h"
+#include "rx-serial/devSerialIO.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #include <FS.h>
 #elif defined(PLATFORM_ESP32)
+#include "devSerialUpdate.h"
+#include "devVTXSPI.h"
+#include "devMSPVTX.h"
+#include "devThermal.h"
 #include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
@@ -64,10 +68,6 @@
 #endif
 // ARDUINO_CORE_INVERT_FIX PT1 end
 
-///LUA///
-#define LUA_MAX_PARAMS 32
-////
-
 //// CONSTANTS ////
 #define SEND_LINK_STATS_TO_FC_INTERVAL 100
 #define DIVERSITY_ANTENNA_INTERVAL 5
@@ -79,39 +79,19 @@ device_affinity_t ui_devices[] = {
   {&Serial0_device, 1},
 #if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
-#endif
-#if defined(PLATFORM_ESP32)
   {&SerialUpdate_device, 1},
 #endif
-#ifdef HAS_LED
   {&LED_device, 0},
-#endif
-  {&LUA_device, 0},
-#ifdef HAS_RGB
+  {&RXLUA_device, 0},
   {&RGB_device, 0},
-#endif
-#ifdef HAS_WIFI
   {&WIFI_device, 0},
-#endif
-#ifdef HAS_BUTTON
   {&Button_device, 0},
-#endif
-#ifdef HAS_VTX_SPI
-  {&VTxSPI_device, 0},
-#endif
-#ifdef USE_ANALOG_VBAT
   {&AnalogVbat_device, 0},
-#endif
-#ifdef HAS_SERVO_OUTPUT
   {&ServoOut_device, 1},
-#endif
-#ifdef HAS_BARO
   {&Baro_device, 0}, // must come after AnalogVbat_device to slow updates
-#endif
-#ifdef HAS_MSP_VTX
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
+  {&VTxSPI_device, 0},
   {&MSPVTx_device, 0}, // dependency on VTxSPI_device
-#endif
-#if defined(HAS_THERMAL) || defined(HAS_FAN)
   {&Thermal_device, 0},
 #endif
 };
@@ -124,50 +104,33 @@ Crc2Byte ota_crc;
 ELRS_EEPROM eeprom;
 RxConfig config;
 Telemetry telemetry;
-Stream *SerialLogger;
-bool hardwareConfigured = true;
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+CRSFRouter crsfRouter;
+RXEndpoint crsfReceiver;
+RXOTAConnector otaConnector;
+
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
-#endif
 uint32_t serialBaud;
 
 /* SERIAL_PROTOCOL_TX is used by CRSF output */
-#if defined(TARGET_RX_FM30_MINI)
-    HardwareSerial SERIAL_PROTOCOL_TX(USART2);
-#elif defined(TARGET_DIY_900_RX_STM32)
-    HardwareSerial SERIAL_PROTOCOL_TX(USART1);
-#else
-    #define SERIAL_PROTOCOL_TX Serial
+#define SERIAL_PROTOCOL_TX Serial
 
-    #if defined(PLATFORM_ESP32)
-        #define SERIAL1_PROTOCOL_TX Serial1
+#if defined(PLATFORM_ESP32)
+    #define SERIAL1_PROTOCOL_TX Serial1
 
-        // SBUS driver needs to distinguish stream for SBUS/DJI protocol
-        const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
-        const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
+    // SBUS driver needs to distinguish stream for SBUS/DJI protocol
+    const Stream *serial_protocol_tx = &(SERIAL_PROTOCOL_TX);
+    const Stream *serial1_protocol_tx = &(SERIAL1_PROTOCOL_TX);
 
-        SerialIO *serial1IO = nullptr;
-    #endif
+    SerialIO *serial1IO = nullptr;
 #endif
 
 SerialIO *serialIO = nullptr;
 
-/* SERIAL_PROTOCOL_RX is used by telemetry receiver and can be on a different peripheral */
-#if defined(TARGET_RX_GHOST_ATTO_V1) /* !TARGET_RX_GHOST_ATTO_V1 */
-    #define SERIAL_PROTOCOL_RX CrsfRxSerial
-    HardwareSerial CrsfRxSerial(USART1, HALF_DUPLEX_ENABLED);
-#elif defined(TARGET_R9SLIMPLUS_RX) /* !TARGET_R9SLIMPLUS_RX */
-    #define SERIAL_PROTOCOL_RX CrsfRxSerial
-    HardwareSerial CrsfRxSerial(USART3);
-#elif defined(TARGET_RX_FM30_MINI)
-    #define SERIAL_PROTOCOL_RX SERIAL_PROTOCOL_TX
-#else
-    #define SERIAL_PROTOCOL_RX Serial
-    #define SERIAL1_PROTOCOL_RX Serial1
-#endif
+#define SERIAL_PROTOCOL_RX Serial
+#define SERIAL1_PROTOCOL_RX Serial1
 
 uint8_t currentTelemetryPayload[CRSF_MAX_PACKET_LEN];
 StubbornSender TelemetrySender;
@@ -178,7 +141,7 @@ StubbornReceiver MspReceiver;
 uint8_t MspData[ELRS_MSP_BUFFER];
 
 static bool tlmSent = false;
-static uint8_t NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+static uint8_t NextTelemetryType = PACKET_TYPE_LINKSTATS;
 static bool telemBurstValid;
 /// PFD Filters ////////////////
 LPF LPF_Offset(2);
@@ -204,9 +167,7 @@ bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
-bool didFHSS = false;
-bool alreadyFHSS = false;
-bool alreadyTLMresp = false;
+static bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -299,8 +260,8 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         rssiDBM2 = (rssiDBM2 > 0) ? 0 : rssiDBM2;
 
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
-        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM2;
+        linkStats.uplink_RSSI_1 = -rssiDBM;
+        linkStats.uplink_RSSI_2 = -rssiDBM2;
         antenna = (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1) ? 0 : 1;
     }
     else if (antenna == 0)
@@ -310,7 +271,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         #endif
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
-        CRSF::LinkStatistics.uplink_RSSI_1 = -rssiDBM;
+        linkStats.uplink_RSSI_1 = -rssiDBM;
     }
     else
     {
@@ -320,26 +281,26 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
         if (rssiDBM > 0) rssiDBM = 0;
         // BetaFlight/iNav expect positive values for -dBm (e.g. -80dBm -> sent as 80)
         // May be overwritten below if DEBUG_BF_LINK_STATS is set
-        CRSF::LinkStatistics.uplink_RSSI_2 = -rssiDBM;
+        linkStats.uplink_RSSI_2 = -rssiDBM;
     }
 
     SnrMean.add(Radio.LastPacketSNRRaw);
 
-    CRSF::LinkStatistics.active_antenna = antenna;
-    CRSF::LinkStatistics.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
-    //CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ; // handled in Tick
-    CRSF::LinkStatistics.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
-    //DBGLN(CRSF::LinkStatistics.uplink_RSSI_1);
+    linkStats.active_antenna = antenna;
+    linkStats.uplink_SNR = SNR_DESCALE(Radio.LastPacketSNRRaw); // possibly overriden below
+    //linkStats.uplink_Link_quality = uplinkLQ; // handled in Tick
+    linkStats.rf_Mode = ExpressLRS_currAirRate_Modparams->enum_rate;
+    //DBGLN(linkStats.uplink_RSSI_1);
     #if defined(DEBUG_BF_LINK_STATS)
-    CRSF::LinkStatistics.downlink_RSSI_1 = debug1;
-    CRSF::LinkStatistics.downlink_Link_quality = debug2;
-    CRSF::LinkStatistics.downlink_SNR = debug3;
-    CRSF::LinkStatistics.uplink_RSSI_2 = debug4;
+    linkStats.downlink_RSSI_1 = debug1;
+    linkStats.downlink_Link_quality = debug2;
+    linkStats.downlink_SNR = debug3;
+    linkStats.uplink_RSSI_2 = debug4;
     #endif
 
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
-    CRSF::LinkStatistics.uplink_SNR = Radio.LastPacketSNRRaw;
+    linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
     debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
     #endif
 }
@@ -363,7 +324,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
 
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
-                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength, 0
+                 ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
                  , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
 #endif
@@ -376,7 +337,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     if (FHSSuseDualBand)
     {
         Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
-                    ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength, 0,
+                    ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
                     ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4,
                     (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
     }
@@ -387,7 +348,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     checkGeminiMode();
     if (geminiMode)
     {
-        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2);
+        Radio.SetFrequencyReg(FHSSgetInitialGeminiFreq(), SX12XX_Radio_2, false);
     }
 
     OtaUpdateSerializers(smWideOr8ch, ModParams->PayloadLength);
@@ -402,52 +363,48 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
 
-    EnableLBT();
+    LbtEnableIfRequired();
 }
 
-bool ICACHE_RAM_ATTR HandleFHSS()
+static void ICACHE_RAM_ATTR HandleFHSS()
 {
-    uint8_t modresultFHSS = (OtaNonce + 1) % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
+    uint8_t modresultFHSS = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
-    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || alreadyFHSS == true || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
+    if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
     {
-        return false;
+        return;
     }
-
-    alreadyFHSS = true;
 
     if (geminiMode)
     {
-        if ((((OtaNonce + 1)/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
+        if (((OtaNonce / ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0) || FHSSuseDualBand) // When in DualBand do not switch between radios.  The OTA modulation paramters and HighFreq/LowFreq Tx amps are set during Config.
+
         {
-            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_1, false);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_2, false);
         }
         else
         {
             // Write radio1 first. This optimises the SPI traffic order.
             uint32_t freqRadio2 = FHSSgetNextFreq();
-            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1);
-            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2);
+            Radio.SetFrequencyReg(FHSSgetGeminiFreq(), SX12XX_Radio_1, false);
+            Radio.SetFrequencyReg(freqRadio2, SX12XX_Radio_2, false);
         }
     }
     else
     {
-        Radio.SetFrequencyReg(FHSSgetNextFreq());
+        Radio.SetFrequencyReg(FHSSgetNextFreq(), SX12XX_Radio_All, false);
     }
 
 #if defined(RADIO_SX127X)
     // SX127x radio has to reset receive mode after hopping
-    uint8_t modresultTLM = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresultTLM = OtaNonce % ExpressLRS_currTlmDenom;
     if (modresultTLM != 0 || ExpressLRS_currTlmDenom == 1) // if we are about to send a tlm response don't bother going back to rx
     {
         Radio.RXnb();
     }
 #endif
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
-    return true;
+    LbtCcaTimerStart();
 }
 
 void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
@@ -455,12 +412,12 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
     // The value in linkstatistics is "positivized" (inverted polarity)
     // and must be inverted on the TX side. Positive values are used
     // so save a bit to encode which antenna is in use
-    ls->uplink_RSSI_1 = CRSF::LinkStatistics.uplink_RSSI_1;
-    ls->uplink_RSSI_2 = CRSF::LinkStatistics.uplink_RSSI_2;
+    ls->uplink_RSSI_1 = linkStats.uplink_RSSI_1;
+    ls->uplink_RSSI_2 = linkStats.uplink_RSSI_2;
     ls->antenna = antenna;
     ls->modelMatch = connectionHasModelMatch;
-    ls->lq = CRSF::LinkStatistics.uplink_Link_quality;
-    ls->mspConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+    ls->lq = linkStats.uplink_Link_quality;
+    ls->tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
 #if defined(DEBUG_FREQ_CORRECTION)
     ls->SNR = FreqCorrection * 127 / FreqCorrectionMax;
 #else
@@ -477,7 +434,7 @@ void ICACHE_RAM_ATTR LinkStatsToOta(OTA_LinkStats_s * const ls)
 
 bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 {
-    uint8_t modresult = (OtaNonce + 1) % ExpressLRS_currTlmDenom;
+    uint8_t modresult = OtaNonce % ExpressLRS_currTlmDenom;
 
     if ((connectionState == disconnected) || (ExpressLRS_currTlmDenom == 1) || (alreadyTLMresp == true) || (modresult != 0) || !teamraceHasModelMatch)
     {
@@ -486,8 +443,9 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
 
     // ESP requires word aligned buffer
     WORD_ALIGNED_ATTR OTA_Packet_s otaPkt = {0};
+    WORD_ALIGNED_ATTR OTA_Packet_s otaPktGemini = {0};
     alreadyTLMresp = true;
-    otaPkt.std.type = PACKET_TYPE_TLM;
+    bool sendGeminiBuffer = false;
 
     bool tlmQueued = false;
     if (firmwareOptions.is_airport)
@@ -499,32 +457,54 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         tlmQueued = TelemetrySender.IsActive();
     }
 
-    if (NextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !tlmQueued)
+    if (NextTelemetryType == PACKET_TYPE_LINKSTATS || !tlmQueued)
     {
+        otaPkt.std.type = PACKET_TYPE_LINKSTATS;
+
         OTA_LinkStats_s * ls;
+
+        // Include some advanced telemetry in the extra space
+        // Note the use of `ul_link_stats.payload` vs just `payload`
         if (OtaIsFullRes)
         {
-            otaPkt.full.tlm_dl.containsLinkStats = 1;
             ls = &otaPkt.full.tlm_dl.ul_link_stats.stats;
-            // Include some advanced telemetry in the extra space
-            // Note the use of `ul_link_stats.payload` vs just `payload`
-            otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                otaPkt.full.tlm_dl.ul_link_stats.payload,
-                sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+            otaPkt.full.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
+
+            otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+
+            if (geminiMode)
+            {
+                sendGeminiBuffer = true;
+                WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload)] = {0};
+
+                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                memcpy(otaPkt.full.tlm_dl.ul_link_stats.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+                LinkStatsToOta(ls);
+
+                otaPktGemini = otaPkt;
+                memcpy(otaPktGemini.full.tlm_dl.ul_link_stats.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.tlm_dl.ul_link_stats.payload)], sizeof(otaPktGemini.full.tlm_dl.ul_link_stats.payload));
+            }
+            else
+            {
+                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
+                    otaPkt.full.tlm_dl.ul_link_stats.payload,
+                    sizeof(otaPkt.full.tlm_dl.ul_link_stats.payload));
+                LinkStatsToOta(ls);
+            }
         }
         else
         {
-            otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
             ls = &otaPkt.std.tlm_dl.ul_link_stats.stats;
+            otaPkt.std.tlm_dl.ul_link_stats.trueDiversityAvailable = isDualRadio();
+            LinkStatsToOta(ls);
         }
-        LinkStatsToOta(ls);
 
-        NextTelemetryType = ELRS_TELEMETRY_TYPE_DATA;
+        NextTelemetryType = PACKET_TYPE_DATA;
         // Start the count at 1 because the next will be DATA and doing +1 before checking
         // against Max below is for some reason 10 bytes more code
         telemetryBurstCount = 1;
     }
-    else
+    else // if tlmQueued
     {
         if (telemetryBurstCount < telemetryBurstMax)
         {
@@ -532,32 +512,65 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
         }
         else
         {
-            NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+            NextTelemetryType = PACKET_TYPE_LINKSTATS;
         }
+
+        otaPkt.std.type = PACKET_TYPE_DATA;
 
         if (firmwareOptions.is_airport)
         {
             OtaPackAirportData(&otaPkt, &apInputBuffer);
         }
-        else if (TelemetrySender.IsActive())
+        else
         {
             if (OtaIsFullRes)
             {
-                otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.full.tlm_dl.payload,
-                    sizeof(otaPkt.full.tlm_dl.payload));
+                otaPkt.full.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+
+                if (geminiMode)
+                {
+                    sendGeminiBuffer = true;
+                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.full.tlm_dl.payload)] = {0};
+
+                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                    memcpy(otaPkt.full.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.full.tlm_dl.payload));
+
+                    otaPktGemini = otaPkt;
+                    memcpy(otaPktGemini.full.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.full.tlm_dl.payload)], sizeof(otaPktGemini.full.tlm_dl.payload));
+                }
+                else
+                {
+                    otaPkt.full.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.full.tlm_dl.payload, sizeof(otaPkt.full.tlm_dl.payload));
+                }
             }
             else
             {
-                otaPkt.std.tlm_dl.type = ELRS_TELEMETRY_TYPE_DATA;
-                otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(
-                    otaPkt.std.tlm_dl.payload,
-                    sizeof(otaPkt.std.tlm_dl.payload));
+                otaPkt.std.tlm_dl.tlmConfirm = MspReceiver.GetCurrentConfirm() ? 1 : 0;
+
+                if (geminiMode)
+                {
+                    sendGeminiBuffer = true;
+                    WORD_ALIGNED_ATTR uint8_t tlmSenderDoubleBuffer[2 * sizeof(otaPkt.std.tlm_dl.payload)] = {0};
+
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(tlmSenderDoubleBuffer, sizeof(tlmSenderDoubleBuffer));
+                    memcpy(otaPkt.std.tlm_dl.payload, tlmSenderDoubleBuffer, sizeof(otaPkt.std.tlm_dl.payload));
+
+                    otaPktGemini = otaPkt;
+                    memcpy(otaPktGemini.std.tlm_dl.payload, &tlmSenderDoubleBuffer[sizeof(otaPktGemini.std.tlm_dl.payload)], sizeof(otaPktGemini.std.tlm_dl.payload));
+                }
+                else
+                {
+                    otaPkt.std.tlm_dl.packageIndex = TelemetrySender.GetCurrentPayload(otaPkt.std.tlm_dl.payload, sizeof(otaPkt.std.tlm_dl.payload));
+                }
             }
         }
     }
 
     OtaGeneratePacketCrc(&otaPkt);
+    if (sendGeminiBuffer)
+    {
+        OtaGeneratePacketCrc(&otaPktGemini);
+    }
 
     SX12XX_Radio_Number_t transmittingRadio;
     if (config.GetForceTlmOff())
@@ -572,17 +585,24 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
     }
-
-#if defined(Regulatory_Domain_EU_CE_2400)
-    transmittingRadio &= ChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-#endif
+    transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
 
     if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
     {
         transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
     }
 
-    Radio.TXnb((uint8_t*)&otaPkt, transmittingRadio);
+    // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
+    // The payloads need to be switch when this happens.
+    // GemX does not switch due to the time required to reconfigure the LR1121 params.
+    if ((OtaNonce/ExpressLRS_currAirRate_Modparams->FHSShopInterval) % 2 == 0 || !sendGeminiBuffer || FHSSuseDualBand)
+    {
+        Radio.TXnb((uint8_t*)&otaPkt, sendGeminiBuffer, (uint8_t*)&otaPktGemini, transmittingRadio);
+    }
+    else
+    {
+        Radio.TXnb((uint8_t*)&otaPktGemini, sendGeminiBuffer, (uint8_t*)&otaPkt, transmittingRadio);
+    }
 
     if (transmittingRadio == SX12XX_Radio_NONE)
     {
@@ -594,10 +614,10 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     return true;
 }
 
-int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
+int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value, SX12XX_Radio_Number_t radio)
 {
     int32_t tempFC = FreqCorrection;
-    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2)
+    if (radio == SX12XX_Radio_2)
     {
         tempFC = FreqCorrection_2;
     }
@@ -625,7 +645,7 @@ int32_t ICACHE_RAM_ATTR HandleFreqCorr(bool value)
         }
     }
 
-    if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+    if (radio == SX12XX_Radio_1)
     {
         FreqCorrection = tempFC;
     }
@@ -648,10 +668,8 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
         if (RXtimerState == tim_locked)
         {
-            // limit rate of freq offset adjustment, use slot 1
-            // because telemetry can fall on slot 1 and will
-            // never get here
-            if (OtaNonce % 8 == 1)
+            // limit rate of freq offset adjustment
+            if (OtaNonce % 8 == 0)
             {
                 if (Offset > 0)
                 {
@@ -682,15 +700,6 @@ void ICACHE_RAM_ATTR updatePhaseLock()
 
 void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the other callback, occurs mid-packet reception
 {
-    updatePhaseLock();
-    OtaNonce++;
-
-    // if (!alreadyTLMresp && !alreadyFHSS && !LQCalc.currentIsSet()) // packet timeout AND didn't DIDN'T just hop or send TLM
-    // {
-    //     Radio.RXnb(); // put the radio cleanly back into RX in case of garbage data
-    // }
-
-
     if (ExpressLRS_currAirRate_Modparams->numOfSends == 1)
     {
         // Save the LQ value before the inc() reduces it by 1
@@ -702,13 +711,12 @@ void ICACHE_RAM_ATTR HWtimerCallbackTick() // this is 180 out of phase with the 
         LQCalcDVDA.inc();
     }
 
-    CRSF::LinkStatistics.uplink_Link_quality = uplinkLQ;
+    linkStats.uplink_Link_quality = uplinkLQ;
     // Only advance the LQI period counter if we didn't send Telemetry this period
     if (!alreadyTLMresp)
         LQCalc.inc();
 
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 }
 
 //////////////////////////////////////////////////////////////
@@ -824,15 +832,14 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
         }
     }
 
-    if (!didFHSS)
-    {
-        HandleFHSS();
-    }
-    didFHSS = false;
+    // For any serial drivers that need to send on a regular cadence (i.e. CRSF to betaflight)
+    sendImmediateRC();
 
-    Radio.isFirstRxIrq = true;
+    OtaNonce++;
+    HandleFHSS();
     updateDiversity();
     tlmSent = HandleSendTelemetryResponse();
+    updatePhaseLock();
 
     #if defined(DEBUG_RX_SCOREBOARD)
     static bool lastPacketWasTelemetry = false;
@@ -847,7 +854,7 @@ void LostConnection(bool resumeRx)
 {
     DBGLN("lost conn fc=%d fo=%d", FreqCorrection, hwTimer::getFreqOffset());
 
-    connectionState = disconnected; //set lost connection
+    setConnectionState(disconnected); //set lost connection
     RXtimerState = tim_disconnected;
     hwTimer::resetFreqOffset();
     PfdPrevRawOffset = 0;
@@ -858,7 +865,6 @@ void LostConnection(bool resumeRx)
     LPF_Offset.init(0);
     LPF_OffsetDx.init(0);
     alreadyTLMresp = false;
-    alreadyFHSS = false;
 
     if (!InBindingMode)
     {
@@ -879,7 +885,7 @@ void LostConnection(bool resumeRx)
 void ICACHE_RAM_ATTR TentativeConnection(unsigned long now)
 {
     PFDloop.reset();
-    connectionState = tentative;
+    setConnectionState(tentative);
     connectionHasModelMatch = false;
     RXtimerState = tim_disconnected;
     DBGLN("tentative conn");
@@ -909,12 +915,10 @@ void GotConnection(unsigned long now)
 
     LockRFmode = firmwareOptions.lock_on_first_connection;
 
-    connectionState = connected; //we got a packet, therefore no lost connection
+    setConnectionState(connected); //we got a packet, therefore no lost connection
     RXtimerState = tim_tentative;
     GotConnectionMillis = now;
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     webserverPreventAutoStart = true;
-    #endif
 
     if (firmwareOptions.is_airport)
     {
@@ -932,7 +936,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_RC(OTA_Packet_s const * const otaPkt
     if (connectionState != connected || SwitchModePending)
         return;
 
-    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData, ExpressLRS_currTlmDenom);
+    bool telemetryConfirmValue = OtaUnpackChannelData(otaPktPtr, ChannelData);
     TelemetrySender.ConfirmCurrentPayload(telemetryConfirmValue);
 
     // No channels packets to the FC or PWM pins if no model match
@@ -985,7 +989,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
         dataLen = sizeof(otaPktPtr->full.msp_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmFlag);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->full.msp_ul.tlmConfirm);
         }
         else
         {
@@ -999,7 +1003,7 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
         dataLen = sizeof(otaPktPtr->std.msp_ul.payload);
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
         {
-            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmFlag);
+            TelemetrySender.ConfirmCurrentPayload(otaPktPtr->std.msp_ul.tlmConfirm);
         }
         else
         {
@@ -1017,14 +1021,9 @@ static void ICACHE_RAM_ATTR ProcessRfPacket_MSP(OTA_Packet_s const * const otaPk
 
     // Must be fully connected to process MSP, prevents processing MSP
     // during sync, where packets can be received before connection
-    if (connectionState != connected)
-        return;
-
-    bool currentMspConfirmValue = MspReceiver.GetCurrentConfirm();
-    MspReceiver.ReceiveData(packageIndex, payload, dataLen);
-    if (currentMspConfirmValue != MspReceiver.GetCurrentConfirm())
+    if (connectionState == connected)
     {
-        NextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
+        MspReceiver.ReceiveData(packageIndex, payload, dataLen);
     }
 }
 
@@ -1062,8 +1061,8 @@ static void ICACHE_RAM_ATTR updateSwitchModePendingFromOta(uint8_t newSwitchMode
 
 static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s const * const otaSync)
 {
-    // Verify the first two of three bytes of the binding ID, which should always match
-    if (otaSync->UID3 != UID[3] || otaSync->UID4 != UID[4])
+    // Verify the first byte of the binding ID, which should always match
+    if (otaSync->UID4 != UID[4])
         return false;
 
     // The third byte will be XORed with inverse of the ModelId if ModelMatch is on
@@ -1077,8 +1076,30 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     DBGW('s');
 #endif
 
+    if (otaSync->otaProtocol == TX_MAVLINK_MODE)
+    {
+        config.SetSerialProtocol(PROTOCOL_MAVLINK);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
+    {
+        config.SetSerialProtocol(PROTOCOL_CRSF);
+    }
+
+    // Check if otaProtocol has been updated.
+    if (config.IsModified())
+    {
+        deferExecutionMillis(100, [](){
+            reconfigureSerial();
+        });
+    }
+
+    if (isDualRadio())
+    {
+        config.SetAntennaMode(otaSync->geminiMode);
+    }
+
     // Will change the packet air rate in loop() if this changes
-    ExpressLRS_nextAirRateIndex = otaSync->rateIndex;
+    ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);
     updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
@@ -1101,7 +1122,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
         || FHSSgetCurrIndex() != otaSync->fhssIndex
         || connectionHasModelMatch != modelMatched)
     {
-        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaPktPtr->sync.nonce, otaPktPtr->sync.fhssIndex);
+        //DBGLN("\r\n%ux%ux%u", OtaNonce, otaSync->nonce, otaSync->fhssIndex);
         FHSSsetCurrIndex(otaSync->fhssIndex);
         OtaNonce = otaSync->nonce;
         TentativeConnection(now);
@@ -1126,6 +1147,8 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     uint32_t const beginProcessing = micros();
 
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
+    OTA_Packet_s * const otaPktPtrSecond = (OTA_Packet_s * const)Radio.RXdataBufferSecond;
+
     if (!OtaValidatePacketCrc(otaPktPtr))
     {
         DBGVLN("CRC error");
@@ -1135,30 +1158,45 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
         return false;
     }
 
-    PFDloop.extEvent(beginProcessing + PACKET_TO_TOCK_SLACK);
+    // The extEvent defines where TOCK timer ISR is to be synced to, i.e. where the packet period begins.
+    // For rates where the TOA is longer than half the packet period schedule the TOCK for rougly 1x TOA before
+    // the TX's end of the period so telemetry is received by the TX in the correct period. For all others,
+    // schedule TOCK to be PACKET_TO_TOCK_SLACK (us) after RX packet reception.
+    int32_t slack = std::max(ExpressLRS_currAirRate_Modparams->interval - 2 * ExpressLRS_currAirRate_RFperfParams->TOA, (int32_t)PACKET_TO_TOCK_SLACK);
+    PFDloop.extEvent(beginProcessing + slack);
 
     doStartTimer = false;
     unsigned long now = millis();
 
     LastValidPacket = now;
 
+    Radio.CheckForSecondPacket();
+    if (Radio.hasSecondRadioGotData)
+    {
+        if (!OtaValidatePacketCrc(otaPktPtrSecond))
+        {
+            Radio.hasSecondRadioGotData = false;
+        }
+    }
+
     switch (otaPktPtr->std.type)
     {
     case PACKET_TYPE_RCDATA: //Standard RC Data Packet
         ProcessRfPacket_RC(otaPktPtr);
-        break;
-    case PACKET_TYPE_MSPDATA:
-        ProcessRfPacket_MSP(otaPktPtr);
         break;
     case PACKET_TYPE_SYNC: //sync packet from master
         doStartTimer = ProcessRfPacket_SYNC(now,
             OtaIsFullRes ? &otaPktPtr->full.sync.sync : &otaPktPtr->std.sync)
             && !InBindingMode;
         break;
-    case PACKET_TYPE_TLM:
+    case PACKET_TYPE_DATA:
         if (firmwareOptions.is_airport)
         {
             OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
+        }
+        else
+        {
+            ProcessRfPacket_MSP(otaPktPtr);
         }
         break;
     default:
@@ -1169,13 +1207,29 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     Radio.GetLastPacketStats();
     getRFlinkInfo();
 
+    // Adjusts FreqCorrection for RX freq offset
     if (Radio.FrequencyErrorAvailable())
     {
     #if defined(RADIO_SX127X)
-        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool());      // Adjusts FreqCorrection for RX freq offset
+        int32_t tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool(Radio.GetProcessingPacketRadio()), Radio.GetProcessingPacketRadio());
         // Teamp900 also needs to adjust its demood PPM
-        Radio.SetPPMoffsetReg(tempFreqCorrection);
-    #endif /* RADIO_SX127X */
+        Radio.SetPPMoffsetReg(tempFreqCorrection, Radio.GetProcessingPacketRadio());
+
+        if (Radio.hasSecondRadioGotData)
+        {
+            SX12XX_Radio_Number_t secondRadio = Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
+            tempFreqCorrection = HandleFreqCorr(Radio.GetFrequencyErrorbool(secondRadio), secondRadio);
+            Radio.SetPPMoffsetReg(tempFreqCorrection, secondRadio);
+        }
+    #else
+        HandleFreqCorr(Radio.GetFrequencyErrorbool(Radio.GetProcessingPacketRadio()), Radio.GetProcessingPacketRadio());
+
+        if (Radio.hasSecondRadioGotData)
+        {
+            SX12XX_Radio_Number_t secondRadio = Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
+            HandleFreqCorr(Radio.GetFrequencyErrorbool(secondRadio), secondRadio);
+        }
+    #endif
     }
 
     // Received a packet, that's the definition of LQ
@@ -1200,8 +1254,6 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 
     if (ProcessRFPacket(status))
     {
-        didFHSS = HandleFHSS();
-
         if (doStartTimer)
         {
             doStartTimer = false;
@@ -1216,23 +1268,10 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
 void ICACHE_RAM_ATTR TXdoneISR()
 {
     Radio.RXnb();
-#if defined(Regulatory_Domain_EU_CE_2400)
-    SetClearChannelAssessmentTime();
-#endif
+    LbtCcaTimerStart();
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('T');
 #endif
-}
-
-void UpdateModelMatch(uint8_t model)
-{
-    DBGLN("Set ModelId=%u", model);
-    config.SetModelId(model);
-}
-
-void SendMSPFrameToFC(uint8_t *mspData)
-{
-    serialIO->queueMSPFrameTransmission(mspData);
 }
 
 /**
@@ -1243,15 +1282,12 @@ void MspReceiveComplete()
     switch (MspData[0])
     {
     case MSP_ELRS_SET_RX_WIFI_MODE: //0x0E
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // The MSP packet needs to be ACKed so the TX doesn't
         // keep sending it, so defer the switch to wifi
         deferExecutionMillis(500, []() {
             setWifiUpdateMode();
         });
-#endif
         break;
-#if !defined(PLATFORM_STM32)
     case MSP_ELRS_MAVLINK_TLM: // 0xFD
         // raw mavlink data
         if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
@@ -1259,54 +1295,11 @@ void MspReceiveComplete()
             ((SerialMavlink *)serialIO)->forwardMessage(MspData);
         }
         break;
-#endif
     default:
         //handle received CRSF package
-        crsf_ext_header_t *receivedHeader = (crsf_ext_header_t *) MspData;
-        switch (receivedHeader->type)
-        {
-        case CRSF_FRAMETYPE_MSP_WRITE: //encapsulated MSP payload
-            if (MspData[7] == MSP_SET_RX_CONFIG && MspData[8] == MSP_ELRS_MODEL_ID)
-            {
-                UpdateModelMatch(MspData[9]);
-                break;
-            }
-            else if (MspData[7] == MSP_SET_VTX_CONFIG)
-            {
-                if (OPT_HAS_VTX_SPI) {
-                    vtxSPIFrequency = getFreqByIdx(MspData[8]);
-                    if (MspData[6] >= 4) // If packet has 4 bytes it also contains power idx and pitmode.
-                    {
-                        vtxSPIPowerIdx = MspData[10];
-                        vtxSPIPitmode = MspData[11];
-                    }
-                    devicesTriggerEvent();
-                    break;
-#if defined(PLATFORM_ESP32)
-                } else if (config.GetSerial1Protocol() == PROTOCOL_SERIAL1_TRAMP || config.GetSerial1Protocol() == PROTOCOL_SERIAL1_SMARTAUDIO) {
-                    serial1IO->queueMSPFrameTransmission(MspData);
-                    break;
-#endif
-                }
-            }
-            // FALLTHROUGH
-        default:
-            if ((receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_CRSF_RECEIVER))
-            {
-                luaParamUpdateReq(
-                    MspData[CRSF_TELEMETRY_TYPE_INDEX],
-                    MspData[CRSF_TELEMETRY_FIELD_ID_INDEX],
-                    MspData[CRSF_TELEMETRY_FIELD_CHUNK_INDEX]
-                );
-            }
-            break;
-        }
-        // No MSP data to the FC if no model match
-        if (connectionHasModelMatch && teamraceHasModelMatch &&
-            (receivedHeader->dest_addr == CRSF_ADDRESS_BROADCAST || receivedHeader->dest_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER))
-        {
-            serialIO->queueMSPFrameTransmission(MspData);
-        }
+        const auto receivedHeader = (crsf_header_t *) MspData;
+        crsfRouter.processMessage(&otaConnector, receivedHeader);
+
     }
 
     MspReceiver.Unlock();
@@ -1316,10 +1309,8 @@ static void setupSerial()
 {
     bool sbusSerialOutput = false;
 	bool sumdSerialOutput = false;
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     bool mavlinkSerialOutput = false;
     bool hottTlmSerial = false;
-#endif
 
     if (OPT_CRSF_RCVR_NO_SERIAL)
     {
@@ -1328,13 +1319,13 @@ static void setupSerial()
         #if defined(PLATFORM_ESP32_S3) && !defined(ESP32_S3_USB_JTAG_ENABLED)
         // Requires pull-down on GPIO3.  If GPIO3 has a pull-up (for JTAG) this doesn't work.
         USBSerial.begin(serialBaud);
-        SerialLogger = &USBSerial;
+        BackpackOrLogStrm = &USBSerial;
         #else
         Serial.begin(serialBaud);
-        SerialLogger = &Serial;
+        BackpackOrLogStrm = &Serial;
         #endif
         #else
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
         #endif
         serialIO = new SerialNOOP();
         return;
@@ -1353,95 +1344,50 @@ static void setupSerial()
         sumdSerialOutput = true;
         serialBaud = 115200;
     }
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (config.GetSerialProtocol() == PROTOCOL_MAVLINK)
     {
         mavlinkSerialOutput = true;
         serialBaud = 460800;
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialBaud = 115200;
     }
     else if (config.GetSerialProtocol() == PROTOCOL_HOTT_TLM)
     {
         hottTlmSerial = true;
         serialBaud = 19200;
     }
-#endif
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
-#ifdef PLATFORM_STM32
-#if defined(TARGET_R9SLIMPLUS_RX)
-    SERIAL_PROTOCOL_RX.setRx(GPIO_PIN_RCSIGNAL_RX);
-    SERIAL_PROTOCOL_RX.begin(serialBaud);
-
-    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-#else
-#if defined(GPIO_PIN_RCSIGNAL_RX_SBUS) && defined(GPIO_PIN_RCSIGNAL_TX_SBUS)
-    if (invert)
-    {
-        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX_SBUS);
-        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX_SBUS);
-    }
-    else
-#endif
-    {
-        SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-        SERIAL_PROTOCOL_TX.setRx(GPIO_PIN_RCSIGNAL_RX);
-    }
-#endif /* TARGET_R9SLIMPLUS_RX */
-#if defined(TARGET_RX_GHOST_ATTO_V1)
-    // USART1 is used for RX (half duplex)
-    SERIAL_PROTOCOL_RX.setHalfDuplex();
-    SERIAL_PROTOCOL_RX.setTx(GPIO_PIN_RCSIGNAL_RX);
-    SERIAL_PROTOCOL_RX.begin(serialBaud);
-    SERIAL_PROTOCOL_RX.enableHalfDuplexRx();
-
-    // USART2 is used for TX (half duplex)
-    // Note: these must be set before begin()
-    SERIAL_PROTOCOL_TX.setHalfDuplex();
-    SERIAL_PROTOCOL_TX.setRx((PinName)NC);
-    SERIAL_PROTOCOL_TX.setTx(GPIO_PIN_RCSIGNAL_TX);
-#endif /* TARGET_RX_GHOST_ATTO_V1 */
-    SERIAL_PROTOCOL_TX.begin(serialBaud, sbusSerialOutput ? SERIAL_8E2 : SERIAL_8N1);
-#endif /* PLATFORM_STM32 */
-#if defined(TARGET_RX_GHOST_ATTO_V1) || defined(TARGET_RX_FM30_MINI)
-    if (invert)
-    {
-        LL_GPIO_SetPinPull(GPIOA, GPIO_PIN_2, LL_GPIO_PULL_DOWN);
-        USART2->CR1 &= ~USART_CR1_UE;
-        USART2->CR2 |= USART_CR2_TXINV;
-        USART2->CR1 |= USART_CR1_UE;
-    }
-#endif
-
-#if defined(TARGET_RX_FM30_MINI) || defined(TARGET_DIY_900_RX_STM32)
-    Serial.setRx(GPIO_PIN_DEBUG_RX);
-    Serial.setTx(GPIO_PIN_DEBUG_TX);
-    Serial.begin(serialBaud); // Same baud as CRSF for simplicity
-#endif
-
 #if defined(PLATFORM_ESP8266)
-    SerialConfig config = SERIAL_8N1;
+    SerialConfig serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput)  ? SERIAL_TX_ONLY : SERIAL_FULL;
-    Serial.begin(serialBaud, config, mode, -1, invert);
+    Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 #elif defined(PLATFORM_ESP32)
-    uint32_t config = SERIAL_8N1;
+    uint32_t serialConfig = SERIAL_8N1;
 
     if(sbusSerialOutput)
     {
-        config = SERIAL_8E2;
+        serialConfig = SERIAL_8E2;
     }
     else if(hottTlmSerial)
     {
-        config = SERIAL_8N2;
+        serialConfig = SERIAL_8N2;
     }
 
     // ARDUINO_CORE_INVERT_FIX PT2
@@ -1453,7 +1399,7 @@ static void setupSerial()
     #endif
     // ARDUINO_CORE_INVERT_FIX PT2 end
 
-    Serial.begin(serialBaud, config, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
+    Serial.begin(serialBaud, serialConfig, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX, invert);
 #endif
 
     if (firmwareOptions.is_airport)
@@ -1468,16 +1414,22 @@ static void setupSerial()
     {
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-    #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     else if (mavlinkSerialOutput)
     {
         serialIO = new SerialMavlink(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
+    {
+        serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_GPS)
+    {
+        serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (hottTlmSerial)
     {
         serialIO = new SerialHoTT_TLM(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
-    #endif
     else
     {
         serialIO = new SerialCRSF(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
@@ -1486,12 +1438,12 @@ static void setupSerial()
 #if defined(DEBUG_ENABLED)
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
     USBSerial.begin(460800);
-    SerialLogger = &USBSerial;
+    BackpackOrLogStrm = &USBSerial;
 #else
-    SerialLogger = &Serial;
+    BackpackOrLogStrm = &Serial;
 #endif
 #else
-    SerialLogger = new NullStream();
+    BackpackOrLogStrm = new NullStream();
 #endif
 }
 
@@ -1570,6 +1522,14 @@ static void setupSerial1()
             Serial1.begin(4800, SERIAL_8N2, UNDEF_PIN, serial1TXpin, false);
             serial1IO = new SerialSmartAudio(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX, serial1TXpin);
             break;
+        case PROTOCOL_SERIAL1_MSP_DISPLAYPORT:
+            Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialDisplayport(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_GPS:
+            Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
     }
 }
 
@@ -1585,20 +1545,10 @@ void reconfigureSerial1()
 
 static void serialShutdown()
 {
-    SerialLogger = new NullStream();
-#ifdef PLATFORM_STM32
-#if defined(TARGET_R9SLIMPLUS_RX) || defined(TARGET_RX_GHOST_ATTO_V1)
-    SERIAL_PROTOCOL_RX.end();
-#endif
-    SERIAL_PROTOCOL_TX.end();
-#else
+    BackpackOrLogStrm = new NullStream();
     if(serialIO != nullptr)
     {
         Serial.end();
-    }
-#endif
-    if(serialIO != nullptr)
-    {
         delete serialIO;
         serialIO = nullptr;
     }
@@ -1646,11 +1596,6 @@ static void setupTarget()
         }
     }
 
-#if defined(TARGET_RX_FM30_MINI)
-    pinMode(GPIO_PIN_UART1TX_INVERT, OUTPUT);
-    digitalWrite(GPIO_PIN_UART1TX_INVERT, LOW);
-#endif
-
     setupTargetCommon();
 }
 
@@ -1663,7 +1608,7 @@ static void setupBindingFromConfig()
         memcpy(UID, config.GetUID(), UID_LEN);
     }
 
-    DBGLN("UID=(%d, %d, %d, %d, %d, %d) ModelId=%u",
+    DBGLN("UID=(%u, %u, %u, %u, %u, %u) ModelId=%u",
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
@@ -1680,7 +1625,7 @@ static void setupRadio()
     if (!init_success)
     {
         DBGLN("Failed to detect RF chipset!!!");
-        connectionState = radioFailed;
+        setConnectionState(radioFailed);
         return;
     }
 
@@ -1764,8 +1709,8 @@ static void EnterBindingMode()
         return;
     }
 
-    // Binding uses a CRCInit=0, 50Hz, and InvertIQ
-    OtaCrcInitializer = 0;
+    // Binding uses 50Hz, and InvertIQ
+    OtaCrcInitializer = OTA_VERSION_ID;
     InBindingMode = true;
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
@@ -1780,7 +1725,7 @@ static void EnterBindingMode()
     Radio.RXnb();
 
     DBGLN("Entered binding mode at freq = %d", Radio.currFreq);
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_ENTER_BIND_MODE);
 }
 
 static void ExitBindingMode()
@@ -1801,9 +1746,7 @@ static void ExitBindingMode()
     OtaUpdateCrcInitFromUid();
     FHSSrandomiseFHSSsequence(uidMacSeedGet());
 
-    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     webserverPreventAutoStart = true;
-    #endif
 
     // Force RF cycling to start at the beginning immediately
     scanIndex = RATE_MAX;
@@ -1815,7 +1758,7 @@ static void ExitBindingMode()
     // if we're in binding mode
     InBindingMode = false;
     DBGLN("Exiting binding mode");
-    devicesTriggerEvent();
+    devicesTriggerEvent(EVENT_EXIT_BIND_MODE);
 }
 
 static void updateBindingMode(unsigned long now)
@@ -1847,10 +1790,8 @@ static void updateBindingMode(unsigned long now)
     // If the power on counter is >=3, enter binding, the counter will be reset after 2s
     else if (!InBindingMode && config.GetPowerOnCounter() >= 3)
     {
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
         // Never enter wifi if forced to binding mode
         webserverPreventAutoStart = true;
-#endif
         DBGLN("Power on counter >=3, enter binding mode");
         EnterBindingMode();
     }
@@ -1879,7 +1820,7 @@ static void updateBindingMode(unsigned long now)
                 config.Commit(); // prevents CheckConfigChangePending() re-enabling radio
                 Radio.End();
                 // Enter a completely invalid state for a receiver, to prevent wifi or radio enabling
-                connectionState = noCrossfire;
+                setConnectionState(noCrossfire);
                 return;
             }
             // if the InitRate config item was changed by LostConnection
@@ -1898,7 +1839,6 @@ void EnterBindingModeSafely()
     if (connectionState == serialUpdate || InBindingMode)
         return;
 
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     // Never enter wifi mode after requesting to enter binding mode
     webserverPreventAutoStart = true;
 
@@ -1911,7 +1851,6 @@ void EnterBindingModeSafely()
         ESP.restart();
         // Unreachable
     }
-#endif
 
     // If connected, handle that in updateBindingMode()
     if (connectionState == connected)
@@ -1935,7 +1874,11 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            serialIO->queueLinkStatisticsPacket();
+            size_t linkStatsSize = sizeof(crsfLinkStatistics_t);
+            uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(linkStatsSize)];
+            crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+            // the linkStats 'originates' from the OTA connector so we don't send it back there.
+            crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
@@ -1952,7 +1895,7 @@ static void debugRcvrLinkstats()
 
         // Copy the data out of the ISR-updating bits ASAP
         // While YOLOing (const void *) away the volatile
-        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&CRSF::LinkStatistics);
+        crsfLinkStatistics_t ls = *(crsfLinkStatistics_t *)((const void *)&linkStats);
         uint32_t packetCounter = debugRcvrLinkstatsPacketId;
         uint8_t fhss = debugRcvrLinkstatsFhssIdx;
         // actually the previous packet's offset since the update happens in tick, and this will
@@ -2027,9 +1970,9 @@ static void CheckConfigChangePending()
     if (config.IsModified() && !InBindingMode && connectionState < NO_CONFIG_SAVE_STATES)
     {
         LostConnection(false);
-        config.Commit();
-        devicesTriggerEvent();
-        EnableLBT();
+        uint32_t changes = config.Commit();
+        devicesTriggerEvent(changes);
+        LbtEnableIfRequired();
         Radio.RXnb();
     }
 }
@@ -2054,9 +1997,6 @@ RF_PRE_INIT()
 void resetConfigAndReboot()
 {
     config.SetDefaults(true);
-#if defined(PLATFORM_STM32)
-    HAL_NVIC_SystemReset();
-#else
     // Prevent WDT from rebooting too early if
     // all this flash write is taking too long
     yield();
@@ -2067,18 +2007,15 @@ void resetConfigAndReboot()
     options_SetTrueDefaults();
 
     ESP.restart();
-#endif
 }
 
 void setup()
 {
-    #if defined(TARGET_UNIFIED_RX)
-    hardwareConfigured = options_init();
-    if (!hardwareConfigured)
+    if (!options_init())
     {
         // In the failure case we set the logging to the null logger so nothing crashes
         // if it decides to log something
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
 
         // Register the WiFi with the framework
         static device_affinity_t wifi_device[] = {
@@ -2087,14 +2024,18 @@ void setup()
         devicesRegister(wifi_device, ARRAY_SIZE(wifi_device));
         devicesInit();
 
-        connectionState = hardwareUndefined;
+        setConnectionState(hardwareUndefined);
     }
-    #else
-    hardwareConfigured = options_init();
-    #endif
-
-    if (hardwareConfigured)
+    else
     {
+#if defined(PLATFORM_ESP32)
+        // arduino-espressif32 HardwareSerial's constructor for UART0 saves and attaches to GPIO 1 and 3, which
+        // will reset any other use of them when begin() is actually called for UART0 by CRSFHandset/SerialIO.
+        // Calling end() here, will call _uartDetachPins() on the underlying UART implementation so they won't
+        // be saved later (fixed upstream, coming someday)
+        Serial.end();
+#endif
+
         // default to CRSF protocol and the compiled baud rate
         serialBaud = firmwareOptions.uart_baud;
 
@@ -2102,25 +2043,16 @@ void setup()
         // to the serial port and they'll block if the buffer fills
         #if defined(DEBUG_LOG)
         Serial.begin(serialBaud);
-        SerialLogger = &Serial;
+        BackpackOrLogStrm = &Serial;
         #else
-        SerialLogger = new NullStream();
+        BackpackOrLogStrm = new NullStream();
         #endif
 
-        // External EEPROM needs I2C setup so it can load config
-        // but configurable I2C pins for PWM RX needs config loaded first
-#if (defined(TARGET_USE_EEPROM) && defined(USE_I2C))
-        setupTarget();
-#endif
         // Init EEPROM and load config, checking powerup count
         setupConfigAndPocCheck();
-#if !(defined(TARGET_USE_EEPROM) && defined(USE_I2C))
         setupTarget();
-#endif
-
-        #if defined(OPT_HAS_SERVO_OUTPUT)
         // If serial is not already defined, then see if there is serial pin configured in the PWM configuration
-        if (GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
+        if (OPT_HAS_SERVO_OUTPUT && GPIO_PIN_RCSIGNAL_RX == UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX == UNDEF_PIN)
         {
             for (int i = 0 ; i < GPIO_PIN_PWM_OUTPUTS_COUNT ; i++)
             {
@@ -2132,7 +2064,8 @@ void setup()
                 }
             }
         }
-        #endif
+        crsfRouter.addEndpoint(&crsfReceiver);
+        crsfRouter.addConnector(&otaConnector);
         setupSerial();
         setupSerial1();
 
@@ -2156,10 +2089,8 @@ void setup()
         }
     }
 
-#if defined(HAS_BUTTON)
     registerButtonFunction(ACTION_BIND, EnterBindingModeSafely);
     registerButtonFunction(ACTION_RESET_REBOOT, resetConfigAndReboot);
-#endif
 
     devicesStart();
 
@@ -2186,12 +2117,10 @@ void loop()
     // read and process any data from serial ports, send any queued non-RC data
     handleSerialIO();
 
-#if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
         ESP.restart();
     }
-    #endif
 
     CheckConfigChangePending();
     executeDeferredFunction(micros());
@@ -2246,17 +2175,15 @@ void loop()
     }
 
     uint8_t nextPlayloadSize = 0;
-    if (!TelemetrySender.IsActive() && telemetry.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
+    if (!TelemetrySender.IsActive() && otaConnector.GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
         TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
 
-#if !defined(PLATFORM_STM32)
     if (config.GetSerialProtocol() == PROTOCOL_MAVLINK && !TelemetrySender.IsActive() && ((SerialMavlink *)serialIO)->GetNextPayload(&nextPlayloadSize, currentTelemetryPayload))
     {
         TelemetrySender.SetDataToTransmit(currentTelemetryPayload, nextPlayloadSize);
     }
-#endif
 
     updateTelemetryBurst();
     updateBindingMode(now);
@@ -2291,28 +2218,11 @@ void reset_into_bootloader(void)
 {
     SERIAL_PROTOCOL_TX.println((const char *)&target_name[4]);
     SERIAL_PROTOCOL_TX.flush();
-#if defined(PLATFORM_STM32)
-    delay(100);
-    DBGLN("Jumping to Bootloader...");
-    delay(100);
-
-    /** Write command for firmware update.
-     *
-     * Bootloader checks this memory area (if newer enough) and
-     * perpare itself for fw update. Otherwise it skips the check
-     * and starts ELRS firmware immediately
-     */
-    extern __IO uint32_t _bootloader_data;
-    volatile struct bootloader * blinfo = ((struct bootloader*)&_bootloader_data) + 0;
-    blinfo->key = 0x454c5253; // ELRS
-    blinfo->reset_type = 0xACDC;
-
-    HAL_NVIC_SystemReset();
-#elif defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP8266)
     delay(100);
     ESP.rebootIntoUartDownloadMode();
 #elif defined(PLATFORM_ESP32)
     delay(100);
-    connectionState = serialUpdate;
+    setConnectionState(serialUpdate);
 #endif
 }

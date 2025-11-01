@@ -1,12 +1,13 @@
+
 #include "devBaro.h"
 
-#if defined(HAS_BARO)
+#if defined(TARGET_RX)
 
-#include "CRSF.h"
+#include "CRSFRouter.h"
+#include "baro_bmp280.h"
+#include "baro_spl06.h"
 #include "logging.h"
 #include "telemetry.h"
-#include "baro_spl06.h"
-#include "baro_bmp280.h"
 //#include "baro_bmp085.h"
 
 #define BARO_STARTUP_INTERVAL       100
@@ -23,7 +24,6 @@ extern bool i2c_enabled;
 static bool Baro_Detect()
 {
     // I2C Baros
-#if defined(USE_I2C)
     if (i2c_enabled)
     {
         if (SPL06::detect())
@@ -47,7 +47,6 @@ static bool Baro_Detect()
         // }
         // DBGLN("No baro detected");
     } // I2C
-#endif
     return false;
 }
 
@@ -113,21 +112,20 @@ static void Baro_PublishPressure(uint32_t pressuredPa)
     // if no external vario is connected output internal Vspd on CRSF_FRAMETYPE_BARO_ALTITUDE packet
     if (!telemetry.GetCrsfBaroSensorDetected())
     {
-        CRSF::SetHeaderAndCrc((uint8_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-        telemetry.AppendTelemetryPackage((uint8_t *)&crsfBaro);
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+        crsfRouter.deliverMessage(nullptr, &crsfBaro.h);
     }
+}
+
+static bool initialize()
+{
+    return Baro_Detect();
 }
 
 static int start()
 {
-    if (Baro_Detect())
-    {
-        BaroReadState = brsUninitialized;
-        return BARO_STARTUP_INTERVAL;
-    }
-
-    BaroReadState = brsNoBaro;
-    return DURATION_NEVER;
+    BaroReadState = brsUninitialized;
+    return BARO_STARTUP_INTERVAL;
 }
 
 static int timeout()
@@ -189,10 +187,11 @@ static int timeout()
 }
 
 device_t Baro_device = {
-    .initialize = nullptr,
+    .initialize = initialize,
     .start = start,
     .event = nullptr,
     .timeout = timeout,
+    .subscribe = EVENT_NONE
 };
 
 #endif

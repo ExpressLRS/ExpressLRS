@@ -74,8 +74,10 @@ void ESP32S3LedDriver::Show()
 {
     size_t bytes_written = 0;
     i2s_stop(I2S_NUM);
-    i2s_write(I2S_NUM, out_buffer, out_buffer_size, &bytes_written, portMAX_DELAY);
-    i2s_start(I2S_NUM);
+    if (i2s_write(I2S_NUM, out_buffer, out_buffer_size, &bytes_written, 0) == ESP_OK)
+    {
+        i2s_start(I2S_NUM);
+    }
 }
 
 void ESP32S3LedDriver::ClearTo(RgbColor color, uint16_t first, uint16_t last)
@@ -94,7 +96,7 @@ static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
 static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 #elif defined(CONFIG_IDF_TARGET_ESP32)
-static const int bitorder[] = {0x40, 0x80, 0x10, 0x20, 0x04, 0x08, 0x01, 0x02};
+static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 #endif
 
 void ESP32S3LedDriverGRB::SetPixelColor(uint16_t indexPixel, RgbColor color)
