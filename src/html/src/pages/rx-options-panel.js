@@ -16,11 +16,12 @@ class RxOptionsPanel extends LitElement {
 
     createRenderRoot() {
         this.domain = elrsState.options.domain
-        this.enableModelMatch = elrsState.options.modelid!==undefined && elrsState.options.modelid !== 255
-        this.modelId = elrsState.options.modelid===undefined ? 0 : elrsState.options.modelid
         this.lockOnFirst = elrsState.options['lock-on-first-connection']
         this.djiArmed = elrsState.options['dji-permanently-armed']
-        this.forceTlmOff = elrsState.options['force-tlm']
+        this.enableModelMatch = elrsState.config.modelid!==undefined && elrsState.config.modelid !== 255
+        this.modelId = elrsState.config.modelid===undefined ? 0 : elrsState.config.modelid
+        this.forceTlmOff = elrsState.config['force-tlm']
+        this.save = this.save.bind(this)
         return this
     }
 
@@ -74,7 +75,10 @@ class RxOptionsPanel extends LitElement {
                     <br>Enable this option to ignore the "Telem Ratio" setting on the TX and never send telemetry from this receiver.
                     <br/>
                     <div class="mui-checkbox">
-                        <input id='force-tlm' name='force-tlm' type='checkbox' value="1"/>
+                        <input id='force-tlm' name='force-tlm' type='checkbox'
+                               ?checked=${this.forceTlmOff}
+                               @change="${(e) => this.forceTlmOff = e.target.checked}"
+                        />
                         <label for="force-tlm">Force telemetry OFF on this receiver</label>
                     </div>
 
@@ -116,6 +120,7 @@ class RxOptionsPanel extends LitElement {
         saveOptionsAndConfig(changes, () => {
             elrsState.options = changes.options
             elrsState.config = changes.config
+            this.modelId = changes.config.modelid
             return this.requestUpdate()
         })
     }
@@ -127,8 +132,10 @@ class RxOptionsPanel extends LitElement {
         // /FEATURE: HAS_SUBGHZ
         changed |= this.lockOnFirst !== elrsState.options['lock-on-first-connection']
         changed |= this.djiArmed !== elrsState.options['dji-permanently-armed']
-        changed |= this.modelId !== elrsState.options['modelid']
-        changed |= this.forceTlmOff !== elrsState.options['force-tlm']
+        changed |= this.enableModelMatch && this.modelId !== elrsState.config['modelid']
+        changed |= !this.enableModelMatch && this.modelId !== 255
+        changed |= this.forceTlmOff !== elrsState.config['force-tlm']
+        console.log("changed options", changed)
         return changed
     }
 }

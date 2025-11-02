@@ -16,7 +16,8 @@ class BindingPanel extends LitElement {
     originalUID = []
 
     createRenderRoot() {
-        return this;
+        this._submitOptions = this._submitOptions.bind(this)
+        return this
     }
 
     firstUpdated(_changedProperties) {
@@ -180,10 +181,12 @@ class BindingPanel extends LitElement {
             vbind: this.bindType
         }
         saveConfig(rx_changes, () => {
-            this.originalUID = this.uid
-            this.originalUIDType = 'Overridden'
-            this.phrase.value = ''
-            this._updateUIDType(this.originalUIDType)
+            if (this.bindType !== 1) {
+                this.originalUID = this.uid
+                this.originalUIDType = 'Overridden'
+                this.phrase.value = ''
+                this._updateUIDType(this.originalUIDType)
+            }
             elrsState.config = rx_changes
             return this.requestUpdate()
         })
