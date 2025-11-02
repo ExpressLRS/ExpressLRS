@@ -585,7 +585,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   ///// Next, Calculate the CRC and put it into the buffer /////
   OtaGeneratePacketCrc(&otaPkt);
 
-  SX12XX_Radio_Number_t transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
+  SX12XX_Radio_Number_t transmittingRadio = Radio.GetStrongestReceivingRadio();
 
   if (isDualRadio())
   {
