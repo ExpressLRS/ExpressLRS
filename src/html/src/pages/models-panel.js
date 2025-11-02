@@ -1,7 +1,7 @@
 import {html, LitElement} from "lit"
 import {customElement} from "lit/decorators.js"
 import '../assets/mui.js'
-import {postWithFeedback} from "../utils/feedback.js"
+import {saveJSONWithReboot} from "../utils/feedback.js"
 
 @customElement('models-panel')
 class ModelsPanel extends LitElement {
@@ -22,26 +22,22 @@ class ModelsPanel extends LitElement {
             <div class="mui-panel">
                 <p>Restore your transmitter module and model configurations from a previous export.</p>
                 <div>
-                    <button class="mui-btn mui-btn--accent upload">
-                        <label>
-                            <input type="file" id="fileselect" name="fileselect[]" @change="${this.upload}"/>
-                            Import module settings
-                        </label>
-                    </button>
+                    <file-drop label="Import module settings" @file-drop=${this.upload}>or drop model JSON configuration file here</file-drop>
                 </div>
             </div>
         `
     }
 
     upload(e) {
-        const files = e.target.files || e.dataTransfer.files
+        const files = e.detail.files
         const reader = new FileReader()
-        reader.onload = (x) => postWithFeedback(
+        reader.onload = (x) => saveJSONWithReboot(
             'Upload Model Configuration',
             'An error occurred while uploading model configuration file',
             '/import',
-            () => {return x.target.result}
-        )(e)
+            x.target.result,
+            () => { return 'Model configuration updated, reboot for them to take effect' }
+        )
         reader.readAsText(files[0])
     }
 }

@@ -2,8 +2,7 @@ import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
 import '../assets/mui.js'
 import {_renderOptions} from "../utils/libs.js"
-import {elrsState, saveConfig, saveOptions} from "../utils/state.js"
-import {cuteAlert, postJSON} from "../utils/feedback.js"
+import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
@@ -22,7 +21,6 @@ class SerialPanel extends LitElement {
         this.baudRate = elrsState.options['rcvr-uart-baud']
         this.sbusFailsafe = elrsState.config['sbus-failsafe']
         this._saveSerial = this._saveSerial.bind(this)
-        this._saveConfig = this._saveConfig.bind(this)
         return this
     }
 
@@ -35,22 +33,18 @@ class SerialPanel extends LitElement {
                 <form>
                     ${this._hasSerial1() ? html`
                     <div class="mui-select">
-                        <select id='serial-protocol' name='serial-protocol'
-                            @change=${this._updateSerial1}
-                        >
+                        <select name='serial-protocol' @change=${this._updateSerial1}>
                             ${_renderOptions([...this.SERIAL_OPTIONS, "AirPort"], this.serial1Protocol)}
                         </select>
-                        <label for='serial-protocol'>Serial 1 Protocol</label>
+                        <label>Serial 1 Protocol</label>
                     </div>
                     ` : ''}
                     ${this._hasSerial2() ? html`
                     <div class="mui-select">
-                        <select id='serial1-protocol' name='serial1-protocol'
-                            @change=${this._updateSerial2}
-                        >
+                        <select name='serial1-protocol' @change=${this._updateSerial2}>
                             ${_renderOptions(["Off", ...this.SERIAL_OPTIONS], this.serial2Protocol)}
                         </select>
-                        <label for='serial1-protocol'>Serial 2 Protocol</label>
+                        <label>Serial 2 Protocol</label>
                     </div>
                     ` : ''}
                     ${this._displayBaudRate() ? html`
@@ -75,11 +69,11 @@ class SerialPanel extends LitElement {
                         </ul>
                         <br/>
                         <div class="mui-select">
-                            <select id='sbus-failsafe' name='serial-failsafe'>
+                            <select name='serial-failsafe'>
                                 <option value='0'>No Pulses</option>
                                 <option value='1'>Last Position</option>
                             </select>
-                            <label for="sbus-failsafe">SBUS Failsafe</label>
+                            <label>SBUS Failsafe</label>
                         </div>
                     </div>
                     ` : ''}
@@ -99,6 +93,7 @@ class SerialPanel extends LitElement {
     }
 
     _hasSerial1() {
+        if (!elrsState.config['pwm']) return true
         for(const pwm of elrsState.config.pwm) {
             const mode = (pwm.config >> 15) & 0xF
             if (mode === 9 || mode === 10 )
@@ -108,6 +103,9 @@ class SerialPanel extends LitElement {
     }
 
     _hasSerial2() {
+        if (!elrsState.config['pwm']) {
+            return elrsState.config['serial1-protocol'] !== undefined
+        }
         for(const pwm of elrsState.config.pwm) {
             const mode = (pwm.config >> 15) & 15
             if (mode === 13 || mode === 14)
@@ -151,42 +149,22 @@ class SerialPanel extends LitElement {
         return this._configChanged() || this._optionsChanged()
     }
 
-    _saveConfig() {
-        if (this._configChanged()) {
-            const changes = {
-                ...elrsState.config,
-                'serial-protocol': this.isAirport ? 0 : this.serial1Protocol,
-                'serial1-protocol': this.serial2Protocol,
-                'sbus-failsafe': this.sbusFailsafe
-            }
-            saveConfig(changes, () => {
-                elrsState.config = changes
-                this.requestUpdate()
-            })
-        }
-    }
-
     _saveSerial(e) {
         e.preventDefault()
-        if (this._optionsChanged()) {
-            const changes = {
-                ...elrsState.options,
-                'is-airport': this.isAirport,
-                'rcvr-uart-baud': this.baudRate
-            }
-            postJSON('/options.json', changes, {
-                onload: async () => {
-                    elrsState.options = changes
-                    this._saveConfig()
-                    this.requestUpdate()
+        saveOptionsAndConfig({
+                options: {
+                    ...elrsState.options,
+                    'is-airport': this.isAirport,
+                    'rcvr-uart-baud': this.baudRate
                 },
-                onerror: async (xhr) => {
-                    await cuteAlert({ type: 'error', title: 'Configuration Update Failed', message: xhr.responseText || 'Request failed' })
+                config: {
+                    ...elrsState.config,
+                    'serial-protocol': this.isAirport ? 0 : this.serial1Protocol,
+                    'serial1-protocol': this.serial2Protocol,
+                    'sbus-failsafe': this.sbusFailsafe
                 }
-            })
-        }
-        else {
-            this._saveConfig()
-        }
+            },
+            () => {this.requestUpdate()}
+        )
     }
 }

@@ -2,7 +2,7 @@ import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
 import '../assets/mui.js'
 import {_renderOptions} from "../utils/libs.js"
-import {elrsState, saveOptions} from "../utils/state.js"
+import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {postWithFeedback} from "../utils/feedback.js"
 
 @customElement('rx-options-panel')
@@ -17,9 +17,9 @@ class RxOptionsPanel extends LitElement {
     createRenderRoot() {
         this.domain = elrsState.options.domain
         this.enableModelMatch = elrsState.options.modelid!==undefined && elrsState.options.modelid !== 255
+        this.modelId = elrsState.options.modelid===undefined ? 0 : elrsState.options.modelid
         this.lockOnFirst = elrsState.options['lock-on-first-connection']
         this.djiArmed = elrsState.options['dji-permanently-armed']
-        this.modelId = elrsState.options['modelid']
         this.forceTlmOff = elrsState.options['force-tlm']
         return this
     }
@@ -33,40 +33,40 @@ class RxOptionsPanel extends LitElement {
                 <form id='upload_options' method='POST' action="/options">
                     <!-- FEATURE:HAS_SUBGHZ -->
                     <div class="mui-select">
-                        <select @change="${(e) => this.domain = parseInt(e.target.value)}">
+                        <select id="domain" @change="${(e) => this.domain = parseInt(e.target.value)}">
                             ${_renderOptions(['AU915','FCC915','EU868','IN866','AU433','EU433','US433','US433-Wide'], this.domain)}
                         </select>
                         <label for="domain">Regulatory domain</label>
                     </div>
                     <!-- /FEATURE:HAS_SUBGHZ -->
                     <div class="mui-checkbox">
-                        <input type='checkbox'
+                        <input id="lock" type='checkbox'
                                ?checked="${this.lockOnFirst}"
                                @change="${(e) => {this.lockOnFirst = e.target.checked}}"/>
-                        <label>Lock on first connection</label>
+                        <label for="lock">Lock on first connection</label>
                     </div>
                     <div class="mui-checkbox">
-                        <input type='checkbox'
+                        <input id="dji" type='checkbox'
                                ?checked="${this.djiArmed}"
                                @change="${(e) => {this.djiArmed = e.target.checked}}"/>
-                        <label>Permanently arm DJI air units</label>
+                        <label for="dji">Permanently arm DJI air units</label>
                     </div>
                     <h2>Model Match</h2>
                     Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
                     in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
                     <br/>
                     <div class="mui-checkbox">
-                        <input type='checkbox'
+                        <input id="modelMatch" type='checkbox'
                                ?checked="${this.enableModelMatch}"
                                @change="${(e) => {this.enableModelMatch = e.target.checked}}"/>
-                        <label>Enable Model Match</label>
+                        <label for="modelMatch">Enable Model Match</label>
                     </div>
                     ${this.enableModelMatch ? html`
                     <div class="mui-textfield">
-                        <input type='text' required
+                        <input id="modelId" type='text' required
                                @change="${(e) => this.modelId = parseInt(e.target.value)}"
                                .value="${this.modelId}"/>
-                        <label>Model ID</label>
+                        <label for="modelId">Model ID</label>
                     </div>
                     ` : ''}
                     <h2>Force telemetry off</h2>
@@ -99,17 +99,23 @@ class RxOptionsPanel extends LitElement {
     save(e) {
         e.preventDefault()
         const changes = {
-            ...elrsState.options,
-            // FEATURE: HAS_SUBGHZ
-            'domain': this.domain,
-            // /FEATURE: HAS_SUBGHZ
-            'lock-on-first-connection': this.lockOnFirst,
-            'dji-permanently-armed': this.djiArmed,
-            'modelid': this.enableModelMatch ? this.modelId : 255,
-            'force-tlm': this.forceTlmOff
+            options: {
+                ...elrsState.options,
+                // FEATURE: HAS_SUBGHZ
+                'domain': this.domain,
+                // /FEATURE: HAS_SUBGHZ
+                'lock-on-first-connection': this.lockOnFirst,
+                'dji-permanently-armed': this.djiArmed,
+            },
+            config: {
+                ...elrsState.config,
+                'modelid': this.enableModelMatch ? this.modelId : 255,
+                'force-tlm': this.forceTlmOff
+            }
         }
-        saveOptions(changes, () => {
-            elrsState.options = changes
+        saveOptionsAndConfig(changes, () => {
+            elrsState.options = changes.options
+            elrsState.config = changes.config
             return this.requestUpdate()
         })
     }

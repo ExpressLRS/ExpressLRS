@@ -21,7 +21,8 @@ export class HardwareLayout extends LitElement {
             <div class="hardware-layout">
                 <div class="mui-panel mui--text-title">Hardware Layout</div>
                 <div class="mui-panel">
-                    <label>Upload target configuration (remember to press "Save Target Configuration" below):</label>
+                    Upload target configuration (remember to press "Save Target Configuration" at the bottom of the page):
+                    <p>
                     <file-drop id="filedrag" label="Upload" @file-drop=${this._onFileDrop}>or drop files here</file-drop>
                 </div>
                 <div class="mui-panel">

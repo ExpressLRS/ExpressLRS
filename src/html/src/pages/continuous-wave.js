@@ -6,7 +6,8 @@ import {post} from "../utils/feedback.js";
 @customElement('continuous-wave')
 export class ContinuousWave extends LitElement {
     @query('#optionsSetSubGHz') accessor optionsSetSubGHz
-    @query('#optionsRadios2') accessor optionsRadios2
+    @query('#radio2') accessor radio2
+    @query('#measured') accessor measured
 
     @state() accessor data = undefined
     @state() accessor started = false
@@ -35,48 +36,50 @@ export class ContinuousWave extends LitElement {
                     <form class="mui-form">
                         ${this.data.radios === 2 ? html`
                             <div class="mui-radio">
-                                <label>
-                                    <input type="radio"
-                                           name="optionsRadios"
-                                           value="1"
-                                           ?disabled=${this.started}
-                                           checked>
-                                    Radio 1
-                                </label>
-                                <label>
-                                    <input type="radio"
-                                           name="optionsRadios"
-                                           id="optionsRadios2"
-                                           value="2"
-                                           ?disabled=${this.started}>
-                                    Radio 2
-                                </label>
+                                <input id="radio1"
+                                       type="radio"
+                                       name="optionsRadios"
+                                       value="1"
+                                       ?disabled=${this.started}
+                                       checked>
+                                <label for="radio1">Radio 1</label>
+                            </div>
+                            <div class="mui-radio">
+                                <input id="radio2"
+                                       type="radio"
+                                       name="optionsRadios"
+                                       value="2"
+                                       ?disabled=${this.started}>
+                                <label for="radio2">Radio 2</label>
                             </div>
                         ` : html``}
-                        <br>
                         <!-- FEATURE:HAS_LR1121 -->
+                        <br>
                         Basic support is available for the LR1121 and setting 915 MHz.
                         <br>
                         <div class="mui-checkbox">
-                            <label>
-                                <input type="checkbox"
-                                       name="setSubGHz"
-                                       id="optionsSetSubGHz"
-                                       ?disabled=${this.started}
-                                       @click="${this._updateFreq}">
-                                Set 915 MHz
-                            </label>
+                            <input type="checkbox"
+                                   name="setSubGHz"
+                                   id="optionsSetSubGHz"
+                                   ?disabled=${this.started}
+                                   @click="${this._updateFreq}">
+                            <label for="optionsSetSubGHz">Set 915 MHz</label>
                         </div>
-                        <br>
                         <!-- /FEATURE:HAS_LR1121 -->
+                        <br>
                         <button class="mui-btn mui-btn--primary" ?disabled=${this.started} @click="${this._startCW}">
                             Start Continuous Wave
                         </button>
                     </form>
                     <br>
                     <div class="mui-textfield">
-                        <input type='text' required @change="${this._measured}"/>
-                        <label>Center Frequency</label>
+                        <input id="measured" type='number' required @input="${this._measured}"
+                               @keypress="${(e) => {
+                                   if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
+                                       e.preventDefault();
+                               }}"
+                        />
+                        <label for="measured">Center Frequency</label>
                     </div>
                     <div style="display: ${this.result.calculated ? 'block' : 'none'};">
                         <table class="mui-table mui-table--bordered">
@@ -134,6 +137,7 @@ export class ContinuousWave extends LitElement {
         if (FEATURES.HAS_LR1121 && !this.optionsSetSubGHz?.checked) {
             this.cwFreq = this.data.center2
         }
+        this._measured()
     }
 
     _startCW(e) {
@@ -141,14 +145,14 @@ export class ContinuousWave extends LitElement {
         e.preventDefault()
         this.started = true
         const formdata = new FormData()
-        formdata.append('radio', this.optionsRadios2?.checked ? 2 : 1)
+        formdata.append('radio', this.radio2?.checked ? 2 : 1)
         if (FEATURES.HAS_LR1121) {
             formdata.append('subGHz', this.optionsSetSubGHz.checked ? 1 : 0)
         }
         post('/cw', formdata)
     }
 
-    _measured(e) {
+    _measured() {
         let xtalNominal = 52000000
         let warn_offset = 90000
         let bad_offset = 180000
@@ -159,8 +163,9 @@ export class ContinuousWave extends LitElement {
             bad_offset = 125000
         }
 
-        const calc = (e.target.value / this.cwFreq) * xtalNominal
-        const rawShift = Math.round(e.target.value - this.cwFreq)
+        if (!this.measured) return
+        const calc = (this.measured.value / this.cwFreq) * xtalNominal
+        const rawShift = Math.round(this.measured.value - this.cwFreq)
         let icon
         if (Math.abs(rawShift) < warn_offset) {
             icon = html`

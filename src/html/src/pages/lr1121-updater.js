@@ -28,7 +28,8 @@ export class LR1121Updater extends LitElement {
             <div class="mui-panel">
                 ${this._renderRadios()}
                 <label>Upload LR1121 firmware binary:</label>
-                <file-drop label="Upload" @file-drop=${this._fileSelected}>or drop firmware file here</file-drop>
+                <br>
+                <file-drop label="Upload and Flash" @file-drop=${this._fileSelected}>or drop firmware file here</file-drop>
                 <br/>
                 <h3>${this.status}</h3>
                 <progress .value="${this.progress}" max="100" style="width:100%;"></progress>
@@ -43,16 +44,12 @@ export class LR1121Updater extends LitElement {
         if (!this.data?.radio2) return html``
         return html`
             <div class="mui-radio">
-                <label>
-                    <input type="radio" name="optionsRadio" value="1" checked>
-                    Update Radio 1
-                </label>
+                <input id="radio1" type="radio" name="optionsRadio" value="1" checked>
+                <label for="radio1">Update Radio 1</label>
             </div>
             <div class="mui-radio">
-                <label>
-                    <input id="radio2" type="radio" name="optionsRadio" value="2">
-                    Update Radio 2
-                </label>
+                <input id="radio2" type="radio" name="optionsRadio" value="2">
+                <label for="radio2">Update Radio 2</label>
             </div>
         `
     }

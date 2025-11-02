@@ -50,41 +50,40 @@ class WifiPanel extends LitElement {
                 </p>
                 <form id="sethome" class="mui-form">
                     <div class="mui-radio">
-                        <input type="radio" name="networktype" value="0" checked @change="${this._handleChange}">
-                        <label>Set new home network</label>
+                        <input id="home" type="radio" name="networktype" value="0" checked @change="${this._handleChange}">
+                        <label for="home">Set new home network</label>
                     </div>
                     <div class="mui-radio">
-                        <input type="radio" name="networktype" value="1" @change="${this._handleChange}">
-                        <label>Temporarily connect to a network, retain current home network setting</label>
+                        <input id="temp" type="radio" name="networktype" value="1" @change="${this._handleChange}">
+                        <label for="temp">Temporarily connect to a network, retain current home network setting</label>
                     </div>
                     <div class="mui-radio">
-                        <input type="radio" name="networktype" value="2" @change="${this._handleChange}">
-                        <label>Temporarily enable "Access Point" mode, retain current home network setting</label>
+                        <input id="ap" type="radio" name="networktype" value="2" @change="${this._handleChange}">
+                        <label for="ap">Temporarily enable "Access Point" mode, retain current home network setting</label>
                     </div>
                     <div class="mui-radio">
-                        <input type="radio" name="networktype" value="3" @change="${this._handleChange}">
-                        <label>Forget home network setting, always use "Access Point" mode</label>
+                        <input id="forget" type="radio" name="networktype" value="3" @change="${this._handleChange}">
+                        <label for="forget">Forget home network setting, always use "Access Point" mode</label>
                     </div>
                     <br/>
                     <div ?hidden="${this.selectedValue !== '0' && this.selectedValue !== '3'}">
                         <div class="mui-textfield">
-                            <input size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
+                            <input id="interval" size='3' name='wifi-on-interval' type='number' placeholder="Disabled"
                                    @input="${(e) => this.wifiOnInterval = parseInt(e.target.value)}"
                                    .value="${this.wifiOnInterval}"
                             />
-                            <label for="wifi-on-interval">WiFi "auto on" interval in seconds (leave blank to
-                                disable)</label>
+                            <label for="interval">WiFi "auto on" interval in seconds (leave blank to disable)</label>
                         </div>
                     </div>
                     <div id="credentials" ?hidden="${this.selectedValue === '2' || this.selectedValue === '3'}">
                         <div class="autocomplete mui-textfield" style="position:relative;">
                             <div style="display: ${this.showLoader ? 'block' : 'none'};" class="loader"></div>
-                            <input name="network" type="text" placeholder="SSID" autocomplete="off"/>
-                            <label for="network">WiFi SSID</label>
+                            <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"/>
+                            <label for="ssid">WiFi SSID</label>
                         </div>
                         <div class="mui-textfield">
-                            <input size='64' name='password' type='password'/>
-                            <label for="password">WiFi password</label>
+                            <input id="pwd" size='64' name='password' type='password'/>
+                            <label for="pwd">WiFi password</label>
                         </div>
                     </div>
                     <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Save</button>
@@ -92,7 +91,7 @@ class WifiPanel extends LitElement {
             </div>
             <div class="mui-panel" ?hidden="${elrsState.config.mode === 'STA'}">
                 <a id="connect" href="#"
-                   @click="${() => postWithFeedback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null)}">
+                   @click="${postWithFeedback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null)}">
                     Connect to Home network: ${elrsState.options['wifi-ssid']}
                 </a>
             </div>
