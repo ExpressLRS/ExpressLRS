@@ -9,7 +9,7 @@ class BindingPanel extends LitElement {
     @query('#phrase') accessor phrase
 
     @state() accessor uid = []
-    @state() accessor bindType = "0"
+    @state() accessor bindType = 0
     @state() accessor uidData = {}
 
     originalUIDType = ''
@@ -21,6 +21,7 @@ class BindingPanel extends LitElement {
 
     firstUpdated(_changedProperties) {
         this.uid = elrsState.config.uid
+        this.bindType = elrsState.config.vbind
         this.originalUID = elrsState.config.uid
         this.originalUIDType = (elrsState.config && elrsState.config.uidtype) ? elrsState.config.uidtype : ''
         this._updateUIDType(this.originalUIDType)
@@ -31,9 +32,9 @@ class BindingPanel extends LitElement {
             <div class="mui-panel mui--text-title">Binding</div>
             <div class="mui-panel">
                 <form class="mui-form">
-                    <!-- FEATURE:IS_TX -->
+                    <!-- FEATURE:NOT IS_TX -->
                     <div class="mui-select">
-                        <select @change="${(e) => {this.bindType = e.target.value}}">
+                        <select @change="${(e) => {this.bindType = parseInt(e.target.value)}}" .value="${this.bindType}" >
                             <option value="0">Persistent (Default) - Bind information is stored across reboots
                             </option>
                             <option value="1">Volatile - Never store bind information across reboots</option>
@@ -44,8 +45,8 @@ class BindingPanel extends LitElement {
                         </select>
                         <label>Binding storage</label>
                     </div>
-                    <!-- /FEATURE:IS_TX -->
-                    ${this.bindType !== "1" ? html`
+                    <!-- /FEATURE:NOT IS_TX -->
+                    ${this.bindType !== 1 ? html`
                         <div>
                             Enter a new binding phrase to replace the current binding information.
                             This will persist across reboots, but <b>will be reset</b> if the firmware is flashed with a
@@ -60,7 +61,7 @@ class BindingPanel extends LitElement {
                             </div>
                         </div>
                         <div class="mui-textfield">
-                            ${this.bindType !== "1" ? html`
+                            ${this.bindType !== 1 ? html`
                                 <span class="badge" id="uid-type"
                                       style="background-color: ${this.uidData.bg}; color: ${this.uidData.fg}">${this.uidData.uidtype}</span>
                             ` : ''}
@@ -70,7 +71,7 @@ class BindingPanel extends LitElement {
                         </div>
                     ` : ''}
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled=${(this.bindType !== '1') && this.uidData.uidtype !== 'Modified'}
+                            ?disabled=${this._saveDisabled()}
                             @click="${this._submitOptions}">Save
                     </button>
                 </form>
@@ -78,6 +79,9 @@ class BindingPanel extends LitElement {
         `
     }
 
+    _saveDisabled() {
+        return !(this.bindType !== elrsState.config.vbind || this.uidData.uidtype === 'Modified')
+    }
 
     _isValidUidByte(s) {
         let f = parseFloat(s)
@@ -176,6 +180,10 @@ class BindingPanel extends LitElement {
             vbind: this.bindType
         }
         saveConfig(rx_changes, () => {
+            this.originalUID = this.uid
+            this.originalUIDType = 'Overridden'
+            this.phrase.value = ''
+            this._updateUIDType(this.originalUIDType)
             elrsState.config = rx_changes
             return this.requestUpdate()
         })

@@ -3,6 +3,7 @@ import {customElement} from "lit/decorators.js";
 import '../assets/mui.js';
 import {elrsState, saveConfig} from "../utils/state.js";
 import {_} from "../utils/libs.js";
+import {postWithFeedback} from "../utils/feedback.js";
 
 @customElement('connections-panel')
 class ConnectionsPanel extends LitElement {
@@ -59,7 +60,16 @@ class ConnectionsPanel extends LitElement {
                                 </tbody>
                             </table>
                         </div>
-                        <button class="mui-btn mui-btn--small mui-btn--primary" @click="${this._savePwmConfig}">Save</button>
+                        <div>
+                            <button class="mui-btn mui-btn--small mui-btn--primary" @click="${this._savePwmConfig}">Save</button>
+                            ${elrsState.options.customised ? html`
+                                <button class="mui-btn mui-btn--small mui-btn--danger mui--pull-right"
+                                        @click="${postWithFeedback('Reset PWM Configuration', 'An error occurred resetting the configuration', '/reset?config', null)}"
+                                >
+                                    Reset to defaults
+                                </button>
+                            ` : ''}
+                        </div>
                     </form>
                     <div class="mui-divider"></div>
                     <ul>

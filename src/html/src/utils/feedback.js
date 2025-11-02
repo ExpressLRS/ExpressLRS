@@ -40,11 +40,12 @@ export function postJSON(url, data, opts = {}) {
 export function saveJSONWithReboot(title, errorTitle, url, changes, successCB) {
   postJSON(url, changes, {
     onload: async () => {
-      if (successCB) successCB()
+      let message
+      if (successCB) message = successCB()
       const res = await cuteAlert({
         type: 'question',
         title,
-        message: 'Reboot to take effect',
+        message: message || 'Reboot to take effect',
         confirmText: 'Reboot',
         cancelText: 'Close',
       })

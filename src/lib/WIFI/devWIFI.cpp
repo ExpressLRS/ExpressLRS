@@ -105,7 +105,7 @@ void setWifiUpdateMode()
 }
 
 /** Is this an IP? */
-static boolean isIp(String str)
+static boolean isIp(const String& str)
 {
   for (size_t i = 0; i < str.length(); i++)
   {
@@ -119,7 +119,7 @@ static boolean isIp(String str)
 }
 
 /** IP to String? */
-static String toStringIp(IPAddress ip)
+static String toStringIp(const IPAddress& ip)
 {
   String res = "";
   for (int i = 0; i < 3; i++)
@@ -132,8 +132,6 @@ static String toStringIp(IPAddress ip)
 
 static bool captivePortal(AsyncWebServerRequest *request)
 {
-  extern const char *wifi_hostname;
-
   if (!isIp(request->host()) && request->host() != (String(wifi_hostname) + ".local"))
   {
     DBGLN("Request redirected to captive portal");
@@ -147,7 +145,7 @@ static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
   for (size_t i=0 ; i<WEB_ASSETS_COUNT ; i++) {
     if (request->url().equals(WEB_ASSETS[i].path)) {
-      AsyncWebServerResponse *response = request->beginResponse_P(200, WEB_ASSETS[i].content_type, WEB_ASSETS[i].data, WEB_ASSETS[i].size);
+      AsyncWebServerResponse *response = request->beginResponse(200, WEB_ASSETS[i].content_type, WEB_ASSETS[i].data, WEB_ASSETS[i].size);
       response->addHeader("Content-Encoding", "gzip");
       request->send(response);
       return;
@@ -335,7 +333,10 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
 #if defined(PLATFORM_ESP32)
-    json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
+    if (GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN)
+    {
+      json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
+    }
 #endif
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();

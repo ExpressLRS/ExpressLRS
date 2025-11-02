@@ -54,7 +54,7 @@ export function devMockPlugin() {
                 {"config": 3584, "pin": 1, "features": 1 + 16},
                 {"config": 4608, "pin": 3, "features": 2 + 16}
             ],
-            vbind: '1',
+            vbind: 0,
             "button-actions": [
                 {
                     "color": 255,
