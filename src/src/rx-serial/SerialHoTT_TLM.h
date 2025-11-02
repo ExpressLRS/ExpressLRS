@@ -324,13 +324,13 @@ private:
     uint32_t htobe24(uint32_t val);
 
     // last received HoTT telemetry packets
-    GPSPacket_t gps;
-    GeneralAirPacket_t gam;
+    GPSPacket_t gps{};
+    GeneralAirPacket_t gam{};
     AirESCPacket_t esc {};
     VarioPacket_t vario {};
     ElectricAirPacket_t eam {};
 
-    // received HoTT bus fra,e
+    // received HoTT bus frame
     hottBusFrame_t hottBusFrame{};
 
     // discoverd devices
@@ -347,7 +347,7 @@ private:
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
-    uint8_t nextDeviceID{};
+    uint8_t nextDeviceID;
 
     uint32_t lastPoll;
     uint8_t cmdSendState;
