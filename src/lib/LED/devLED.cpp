@@ -121,7 +121,7 @@ static int event()
     #if defined(TARGET_TX)
         setPowerLEDs();
     #else
-        if (InBindingMode && GPIO_PIN_LED_RED != UNDEF_PIN)
+        if (InBindingMode && connectionState < MODE_STATES && GPIO_PIN_LED_RED != UNDEF_PIN)
         {
             return flashLED(GPIO_PIN_LED_RED, GPIO_LED_RED_INVERTED, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));
         }

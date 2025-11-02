@@ -1,6 +1,46 @@
 name: Build ExpressLRS
 on: [push, pull_request]
 jobs:
+  build-and-validate-artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd src/html
+          npm ci
+
+      - name: Build Web UI for all platforms
+        run: |
+          cd src/html
+          cp -r headers out
+          npm run build:all
+
+      - name: Validate artifacts
+        id: validate
+        run: |
+          cd src/html
+          diff -qr out headers >/dev/null 2>&1
+          exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "Artifact check passed."
+            exit 0
+          elif [ "$exit_code" -eq 1 ]; then
+            echo "🚨 **Web UI Artifacts Error:** Web UI artifacts have not been built and committed. Please build and commit them as part of this PR."
+            exit 1 # Fail the step
+          else
+            echo "⚠️ **Artifact Check Error:** An unexpected error ($exit_code) occurred during file comparison. Check the workflow logs."
+            exit 2 # Fail the step
+          fi
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +82,9 @@ jobs:
         PLATFORMIO_BUILD_FLAGS="-DRegulatory_Domain_ISM_2400" pio test -e native
 
   targets:
+    needs:
+      - build-and-validate-artifacts
+      - test
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.set-targets.outputs.targets }}
@@ -88,6 +131,17 @@ jobs:
       with:
         path: ~/.platformio
         key: ${{ runner.os }}-platformio
+
+    - name: Install Node
+      uses: actions/setup-node@v5
+      with:
+        node-version: 'latest'
+
+    - name: Cache node-modules
+      uses: actions/cache@v4
+      with:
+        path: src/html/node-modules
+        key: ${{ runner.os }}-node-modules
 
     - name: Run PlatformIO
       run: |
