@@ -27,6 +27,10 @@
 #define VOLT_MIN_CRSFRATE 5000
 #define AIRSPEED_MIN_CRSFRATE 5000
 
+constexpr uint8_t SIZE_8BIT = 1;
+constexpr uint8_t SIZE_16BIT = 2;
+constexpr uint8_t SIZE_24BIT = 3;
+
 extern Telemetry telemetry;
 
 int SerialHoTT_TLM::getMaxSerialReadSize()
@@ -323,13 +327,13 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
 
     crsfRpm.p.source_id = device;
 
-    uint8_t payloadSize = 1 + 3 * 2;
+    uint8_t payloadSize = SIZE_8BIT + SIZE_24BIT * 2;
 
     if (device == EAM)
     {
         crsfRpm.p.rpm0 = htobe24(eam.rpm * HOTT_RPM_SCALE);
 
-        payloadSize = 1 + 3 * 1;
+        payloadSize = SIZE_8BIT + SIZE_24BIT * 1;
     }
     else if (device == GAM)
     {
@@ -346,7 +350,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
             crsfRpm.p.rpm2 = htobe24((esc.becTemp + (esc.capacitorTemp << 8)));        // turbine: fuel in ml
             crsfRpm.p.rpm3 = htobe24(esc.becCurrent);                                  // turbine: fuel flow in ml/min
  
-            payloadSize = 1 + 3 * 4;
+            payloadSize += SIZE_8BIT + SIZE_24BIT * 2;
         }
     }
 
@@ -372,7 +376,7 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
 
     crsfTemp.p.source_id = device;
 
-    uint8_t payloadSize = 1 + 2 * 2;
+    uint8_t payloadSize = SIZE_8BIT + SIZE_16BIT * 2;
 
     if (device == EAM)
     {
@@ -392,14 +396,14 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
         crsfTemp.p.temperature[3] = htobe16((esc.pumpTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
         crsfTemp.p.temperature[4] = htobe16((esc.auxTemp - HOTT_TEMP_OFFSET) * HOTT_TEMP_SCALE);
 
-        payloadSize = 1 + 2 * 5;
+        payloadSize = SIZE_8BIT + SIZE_16BIT * 5;
 
         if (escIsTurbine)
         {
             crsfTemp.p.temperature[5] = htobe16((esc.throttle) * HOTT_TEMP_SCALE);                          // turbine: throttle %
             crsfTemp.p.temperature[6] = htobe16(((int8_t)esc.turbineNumber) * HOTT_TEMP_SCALE);             // turbine: status
 
-            payloadSize = 1 + 2 * 7;
+            payloadSize += SIZE_8BIT + SIZE_16BIT * 2;
         } 
     }
 
@@ -428,7 +432,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
 
     crsfCells.p.source_id = device;
 
-    uint8_t payloadSize = 1 + 2 * 14;
+    uint8_t payloadSize = SIZE_8BIT + SIZE_16BIT * 14;
 
     if (device == EAM)
     {
@@ -457,7 +461,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
         crsfCells.p.cell[4] = htobe16(gam.voltageCell5 * HOTT_CELL_SCALE);
         crsfCells.p.cell[5] = htobe16(gam.voltageCell6 * HOTT_CELL_SCALE);
 
-        payloadSize = 1 + 2 * 6;
+        payloadSize = SIZE_8BIT + SIZE_16BIT * 6;
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfCells, CRSF_FRAMETYPE_CELLS, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
@@ -482,7 +486,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
 
     crsfVolt.p.source_id = 128 + device;
 
-    uint8_t payloadSize = 1 + 2 * 3;
+    uint8_t payloadSize = SIZE_8BIT + SIZE_16BIT * 3;
 
     if (device == EAM)
     {
@@ -501,7 +505,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
         crsfVolt.p.cell[0] = htobe16(esc.inputVoltage * HOTT_VOLT_SCALE);                   // turbine: ECU voltage
         crsfVolt.p.cell[1] = htobe16(esc.becVoltage * HOTT_VOLT_SCALE);                     // turbine: pumpV or pumpPW depending on turbine
 
-        payloadSize = 1 + 2 * 2;
+        payloadSize = SIZE_8BIT + SIZE_16BIT * 2;
     }
 
     CRSF::SetHeaderAndCrc((uint8_t *)&crsfVolt, CRSF_FRAMETYPE_CELLS, payloadSize + CRSF_FRAME_NOT_COUNTED_BYTES, CRSF_ADDRESS_CRSF_TRANSMITTER);
