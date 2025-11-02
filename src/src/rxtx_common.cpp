@@ -4,10 +4,7 @@
 #include "logging.h"
 
 #include <functional>
-
-#if defined(USE_I2C)
 #include <Wire.h>
-#endif
 
 static const int maxDeferredFunctions = 3;
 
@@ -27,11 +24,11 @@ boolean i2c_enabled = false;
 
 static void setupWire()
 {
-#if defined(USE_I2C)
+#if defined(PLATFORM_ESP32)
     int gpio_scl = GPIO_PIN_SCL;
     int gpio_sda = GPIO_PIN_SDA;
 
-#if defined(TARGET_RX) && defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
@@ -57,18 +54,10 @@ static void setupWire()
     if(gpio_sda != UNDEF_PIN && gpio_scl != UNDEF_PIN)
     {
         DBGLN("Starting wire on SCL %d, SDA %d", gpio_scl, gpio_sda);
-#if defined(PLATFORM_STM32)
-        // Wire::begin() passing ints is ambiguously overloaded, use the set functions
-        // which themselves might get the PinName overloads
-        Wire.setSCL(gpio_scl);
-        Wire.setSDA(gpio_sda);
-        Wire.begin();
-#else
         // ESP hopes to get Wire::begin(int, int)
         // ESP32 hopes to get Wire::begin(int = -1, int = -1, uint32 = 0)
         Wire.begin(gpio_sda, gpio_scl);
         Wire.setClock(400000);
-#endif
         i2c_enabled = true;
     }
 #endif

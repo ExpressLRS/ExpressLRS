@@ -1,11 +1,10 @@
 #include "devAnalogVbat.h"
 
-#if defined(USE_ANALOG_VBAT)
-#include <Arduino.h>
-#include "CRSF.h"
-#include "telemetry.h"
-#include "median.h"
+#include "CRSFRouter.h"
 #include "logging.h"
+#include "median.h"
+#include "telemetry.h"
+#include <Arduino.h>
 
 // Sample 5x samples over 500ms (unless SlowUpdate)
 #define VBAT_SMOOTH_CNT         5
@@ -35,12 +34,13 @@ void Vbat_enableSlowUpdate(bool enable)
     vbatUpdateScale = enable ? 2 : 1;
 }
 
+static bool initialize()
+{
+    return GPIO_ANALOG_VBAT != UNDEF_PIN;
+}
+
 static int start()
 {
-    if (GPIO_ANALOG_VBAT == UNDEF_PIN)
-    {
-        return DURATION_NEVER;
-    }
     vbatUpdateScale = 1;
 #if defined(PLATFORM_ESP32)
     analogReadResolution(12);
@@ -86,13 +86,13 @@ static void reportVbat()
     crsfbatt.p.voltage = htobe16((uint16_t)vbat);
     // No sensors for current, capacity, or remaining available
 
-    CRSF::SetHeaderAndCrc((uint8_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_CRSF_TRANSMITTER);
-    telemetry.AppendTelemetryPackage((uint8_t *)&crsfbatt);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.deliverMessage(nullptr, &crsfbatt.h);
 }
 
 static int timeout()
 {
-    if (GPIO_ANALOG_VBAT == UNDEF_PIN || telemetry.GetCrsfBatterySensorDetected())
+    if (telemetry.GetCrsfBatterySensorDetected())
     {
         return DURATION_NEVER;
     }
@@ -114,10 +114,9 @@ static int timeout()
 }
 
 device_t AnalogVbat_device = {
-    .initialize = nullptr,
+    .initialize = initialize,
     .start = start,
     .event = nullptr,
     .timeout = timeout,
+    .subscribe = EVENT_NONE
 };
-
-#endif /* if USE_ANALOG_VCC */

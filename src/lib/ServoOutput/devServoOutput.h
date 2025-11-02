@@ -1,19 +1,16 @@
 #pragma once
-#if defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
 
 #include "device.h"
 #include "common.h"
 
-#if (defined(PLATFORM_ESP32))
+#if defined(PLATFORM_ESP32)
 #include "DShotRMT.h"
 #endif
 
 extern device_t ServoOut_device;
-#define HAS_SERVO_OUTPUT
-#define OPT_HAS_SERVO_OUTPUT (GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
 
 // Notify this unit that new channel data has arrived
 void servoNewChannelsAvailable();
-#else
-inline void servoNewChannelsAvailable(){};
+
 #endif

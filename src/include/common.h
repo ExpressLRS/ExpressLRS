@@ -2,6 +2,7 @@
 
 #ifndef UNIT_TEST
 #include "targets.h"
+#include <device.h>
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
@@ -12,12 +13,10 @@
 #else
 #error "Radio configuration is not valid!"
 #endif
-
+#else
+#include <cstdint>
 #endif // UNIT_TEST
 
-// Used to XOR with OtaCrcInitializer and macSeed to reduce compatibility with previous versions.
-// It should be incremented when the OTA packet structure is modified.
-#define OTA_VERSION_ID      3
 #define UID_LEN             6
 
 typedef enum : uint8_t
@@ -79,26 +78,41 @@ typedef enum
 
 typedef enum : uint8_t
 {
-    RATE_LORA_4HZ = 0,
-    RATE_LORA_25HZ,
-    RATE_LORA_50HZ,
-    RATE_LORA_100HZ,
-    RATE_LORA_100HZ_8CH,
-    RATE_LORA_150HZ,
-    RATE_LORA_200HZ,
-    RATE_LORA_250HZ,
-    RATE_LORA_333HZ_8CH,
-    RATE_LORA_500HZ,
-    RATE_DVDA_250HZ, // FLRC
-    RATE_DVDA_500HZ, // FLRC
-    RATE_FLRC_500HZ,
-    RATE_FLRC_1000HZ,
-    RATE_DVDA_50HZ,
-    RATE_LORA_200HZ_8CH,
-    RATE_FSK_2G4_DVDA_500HZ,
-    RATE_FSK_2G4_1000HZ,
-    RATE_FSK_900_1000HZ,
+    // RATE_MODULATION_BAND_RATE_MODE
+
+    RATE_LORA_900_25HZ = 0,
+    RATE_LORA_900_50HZ,
+    RATE_LORA_900_100HZ,
+    RATE_LORA_900_100HZ_8CH,
+    RATE_LORA_900_150HZ,
+    RATE_LORA_900_200HZ,
+    RATE_LORA_900_200HZ_8CH,
+    RATE_LORA_900_250HZ,
+    RATE_LORA_900_333HZ_8CH,
+    RATE_LORA_900_500HZ,
+    RATE_LORA_900_50HZ_DVDA,
     RATE_FSK_900_1000HZ_8CH,
+
+    RATE_LORA_2G4_25HZ = 20,
+    RATE_LORA_2G4_50HZ,
+    RATE_LORA_2G4_100HZ,
+    RATE_LORA_2G4_100HZ_8CH,
+    RATE_LORA_2G4_150HZ,
+    RATE_LORA_2G4_200HZ,
+    RATE_LORA_2G4_200HZ_8CH,
+    RATE_LORA_2G4_250HZ,
+    RATE_LORA_2G4_333HZ_8CH,
+    RATE_LORA_2G4_500HZ,
+    RATE_FLRC_2G4_250HZ_DVDA,
+    RATE_FLRC_2G4_500HZ_DVDA,
+    RATE_FLRC_2G4_500HZ,
+    RATE_FLRC_2G4_1000HZ,
+    RATE_FSK_2G4_250HZ_DVDA,
+    RATE_FSK_2G4_500HZ_DVDA,
+    RATE_FSK_2G4_1000HZ,
+
+    RATE_LORA_DUAL_100HZ_8CH = 100,
+    RATE_LORA_DUAL_150HZ,
 } expresslrs_RFrates_e;
 
 enum {
@@ -222,7 +236,9 @@ enum eSerialProtocol : uint8_t
 	PROTOCOL_SUMD,
     PROTOCOL_DJI_RS_PRO,
     PROTOCOL_HOTT_TLM,
-    PROTOCOL_MAVLINK
+    PROTOCOL_MAVLINK,
+    PROTOCOL_MSP_DISPLAYPORT,
+    PROTOCOL_GPS
 };
 
 #if defined(PLATFORM_ESP32)
@@ -238,6 +254,8 @@ enum eSerial1Protocol : uint8_t
     PROTOCOL_SERIAL1_HOTT_TLM,
     PROTOCOL_SERIAL1_TRAMP,
     PROTOCOL_SERIAL1_SMARTAUDIO,
+    PROTOCOL_SERIAL1_MSP_DISPLAYPORT,
+    PROTOCOL_SERIAL1_GPS
 };
 #endif
 
@@ -273,20 +291,20 @@ enum eAuxChannels : uint8_t
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 6
-#define RATE_BINDING RATE_LORA_50HZ
+#define RATE_BINDING RATE_LORA_900_50HZ
 
 extern SX127xDriver Radio;
 
 #elif defined(RADIO_LR1121)
-#define RATE_MAX 16
-#define RATE_BINDING RATE_LORA_50HZ
-#define RATE_DUALBAND_BINDING 9 // 2.4GHz 50Hz
+#define RATE_MAX 20
+#define RATE_BINDING RATE_LORA_900_50HZ
+#define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 
 extern LR1121Driver Radio;
 
 #elif defined(RADIO_SX128X)
 #define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_BINDING RATE_LORA_50HZ
+#define RATE_BINDING RATE_LORA_2G4_50HZ
 
 extern SX1280Driver Radio;
 #endif
@@ -305,10 +323,17 @@ extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
 extern bool InBindingMode;
 extern uint8_t ExpressLRS_currTlmDenom;
-extern connectionState_e connectionState;
 extern expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 extern expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 extern uint32_t ChannelData[CRSF_NUM_CHANNELS]; // Current state of channels, CRSF format
+
+extern connectionState_e connectionState;
+#if !defined(UNIT_TEST)
+inline void setConnectionState(connectionState_e newState) {
+    connectionState = newState;
+    devicesTriggerEvent(EVENT_CONNECTION_CHANGED);
+}
+#endif
 
 uint32_t uidMacSeedGet();
 bool isDualRadio();
@@ -317,5 +342,5 @@ void EnterBindingModeSafely(); // defined in rx_main/tx_main
 #if defined(RADIO_LR1121)
 bool isSupportedRFRate(uint8_t index);
 #else
-inline bool isSupportedRFRate(uint8_t index) { return true; };
+inline bool isSupportedRFRate(uint8_t index) { return true; }
 #endif

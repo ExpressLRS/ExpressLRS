@@ -1,5 +1,5 @@
 #pragma once
-#if defined(USE_MSP_WIFI)
+#if defined(TARGET_RX)
 
 #include <cstdint>
 #include <cstring>

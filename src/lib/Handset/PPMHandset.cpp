@@ -3,7 +3,6 @@
 #if defined(PLATFORM_ESP32) && defined(TARGET_TX)
 
 #include "PPMHandset.h"
-#include "common.h"
 #include "crsf_protocol.h"
 #include "logging.h"
 
@@ -36,16 +35,11 @@ void PPMHandset::End()
     rmt_driver_uninstall(PPM_RMT_CHANNEL);
 }
 
-bool PPMHandset::IsArmed()
-{
-    bool maybeArmed = numChannels < 5 || CRSF_to_BIT(ChannelData[4]);
-    return maybeArmed && lastPPM;
-}
-
 void PPMHandset::handleInput()
 {
     const auto now = millis();
     size_t length = 0;
+    uint32_t localChannelData[CRSF_NUM_CHANNELS];
 
     auto *items = static_cast<rmt_item32_t *>(xRingbufferReceive(rb, &length, 0));
     if (items)
@@ -60,17 +54,24 @@ void PPMHandset::handleInput()
             {
                 break;
             }
-            channelCount ++;
+            channelCount++;
             const auto ppm = (item.duration0 + item.duration1) / RMT_TICKS_PER_US;
-            ChannelData[i] = fmap(constrain(ppm, 988, 2012), 988, 2012, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+            localChannelData[i] = fmap(constrain(ppm, 988, 2012), 988, 2012, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
         }
         numChannels = channelCount;
         vRingbufferReturnItem(rb, static_cast<void *>(items));
         lastPPM = now;
+
+        PerformChannelOverrides(localChannelData, numChannels);
+
+        SetArmed(numChannels < 5 || CRSF_to_BIT(localChannelData[4]));
+        if (channelCount > 0)
+            RCDataReceived(localChannelData, numChannels);
     }
     else if (lastPPM && now - 1000 > lastPPM)
     {
         DBGLN("PPM signal lost, disarming");
+        SetArmed(false);
         if (disconnected)
         {
             disconnected();

@@ -5,16 +5,8 @@
 #include "POWERMGNT.h"
 #include "devADC.h"
 
-#if defined(GPIO_PIN_PA_PDET)
-
-#if defined(USE_SKY85321)
+#if defined(TARGET_TX) && defined(PLATFORM_ESP32)
 #define SKY85321_MAX_DBM_INPUT 5
-
-// SKY85321_PDET_SLOPE/INTERCEPT convert mV from analogRead() to dBm
-#if !defined(SKY85321_PDET_SLOPE) || !defined(SKY85321_PDET_INTERCEPT)
-  #error "SKY85321 requires SKY85321_PDET_SLOPE and SKY85321_PDET_INTERCEPT"
-#endif
-#endif // USE_SKY85321
 
 typedef uint32_t pdet_storage_t;
 #define PDET_DBM_SCALE(x)         ((pdet_storage_t)((x) * 1000U))
@@ -27,14 +19,15 @@ extern bool busyTransmitting;
 static pdet_storage_t PdetMvScaled;
 static uint8_t lastTargetPowerdBm;
 
+static bool initialize()
+{
+    return GPIO_PIN_PA_PDET != UNDEF_PIN;
+}
+
 static int start()
 {
-    if (GPIO_PIN_PA_PDET != UNDEF_PIN)
-    {
-        analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
-        return DURATION_IMMEDIATELY;
-    }
-    return DURATION_NEVER;
+    analogSetPinAttenuation(GPIO_PIN_PA_PDET, ADC_0db);
+    return DURATION_IMMEDIATELY;
 }
 
 /**
@@ -48,7 +41,7 @@ static int start()
  */
 static int event()
 {
-    if (GPIO_PIN_PA_PDET == UNDEF_PIN || connectionState > connectionState_e::MODE_STATES)
+    if (connectionState > connectionState_e::MODE_STATES)
     {
         return DURATION_NEVER;
     }
@@ -89,9 +82,10 @@ static int timeout()
 }
 
 device_t PDET_device = {
-    .initialize = NULL,
+    .initialize = initialize,
     .start = start,
     .event = event,
-    .timeout = timeout
+    .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED
 };
 #endif

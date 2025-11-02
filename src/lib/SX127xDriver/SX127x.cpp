@@ -7,14 +7,6 @@ SX127xDriver *SX127xDriver::instance = NULL;
 
 RFAMP_hal RFAMP;
 
-#ifdef USE_SX1276_RFO_HF
-  #ifndef OPT_USE_SX1276_RFO_HF
-    #define OPT_USE_SX1276_RFO_HF true
-  #endif
-#else
-  #define OPT_USE_SX1276_RFO_HF false
-#endif
-
 const uint8_t SX127x_AllowedSyncwords[105] =
     {0, 5, 6, 7, 11, 12, 13, 15, 18,
      21, 23, 26, 29, 30, 31, 33, 34,
@@ -88,9 +80,7 @@ bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
   ConfigLoraDefaults();
   // Force the next power update, and use the defaults for RFO_HF or PA_BOOST
   pwrCurrent = PWRPENDING_NONE;
-#if defined(TARGET_UNIFIED_RX) || defined(TARGET_UNIFIED_TX)
   if (POWER_OUTPUT_VALUES2 == nullptr)
-#endif
   {
     if (OPT_USE_SX1276_RFO_HF)
     {
@@ -131,7 +121,8 @@ void SX127xDriver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
   SetPreambleLength(8);
   SetSpreadingFactor(SX127x_SF_9);
   SetBandwidthCodingRate(SX127x_BW_125_00_KHZ, SX127x_CR_4_5);
-  SetFrequencyHz(freq, SX12XX_Radio_All);
+  const int32_t regFreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
+  SetFrequencyReg(regFreq, SX12XX_Radio_All);
   if (freq > 900000000)
   {
     hal.writeRegister(0x01, 0x80, radioNumber);
@@ -335,14 +326,7 @@ void SX127xDriver::SetSpreadingFactor(SX127x_SpreadingFactor sf)
   }
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyHz(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
-{
-  int32_t regfreq = ((uint32_t)((double)freq / (double)FREQ_STEP));
-
-  SetFrequencyReg(regfreq, radioNumber);
-}
-
-void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radio_Number_t radioNumber, bool doRx)
 {
   currFreq = regfreq;
   SetMode(SX127x_OPMODE_STANDBY, radioNumber);
@@ -354,43 +338,10 @@ void ICACHE_RAM_ATTR SX127xDriver::SetFrequencyReg(uint32_t regfreq, SX12XX_Radi
   WORD_ALIGNED_ATTR uint8_t outbuff[3] = {FRQ_MSB, FRQ_MID, FRQ_LSB}; //check speedup
 
   hal.writeRegister(SX127X_REG_FRF_MSB, outbuff, sizeof(outbuff), radioNumber);
-}
 
-void ICACHE_RAM_ATTR SX127xDriver::SetRxTimeoutUs(uint32_t interval)
-{
-  timeoutSymbols = 0; // no timeout i.e. use continuous mode
-  if (interval)
+  if (doRx)
   {
-    unsigned int spread = 0;
-    switch (currSF)
-    {
-    case SX127x_SF_6:
-      spread = 6;
-      break;
-    case SX127x_SF_7:
-      spread = 7;
-      break;
-    case SX127x_SF_8:
-      spread = 8;
-      break;
-    case SX127x_SF_9:
-      spread = 9;
-      break;
-    case SX127x_SF_10:
-      spread = 10;
-      break;
-    case SX127x_SF_11:
-      spread = 11;
-      break;
-    case SX127x_SF_12:
-      spread = 12;
-      break;
-    }
-    uint32_t symbolTimeUs = ((uint32_t)(1 << spread)) * 1000000 / GetCurrBandwidth();
-    timeoutSymbols = interval / symbolTimeUs;
-    hal.writeRegisterBits(SX127X_REG_SYMB_TIMEOUT_MSB, timeoutSymbols >> 8, SX127X_REG_SYMB_TIMEOUT_MSB_MASK, SX12XX_Radio_All);  // set the timeout MSB
-    hal.writeRegister(SX127X_REG_SYMB_TIMEOUT_LSB, timeoutSymbols & 0xFF, SX12XX_Radio_All);
-    DBGLN("SetRxTimeout(%u), symbolTime=%uus symbols=%u", interval, (uint32_t)symbolTimeUs, timeoutSymbols);
+    RXnb();
   }
 }
 
@@ -439,7 +390,7 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnbISR()
   TXdoneCallback();
 }
 
-void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber)
 {
   // if (currOpmode == SX127x_OPMODE_TX)
   // {
@@ -469,7 +420,15 @@ void ICACHE_RAM_ATTR SX127xDriver::TXnb(uint8_t * data, SX12XX_Radio_Number_t ra
 
   RFAMP.TXenable(radioNumber);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, SX127X_FIFO_TX_BASE_ADDR_MAX, radioNumber);
-  hal.writeRegister(SX127X_REG_FIFO, data, PayloadLength, radioNumber);
+  if (sendGeminiBuffer)
+  {
+    hal.writeRegister(SX127X_REG_FIFO, data, PayloadLength, SX12XX_Radio_1);
+    hal.writeRegister(SX127X_REG_FIFO, dataGemini, PayloadLength, SX12XX_Radio_2);
+  }
+  else
+  {
+    hal.writeRegister(SX127X_REG_FIFO, data, PayloadLength, radioNumber);
+  }
 
   SetMode(SX127x_OPMODE_TX, radioNumber);
 }
@@ -481,75 +440,57 @@ bool ICACHE_RAM_ATTR SX127xDriver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
   uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radioNumber);
   hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radioNumber);
   hal.readRegister(SX127X_REG_FIFO, RXdataBuffer, PayloadLength, radioNumber);
-
-  if (timeoutSymbols)
-  {
-    // From page 42 of the datasheet rev 7
-    // In Rx Single mode, the device will return to Standby mode as soon as the interrupt occurs
-    currOpmode = SX127x_OPMODE_STANDBY;
-  }
-
   return RXdoneCallback(SX12XX_RX_OK);
 }
 
 void ICACHE_RAM_ATTR SX127xDriver::RXnb()
 {
   RFAMP.RXenable();
-
-  if (timeoutSymbols)
-  {
-    SetMode(SX127x_OPMODE_RXSINGLE, SX12XX_Radio_All);
-  }
-  else
-  {
-    SetMode(SX127x_OPMODE_RXCONTINUOUS, SX12XX_Radio_All);
-  }
+  SetMode(SX127x_OPMODE_RXCONTINUOUS, SX12XX_Radio_All);
 }
 
-
-void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+void ICACHE_RAM_ATTR SX127xDriver::CheckForSecondPacket()
 {
   SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-  bool gotRadio[2] = {false, false}; // one-radio default.
   uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
   uint8_t secondRadioIdx = !processingRadioIdx;
 
   // processingRadio always passed the sanity check here
   gotRadio[processingRadioIdx] = true;
+  gotRadio[secondRadioIdx] = false;
 
-  // if it's a dual radio, and if it's the first IRQ
-  // (don't need this if it's the second IRQ, because we know the first IRQ is already failed)
-  if (instance->isFirstRxIrq && GPIO_PIN_NSS_2 != UNDEF_PIN)
+  hasSecondRadioGotData = false;
+
+  if (GPIO_PIN_NSS_2 != UNDEF_PIN)
   {
-    bool isSecondRadioGotData = false;
     uint16_t secondIrqStatus = instance->GetIrqFlags(radio[secondRadioIdx]);
-
     if(secondIrqStatus & SX127X_CLEAR_IRQ_FLAG_RX_DONE)
     {
-      WORD_ALIGNED_ATTR uint8_t RXdataBuffer_second[RXBuffSize];
       uint8_t const FIFOaddr = hal.readRegister(SX127X_REG_FIFO_RX_CURRENT_ADDR, radio[secondRadioIdx]);
       hal.writeRegister(SX127X_REG_FIFO_ADDR_PTR, FIFOaddr, radio[secondRadioIdx]);
-      hal.readRegister(SX127X_REG_FIFO, RXdataBuffer_second, PayloadLength, radio[secondRadioIdx]);
+      hal.readRegister(SX127X_REG_FIFO, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
 
-      // if the second packet is same to the first, it's valid
-      if (memcmp(RXdataBuffer, RXdataBuffer_second, PayloadLength) == 0)
-      {
-        isSecondRadioGotData = true;
-      }
+      hasSecondRadioGotData = true;
     }
-
-    gotRadio[secondRadioIdx] = isSecondRadioGotData;
-    #if defined(DEBUG_RCVR_SIGNAL_STATS)
-    // second radio received the same packet to the processing radio
-    if(!isSecondRadioGotData)
-    {
-      instance->rxSignalStats[secondRadioIdx].fail_count++;
-    }
-    #endif
   }
+}
+
+void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
+{
+  SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+  uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+  uint8_t secondRadioIdx = !processingRadioIdx;
 
   int8_t rssi[2];
   int8_t snr[2];
+
+  gotRadio[secondRadioIdx] = hasSecondRadioGotData;
+  #if defined(DEBUG_RCVR_SIGNAL_STATS)
+  if(!hasSecondRadioGotData)
+  {
+    instance->rxSignalStats[secondRadioIdx].fail_count++;
+  }
+  #endif
 
   for (uint8_t i = 0; i < 2; i++)
   {
@@ -622,20 +563,19 @@ void ICACHE_RAM_ATTR SX127xDriver::SetMode(SX127x_RadioOPmodes mode, SX12XX_Radi
   currOpmode = mode;
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, bool InvertIQ, uint8_t _PayloadLength)
 {
-  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength, interval);
+  Config(bw, sf, cr, freq, preambleLen, currSyncWord, InvertIQ, _PayloadLength);
 }
 
-void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength, uint32_t interval)
+void SX127xDriver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq, uint8_t preambleLen, uint8_t syncWord, bool InvertIQ, uint8_t _PayloadLength)
 {
   PayloadLength = _PayloadLength;
   ConfigLoraDefaults();
   SetPreambleLength(preambleLen);
   SetSpreadingFactor((SX127x_SpreadingFactor)sf);
   SetBandwidthCodingRate((SX127x_Bandwidth)bw, (SX127x_CodingRate)cr);
-  SetFrequencyReg(freq);
-  SetRxTimeoutUs(interval);
+  SetFrequencyReg(freq, SX12XX_Radio_All);
 }
 
 uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidth()
@@ -672,15 +612,15 @@ uint32_t ICACHE_RAM_ATTR SX127xDriver::GetCurrBandwidthNormalisedShifted() // th
  * @param offset is in Hz or FREQ_STEP (FREQ_HZ_TO_REG_VAL) units, whichever
  *    was used to SetFrequencyHz/SetFrequencyReg
  */
-void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset)
+void ICACHE_RAM_ATTR SX127xDriver::SetPPMoffsetReg(int32_t offset, SX12XX_Radio_Number_t radioNumber)
 {
-  int8_t offsetPPM = (offset * 1e6 / currFreq) * 95 / 100;
-  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, processingPacketRadio);
+  int8_t offsetPPM = (offset * 1000000 / currFreq) * 95 / 100;
+  hal.writeRegister(SX127x_PPMOFFSET, (uint8_t)offsetPPM, radioNumber);
 }
 
-bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool()
+bool ICACHE_RAM_ATTR SX127xDriver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
 {
-  return (hal.readRegister(SX127X_REG_FEI_MSB, processingPacketRadio) & 0b1000) >> 3; // returns true if pos freq error, neg if false
+  return (hal.readRegister(SX127X_REG_FEI_MSB, radioNumber) & 0b1000) >> 3; // returns true if pos freq error, neg if false
 }
 
 int32_t ICACHE_RAM_ATTR SX127xDriver::GetFrequencyError()
@@ -768,7 +708,6 @@ void ICACHE_RAM_ATTR SX127xDriver::IsrCallback(SX12XX_Radio_Number_t radioNumber
             instance->rxSignalStats[(radioNumber == SX12XX_Radio_1) ? 0 : 1].fail_count++;
         }
 #endif
-        instance->isFirstRxIrq = false;   // RX isr is already fired in this period. (reset to true in tock)
     }
     else if (irqStatus == SX127X_CLEAR_IRQ_FLAG_NONE)
     {

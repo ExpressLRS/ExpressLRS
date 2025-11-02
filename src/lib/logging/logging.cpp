@@ -8,6 +8,8 @@
   #define GETCHAR *fmt
 #endif
 
+Stream *BackpackOrLogStrm;
+
 void debugPrintf(const char* fmt, ...)
 {
   char c;
@@ -36,7 +38,6 @@ void debugPrintf(const char* fmt, ...)
         case 'x':
           utoa(va_arg(vlist, uint32_t), buf, HEX);
           break;
-#if !defined(PLATFORM_STM32)
         case 'f':
           {
             float val = va_arg(vlist, double);
@@ -46,7 +47,6 @@ void debugPrintf(const char* fmt, ...)
             itoa(decimals, buf + strlen(buf), DEC);
           }
           break;
-#endif
         default:
           break;
       }
@@ -65,17 +65,18 @@ void debugPrintf(const char* fmt, ...)
 void debugCreateInitLogger()
 {
   #if defined(PLATFORM_ESP32)
-  TxBackpack = new HardwareSerial(1);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1, 3, 1);
+  BackpackOrLogStrm = new HardwareSerial(1);
+  ((HardwareSerial *)BackpackOrLogStrm)->begin(460800, SERIAL_8N1, 3, 1);
   #else
-  TxBackpack = new HardwareSerial(0);
-  ((HardwareSerial *)TxBackpack)->begin(460800, SERIAL_8N1);
+  BackpackOrLogStrm = new HardwareSerial(0);
+  ((HardwareSerial *)BackpackOrLogStrm)->begin(460800, SERIAL_8N1);
   #endif
 }
 
 void debugFreeInitLogger()
 {
-  ((HardwareSerial *)TxBackpack)->end();
-  delete (HardwareSerial *)TxBackpack;
+  ((HardwareSerial *)BackpackOrLogStrm)->end();
+  delete (HardwareSerial *)BackpackOrLogStrm;
+  BackpackOrLogStrm = nullptr;
 }
 #endif

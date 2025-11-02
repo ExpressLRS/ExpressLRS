@@ -1,4 +1,4 @@
-#if defined(USE_MSP_WIFI)
+#if defined(TARGET_RX)
 
 #include "tcpsocket.h"
 #include "logging.h"
