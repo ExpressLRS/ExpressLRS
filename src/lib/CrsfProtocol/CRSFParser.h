@@ -9,13 +9,14 @@
 
 class CRSFParser {
 public:
-    bool processByte(CRSFConnector *origin, uint8_t byte, const std::function<void(const crsf_header_t *)>& foundMessage = nullptr);
+    void processBytes(CRSFConnector *origin, const uint8_t *inputBytes, uint16_t size, const std::function<void(const crsf_header_t *)> &foundMessage = nullptr);
+    bool processByte(CRSFConnector *origin, uint8_t inputByte, const std::function<void(const crsf_header_t *)>& foundMessage = nullptr);
 
     // unit testing
     void Reset()
     {
         telemetry_state = TELEMETRY_IDLE;
-        currentTelemetryByte = 0;
+        inBufferIndex = 0;
     }
 
 private:
@@ -27,7 +28,7 @@ private:
     } telemetry_state_s;
 
     telemetry_state_s telemetry_state = TELEMETRY_IDLE;
-    uint8_t currentTelemetryByte = 0;
+    uint8_t inBufferIndex = 0;
     uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN] = {};
 
 };

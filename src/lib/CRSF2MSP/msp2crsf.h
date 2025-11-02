@@ -18,11 +18,10 @@ public:
 private:
     uint8_t seqNum = 0;
 
-    static void setNewFrame(uint8_t &data, bool isNewFrame);
-    static void setSeqNumber(uint8_t &data, uint8_t seqNumber);
-    static void setVersion(uint8_t &data, MSPframeType_e version);
+    static uint8_t getNewFrameBits(bool isNewFrame);
+    static uint8_t getSeqNumberBits(uint8_t seqNumber);
+    static uint8_t getVersionBits(MSPframeType_e version);
     static crsf_frame_type_e getHeaderDir(uint8_t headerDir);
-    static void setError(uint8_t &data, bool isError);
 
     static uint32_t getFrameLen(uint32_t payloadLen, uint8_t mspVersion);
     static MSPframeType_e getVersion(const uint8_t *data);

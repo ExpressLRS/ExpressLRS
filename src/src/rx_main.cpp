@@ -107,6 +107,9 @@ CRSFRouter crsfRouter;
 RXEndpoint crsfReceiver;
 RXOTAConnector otaConnector;
 
+bool crsfBatterySensorDetected = false;
+bool crsfBaroSensorDetected = false;
+
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;

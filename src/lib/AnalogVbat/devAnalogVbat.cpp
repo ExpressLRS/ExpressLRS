@@ -22,9 +22,6 @@ static uint8_t vbatUpdateScale;
 static esp_adc_cal_characteristics_t *vbatAdcUnitCharacterics;
 #endif
 
-/* Shameful externs */
-extern bool crsfBatterySensorDetected;
-
 /**
  * @brief: Enable SlowUpdate mode to reduce the frequency Vbat telemetry is sent
  ***/

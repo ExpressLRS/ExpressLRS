@@ -28,9 +28,6 @@
 #define VOLT_MIN_CRSFRATE 5000
 #define AIRSPEED_MIN_CRSFRATE 5000
 
-extern bool crsfBatterySensorDetected;
-extern bool crsfBaroSensorDetected;
-
 SerialHoTT_TLM::SerialHoTT_TLM(Stream &out, Stream &in, const int8_t serial1TXpin)
     : SerialIO(&out, &in)
 {

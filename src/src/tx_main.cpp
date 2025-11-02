@@ -1186,22 +1186,24 @@ static void HandleUARTin()
     {
       uint8_t buf[size];
       TxUSB->readBytes(buf, size);
-        apInputBuffer.lock();
-        apInputBuffer.pushBytes(buf, size);
-        apInputBuffer.unlock();
+      apInputBuffer.lock();
+      apInputBuffer.pushBytes(buf, size);
+      apInputBuffer.unlock();
     }
     return;
   }
 
-  // Read from the USB serial port
+  // USB serial input
+  // If a mavlink packet is received on the USB input, automatically switch the link mode to and process as mavlink
+  // Otherwise, USB serial data is processed as CRSF
   auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
   if (size > 0)
   {
     uint8_t buf[size];
     TxUSB->readBytes(buf, size);
 
-    // Lets check if the data is Mav and auto change LinkMode
-    // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+    // If the data is MAVLink, then auto change LinkMode and start the radio link
+    // since the user might be operating the module as a standalone unit without a handset.
     if (connectionState == noCrossfire)
     {
       if (isThisAMavPacket(buf, size))
@@ -1218,15 +1220,13 @@ static void HandleUARTin()
     }
     else
     {
-      // Process data as CRSF bytes
-      for (uint8_t i = 0; i < size; ++i)
-      {
-        crsfParser.processByte(&usbConnector, buf[i]);
-      }
+      crsfParser.processBytes(&usbConnector, buf, size);
     }
   }
 
-  // Read from the Backpack serial port
+  // Backpack serial input
+  // Backpack will not switch modes, but will process data as mavlink if the link mode is already set to mavlink
+  // Backpack serial data is ALSO always processed as backpack MSP
   if (BackpackOrLogStrm != TxUSB && BackpackOrLogStrm->available())
   {
     auto size = std::min(uartInputBuffer.free(), (uint16_t)BackpackOrLogStrm->available());
@@ -1242,8 +1242,8 @@ static void HandleUARTin()
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
 
-        // The tx is in Mavlink mode and receiving data from the Backpack.
-        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+        // The TX is in MAVLink mode and receiving data from the Backpack,
+        // start the radio since the user might be operating the module as a standalone unit without a handset.
         if (connectionState == noCrossfire)
         {
           if (isThisAMavPacket(buf, size))
@@ -1319,9 +1319,10 @@ static void setupSerial()
   BackpackOrLogStrm = serialPort;
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3)
-  Serial.begin(firmwareOptions.uart_baud);
-  TxUSB = &Serial;
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+  // Because we have ARDUINO_USB_MODE enabled, we use USBSerial as the USB device.
+  USBSerial.begin(firmwareOptions.uart_baud);
+  TxUSB = &USBSerial;
 #elif defined(PLATFORM_ESP32)
   if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {

@@ -11,9 +11,6 @@
 
 #define BARO_STARTUP_INTERVAL       100
 
-/* Shameful externs */
-extern bool crsfBaroSensorDetected;
-
 /* Local statics */
 static BaroBase *baro;
 static eBaroReadState BaroReadState;

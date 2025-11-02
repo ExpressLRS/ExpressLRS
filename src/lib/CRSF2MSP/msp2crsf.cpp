@@ -2,43 +2,27 @@
 
 #include "CRSFRouter.h"
 
-void MSP2CROSSFIRE::setSeqNumber(uint8_t &data, const uint8_t seqNumber)
+uint8_t MSP2CROSSFIRE::getSeqNumberBits(const uint8_t seqNumber)
 {
-    const uint8_t seqNumberConstrained = seqNumber & 0b1111; // constrain to bounds
-    data = (data & ~0b1111) | seqNumberConstrained;
+    return seqNumber & 0b1111; // constrain to bounds
 }
 
-void MSP2CROSSFIRE::setNewFrame(uint8_t &data, bool isNewFrame)
+uint8_t MSP2CROSSFIRE::getNewFrameBits(bool isNewFrame)
 {
-    if (isNewFrame)
-    {
-        data |= bit(4);
-    }
-    else
-    {
-        data &= ~bit(4);
-    }
+    return isNewFrame ? bit(4) : 0;
 }
 
-void MSP2CROSSFIRE::setVersion(uint8_t &data, const MSPframeType_e version)
+uint8_t MSP2CROSSFIRE::getVersionBits(const MSPframeType_e version)
 {
-    uint8_t val;
-
-    data &= ~(0b11 << 5); // clear version
     if (version == MSP_FRAME_V1 || version == MSP_FRAME_V1_JUMBO)
     {
-        val = 1;
+        return 1 << 5;
     }
-    else if (version == MSP_FRAME_V2)
+    if (version == MSP_FRAME_V2)
     {
-        val = 2;
+        return 2 << 5;
     }
-    else
-    {
-        setError(data, true);
-        return;
-    }
-    data |= val << 5;   // set version
+    return bit(7);  // Set the error bit for invalid MSP versions
 }
 
 crsf_frame_type_e MSP2CROSSFIRE::getHeaderDir(const uint8_t headerDir)
@@ -52,18 +36,6 @@ crsf_frame_type_e MSP2CROSSFIRE::getHeaderDir(const uint8_t headerDir)
         return CRSF_FRAMETYPE_MSP_RESP;
     }
     return (crsf_frame_type_e)0;
-}
-
-void MSP2CROSSFIRE::setError(uint8_t &data, const bool isError)
-{
-    if (isError)
-    {
-        data |= bit(7);
-    }
-    else
-    {
-        data &= ~bit(7);
-    }
 }
 
 uint32_t MSP2CROSSFIRE::getFrameLen(const uint32_t payloadLen, const uint8_t mspVersion)
@@ -148,17 +120,14 @@ void MSP2CROSSFIRE::parse(CRSFConnector *connector, const uint8_t *data, uint32_
 
     for (uint8_t i = 0; i < numChunks; i++)
     {
-        uint8_t packet[CRSF_MAX_PACKET_LEN];
-        setError(packet[5], false);
-        setVersion(packet[5], mspVersion);
-        setSeqNumber(packet[5], seqNum++);
-        setNewFrame(packet[5], i == 0); // set to true if this is the first chunk
+        uint8_t packet[CRSF_MAX_PACKET_LEN] {};
+        packet[5] = getVersionBits(mspVersion) | getSeqNumberBits(seqNum++) | getNewFrameBits(i == 0);
 
         const uint32_t startIdx = (i * CRSF_MSP_MAX_BYTES_PER_CHUNK) + 3; // we don't transmit the MSP header
         const uint8_t CRSFpktLen = (i == (numChunks - 1)) ? chunkRemainder : (CRSF_MSP_MAX_BYTES_PER_CHUNK);
 
         memcpy(&packet[6], &data[startIdx], CRSFpktLen);
-        crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)packet, getHeaderDir(data[2]), CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET, dest, src);
+        crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)packet, getHeaderDir(data[CRSF_MSP_TYPE_IDX]), CRSFpktLen + CRSF_EXT_FRAME_PAYLOAD_LEN_SIZE_OFFSET, dest, src);
         crsfRouter.processMessage(connector, (crsf_header_t *)packet);
     }
 }

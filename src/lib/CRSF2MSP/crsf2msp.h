@@ -12,20 +12,19 @@
 class CROSSFIRE2MSP final
 {
 public:
-    CROSSFIRE2MSP() = default;
     void parse(const uint8_t *data, const std::function<void(uint8_t *, uint32_t)> &processMSP); // accept crsf frame input
     const uint8_t *getFrame() const { return outBuffer; }
     uint32_t getFrameLen() const { return idx + 1; } // include the last byte (crc)
     void reset();
 
 private:
-    uint8_t outBuffer[MSP_FRAME_MAX_LEN];
+    uint8_t outBuffer[MSP_FRAME_MAX_LEN] {};
     uint32_t pktLen = 0; // packet length of the incoming msp frame
     uint32_t idx = 0;    // number of bytes received in the current msp frame
-    uint8_t seqNumberPrev;
+    uint8_t seqNumberPrev = 0;
     bool frameComplete = false;
-    uint8_t src;                                // source of the msp frame (from CRSF ext header)
-    uint8_t dest;                               // destination of the msp frame (from CRSF ext header)
+    uint8_t src = 0;                            // source of the msp frame (from CRSF ext header)
+    uint8_t dest = 0;                           // destination of the msp frame (from CRSF ext header)
     MSPframeType_e MSPvers = MSP_FRAME_UNKNOWN; // need to store the MSP version since it can only be inferred from the first frame
 
     static bool isNewFrame(const uint8_t *data);
