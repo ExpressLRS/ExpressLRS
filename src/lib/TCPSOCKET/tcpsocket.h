@@ -21,8 +21,8 @@ public:
 private:
     AsyncServer *TCPserver = nullptr;
     AsyncClient *TCPclient = nullptr;
-    CROSSFIRE2MSP crsf2msp;
-    MSP2CROSSFIRE msp2crsf;
+    CROSSFIRE2MSP *crsf2msp = nullptr;;
+    MSP2CROSSFIRE *msp2crsf = nullptr;;
 
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);

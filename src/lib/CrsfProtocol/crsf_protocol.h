@@ -142,7 +142,7 @@ typedef enum : uint8_t
  */
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t sync_byte;
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     crsf_frame_type_e type;
     uint8_t payload[0];

@@ -101,7 +101,7 @@ void CRSFRouter::deliverMessageTo(const crsf_addr_e destination, const crsf_head
 
 void CRSFRouter::SetHeaderAndCrc(crsf_header_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize)
 {
-    frame->device_addr = CRSF_SYNC_BYTE;
+    frame->sync_byte = CRSF_SYNC_BYTE;
     frame->frame_size = frameSize;
     frame->type = frameType;
 

@@ -29,7 +29,7 @@ private:
 
     telemetry_state_s telemetry_state = TELEMETRY_IDLE;
     uint8_t inBufferIndex = 0;
-    uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN] = {};
+    uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN] {};
 
 };
 

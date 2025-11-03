@@ -53,11 +53,15 @@ void TCPSOCKET::handleError(void *arg, AsyncClient *client, int8_t error)
 
 void TCPSOCKET::clientConnect(AsyncClient *client)
 {
+    if (crsf2msp == nullptr) {
+        crsf2msp = new CROSSFIRE2MSP();
+        msp2crsf = new MSP2CROSSFIRE();
+    }
     if (TCPclient != nullptr)
     {
+        crsf2msp->reset();
         TCPclient->close();
         TCPclient = client;
-        crsf2msp.reset();
     }
 
     // register events
@@ -78,20 +82,18 @@ void TCPSOCKET::clientDisconnect(AsyncClient *client)
     delete client;
 }
 
-void TCPSOCKET::processData(AsyncClient *client, void *data, size_t len)
+void TCPSOCKET::processData(AsyncClient *client, void *data, const size_t len)
 {
     TCPclient = client;
-    msp2crsf.parse(this, (uint8_t *)data, len, CRSF_ADDRESS_BLUETOOTH_WIFI, CRSF_ADDRESS_FLIGHT_CONTROLLER);
+    msp2crsf->parse(this, (uint8_t *)data, len, CRSF_ADDRESS_BLUETOOTH_WIFI, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
 void TCPSOCKET::forwardMessage(const crsf_header_t *message)
 {
-    if (TCPclient != nullptr)
+    if (TCPclient != nullptr && (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ))
     {
-        DBGLN("Got MSP frame, forwarding to client");
-        crsf2msp.parse((uint8_t *)message, [&](const uint8_t *data, const size_t len) {
+        crsf2msp->parse((uint8_t *)message, [&](const uint8_t *data, const size_t len) {
             TCPclient->write((const char *)data, len);
-            DBGLN("TCP OUT SENT: Sent!: len: %d", len);
         });
         TCPclient->send();
     }
