@@ -10,10 +10,10 @@
 #include "crsf2msp.h"
 #include "msp2crsf.h"
 
-class TCPSOCKET final : public CRSFConnector
+class TcpMspConnector final : public CRSFConnector
 {
 public:
-    TCPSOCKET();
+    TcpMspConnector();
     void begin();
 
     void forwardMessage(const crsf_header_t *message) override;

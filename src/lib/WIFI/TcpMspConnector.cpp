@@ -1,6 +1,6 @@
 #if defined(TARGET_RX)
 
-#include "tcpsocket.h"
+#include "TcpMspConnector.h"
 #include "logging.h"
 
 #include "CRSFRouter.h"
@@ -9,12 +9,12 @@
 
 #define TCP_PORT_BETAFLIGHT 5761 //port 5761 as used by BF configurator
 
-TCPSOCKET::TCPSOCKET() : CRSFConnector()
+TcpMspConnector::TcpMspConnector() : CRSFConnector()
 {
     addDevice(CRSF_ADDRESS_BLUETOOTH_WIFI);
 }
 
-void TCPSOCKET::begin()
+void TcpMspConnector::begin()
 {
     crsfRouter.addConnector(this);
 
@@ -23,35 +23,35 @@ void TCPSOCKET::begin()
     TCPserver->begin();
 }
 
-void TCPSOCKET::handleNewClient(void *arg, AsyncClient *client)
+void TcpMspConnector::handleNewClient(void *arg, AsyncClient *client)
 {
     DBGLN("\nTCPSOCKET client (%x) connected ip: %s", client, client->remoteIP().toString().c_str());
-    ((TCPSOCKET *)arg)->clientConnect(client);
+    ((TcpMspConnector *)arg)->clientConnect(client);
 }
 
-void TCPSOCKET::handleDataIn(void *arg, AsyncClient *client, void *data, const size_t len)
+void TcpMspConnector::handleDataIn(void *arg, AsyncClient *client, void *data, const size_t len)
 {
-    ((TCPSOCKET *)arg)->processData(client, data, len);
+    ((TcpMspConnector *)arg)->processData(client, data, len);
 }
 
-void TCPSOCKET::handleDisconnect(void *arg, AsyncClient *client)
+void TcpMspConnector::handleDisconnect(void *arg, AsyncClient *client)
 {
     DBGLN("\n client %s disconnected \n", client->remoteIP().toString().c_str());
-    ((TCPSOCKET *)arg)->clientDisconnect(client);
+    ((TcpMspConnector *)arg)->clientDisconnect(client);
 }
 
-void TCPSOCKET::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
+void TcpMspConnector::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
     DBGLN("\nclient ACK timeout ip: %s", client->remoteIP().toString().c_str());
 }
 
-void TCPSOCKET::handleError(void *arg, AsyncClient *client, int8_t error)
+void TcpMspConnector::handleError(void *arg, AsyncClient *client, int8_t error)
 {
     DBGLN("\nclient %x connection error %s", client, client->errorToString(error));
-    ((TCPSOCKET *)arg)->clientDisconnect(client);
+    ((TcpMspConnector *)arg)->clientDisconnect(client);
 }
 
-void TCPSOCKET::clientConnect(AsyncClient *client)
+void TcpMspConnector::clientConnect(AsyncClient *client)
 {
     if (crsf2msp == nullptr) {
         crsf2msp = new CROSSFIRE2MSP();
@@ -72,7 +72,7 @@ void TCPSOCKET::clientConnect(AsyncClient *client)
     client->setRxTimeout(clientTimeoutS);
 }
 
-void TCPSOCKET::clientDisconnect(AsyncClient *client)
+void TcpMspConnector::clientDisconnect(AsyncClient *client)
 {
     if (client == TCPclient)
     {
@@ -82,13 +82,13 @@ void TCPSOCKET::clientDisconnect(AsyncClient *client)
     delete client;
 }
 
-void TCPSOCKET::processData(AsyncClient *client, void *data, const size_t len)
+void TcpMspConnector::processData(AsyncClient *client, void *data, const size_t len)
 {
     TCPclient = client;
     msp2crsf->parse(this, (uint8_t *)data, len, CRSF_ADDRESS_BLUETOOTH_WIFI, CRSF_ADDRESS_FLIGHT_CONTROLLER);
 }
 
-void TCPSOCKET::forwardMessage(const crsf_header_t *message)
+void TcpMspConnector::forwardMessage(const crsf_header_t *message)
 {
     if (TCPclient != nullptr && (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ))
     {

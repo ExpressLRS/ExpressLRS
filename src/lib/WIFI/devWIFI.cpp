@@ -76,8 +76,8 @@ static DNSServer dnsServer;
 static IPAddress ipAddress;
 
 #if defined(TARGET_RX)
-#include "tcpsocket.h"
-TCPSOCKET wifi2tcp;
+#include "TcpMspConnector.h"
+TcpMspConnector wifi2tcp;
 #endif
 
 #if defined(PLATFORM_ESP8266)
