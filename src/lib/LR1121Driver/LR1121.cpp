@@ -55,7 +55,7 @@ LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
     instance = this;
-    lastSuccessfulPacketRadio = SX12XX_Radio_1;
+    strongestReceivingRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
     codec = &copyCodec;
 }
@@ -752,8 +752,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
     const SX12XX_Radio_Number_t radioNumber = processingPacketRadio == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
-    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
-    lastSuccessfulPacketRadio = processingPacketRadio;
+    // by default, set the strongest receiving radio to be the current processing radio (which got a successful packet)
+    strongestReceivingRadio = processingPacketRadio;
     DecodeRssiSnr(processingPacketRadio, rx_buf);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     irq_count_or++;
@@ -767,8 +767,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             const int8_t firstSNR = LastPacketSNRRaw;
             DecodeRssiSnr(radioNumber, rx2_buf);
             LastPacketSNRRaw = fuzzy_snr(LastPacketSNRRaw, firstSNR, FuzzySNRThreshold);
-            // Update the last successful packet radio to be the one with better signal strength
-            lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+            // Update the strongest receiving radio to be the one with better signal strength
+            strongestReceivingRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
             irq_count_both++;
         }
