@@ -49,7 +49,7 @@ SX127xDriver::SX127xDriver(): SX12xxDriverCommon()
   headerExplMode = false;
   crcEnabled = false;
   lowFrequencyMode = SX1278_HIGH_FREQ;
-  lastSuccessfulPacketRadio = SX12XX_Radio_1;
+  strongestReceivingRadio = SX12XX_Radio_1;
 }
 
 bool SX127xDriver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
@@ -514,15 +514,15 @@ void ICACHE_RAM_ATTR SX127xDriver::GetLastPacketStats()
     }
   }
 
-  // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
-  instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
+  // by default, set the strongest receiving radio to be the current processing radio (which got a successful packet)
+  instance->strongestReceivingRadio = instance->processingPacketRadio;
 
   // when both radio got the packet, use the better RSSI one
   if (gotRadio[0] && gotRadio[1])
   {
     LastPacketSNRRaw = instance->fuzzy_snr(snr[0], snr[1], instance->FuzzySNRThreshold);
-    // Update the last successful packet radio to be the one with better signal strength
-    instance->lastSuccessfulPacketRadio = (rssi[0] > rssi[1]) ? radio[0] : radio[1];
+    // Update the strongest receiving radio to be the one with better signal strength
+    instance->strongestReceivingRadio = (rssi[0] > rssi[1]) ? radio[0] : radio[1];
   }
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)

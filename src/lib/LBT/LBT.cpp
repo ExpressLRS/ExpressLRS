@@ -204,7 +204,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR LbtChannelIsClear(SX12XX_Radio_Number_t ra
     }
   }
 
-  if (radioNumber & SX12XX_Radio_2)
+  if (isDualRadio() && radioNumber & SX12XX_Radio_2)
   {
     rssiInst2 = Radio.GetRssiInst(SX12XX_Radio_2);
 
