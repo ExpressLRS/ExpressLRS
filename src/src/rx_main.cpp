@@ -1335,6 +1335,7 @@ static void setupSerial()
         sbusSerialOutput = true;
         serialBaud = 100000;
     }
+#if !defined(TARGET_RX_GHOST_ATTO_V1)
     else if (config.GetSerialProtocol() == PROTOCOL_SUMD)
     {
         sumdSerialOutput = true;
@@ -1351,6 +1352,7 @@ static void setupSerial()
         hottTlmSerial = true;
         serialBaud = 19200;
     }
+#endif
 #endif
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 

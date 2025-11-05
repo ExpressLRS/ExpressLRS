@@ -21,7 +21,9 @@ static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DSh
 static struct luaItem_selection luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
     0, // value
-#if defined(PLATFORM_STM32)
+#if defined(TARGET_RX_GHOST_ATTO_V1)
+    "CRSF;Inverted CRSF;SBUS;Inverted SBUS",
+#elif defined(PLATFORM_STM32)
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro",
 #else
     "CRSF;Inverted CRSF;SBUS;Inverted SBUS;SUMD;DJI RS Pro;HoTT Telemetry;MAVLink",

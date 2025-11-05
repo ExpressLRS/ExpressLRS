@@ -29,6 +29,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     // TODO: if failsafeMode == FAILSAFE_SET_POSITION then we use the set positions rather than the last values
     crsf_channels_s PackedRCdataOut;
 
+#if !defined(TARGET_RX_GHOST_ATTO_V1)
 #if defined(PLATFORM_ESP32)
     extern Stream* serial_protocol_tx;
     extern Stream* serial1_protocol_tx;
@@ -57,6 +58,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         PackedRCdataOut.ch15 = channelData[4] < CRSF_CHANNEL_VALUE_MID ? 352 : 1696;
     }
     else
+#endif
     {
         PackedRCdataOut.ch0 = channelData[0];
         PackedRCdataOut.ch1 = channelData[1];
