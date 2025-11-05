@@ -578,19 +578,13 @@ bool ICACHE_RAM_ATTR HandleSendTelemetryResponse()
     {
         transmittingRadio = SX12XX_Radio_NONE;
     }
-    else if (isDualRadio())
-    {
-        transmittingRadio = SX12XX_Radio_All;
-    }
     else
     {
-        transmittingRadio = Radio.GetLastSuccessfulPacketRadio();
-    }
-    transmittingRadio = LbtChannelIsClear(transmittingRadio);   // weed out the radio(s) if channel in use
-
-    if (!geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
-    {
-        transmittingRadio = Radio.LastPacketRSSI > Radio.LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2; // Pick the radio with best rf connection to the tx.
+        transmittingRadio = LbtChannelIsClear(SX12XX_Radio_All);   // weed out the radio(s) if channel in use
+        if (isDualRadio() && !geminiMode && transmittingRadio == SX12XX_Radio_All) // If the receiver is in diversity mode, only send TLM on a single radio.
+        {
+            transmittingRadio = Radio.GetStrongestReceivingRadio(); // Pick the radio with best rf connection to the tx.
+        }
     }
 
     // Gemini flips frequencies between radios on the rx side only.  This is to help minimise antenna cross polarization.
