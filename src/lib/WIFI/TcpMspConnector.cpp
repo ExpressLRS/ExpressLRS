@@ -95,7 +95,6 @@ void TcpMspConnector::forwardMessage(const crsf_header_t *message)
         crsf2msp->parse((uint8_t *)message, [&](const uint8_t *data, const size_t len) {
             TCPclient->write((const char *)data, len);
         });
-        TCPclient->send();
     }
 }
 

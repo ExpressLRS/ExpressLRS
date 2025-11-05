@@ -4,7 +4,7 @@
 
 void CRSFParser::processBytes(CRSFConnector *origin, const uint8_t *inputBytes, const uint16_t size, const std::function<void(const crsf_header_t *)>& foundMessage)
 {
-    for (uint8_t i = 0; i < size; ++i)
+    for (uint16_t i = 0; i < size; ++i)
     {
         processByte(origin, inputBytes[i], foundMessage);
     }
