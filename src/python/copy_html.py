@@ -2,8 +2,6 @@ Import("env")
 import subprocess, os, shutil
 
 os.chdir('html')
-subprocess.run(['npm', 'i'])
-
 target_name = env['PIOENV'].upper()
 
 type = 'tx' if '_TX_' in target_name else 'rx'
