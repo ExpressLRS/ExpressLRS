@@ -18,3 +18,17 @@ export function _renderOptions(options, selected) {
     );
 }
 
+export function _uintInput(e) {
+    if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
+        e.preventDefault();
+}
+
+export function _intInput(e) {
+    if (e.which !== 8 && e.which !== 0 && e.which !== 45 && e.which < 48 || e.which > 57)
+        e.preventDefault();
+}
+
+export function _arrayInput(e) {
+    if (e.which !== 32 && e.which !== 44 && e.which !== 45)
+        _intInput(e)
+}

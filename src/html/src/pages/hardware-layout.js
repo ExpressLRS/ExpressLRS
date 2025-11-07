@@ -4,6 +4,7 @@ import '../assets/mui.js'
 import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
+import {_arrayInput, _intInput, _uintInput} from "../utils/libs.js";
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
@@ -35,10 +36,9 @@ export class HardwareLayout extends LitElement {
                         to pre-configured defaults and reboot.
                     </div>
                     <form id="upload_hardware" class="mui-form">
-                        <input type="hidden" id="customised" name="customised" value="true"/>
                         ${this._renderTable()}
                         <br>
-                        <input type="button" value="Save Target Configuration"
+                        <input type="button" name="_ignore" value="Save Target Configuration"
                                class="mui-btn mui-btn--primary" @click=${this._submitConfig} />
                     </form>
                 </div>
@@ -85,10 +85,12 @@ export class HardwareLayout extends LitElement {
                     ${row.options?.map(opt => html`
                         <option value="${opt.value}">${opt.label}</option>`)}
                 </select>`
-            case 'text':
-            default:
-                const cls = row.className ? row.className : ''
-                return html`<input size=${row.size ?? nothing} id="${row.id}" name="${row.id}" type="text" class="${cls}"/>`
+            case 'int':
+                return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 3} maxlength=${row.size ?? 3} type="text" @keypress="${_intInput}"/>`
+            case 'uint':
+                return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 3} maxlength=${row.size ?? 3} type="text" @keypress="${_uintInput}"/>`
+            case 'array':
+                return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? nothing} maxlength=${row.size ?? nothing} type="text" class="array"  @keypress="${_arrayInput}"/>`
         }
     }
 
@@ -169,7 +171,7 @@ export class HardwareLayout extends LitElement {
             return isNaN(v) ? v : +v
         })
         // Use shared helper that prompts for reboot on success
-        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', JSON.parse(body))
+        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', {...JSON.parse(body), "customised": true})
         return false
     }
 }
