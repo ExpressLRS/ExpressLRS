@@ -41,7 +41,7 @@ class WifiPanel extends LitElement {
             <div class="mui-panel mui--text-title">WiFi Configuration</div>
             <div class="mui-panel">
                 <div class="mui-panel info-bg">
-                    ${elrsState.config.mode !== 'STA' ? 'Currently in Access-Point mode' : 'Currently connected to home network: ' + elrsState.config.ssid}
+                    ${elrsState.settings.mode !== 'STA' ? 'Currently in Access-Point mode' : 'Currently connected to home network: ' + elrsState.settings.ssid}
                 </div>
                 <p>
                     Here you can join a network, and save it as your Home network. When you enable WiFi in range of your
@@ -89,7 +89,7 @@ class WifiPanel extends LitElement {
                     <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Save</button>
                 </form>
             </div>
-            <div class="mui-panel" ?hidden="${elrsState.config.mode === 'STA'}">
+            <div class="mui-panel" ?hidden="${elrsState.settings.mode === 'STA'}">
                 <a id="connect" href="#"
                    @click="${postWithFeedback('Connect to Home Network', 'An error occurred connecting to the Home network', '/connect', null)}">
                     Connect to Home network: ${elrsState.options['wifi-ssid']}
