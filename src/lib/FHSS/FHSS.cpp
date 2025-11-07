@@ -181,106 +181,130 @@ bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz)
     return true; // safe
 }
 
-static void FHSS_buildDualBandPairs_GNSSSafe(uint32_t seed)
+static void FHSS_buildSecondarySequence_GNSSAware(uint32_t seed)
 {
-    // Assumes these globals already exist (as in ELRS):
-    // - FHSSsequence               : uint8_t[] primary sequence (length = FHSSgetSequenceCount())
-    // - FHSSsequence_DualBand      : uint8_t[] secondary sequence (same length when dual-band)
-    // - FHSSconfig / FHSSconfigDualBand with freq_start, freq_count, etc.
-    // - sync_channel / sync_channel_DualBand already pinned by FHSSrandomiseFHSSsequenceBuild()
-
+    // Build the secondary sequence by drawing from a per-hop GNSS-safe bucket
+    // with fairness (even usage) and deterministic tie-breaking.
     const uint16_t seqLen = FHSSgetSequenceCount();
     if (seqLen == 0) return;
 
-    // If the two bands have different channel counts, we still produce seqLen entries,
-    // wrapping the smaller one as needed.
     const uint16_t priCount = FHSSconfig->freq_count;
     const uint16_t secCount = FHSSconfigDualBand->freq_count;
 
-    // Helpers to convert channel index (0..count-1) -> absolute frequency in Hz
     auto idx_to_freq_primary = [&](uint8_t chIdx) -> uint32_t {
-        // Replace with the exact math used in your tree:
-        // start + chIdx * step (or spread), respecting your scaling macro(s)
         return FHSSconfig->freq_start + ((uint32_t)chIdx * freq_spread / FREQ_SPREAD_SCALE);
     };
     auto idx_to_freq_secondary = [&](uint8_t chIdx) -> uint32_t {
         return FHSSconfigDualBand->freq_start + ((uint32_t)chIdx * freq_spread_DualBand / FREQ_SPREAD_SCALE);
     };
 
-    // We’ll build a brand new secondary order that aligns 1:1 with primary hops.
-    uint8_t newSecondary[FHSS_SEQUENCE_LEN];
+    // Helper for deterministic pseudo-random choice without touching global RNG
+    auto pick_index_deterministic = [&](uint32_t mix) -> uint32_t {
+        // xorshift32
+        uint32_t x = mix ? mix : 0xA3C59AC3u;
+        x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+        return x;
+    };
 
-    // We walk over the *current* shuffled secondary sequence with a moving pointer j.
-    // Each time we accept a candidate, we WRITE it into newSecondary[i].
-    uint16_t j = 0;
+    // Distance score: how far |fB-fA| is from the nearest protected window (higher is better)
+    auto distance_score = [&](uint32_t fA_hz, uint32_t fB_hz) -> uint32_t {
+        uint64_t d = (fB_hz > fA_hz) ? (uint64_t)fB_hz - (uint64_t)fA_hz : (uint64_t)fA_hz - (uint64_t)fB_hz;
+        uint32_t best = 0xFFFFFFFFu;
+        for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
+            uint64_t lo = (uint64_t)s_protectedBands[k].center_hz - (uint64_t)s_protectedBands[k].half_bw_hz - s_protectTolHz;
+            uint64_t hi = (uint64_t)s_protectedBands[k].center_hz + (uint64_t)s_protectedBands[k].half_bw_hz + s_protectTolHz;
+            if (d >= lo && d <= hi) {
+                // inside window → distance is 0 to the edge; choose min to be conservative
+                uint64_t toLo = (d - lo);
+                uint64_t toHi = (hi - d);
+                uint32_t edgeDist = (uint32_t)((toLo < toHi) ? toLo : toHi);
+                if (edgeDist < best) best = edgeDist;
+            } else {
+                // outside window → distance to the nearest edge
+                uint64_t ed = (d < lo) ? (lo - d) : (d - hi);
+                uint32_t edgeDist = (uint32_t)((ed > 0xFFFFFFFFULL) ? 0xFFFFFFFFu : ed);
+                if (edgeDist < best) best = edgeDist;
+            }
+        }
+        return best;
+    };
 
-    const uint8_t MAX_RESHUFFLES = 8;
-    uint8_t reshuffles = 0;
 
-retry_build:
-    j = 0;
-    // Optional: ensure we don’t *lose* the sync channel position if your stack expects it at hop 0.
-    // We’ll try to honor "sync_channel_DualBand must be at index 0" first; if we can’t find a safe
-    // pairing for hop 0 with that fixed channel after several reshuffles, we fall back.
-    bool enforceSyncAtZero = true;
+    // Track even usage across the full sequence
+    uint16_t usageCount[256];
+    for (uint16_t s = 0; s < 256; ++s) usageCount[s] = 0;
+
+    // Track no-duplicate preference within blocks of size secCount
+    bool usedInBlock[256];
+    for (uint16_t s = 0; s < 256; ++s) usedInBlock[s] = false;
 
     for (uint16_t i = 0; i < seqLen; ++i) {
+        if (secCount <= 256 && (i % secCount) == 0) {
+            // reset per-block usage mask
+            for (uint16_t s = 0; s < secCount; ++s) usedInBlock[s] = false;
+        }
+
         const uint8_t priIdx = FHSSsequence[i % priCount];
         const uint32_t fA = idx_to_freq_primary(priIdx);
 
-        bool found = false;
-
-        if (enforceSyncAtZero && i == 0) {
-            // Try to use the fixed sync channel at 0 for the secondary.
-            const uint8_t secIdx = sync_channel_DualBand % secCount;
-            const uint32_t fB = idx_to_freq_secondary(secIdx);
+        // Build the safe bucket for this primary hop
+        uint8_t bucket[256];
+        uint16_t bucketSz = 0;
+        for (uint16_t s = 0; s < secCount; ++s) {
+            const uint32_t fB = idx_to_freq_secondary((uint8_t)s);
             if (FHSS_isPairGNSSSafe(fA, fB)) {
-                newSecondary[0] = secIdx;
-                found = true;
+                bucket[bucketSz++] = (uint8_t)s;
             }
-            // If not safe, we’ll drop into the general search below (and eventually reshuffle).
         }
 
-        if (!found) {
-            // Probe up to seqLen candidates by cycling j through the *existing* shuffled secondary list.
-            for (uint16_t probe = 0; probe < seqLen; ++probe) {
-                const uint8_t secIdx = FHSSsequence_DualBand[j % secCount];
-                const uint32_t fB = idx_to_freq_secondary(secIdx);
-                if (FHSS_isPairGNSSSafe(fA, fB)) {
-                    newSecondary[i] = secIdx;     // ***** COMMIT THE CHOICE *****
-                    j = (j + 1) % secCount;       // advance so we don’t reuse the same slot every time
-                    found = true;
-                    break;
+        uint8_t chosen = 0xFF;
+
+        if (bucketSz > 0) {
+            // Prefer candidates not used yet in this block, if any
+            uint8_t filtered[256];
+            uint16_t filteredSz = 0;
+            for (uint16_t t = 0; t < bucketSz; ++t) {
+                uint8_t s = bucket[t];
+                if (!usedInBlock[s]) filtered[filteredSz++] = s;
+            }
+            const uint8_t* cand = (filteredSz > 0) ? filtered : bucket;
+            uint16_t candSz = (filteredSz > 0) ? filteredSz : bucketSz;
+
+            // Find least-used among candidates
+            uint16_t minUse = 0xFFFFu;
+            for (uint16_t t = 0; t < candSz; ++t) {
+                uint8_t s = cand[t];
+                if (usageCount[s] < minUse) minUse = usageCount[s];
+            }
+            uint8_t least[256];
+            uint16_t leastSz = 0;
+            for (uint16_t t = 0; t < candSz; ++t) {
+                uint8_t s = cand[t];
+                if (usageCount[s] == minUse) least[leastSz++] = s;
+            }
+
+            // Deterministic pick among equals using a derived mix of seed and hop index
+            uint32_t mix = seed ^ (0x9E3779B9u * (uint32_t)(i + 1));
+            uint32_t r = pick_index_deterministic(mix);
+            chosen = least[r % leastSz];
+        } else {
+            // Empty bucket: choose least-bad candidate maximizing distance from protected windows
+            uint32_t bestScore = 0;
+            uint8_t bestIdx = 0;
+            for (uint16_t s = 0; s < secCount; ++s) {
+                const uint32_t fB = idx_to_freq_secondary((uint8_t)s);
+                uint32_t score = distance_score(fA, fB);
+                if (score > bestScore || (score == bestScore && s < bestIdx)) {
+                    bestScore = score;
+                    bestIdx = (uint8_t)s;
                 }
-                // printf("No, again %u...\n", i);
-                j = (j + 1) % secCount;
             }
+            chosen = bestIdx;
         }
 
-        if (!found) {
-            // Couldn’t find any partner for this primary hop with current secondary permutation.
-            if (++reshuffles <= MAX_RESHUFFLES) {
-                uint32_t derivedSeed = seed ^ (0x9E3779B9u * reshuffles);
-                FHSSrandomiseFHSSsequenceBuild(
-                    derivedSeed,
-                    FHSSconfigDualBand->freq_count,
-                    sync_channel_DualBand,
-                    FHSSsequence_DualBand
-                );
-                // Try again from scratch. If sync-at-zero caused trouble, relax it after first failure.
-                enforceSyncAtZero = (reshuffles == 1);
-                printf("shuffling");
-                goto retry_build;
-            }
-            // Last-resort: keep original secondary sequence (rare) rather than hang.
-            printf("No sats 4 U\n");
-            return;
-        }
-    }
-
-    // ***** COMMIT PERSISTENTLY: replace the *in-use* secondary sequence order *****
-    for (uint16_t i = 0; i < seqLen; ++i) {
-        FHSSsequence_DualBand[i] = newSecondary[i];
+        FHSSsequence_DualBand[i] = chosen;
+        usageCount[chosen]++;
+        usedInBlock[chosen] = true;
     }
 }
 
@@ -304,11 +328,9 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     DBGLN("Dual Domain %s, %u channels, sync=%u",
         FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
+    // Build the secondary band sequence with GNSS avoidance integrated
     FHSSusePrimaryFreqBand = false;
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
-
-    // now enforce GNSS-safe pairing across the two bands
-    FHSS_buildDualBandPairs_GNSSSafe(seed);
+    FHSS_buildSecondarySequence_GNSSAware(seed);
     FHSSusePrimaryFreqBand = true;
 
 #endif
