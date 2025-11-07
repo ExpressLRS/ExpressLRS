@@ -1,8 +1,10 @@
-#include <cstdint>
-#include <SX1280_Regs.h>
+#include "options.h"
+
 #include <FHSS.h>
-#include <unity.h>
+#include <SX1280_Regs.h>
+#include <cstdint>
 #include <set>
+#include <unity.h>
 
 void test_fhss_first(void)
 {
@@ -69,17 +71,28 @@ void test_fhss_same(void)
     }
 }
 
-void test_fhss_reg_same(void)
+void test_fhss_reg_same_fcc915(void)
 {
+    firmwareOptions.domain = 1;
     FHSSrandomiseFHSSsequence(0x01020304L);
 
-    const uint32_t numFhss = FHSSgetSequenceCount();
-
-    uint32_t fhss[numFhss];
-
+    uint32_t start = FHSSconfig->freq_start;
     for (unsigned int i = 1; i < FHSSgetSequenceCount(); i++) {
         uint32_t freq = FHSSgetNextFreq();
-        uint32_t reg = FREQ_HZ_TO_REG_VAL((2400400000 + FHSSsequence[i]*1000000));
+        uint32_t reg = FREQ_HZ_TO_REG_VAL(start + FHSSsequence[i]*freq_spread);
+        TEST_ASSERT_UINT32_WITHIN(1, reg, freq);
+    }
+}
+
+void test_fhss_reg_same_eu868(void)
+{
+    firmwareOptions.domain = 2;
+    FHSSrandomiseFHSSsequence(0x01020304L);
+
+    uint32_t start = FHSSconfig->freq_start;
+    for (unsigned int i = 1; i < FHSSgetSequenceCount(); i++) {
+        uint32_t freq = FHSSgetNextFreq();
+        uint32_t reg = FREQ_HZ_TO_REG_VAL(start + FHSSsequence[i]*freq_spread);
         TEST_ASSERT_UINT32_WITHIN(1, reg, freq);
     }
 }
@@ -95,7 +108,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_fhss_assignment);
     RUN_TEST(test_fhss_unique);
     RUN_TEST(test_fhss_same);
-    RUN_TEST(test_fhss_reg_same);
+    RUN_TEST(test_fhss_reg_same_fcc915);
+    RUN_TEST(test_fhss_reg_same_eu868);
     UNITY_END();
 
     return 0;

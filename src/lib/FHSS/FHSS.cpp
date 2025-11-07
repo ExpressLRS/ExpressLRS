@@ -3,11 +3,11 @@
 #include "options.h"
 #include <string.h>
 
-#if defined(RADIO_SX127X) || defined(RADIO_LR1121)
+#if defined(RADIO_SX127X) || defined(RADIO_LR1121) || defined(UNIT_TEST)
 
 #if defined(RADIO_LR1121)
 #include "LR1121Driver.h"
-#else
+#elif defined(RADIO_SX127X)
 #include "SX127xDriver.h"
 #endif
 
@@ -22,7 +22,7 @@ const fhss_config_t domains[] = {
     {"US433W",  FREQ_HZ_TO_REG_VAL(423500000), FREQ_HZ_TO_REG_VAL(438000000), 20, 434000000},
 };
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(UNIT_TEST)
 const fhss_config_t domainsDualBand[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
@@ -147,12 +147,11 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 // ---- GNSS protection: centers and ±half bandwidths ----
 // Default: GPS L1/L2/L5. Add Galileo/BeiDou as needed.
 static protected_band_t s_protectedBands[] = {
-    { 1575420000u, 1500000u }, // GPS L1 1575.42 MHz, ±1.5 MHz
-    { 1227600000u, 1500000u }, // GPS L2 1227.60 MHz, ±1.5 MHz
-    { 1176450000u, 1500000u }, // GPS L5 1176.45 MHz, ±1.5 MHz
+    { 1227600000u, 51150000u }, // GPS L5 - E6
+    { 1581549000u, 20451000u }, // GPS E1 - G1
 };
 static uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
-static uint32_t s_protectTolHz = 200000u; // extra margin (±200 kHz)
+static uint32_t s_protectTolHz = 20000000u; // extra margin (±10 MHz)
 
 void FHSS_setProtectedBands(const protected_band_t* bands, uint8_t count, uint32_t tol_hz)
 {
@@ -173,27 +172,10 @@ static bool in_window(uint64_t f_hz, uint32_t c_hz, uint32_t half_bw_hz, uint32_
 // Consider: |fA ± fB|, |2fA ± fB|, |2fB ± fA|, and optionally 3rd order like |3fA ± 2fB|
 bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz)
 {
-    uint64_t a = fA_hz, b = fB_hz;
-
-    // Build candidate IMD products
-    uint64_t cand[] = {
-        (a > b) ? (a - b) : (b - a), // |fA - fB|
-        a + b,                       // fA + fB
-        (2*a > b) ? (2*a - b) : (b - 2*a), // |2fA - fB|
-        2*a + b,                     // 2fA + fB
-        (2*b > a) ? (2*b - a) : (a - 2*b), // |2fB - fA|
-        2*b + a,                     // 2fB + fA
-        // Uncomment if you want extra caution with higher orders:
-        // (3*a > 2*b) ? (3*a - 2*b) : (2*b - 3*a),
-        // 3*a + 2*b,
-        // (3*b > 2*a) ? (3*b - 2*a) : (2*a - 3*b),
-        // 3*b + 2*a,
-    };
-
-    for (uint8_t i = 0; i < sizeof(cand)/sizeof(cand[0]); ++i) {
-        for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
-            if (in_window(cand[i], s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz, s_protectTolHz))
-                return false; // NOT safe — hits a protected window
+    for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
+        if (in_window(fB_hz - fA_hz, s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz, s_protectTolHz))
+        {
+            return false; // NOT safe — hits a protected window
         }
     }
     return true; // safe
@@ -201,57 +183,104 @@ bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz)
 
 static void FHSS_buildDualBandPairs_GNSSSafe(uint32_t seed)
 {
-    // Assumes FHSSsequence (primary) and FHSSsequence_DualBand (secondary) are
-    // already filled with shuffled channel indices for each band.
-    // We’ll walk the primary sequence in order and pick, for each hop i, a secondary
-    // hop j that yields a GNSS-safe pair. We maintain a moving pointer over secondary.
+    // Assumes these globals already exist (as in ELRS):
+    // - FHSSsequence               : uint8_t[] primary sequence (length = FHSSgetSequenceCount())
+    // - FHSSsequence_DualBand      : uint8_t[] secondary sequence (same length when dual-band)
+    // - FHSSconfig / FHSSconfigDualBand with freq_start, freq_count, etc.
+    // - sync_channel / sync_channel_DualBand already pinned by FHSSrandomiseFHSSsequenceBuild()
 
-    const uint16_t seqLen = FHSSgetSequenceCount(); // typically 256
-    uint16_t j = 0; // secondary moving index
+    const uint16_t seqLen = FHSSgetSequenceCount();
+    if (seqLen == 0) return;
 
-    // Convert index -> frequency helpers
-    auto idx_to_freq_primary = [](uint8_t chIdx) -> uint32_t {
+    // If the two bands have different channel counts, we still produce seqLen entries,
+    // wrapping the smaller one as needed.
+    const uint16_t priCount = FHSSconfig->freq_count;
+    const uint16_t secCount = FHSSconfigDualBand->freq_count;
+
+    // Helpers to convert channel index (0..count-1) -> absolute frequency in Hz
+    auto idx_to_freq_primary = [&](uint8_t chIdx) -> uint32_t {
+        // Replace with the exact math used in your tree:
+        // start + chIdx * step (or spread), respecting your scaling macro(s)
         return FHSSconfig->freq_start + ((uint32_t)chIdx * freq_spread / FREQ_SPREAD_SCALE);
     };
-    auto idx_to_freq_secondary = [](uint8_t chIdx) -> uint32_t {
+    auto idx_to_freq_secondary = [&](uint8_t chIdx) -> uint32_t {
         return FHSSconfigDualBand->freq_start + ((uint32_t)chIdx * freq_spread_DualBand / FREQ_SPREAD_SCALE);
     };
 
-    // Bounded reshuffle attempts to avoid pathological dead-ends
+    // We’ll build a brand new secondary order that aligns 1:1 with primary hops.
+    uint8_t newSecondary[FHSS_SEQUENCE_LEN];
+
+    // We walk over the *current* shuffled secondary sequence with a moving pointer j.
+    // Each time we accept a candidate, we WRITE it into newSecondary[i].
+    uint16_t j = 0;
+
     const uint8_t MAX_RESHUFFLES = 8;
     uint8_t reshuffles = 0;
 
 retry_build:
     j = 0;
+    // Optional: ensure we don’t *lose* the sync channel position if your stack expects it at hop 0.
+    // We’ll try to honor "sync_channel_DualBand must be at index 0" first; if we can’t find a safe
+    // pairing for hop 0 with that fixed channel after several reshuffles, we fall back.
+    bool enforceSyncAtZero = true;
+
     for (uint16_t i = 0; i < seqLen; ++i) {
-        uint8_t priIdx = FHSSsequence[i];
-        uint32_t fA = idx_to_freq_primary(priIdx);
+        const uint8_t priIdx = FHSSsequence[i % priCount];
+        const uint32_t fA = idx_to_freq_primary(priIdx);
 
         bool found = false;
-        for (uint16_t probe = 0; probe < seqLen; ++probe) {
-            uint8_t secIdx = FHSSsequence_DualBand[j];
-            uint32_t fB = idx_to_freq_secondary(secIdx);
+
+        if (enforceSyncAtZero && i == 0) {
+            // Try to use the fixed sync channel at 0 for the secondary.
+            const uint8_t secIdx = sync_channel_DualBand % secCount;
+            const uint32_t fB = idx_to_freq_secondary(secIdx);
             if (FHSS_isPairGNSSSafe(fA, fB)) {
-                // keep this pairing; advance j so we don't reuse the same secondary hop every time
-                j = (j + 1) % seqLen;
+                newSecondary[0] = secIdx;
                 found = true;
-                break;
             }
-            // try next secondary hop (cyclic)
-            j = (j + 1) % seqLen;
+            // If not safe, we’ll drop into the general search below (and eventually reshuffle).
         }
 
         if (!found) {
-            // Couldn’t find any partner for this primary hop with the current secondary permutation.
-            // Deterministically reshuffle secondary using a derived seed and retry.
+            // Probe up to seqLen candidates by cycling j through the *existing* shuffled secondary list.
+            for (uint16_t probe = 0; probe < seqLen; ++probe) {
+                const uint8_t secIdx = FHSSsequence_DualBand[j % secCount];
+                const uint32_t fB = idx_to_freq_secondary(secIdx);
+                if (FHSS_isPairGNSSSafe(fA, fB)) {
+                    newSecondary[i] = secIdx;     // ***** COMMIT THE CHOICE *****
+                    j = (j + 1) % secCount;       // advance so we don’t reuse the same slot every time
+                    found = true;
+                    break;
+                }
+                // printf("No, again %u...\n", i);
+                j = (j + 1) % secCount;
+            }
+        }
+
+        if (!found) {
+            // Couldn’t find any partner for this primary hop with current secondary permutation.
             if (++reshuffles <= MAX_RESHUFFLES) {
                 uint32_t derivedSeed = seed ^ (0x9E3779B9u * reshuffles);
-                FHSSrandomiseFHSSsequenceBuild(derivedSeed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+                FHSSrandomiseFHSSsequenceBuild(
+                    derivedSeed,
+                    FHSSconfigDualBand->freq_count,
+                    sync_channel_DualBand,
+                    FHSSsequence_DualBand
+                );
+                // Try again from scratch. If sync-at-zero caused trouble, relax it after first failure.
+                enforceSyncAtZero = (reshuffles == 1);
+                printf("shuffling");
                 goto retry_build;
             }
-            // Give up gracefully: keep the original order (very unlikely) rather than hang.
-            break;
+            // Last-resort: keep original secondary sequence (rare) rather than hang.
+            printf("No sats 4 U\n");
+            return;
         }
+    }
+
+    // ***** COMMIT PERSISTENTLY: replace the *in-use* secondary sequence order *****
+    for (uint16_t i = 0; i < seqLen; ++i) {
+        FHSSsequence_DualBand[i] = newSecondary[i];
     }
 }
 
@@ -266,8 +295,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         FHSSconfig->domain, FHSSconfig->freq_count, sync_channel);
 
     FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfig->freq_count, sync_channel, FHSSsequence);
-
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(UNIT_TEST)
     FHSSconfigDualBand = &domainsDualBand[0];
     sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
@@ -278,10 +306,10 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
 
     FHSSusePrimaryFreqBand = false;
     FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
-    FHSSusePrimaryFreqBand = true;
 
     // now enforce GNSS-safe pairing across the two bands
     FHSS_buildDualBandPairs_GNSSSafe(seed);
+    FHSSusePrimaryFreqBand = true;
 
 #endif
 }
