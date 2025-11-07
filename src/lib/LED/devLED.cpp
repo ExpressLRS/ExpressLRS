@@ -131,13 +131,21 @@ static int event()
     case connected:
         if (hasRGBLeds)
         {
+#if defined(LED_OFF_CONNECTED)
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW);
+#else
             digitalWrite(GPIO_PIN_LED_GREEN, HIGH);
+#endif
             digitalWrite(GPIO_PIN_LED_RED, LOW);
             digitalWrite(GPIO_PIN_LED_BLUE, LOW);
         }
         else if (GPIO_PIN_LED_GREEN != UNDEF_PIN)
         {
+#if defined(LED_OFF_CONNECTED)
+            digitalWrite(GPIO_PIN_LED_GREEN, LOW ^ GPIO_LED_GREEN_INVERTED);
+#else
             digitalWrite(GPIO_PIN_LED_GREEN, HIGH ^ GPIO_LED_GREEN_INVERTED);
+#endif
         }
         if (GPIO_PIN_LED_RED != UNDEF_PIN)
         {
@@ -147,7 +155,11 @@ static int event()
             }
             else if (!hasRGBLeds)
             {
+#if defined(LED_OFF_CONNECTED)
+                digitalWrite(GPIO_PIN_LED_RED, LOW ^ GPIO_LED_RED_INVERTED); // turn off led
+#else
                 digitalWrite(GPIO_PIN_LED_RED, HIGH ^ GPIO_LED_RED_INVERTED); // turn on led
+#endif
             }
         }
         return DURATION_NEVER;
