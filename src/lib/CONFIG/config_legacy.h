@@ -189,6 +189,21 @@ typedef struct {
 } v7_rx_config_t;
 
 // V8 is just V7 except PWM config inserted 10khz PWM in the middle
+typedef v6_rx_config_pwm_t v8_rx_config_pwm_t;
+
+// failsafeMode was added during v8, no new version number created, but was in v9
+typedef union {
+    struct {
+        uint32_t failsafe:10,    // us output during failsafe +988 (e.g. 512 here would be 1500us)
+                 inputChannel:4, // 0-based input channel
+                 inverted:1,     // invert channel output
+                 mode:4,         // Output mode (eServoOutputMode)
+                 narrow:1,       // Narrow output mode (half pulse width)
+                 failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
+                 unused:10;      // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+    } val;
+    uint32_t raw;
+} v9_rx_config_pwm_t;
 
 typedef struct {
     uint32_t    version;
@@ -211,10 +226,14 @@ typedef struct {
     uint8_t     serialProtocol:4,
                 failsafeMode:2,
                 unused:2;
-    v6_rx_config_pwm_t pwmChannels[16];
+    v9_rx_config_pwm_t pwmChannels[16];
     uint8_t     teamraceChannel:4,
                 teamracePosition:3,
                 teamracePitMode:1;  // FUTURE: Enable pit mode when disabling model
     uint8_t     targetSysId;
     uint8_t     sourceSysId;
 } v9_rx_config_t;
+
+// V10 changed rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
+// powerOnCounter 3 bits -> 2
+// rateInitialIdx 4 bits -> 5

@@ -208,7 +208,7 @@ void TxConfig::Load()
                 ModelV6toV7(&v6model, newModel);
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
-            
+
             if (version <= 7)
             {
                 // Upgrade v7 to v8 directly writing to nvs instead of calling Commit() over and over
@@ -758,6 +758,8 @@ TxConfig::SetModelId(uint8_t modelId)
 #include "flash_hal.h"
 #endif
 
+#define CONFCOPY(member) m_config.member = old.member
+
 RxConfig::RxConfig()
 {
 }
@@ -787,14 +789,22 @@ void RxConfig::Load()
         return;
     }
 
-    // Upgrade EEPROM, starting with defaults
+    // Upgrade EEPROM, load defaults then load the old values into it
     SetDefaults(false);
-    UpgradeEepromV4();
-    UpgradeEepromV5();
-    UpgradeEepromV6();
-    UpgradeEepromV7V8();
-    UpgradeEepromV9();
-    m_config.version = RX_CONFIG_VERSION | RX_CONFIG_MAGIC;
+    switch (version)
+    {
+        case 4:
+            UpgradeEepromV4(); break;
+        case 5:
+            UpgradeEepromV5(); break;
+        case 6:
+            UpgradeEepromV6(); break;
+        case 7: // falthrough
+        case 8:
+            UpgradeEepromV7V8(version); break;
+        case 9:
+            UpgradeEepromV9(); break;
+    }
     m_modified = EVENT_CONFIG_MODEL_CHANGED; // anything to force write
     Commit();
 }
@@ -819,31 +829,32 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
     Commit();
 }
 
+static unsigned toFailsafeV10(unsigned oldFailsafe)
+{
+    // the old failsafe was 988+value, new is 476+value
+    return oldFailsafe + (988-476);
+}
+
 // ========================================================
 // V4 Upgrade
 
 static void PwmConfigV4(v4_rx_config_pwm_t const * const v4, rx_config_pwm_t * const current)
 {
-    current->val.failsafe = v4->val.failsafe;
+    current->val.failsafe = toFailsafeV10(v4->val.failsafe);
     current->val.inputChannel = v4->val.inputChannel;
     current->val.inverted = v4->val.inverted;
 }
 
 void RxConfig::UpgradeEepromV4()
 {
-    v4_rx_config_t v4Config;
-    m_eeprom->Get(0, v4Config);
+    v4_rx_config_t old;
+    m_eeprom->Get(0, old);
 
-    if ((v4Config.version & ~CONFIG_MAGIC_MASK) == 4)
-    {
-        UpgradeUid(nullptr, v4Config.isBound ? v4Config.uid : nullptr);
-        m_config.modelId = v4Config.modelId;
-        // OG PWMP had only 8 channels
-        for (unsigned ch=0; ch<8; ++ch)
-        {
-            PwmConfigV4(&v4Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
-        }
-    }
+    UpgradeUid(nullptr, old.isBound ? old.uid : nullptr);
+    CONFCOPY(modelId);
+    // OG PWMP had only 8 channels
+    for (unsigned ch=0; ch<8; ++ch)
+        PwmConfigV4(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
 }
 
 // ========================================================
@@ -851,7 +862,7 @@ void RxConfig::UpgradeEepromV4()
 
 static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * const current)
 {
-    current->val.failsafe = v5->val.failsafe;
+    current->val.failsafe = toFailsafeV10(v5->val.failsafe);
     current->val.inputChannel = v5->val.inputChannel;
     current->val.inverted = v5->val.inverted;
     current->val.narrow = v5->val.narrow;
@@ -864,24 +875,18 @@ static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * c
 
 void RxConfig::UpgradeEepromV5()
 {
-    v5_rx_config_t v5Config;
-    m_eeprom->Get(0, v5Config);
+    v5_rx_config_t old;
+    m_eeprom->Get(0, old);
 
-    if ((v5Config.version & ~CONFIG_MAGIC_MASK) == 5)
-    {
-        UpgradeUid(v5Config.onLoan ? v5Config.loanUID : nullptr, v5Config.isBound ? v5Config.uid : nullptr);
-        m_config.vbat.scale = v5Config.vbatScale;
-        m_config.power = v5Config.power;
-        m_config.antennaMode = v5Config.antennaMode;
-        m_config.forceTlmOff = v5Config.forceTlmOff;
-        m_config.rateInitialIdx = v5Config.rateInitialIdx;
-        m_config.modelId = v5Config.modelId;
-
-        for (unsigned ch=0; ch<16; ++ch)
-        {
-            PwmConfigV5(&v5Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
-        }
-    }
+    UpgradeUid(old.onLoan ? old.loanUID : nullptr, old.isBound ? old.uid : nullptr);
+    m_config.vbat.scale = old.vbatScale;
+    CONFCOPY(power);
+    CONFCOPY(antennaMode);
+    CONFCOPY(forceTlmOff);
+    CONFCOPY(rateInitialIdx);
+    CONFCOPY(modelId);
+    for (unsigned ch=0; ch<16; ++ch)
+        PwmConfigV5(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
 }
 
 // ========================================================
@@ -889,7 +894,7 @@ void RxConfig::UpgradeEepromV5()
 
 static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * const current)
 {
-    current->val.failsafe = v6->val.failsafe;
+    current->val.failsafe = toFailsafeV10(v6->val.failsafe);
     current->val.inputChannel = v6->val.inputChannel;
     current->val.inverted = v6->val.inverted;
     current->val.narrow = v6->val.narrow;
@@ -898,71 +903,85 @@ static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * c
 
 void RxConfig::UpgradeEepromV6()
 {
-    v6_rx_config_t v6Config;
-    m_eeprom->Get(0, v6Config);
+    v6_rx_config_t old;
+    m_eeprom->Get(0, old);
 
-    if ((v6Config.version & ~CONFIG_MAGIC_MASK) == 6)
-    {
-        UpgradeUid(v6Config.onLoan ? v6Config.loanUID : nullptr, v6Config.isBound ? v6Config.uid : nullptr);
-        m_config.vbat.scale = v6Config.vbatScale;
-        m_config.power = v6Config.power;
-        m_config.antennaMode = v6Config.antennaMode;
-        m_config.forceTlmOff = v6Config.forceTlmOff;
-        m_config.rateInitialIdx = v6Config.rateInitialIdx;
-        m_config.modelId = v6Config.modelId;
-
-        for (unsigned ch=0; ch<16; ++ch)
-        {
-            PwmConfigV6(&v6Config.pwmChannels[ch], &m_config.pwmChannels[ch]);
-        }
-    }
+    UpgradeUid(old.onLoan ? old.loanUID : nullptr, old.isBound ? old.uid : nullptr);
+    m_config.vbat.scale = old.vbatScale;
+    CONFCOPY(power);
+    CONFCOPY(antennaMode);
+    CONFCOPY(forceTlmOff);
+    CONFCOPY(rateInitialIdx);
+    CONFCOPY(modelId);
+    for (unsigned ch=0; ch<16; ++ch)
+        PwmConfigV6(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
 }
 
 // ========================================================
 // V7/V8 Upgrade
 
-void RxConfig::UpgradeEepromV7V8()
+void RxConfig::UpgradeEepromV7V8(uint8_t ver)
 {
-    v7_rx_config_t v7Config;
-    m_eeprom->Get(0, v7Config);
+    v7_rx_config_t old;
+    m_eeprom->Get(0, old);
 
-    bool isV8 = (v7Config.version & ~CONFIG_MAGIC_MASK) == 8;
-    if (isV8 || (v7Config.version & ~CONFIG_MAGIC_MASK) == 7)
+    UpgradeUid(old.onLoan ? old.loanUID : nullptr, old.isBound ? old.uid : nullptr);
+    m_config.vbat.scale = old.vbatScale;
+    CONFCOPY(power);
+    CONFCOPY(antennaMode);
+    CONFCOPY(forceTlmOff);
+    CONFCOPY(rateInitialIdx);
+    CONFCOPY(modelId);
+    CONFCOPY(serialProtocol);
+    CONFCOPY(failsafeMode);
+
+    bool isV8 = ver == 8;
+    for (unsigned ch=0; ch<16; ++ch)
     {
-        UpgradeUid(v7Config.onLoan ? v7Config.loanUID : nullptr, v7Config.isBound ? v7Config.uid : nullptr);
-
-        m_config.vbat.scale = v7Config.vbatScale;
-        m_config.power = v7Config.power;
-        m_config.antennaMode = v7Config.antennaMode;
-        m_config.forceTlmOff = v7Config.forceTlmOff;
-        m_config.rateInitialIdx = v7Config.rateInitialIdx;
-        m_config.modelId = v7Config.modelId;
-        m_config.serialProtocol = v7Config.serialProtocol;
-        m_config.failsafeMode = v7Config.failsafeMode;
-
-        for (unsigned ch=0; ch<16; ++ch)
-        {
-            m_config.pwmChannels[ch].raw = v7Config.pwmChannels[ch].raw;
-            if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
-                m_config.pwmChannels[ch].val.mode += 1;
-        }
+        m_config.pwmChannels[ch].raw = old.pwmChannels[ch].raw;
+        if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
+            m_config.pwmChannels[ch].val.mode += 1;
     }
 }
 
 // ========================================================
 // V9 Upgrade
 
+static void PwmConfigV9(v9_rx_config_pwm_t const * const old, rx_config_pwm_t * const current)
+{
+    current->val.failsafe = toFailsafeV10(old->val.failsafe);
+    current->val.inputChannel = old->val.inputChannel;
+    current->val.inverted = old->val.inverted;
+    current->val.mode = old->val.mode;
+    current->val.narrow = old->val.narrow;
+    current->val.failsafeMode = old->val.failsafeMode;
+}
+
 void RxConfig::UpgradeEepromV9()
 {
-    v9_rx_config_t v9Config;
-    m_eeprom->Get(0, v9Config);
+    v9_rx_config_t old;
+    m_eeprom->Get(0, old);
 
-    if ((v9Config.version & ~CONFIG_MAGIC_MASK) == 9)
-    {
-        m_config.powerOnCounter = v9Config.powerOnCounter;
-        m_config.forceTlmOff = v9Config.forceTlmOff;
-        m_config.rateInitialIdx = v9Config.rateInitialIdx;
-    }
+    memcpy(m_config.uid, old.uid, UID_LEN);
+    CONFCOPY(serial1Protocol);
+    CONFCOPY(flash_discriminator);
+    CONFCOPY(vbat.scale);
+    CONFCOPY(vbat.offset);
+    CONFCOPY(bindStorage);
+    CONFCOPY(power);
+    CONFCOPY(antennaMode);
+    CONFCOPY(forceTlmOff);
+    CONFCOPY(rateInitialIdx);
+    CONFCOPY(modelId);
+    CONFCOPY(serialProtocol);
+    CONFCOPY(failsafeMode);
+    for (unsigned ch=0; ch<16; ++ch)
+        PwmConfigV9(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
+    CONFCOPY(teamraceChannel);
+    CONFCOPY(teamracePosition);
+    CONFCOPY(teamracePitMode);
+    CONFCOPY(targetSysId);
+    CONFCOPY(sourceSysId);
 }
 
 void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
