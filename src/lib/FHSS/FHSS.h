@@ -54,6 +54,15 @@ extern const fhss_config_t *FHSSconfigDualBand;
 void FHSSrandomiseFHSSsequence(uint32_t seed);
 void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
 
+// Intermod guard for dual-band pairing
+typedef struct {
+    uint32_t center_hz;
+    uint32_t half_bw_hz; // +/- this around center
+} protected_band_t;
+
+bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz);
+void FHSS_setProtectedBands(const protected_band_t* bands, uint8_t count, uint32_t tol_hz);
+
 static inline uint32_t FHSSgetMinimumFreq(void)
 {
     return FHSSconfig->freq_start;
