@@ -20,6 +20,23 @@ export function devMockPlugin() {
 
     // Basic stub data used by multiple endpoints
     const stubState = {
+        settings: {
+            product_name: 'ELRS Mock Device',
+            lua_name: "ELRS+PWM 2400RX",
+            uidtype: 'Flashed',
+            ssid: 'ExpressLRS TX',
+            mode: 'AP',
+            custom_hardware: true,
+            has_low_band: false,
+            has_high_band: true,
+            reg_domain_low: 'EU868',
+            reg_domain_high: 'CE_LBT',
+            target: "Unified_ESP32_LR1121",
+            version: "25.0.0",
+            "git-commit": "3468759",
+            "module-type": FEATURES.IS_TX ? "TX" : "RX",
+            "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : "SX127X"),
+        },
         options: {
             customised: true,
             "uid": [1, 2, 3, 4, 5, 6],   // this is the 'flashed' UID and may be empty if using traditional binding on an RX.
@@ -35,13 +52,8 @@ export function devMockPlugin() {
             "wifi-ssid": "network-ssid"
         },
         config: {
-            product_name: 'ELRS Mock Device',
-            lua_name: "ELRS+PWM 2400RX",
-            reg_domain: 'EU868',
-            uid: [5, 4, 3, 2, 1, 0],  // current UID
-            uidtype: 'Flashed',
-            mode: 'AP',
-            ssid: 'ExpressLRS TX',
+            uid: [5, 4, 3, 2, 1, 0],  // current UID, different to options if traditional binding or on-loan
+            // RX config
             modelid: 62,
             'force-tlm': false,
             'serial-protocol': 1,
@@ -55,6 +67,7 @@ export function devMockPlugin() {
                 {"config": 4608, "pin": 3, "features": 2 + 16}
             ],
             vbind: 0,
+            // TX config
             "button-actions": [
                 {
                     "color": 255,
@@ -97,22 +110,7 @@ export function devMockPlugin() {
                 if (method === 'GET' && url === '/config') {
                     // Reset the networks scan delay counter whenever config is fetched
                     networkQueryCount = 0
-                    return sendJSON(res, {options: stubState.options, config: stubState.config})
-                }
-                if (method === 'GET' && url === '/target') {
-                    // Reset the networks scan delay counter whenever config is fetched
-                    networkQueryCount = 0
-                    return sendJSON(res, {
-                        "target": "Unified_ESP32_LR1121",
-                        "version": "25.0.0",
-                        "product_name": "Bobbybox 27GHz TX",
-                        "lua_name": "Bobbybox 27G TX",
-                        "reg_domain": "AU915",
-                        "git-commit": "3468759",
-                        "module-type": FEATURES.IS_TX ? "TX" : "RX",
-                        "radio-type": FEATURES.HAS_SX128X ? "SX128X" : (FEATURES.HAS_LR1121 ? "LR1121" : "SX127X"),
-                        "has-sub-ghz": !FEATURES.HAS_SX128X,
-                    })
+                    return sendJSON(res, stubState)
                 }
                 if (method === 'GET' && (url === '/networks.json' || url.startsWith('/networks.json'))) {
                     networkQueryCount++

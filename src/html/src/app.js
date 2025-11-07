@@ -1,7 +1,7 @@
 import {LitElement, html, svg} from 'lit'
 import {customElement, query} from "lit/decorators.js"
 import FEATURES from "./features.js"
-import {elrsState} from './utils/state.js'
+import {elrsState, formatBand} from './utils/state.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
@@ -80,9 +80,9 @@ export class App extends LitElement {
                            @click="${this.hideSidedrawer}">${this.menu}</a>
                     </div>
                     <div style="padding-left: 15px">
-                        <div id="product_name">${elrsState.target?.product_name}</div>
+                        <div id="product_name">${elrsState.settings?.product_name}</div>
                         <div>
-                            <b>Firmware Rev. </b>${elrsState.target?.version} ${elrsState.config.reg_domain}
+                            <b>Firmware Rev. </b>${elrsState.settings?.version} ${formatBand()}
                         </div>
                     </div>
                 </div>
@@ -116,10 +116,9 @@ export class App extends LitElement {
             const resp = await fetch('/config')
             if (!resp.ok) throw new Error('Failed to load config')
             const data = await resp.json()
+            elrsState.settings = data.settings || null
             elrsState.options = data.options || null
             elrsState.config = data.config || null
-            const r = await fetch("/target")
-            elrsState.target = await r.json()
             this.requestUpdate()
         } catch (e) {
             console.warn('Startup data load failed:', e)

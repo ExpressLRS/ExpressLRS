@@ -24,7 +24,7 @@ class BindingPanel extends LitElement {
         this.uid = elrsState.config.uid
         this.bindType = elrsState.config.vbind
         this.originalUID = elrsState.config.uid
-        this.originalUIDType = (elrsState.config && elrsState.config.uidtype) ? elrsState.config.uidtype : ''
+        this.originalUIDType = (elrsState.settings && elrsState.settings.uidtype) ? elrsState.settings.uidtype : ''
         this._updateUIDType(this.originalUIDType)
     }
 

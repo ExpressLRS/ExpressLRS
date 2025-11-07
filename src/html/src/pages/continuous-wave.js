@@ -2,6 +2,7 @@ import {html, LitElement} from 'lit';
 import {customElement, query, state} from 'lit/decorators.js';
 import FEATURES from "../features.js";
 import {post} from "../utils/feedback.js";
+import {elrsState} from "../utils/state.js";
 
 @customElement('continuous-wave')
 export class ContinuousWave extends LitElement {
@@ -54,17 +55,19 @@ export class ContinuousWave extends LitElement {
                             </div>
                         ` : html``}
                         <!-- FEATURE:HAS_LR1121 -->
-                        <br>
-                        Basic support is available for the LR1121 and setting 915 MHz.
-                        <br>
-                        <div class="mui-checkbox">
-                            <input type="checkbox"
-                                   name="setSubGHz"
-                                   id="optionsSetSubGHz"
-                                   ?disabled=${this.started}
-                                   @click="${this._updateFreq}">
-                            <label for="optionsSetSubGHz">Set 915 MHz</label>
-                        </div>
+                        ${elrsState.settings.has_high_band && elrsState.settings.has_low_band ? html`
+                            <br>
+                            Basic support is available for the LR1121 and setting 915 MHz.
+                            <br>
+                            <div class="mui-checkbox">
+                                <input type="checkbox"
+                                       name="setSubGHz"
+                                       id="optionsSetSubGHz"
+                                       ?disabled=${this.started}
+                                       @click="${this._updateFreq}">
+                                <label for="optionsSetSubGHz">Set 915 MHz</label>
+                            </div>
+                        ` : ''}
                         <!-- /FEATURE:HAS_LR1121 -->
                         <br>
                         <button class="mui-btn mui-btn--primary" ?disabled=${this.started} @click="${this._startCW}">
@@ -134,8 +137,16 @@ export class ContinuousWave extends LitElement {
 
     _updateFreq() {
         this.cwFreq = this.data.center
-        if (FEATURES.HAS_LR1121 && !this.optionsSetSubGHz?.checked) {
-            this.cwFreq = this.data.center2
+        if (FEATURES.HAS_LR1121) {
+            if (elrsState.settings?.has_high_band && elrsState.settings?.has_low_band) {
+                if (!this.optionsSetSubGHz || !this.optionsSetSubGHz.checked)
+                {
+                    this.cwFreq = this.data.center2
+                }
+            }
+            else if (elrsState.settings?.has_high_band) {
+                this.cwFreq = this.data.center2
+            }
         }
         this._measured()
     }
@@ -147,7 +158,13 @@ export class ContinuousWave extends LitElement {
         const formdata = new FormData()
         formdata.append('radio', this.radio2?.checked ? 2 : 1)
         if (FEATURES.HAS_LR1121) {
-            formdata.append('subGHz', this.optionsSetSubGHz.checked ? 1 : 0)
+            let subGHz = 0
+            if (elrsState.settings.has_high_band && elrsState.settings.has_low_band) {
+                subGHz = this.optionsSetSubGHz.checked ? 1 : 0
+            } else if (elrsState.settings.has_low_band) {
+                subGHz = 1
+            }
+            formdata.append('subGHz', subGHz)
         }
         post('/cw', formdata)
     }

@@ -1,6 +1,6 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import {elrsState} from "../utils/state.js";
+import {elrsState, formatBand} from "../utils/state.js";
 import '../assets/mui.js';
 
 @customElement('info-panel')
@@ -15,15 +15,15 @@ class InfoPanel extends LitElement {
             <div class="mui-panel">
                 <table class="mui-table mui-table--bordered">
                     <tbody>
-                    <tr><td><b>Product</b></td><td>${elrsState.target.product_name}</td></tr>
-                    <tr><td><b>Lua Name</b></td><td>${elrsState.target.lua_name}</td></tr>
-                    <tr><td><b>Version</b></td><td>${elrsState.target.version}</td></tr>
+                    <tr><td><b>Product</b></td><td>${elrsState.settings.product_name}</td></tr>
+                    <tr><td><b>Lua Name</b></td><td>${elrsState.settings.lua_name}</td></tr>
+                    <tr><td><b>Version</b></td><td>${elrsState.settings.version}</td></tr>
+                    <tr><td><b>Git Hash</b></td><td>${elrsState.settings['git-commit']}</td></tr>
+                    <tr><td><b>Device Type</b></td><td>${elrsState.settings['module-type']}</td></tr>
+                    <tr><td><b>Firmware</b></td><td>${elrsState.settings.target}</td></tr>
+                    <tr><td><b>Radio</b></td><td>${elrsState.settings['radio-type']}</td></tr>
+                    <tr><td><b>Domain</b></td><td>${formatBand()}</td></tr>
                     <tr><td><b>Binding UID</b></td><td>${elrsState.config.uid.toString()}</td></tr>
-                    <tr><td><b>Domain</b></td><td>${elrsState.target.reg_domain}</td></tr>
-                    <tr><td><b>Device Type</b></td><td>${elrsState.target['module-type']}</td></tr>
-                    <tr><td><b>Radio</b></td><td>${elrsState.target['radio-type']}</td></tr>
-                    <tr><td><b>Firmware</b></td><td>${elrsState.target.target}</td></tr>
-                    <tr><td><b>Git Hash</b></td><td>${elrsState.target['git-commit']}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -58,6 +58,10 @@ class InfoPanel extends LitElement {
                                 html`<tr><td><b>Telemetry Report Interval (ms)</b></td><td>${elrsState.options['tlm-interval']}</td></tr>`
                                 : ''}
                         <!-- /FEATURE: IS_TX -->
+                        ${elrsState.settings?.custom_hardware ?
+                                html`<tr><td><b>Customised Hardware Settings</b></td><td>True</td></tr>`
+                                : ''}
+
                         </tbody>
                     </table>
                 </div>

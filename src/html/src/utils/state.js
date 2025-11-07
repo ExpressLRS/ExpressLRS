@@ -4,6 +4,18 @@ import {errorAlert, postJSON, saveJSONWithReboot} from "./feedback.js";
 class ElrsState extends State {
     config = {}
     options = {}
+    settings = {}
+}
+
+export function formatBand() {
+    if (elrsState.settings) {
+        if (elrsState.settings.reg_domain_low && elrsState.settings.reg_domain_high) {
+            return elrsState.settings.reg_domain_low + '/' + elrsState.settings.reg_domain_high
+        }
+        if (elrsState.settings.reg_domain_low)
+            return elrsState.settings.reg_domain_low
+        return elrsState.settings.reg_domain_high
+    }
 }
 
 export function saveConfig(changes, successCB) {

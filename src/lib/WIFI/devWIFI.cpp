@@ -160,7 +160,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   { // If captive portal redirect instead of displaying the page.
     return;
   }
-  force_update = request->hasArg("force");  // TODO handle this
+  force_update = request->hasArg("force");
   if (connectionState == hardwareUndefined)
   {
     request->redirect("/index.html#hardware");
@@ -328,16 +328,14 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 
   if (!exportMode)
   {
-    json["config"]["ssid"] = station_ssid;
-    json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
-#if defined(PLATFORM_ESP32)
+    #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN)
     {
       json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     }
-#endif
+    #endif
     json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
     json["config"]["modelid"] = config.GetModelId();
     json["config"]["force-tlm"] = config.GetForceTlmOff();
@@ -363,10 +361,38 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       json["config"]["pwm"][ch]["features"] = features;
     }
     #endif
-    json["config"]["product_name"] = product_name;
-    json["config"]["lua_name"] = device_name;
-    json["config"]["reg_domain"] = FHSSgetRegulatoryDomain();
-    json["config"]["uidtype"] = GetConfigUidType(json);
+    json["settings"]["product_name"] = product_name;
+    json["settings"]["lua_name"] = device_name;
+    json["settings"]["uidtype"] = GetConfigUidType(json);
+    json["settings"]["ssid"] = station_ssid;
+    json["settings"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    json["settings"]["custom_hardware"] = hardware_flag(HARDWARE_customised);
+    json["settings"]["target"] = &target_name[4];
+    json["settings"]["version"] = VERSION;
+    json["settings"]["git-commit"] = commit;
+#if defined(TARGET_TX)
+    json["settings"]["module-type"] = "TX";
+#endif
+#if defined(TARGET_RX)
+    json["settings"]["module-type"] = "RX";
+#endif
+#if defined(RADIO_SX128X)
+    json["settings"]["radio-type"] = "SX128X";
+    json["settings"]["has_low_band"] = false;
+    json["settings"]["has_high_band"] = true;
+    json["settings"]["reg_domain_high"] = FHSSconfig->domain;
+#elif defined(RADIO_SX127X)
+    json["settings"]["radio-type"] = "SX127X";
+    json["settings"]["has_low_band"] = true;
+    json["settings"]["has_high_band"] = false;
+    json["settings"]["reg_domain_low"] = FHSSconfig->domain;
+#elif defined(RADIO_LR1121)
+    json["settings"]["radio-type"] = "LR1121";
+    json["settings"]["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
+    json["settings"]["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
+    json["settings"]["reg_domain_low"] = FHSSconfig->domain;
+    json["settings"]["reg_domain_high"] = FHSSconfigDualBand->domain;
+#endif
   }
 
   response->setLength();
@@ -513,39 +539,6 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   request->send(200, "text/plain", "Configuration updated");
 }
 #endif
-
-static void WebUpdateGetTarget(AsyncWebServerRequest *request)
-{
-  JsonDocument json;
-  json["target"] = &target_name[4];
-  json["version"] = VERSION;
-  json["product_name"] = product_name;
-  json["lua_name"] = device_name;
-  json["reg_domain"] = FHSSgetRegulatoryDomain();
-  json["git-commit"] = commit;
-#if defined(TARGET_TX)
-  json["module-type"] = "TX";
-#endif
-#if defined(TARGET_RX)
-  json["module-type"] = "RX";
-#endif
-#if defined(RADIO_SX128X)
-  json["radio-type"] = "SX128X";
-  json["has-sub-ghz"] = false;
-#endif
-#if defined(RADIO_SX127X)
-  json["radio-type"] = "SX127X";
-  json["has-sub-ghz"] = true;
-#endif
-#if defined(RADIO_LR1121)
-  json["radio-type"] = "LR1121";
-  json["has-sub-ghz"] = true;
-#endif
-
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  serializeJson(json, *response);
-  request->send(response);
-}
 
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
 {
@@ -1043,7 +1036,6 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/access", WebUpdateAccessPoint);
-  server.on("/target", WebUpdateGetTarget);
   server.on("/firmware.bin", WebUpdateGetFirmware);
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);

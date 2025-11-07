@@ -1,5 +1,5 @@
 Import("env")
-import subprocess, os, shutil
+import os, shutil
 
 os.chdir('html')
 target_name = env['PIOENV'].upper()

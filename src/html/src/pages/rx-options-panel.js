@@ -135,7 +135,6 @@ class RxOptionsPanel extends LitElement {
         changed |= this.enableModelMatch && this.modelId !== elrsState.config['modelid']
         changed |= !this.enableModelMatch && this.modelId !== 255
         changed |= this.forceTlmOff !== elrsState.config['force-tlm']
-        console.log("changed options", changed)
         return changed
     }
 }
