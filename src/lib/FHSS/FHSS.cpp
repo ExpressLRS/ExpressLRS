@@ -1,7 +1,7 @@
 #include "FHSS.h"
 #include "logging.h"
 #include "options.h"
-#include <string.h>
+#include <cstring>
 
 #if defined(RADIO_SX127X) || defined(RADIO_LR1121) || defined(UNIT_TEST)
 
@@ -92,14 +92,13 @@ bool isUsingPrimaryFreqBand()
 Requirements:
 1. 0 every n hops
 2. No two repeated channels
-3. Equal occurance of each (or as even as possible) of each channel
+3. Equal occurrence of each (or as even as possible) of each channel
 4. Pseudorandom
 
 Approach:
   Fill the sequence array with the sync channel every FHSS_FREQ_CNT
   Iterate through the array, and for each block, swap each entry in it with
   another random entry, excluding the sync channel.
-
 */
 void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uint_fast8_t syncChannel, uint8_t *inSequence)
 {
@@ -161,16 +160,14 @@ void FHSS_setProtectedBands(const protected_band_t* bands, uint8_t count, uint32
     s_protectTolHz = tol_hz;
 }
 
-static bool in_window(uint64_t f_hz, uint32_t c_hz, uint32_t half_bw_hz, uint32_t tol_hz)
+static bool in_window(const uint32_t f_hz, const uint32_t c_hz, const uint32_t half_bw_hz, const uint32_t tol_hz)
 {
-    uint64_t lo = (uint64_t)c_hz - (uint64_t)half_bw_hz - tol_hz;
-    uint64_t hi = (uint64_t)c_hz + (uint64_t)half_bw_hz + tol_hz;
+    const uint32_t lo = c_hz - half_bw_hz - tol_hz;
+    const uint32_t hi = c_hz + half_bw_hz + tol_hz;
     return (f_hz >= lo) && (f_hz <= hi);
 }
 
-// Check common 2nd/3rd order intermod products for (fA, fB)
-// Consider: |fA ± fB|, |2fA ± fB|, |2fB ± fA|, and optionally 3rd order like |3fA ± 2fB|
-bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz)
+bool FHSS_isPairGNSSSafe(const uint32_t fA_hz, const uint32_t fB_hz)
 {
     for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
         if (in_window(fB_hz - fA_hz, s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz, s_protectTolHz))
@@ -181,17 +178,17 @@ bool FHSS_isPairGNSSSafe(uint32_t fA_hz, uint32_t fB_hz)
     return true; // safe
 }
 
-static uint32_t FHSS_idxToFreqPrimary(uint8_t chIdx)
+static uint32_t FHSS_idxToFreqPrimary(const uint8_t chIdx)
 {
-    return FHSSconfig->freq_start + ((uint32_t)chIdx * freq_spread / FREQ_SPREAD_SCALE);
+    return FHSSconfig->freq_start + static_cast<uint32_t>(chIdx) * freq_spread / FREQ_SPREAD_SCALE;
 }
 
-static uint32_t FHSS_idxToFreqSecondary(uint8_t chIdx)
+static uint32_t FHSS_idxToFreqSecondary(const uint8_t chIdx)
 {
-    return FHSSconfigDualBand->freq_start + ((uint32_t)chIdx * freq_spread_DualBand / FREQ_SPREAD_SCALE);
+    return FHSSconfigDualBand->freq_start + static_cast<uint32_t>(chIdx) * freq_spread_DualBand / FREQ_SPREAD_SCALE;
 }
 
-static uint32_t FHSS_pickIndexDeterministic(uint32_t mix)
+static uint32_t FHSS_pickIndexDeterministic(const uint32_t mix)
 {
     // xorshift32
     uint32_t x = mix ? mix : 0xA3C59AC3u;
@@ -199,32 +196,33 @@ static uint32_t FHSS_pickIndexDeterministic(uint32_t mix)
     return x;
 }
 
-static uint32_t FHSS_distanceScore(uint32_t fA_hz, uint32_t fB_hz)
+static uint32_t FHSS_distanceScore(const uint32_t fA_hz, const uint32_t fB_hz)
 {
-    // Assumption: fA_hz is the lower-band (sub-GHz) and fB_hz is the higher-band (2.4 GHz).
-    // Therefore d = fB - fA (no need for absolute value).
-    uint64_t d = static_cast<uint64_t>(fB_hz) - static_cast<uint64_t>(fA_hz);
+    // Assumptions locked by project constraints:
+    // - fA_hz is sub-GHz primary, fB_hz is 2.4 GHz secondary, so fB_hz >= fA_hz.
+    // - GNSS protected bands and tolerances remain within 32-bit Hz values.
+    // Under these bounds, 32-bit unsigned intermediates are safe and avoid wrap.
+    uint32_t d = fB_hz - fA_hz; // safe since fB_hz >= fA_hz
     uint32_t best = 0xFFFFFFFFu;
     for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
-        const auto lo = static_cast<uint64_t>(s_protectedBands[k].center_hz) - static_cast<uint64_t>(s_protectedBands[k].half_bw_hz) - s_protectTolHz;
-        const auto hi = static_cast<uint64_t>(s_protectedBands[k].center_hz) + static_cast<uint64_t>(s_protectedBands[k].half_bw_hz) + s_protectTolHz;
+        const uint32_t lo = s_protectedBands[k].center_hz - s_protectedBands[k].half_bw_hz - s_protectTolHz;
+        const uint32_t hi = s_protectedBands[k].center_hz + s_protectedBands[k].half_bw_hz + s_protectTolHz;
         if (d >= lo && d <= hi) {
-            // inside window → distance is 0 to the edge; choose min to be conservative
-            uint64_t toLo = d - lo;
-            uint64_t toHi = hi - d;
-            const auto edgeDist = static_cast<uint32_t>(toLo < toHi ? toLo : toHi);
+            // inside window → distance is min distance to edge
+            const uint32_t toLo = d - lo;
+            const uint32_t toHi = hi - d;
+            const uint32_t edgeDist = toLo < toHi ? toLo : toHi;
             if (edgeDist < best) best = edgeDist;
         } else {
             // outside window → distance to the nearest edge
-            uint64_t ed = (d < lo) ? (lo - d) : (d - hi);
-            uint32_t edgeDist = (uint32_t)((ed > 0xFFFFFFFFULL) ? 0xFFFFFFFFu : ed);
-            if (edgeDist < best) best = edgeDist;
+            const uint32_t ed = (d < lo) ? (lo - d) : (d - hi);
+            if (ed < best) best = ed;
         }
     }
     return best;
 }
 
-static void FHSS_buildSecondarySequence_GNSSAware(uint32_t seed)
+static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
 {
     // Build the secondary sequence by drawing from a per-hop GNSS-safe bucket
     // with fairness (even usage) and deterministic tie-breaking.
@@ -259,46 +257,45 @@ static void FHSS_buildSecondarySequence_GNSSAware(uint32_t seed)
             }
         }
 
-        uint8_t chosen = 0xFF;
-
+        uint8_t chosen;
         if (bucketSz > 0) {
             // Prefer candidates not used yet in this block, if any
             uint8_t filtered[256];
             uint16_t filteredSz = 0;
             for (uint16_t t = 0; t < bucketSz; ++t) {
-                uint8_t s = bucket[t];
+                const uint8_t s = bucket[t];
                 if (!usedInBlock[s]) filtered[filteredSz++] = s;
             }
-            const uint8_t* cand = (filteredSz > 0) ? filtered : bucket;
-            uint16_t candSz = (filteredSz > 0) ? filteredSz : bucketSz;
+            const uint8_t* cand = filteredSz > 0 ? filtered : bucket;
+            const uint16_t candSz = filteredSz > 0 ? filteredSz : bucketSz;
 
             // Find least-used among candidates
             uint16_t minUse = 0xFFFFu;
             for (uint16_t t = 0; t < candSz; ++t) {
-                uint8_t s = cand[t];
+                const uint8_t s = cand[t];
                 if (usageCount[s] < minUse) minUse = usageCount[s];
             }
             uint8_t least[256];
             uint16_t leastSz = 0;
             for (uint16_t t = 0; t < candSz; ++t) {
-                uint8_t s = cand[t];
+                const uint8_t s = cand[t];
                 if (usageCount[s] == minUse) least[leastSz++] = s;
             }
 
             // Deterministic pick among equals using a derived mix of seed and hop index
-            uint32_t mix = seed ^ (0x9E3779B9u * (uint32_t)(i + 1));
-            uint32_t r = FHSS_pickIndexDeterministic(mix);
+            const uint32_t mix = seed ^ 0x9E3779B9u * static_cast<uint32_t>(i + 1);
+            const uint32_t r = FHSS_pickIndexDeterministic(mix);
             chosen = least[r % leastSz];
         } else {
-            // Empty bucket: choose least-bad candidate maximizing distance from protected windows
+            // Empty bucket: choose the least-bad candidate maximizing distance from protected windows
             uint32_t bestScore = 0;
             uint8_t bestIdx = 0;
             for (uint16_t s = 0; s < secCount; ++s) {
-                const uint32_t fB = FHSS_idxToFreqSecondary((uint8_t)s);
-                uint32_t score = FHSS_distanceScore(fA, fB);
+                const uint32_t fB = FHSS_idxToFreqSecondary(static_cast<uint8_t>(s));
+                const uint32_t score = FHSS_distanceScore(fA, fB);
                 if (score > bestScore || (score == bestScore && s < bestIdx)) {
                     bestScore = score;
-                    bestIdx = (uint8_t)s;
+                    bestIdx = static_cast<uint8_t>(s);
                 }
             }
             chosen = bestIdx;
@@ -334,6 +331,5 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     FHSSusePrimaryFreqBand = false;
     FHSS_buildSecondarySequence_GNSSAware(seed);
     FHSSusePrimaryFreqBand = true;
-
 #endif
 }
