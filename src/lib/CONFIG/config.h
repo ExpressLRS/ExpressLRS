@@ -219,9 +219,9 @@ typedef union {
                  inputChannel:4, // 0-based input channel
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
+                 stretch:1,      // expand the channel input to 500us - 2500us
                  narrow:1,       // Narrow output mode (half pulse width)
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 stretch:1,      // expand the channel input to 500us - 2500us
                  unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
     } val;
     uint32_t raw;

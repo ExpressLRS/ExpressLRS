@@ -34,7 +34,7 @@ function getPwmFormData() {
     failsafeField.value = failsafe;
     let failsafeMode = failsafeModeField.value;
 
-    const raw = (failsafeMode << 21) | (narrow << 20) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476);
+    const raw = (failsafeMode << 22) | (narrow << 21) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476);
     // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
     outData.push(raw);
     ++ch;
@@ -83,8 +83,8 @@ function updatePwmSettings(arPwm) {
     const ch = (item.config >> 11) & 15; // 4 bits
     const inv = (item.config >> 15) & 1;
     const mode = (item.config >> 16) & 15; // 4 bits
-    const narrow = (item.config >> 20) & 1;
-    const failsafeMode = (item.config >> 21) & 3; // 2 bits
+    const narrow = (item.config >> 21) & 1;
+    const failsafeMode = (item.config >> 22) & 3; // 2 bits
     const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (features & 16) {
