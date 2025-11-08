@@ -33,7 +33,7 @@
   "name": "STM32F301K8",
   "upload": {
     "maximum_ram_size": 16384,
-    "maximum_size": 65536,
+    "maximum_size": 47104,
     "protocol": "stlink",
     "protocols": [
       "jlink",
