@@ -962,9 +962,8 @@ void RxConfig::UpgradeEepromV9()
     v9_rx_config_t old;
     m_eeprom->Get(0, old);
 
-    memcpy(m_config.uid, old.uid, UID_LEN);
+    UpgradeUid(nullptr, old.uid);
     CONFCOPY(serial1Protocol);
-    CONFCOPY(flash_discriminator);
     CONFCOPY(vbat.scale);
     CONFCOPY(vbat.offset);
     CONFCOPY(bindStorage);
@@ -984,8 +983,13 @@ void RxConfig::UpgradeEepromV9()
     CONFCOPY(sourceSysId);
 }
 
+/**
+ * @brief Upgrade UID and flash_discriminator from old config, using onLoanUid if != null
+ */
 void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
 {
+    // Always set the flash_discriminator otherwise the UID might change next reboot
+    m_config.flash_discriminator = firmwareOptions.flash_discriminator;
     // Convert to traditional binding
     // On loan? Now you own
     if (onLoanUid)
@@ -996,7 +1000,6 @@ void RxConfig::UpgradeUid(uint8_t *onLoanUid, uint8_t *boundUid)
     else if (firmwareOptions.hasUID)
     {
         memcpy(m_config.uid, firmwareOptions.uid, UID_LEN);
-        m_config.flash_discriminator = firmwareOptions.flash_discriminator;
     }
     else if (boundUid)
     {
