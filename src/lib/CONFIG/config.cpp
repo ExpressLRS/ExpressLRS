@@ -833,7 +833,7 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
 static unsigned toFailsafeV10(unsigned oldFailsafe)
 {
     // the old failsafe was 988+value, new is 476+value
-    return oldFailsafe + (988-476);
+    return oldFailsafe + (988 - CHANNEL_VALUE_FS_US_MIN);
 }
 
 // ========================================================
