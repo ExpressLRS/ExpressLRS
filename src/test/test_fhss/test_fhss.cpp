@@ -99,27 +99,45 @@ void test_fhss_reg_same_eu868(void)
 
 void test_secondary_uses_all_channels(void)
 {
+    firmwareOptions.domain = 3;
     // Build sequences (this initializes FHSSconfigDualBand and FHSSsequence_DualBand)
     FHSSrandomiseFHSSsequence(0x0BADB002u);
 
     // Switch context to secondary band to query its counts deterministically
     bool prevPrimary = FHSSusePrimaryFreqBand;
+    const uint32_t priCount = FHSSgetChannelCount();
     FHSSusePrimaryFreqBand = false;
     const uint32_t secCount = FHSSgetChannelCount();
     const uint16_t seqLen = FHSSgetSequenceCount();
     FHSSusePrimaryFreqBand = prevPrimary;
 
-    // Collect all secondary indices used across the built sequence
-    std::set<uint32_t> usedIdx;
-    for (uint16_t i = 0; i < seqLen; ++i) {
-        uint32_t s = FHSSsequence_DualBand[i];
-        // Ensure the index is in range
-        TEST_ASSERT_TRUE_MESSAGE(s < secCount, "Secondary index out of range");
-        usedIdx.insert(s);
+    {
+        // Collect all secondary indices used across the built sequence
+        std::set<uint32_t> usedIdx;
+        for (uint16_t i = 0; i < seqLen; ++i) {
+            uint32_t s = FHSSsequence_DualBand[i];
+            // Ensure the index is in range
+            TEST_ASSERT_TRUE_MESSAGE(s < secCount, "Secondary index out of range");
+            usedIdx.insert(s);
+        }
+
+        // Expect that every possible secondary channel appears at least once
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(secCount, usedIdx.size(), "Not all secondary channels were used in the sequence");
     }
 
-    // Expect that every possible secondary channel appears at least once
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(secCount, usedIdx.size(), "Not all secondary channels were used in the sequence");
+    {
+        // Collect all secondary x-band indices used across the built sequence
+        std::set<uint32_t> usedIdx;
+        for (uint16_t i = 0; i < seqLen; ++i) {
+            uint32_t s = FHSSsequence_XBand[i];
+            // Ensure the index is in range
+            TEST_ASSERT_TRUE_MESSAGE(s < secCount, "Secondary index out of range");
+            usedIdx.insert(s);
+        }
+
+        // Expect that every possible secondary channel appears at least once
+        TEST_ASSERT_GREATER_THAN_UINT32_MESSAGE(20, usedIdx.size(), "Not enough secondary x-band channels available in the sequence");
+    }
 }
 
 // Unity setup/teardown

@@ -11,7 +11,7 @@
 #include "SX127xDriver.h"
 #endif
 
-const fhss_config_t domains[] = {
+constexpr fhss_config_t domains[] = {
     {"AU915",  FREQ_HZ_TO_REG_VAL(915500000), FREQ_HZ_TO_REG_VAL(926900000), 20, 921000000},
     {"FCC915", FREQ_HZ_TO_REG_VAL(903500000), FREQ_HZ_TO_REG_VAL(926900000), 40, 915000000},
     {"EU868",  FREQ_HZ_TO_REG_VAL(863275000), FREQ_HZ_TO_REG_VAL(869575000), 13, 868000000},
@@ -23,7 +23,7 @@ const fhss_config_t domains[] = {
 };
 
 #if defined(RADIO_LR1121) || defined(UNIT_TEST)
-const fhss_config_t domainsDualBand[] = {
+constexpr fhss_config_t domainsDualBand[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
         "CE_LBT",
@@ -37,7 +37,7 @@ const fhss_config_t domainsDualBand[] = {
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
 
-const fhss_config_t domains[] = {
+constexpr fhss_config_t domains[] = {
     {
     #if defined(Regulatory_Domain_EU_CE_2400)
         "CE_LBT",
@@ -54,6 +54,7 @@ const fhss_config_t *FHSSconfigDualBand;
 
 // Actual sequence of hops as indexes into the frequency list
 uint8_t FHSSsequence[FHSS_SEQUENCE_LEN];
+uint8_t FHSSsequence_XBand[FHSS_SEQUENCE_LEN];
 uint8_t FHSSsequence_DualBand[FHSS_SEQUENCE_LEN];
 
 // Which entry in the sequence we currently are on
@@ -144,10 +145,9 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 }
 
 // ---- GNSS protection: centers and ±half bandwidths ----
-// Default: GPS L1/L2/L5. Add Galileo/BeiDou as needed.
 static protected_band_t s_protectedBands[] = {
-    { 1227600000u, 51150000u }, // GPS L5 - E6
-    { 1581549000u, 20451000u }, // GPS E1 - G1
+    { 1227600000u, 51150000u }, // L5/L2/E5/B2/E6/B3/L3 region
+    { 1581549000u, 20451000u }, // L1/E1/B1/GLONASS L1 region
 };
 static uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
 static uint32_t s_protectTolHz = 7500000u; // extra margin (±7.5 MHz)
@@ -202,7 +202,7 @@ static uint32_t FHSS_distanceScore(const uint32_t fA_hz, const uint32_t fB_hz)
     // - fA_hz is sub-GHz primary, fB_hz is 2.4 GHz secondary, so fB_hz >= fA_hz.
     // - GNSS protected bands and tolerances remain within 32-bit Hz values.
     // Under these bounds, 32-bit unsigned intermediates are safe and avoid wrap.
-    uint32_t d = fB_hz - fA_hz; // safe since fB_hz >= fA_hz
+    const uint32_t d = fB_hz - fA_hz; // safe since fB_hz >= fA_hz
     uint32_t best = 0xFFFFFFFFu;
     for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
         const uint32_t lo = s_protectedBands[k].center_hz - s_protectedBands[k].half_bw_hz - s_protectTolHz;
@@ -251,9 +251,9 @@ static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
         uint8_t bucket[256];
         uint16_t bucketSz = 0;
         for (uint16_t s = 0; s < secCount; ++s) {
-            const uint32_t fB = FHSS_idxToFreqSecondary((uint8_t)s);
+            const uint32_t fB = FHSS_idxToFreqSecondary(static_cast<uint8_t>(s));
             if (FHSS_isPairGNSSSafe(fA, fB)) {
-                bucket[bucketSz++] = (uint8_t)s;
+                bucket[bucketSz++] = static_cast<uint8_t>(s);
             }
         }
 
@@ -301,7 +301,7 @@ static void FHSS_buildSecondarySequence_GNSSAware(const uint32_t seed)
             chosen = bestIdx;
         }
 
-        FHSSsequence_DualBand[i] = chosen;
+        FHSSsequence_XBand[i] = chosen;
         usageCount[chosen]++;
         usedInBlock[chosen] = true;
     }
@@ -323,16 +323,16 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     sync_channel_DualBand = FHSSconfigDualBand->freq_count / 2;
     freq_spread_DualBand = (FHSSconfigDualBand->freq_stop - FHSSconfigDualBand->freq_start) * FREQ_SPREAD_SCALE / (FHSSconfigDualBand->freq_count - 1);
     secondaryBandCount = (FHSS_SEQUENCE_LEN / FHSSconfigDualBand->freq_count) * FHSSconfigDualBand->freq_count;
+    FHSSusePrimaryFreqBand = false;
 
     DBGLN("Dual Domain %s, %u channels, sync=%u",
         FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
-    FHSSusePrimaryFreqBand = false;
     // Build High Band hopping sequence
-    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    FHSSrandomiseFHSSsequenceBuild(seed ^ 0x0dc277e6, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
 
     // Build High Band hopping sequence with GNSS avoidance integrated
-    FHSS_buildSecondarySequence_GNSSAware(seed);
+    FHSS_buildSecondarySequence_GNSSAware(seed ^ 0xfbce3cce);
     FHSSusePrimaryFreqBand = true;
 #endif
 }
