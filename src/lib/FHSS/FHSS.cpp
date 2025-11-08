@@ -145,32 +145,23 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 }
 
 // ---- GNSS protection: centers and ±half bandwidths ----
-static protected_band_t s_protectedBands[] = {
-    { 1227600000u, 51150000u }, // L5/L2/E5/B2/E6/B3/L3 region
-    { 1581549000u, 20451000u }, // L1/E1/B1/GLONASS L1 region
+constexpr protected_band_t s_protectedBands[] = {
+    { 1583500000u, 32000000u }, // L1/E1/B1/GLONASS L1 region
 };
-static uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
-static uint32_t s_protectTolHz = 7500000u; // extra margin (±7.5 MHz)
+constexpr uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
+constexpr uint32_t s_protectTolHz = 1000000u; // extra margin (±1.0 MHz)
 
-void FHSS_setProtectedBands(const protected_band_t* bands, uint8_t count, uint32_t tol_hz)
+static bool in_window(const uint32_t f_hz, const uint32_t c_hz, const uint32_t half_bw_hz)
 {
-    // (Optional) expose a way to override at runtime/build
-    s_protectedBandCount = (count <= sizeof(s_protectedBands)/sizeof(s_protectedBands[0])) ? count : s_protectedBandCount;
-    for (uint8_t i = 0; i < s_protectedBandCount; ++i) s_protectedBands[i] = bands[i];
-    s_protectTolHz = tol_hz;
-}
-
-static bool in_window(const uint32_t f_hz, const uint32_t c_hz, const uint32_t half_bw_hz, const uint32_t tol_hz)
-{
-    const uint32_t lo = c_hz - half_bw_hz - tol_hz;
-    const uint32_t hi = c_hz + half_bw_hz + tol_hz;
+    const uint32_t lo = c_hz - half_bw_hz - s_protectTolHz;
+    const uint32_t hi = c_hz + half_bw_hz + s_protectTolHz;
     return (f_hz >= lo) && (f_hz <= hi);
 }
 
 bool FHSS_isPairGNSSSafe(const uint32_t fA_hz, const uint32_t fB_hz)
 {
     for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
-        if (in_window(fB_hz - fA_hz, s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz, s_protectTolHz))
+        if (in_window(fB_hz - fA_hz, s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz))
         {
             return false; // NOT safe — hits a protected window
         }

@@ -99,7 +99,7 @@ void test_fhss_reg_same_eu868(void)
 
 void test_secondary_uses_all_channels(void)
 {
-    firmwareOptions.domain = 3;
+    firmwareOptions.domain = 2;
     // Build sequences (this initializes FHSSconfigDualBand and FHSSsequence_DualBand)
     FHSSrandomiseFHSSsequence(0x0BADB002u);
 
