@@ -8,10 +8,11 @@
 
 #define CRSF_CRC_POLY 0xd5
  
-#define CHANNEL_VALUE_FS_US_MIN         476  // lower failsafe limit - changing this requires edits in getPwmFormData()
+#define CHANNEL_VALUE_FS_US_MIN         476  // stretch failsafe limit - changing this requires edits in getPwmFormData()
 #define CHANNEL_VALUE_FS_US_ELIMITS_MIN 885  // ELimits failsafe min
 #define CHANNEL_VALUE_FS_US_MID         1500 // center
-#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2115 // Elimits failsafe max 
+#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2115 // Elimits failsafe max
+#define CHANNEL_VALUE_FS_US_MAX         2523 // stretch failsafe limit
 
 #define CRSF_CHANNEL_VALUE_EXT_MIN 0    // 885us with E.Limits on (-120%) 
 #define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
