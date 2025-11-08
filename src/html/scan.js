@@ -29,8 +29,8 @@ function getPwmFormData() {
     const failsafeField = _(`pwm_${ch}_fs`);
     const failsafeModeField = _(`pwm_${ch}_fsmode`);
     let failsafe = failsafeField.value;
-    if (failsafe > 2523) failsafe = 2523;
-    if (failsafe < 476) failsafe = 476;
+    if (failsafe > 2115) failsafe = 2115; // for max range change t0 2523
+    if (failsafe < 885) failsafe = 885;   // for min range change to 476
     failsafeField.value = failsafe;
     let failsafeMode = failsafeModeField.value;
 
