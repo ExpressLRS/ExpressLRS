@@ -145,28 +145,14 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 }
 
 // ---- GNSS protection: centers and ±half bandwidths ----
-constexpr protected_band_t s_protectedBands[] = {
-    { 1583500000u, 32000000u }, // L1/E1/B1/GLONASS L1 region
-};
-constexpr uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
-constexpr uint32_t s_protectTolHz = 1000000u; // extra margin (±1.0 MHz)
+constexpr protected_band_t s_protectedBand = { 1583500000u, 32000000u }; // L1/E1/B1/GLONASS L1 region - full keep-out on SA (22 2.4 bands)
+constexpr uint32_t gnss_lo = s_protectedBand.center_hz - s_protectedBand.half_bw_hz;
+constexpr uint32_t gnss_hi = s_protectedBand.center_hz + s_protectedBand.half_bw_hz;
 
-static bool in_window(const uint32_t f_hz, const uint32_t c_hz, const uint32_t half_bw_hz)
+static bool FHSS_isPairGNSSSafe(const uint32_t fA_hz, const uint32_t fB_hz)
 {
-    const uint32_t lo = c_hz - half_bw_hz - s_protectTolHz;
-    const uint32_t hi = c_hz + half_bw_hz + s_protectTolHz;
-    return (f_hz >= lo) && (f_hz <= hi);
-}
-
-bool FHSS_isPairGNSSSafe(const uint32_t fA_hz, const uint32_t fB_hz)
-{
-    for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
-        if (in_window(fB_hz - fA_hz, s_protectedBands[k].center_hz, s_protectedBands[k].half_bw_hz))
-        {
-            return false; // NOT safe — hits a protected window
-        }
-    }
-    return true; // safe
+    const auto f_hz = fB_hz - fA_hz;
+    return (f_hz < gnss_lo) || (f_hz > gnss_hi);
 }
 
 static uint32_t FHSS_idxToFreqPrimary(const uint8_t chIdx)
@@ -181,34 +167,27 @@ static uint32_t FHSS_idxToFreqSecondary(const uint8_t chIdx)
 
 static uint32_t FHSS_pickIndexDeterministic(const uint32_t mix)
 {
-    // xorshift32
     uint32_t x = mix ? mix : 0xA3C59AC3u;
-    x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
     return x;
 }
 
 static uint32_t FHSS_distanceScore(const uint32_t fA_hz, const uint32_t fB_hz)
 {
-    // Assumptions locked by project constraints:
-    // - fA_hz is sub-GHz primary, fB_hz is 2.4 GHz secondary, so fB_hz >= fA_hz.
-    // - GNSS protected bands and tolerances remain within 32-bit Hz values.
-    // Under these bounds, 32-bit unsigned intermediates are safe and avoid wrap.
-    const uint32_t d = fB_hz - fA_hz; // safe since fB_hz >= fA_hz
+    const uint32_t d = fB_hz - fA_hz;
     uint32_t best = 0xFFFFFFFFu;
-    for (uint8_t k = 0; k < s_protectedBandCount; ++k) {
-        const uint32_t lo = s_protectedBands[k].center_hz - s_protectedBands[k].half_bw_hz - s_protectTolHz;
-        const uint32_t hi = s_protectedBands[k].center_hz + s_protectedBands[k].half_bw_hz + s_protectTolHz;
-        if (d >= lo && d <= hi) {
-            // inside window → distance is min distance to edge
-            const uint32_t toLo = d - lo;
-            const uint32_t toHi = hi - d;
-            const uint32_t edgeDist = toLo < toHi ? toLo : toHi;
-            if (edgeDist < best) best = edgeDist;
-        } else {
-            // outside window → distance to the nearest edge
-            const uint32_t ed = (d < lo) ? (lo - d) : (d - hi);
-            if (ed < best) best = ed;
-        }
+    if (d >= gnss_lo && d <= gnss_hi) {
+        // inside window → distance is min distance to edge
+        const uint32_t toLo = d - gnss_lo;
+        const uint32_t toHi = gnss_hi - d;
+        const uint32_t edgeDist = toLo < toHi ? toLo : toHi;
+        if (edgeDist < best) best = edgeDist;
+    } else {
+        // outside window → distance to the nearest edge
+        const uint32_t ed = (d < gnss_lo) ? (gnss_lo - d) : (d - gnss_hi);
+        if (ed < best) best = ed;
     }
     return best;
 }
@@ -320,7 +299,7 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
         FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
     // Build High Band hopping sequence
-    FHSSrandomiseFHSSsequenceBuild(seed ^ 0x0dc277e6, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
 
     // Build High Band hopping sequence with GNSS avoidance integrated
     FHSS_buildSecondarySequence_GNSSAware(seed ^ 0xfbce3cce);
