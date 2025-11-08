@@ -802,8 +802,9 @@ void RxConfig::Load()
         case 7: // falthrough
         case 8:
             UpgradeEepromV7V8(version); break;
-        case 9:
-            UpgradeEepromV9(); break;
+        case 9: // fallthrough
+        case 10:
+            UpgradeEepromV9V10(version); break;
     }
     m_modified = EVENT_CONFIG_MODEL_CHANGED; // anything to force write
     Commit();
@@ -957,30 +958,34 @@ static void PwmConfigV9(v9_rx_config_pwm_t const * const old, rx_config_pwm_t * 
     current->val.failsafeMode = old->val.failsafeMode;
 }
 
-void RxConfig::UpgradeEepromV9()
+void RxConfig::UpgradeEepromV9V10(uint8_t ver)
 {
     v9_rx_config_t old;
     m_eeprom->Get(0, old);
 
     UpgradeUid(nullptr, old.uid);
-    CONFCOPY(serial1Protocol);
-    CONFCOPY(vbat.scale);
-    CONFCOPY(vbat.offset);
-    CONFCOPY(bindStorage);
-    CONFCOPY(power);
-    CONFCOPY(antennaMode);
-    CONFCOPY(forceTlmOff);
-    CONFCOPY(rateInitialIdx);
-    CONFCOPY(modelId);
-    CONFCOPY(serialProtocol);
-    CONFCOPY(failsafeMode);
+    // Version 10 is the main structure, version 11 changes the PWM structure
+    if (ver != 10)
+    {
+        CONFCOPY(serial1Protocol);
+        CONFCOPY(vbat.scale);
+        CONFCOPY(vbat.offset);
+        CONFCOPY(bindStorage);
+        CONFCOPY(power);
+        CONFCOPY(antennaMode);
+        CONFCOPY(forceTlmOff);
+        CONFCOPY(rateInitialIdx);
+        CONFCOPY(modelId);
+        CONFCOPY(serialProtocol);
+        CONFCOPY(failsafeMode);
+        CONFCOPY(teamraceChannel);
+        CONFCOPY(teamracePosition);
+        CONFCOPY(teamracePitMode);
+        CONFCOPY(targetSysId);
+        CONFCOPY(sourceSysId);
+    }
     for (unsigned ch=0; ch<16; ++ch)
         PwmConfigV9(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
-    CONFCOPY(teamraceChannel);
-    CONFCOPY(teamracePosition);
-    CONFCOPY(teamracePitMode);
-    CONFCOPY(targetSysId);
-    CONFCOPY(sourceSysId);
 }
 
 /**

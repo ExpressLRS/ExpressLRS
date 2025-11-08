@@ -234,6 +234,8 @@ typedef struct {
     uint8_t     sourceSysId;
 } v9_rx_config_t;
 
-// V10 changed rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
+// V10 changed
 // powerOnCounter 3 bits -> 2
 // rateInitialIdx 4 bits -> 5
+// V11 changed
+// rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
