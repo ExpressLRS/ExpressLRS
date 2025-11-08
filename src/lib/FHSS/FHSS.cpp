@@ -150,7 +150,7 @@ static protected_band_t s_protectedBands[] = {
     { 1581549000u, 20451000u }, // GPS E1 - G1
 };
 static uint8_t  s_protectedBandCount = sizeof(s_protectedBands)/sizeof(s_protectedBands[0]);
-static uint32_t s_protectTolHz = 20000000u; // extra margin (±10 MHz)
+static uint32_t s_protectTolHz = 7500000u; // extra margin (±7.5 MHz)
 
 void FHSS_setProtectedBands(const protected_band_t* bands, uint8_t count, uint32_t tol_hz)
 {
@@ -327,8 +327,11 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     DBGLN("Dual Domain %s, %u channels, sync=%u",
         FHSSconfigDualBand->domain, FHSSconfigDualBand->freq_count, sync_channel_DualBand);
 
-    // Build the secondary band sequence with GNSS avoidance integrated
     FHSSusePrimaryFreqBand = false;
+    // Build High Band hopping sequence
+    FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
+
+    // Build High Band hopping sequence with GNSS avoidance integrated
     FHSS_buildSecondarySequence_GNSSAware(seed);
     FHSSusePrimaryFreqBand = true;
 #endif

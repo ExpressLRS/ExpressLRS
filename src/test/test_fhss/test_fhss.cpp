@@ -97,6 +97,31 @@ void test_fhss_reg_same_eu868(void)
     }
 }
 
+void test_secondary_uses_all_channels(void)
+{
+    // Build sequences (this initializes FHSSconfigDualBand and FHSSsequence_DualBand)
+    FHSSrandomiseFHSSsequence(0x0BADB002u);
+
+    // Switch context to secondary band to query its counts deterministically
+    bool prevPrimary = FHSSusePrimaryFreqBand;
+    FHSSusePrimaryFreqBand = false;
+    const uint32_t secCount = FHSSgetChannelCount();
+    const uint16_t seqLen = FHSSgetSequenceCount();
+    FHSSusePrimaryFreqBand = prevPrimary;
+
+    // Collect all secondary indices used across the built sequence
+    std::set<uint32_t> usedIdx;
+    for (uint16_t i = 0; i < seqLen; ++i) {
+        uint32_t s = FHSSsequence_DualBand[i];
+        // Ensure the index is in range
+        TEST_ASSERT_TRUE_MESSAGE(s < secCount, "Secondary index out of range");
+        usedIdx.insert(s);
+    }
+
+    // Expect that every possible secondary channel appears at least once
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(secCount, usedIdx.size(), "Not all secondary channels were used in the sequence");
+}
+
 // Unity setup/teardown
 void setUp() {}
 void tearDown() {}
@@ -110,6 +135,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_fhss_same);
     RUN_TEST(test_fhss_reg_same_fcc915);
     RUN_TEST(test_fhss_reg_same_eu868);
+    RUN_TEST(test_secondary_uses_all_channels);
     UNITY_END();
 
     return 0;
