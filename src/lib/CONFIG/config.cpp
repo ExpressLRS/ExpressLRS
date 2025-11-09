@@ -799,7 +799,7 @@ void RxConfig::Load()
             UpgradeEepromV5(); break;
         case 6:
             UpgradeEepromV6(); break;
-        case 7: // falthrough
+        case 7: // fallthrough
         case 8:
             UpgradeEepromV7V8(version); break;
         case 9: // fallthrough
