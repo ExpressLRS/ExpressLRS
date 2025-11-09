@@ -296,12 +296,13 @@ void TxConfig::UpgradeEepromV5ToV6()
 void TxConfig::UpgradeEepromV6ToV7()
 {
     v6_tx_config_t v6Config;
+    v7_tx_config_t v7Config = { 0 }; // default the new fields to 0
 
     // Populate the prev version struct from eeprom
     m_eeprom->Get(0, v6Config);
 
     // Manual field copying as some fields have moved
-    #define LAZY(member) m_config.member = v6Config.member
+    #define LAZY(member) v7Config.member = v6Config.member
     LAZY(vtxBand);
     LAZY(vtxChannel);
     LAZY(vtxPower);
@@ -316,23 +317,24 @@ void TxConfig::UpgradeEepromV6ToV7()
 
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
-        ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
+        ModelV6toV7(&v6Config.model_config[i], &v7Config.model_config[i]);
     }
 
     m_modified = ALL_CHANGED;
 
     // Full Commit now
     m_config.version = 7U | TX_CONFIG_MAGIC;
-    Commit();
+    m_eeprom->Put(0, v7Config);
+    m_eeprom->Commit();
 }
 
 void TxConfig::UpgradeEepromV7ToV8()
 {
     v7_tx_config_t v7Config;
-
-    // Populate the prev version struct from eeprom
     m_eeprom->Get(0, v7Config);
 
+    // All the fields are the same in v8, just the model config has changed
+    memcpy(&m_config, &v7Config, sizeof(v7Config));
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
