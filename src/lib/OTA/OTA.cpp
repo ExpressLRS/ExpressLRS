@@ -134,7 +134,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
  * A 3 bit switch index and 3-4 bit value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: channelData, TelemetryStatus
+ * Inputs: channelData, stubbornAck
  * Outputs: OTA_Packet4_s, side-effects the sentSwitch value
  */
 // The next switch index to send, where 0=AUX2 and 6=AUX8
@@ -143,7 +143,7 @@ static uint8_t Hybrid8NextSwitchIndex;
 void OtaSetHybrid8NextSwitchIndex(uint8_t idx) { Hybrid8NextSwitchIndex = idx; }
 #endif
 void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData,
-                                                bool const TelemetryStatus)
+                                                bool const stubbornAck)
 {
     OTA_Packet4_s * const ota4 = &otaPktPtr->std;
     PackChannelDataHybridCommon(ota4, channelData);
@@ -160,7 +160,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybrid8(OTA_Packet_s * const otaPktPtr, 
         value = CRSF_to_SWITCH3b(channelData[bitclearedSwitchIndex + 1 + 4]);
 
     ota4->rc.switches =
-        TelemetryStatus << 6 |
+        stubbornAck << 6 |
         // tell the receiver which switch index this is
         bitclearedSwitchIndex << 3 |
         // include the switch value
@@ -189,17 +189,17 @@ static uint8_t ICACHE_RAM_ATTR HybridWideSwitchToOta(const uint32_t *channelData
  * A 6 bit switch value is used to send the remaining switches
  * in a round-robin fashion.
  *
- * Inputs: cchannelData, TelemetryStatus
+ * Inputs: cchannelData, stubbornAck
  * Outputs: OTA_Packet4_s
  **/
 void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData,
-                                                   bool const TelemetryStatus)
+                                                   bool const stubbornAck)
 {
     OTA_Packet4_s * const ota4 = &otaPktPtr->std;
     PackChannelDataHybridCommon(ota4, channelData);
 
     uint8_t nextSwitchIndex = HybridWideNonceToSwitchIndex(OtaNonce);
-    uint8_t value = TelemetryStatus << 6;
+    uint8_t value = stubbornAck << 6;
     // There are only 7 switches to round robin through, so the 8th slot is used to send TX power
     if (nextSwitchIndex == 7)
     {
@@ -213,11 +213,11 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
     ota4->rc.switches = value;
 }
 
-static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota8, const uint32_t *channelData, bool const TelemetryStatus, bool const isHighAux)
+static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota8, const uint32_t *channelData, bool const stubbornAck, bool const isHighAux)
 {
     // All channel data is 10 bit apart from AUX1 which is 1 bit
     ota8->rc.packetType = PACKET_TYPE_RCDATA;
-    ota8->rc.telemetryStatus = TelemetryStatus;
+    ota8->rc.stubbornAck = stubbornAck;
     // uplinkPower has 8 items but only 3 bits, but 0 is 0 power which we never use, shift 1-8 -> 0-7
     ota8->rc.uplinkPower = constrain(linkStats.uplink_TX_Power, 1, 8) - 1;
     ota8->rc.isHighAux = isHighAux;
@@ -263,21 +263,21 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
 #endif
 }
 
-static void ICACHE_RAM_ATTR GenerateChannelData8ch(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool const TelemetryStatus)
+static void ICACHE_RAM_ATTR GenerateChannelData8ch(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool const stubbornAck)
 {
-    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, channelData, TelemetryStatus, false);
+    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, channelData, stubbornAck, false);
 }
 
 static bool FullResIsHighAux;
 #if defined(UNIT_TEST)
 void OtaSetFullResNextChannelSet(bool next) { FullResIsHighAux = next; }
 #endif
-static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool const TelemetryStatus)
+static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool const stubbornAck)
 {
     // Every time this function is called, the opposite high Aux channels are sent
     // This tries to ensure a fair split of high and low aux channels packets even
     // at 1:2 ratio and around sync packets
-    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, channelData, TelemetryStatus, FullResIsHighAux);
+    GenerateChannelData8ch12ch((OTA_Packet8_s * const)otaPktPtr, channelData, stubbornAck, FullResIsHighAux);
     FullResIsHighAux = !FullResIsHighAux;
 }
 #endif
@@ -354,7 +354,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
  *
  * Input: Buffer
  * Output: channelData
- * Returns: TelemetryStatus bit
+ * Returns: stubbornAck bit
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
@@ -377,7 +377,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
         channelData[5+switchIndex] = SWITCH3b_to_CRSF(switchByte & 0b111);
     }
 
-    // TelemetryStatus bit
+    // stubbornAck bit
     return switchByte & (1 << 6);
 }
 
@@ -387,23 +387,21 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
  * Hybrid switches uses 10 bits for each analog channel,
  * 1 bits for the low latency switch[0]
  * 6 bit for the round-robin switch
- * 1 bit for the TelemetryStatus
+ * 1 bit for the stubbornAck
  * depending on TelemetryRatio
  *
  * Output: channelData
- * Returns: TelemetryStatus bit
+ * Returns: stubbornAck bit
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
-    static bool TelemetryStatus = false;
-
     OTA_Packet4_s const * const ota4 = (OTA_Packet4_s const * const)otaPktPtr;
     UnpackChannelDataHybridCommon(ota4, channelData);
 
     // The round-robin switch, 6-7 bits with the switch index implied by the nonce
     const uint8_t switchByte = ota4->rc.switches;
     uint8_t switchIndex = HybridWideNonceToSwitchIndex(OtaNonce);
-    TelemetryStatus = (switchByte & 0b01000000) >> 6;
+    bool stubbornAck = (switchByte & 0b01000000) >> 6;
     if (switchIndex == 7)
     {
         linkStats.uplink_TX_Power = switchByte & 0b111111;
@@ -414,7 +412,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
         channelData[5 + switchIndex] = N_to_CRSF(switchValue, 63);
     }
 
-    return TelemetryStatus;
+    return stubbornAck;
 }
 
 bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
@@ -457,7 +455,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
     linkStats.uplink_TX_Power = constrain(ota8->rc.uplinkPower + 1, 1, 8);
-    return ota8->rc.telemetryStatus;
+    return ota8->rc.stubbornAck;
 }
 #endif
 
@@ -475,7 +473,7 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 
     // Zero the crcHigh bits, as the CRC is calculated before it is ORed in
     otaPktPtr->std.crcHigh = 0;
-    
+
     uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
     uint16_t const calculatedCRC =
         ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
@@ -556,13 +554,13 @@ void OtaPackAirportData(OTA_Packet_s * const otaPktPtr, FIFO<AP_MAX_BUF_LEN> *in
     uint8_t count = inputBuffer->size();
     if (OtaIsFullRes)
     {
-        count = std::min(count, (uint8_t)ELRS8_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint8_t)ELRS8_DATA_DL_BYTES_PER_CALL);
         otaPktPtr->full.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->full.airport.payload, count);
     }
     else
     {
-        count = std::min(count, (uint8_t)ELRS4_TELEMETRY_BYTES_PER_CALL);
+        count = std::min(count, (uint8_t)ELRS4_DATA_DL_BYTES_PER_CALL);
         otaPktPtr->std.airport.count = count;
         inputBuffer->popBytes(otaPktPtr->std.airport.payload, count);
     }

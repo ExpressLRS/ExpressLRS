@@ -14,7 +14,7 @@ StubbornReceiver receiver;
 void test_stubborn_link_sends_data(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[1];
@@ -45,7 +45,7 @@ void test_stubborn_link_sends_data(void)
 void test_stubborn_link_sends_data_even_bytes_per_call(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[2];
@@ -70,7 +70,7 @@ void test_stubborn_link_sends_data_even_bytes_per_call(void)
 void test_stubborn_link_sends_data_odd_bytes_per_call(void)
 {
     uint8_t batterySequence[] = {0xEC,11, 0x08,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[3];
@@ -98,7 +98,7 @@ void test_stubborn_link_sends_data_odd_bytes_per_call(void)
 void test_stubborn_link_sends_data_larger_frame_size(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[sizeof(batterySequence)+1];
@@ -118,7 +118,7 @@ void test_stubborn_link_receives_data(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
     uint8_t data[100];
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(data, sizeof(data));
 
@@ -137,7 +137,7 @@ void test_stubborn_link_receives_data_with_multiple_bytes(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109,0,0,0};
     uint8_t data[100];
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(data, sizeof(data));
 
@@ -159,11 +159,11 @@ void test_stubborn_link_resyncs(void)
     uint8_t data[1];
     uint8_t packageIndex;
 
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(buffer, sizeof(buffer));
 
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
 
@@ -192,7 +192,7 @@ void test_stubborn_link_resyncs(void)
 
     // resync active
     packageIndex = sender.GetCurrentPayload(data, 1);
-    TEST_ASSERT_EQUAL(ELRS4_TELEMETRY_MAX_PACKAGES, packageIndex);
+    TEST_ASSERT_EQUAL(ELRS4_DATA_DL_MAX_PACKAGES, packageIndex);
     receiver.ReceiveData(packageIndex, data, 1);
     sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
     TEST_ASSERT_EQUAL(false, sender.IsActive());
@@ -218,11 +218,11 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
     uint8_t data[1];
     uint8_t packageIndex;
 
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(buffer, sizeof(buffer));
 
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
 
@@ -253,7 +253,7 @@ void test_stubborn_link_resyncs_during_last_confirm(void)
 
     // resync active
     packageIndex = sender.GetCurrentPayload(data, 1);
-    TEST_ASSERT_EQUAL(ELRS4_TELEMETRY_MAX_PACKAGES, packageIndex);
+    TEST_ASSERT_EQUAL(ELRS4_DATA_DL_MAX_PACKAGES, packageIndex);
     receiver.ReceiveData(packageIndex, data, 1);
     sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
     TEST_ASSERT_EQUAL(false, sender.IsActive());
@@ -278,11 +278,11 @@ void test_stubborn_link_sends_data_until_confirmation(void)
     uint8_t packageIndex;
     uint8_t buffer[100];
 
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
 
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(buffer, sizeof(buffer));
 
@@ -306,11 +306,11 @@ void test_stubborn_link_multiple_packages(void)
     uint8_t packageIndex;
     uint8_t buffer[100];
 
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(buffer, sizeof(buffer));
 
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
 
     for (int i = 0; i < 3; i++)
@@ -341,11 +341,11 @@ static void test_stubborn_link_resync_then_send(void)
     uint8_t maxLength;
     uint8_t packageIndex;
 
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(buffer, sizeof(buffer));
 
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(testSequence1, sizeof(testSequence1));
 
@@ -363,12 +363,12 @@ static void test_stubborn_link_resync_then_send(void)
 
     // Send next packet, which should be a RESYNC
     packageIndex = sender.GetCurrentPayload(data, 1);
-    TEST_ASSERT_EQUAL(ELRS4_TELEMETRY_MAX_PACKAGES, packageIndex);
+    TEST_ASSERT_EQUAL(ELRS4_DATA_DL_MAX_PACKAGES, packageIndex);
     receiver.ReceiveData(packageIndex, data, 1);
     sender.ConfirmCurrentPayload(receiver.GetCurrentConfirm());
 
     // Complete the transfer
-    int maxSends = ELRS4_TELEMETRY_MAX_PACKAGES + 1;
+    int maxSends = ELRS4_DATA_DL_MAX_PACKAGES + 1;
     while (!receiver.HasFinishedData() && maxSends)
     {
         packageIndex = sender.GetCurrentPayload(data, 1);
@@ -385,7 +385,7 @@ static void test_stubborn_link_resync_then_send(void)
 void test_stubborn_link_variable_size_per_call(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[2];
@@ -422,7 +422,7 @@ void test_stubborn_link_variable_size_per_call(void)
 void test_stubborn_link_premature_advance(void)
 {
     uint8_t batterySequence[] = {0xEC,10,0x08,0,0,0,0,0,0,0,0,109};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(batterySequence, sizeof(batterySequence));
     uint8_t data[1];
@@ -453,14 +453,14 @@ void test_stubborn_link_forlorn_receiver(void)
 {
     uint8_t testSequence1[] = {1,2,3,4,5,6};
     uint8_t testSequence2[] = {11,12,13,14,15,16,17,18,19,20};
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(testSequence1, sizeof(testSequence1));
     uint8_t packageIndex;
 
     uint8_t dataOta[1];
     uint8_t dataReceiver[64];
-    receiver.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    receiver.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     receiver.ResetState();
     receiver.SetDataToReceive(dataReceiver, sizeof(dataReceiver));
 
@@ -475,7 +475,7 @@ void test_stubborn_link_forlorn_receiver(void)
 
     // Simulate the Sender rebooting and starting a different send
     // Note nothing is done to the receiver to help it figure it out
-    sender.setMaxPackageIndex(ELRS4_TELEMETRY_MAX_PACKAGES);
+    sender.setMaxPackageIndex(ELRS4_DATA_DL_MAX_PACKAGES);
     sender.ResetState();
     sender.SetDataToTransmit(testSequence2, sizeof(testSequence2));
 
@@ -485,7 +485,7 @@ void test_stubborn_link_forlorn_receiver(void)
     {
         packageIndex = sender.GetCurrentPayload(dataOta, sizeof(dataOta));
         // If receiver is working properly, packageIndex should go 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
-        // If it is not working properly it will likely go 1, 2, 2, 2, 2, ... ELRS4_TELEMETRY_MAX_PACKAGES, 0, 0, 0, 0
+        // If it is not working properly it will likely go 1, 2, 2, 2, 2, ... ELRS4_DATA_DL_MAX_PACKAGES, 0, 0, 0, 0
         // Count the positions where the packageIndex has moved on
         if (lastPackageIndex != packageIndex)
         {
