@@ -433,7 +433,7 @@ void TXModuleEndpoint::updateTlmBandwidth()
     const uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     const uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     const uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
-    const uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_TELEMETRY_BYTES_PER_CALL : ELRS4_TELEMETRY_BYTES_PER_CALL;
+    const uint8_t bytesPerCall = OtaIsFullRes ? ELRS8_DATA_DL_BYTES_PER_CALL : ELRS4_DATA_DL_BYTES_PER_CALL;
     uint32_t bandwidthValue = bytesPerCall * 8U * burst * hz / ratiodiv / (burst + 1);
     if (OtaIsFullRes)
     {
@@ -441,7 +441,7 @@ void TXModuleEndpoint::updateTlmBandwidth()
       // N bytes more data for every rate except 100Hz 1:128, and 2*N bytes more for many
       // rates. The calculation is a more complex though, so just approximate some of the
       // extra bandwidth
-      bandwidthValue += 8U * (ELRS8_TELEMETRY_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
+      bandwidthValue += 8U * (ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
     }
 
     utoa(bandwidthValue, &tlmBandwidth[2], 10);

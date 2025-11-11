@@ -4,9 +4,8 @@
 
 #if defined(TARGET_TX) && defined(PLATFORM_ESP32)
 
-#include "common.h"
-#include "crsf_protocol.h"
 #include "handset.h"
+#include "crsf_protocol.h"
 #include "hwTimer.h"
 #include "options.h"
 #include <WiFi.h>

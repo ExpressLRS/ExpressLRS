@@ -92,16 +92,23 @@ def doConfiguration(file, defines, config, moduletype, frequency, platform, devi
         print('You will be able to configure the hardware via the web UI on the device.')
     else:
         products = []
-        i = 0
-        for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][].product_name', targets):
-            i += 1
+        for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][]', targets):
             products.append(k)
-            print(f"{i}) {k}")
+        if frequency == 'dual':
+            for k in jmespath.search(f'[*."{moduletype}_2400".*][][?platform==`{platform}`][]', targets):
+                if '_LR1121_' in k['firmware']:
+                    products.append(k)
+            for k in jmespath.search(f'[*."{moduletype}_900".*][][?platform==`{platform}`][]', targets):
+                if '_LR1121_' in k['firmware']:
+                    products.append(k)
+        # Sort the list by product name, case insensitive, and print the list
+        products = sorted(products, key=lambda p: p['product_name'].casefold())
+        for i, p in enumerate(products):
+            print(f"{i+1}) {p['product_name']}")
         print('Choose a configuration to load into the firmware file (press enter to leave bare)')
         choice = input()
         if choice != "":
             config = products[int(choice)-1]
-            config = jmespath.search(f'[*."{moduletype}_{frequency}".*][][?product_name==`{config}`][]', targets)[0]
 
     if config is not None:
         product_name = config['product_name']

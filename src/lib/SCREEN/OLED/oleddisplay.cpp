@@ -55,7 +55,7 @@ void OLEDDisplay::doScreenBackLight(screen_backlight_t state)
 
 void OLEDDisplay::printScreenshot()
 {
-    u8g2->writeBufferXBM(*TxBackpack);
+    u8g2->writeBufferXBM(*BackpackOrLogStrm);
 }
 
 void OLEDDisplay::displaySplashScreen()
