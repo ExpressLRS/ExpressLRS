@@ -31,7 +31,7 @@ button {
 
 :root {
     --drawer-width: 250px;
-    --footer-height: 76px;
+    --footer-height: 36px;
 }
 
 #sidedrawer {
