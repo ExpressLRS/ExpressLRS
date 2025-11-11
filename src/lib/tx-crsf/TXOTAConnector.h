@@ -20,7 +20,7 @@ private:
 
     static constexpr auto MSP_SERIAL_OUT_FIFO_SIZE = 256U;
     FIFO<MSP_SERIAL_OUT_FIFO_SIZE> outputQueue;
-    uint8_t currentTransmissionBuffer[ELRS_MSP_BUFFER] = {};
+    uint8_t currentTransmissionBuffer[ELRS_DATA_UL_BUFFER] = {};
     uint8_t currentTransmissionLength = 0;
 };
 

@@ -52,15 +52,12 @@ constexpr size_t ELRSOPTS_DEVICENAME_SIZE = 16;
 constexpr size_t ELRSOPTS_OPTIONS_SIZE = 512;
 constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
 
+extern char device_name[];
 extern firmware_options_t firmwareOptions;
 extern bool options_init();
 
-#if defined(UNIT_TEST)
-extern char *product_name;
-extern char *device_name;
-#else
+#if !defined(UNIT_TEST)
 extern char product_name[];
-extern char device_name[];
 extern uint32_t logo_image;
 extern String& getOptions();
 extern String& getHardware();

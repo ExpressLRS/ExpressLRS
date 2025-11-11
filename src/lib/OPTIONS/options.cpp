@@ -25,8 +25,7 @@ const char *wifi_ap_password = "expresslrs";
 const char *wifi_ap_address = "10.0.0.1";
 
 #if defined(UNIT_TEST)
-char *device_name = DEVICE_NAME;
-char *product_name = (char *)(target_name+4);
+char device_name[] = DEVICE_NAME;
 firmware_options_t firmwareOptions;
 #else
 #include <ArduinoJson.h>

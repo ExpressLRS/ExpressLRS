@@ -2,9 +2,8 @@
 
 #if defined(PLATFORM_ESP32)
 
-#include "common.h"
-#include "crsf_protocol.h"
 #include "handset.h"
+#include "crsf_protocol.h"
 #include "POWERMGNT.h"
 #include "hwTimer.h"
 #include "logging.h"

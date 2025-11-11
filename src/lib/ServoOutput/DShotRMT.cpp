@@ -145,6 +145,10 @@ void DShotRMT::set_looping(bool x) {
 	looping = x;
 }
 
+void DShotRMT::set_looping(bool x) {
+	rmt_set_tx_loop_mode(rmt_channel, x);
+}
+
 // ...the config part is done, now the calculating and sending part
 void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request) {
 	if (throttle_value == 0) {
