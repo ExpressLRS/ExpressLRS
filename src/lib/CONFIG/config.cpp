@@ -956,6 +956,9 @@ static void PwmConfigV9(v9_rx_config_pwm_t const * const old, rx_config_pwm_t * 
     current->val.mode = old->val.mode;
     current->val.narrow = old->val.narrow;
     current->val.failsafeMode = old->val.failsafeMode;
+    // somDShot3D pushes everyone down
+    if (m_config.pwmChannels[ch].val.mode > somDShot)
+        m_config.pwmChannels[ch].val.mode += 1;
 }
 
 void RxConfig::UpgradeEepromV9V10(uint8_t ver)

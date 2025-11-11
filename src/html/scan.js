@@ -89,7 +89,9 @@ function updatePwmSettings(arPwm) {
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (features & 16) {
       modes.push('DShot');
+      modes.push('DShot-3D');
     } else {
+      modes.push(undefined);
       modes.push(undefined);
     }
     if (features & 1) {
