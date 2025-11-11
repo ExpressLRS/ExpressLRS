@@ -16,7 +16,7 @@ static DShotRMT *head_node = NULL, *cur_node = NULL, *tail_node; // linked list 
 
 static int prev_pin = -1; // we need to remember what the previous GPIO pin used was to remove it from the RMT (setting a new RMT pin does not unset the previous pin)
 
-// latch status to indicate if the RMT driver has been installed or uninstalled, so we don't do it twice 
+// latch status to indicate if the RMT driver has been installed or uninstalled, so we don't do it twice
 static bool has_inited = false;
 static bool has_deinited = false;
 
@@ -145,10 +145,6 @@ void DShotRMT::set_looping(bool x) {
 	looping = x;
 }
 
-void DShotRMT::set_looping(bool x) {
-	rmt_set_tx_loop_mode(rmt_channel, x);
-}
-
 // ...the config part is done, now the calculating and sending part
 void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request) {
 	if (throttle_value == 0) {
@@ -165,7 +161,7 @@ void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t te
 		// ...packets are the same for bidirectional mode
 		next_packet.throttle_value = throttle_value;
 	}
-	
+
 	next_packet.telemetric_request = telemetric_request;
 	next_packet.checksum = this->calc_dshot_chksum(next_packet);
 
@@ -201,7 +197,7 @@ rmt_item32_t* DShotRMT::encode_dshot_to_rmt(uint16_t parsed_packet) {
 	else {
 		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level0 = LOW;
 		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level1 = LOW;
-	
+
 		for (int i = 0; i < DSHOT_PAUSE_BIT; i++, parsed_packet <<= 1) 	{
 			if (parsed_packet & 0b1000000000000000) {
 				// set one
