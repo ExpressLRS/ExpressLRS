@@ -52,6 +52,7 @@ uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
 
 static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
 {
+#if defined(PLATFORM_ESP32)
     // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
     if (dshotInstances[ch] == nullptr)
         return;
@@ -84,20 +85,18 @@ static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
         // getting an actual zero microsecond command means the failsafe mode is no-pulse
         dshotInstances[ch]->set_looping(false);
     }
+#endif /* PLATFORM_ESP32 */
 }
 
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
     const eServoOutputMode chMode = (eServoOutputMode)chConfig->val.mode;
-#if defined(PLATFORM_ESP32)
     if (chMode == somDShot || chMode == somDShot3D)
     {
         servoWriteDshot(chMode, ch, us);
     }
-    else
-#endif
-    if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
+    else if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
     {
         pwmChannelValues[ch] = us;
         if (chMode == somOnOff)
