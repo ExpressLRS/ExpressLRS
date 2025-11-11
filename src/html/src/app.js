@@ -72,8 +72,8 @@ export class App extends LitElement {
                 </ul>
             </div>
             <header id="header" class="mui-appbar elrs-header">
-                <div style="padding-left: 0; align-items: center; display: flex">
-                    <div class="mui--appbar-line-height" style="padding-left: 0">
+                <div class="mui--appbar-height" style="align-items: center; display: flex">
+                    <div style="padding-left: 16px">
                         <a class="mui--align-middle sidedrawer-toggle mui--visible-xs-inline-block mui--visible-sm-inline-block js-show-sidedrawer"
                            @click="${this.showSidedrawer}">${this.menu}</a>
                         <a class="mui--align-middle sidedrawer-toggle mui--hidden-xs mui--hidden-sm js-hide-sidedrawer"
@@ -119,6 +119,7 @@ export class App extends LitElement {
             elrsState.settings = data.settings || null
             elrsState.options = data.options || null
             elrsState.config = data.config || null
+            document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
             this.requestUpdate()
         } catch (e) {
             console.warn('Startup data load failed:', e)
