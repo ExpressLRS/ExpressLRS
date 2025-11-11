@@ -13,6 +13,7 @@ class SerialPanel extends LitElement {
     @state() accessor baudRate
     @state() accessor sbusFailsafe
     @state() accessor isAirport
+    @state() accessor djiArmed
 
     createRenderRoot() {
         this.isAirport = elrsState.options['is-airport']
@@ -20,6 +21,7 @@ class SerialPanel extends LitElement {
         this.serial2Protocol = elrsState.config['serial1-protocol']
         this.baudRate = elrsState.options['rcvr-uart-baud']
         this.sbusFailsafe = elrsState.config['sbus-failsafe']
+        this.djiArmed = elrsState.options['dji-permanently-armed']
         this._saveSerial = this._saveSerial.bind(this)
         return this
     }
@@ -75,6 +77,14 @@ class SerialPanel extends LitElement {
                             </select>
                             <label>SBUS Failsafe</label>
                         </div>
+                    </div>
+                    ` : ''}
+                    ${this._displayPortSelected() ? html`
+                    <div class="mui-checkbox">
+                        <input id="dji" type='checkbox'
+                               ?checked="${this.djiArmed}"
+                               @change="${(e) => {this.djiArmed = e.target.checked}}"/>
+                        <label for="dji">Permanently arm DJI air units</label>
                     </div>
                     ` : ''}
                     <button class="mui-btn mui-btn--small mui-btn--primary"
@@ -135,6 +145,10 @@ class SerialPanel extends LitElement {
         return this.serial1Protocol === 2 || this.serial1Protocol === 3 || this.serial2Protocol === 3 || this.serial2Protocol === 4
     }
 
+    _displayPortSelected() {
+        return this.serial1Protocol === 8 || this.serial2Protocol === 9
+    }
+
     _configChanged() {
         return (!this.isAirport && this.serial1Protocol !== elrsState.config['serial-protocol']) ||
             this.serial2Protocol !== elrsState.config['serial1-protocol'] ||
@@ -142,7 +156,8 @@ class SerialPanel extends LitElement {
     }
     _optionsChanged() {
         return this.isAirport !== elrsState.options['is-airport'] ||
-            this.baudRate !== elrsState.options['rcvr-uart-baud']
+            this.baudRate !== elrsState.options['rcvr-uart-baud'] ||
+            this.djiArmed !== elrsState.options['dji-permanently-armed']
     }
 
     _changed() {
@@ -155,7 +170,8 @@ class SerialPanel extends LitElement {
                 options: {
                     ...elrsState.options,
                     'is-airport': this.isAirport,
-                    'rcvr-uart-baud': this.baudRate
+                    'rcvr-uart-baud': this.baudRate,
+                    'dji-permanently-armed': this.djiArmed,
                 },
                 config: {
                     ...elrsState.config,

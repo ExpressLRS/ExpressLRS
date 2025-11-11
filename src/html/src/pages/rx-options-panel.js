@@ -10,14 +10,12 @@ class RxOptionsPanel extends LitElement {
     @state() accessor domain
     @state() accessor enableModelMatch
     @state() accessor lockOnFirst
-    @state() accessor djiArmed
     @state() accessor modelId
     @state() accessor forceTlmOff
 
     createRenderRoot() {
         this.domain = elrsState.options.domain
         this.lockOnFirst = elrsState.options['lock-on-first-connection']
-        this.djiArmed = elrsState.options['dji-permanently-armed']
         this.enableModelMatch = elrsState.config.modelid!==undefined && elrsState.config.modelid !== 255
         this.modelId = elrsState.config.modelid===undefined ? 0 : elrsState.config.modelid
         this.forceTlmOff = elrsState.config['force-tlm']
@@ -45,12 +43,6 @@ class RxOptionsPanel extends LitElement {
                                ?checked="${this.lockOnFirst}"
                                @change="${(e) => {this.lockOnFirst = e.target.checked}}"/>
                         <label for="lock">Lock on first connection</label>
-                    </div>
-                    <div class="mui-checkbox">
-                        <input id="dji" type='checkbox'
-                               ?checked="${this.djiArmed}"
-                               @change="${(e) => {this.djiArmed = e.target.checked}}"/>
-                        <label for="dji">Permanently arm DJI air units</label>
                     </div>
                     <h2>Model Match</h2>
                     Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
@@ -109,7 +101,6 @@ class RxOptionsPanel extends LitElement {
                 'domain': this.domain,
                 // /FEATURE: HAS_SUBGHZ
                 'lock-on-first-connection': this.lockOnFirst,
-                'dji-permanently-armed': this.djiArmed,
             },
             config: {
                 ...elrsState.config,
@@ -131,7 +122,6 @@ class RxOptionsPanel extends LitElement {
         changed |= this.domain !== elrsState.options['domain']
         // /FEATURE: HAS_SUBGHZ
         changed |= this.lockOnFirst !== elrsState.options['lock-on-first-connection']
-        changed |= this.djiArmed !== elrsState.options['dji-permanently-armed']
         changed |= this.enableModelMatch && this.modelId !== elrsState.config['modelid']
         changed |= !this.enableModelMatch && this.modelId !== 255
         changed |= this.forceTlmOff !== elrsState.config['force-tlm']
