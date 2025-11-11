@@ -2,6 +2,18 @@
 
 /***
  * Outdated config structs used by the update process
+ *
+ * TX V7 Jun 22 2022 (3.0.0)
+ * TX V8 (4.0.0)
+ *
+ * RX V5 Jun 22 2022 (3.0.0)
+ * RX V6 Nov 09 2022 (3.1.0)
+ * RX V7 Mar 13 2023 (3.3.0)
+ * RX V8 Sep 29 2023 (3.4.0?)
+ * RX V9 Feb 16 2024 (3.4.0)
+ * RX V10 (4.0.0)
+ * RX V11 (4.0.0)
+ *
  ***/
 
 #include <inttypes.h>
@@ -239,3 +251,4 @@ typedef struct {
 // rateInitialIdx 4 bits -> 5
 // V11 changed
 // rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
+

@@ -836,6 +836,22 @@ static unsigned toFailsafeV10(unsigned oldFailsafe)
     return oldFailsafe + (988-476);
 }
 
+/**
+ * @brief Convert rx_config_pwm_t.mode to what should be its current value, taking
+ * into account every time some jerk inserted a value in the middle instead of the end
+ * (eServoOutputMode)
+ */
+static uint8_t toServoOutputModeCurrent(uint8_t verStart, uint8_t mode)
+{
+    // somDShot
+    if (verStart < 8 && mode > somOnOff)
+        mode += 1;
+    // somDShot3D
+    if (verStart < 11 && mode > somDShot)
+        mode += 1;
+    return mode;
+}
+
 // ========================================================
 // V4 Upgrade
 
@@ -936,12 +952,10 @@ void RxConfig::UpgradeEepromV7V8(uint8_t ver)
     CONFCOPY(serialProtocol);
     CONFCOPY(failsafeMode);
 
-    bool isV8 = ver == 8;
     for (unsigned ch=0; ch<16; ++ch)
     {
         m_config.pwmChannels[ch].raw = old.pwmChannels[ch].raw;
-        if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
-            m_config.pwmChannels[ch].val.mode += 1;
+        m_config.pwmChannels[ch].val.mode = toServoOutputModeCurrent(ver, old.pwmChannels[ch].val.mode);
     }
 }
 
@@ -953,12 +967,9 @@ static void PwmConfigV9(v9_rx_config_pwm_t const * const old, rx_config_pwm_t * 
     current->val.failsafe = toFailsafeV10(old->val.failsafe);
     current->val.inputChannel = old->val.inputChannel;
     current->val.inverted = old->val.inverted;
-    current->val.mode = old->val.mode;
+    current->val.mode = toServoOutputModeCurrent(10, old->val.mode);
     current->val.narrow = old->val.narrow;
     current->val.failsafeMode = old->val.failsafeMode;
-    // somDShot3D pushes everyone down
-    if (m_config.pwmChannels[ch].val.mode > somDShot)
-        m_config.pwmChannels[ch].val.mode += 1;
 }
 
 void RxConfig::UpgradeEepromV9V10(uint8_t ver)
