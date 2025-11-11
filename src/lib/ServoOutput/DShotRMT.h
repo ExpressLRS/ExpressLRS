@@ -95,6 +95,7 @@ public:
 
 	// ...safety first ...no parameters, no DShot
 	bool begin(dshot_mode_t dshot_mode = DSHOT_OFF, bool is_bidirectional = false);
+	void set_looping(bool);
 	void send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request = NO_TELEMETRIC);
 
 private:
