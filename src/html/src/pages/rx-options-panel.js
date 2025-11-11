@@ -1,7 +1,7 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
 import '../assets/mui.js'
-import {_renderOptions} from "../utils/libs.js"
+import {_renderOptions, _uintInput} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {postWithFeedback} from "../utils/feedback.js"
 
@@ -45,8 +45,10 @@ class RxOptionsPanel extends LitElement {
                         <label for="lock">Lock on first connection</label>
                     </div>
                     <h2>Model Match</h2>
-                    Specify the 'Receiver' number in OpenTX/EdgeTX model setup page and turn on the 'Model Match'
-                    in the ExpressLRS Lua script for that model. 'Model Match' is between 0 and 63 inclusive.
+                    Model Match is used to prevent accidentally selecting the wrong model in the handset and flying with an
+                    unexpected handset or ELRS configuration. When enabled, Model Match restricts this receiver to only
+                    connect fully with the specific Receiver ID below. Set the transmitter's Receiver ID in EdgeTX's model
+                    settings, and enable Model Match in the ExpressLRS lua.
                     <br/>
                     <div class="mui-checkbox">
                         <input id="modelMatch" type='checkbox'
@@ -56,10 +58,11 @@ class RxOptionsPanel extends LitElement {
                     </div>
                     ${this.enableModelMatch ? html`
                     <div class="mui-textfield">
-                        <input id="modelId" type='text' required
+                        <input id="modelId" min="0" max="63" type='number' required
                                @change="${(e) => this.modelId = parseInt(e.target.value)}"
-                               .value="${this.modelId}"/>
-                        <label for="modelId">Model ID</label>
+                               .value="${this.modelId}"
+                               @keypress="${_uintInput}"/>
+                        <label for="modelId">Receiver ID (0 - 63)</label>
                     </div>
                     ` : ''}
                     <h2>Force telemetry off</h2>
