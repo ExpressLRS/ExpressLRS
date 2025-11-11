@@ -50,7 +50,7 @@ button {
 #content-wrapper {
     min-height: 100%;
     overflow-x: hidden;
-    margin-left: 0px;
+    margin-left: 0;
     transition: margin-left 0.2s;
 
     /* sticky bottom */
@@ -62,17 +62,25 @@ button {
 #footer {
     box-sizing: border-box;
     height: var(--footer-height);
-    margin-left: 0px;
+    margin-left: 0;
     transition: margin-left 0.2s;
     background-color: #0288D1;
     color: #fff;
+    padding: 6px;
+    z-index: 2;
+    position: fixed;
+    width: calc(100% - var(--drawer-width));
+    top: calc(100% - var(--footer-height));
+}
+
+body.hide-sidedrawer #footer {
+    width: 100% !important;
 }
 
 #footer a {
     color: #fff;
     text-decoration: underline;
 }
-
 
 @media (min-width: 48em) and (hover: hover) and (pointer: fine) {
     #header {
@@ -135,7 +143,7 @@ button {
 }
 
 #sidedrawer > ul {
-    padding-left: 0px;
+    padding-left: 0;
 }
 
 #sidedrawer > ul > li:first-child {
