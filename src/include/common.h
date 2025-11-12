@@ -210,13 +210,14 @@ enum eServoOutputMode : uint8_t
     som10KHzDuty,   // 6:  10kHz duty
     somOnOff,       // 7:  Digital 0/1 mode
     somDShot,       // 8:  DShot300
-    somSerial,      // 9:  primary Serial
-    somSCL,         // 10: I2C clock signal
-    somSDA,         // 11: I2C data line
-    somPwm,         // 12: true PWM mode (NOT SUPPORTED)
+    somDShot3D,     // 9:  DShot300 3D
+    somSerial,      // 10:  primary Serial
+    somSCL,         // 11: I2C clock signal
+    somSDA,         // 12: I2C data line
+    somPwm,         // 13: true PWM mode (NOT SUPPORTED)
 #if defined(PLATFORM_ESP32)
-    somSerial1RX,   // 13: secondary Serial RX
-    somSerial1TX,   // 14: secondary Serial TX
+    somSerial1RX,   // 14: secondary Serial RX
+    somSerial1TX,   // 15: secondary Serial TX
 #endif
 };
 
@@ -334,6 +335,9 @@ inline void setConnectionState(connectionState_e newState) {
     devicesTriggerEvent(EVENT_CONNECTION_CHANGED);
 }
 #endif
+
+extern bool crsfBatterySensorDetected;
+extern bool crsfBaroSensorDetected;
 
 uint32_t uidMacSeedGet();
 bool isDualRadio();

@@ -50,29 +50,60 @@ uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
     }
 }
 
+static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
+{
+#if defined(PLATFORM_ESP32)
+    // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+    if (dshotInstances[ch] == nullptr)
+        return;
+
+    // check if we actually want a pulse (for no-pulse failsafe)
+    if (us > 0)
+    {
+        uint16_t dshotVal;
+        us = constrain(us, 1000, 2000);
+        if (chMode == somDShot)
+        {
+            dshotVal = fmap(us, 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+        }
+        else // somDShot3D
+        {
+            if (us == 1500) { // stopped
+                dshotVal = 0;
+            }
+            else if (us > 1500) { // forward
+                dshotVal = fmap(us, 1501, 2000, 1048, 2047);
+            }
+            else { // reverse
+                dshotVal = fmap(us, 1499, 1000, 48, 1047);
+            }
+        }
+        dshotInstances[ch]->send_dshot_value(dshotVal);
+    }
+    else
+    {
+        // getting an actual zero microsecond command means the failsafe mode is no-pulse
+        dshotInstances[ch]->set_looping(false);
+    }
+#endif /* PLATFORM_ESP32 */
+}
+
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-#if defined(PLATFORM_ESP32)
-    if ((eServoOutputMode)chConfig->val.mode == somDShot)
+    const eServoOutputMode chMode = (eServoOutputMode)chConfig->val.mode;
+    if (chMode == somDShot || chMode == somDShot3D)
     {
-        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
-        if (dshotInstances[ch])
-        {
-            us = fmap(constrain(us, 1000, 2000), 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
-            dshotInstances[ch]->send_dshot_value(us);
-        }
+        servoWriteDshot(chMode, ch, us);
     }
-    else
-#endif
-    if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
+    else if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
     {
         pwmChannelValues[ch] = us;
-        if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+        if (chMode == somOnOff)
         {
             digitalWrite(servoPins[ch], us > 1500);
         }
-        else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        else if (chMode == som10KHzDuty)
         {
             PWM.setDuty(pwmChannels[ch], constrain(us, 1000, 2000) - 1000);
         }
@@ -173,7 +204,7 @@ static bool initialize()
             pin = UNDEF_PIN;
         }
 #if defined(PLATFORM_ESP32)
-        else if (mode == somDShot)
+        else if (mode == somDShot || mode == somDShot3D)
         {
             if (rmtCH < RMT_MAX_CHANNELS)
             {
@@ -181,7 +212,7 @@ static bool initialize()
                 auto rmtChannel = (rmt_channel_t)rmtCH;
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
-                digitalWrite(pin, LOW);                
+                digitalWrite(pin, LOW);
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
                 rmtCH++;
             }
@@ -248,7 +279,7 @@ static int event()
                 pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
             }
 #if defined(PLATFORM_ESP32)
-            else if ((eServoOutputMode)chConfig->val.mode == somDShot)
+            else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
             {
                 dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
             }

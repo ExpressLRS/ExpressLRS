@@ -29,24 +29,16 @@ void sendCRSFTelemetryToBackpack(uint8_t *) {}
 void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #endif
 
+#include "CRSFParser.h"
 #include "CRSFRouter.h"
+#include "MAVLink.h"
 #include "TXModuleEndpoint.h"
 #include "TXOTAConnector.h"
-#include "MAVLink.h"
-
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
-#include "USB.h"
-#define USBSerial Serial
-#elif defined(PLATFORM_ESP8266)
-#include <user_interface.h>
-#endif
+#include "TXUSBConnector.h"
 
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #endif
-
-//// CONSTANTS ////
-#define MSP_PACKET_SEND_INTERVAL 10LU
 
 /// define some libs to use ///
 MSP msp;
@@ -66,11 +58,8 @@ uint8_t mavlinkSSBuffer[CRSF_MAX_PACKET_LEN]; // Buffer for current stubbon send
 unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 //// MSP Data Handling ///////
-bool NextPacketIsMspData = false;  // if true the next packet will contain the msp data
+bool NextPacketIsDataUl = false;  // if true the next packet will contain the uplink data (instead of channels)
 char backpackVersion[32] = "";
-uint8_t packageIndexRadio1 = 0xFF;
-uint8_t packageIndexRadio2 = 0xFF;
-uint8_t tlmSenderDoubleBuffer[20] = {0};
 
 ////////////SYNC PACKET/////////
 /// sync packet spamming on mode change vars ///
@@ -83,8 +72,8 @@ uint32_t SyncPacketLastSent = 0;
 static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle;
 ////////////////////////////////////////////////
 
-volatile uint32_t LastTLMpacketRecvMillis = 0;
-uint32_t TLMpacketReported = 0;
+static uint32_t LastTLMpacketRecv_Ms = 0;
+static uint32_t LinkStatsLastReported_Ms = 0;
 static bool commitInProgress = false;
 
 LQCALC<100> LqTQly;
@@ -98,13 +87,15 @@ static uint8_t BindingSendCount;
 bool RxWiFiReadyToSend = false;
 
 static TxTlmRcvPhase_e TelemetryRcvPhase = ttrpTransmitting;
-StubbornReceiver TelemetryReceiver;
-StubbornSender MspSender;
+StubbornReceiver DataDlReceiver;
+StubbornSender DataUlSender;
 uint8_t CRSFinBuffer[CRSF_MAX_PACKET_LEN+1];
 
 CRSFRouter crsfRouter;
 TXModuleEndpoint crsfTransmitter;
 TXOTAConnector otaConnector;
+TXUSBConnector usbConnector;
+CRSFParser crsfParser;
 
 device_affinity_t ui_devices[] = {
   {&Handset_device, 1},
@@ -170,10 +161,72 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
   // -- uplink_TX_Power is updated when sending to the handset, so it updates when missing telemetry
   // -- rf_mode is updated when we change rates
   // -- downlink_Link_quality is updated before the LQ period is incremented
-  MspSender.ConfirmCurrentPayload(ls->tlmConfirm);
+
+  // The Rx only has a single radio.  Force the Tx out of Gemini mode.
+  if (inGeminiMode() && !ls->trueDiversityAvailable)
+  {
+      config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
+  }
 }
 
-bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status)
+/***
+ * @brief Receive downlink data from payload buffers in OTA_Packet_s structures and merge Gemini payload buffers
+ * @param pi1 packageIndex from Radio.RXdataBuffer
+ * @param pi2 packageIndex from Radio.RXdataBufferSecond (not used if not Gemini)
+ * @param data1 pointer to payload from Radio.RXdataBuffer
+ * @param data2 pointer to payload from Radio.RXdataBufferSecond (not used if not Gemini)
+ * @param dataLen sizeof payload data in both data1 and data2
+ * @param stubbornAck StubbornSender ack bit from either buffer (should be same)
+ */
+void ICACHE_RAM_ATTR ProcessOtaDataDl(uint8_t pi1, uint8_t pi2, uint8_t *data1, uint8_t *data2, size_t dataLen, bool stubbornAck)
+{
+  static uint8_t packageIndexRadio1 = 0xFF;
+  static uint8_t packageIndexRadio2 = 0xFF;
+  constexpr size_t geminiSpanBufferSize = 2 * ELRS8_DATA_DL_BYTES_PER_CALL; // 2 * whatever the largest payload will be
+  static uint8_t geminiSpanBuffer[geminiSpanBufferSize] = {0};
+
+  // Gemini downlink data transfer uses both radios to double to downlink data instead of being redundant copies
+  // Build the "span" buffer from the two downlink packet buffers as the two halves come in
+  if (inGeminiMode())
+  {
+      if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
+      {
+          packageIndexRadio1 = pi1;
+          memcpy(geminiSpanBuffer, data1, dataLen);
+      }
+      else
+      {
+          packageIndexRadio2 = pi1;
+          memcpy(&geminiSpanBuffer[dataLen], data1, dataLen);
+      }
+
+      if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 && Radio.hasSecondRadioGotData)
+      {
+          packageIndexRadio2 = pi2;
+          memcpy(&geminiSpanBuffer[dataLen], data2, dataLen);
+      }
+      else if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2 && Radio.hasSecondRadioGotData)
+      {
+          packageIndexRadio1 = pi2;
+          memcpy(geminiSpanBuffer, data2, dataLen);
+      }
+
+      if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
+      {
+          DataUlSender.ConfirmCurrentPayload(stubbornAck);
+          DataDlReceiver.ReceiveData(packageIndexRadio1, geminiSpanBuffer, 2 * dataLen);
+          packageIndexRadio1 = 0xFF;
+          packageIndexRadio2 = 0xFF;
+      }
+  }
+  else
+  {
+      DataUlSender.ConfirmCurrentPayload(stubbornAck);
+      DataDlReceiver.ReceiveData(pi1, data1, dataLen);
+  }
+}
+
+static bool ICACHE_RAM_ATTR ProcessDownlinkPacket(SX12xxDriverCommon::rx_status const status)
 {
   if (status != SX12xxDriverCommon::SX12XX_RX_OK)
   {
@@ -190,7 +243,7 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     return false;
   }
 
-  LastTLMpacketRecvMillis = millis();
+  LastTLMpacketRecv_Ms = millis();
   LqTQly.add();
 
   Radio.CheckForSecondPacket();
@@ -216,51 +269,15 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     switch (otaPktPtr->std.type)
     {
       case PACKET_TYPE_LINKSTATS:
-        LinkStatsFromOta(&ota8->tlm_dl.ul_link_stats.stats);
+        LinkStatsFromOta(&ota8->data_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
-        if (inGeminiMode() && !ota8->tlm_dl.ul_link_stats.trueDiversityAvailable)
-        {
-            config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
-        }
-
-        if (inGeminiMode())
-        {
-            if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
-            {
-                packageIndexRadio1 = ota8->tlm_dl.packageIndex;
-                memcpy(tlmSenderDoubleBuffer, ota8->tlm_dl.ul_link_stats.payload, sizeof(ota8->tlm_dl.ul_link_stats.payload));
-            }
-            else
-            {
-                packageIndexRadio2 = ota8->tlm_dl.packageIndex;
-                memcpy(&tlmSenderDoubleBuffer[sizeof(ota8->tlm_dl.ul_link_stats.payload)], ota8->tlm_dl.ul_link_stats.payload, sizeof(ota8->tlm_dl.ul_link_stats.payload));
-            }
-
-            if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 && Radio.hasSecondRadioGotData)
-            {
-                packageIndexRadio2 = ota8Second->tlm_dl.packageIndex;
-                memcpy(&tlmSenderDoubleBuffer[sizeof(ota8Second->tlm_dl.ul_link_stats.payload)], ota8Second->tlm_dl.ul_link_stats.payload, sizeof(ota8Second->tlm_dl.ul_link_stats.payload));
-            }
-            else if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2 && Radio.hasSecondRadioGotData)
-            {
-                packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
-                memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.ul_link_stats.payload, sizeof(ota8Second->tlm_dl.ul_link_stats.payload));
-            }
-
-            if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
-            {
-                TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
-                    tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.ul_link_stats.payload));
-                packageIndexRadio1 = 0xFF;
-                packageIndexRadio2 = 0xFF;
-            }
-        }
-        else
-        {
-            TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES,
-                ota8->tlm_dl.ul_link_stats.payload, sizeof(ota8->tlm_dl.ul_link_stats.payload));
-        }
+        ProcessOtaDataDl(
+          ota8->data_dl.packageIndex, ota8Second->data_dl.packageIndex,
+          ota8->data_dl.ul_link_stats.payload,
+          ota8Second->data_dl.ul_link_stats.payload,
+          sizeof(ota8->data_dl.ul_link_stats.payload),
+          ota8->data_dl.stubbornAck
+        );
         break;
 
       case PACKET_TYPE_DATA:
@@ -270,45 +287,13 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         }
         else
         {
-            if (inGeminiMode())
-            {
-                if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
-                {
-                    packageIndexRadio1 = ota8->tlm_dl.packageIndex;
-                    memcpy(tlmSenderDoubleBuffer, ota8->tlm_dl.payload, sizeof(ota8->tlm_dl.payload));
-                }
-                else
-                {
-                    packageIndexRadio2 = ota8->tlm_dl.packageIndex;
-                    memcpy(&tlmSenderDoubleBuffer[sizeof(ota8->tlm_dl.payload)], ota8->tlm_dl.payload, sizeof(ota8->tlm_dl.payload));
-                }
-
-                if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 && Radio.hasSecondRadioGotData)
-                {
-                    packageIndexRadio2 = ota8Second->tlm_dl.packageIndex;
-                    memcpy(&tlmSenderDoubleBuffer[sizeof(ota8Second->tlm_dl.payload)], ota8Second->tlm_dl.payload, sizeof(ota8Second->tlm_dl.payload));
-                }
-                else if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2 && Radio.hasSecondRadioGotData)
-                {
-                    packageIndexRadio1 = ota8Second->tlm_dl.packageIndex;
-                    memcpy(tlmSenderDoubleBuffer, ota8Second->tlm_dl.payload, sizeof(ota8Second->tlm_dl.payload));
-                }
-
-                if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
-                {
-                    MspSender.ConfirmCurrentPayload(ota8->tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS8_TELEMETRY_MAX_PACKAGES,
-                        tlmSenderDoubleBuffer, 2 * sizeof(ota8->tlm_dl.payload));
-                    packageIndexRadio1 = 0xFF;
-                    packageIndexRadio2 = 0xFF;
-                }
-            }
-            else
-            {
-                MspSender.ConfirmCurrentPayload(ota8->tlm_dl.tlmConfirm);
-                TelemetryReceiver.ReceiveData(ota8->tlm_dl.packageIndex & ELRS8_TELEMETRY_MAX_PACKAGES,
-                    ota8->tlm_dl.payload, sizeof(ota8->tlm_dl.payload));
-            }
+          ProcessOtaDataDl(
+            ota8->data_dl.packageIndex, ota8Second->data_dl.packageIndex,
+            ota8->data_dl.payload,
+            ota8Second->data_dl.payload,
+            sizeof(ota8->data_dl.payload),
+            ota8->data_dl.stubbornAck
+          );
         }
         break;
     }
@@ -319,13 +304,15 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
     switch (otaPktPtr->std.type)
     {
       case PACKET_TYPE_LINKSTATS:
-        LinkStatsFromOta(&otaPktPtr->std.tlm_dl.ul_link_stats.stats);
+        LinkStatsFromOta(&otaPktPtr->std.data_dl.ul_link_stats.stats);
 
-        // The Rx only has a single radio.  Force the Tx out of Gemini mode.
-        if (inGeminiMode() && !otaPktPtr->std.tlm_dl.ul_link_stats.trueDiversityAvailable)
-        {
-            config.SetAntennaMode(TX_RADIO_MODE_SWITCH);
-        }
+        ProcessOtaDataDl(
+          otaPktPtr->std.data_dl.packageIndex, otaPktPtrSecond->std.data_dl.packageIndex,
+          otaPktPtr->std.data_dl.ul_link_stats.payload,
+          otaPktPtrSecond->std.data_dl.ul_link_stats.payload,
+          sizeof(otaPktPtr->std.data_dl.ul_link_stats.payload),
+          otaPktPtr->std.data_dl.stubbornAck
+        );
         break;
 
       case PACKET_TYPE_DATA:
@@ -335,46 +322,13 @@ bool ICACHE_RAM_ATTR ProcessTLMpacket(SX12xxDriverCommon::rx_status const status
         }
         else
         {
-            if (inGeminiMode())
-            {
-                if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1)
-                {
-                    packageIndexRadio1 = otaPktPtr->std.tlm_dl.packageIndex;
-                    memcpy(tlmSenderDoubleBuffer, otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
-                }
-                else
-                {
-                    packageIndexRadio2 = otaPktPtr->std.tlm_dl.packageIndex;
-                    memcpy(&tlmSenderDoubleBuffer[sizeof(otaPktPtr->std.tlm_dl.payload)], otaPktPtr->std.tlm_dl.payload, sizeof(otaPktPtr->std.tlm_dl.payload));
-                }
-
-                if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_1 && Radio.hasSecondRadioGotData)
-                {
-                    packageIndexRadio2 = otaPktPtrSecond->std.tlm_dl.packageIndex;
-                    memcpy(&tlmSenderDoubleBuffer[sizeof(otaPktPtrSecond->std.tlm_dl.payload)], otaPktPtrSecond->std.tlm_dl.payload, sizeof(otaPktPtrSecond->std.tlm_dl.payload));
-                }
-                else if (Radio.GetProcessingPacketRadio() == SX12XX_Radio_2 && Radio.hasSecondRadioGotData)
-                {
-                    packageIndexRadio1 = otaPktPtrSecond->std.tlm_dl.packageIndex;
-                    memcpy(tlmSenderDoubleBuffer, otaPktPtrSecond->std.tlm_dl.payload, sizeof(otaPktPtrSecond->std.tlm_dl.payload));
-                }
-
-                if (packageIndexRadio1 == packageIndexRadio2 && packageIndexRadio1 != 0xFF)
-                {
-                    MspSender.ConfirmCurrentPayload(otaPktPtr->std.tlm_dl.tlmConfirm);
-                    TelemetryReceiver.ReceiveData(packageIndexRadio1 & ELRS4_TELEMETRY_MAX_PACKAGES,
-                        tlmSenderDoubleBuffer, 2 * sizeof(otaPktPtr->std.tlm_dl.payload));
-                    packageIndexRadio1 = 0xFF;
-                    packageIndexRadio2 = 0xFF;
-                }
-            }
-            else
-            {
-                MspSender.ConfirmCurrentPayload(otaPktPtr->std.tlm_dl.tlmConfirm);
-                TelemetryReceiver.ReceiveData(otaPktPtr->std.tlm_dl.packageIndex & ELRS4_TELEMETRY_MAX_PACKAGES,
-                    otaPktPtr->std.tlm_dl.payload,
-                    sizeof(otaPktPtr->std.tlm_dl.payload));
-            }
+          ProcessOtaDataDl(
+            otaPktPtr->std.data_dl.packageIndex, otaPktPtrSecond->std.data_dl.packageIndex,
+            otaPktPtr->std.data_dl.payload,
+            otaPktPtrSecond->std.data_dl.payload,
+            sizeof(otaPktPtr->std.data_dl.payload),
+            otaPktPtr->std.data_dl.stubbornAck
+          );
         }
         break;
     }
@@ -422,7 +376,7 @@ expresslrs_tlm_ratio_e ICACHE_RAM_ATTR UpdateTlmRatioEffective()
     uint8_t newTlmDenom = TLMratioEnumToValue(retVal);
     // Delay going into disconnected state when the TLM ratio increases
     if (connectionState == connected && ExpressLRS_currTlmDenom > newTlmDenom)
-      LastTLMpacketRecvMillis = SyncPacketLastSent;
+      LastTLMpacketRecv_Ms = SyncPacketLastSent;
     ExpressLRS_currTlmDenom = newTlmDenom;
   }
 
@@ -544,8 +498,8 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   OtaNonce = 0;
 
   OtaUpdateSerializers(newSwitchMode, ModParams->PayloadLength);
-  MspSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
-  TelemetryReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_TELEMETRY_MAX_PACKAGES : ELRS4_TELEMETRY_MAX_PACKAGES);
+  DataUlSender.setMaxPackageIndex(ELRS_MSP_MAX_PACKAGES);
+  DataDlReceiver.setMaxPackageIndex(OtaIsFullRes ? ELRS8_DATA_DL_MAX_PACKAGES : ELRS4_DATA_DL_MAX_PACKAGES);
 
   ExpressLRS_currAirRate_Modparams = ModParams;
   ExpressLRS_currAirRate_RFperfParams = RFperf;
@@ -566,7 +520,7 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
   if (lastRcData && (micros() - lastRcData > 1000000))
   {
     // The tx is in Mavlink mode and without a valid crsf or RC input.  Do not send stale or fake zero packet RC!
-    // Only send sync and MSP packets.
+    // Only send SYNC and DATA packets.
     if (config.GetLinkMode() == TX_MAVLINK_MODE)
     {
       dontSendChannelData = true;
@@ -613,29 +567,29 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       OtaPackAirportData(&otaPkt, &apInputBuffer);
     }
-    else if ((NextPacketIsMspData && MspSender.IsActive()) || dontSendChannelData)
+    else if ((NextPacketIsDataUl && DataUlSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_DATA;
       if (OtaIsFullRes)
       {
-        otaPkt.full.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.full.msp_ul.payload,
-          sizeof(otaPkt.full.msp_ul.payload));
+        otaPkt.full.data_ul.packageIndex = DataUlSender.GetCurrentPayload(
+          otaPkt.full.data_ul.payload,
+          sizeof(otaPkt.full.data_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.full.msp_ul.tlmConfirm = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.full.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
       else
       {
-        otaPkt.std.msp_ul.packageIndex = MspSender.GetCurrentPayload(
-          otaPkt.std.msp_ul.payload,
-          sizeof(otaPkt.std.msp_ul.payload));
+        otaPkt.std.data_ul.packageIndex = DataUlSender.GetCurrentPayload(
+          otaPkt.std.data_ul.payload,
+          sizeof(otaPkt.std.data_ul.payload));
         if (config.GetLinkMode() == TX_MAVLINK_MODE)
-          otaPkt.std.msp_ul.tlmConfirm = TelemetryReceiver.GetCurrentConfirm();
+          otaPkt.std.data_ul.stubbornAck = DataDlReceiver.GetCurrentConfirm();
       }
 
-      // send channel data next so the channel messages also get sent during msp transmissions
-      NextPacketIsMspData = false;
-      // counter can be increased even for normal msp messages since it's reset if a real bind message should be sent
+      // send channel data next so the channel messages also get sent during data uplink transmissions
+      NextPacketIsDataUl = false;
+      // counter can be increased even for normal DataUl messages since it's reset if a real bind message should be sent
       BindingSendCount++;
       // If not in TlmBurst, request a sync packet soon to trigger higher download bandwidth for reply
       if (syncTelemBoostState == stbIdle)
@@ -644,10 +598,10 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     }
     else
     {
-      // always enable msp after a channel package since the slot is only used if MspSender has data to send
-      NextPacketIsMspData = true;
+      // always enable DataUl after a channel package since the slot is only used if DataUlSender has data to send
+      NextPacketIsDataUl = true;
 
-      OtaPackChannelData(&otaPkt, ChannelData, TelemetryReceiver.GetCurrentConfirm());
+      OtaPackChannelData(&otaPkt, ChannelData, DataDlReceiver.GetCurrentConfirm());
     }
   }
 
@@ -882,11 +836,11 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
   // busyTransmitting is required here to prevent accidental rxdone IRQs due to interference triggering RXdoneISR.
   if (LqTQly.currentIsSet() || busyTransmitting)
   {
-    return false; // Already received tlm, do not run ProcessTLMpacket() again.
+    return false; // Already received tlm, do not run ProcessDownlinkPacket() again.
   }
 
   LbtCcaTimerStart();
-  const bool packetSuccessful = ProcessTLMpacket(status);
+  const bool packetSuccessful = ProcessDownlinkPacket(status);
   return packetSuccessful;
 }
 
@@ -957,7 +911,7 @@ static void UpdateConnectDisconnectStatus()
     (uint32_t)ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / RX_LOSS_CNT)
     ) + 2U;
   // Capture the last before now so it will always be <= now
-  const uint32_t lastTlmMillis = LastTLMpacketRecvMillis;
+  const uint32_t lastTlmMillis = LastTLMpacketRecv_Ms;
   const uint32_t now = millis();
   if (lastTlmMillis && ((now - lastTlmMillis) <= msConnectionLostTimeout))
   {
@@ -976,6 +930,8 @@ static void UpdateConnectDisconnectStatus()
     (connectionState == awaitingModelId && (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs))
   {
     setConnectionState(disconnected);
+    linkStats.uplink_Link_quality = 0;
+    LinkStatsLastReported_Ms = 0; // Notify immediately
     connectionHasModelMatch = true;
   }
 }
@@ -998,7 +954,7 @@ void SetSyncSpam()
 static void SendRxWiFiOverMSP()
 {
   MSPDataPackage[0] = MSP_ELRS_SET_RX_WIFI_MODE;
-  MspSender.SetDataToTransmit(MSPDataPackage, 1);
+  DataUlSender.SetDataToTransmit(MSPDataPackage, 1);
 }
 
 static void CheckReadyToSend()
@@ -1048,8 +1004,8 @@ void SendUIDOverMSP()
   MSPDataPackage[0] = MSP_ELRS_BIND;
   memcpy(&MSPDataPackage[1], &UID[2], 4);
   BindingSendCount = 0;
-  MspSender.ResetState();
-  MspSender.SetDataToTransmit(MSPDataPackage, 5);
+  DataUlSender.ResetState();
+  DataUlSender.SetDataToTransmit(MSPDataPackage, 5);
 }
 
 static void EnterBindingMode()
@@ -1084,7 +1040,7 @@ static void ExitBindingMode()
   if (!InBindingMode)
     return;
 
-  MspSender.ResetState();
+  DataUlSender.ResetState();
 
   // Reset CRCInit to UID-defined value
   OtaUpdateCrcInitFromUid();
@@ -1180,48 +1136,55 @@ static void HandleUARTout()
 
 static void HandleUARTin()
 {
-  // Read from the USB serial port
-  if (TxUSB->available())
+  if (firmwareOptions.is_airport)
   {
-    if (firmwareOptions.is_airport)
+    auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
+    if (size > 0)
     {
-      auto size = std::min(apInputBuffer.free(), (uint16_t)TxUSB->available());
-      if (size > 0)
+      uint8_t buf[size];
+      TxUSB->readBytes(buf, size);
+      apInputBuffer.lock();
+      apInputBuffer.pushBytes(buf, size);
+      apInputBuffer.unlock();
+    }
+    return;
+  }
+
+  // USB serial input
+  // If a mavlink packet is received on the USB input, automatically switch the link mode to and process as mavlink
+  // Otherwise, USB serial data is processed as CRSF
+  auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
+  if (size > 0)
+  {
+    uint8_t buf[size];
+    TxUSB->readBytes(buf, size);
+
+    // If the data is MAVLink, then auto change LinkMode and start the radio link
+    // since the user might be operating the module as a standalone unit without a handset.
+    if (connectionState == noCrossfire)
+    {
+      if (isThisAMavPacket(buf, size))
       {
-        uint8_t buf[size];
-        TxUSB->readBytes(buf, size);
-        apInputBuffer.lock();
-        apInputBuffer.pushBytes(buf, size);
-        apInputBuffer.unlock();
+        config.SetLinkMode(TX_MAVLINK_MODE);
+        UARTconnected();
       }
+    }
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+      uartInputBuffer.lock();
+      uartInputBuffer.pushBytes(buf, size);
+      uartInputBuffer.unlock();
     }
     else
     {
-      auto size = std::min(uartInputBuffer.free(), (uint16_t)TxUSB->available());
-      if (size > 0)
-      {
-        uint8_t buf[size];
-        TxUSB->readBytes(buf, size);
-        uartInputBuffer.lock();
-        uartInputBuffer.pushBytes(buf, size);
-        uartInputBuffer.unlock();
-
-        // Lets check if the data is Mav and auto change LinkMode
-        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
-        if (connectionState == noCrossfire)
-        {
-          if (isThisAMavPacket(buf, size))
-          {
-            config.SetLinkMode(TX_MAVLINK_MODE);
-            UARTconnected();
-          }
-        }
-      }
+      crsfParser.processBytes(&usbConnector, buf, size);
     }
   }
 
-  // Read from the Backpack serial port
-  if (BackpackOrLogStrm->available())
+  // Backpack serial input
+  // Backpack will not switch modes, but will process data as mavlink if the link mode is already set to mavlink
+  // Backpack serial data is ALSO always processed as backpack MSP
+  if (BackpackOrLogStrm != TxUSB && BackpackOrLogStrm->available())
   {
     auto size = std::min(uartInputBuffer.free(), (uint16_t)BackpackOrLogStrm->available());
     if (size > 0)
@@ -1236,8 +1199,8 @@ static void HandleUARTin()
         uartInputBuffer.pushBytes(buf, size);
         uartInputBuffer.unlock();
 
-        // The tx is in Mavlink mode and receiving data from the Backpack.
-        // Start the hwTimer since the user might be operating the module as a standalone unit without a handset.
+        // The TX is in MAVLink mode and receiving data from the Backpack,
+        // start the radio since the user might be operating the module as a standalone unit without a handset.
         if (connectionState == noCrossfire)
         {
           if (isThisAMavPacket(buf, size))
@@ -1249,6 +1212,27 @@ static void HandleUARTin()
 
       // Try to parse any MSP packets from the Backpack
       ParseMSPData(buf, size);
+    }
+  }
+
+  if (config.GetLinkMode() == TX_MAVLINK_MODE)
+  {
+    // Use DataUlSender for MAVLINK uplink data
+    uint8_t *nextPayload = 0;
+    uint8_t nextPlayloadSize = 0;
+    uint16_t count = uartInputBuffer.size();
+    if (count > 0 && !DataUlSender.IsActive())
+    {
+      count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
+      mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
+      mavlinkSSBuffer[1] = count;
+      // Following n bytes are just raw mavlink
+      uartInputBuffer.lock();
+      uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
+      uartInputBuffer.unlock();
+      nextPayload = mavlinkSSBuffer;
+      nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
+      DataUlSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
     }
   }
 }
@@ -1291,12 +1275,9 @@ static void setupSerial()
 #endif
   BackpackOrLogStrm = serialPort;
 
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
-  Serial.begin(460800);
-#endif
-
 // Setup TxUSB
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+  // Because we have ARDUINO_USB_MODE enabled, we use USBSerial as the USB device.
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
 #elif defined(PLATFORM_ESP32)
@@ -1315,7 +1296,7 @@ static void setupSerial()
   else
   {
     // The backpack is on a separate UART to UART0
-    // Set TxUSB to pins 3, 1 so that we can access TxUSB and BackpackOrLogStrm independantly
+    // Set TxUSB to UART0 default pins so that we can access TxUSB and BackpackOrLogStrm independantly
     TxUSB = new HardwareSerial(1);
     ((HardwareSerial *)TxUSB)->begin(firmwareOptions.uart_baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
   }
@@ -1409,6 +1390,20 @@ static void cyclePower()
   }
 }
 
+static void checkSendLinkStatsToHandset(uint32_t now)
+{
+  if ((now - LinkStatsLastReported_Ms) > firmwareOptions.tlm_report_interval)
+  {
+    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
+
+    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+    // the linkStats originates from the OTA connector so we don't send it back there.
+    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
+    LinkStatsLastReported_Ms = now;
+  }
+}
+
 void setup()
 {
   if (setupHardwareFromOptions())
@@ -1429,6 +1424,7 @@ void setup()
     crsfTransmitter.begin();
     crsfRouter.addConnector(&otaConnector);
     crsfRouter.addEndpoint(&crsfTransmitter);
+    crsfRouter.addConnector(&usbConnector);
     // When a CRSF handset is detected, it will add itself to the router
 
     handset->registerCallbacks(UARTconnected, firmwareOptions.is_airport ? nullptr : UARTdisconnected);
@@ -1462,7 +1458,7 @@ void setup()
     }
     else
     {
-      TelemetryReceiver.SetDataToReceive(CRSFinBuffer, sizeof(CRSFinBuffer));
+      DataDlReceiver.SetDataToReceive(CRSFinBuffer, sizeof(CRSFinBuffer));
 
       POWERMGNT::init();
       DynamicPower_Init();
@@ -1538,22 +1534,9 @@ void loop()
   CheckConfigChangePending();
   DynamicPower_Update(now);
   VtxPitmodeSwitchUpdate();
+  checkSendLinkStatsToHandset(now);
 
-  /* Send TLM updates to handset if connected + reporting period
-   * is elapsed. This keeps handset happy dispite of the telemetry ratio */
-  if ((connectionState == connected) && (LastTLMpacketRecvMillis != 0) &&
-      (now >= (uint32_t)(firmwareOptions.tlm_report_interval + TLMpacketReported)))
-  {
-    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
-
-    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
-    // the linkStats originates from the OTA connector so we don't send it back there.
-    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
-    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
-    TLMpacketReported = now;
-  }
-
-  if (TelemetryReceiver.HasFinishedData())
+  if (DataDlReceiver.HasFinishedData())
   {
       if (CRSFinBuffer[0] == CRSF_ADDRESS_USB)
       {
@@ -1561,7 +1544,7 @@ void loop()
         {
           const uint8_t count = CRSFinBuffer[CRSF_TELEMETRY_LENGTH_INDEX];
           // Convert to CRSF telemetry where we can and send to handset
-          convert_mavlink_to_crsf_telem(&otaConnector, CRSFinBuffer, count);
+          convert_mavlink_to_crsf_telem(CRSF_ADDRESS_RADIO_TRANSMITTER, CRSFinBuffer, count);
           // forward raw mavlink data to USB
           TxUSB->write(CRSFinBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
           // And to the backpack if we have one
@@ -1573,14 +1556,14 @@ void loop()
       }
       else
       {
-        // Send all other tlm to handset
+        // Send all other tlm to CRSF router
         crsfRouter.processMessage(&otaConnector, (crsf_header_t *)CRSFinBuffer);
         sendCRSFTelemetryToBackpack(CRSFinBuffer);
       }
-      TelemetryReceiver.Unlock();
+      DataDlReceiver.Unlock();
   }
 
-  // only send msp data when binding is not active
+  // only send Uplink data when binding is not active
   if (InBindingMode)
   {
 #if defined(RADIO_LR1121)
@@ -1596,29 +1579,8 @@ void loop()
       ExitBindingMode();
     }
   }
-  else if (!MspSender.IsActive())
+  else if (!DataUlSender.IsActive())
   {
     otaConnector.pumpSender();
-  }
-
-  if (config.GetLinkMode() == TX_MAVLINK_MODE)
-  {
-    // Use MspSender for MAVLINK uplink data
-    uint8_t *nextPayload = 0;
-    uint8_t nextPlayloadSize = 0;
-    uint16_t count = uartInputBuffer.size();
-    if (count > 0 && !MspSender.IsActive())
-    {
-        count = std::min(count, (uint16_t)CRSF_PAYLOAD_SIZE_MAX);
-        mavlinkSSBuffer[0] = MSP_ELRS_MAVLINK_TLM; // Used on RX to differentiate between std msp opcodes and mavlink
-        mavlinkSSBuffer[1] = count;
-        // Following n bytes are just raw mavlink
-        uartInputBuffer.lock();
-        uartInputBuffer.popBytes(mavlinkSSBuffer + CRSF_FRAME_NOT_COUNTED_BYTES, count);
-        uartInputBuffer.unlock();
-        nextPayload = mavlinkSSBuffer;
-        nextPlayloadSize = count + CRSF_FRAME_NOT_COUNTED_BYTES;
-        MspSender.SetDataToTransmit(nextPayload, nextPlayloadSize);
-    }
   }
 }

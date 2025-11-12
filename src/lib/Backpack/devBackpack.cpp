@@ -2,13 +2,11 @@
 
 #include "CRSFHandset.h"
 #include "CRSFRouter.h"
-#include "TXOTAConnector.h"  // Not needed once hack for forwarding headtracking is removed
 #include "config.h"
 #include "device.h"
 #include "logging.h"
 #include "msp.h"
 #include "msptypes.h"
-#include "telemetry.h"
 
 // How often to check for backpack commands
 #define BACKPACK_PERIOD_MS  20
@@ -301,16 +299,8 @@ static void headtrackPublishChannelsToEdgeTX()
             bitCnt -= 8;
         }
     }
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2, CRSF_ADDRESS_RADIO_TRANSMITTER);
-    /***
-     * MAJOR HACK MAJOR HACK MAJOR HACK MAJOR HACK MAJOR HACK MAJOR HACK MAJOR HACK MAJOR HACK
-     * This packet has no extended header so the router doesn't know where to send it and will therefore broadcast it.
-     * That includes the otaConnector, which will then package it up and send it to the receiver, where it will generate
-     * an out of band channels packet that goes to the flight controller.
-     * NEEDS FIX
-     * */
-    extern TXOTAConnector otaConnector;
-    crsfRouter.deliverMessage(&otaConnector, &rcPacket.h);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2);
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &rcPacket.h);
 }
 
 void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)

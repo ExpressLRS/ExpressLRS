@@ -45,10 +45,10 @@ public:
     bool IQinverted;
 
     SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
     SX12XX_Radio_Number_t transmittingRadio;
+    SX12XX_Radio_Number_t strongestReceivingRadio;
     SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
-    SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
+    SX12XX_Radio_Number_t GetStrongestReceivingRadio() { return strongestReceivingRadio; }
     SX12XX_Radio_Number_t GetLastTransmitRadio() {return transmittingRadio; }
 
     /////////////Packet Stats//////////
