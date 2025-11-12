@@ -44,7 +44,7 @@ static uint8_t mspState = STOP_MSPVTX;
 static void sendCrsfMspToFC(uint8_t *mspFrame, uint8_t mspFrameSize)
 {
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)mspFrame, CRSF_FRAMETYPE_MSP_REQ, mspFrameSize, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_RECEIVER);
-    crsfRouter.deliverMessage(nullptr, (crsf_header_t *)mspFrame);
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_FLIGHT_CONTROLLER, (crsf_header_t *)mspFrame);
 }
 
 static void sendVtxConfigCommand(void)
