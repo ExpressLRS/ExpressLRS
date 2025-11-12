@@ -985,7 +985,10 @@ void RxConfig::UpgradeEepromV9V10(uint8_t ver)
         CONFCOPY(sourceSysId);
     }
     for (unsigned ch=0; ch<16; ++ch)
-        PwmConfigV9(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
+    {
+        if (m_config.pwmChannels[ch].val.mode > somDShot)
+            m_config.pwmChannels[ch].val.mode += 1;
+    }
 }
 
 /**

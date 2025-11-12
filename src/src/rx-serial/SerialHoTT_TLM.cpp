@@ -5,7 +5,6 @@
 #include "CRSFRouter.h"
 #include "FIFO.h"
 #include "common.h"
-#include "telemetry.h"
 
 #define NOT_FOUND 0xff          // no device found indicator
 
@@ -32,8 +31,6 @@
 constexpr uint8_t SIZE_8BIT = 1;
 constexpr uint8_t SIZE_16BIT = 2;
 constexpr uint8_t SIZE_24BIT = 3;
-
-extern Telemetry telemetry;
 
 SerialHoTT_TLM::SerialHoTT_TLM(Stream &out, Stream &in, const int8_t serial1TXpin)
     : SerialIO(&out, &in)
@@ -284,19 +281,19 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
 void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBaroSensorDetected();
+    crsfBaroSensorDetected = true;
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_baro_vario_t) crsfBaro = {0};
     crsfBaro.p.altitude = htobe16(getHoTTaltitude() * 10 + 5000); // Hott 500 = 0m, ELRS 10000 = 0.0m
     crsfBaro.p.verticalspd = htobe16(getHoTTvv() - HOTT_VSPD_OFFSET);
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBaro, CRSF_FRAMETYPE_BARO_ALTITUDE, CRSF_FRAME_SIZE(sizeof(crsf_sensor_baro_vario_t)));
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastVarioSent >= VARIO_MIN_CRSFRATE) || (lastVarioCRC != crsfBaro.crc))
     {
         lastVarioSent = now;
-        crsfRouter.deliverMessage(nullptr, &crsfBaro.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBaro.h);
     }
 
     lastVarioCRC = crsfBaro.crc;
@@ -312,13 +309,13 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
     crsfGPS.p.gps_heading = htobe16(getHoTTheading() * 100);
     crsfGPS.p.altitude = htobe16(getHoTTMSLaltitude() + 1000); // HoTT 1 = 1m, CRSF: 0m = 1000
     crsfGPS.p.satellites_in_use = getHoTTsatellites();
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfGPS, CRSF_FRAMETYPE_GPS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)));
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastGPSSent >= GPS_MIN_CRSFRATE) || (lastGPSCRC != crsfGPS.crc))
     {
         lastGPSSent = now;
-        crsfRouter.deliverMessage(nullptr, &crsfGPS.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfGPS.h);
     }
 
     lastGPSCRC = crsfGPS.crc;
@@ -327,7 +324,7 @@ void SerialHoTT_TLM::sendCRSFgps(uint32_t now)
 void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
 {
     // indicate external sensor is present
-    telemetry.SetCrsfBatterySensorDetected();
+    crsfBatterySensorDetected = true;
 
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfBatt = {0};
@@ -335,13 +332,13 @@ void SerialHoTT_TLM::sendCRSFbattery(uint32_t now)
     crsfBatt.p.current = htobe16(getHoTTcurrent());
     crsfBatt.p.capacity = htobe24(getHoTTcapacity() * 10); // HoTT: 1 = 10mAh, CRSF: 1 ? 1 = 1mAh
     crsfBatt.p.remaining = getHoTTremaining();
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfBatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastBatterySent >= BATT_MIN_CRSFRATE) || (lastBatteryCRC != crsfBatt.crc))
     {
         lastBatterySent = now;
-        crsfRouter.deliverMessage(nullptr, &crsfBatt.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfBatt.h);
     }
 
     lastBatteryCRC = crsfBatt.crc;
@@ -381,7 +378,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
         }
     }
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfRpm, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfRpm, CRSF_FRAMETYPE_RPM, CRSF_FRAME_SIZE(payloadSize));
 
     uint8_t crc = ((uint8_t *)&crsfRpm.p)[payloadSize];
 
@@ -390,7 +387,7 @@ void SerialHoTT_TLM::sendCRSFrpm(uint32_t now, HoTTDevices device)
     {
         lastRpmSent = now;
 
-        crsfRouter.deliverMessage(nullptr, &crsfRpm.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfRpm.h);
     }
 
     lastRpmCRC = crc;
@@ -434,7 +431,7 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
         } 
     }
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfTemp, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfTemp, CRSF_FRAMETYPE_TEMP, CRSF_FRAME_SIZE(payloadSize));
 
     uint8_t crc = ((uint8_t *)&crsfTemp.p)[payloadSize];
 
@@ -443,7 +440,7 @@ void SerialHoTT_TLM::sendCRSFtemp(uint32_t now, HoTTDevices device)
     {
         lastTempSent = now;
 
-        crsfRouter.deliverMessage(nullptr, &crsfTemp.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfTemp.h);
     }
 
     lastTempCRC = crc;
@@ -491,7 +488,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
         payloadSize = SIZE_8BIT + SIZE_16BIT * 6;
     }
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfCells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfCells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize));
 
     uint8_t crc = ((uint8_t *)&crsfCells.p)[payloadSize];
 
@@ -500,7 +497,7 @@ void SerialHoTT_TLM::sendCRSFcells(uint32_t now, HoTTDevices device)
     {
         lastCellsSent = now;
 
-        crsfRouter.deliverMessage(nullptr, &crsfCells.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfCells.h);
     }
 
     lastCellsCRC = crc;
@@ -535,7 +532,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
         payloadSize = SIZE_8BIT + SIZE_16BIT * 2;
     }
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfVolt, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfVolt, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadSize));
 
     uint8_t crc = ((uint8_t *)&crsfVolt.p)[payloadSize];
 
@@ -544,7 +541,7 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
     {
         lastVoltSent = now;
 
-        crsfRouter.deliverMessage(nullptr, &crsfVolt.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfVolt.h);
     }
 
     lastVoltCRC = crc;
@@ -568,14 +565,14 @@ void SerialHoTT_TLM::sendCRSFairspeed(uint32_t now, HoTTDevices device)
         crsfAirspeed.p.speed = htobe16(esc.speed * HOTT_SPEED_SCALE_EAM);
     }
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAirspeed, CRSF_FRAMETYPE_AIRSPEED, CRSF_FRAME_SIZE(sizeof(crsf_sensor_airspeed_t)), CRSF_ADDRESS_RADIO_TRANSMITTER);
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAirspeed, CRSF_FRAMETYPE_AIRSPEED, CRSF_FRAME_SIZE(sizeof(crsf_sensor_airspeed_t)));
 
     // send packet only if min rate timer expired or values have changed
     if ((now - lastAirspeedSent >= AIRSPEED_MIN_CRSFRATE) || (lastAirspeedCRC != crsfAirspeed.crc))
     {
         lastAirspeedSent = now;
 
-        crsfRouter.deliverMessage(nullptr, &crsfAirspeed.h);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfAirspeed.h);
     }
 
     lastAirspeedCRC = crsfAirspeed.crc;
