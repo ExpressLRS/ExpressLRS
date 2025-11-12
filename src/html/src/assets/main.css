@@ -69,7 +69,7 @@ button {
     padding: 6px;
     z-index: 2;
     position: fixed;
-    width: calc(100% - var(--drawer-width));
+    width: 100%;
     top: calc(100% - var(--footer-height));
 }
 
@@ -97,6 +97,7 @@ body.hide-sidedrawer #footer {
 
     #footer {
         margin-left: var(--drawer-width);
+        width: calc(100% - var(--drawer-width));
     }
 
     body.hide-sidedrawer #header {
@@ -218,8 +219,10 @@ body.hide-sidedrawer #footer {
     a.sidedrawer-toggle.js-hide-sidedrawer {
         display: none !important;
     }
+    #footer {
+        width: 100% !important;
+    }
 }
-
 
 /* Wide screens (>=1024px): make sidedrawer persistent on all devices */
 @media (min-width: 64em) {
@@ -237,6 +240,7 @@ body.hide-sidedrawer #footer {
 
     #footer {
         margin-left: var(--drawer-width);
+        width: calc(100% - var(--drawer-width));
     }
 
     body.hide-sidedrawer #header {
