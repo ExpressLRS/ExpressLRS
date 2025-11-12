@@ -95,6 +95,7 @@ typedef enum : uint8_t
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
+    CRSF_ADDRESS_BLUETOOTH_WIFI = 0x12,
     CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
     CRSF_ADDRESS_RESERVED1 = 0x8A,
     CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
@@ -141,7 +142,7 @@ typedef enum : uint8_t
  */
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t sync_byte;
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     crsf_frame_type_e type;
     uint8_t payload[0];

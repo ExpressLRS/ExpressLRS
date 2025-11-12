@@ -94,7 +94,7 @@ void create_test_message(crsf_ext_header_t *msg, crsf_frame_type_e type, crsf_ad
 void create_simple_test_message(crsf_header_t *msg, crsf_frame_type_e type, crsf_addr_e dest_device_addr)
 {
     memset(msg, 0, sizeof(crsf_header_t)); // Start clean
-    msg->device_addr = dest_device_addr;
+    msg->sync_byte = dest_device_addr;
     msg->frame_size = 2; // Size includes type
     msg->type = type;
 }
