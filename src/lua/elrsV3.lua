@@ -10,6 +10,7 @@ local EXITVER = "-- EXIT (Lua r16) --"
 local deviceId = 0xEE
 local handsetId = 0xEF
 local deviceName = nil
+local expectedDeviceId = 0xEE  -- FIX: Track expected device ID to prevent race conditions
 local lineIndex = 1
 local pageOffset = 0
 local edit = nil
@@ -18,6 +19,7 @@ local fieldTimeout = 0
 local loadQ = {}
 local fieldChunk = 0
 local fieldData = nil
+local fieldChunkTimeout = 0  -- FIX: Add timeout for chunked transmission to prevent memory leak
 local fields = {}
 local devices = {}
 local goodBadPkt = ""
@@ -139,12 +141,25 @@ end
 local function fieldGetStrOrOpts(data, offset, last, isOpts)
   -- For isOpts: Split a table of byte values (string) with ; separator into a table
   -- Else just read a string until the first null byte
+  -- FIX: Add boundary check to prevent buffer overflow
+  if not data or offset < 1 or offset > #data then
+    return last or (isOpts and {}) or '', offset, 0
+  end
+
   local r = last or (isOpts and {})
   local opt = ''
   local vcnt = 0
+  local maxIterations = #data - offset + 1  -- FIX: Prevent infinite loop
+
   repeat
+    -- FIX: Check if we're still within bounds
+    if offset > #data then
+      break
+    end
+
     local b = data[offset]
     offset = offset + 1
+    maxIterations = maxIterations - 1  -- FIX: Decrement counter
 
     if not last then
       if r and (b == 59 or b == 0) then -- ';'
@@ -163,7 +178,7 @@ local function fieldGetStrOrOpts(data, offset, last, isOpts)
         })[b] or string.char(b))
       end
     end
-  until b == 0
+  until b == 0 or maxIterations <= 0  -- FIX: Add safety exit condition
 
   return (r or opt), offset, vcnt, collectgarbage("collect")
 end
@@ -177,6 +192,11 @@ local function getDevice(id)
 end
 
 local function fieldGetValue(data, offset, size)
+  -- FIX: Add boundary check to prevent buffer overflow
+  if not data or offset < 1 or (offset + size - 1) > #data then
+    return 0  -- Return safe default value if out of bounds
+  end
+
   local result = 0
   for i=0, size-1 do
     result = bit32.lshift(result, 8) + data[offset + i]
@@ -186,6 +206,10 @@ end
 
 local function reloadCurField()
   local field = getField(lineIndex)
+  -- FIX: Add nil check to prevent crash
+  if not field then
+    return
+  end
   fieldTimeout = 0
   fieldChunk = 0
   fieldData = nil
@@ -251,14 +275,20 @@ end
 -- -- FLOAT
 local function fieldFloatLoad(field, data, offset)
   fieldSignedLoad(field, data, offset, 4, 21)
-  field.prec = data[offset+16]
-  if field.prec > 3 then
-    field.prec = 3
+  -- FIX: Add boundary check and validation for precision
+  if offset + 16 > #data then
+    field.prec = 0
+  else
+    field.prec = data[offset+16]
+    -- FIX: Validate precision is within safe bounds (0-3)
+    if field.prec < 0 or field.prec > 3 then
+      field.prec = 3
+    end
   end
   field.step = fieldGetValue(data, offset+17, 4)
 
   -- precompute the format string to preserve the precision
-  field.fmt = "%." .. tostring(field.prec) .. "f" .. field.unit
+  field.fmt = "%." .. tostring(field.prec) .. "f" .. (field.unit or "")
   -- Convert precision to a divider
   field.prec = 10 ^ field.prec
 end
@@ -375,9 +405,18 @@ end
 
 local function changeDeviceId(devId) --change to selected device ID
   local device = getDevice(devId)
+  -- FIX: Add nil check for device
+  if not device then return end
   if deviceId == devId and fields_count == device.fldcnt then return end
 
+  -- FIX: Clear any pending chunked data before switching devices to prevent race condition
+  fieldData = nil
+  fieldChunk = 0
+  fieldChunkTimeout = 0
+  expectChunksRemain = -1
+
   deviceId = devId
+  expectedDeviceId = devId  -- FIX: Set expected device ID
   elrsFlags = 0
   currentFolderId = nil
   deviceName = device.name
@@ -436,15 +475,22 @@ local functions = {
 
 local function parseParameterInfoMessage(data)
   local fieldId = (fieldPopup and fieldPopup.id) or loadQ[#loadQ]
-  if data[2] ~= deviceId or data[3] ~= fieldId then
+  -- FIX: Check against expectedDeviceId to prevent race condition when switching devices
+  if data[2] ~= expectedDeviceId or data[3] ~= fieldId then
+    -- FIX: Clear chunk state when receiving data for wrong device/field
     fieldData = nil
     fieldChunk = 0
+    fieldChunkTimeout = 0
     return
   end
   local field = fields[fieldId]
   local chunksRemain = data[4]
   -- If no field or the chunksremain changed when we have data, don't continue
   if not field or (fieldData and chunksRemain ~= expectChunksRemain) then
+    -- FIX: Clear stale chunk data to prevent memory leak
+    fieldData = nil
+    fieldChunk = 0
+    fieldChunkTimeout = 0
     return
   end
 
@@ -466,6 +512,8 @@ local function parseParameterInfoMessage(data)
   if chunksRemain > 0 then
     fieldChunk = fieldChunk + 1
     expectChunksRemain = chunksRemain - 1
+    -- FIX: Set timeout for next chunk (5 seconds)
+    fieldChunkTimeout = getTime() + 500
   else
     -- Field data stream is now complete, process into a field
     loadQ[#loadQ] = nil
@@ -483,8 +531,10 @@ local function parseParameterInfoMessage(data)
       if field.max == 0 then field.max = nil end
     end
 
+    -- FIX: Clear chunk state after successful completion
     fieldChunk = 0
     fieldData = nil
+    fieldChunkTimeout = 0
 
     -- Return value is if the screen should be updated
     -- If deviceId is TX module, then the Bad/Good drives the update; for other
@@ -494,7 +544,8 @@ local function parseParameterInfoMessage(data)
 end
 
 local function parseElrsInfoMessage(data)
-  if data[2] ~= deviceId then
+  -- FIX: Check against expectedDeviceId to prevent race condition
+  if data[2] ~= expectedDeviceId then
     fieldData = nil
     fieldChunk = 0
     return
@@ -553,6 +604,19 @@ local function refreshNext(skipPush)
   if skipPush then return end
 
   local time = getTime()
+  -- FIX: Check for chunked transmission timeout to prevent memory leak
+  if fieldChunkTimeout > 0 and time > fieldChunkTimeout then
+    -- Timeout occurred, clear stuck chunked transmission
+    fieldData = nil
+    fieldChunk = 0
+    fieldChunkTimeout = 0
+    expectChunksRemain = -1
+    -- Re-request the field from the beginning
+    if #loadQ > 0 then
+      fieldTimeout = 0
+    end
+  end
+
   if fieldPopup then
     if time > fieldTimeout and fieldPopup.status ~= 3 then
       crossfireTelemetryPush(0x2D, { deviceId, handsetId, fieldPopup.id, 6 }) -- lcsQuery
