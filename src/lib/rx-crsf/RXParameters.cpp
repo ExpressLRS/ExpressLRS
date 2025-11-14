@@ -250,7 +250,6 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 #if defined(PLATFORM_ESP32)
     // DShot output (2 options)
     // ;DShot;DShot3D
-    // ESP8266 enum skips this, so it is never present
     if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)   // DShot doesn't work with GPIO0, exclude it
     {
         pModeString = dshot;
@@ -336,16 +335,16 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
             pModeString = serial1_TX;
         }
         else
-        { 
+        {
             pModeString = no2Options;
         }
-    } 
+    }
     else
     {   // otherwise allow any pin to be either RX or TX but only once
         if (serial1txAssigned && !serial1rxAssigned)
         {
             pModeString = serial1_RX;
-        }        
+        }
         else if (serial1rxAssigned && !serial1txAssigned)
         {
             pModeString = serial1_TX;
@@ -354,7 +353,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
         else if (!serial1rxAssigned && !serial1txAssigned)
         {
             pModeString = serial1_BOTH;
-        } 
+        }
         else
         {
             pModeString = no2Options;
@@ -610,7 +609,7 @@ void RXEndpoint::updateParameters()
     setTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
   }
 #endif
-  
+
   setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)

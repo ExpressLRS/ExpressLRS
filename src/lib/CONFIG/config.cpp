@@ -936,12 +936,10 @@ void RxConfig::UpgradeEepromV7V8(uint8_t ver)
     CONFCOPY(serialProtocol);
     CONFCOPY(failsafeMode);
 
-    bool isV8 = ver == 8;
     for (unsigned ch=0; ch<16; ++ch)
     {
         m_config.pwmChannels[ch].raw = old.pwmChannels[ch].raw;
-        if (!isV8 && m_config.pwmChannels[ch].val.mode > somOnOff)
-            m_config.pwmChannels[ch].val.mode += 1;
+        m_config.pwmChannels[ch].val.mode = toServoOutputModeCurrent(ver, old.pwmChannels[ch].val.mode);
     }
 }
 
@@ -953,7 +951,7 @@ static void PwmConfigV9(v9_rx_config_pwm_t const * const old, rx_config_pwm_t * 
     current->val.failsafe = toFailsafeV10(old->val.failsafe);
     current->val.inputChannel = old->val.inputChannel;
     current->val.inverted = old->val.inverted;
-    current->val.mode = old->val.mode;
+    current->val.mode = toServoOutputModeCurrent(10, old->val.mode);
     current->val.narrow = old->val.narrow;
     current->val.failsafeMode = old->val.failsafeMode;
 }
@@ -985,10 +983,7 @@ void RxConfig::UpgradeEepromV9V10(uint8_t ver)
         CONFCOPY(sourceSysId);
     }
     for (unsigned ch=0; ch<16; ++ch)
-    {
-        if (m_config.pwmChannels[ch].val.mode > somDShot)
-            m_config.pwmChannels[ch].val.mode += 1;
-    }
+        PwmConfigV9(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
 }
 
 /**
