@@ -836,6 +836,22 @@ static unsigned toFailsafeV10(unsigned oldFailsafe)
     return oldFailsafe + (988 - CHANNEL_VALUE_FS_US_MIN);
 }
 
+/**
+ * @brief Convert rx_config_pwm_t.mode to what should be its current value, taking
+ * into account every time some jerk inserted a value in the middle instead of the end
+ * (eServoOutputMode)
+ */
+static uint8_t toServoOutputModeCurrent(uint8_t verStart, uint8_t mode)
+{
+    // somDShot
+    if (verStart < 8 && mode > somOnOff)
+        mode += 1;
+    // somDShot3D
+    if (verStart < 11 && mode > somDShot)
+        mode += 1;
+    return mode;
+}
+
 // ========================================================
 // V4 Upgrade
 
