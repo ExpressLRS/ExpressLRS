@@ -833,7 +833,7 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
 static unsigned toFailsafeV10(unsigned oldFailsafe)
 {
     // the old failsafe was 988+value, new is 476+value
-    return oldFailsafe + (988-476);
+    return oldFailsafe + (988 - CHANNEL_VALUE_FS_US_MIN);
 }
 
 /**
@@ -1207,7 +1207,8 @@ RxConfig::SetDefaults(bool commit)
             }
 #endif
         }
-        const uint16_t failsafe = ch == 2 ? 0 : 512; // ch2 is throttle, failsafe it to 988
+        const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN : 
+                                            CHANNEL_VALUE_FS_US_MID - CHANNEL_VALUE_FS_US_MIN; // ch2 is throttle, failsafe it to 885
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
     }
 
