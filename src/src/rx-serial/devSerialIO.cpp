@@ -234,7 +234,7 @@ static int timeout(devserial_ctx_t *ctx)
     for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
     {
         const uint32_t crsfVal = ChannelData[i];
-        localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_MID : crsfVal;
+        localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_EXT_MIN : crsfVal;
     }
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, localChannelData);
 }
