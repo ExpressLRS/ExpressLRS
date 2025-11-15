@@ -882,7 +882,7 @@ static void PwmConfigV5(v5_rx_config_pwm_t const * const v5, rx_config_pwm_t * c
     current->val.failsafe = toFailsafeV10(v5->val.failsafe);
     current->val.inputChannel = v5->val.inputChannel;
     current->val.inverted = v5->val.inverted;
-    current->val.stretched = v5->val.narrow;
+    current->val.narrow = v5->val.narrow;
     current->val.mode = v5->val.mode;
     if (v5->val.mode > som400Hz)
     {
@@ -914,7 +914,7 @@ static void PwmConfigV6(v6_rx_config_pwm_t const * const v6, rx_config_pwm_t * c
     current->val.failsafe = toFailsafeV10(v6->val.failsafe);
     current->val.inputChannel = v6->val.inputChannel;
     current->val.inverted = v6->val.inverted;
-    current->val.stretched = v6->val.narrow;
+    current->val.narrow = v6->val.narrow;
     current->val.mode = v6->val.mode;
 }
 
