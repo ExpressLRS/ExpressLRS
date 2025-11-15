@@ -1,7 +1,6 @@
 #include "TXModuleEndpoint.h"
 
 #include "CRSFHandset.h"
-#include "common.h"
 #include "logging.h"
 
 #include "FHSS.h"
@@ -96,11 +95,13 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     constexpr unsigned inputChannelMask = (1 << srcBits) - 1;
     constexpr unsigned precisionShift = dstBits - srcBits;
 
+    uint32_t localChannelData[CRSF_NUM_CHANNELS];
+
     // code from BetaFlight rx/crsf.cpp / bitpacker_unpack
     uint8_t bitsMerged = 0;
     uint32_t readValue = 0;
     unsigned readByteIndex = 0;
-    for (uint32_t & n : ChannelData)
+    for (uint32_t & n : localChannelData)
     {
         while (bitsMerged < srcBits)
         {
@@ -114,14 +115,14 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
         bitsMerged -= srcBits;
     }
 
-    handset->SetRCDataReceived();
+    handset->PerformChannelOverrides(localChannelData, CRSF_NUM_CHANNELS);
 
     //
     // sends channel data and also communicates commanded armed status in arming mode Switch.
     // frame len 24 -> arming mode CH5: use channel 5 value
     // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
     //
-    armCmd = message->frame_size == 24 ? CRSF_to_BIT(ChannelData[4]) : payload[readByteIndex];
+    armCmd = message->frame_size == 24 ? CRSF_to_BIT(localChannelData[4]) : payload[readByteIndex];
 
     // monitoring arming state
     if (lastArmCmd != armCmd)
@@ -132,4 +133,6 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
         devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);
 #endif
     }
+
+    handset->RCDataReceived(localChannelData, CRSF_NUM_CHANNELS);
 }

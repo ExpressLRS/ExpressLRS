@@ -80,7 +80,6 @@ public:
 };
 
 static HardwareSerial Serial;
-static Stream *SerialLogger = &Serial;
 
 inline void interrupts() {}
 inline void noInterrupts() {}

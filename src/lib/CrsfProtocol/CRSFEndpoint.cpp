@@ -254,7 +254,7 @@ uint8_t CRSFEndpoint::sendParameter(const crsf_addr_e origin, const bool isElrs,
     chunkStart[1] = chunkCnt - (fieldChunk + 1); // ChunksRemain
     memcpy(paramInformation + sizeof(crsf_ext_header_t), chunkStart, chunkSize + 2);
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)paramInformation, frameType, CRSF_EXT_FRAME_SIZE(chunkSize + 2), origin, device_id);
-    crsfRouter.deliverMessage(nullptr, (crsf_header_t *)paramInformation);
+    crsfRouter.deliverMessageTo(origin, (crsf_header_t *)paramInformation);
     return chunkCnt - (fieldChunk + 1);
 }
 
@@ -304,9 +304,9 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
     switch (parameterType)
     {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
-        DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
         if (parameterIndex < MAX_CRSF_PARAMETERS && paramCallbacks[parameterIndex])
         {
+            DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
             // While the command is executing, the handset will send `WRITE state=lcsQuery`.
             // paramCallbacks will set the value when nextStatusChunk == 0, or send any
             // remaining chunks when nextStatusChunk != 0
@@ -411,5 +411,5 @@ void CRSFEndpoint::sendDeviceInformationPacket()
     device->fieldCnt = lastParameter;
     device->parameterVersion = 0;
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin, device_id);
-    crsfRouter.deliverMessage(nullptr, (crsf_header_t *)deviceInformation);
+    crsfRouter.deliverMessageTo(requestOrigin, (crsf_header_t *)deviceInformation);
 }

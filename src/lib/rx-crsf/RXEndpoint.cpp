@@ -1,17 +1,12 @@
 #include "RXEndpoint.h"
 
 #if !defined(UNIT_TEST)
-#include "CRSFParameters.h"
 #include "config.h"
-#include "crsf2msp.h"
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
 #include "logging.h"
 #include "msptypes.h"
-#include "tcpsocket.h"
-
-extern TCPSOCKET wifi2tcp;
 
 extern void reset_into_bootloader();
 
@@ -27,7 +22,7 @@ RXEndpoint::RXEndpoint()
  */
 bool RXEndpoint::handleRaw(const crsf_header_t *message)
 {
-    if (message->device_addr == CRSF_ADDRESS_CRSF_RECEIVER && message->frame_size >= 4 && message->type == CRSF_FRAMETYPE_COMMAND)
+    if (message->sync_byte == CRSF_ADDRESS_CRSF_RECEIVER && message->frame_size >= 4 && message->type == CRSF_FRAMETYPE_COMMAND)
     {
         uint8_t *payload = (uint8_t *)message + sizeof(crsf_header_t);
         // Non CRSF, dest=b src=l -> reboot to bootloader
@@ -53,13 +48,6 @@ bool RXEndpoint::handleRaw(const crsf_header_t *message)
 void RXEndpoint::handleMessage(const crsf_header_t *message)
 {
     const auto extMessage = (crsf_ext_header_t *)message;
-
-    // this needs refactoring in the future; convert the TCPSocket into a CRSFConnector, and this bit would move there
-    if (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ) // if we have a client we probs wanna talk to it
-    {
-        DBGLN("Got MSP frame, forwarding to client");
-        wifi2tcp.crsfMspIn((uint8_t *)message);
-    }
 
     if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {

@@ -51,7 +51,7 @@ SX1280Driver::SX1280Driver(): SX12xxDriverCommon()
 {
     instance = this;
     currOpmode = SX1280_MODE_SLEEP;
-    lastSuccessfulPacketRadio = SX12XX_Radio_1;
+    strongestReceivingRadio = SX12XX_Radio_1;
     fallBackMode = SX1280_MODE_STDBY_RC;
 }
 
@@ -645,15 +645,15 @@ void ICACHE_RAM_ATTR SX1280Driver::GetLastPacketStats()
         }
     }
 
-    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
-    instance->lastSuccessfulPacketRadio = instance->processingPacketRadio;
+    // by default, set the strongest receiving radio to be the current processing radio (which got a successful packet)
+    instance->strongestReceivingRadio = instance->processingPacketRadio;
 
     // when both radio got the packet, use the better RSSI one
     if(gotRadio[0] && gotRadio[1])
     {
         LastPacketSNRRaw = instance->fuzzy_snr(snr[0], snr[1], instance->FuzzySNRThreshold);
-        // Update the last successful packet radio to be the one with better signal strength
-        instance->lastSuccessfulPacketRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
+        // Update the strongest receiving radio to be the one with better signal strength
+        instance->strongestReceivingRadio = (rssi[0]>rssi[1])? radio[0]: radio[1];
     }
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)

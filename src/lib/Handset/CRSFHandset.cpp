@@ -192,7 +192,7 @@ void CRSFHandset::sendSyncPacketToTX() // in values in us.
             },
             .crc = crsfRouter.crsf_crc.calc((uint8_t *)&sync_packet + CRSF_TELEMETRY_TYPE_INDEX, sizeof(sync_packet)-3)
         };
-        crsfRouter.deliverMessage(nullptr, (crsf_header_t *)&sync_packet);
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, (crsf_header_t *)&sync_packet);
 
         OpenTXsyncLastSent = now;
     }
@@ -587,7 +587,7 @@ bool CRSFHandset::UARTwdt()
 #ifdef DEBUG_OPENTX_SYNC
         if (abs((int)((1000000 / (ExpressLRS_currAirRate_Modparams->interval * ExpressLRS_currAirRate_Modparams->numOfSends)) - (int)GoodPktsCount)) > 1)
 #endif
-            DBGLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
+            DBGVLN("UART STATS Bad:Good = %u:%u", BadPktsCount, GoodPktsCount);
 
         UARTwdtLastChecked = now;
         if (retval)

@@ -29,13 +29,13 @@ function getPwmFormData() {
     const failsafeField = _(`pwm_${ch}_fs`);
     const failsafeModeField = _(`pwm_${ch}_fsmode`);
     let failsafe = failsafeField.value;
-    if (failsafe > 2011) failsafe = 2011;
-    if (failsafe < 988) failsafe = 988;
+    if (failsafe > 2115) failsafe = 2115; // for max range change to 2523
+    if (failsafe < 885) failsafe = 885;   // for min range change to 476
     failsafeField.value = failsafe;
     let failsafeMode = failsafeModeField.value;
 
-    const raw = (stretch << 19) | (mode << 15) | (invert << 14) | (inChannel << 10) | (failsafeMode << 20) | (failsafe - 988);
-    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} stretch=${stretch} raw=${raw}`);
+    const raw = (failsafeMode << 22) | (stretch << 20) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476);
+    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} str=${stretch} raw=${raw}`);
     outData.push(raw);
     ++ch;
   }
@@ -77,20 +77,21 @@ function updatePwmSettings(arPwm) {
   var pinRxIndex = undefined;
   var pinTxIndex = undefined;
   var pinModes = []
-  // arPwm is an array of raw integers [49664,50688,51200]. 10 bits of failsafe position, 4 bits of input channel, 1 bit invert, 4 bits mode, 1 bits for stretch
-  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">Stretch?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
+  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
   arPwm.forEach((item, index) => {
-    const failsafe = (item.config & 1023) + 988; // 10 bits
-    const failsafeMode = (item.config >> 20) & 3; // 2 bits
-    const ch = (item.config >> 10) & 15; // 4 bits
-    const inv = (item.config >> 14) & 1;
-    const mode = (item.config >> 15) & 15; // 4 bits
-    const stretch = (item.config >> 19) & 1;
+    const failsafe = (item.config & 2047) + 476; // 11 bits
+    const ch = (item.config >> 11) & 15; // 4 bits
+    const inv = (item.config >> 15) & 1;
+    const mode = (item.config >> 16) & 15; // 4 bits
+    const stretch = (item.config >> 20) & 1;
+    const failsafeMode = (item.config >> 22) & 3; // 2 bits
     const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
     if (features & 16) {
       modes.push('DShot');
+      modes.push('DShot-3D');
     } else {
+      modes.push(undefined);
       modes.push(undefined);
     }
     if (features & 1) {

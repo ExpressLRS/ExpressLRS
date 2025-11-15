@@ -3,11 +3,8 @@
 #include "OTA.h"
 #include "common.h"
 #include "device.h"
-#include "tcpsocket.h"
-#include "telemetry.h"
+#include "msp2crsf.h"
 
-extern TCPSOCKET wifi2tcp;
-extern Telemetry telemetry;
 extern void reset_into_bootloader();
 
 void SerialCRSF::forwardMessage(const crsf_header_t *message)
@@ -28,23 +25,6 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
             _fifo.unlock();
         }
     }
-}
-
-void SerialCRSF::sendQueuedData(uint32_t maxBytesToSend)
-{
-    uint32_t bytesWritten = 0;
-    uint8_t OutPktLen;
-    while ((OutPktLen = wifi2tcp.crsfCrsfOutAvailable(maxBytesToSend - bytesWritten)))
-    {
-        uint8_t OutData[OutPktLen];
-        wifi2tcp.crsfCrsfOutPop(OutData);
-        noInterrupts();
-        this->_outputPort->write(OutData, OutPktLen); // write the packet out
-        interrupts();
-        bytesWritten += OutPktLen;
-    }
-    // Call the super class to send the current FIFO (using any left-over bytes)
-    SerialIO::sendQueuedData(maxBytesToSend - bytesWritten);
 }
 
 uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
@@ -102,10 +82,17 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     return DURATION_IMMEDIATELY;
 }
 
-void SerialCRSF::processBytes(uint8_t *bytes, uint16_t size)
+void SerialCRSF::processBytes(uint8_t *bytes, const uint16_t size)
 {
-    for (int i=0 ; i<size ; i++)
-    {
-        telemetry.RXhandleUARTin(this, bytes[i]);
-    }
+    crsfParser.processBytes(this, bytes, size, [](const crsf_header_t *message) {
+        if (message->type == CRSF_FRAMETYPE_BATTERY_SENSOR)
+        {
+            crsfBatterySensorDetected = true;
+        }
+        if (message->type == CRSF_FRAMETYPE_BARO_ALTITUDE ||
+            message->type == CRSF_FRAMETYPE_VARIO)
+        {
+            crsfBaroSensorDetected = true;
+        }
+    });
 }

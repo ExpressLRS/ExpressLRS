@@ -7,12 +7,21 @@
 #define PACKED __attribute__((packed))
 
 #define CRSF_CRC_POLY 0xd5
+ 
+#define CHANNEL_VALUE_FS_US_MIN         476  // stretch failsafe limit - changing this requires edits in getPwmFormData()
+#define CHANNEL_VALUE_FS_US_ELIMITS_MIN 885  // ELimits failsafe min
+#define CHANNEL_VALUE_FS_US_MID         1500 // center
+#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2115 // Elimits failsafe max
+#define CHANNEL_VALUE_FS_US_MAX         2523 // stretch failsafe limit
 
+#define CRSF_CHANNEL_VALUE_EXT_MIN 0    // 885us with E.Limits on (-120%) 
 #define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
 #define CRSF_CHANNEL_VALUE_1000 191
 #define CRSF_CHANNEL_VALUE_MID  992
 #define CRSF_CHANNEL_VALUE_2000 1792
 #define CRSF_CHANNEL_VALUE_MAX  1811 // 2012us - actual CRSF max is 1984 with E.Limits on
+#define CRSF_CHANNEL_VALUE_EXT_MAX 1984 // 2115us with E.Limits on (+120%) 
+
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
@@ -95,6 +104,7 @@ typedef enum : uint8_t
 {
     CRSF_ADDRESS_BROADCAST = 0x00,
     CRSF_ADDRESS_USB = 0x10,
+    CRSF_ADDRESS_BLUETOOTH_WIFI = 0x12,
     CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
     CRSF_ADDRESS_RESERVED1 = 0x8A,
     CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
@@ -141,7 +151,7 @@ typedef enum : uint8_t
  */
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t sync_byte;
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     crsf_frame_type_e type;
     uint8_t payload[0];

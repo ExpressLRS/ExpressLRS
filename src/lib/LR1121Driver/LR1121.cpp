@@ -18,13 +18,46 @@ static uint32_t beginTX;
 static uint32_t endTX;
 #endif
 
+class FECCodec final : public BufferCodec
+{
+public:
+    void encode(uint8_t *out, uint8_t *in, uint32_t len) override;
+    void decode(uint8_t *out, uint8_t *in, uint32_t len) override;
+} fecCodec;
+
+class CopyCodec final : public BufferCodec
+{
+public:
+    void encode(uint8_t *out, uint8_t *in, uint32_t len) override;
+    void decode(uint8_t *out, uint8_t *in, uint32_t len) override;
+} copyCodec;
+
+void ICACHE_RAM_ATTR FECCodec::encode(uint8_t *out, uint8_t *in, uint32_t len)
+{
+    FECEncode(in, out);
+}
+
+void ICACHE_RAM_ATTR FECCodec::decode(uint8_t *out, uint8_t *in, uint32_t len)
+{
+    FECDecode(in, out);
+}
+
+void ICACHE_RAM_ATTR CopyCodec::encode(uint8_t *out, uint8_t *in, const uint32_t len)
+{
+    memcpy(out, in, len);
+}
+void ICACHE_RAM_ATTR CopyCodec::decode(uint8_t *out, uint8_t *in, const uint32_t len)
+{
+    memcpy(out, in, len);
+}
+
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
     useFSK = false;
     instance = this;
-    lastSuccessfulPacketRadio = SX12XX_Radio_1;
+    strongestReceivingRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
-    useFEC = false;
+    codec = &copyCodec;
 }
 
 void LR1121Driver::End()
@@ -162,7 +195,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
     hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
 
-    useFEC = false;
+    codec = &copyCodec;
     if (useFSK)
     {
         DBGLN("Config FSK");
@@ -174,7 +207,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
         // Increase packet length for FEC used only on 1000Hz 2.5GHz.
         if (!isSubGHz)
         {
-            useFEC = true;
+            codec = &fecCodec;
             PayloadLength = 14;
         }
 
@@ -613,32 +646,16 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 
     WORD_ALIGNED_ATTR uint8_t outBuffer[32] = {0};
     const uint8_t length = PayloadLength+3;
-    if (useFEC)
+    codec->encode(outBuffer, data, PayloadLength);
+    if (sendGeminiBuffer)
     {
-        FECEncode(data, outBuffer);
-        if (sendGeminiBuffer)
-        {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_1);
-
-            FECEncode(dataGemini, outBuffer);
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_2);
-        }
-        else
-        {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, radioNumber);
-        }
+        hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_1);
+        codec->encode(outBuffer, dataGemini, PayloadLength);
+        hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, SX12XX_Radio_2);
     }
     else
     {
-        if (sendGeminiBuffer)
-        {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, data, length, SX12XX_Radio_1);
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, dataGemini, length, SX12XX_Radio_2);
-        }
-        else
-        {
-            hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, data, length, radioNumber);
-        }
+        hal.WriteCommand(LR11XX_RADIO_WRITE_BUFFER8_SET_TX, outBuffer, length, radioNumber);
     }
 #ifdef DEBUG_LLCC68_OTA_TIMING
     beginTX = micros();
@@ -678,15 +695,7 @@ bool ICACHE_RAM_ATTR LR1121Driver::RXnbISR(SX12XX_Radio_Number_t radioNumber)
     // GetPacket
     hal.WriteCommand(LR11XX_RADIO_GET_PACKET, radioNumber);
     hal.ReadCommand(rx_buf, PayloadLength + 6, radioNumber);
-
-    if (useFEC)
-    {
-        FECDecode(rx_buf + 6, RXdataBuffer);
-    }
-    else
-    {
-        memcpy(RXdataBuffer, rx_buf + 6, PayloadLength);
-    }
+    codec->decode(RXdataBuffer, rx_buf + 6, PayloadLength);
     if (!RXdoneCallback(SX12XX_RX_OK))
     {
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
@@ -722,31 +731,18 @@ int8_t ICACHE_RAM_ATTR LR1121Driver::GetRssiInst(SX12XX_Radio_Number_t radioNumb
 
 void ICACHE_RAM_ATTR LR1121Driver::CheckForSecondPacket()
 {
-    constexpr SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
-    const uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
-    const uint8_t secondRadioIdx = !processingRadioIdx;
-
-    // processingRadio always passed the sanity check here
-    gotRadio[processingRadioIdx] = true;
-    gotRadio[secondRadioIdx] = false;
-
     hasSecondRadioGotData = false;
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
+        constexpr SX12XX_Radio_Number_t radio[2] = {SX12XX_Radio_1, SX12XX_Radio_2};
+        const uint8_t processingRadioIdx = (instance->processingPacketRadio == SX12XX_Radio_1) ? 0 : 1;
+        const uint8_t secondRadioIdx = !processingRadioIdx;
         const uint32_t secondIrqStatus = instance->GetIrqStatus(radio[secondRadioIdx]);
         if(secondIrqStatus & LR1121_IRQ_RX_DONE)
         {
             hal.WriteCommand(LR11XX_RADIO_GET_PACKET, radio[secondRadioIdx]);
             hal.ReadCommand(rx2_buf, PayloadLength + 6, radio[secondRadioIdx]);
-            if (useFEC)
-            {
-                FECDecode(rx2_buf + 6, RXdataBufferSecond);
-            }
-            else
-            {
-                memcpy(RXdataBufferSecond, rx2_buf + 6, PayloadLength);
-            }
-
+            codec->decode(RXdataBufferSecond, rx2_buf + 6, PayloadLength);
             hasSecondRadioGotData = true;
         }
     }
@@ -756,8 +752,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 {
     const SX12XX_Radio_Number_t radioNumber = processingPacketRadio == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
-    // by default, set the last successful packet radio to be the current processing radio (which got a successful packet)
-    lastSuccessfulPacketRadio = processingPacketRadio;
+    // by default, set the strongest receiving radio to be the current processing radio (which got a successful packet)
+    strongestReceivingRadio = processingPacketRadio;
     DecodeRssiSnr(processingPacketRadio, rx_buf);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     irq_count_or++;
@@ -771,8 +767,8 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
             const int8_t firstSNR = LastPacketSNRRaw;
             DecodeRssiSnr(radioNumber, rx2_buf);
             LastPacketSNRRaw = fuzzy_snr(LastPacketSNRRaw, firstSNR, FuzzySNRThreshold);
-            // Update the last successful packet radio to be the one with better signal strength
-            lastSuccessfulPacketRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
+            // Update the strongest receiving radio to be the one with better signal strength
+            strongestReceivingRadio = LastPacketRSSI>LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
             irq_count_both++;
         }
@@ -786,29 +782,27 @@ void ICACHE_RAM_ATTR LR1121Driver::GetLastPacketStats()
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_1()
 {
-    if (digitalRead(GPIO_PIN_DIO1))
-    {
-        IsrCallback(SX12XX_Radio_1);
-    }
+    IsrCallback(SX12XX_Radio_1);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback_2()
 {
-    if (digitalRead(GPIO_PIN_DIO1_2))
-    {
-        IsrCallback(SX12XX_Radio_2);
-    }
+    IsrCallback(SX12XX_Radio_2);
 }
 
 void ICACHE_RAM_ATTR LR1121Driver::IsrCallback(SX12XX_Radio_Number_t radioNumber)
 {
     instance->processingPacketRadio = radioNumber;
+    const SX12XX_Radio_Number_t otherRadioNumber = radioNumber == SX12XX_Radio_1 ? SX12XX_Radio_2 : SX12XX_Radio_1;
 
     const uint32_t irqStatus = instance->GetIrqStatus(radioNumber);
     if (irqStatus & LR1121_IRQ_TX_DONE)
     {
         instance->TXnbISR();
-        instance->ClearIrqStatus(SX12XX_Radio_All);
+        if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+        {
+            instance->ClearIrqStatus(otherRadioNumber);
+        }
     }
     else if (irqStatus & LR1121_IRQ_RX_DONE)
     {
