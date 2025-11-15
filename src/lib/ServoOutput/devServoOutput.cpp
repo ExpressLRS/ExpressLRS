@@ -151,9 +151,9 @@ static void servosUpdate(unsigned long now)
         {
             const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
             const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
-            // crsfVal might 0 if this is a switch channel, and it has not been
+            // crsfVal might unset if this is a switch channel, and it has not been
             // received yet. Delay initializing the servo until the channel is valid
-            if (crsfVal == 0)
+            if (crsfVal == CRSF_CHANNEL_VALUE_UNSET)
             {
                 continue;
             }

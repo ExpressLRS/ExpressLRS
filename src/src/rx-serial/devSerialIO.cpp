@@ -24,7 +24,7 @@ enum teamraceOutputInhibitState_e {
 
 typedef struct devserial_ctx_s {
   SerialIO **io;
-  bool frameAvailable;          
+  bool frameAvailable;
   bool frameMissed ;
   connectionState_e lastConnectionState;
   uint8_t lastTeamracePosition;
@@ -231,9 +231,10 @@ static int timeout(devserial_ctx_t *ctx)
     // there will be to each channel slot in the array, and the global buffer may be updated
     // in-between access to each channel slot.
     WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS];
-    for (int i = 0; i < CRSF_NUM_CHANNELS; i++)
+    for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
     {
-        localChannelData[i] = ChannelData[i];
+        const uint32_t crsfVal = ChannelData[i];
+        localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_MID : crsfVal;
     }
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, localChannelData);
 }
