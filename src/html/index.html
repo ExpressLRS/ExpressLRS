@@ -196,13 +196,12 @@
 							</ul>
 							<li><b>Input:</b> Input channel from the handset</li>
 							<li><b>Invert:</b> Invert input channel position</li>
-							<li><b>Stretch:</b> Pulse width 476us-2524us instead of 988us-2012us, for wide range servos</li>
+							<li><b>Stretch:</b> Stretch pulse width from mode limits to 500-2500us</li>
 							<li><b>Failsafe</b>
 								<ul>
 									<li>"Set Position" sets the servo to an absolute "Failsafe Pos"
 										<ul>
 											<li>Does not use "Invert" flag</li>
-											<li>Value will be doubled from center if "Strech" is used</li>
 											<li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
 										</ul>
 									</li>

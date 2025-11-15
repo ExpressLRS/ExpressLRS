@@ -1,6 +1,7 @@
 #if defined(TARGET_RX)
 
 #include "devServoOutput.h"
+#include "OTA.h"
 #include "PWM.h"
 #include "config.h"
 #include "crsf_protocol.h"
@@ -159,10 +160,15 @@ static void servosUpdate(unsigned long now)
             }
 
             uint16_t us;
-            if (chConfig->val.stretched) {
-                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 476, 2524);
+            if (chConfig->val.stretched)
+            {
+                if (OtaIsFullRes)
+                    us = fmap(crsfVal, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 500, 2500);
+                else
+                    us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
             }
-            else {
+            else
+            {
                 us = CRSF_to_US(crsfVal);
             }
             // Flip the output around the mid-value if inverted
