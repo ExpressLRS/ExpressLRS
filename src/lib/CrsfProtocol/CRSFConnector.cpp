@@ -19,7 +19,7 @@ bool CRSFConnector::forwardsTo(const crsf_addr_e device_id)
 void CRSFConnector::debugCRSF(const char *str, const crsf_header_t *message)
 {
     DBGLN(str);
-    DBGLN("dev:  %x", message->device_addr);
+    DBGLN("dev:  %x", message->sync_byte);
     DBGLN("size: %x", message->frame_size);
     DBGLN("type: %x", message->type);
     if (message->type >= CRSF_FRAMETYPE_DEVICE_PING)
