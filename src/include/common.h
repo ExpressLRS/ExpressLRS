@@ -215,10 +215,8 @@ enum eServoOutputMode : uint8_t
     somSCL,         // 11: I2C clock signal
     somSDA,         // 12: I2C data line
     somPwm,         // 13: true PWM mode (NOT SUPPORTED)
-#if defined(PLATFORM_ESP32)
     somSerial1RX,   // 14: secondary Serial RX
     somSerial1TX,   // 15: secondary Serial TX
-#endif
 };
 
 enum eServoOutputFailsafeMode : uint8_t

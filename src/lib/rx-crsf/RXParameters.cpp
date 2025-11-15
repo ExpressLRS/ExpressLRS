@@ -6,6 +6,7 @@
 #include "deferred.h"
 #include "devServoOutput.h"
 #include "helpers.h"
+#include "logging.h"
 
 #define RX_HAS_SERIAL1 (GPIO_PIN_SERIAL1_TX != UNDEF_PIN || OPT_HAS_SERVO_OUTPUT)
 
@@ -249,7 +250,6 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 #if defined(PLATFORM_ESP32)
     // DShot output (2 options)
     // ;DShot;DShot3D
-    // ESP8266 enum skips this, so it is never present
     if (GPIO_PIN_PWM_OUTPUTS[arg-1] != 0)   // DShot doesn't work with GPIO0, exclude it
     {
         pModeString = dshot;
@@ -335,16 +335,16 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
             pModeString = serial1_TX;
         }
         else
-        { 
+        {
             pModeString = no2Options;
         }
-    } 
+    }
     else
     {   // otherwise allow any pin to be either RX or TX but only once
         if (serial1txAssigned && !serial1rxAssigned)
         {
             pModeString = serial1_RX;
-        }        
+        }
         else if (serial1rxAssigned && !serial1txAssigned)
         {
             pModeString = serial1_TX;
@@ -353,7 +353,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
         else if (!serial1rxAssigned && !serial1txAssigned)
         {
             pModeString = serial1_BOTH;
-        } 
+        }
         else
         {
             pModeString = no2Options;
@@ -470,10 +470,14 @@ void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
       rx_config_pwm_t newPwmCh;
-      // The value must fit into the 10 bit range of the failsafe
+      // The value must fit into the 11 bit range of the failsafe
       newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-      newPwmCh.val.failsafe = CRSF_to_UINT10(constrain(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
-      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+988U);
+      // scale failsafe values to ELimits
+      newPwmCh.val.failsafe = fmap(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], 
+                                   CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 
+                                   CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN, CHANNEL_VALUE_FS_US_ELIMITS_MAX - CHANNEL_VALUE_FS_US_MIN);
+
+      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+CHANNEL_VALUE_FS_US_MIN);
       config.SetPwmChannelRaw(ch, newPwmCh.raw);
     }
   }
@@ -605,7 +609,7 @@ void RXEndpoint::updateParameters()
     setTextSelectionValue(&luaSerial1Protocol, config.GetSerial1Protocol());
   }
 #endif
-  
+
   setTextSelectionValue(&luaSBUSFailsafeMode, config.GetFailsafeMode());
 
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)

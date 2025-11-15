@@ -51,7 +51,7 @@ void LR1121Hal::init()
 #ifdef PLATFORM_ESP32
     SPIEx.begin(GPIO_PIN_SCK, GPIO_PIN_MISO, GPIO_PIN_MOSI, GPIO_PIN_NSS); // sck, miso, mosi, ss (ss can be any GPIO)
     gpio_pullup_en((gpio_num_t)GPIO_PIN_MISO);
-    SPIEx.setFrequency(17500000);
+    SPIEx.setFrequency(16000000);
     SPIEx.setHwCs(true);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {
@@ -66,7 +66,7 @@ void LR1121Hal::init()
     SPIEx.setHwCs(true);
     SPIEx.setBitOrder(MSBFIRST);
     SPIEx.setDataMode(SPI_MODE0);
-    SPIEx.setFrequency(17500000);
+    SPIEx.setFrequency(16000000);
 #endif
 
     attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
@@ -158,7 +158,8 @@ void ICACHE_RAM_ATTR LR1121Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12X
 
 bool ICACHE_RAM_ATTR LR1121Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
 {
-    constexpr uint32_t wtimeoutUS = 1000U;
+    constexpr uint32_t wtimeoutUS = 2000U; // changed due to unknown issues in a small percentage of LR1121s that some
+                                           // commands may have extremely long busy times during startup, exceeding 1ms
     uint32_t startTime = 0;
 
     while (true)

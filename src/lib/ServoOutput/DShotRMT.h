@@ -90,7 +90,7 @@ typedef struct dshot_config_s {
 
 class DShotRMT {
 public:
-	DShotRMT(gpio_num_t gpio, rmt_channel_t rmtChannel);
+	DShotRMT(gpio_num_t gpio, int idx);
 	~DShotRMT();
 
 	// ...safety first ...no parameters, no DShot
@@ -98,22 +98,32 @@ public:
 	void set_looping(bool);
 	void send_dshot_value(uint16_t throttle_value, telemetric_request_t telemetric_request = NO_TELEMETRIC);
 
+	static void poll(); // call this as often as possible (or about every 150us)
+
 private:
 	gpio_num_t gpio_num;
-	rmt_channel_t rmt_channel;
-	rmt_item32_t dshot_tx_rmt_item[DSHOT_PACKET_LENGTH + 1];
+	int my_idx;
+	void* next_node = NULL; // linked list next node
+
+	dshot_packet_t next_packet; // stores the data to be sent when the turn comes
 
 	dshot_mode_t mode = DSHOT_OFF;
 	bool bidirectional = false;
+	uint16_t ticks_per_bit = 0;
 	uint16_t ticks_zero_high = 0;
 	uint16_t ticks_zero_low = 0;
 	uint16_t ticks_one_high = 0;
 	uint16_t ticks_one_low = 0;
 
+	bool has_new_data = false;
+	bool looping = true;
+	uint32_t last_send_time = 0;
+
 	rmt_item32_t* encode_dshot_to_rmt(uint16_t parsed_packet);
 	uint16_t calc_dshot_chksum(const dshot_packet_t& dshot_packet);
 	uint16_t prepare_rmt_data(const dshot_packet_t& dshot_packet);
-
-	void output_rmt_data(const dshot_packet_t& dshot_packet);
+	void output_rmt_data();
+	void set_pin();
 };
+
 #endif
