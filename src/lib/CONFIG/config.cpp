@@ -1210,7 +1210,7 @@ RxConfig::SetDefaults(bool commit)
             }
 #endif
         }
-        const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN : 
+        const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN :
                                             CHANNEL_VALUE_FS_US_MID - CHANNEL_VALUE_FS_US_MIN; // ch2 is throttle, failsafe it to 885
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
     }
@@ -1236,18 +1236,18 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 }
 
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    rx_config_pwm_t newConfig;
+    rx_config_pwm_t newConfig{};
     newConfig.val.failsafe = failsafe;
     newConfig.val.inputChannel = inputCh;
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
-    newConfig.val.narrow = narrow;
+    newConfig.val.stretched = stretched;
     if (pwm->raw == newConfig.raw)
         return;
 

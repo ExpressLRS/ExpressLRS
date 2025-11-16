@@ -25,17 +25,17 @@ function getPwmFormData() {
     const inChannel = inField.value;
     const mode = _(`pwm_${ch}_mode`).value;
     const invert = _(`pwm_${ch}_inv`).checked ? 1 : 0;
-    const narrow = _(`pwm_${ch}_nar`).checked ? 1 : 0;
+    const stretch = _(`pwm_${ch}_stretch`).checked ? 1 : 0;
     const failsafeField = _(`pwm_${ch}_fs`);
     const failsafeModeField = _(`pwm_${ch}_fsmode`);
     let failsafe = failsafeField.value;
-    if (failsafe > 2115) failsafe = 2115; // for max range change to 2523
-    if (failsafe < 885) failsafe = 885;   // for min range change to 476
+    if (failsafe > 2523) failsafe = 2523;
+    if (failsafe < 476) failsafe = 476;
     failsafeField.value = failsafe;
     let failsafeMode = failsafeModeField.value;
 
-    const raw = (failsafeMode << 22) | (narrow << 21) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476);
-    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} nar=${narrow} raw=${raw}`);
+    const raw = (failsafeMode << 22) | (stretch << 20) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476);
+    // console.log(`PWM ${ch} mode=${mode} input=${inChannel} fs=${failsafe} fsmode=${failsafeMode} inv=${invert} str=${stretch} raw=${raw}`);
     outData.push(raw);
     ++ch;
   }
@@ -77,13 +77,13 @@ function updatePwmSettings(arPwm) {
   var pinRxIndex = undefined;
   var pinTxIndex = undefined;
   var pinModes = []
-  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">750us?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
+  const htmlFields = ['<div class="mui-panel pwmpnl"><table class="pwmtbl mui-table"><tr><th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">Stretch?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th></tr>'];
   arPwm.forEach((item, index) => {
     const failsafe = (item.config & 2047) + 476; // 11 bits
     const ch = (item.config >> 11) & 15; // 4 bits
     const inv = (item.config >> 15) & 1;
     const mode = (item.config >> 16) & 15; // 4 bits
-    const narrow = (item.config >> 21) & 1;
+    const stretch = (item.config >> 20) & 1;
     const failsafeMode = (item.config >> 22) & 3; // 2 bits
     const features = item.features;
     const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off'];
@@ -145,7 +145,7 @@ function updatePwmSettings(arPwm) {
             <td>${modeSelect}</td>
             <td>${inputSelect}</td>
             <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_inv"${(inv) ? ' checked' : ''}></div></td>
-            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_nar"${(narrow) ? ' checked' : ''}></div></td>
+            <td><div class="mui-checkbox mui--text-center"><input type="checkbox" id="pwm_${index}_stretch"${(stretch) ? ' checked' : ''}></div></td>
             <td>${failsafeModeSelect}</td>
             <td><div class="mui-textfield compact"><input id="pwm_${index}_fs" value="${failsafe}" size="6" class="pwmitm" /></div></td></tr>`);
     pinModes[index] = mode;
@@ -161,7 +161,7 @@ function updatePwmSettings(arPwm) {
   const setDisabled = (index, onoff) => {
     _(`pwm_${index}_ch`).disabled = onoff;
     _(`pwm_${index}_inv`).disabled = onoff;
-    _(`pwm_${index}_nar`).disabled = onoff;
+    _(`pwm_${index}_stretch`).disabled = onoff;
     _(`pwm_${index}_fs`).disabled = onoff;
     _(`pwm_${index}_fsmode`).disabled = onoff;
   }

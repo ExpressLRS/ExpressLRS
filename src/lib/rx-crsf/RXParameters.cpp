@@ -466,20 +466,7 @@ void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
     // and the handset will send another lcdQuery that will overwrite it with idle
     newStep = lcsExecuting;
     msg = "Setting failsafe";
-
-    for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-    {
-      rx_config_pwm_t newPwmCh;
-      // The value must fit into the 11 bit range of the failsafe
-      newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-      // scale failsafe values to ELimits
-      newPwmCh.val.failsafe = fmap(ChannelData[config.GetPwmChannel(ch)->val.inputChannel], 
-                                   CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 
-                                   CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN, CHANNEL_VALUE_FS_US_ELIMITS_MAX - CHANNEL_VALUE_FS_US_MIN);
-
-      //DBGLN("FSCH(%u) crsf=%u us=%u", ch, ChannelData[ch], newPwmCh.val.failsafe+CHANNEL_VALUE_FS_US_MIN);
-      config.SetPwmChannelRaw(ch, newPwmCh.raw);
-    }
+    servoCurrentToFailsafeConfig();
   }
   else
   {
