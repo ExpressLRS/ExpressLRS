@@ -333,8 +333,20 @@ void TxConfig::UpgradeEepromV7ToV8()
     v7_tx_config_t v7Config;
     m_eeprom->Get(0, v7Config);
 
-    // All the fields are the same in v8, just the model config has changed
-    memcpy(&m_config, &v7Config, sizeof(v7Config));
+    // Manual field copying as some fields were removed
+    #define LAZY(member) m_config.member = v7Config.member
+    LAZY(vtxBand);
+    LAZY(vtxChannel);
+    LAZY(vtxPower);
+    LAZY(vtxPitmode);
+    LAZY(powerFanThreshold);
+    LAZY(fanMode);
+    LAZY(motionMode);
+    LAZY(dvrAux);
+    LAZY(dvrStartDelay);
+    LAZY(dvrStopDelay);
+    #undef LAZY
+
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
