@@ -1,6 +1,8 @@
 #include <stdint.h>
 
 typedef enum {
+    // Customisation flag
+    HARDWARE_customised,
     // Serial
     HARDWARE_serial_rx,
     HARDWARE_serial_tx,

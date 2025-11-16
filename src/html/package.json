@@ -1,0 +1,39 @@
+{
+  "name": "elrs-ui",
+  "private": true,
+  "version": "4.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite",
+    "dev:rx": "vite",
+    "clean": "rimraf dist",
+    "build": "npm run clean && vite build",
+    "build:lr1121-tx": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true vite build && cp dist/esp32_fs.h headers/web-lr1121-tx.h",
+    "build:lr1121-rx": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_LR1121=true vite build && cp dist/esp32_fs.h headers/web-lr1121-rx.h",
+    "build:sx128x-tx": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_SX128X=true vite build && cp dist/esp32_fs.h headers/web-sx128x-tx.h",
+    "build:sx128x-rx": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX128X=true vite build && cp dist/esp32_fs.h headers/web-sx128x-rx.h",
+    "build:sx127x-tx": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_SX127X=true vite build && cp dist/esp32_fs.h headers/web-sx127x-tx.h",
+    "build:sx127x-rx": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX127X=true vite build && cp dist/esp32_fs.h headers/web-sx127x-rx.h",
+    "build:sx128x-tx-8285": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_SX128X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx128x-tx-8285.h",
+    "build:sx128x-rx-8285": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX128X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx128x-rx-8285.h",
+    "build:sx127x-tx-8285": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_SX127X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx127x-tx-8285.h",
+    "build:sx127x-rx-8285": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX127X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx127x-rx-8285.h",
+    "build:all": "npm run build:lr1121-tx && npm run build:lr1121-rx && npm run build:sx128x-tx && npm run build:sx128x-rx && npm run build:sx127x-tx && npm run build:sx127x-rx && npm run build:sx128x-tx-8285 && npm run build:sx128x-rx-8285 && npm run build:sx127x-tx-8285 && npm run build:sx127x-rx-8285",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@lit-app/state": "^1.0.0",
+    "lit": "^3.3.1",
+    "lit-html": "^3.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/plugin-proposal-decorators": "^7.28.0",
+    "node-zopfli-es": "^2.0.4",
+    "rimraf": "^6.1.0",
+    "rollup-plugin-minify-template-literals": "^1.1.7",
+    "vite": "^7.2.2",
+    "vite-plugin-babel": "^1.3.2"
+  }
+}

@@ -406,7 +406,7 @@ static int timeout()
         return blinkyUpdate();
     }
 #if defined(TARGET_RX)
-    if (InBindingMode)
+    if (InBindingMode && connectionState < MODE_STATES)
     {
         blinkyColor.h = 10;
         return flashLED(blinkyColor, 192, 0, LEDSEQ_BINDING, sizeof(LEDSEQ_BINDING));

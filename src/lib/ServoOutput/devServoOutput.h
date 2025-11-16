@@ -12,5 +12,7 @@ extern device_t ServoOut_device;
 
 // Notify this unit that new channel data has arrived
 void servoNewChannelsAvailable();
+// Copy the current output values to the config's failsafe values
+void servoCurrentToFailsafeConfig();
 
 #endif
