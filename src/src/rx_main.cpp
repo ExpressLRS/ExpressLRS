@@ -1562,6 +1562,8 @@ static void setupBindingFromConfig()
 
 static void setupRadio()
 {
+    ChannelDataReset();
+
     Radio.currFreq = FHSSgetInitialFreq();
 #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
