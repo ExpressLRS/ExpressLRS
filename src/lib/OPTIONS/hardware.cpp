@@ -22,6 +22,7 @@ static const struct {
     const char *name;
     const datatype_t type;
 } fields[] = {
+    {HARDWARE_customised, "customised", BOOL},
     {HARDWARE_serial_rx, "serial_rx", INT},
     {HARDWARE_serial_tx, "serial_tx", INT},
     {HARDWARE_serial1_rx, "serial1_rx", INT},

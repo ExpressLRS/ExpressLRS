@@ -1,6 +1,7 @@
 #if defined(TARGET_RX)
 
 #include "devServoOutput.h"
+#include "OTA.h"
 #include "PWM.h"
 #include "config.h"
 #include "crsf_protocol.h"
@@ -21,6 +22,8 @@ const uint8_t RMT_MAX_CHANNELS = 8;
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
+
+typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
@@ -109,7 +112,7 @@ static void servoWrite(uint8_t ch, uint16_t us)
         }
         else
         {
-            PWM.setMicroseconds(pwmChannels[ch], us / (chConfig->val.narrow + 1));
+            PWM.setMicroseconds(pwmChannels[ch], us);
         }
     }
 }
@@ -135,6 +138,55 @@ static void servosFailsafe()
     }
 }
 
+static void servoCalcAllChannels(servoWrite_fn write)
+{
+    for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+    {
+        const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+        const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
+        // crsfVal might be unset if this is a switch channel, and it has not been
+        // received yet. Delay initializing the servo until the channel is valid
+        if (crsfVal == CRSF_CHANNEL_VALUE_UNSET)
+        {
+            continue;
+        }
+
+        uint16_t us;
+        if (chConfig->val.stretched)
+        {
+            if (OtaIsFullRes)
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 500, 2500);
+            else
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
+        }
+        else
+        {
+            us = CRSF_to_US(crsfVal);
+        }
+        // Flip the output around the mid-value if inverted
+        // (1500 - usOutput) + 1500
+        if (chConfig->val.inverted)
+        {
+            us = 3000U - us;
+        }
+        write(ch, us);
+    } /* for each servo */
+}
+
+static void servoUsToFailsafeConfig(uint8_t ch, uint16_t us)
+{
+    rx_config_pwm_t newPwmCh;
+    newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+    newPwmCh.val.failsafe = constrain(us, CHANNEL_VALUE_FS_US_MIN, CHANNEL_VALUE_FS_US_MAX) - CHANNEL_VALUE_FS_US_MIN;
+    //DBGLN("FSCH(%u) us=%u", ch, us);
+    config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+void servoCurrentToFailsafeConfig()
+{
+    servoCalcAllChannels(&servoUsToFailsafeConfig);
+}
+
 static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
@@ -147,26 +199,7 @@ static void servosUpdate(unsigned long now)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
-        {
-            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
-            // crsfVal might be unset if this is a switch channel, and it has not been
-            // received yet. Delay initializing the servo until the channel is valid
-            if (crsfVal == CRSF_CHANNEL_VALUE_UNSET)
-            {
-                continue;
-            }
-
-            uint16_t us = CRSF_to_US(crsfVal);
-            // Flip the output around the mid-value if inverted
-            // (1500 - usOutput) + 1500
-            if (chConfig->val.inverted)
-            {
-                us = 3000U - us;
-            }
-            servoWrite(ch, us);
-        } /* for each servo */
+        servoCalcAllChannels(&servoWrite);
     }     /* if newChannelsAvailable */
 
     // LQ goes to 0 (100 packets missed in a row)

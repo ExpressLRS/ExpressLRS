@@ -9,7 +9,7 @@
 
 #if defined(TARGET_TX)
 
-#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED)
+#define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED | EVENT_CONFIG_VERSION_CHANGED)
 
 // Really awful but safe(?) type punning of model_config_t/v6_model_config_t to and from uint32_t
 template<class T> static const void U32_to_Model(uint32_t const u32, T * const model)
@@ -82,7 +82,7 @@ static uint8_t SwitchesV6toV7(uint8_t switchesV6)
     }
 }
 
-static void ModelV6toV7(v6_model_config_t const * const v6, model_config_t * const v7)
+static void ModelV6toV7(v6_model_config_t const * const v6, v7_model_config_t * const v7)
 {
     v7->rate = RateV6toV7(v6->rate);
     v7->tlm = RatioV6toV7(v6->tlm);
@@ -199,19 +199,20 @@ void TxConfig::Load()
         itoa(i, model+5, 10);
         if (nvs_get_u32(handle, model, &value) == ESP_OK)
         {
+            // Chaining update, last calls nvs_set_u32, all others set `value`
             if (version == 6)
             {
-                // Upgrade v6 to v7 directly writing to nvs instead of calling Commit() over and over
+                // Upgrade v6 to v7
                 v6_model_config_t v6model;
                 U32_to_Model(value, &v6model);
-                model_config_t * const newModel = &m_config.model_config[i];
-                ModelV6toV7(&v6model, newModel);
-                nvs_set_u32(handle, model, Model_to_U32(newModel));
+                v7_model_config_t v7Model;
+                ModelV6toV7(&v6model, &v7Model);
+                value = Model_to_U32(&v7Model);
             }
 
             if (version <= 7)
             {
-                // Upgrade v7 to v8 directly writing to nvs instead of calling Commit() over and over
+                // Upgrade v7 to v8
                 v7_model_config_t v7model;
                 U32_to_Model(value, &v7model);
                 model_config_t * const newModel = &m_config.model_config[i];
@@ -228,6 +229,7 @@ void TxConfig::Load()
 
     if (version != TX_CONFIG_VERSION)
     {
+        m_modified |= EVENT_CONFIG_VERSION_CHANGED;
         Commit();
     }
 }
@@ -294,12 +296,13 @@ void TxConfig::UpgradeEepromV5ToV6()
 void TxConfig::UpgradeEepromV6ToV7()
 {
     v6_tx_config_t v6Config;
+    v7_tx_config_t v7Config = { 0 }; // default the new fields to 0
 
     // Populate the prev version struct from eeprom
     m_eeprom->Get(0, v6Config);
 
     // Manual field copying as some fields have moved
-    #define LAZY(member) m_config.member = v6Config.member
+    #define LAZY(member) v7Config.member = v6Config.member
     LAZY(vtxBand);
     LAZY(vtxChannel);
     LAZY(vtxPower);
@@ -314,23 +317,24 @@ void TxConfig::UpgradeEepromV6ToV7()
 
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
-        ModelV6toV7(&v6Config.model_config[i], &m_config.model_config[i]);
+        ModelV6toV7(&v6Config.model_config[i], &v7Config.model_config[i]);
     }
 
     m_modified = ALL_CHANGED;
 
     // Full Commit now
     m_config.version = 7U | TX_CONFIG_MAGIC;
-    Commit();
+    m_eeprom->Put(0, v7Config);
+    m_eeprom->Commit();
 }
 
 void TxConfig::UpgradeEepromV7ToV8()
 {
     v7_tx_config_t v7Config;
-
-    // Populate the prev version struct from eeprom
     m_eeprom->Get(0, v7Config);
 
+    // All the fields are the same in v8, just the model config has changed
+    memcpy(&m_config, &v7Config, sizeof(v7Config));
     for (unsigned i=0; i<CONFIG_TX_MODEL_CNT; i++)
     {
         ModelV7toV8(&v7Config.model_config[i], &m_config.model_config[i]);
@@ -349,6 +353,7 @@ TxConfig::Commit()
 {
     if (!m_modified)
     {
+        DBGLN("No changes");
         // No changes
         return 0;
     }
@@ -394,7 +399,10 @@ TxConfig::Commit()
         nvs_set_u32(handle, "button1", m_config.buttonColors[0].raw);
         nvs_set_u32(handle, "button2", m_config.buttonColors[1].raw);
     }
-    nvs_set_u32(handle, "tx_version", m_config.version);
+    if (m_modified & EVENT_CONFIG_VERSION_CHANGED)
+    {
+        nvs_set_u32(handle, "tx_version", m_config.version);
+    }
     nvs_commit(handle);
 #else
     // Write the struct to eeprom
@@ -668,11 +676,6 @@ TxConfig::SetDefaults(bool commit)
     m_config.version = TX_CONFIG_VERSION | TX_CONFIG_MAGIC;
     m_config.powerFanThreshold = PWR_250mW;
     m_modified = ALL_CHANGED;
-
-    if (commit)
-    {
-        m_modified = ALL_CHANGED;
-    }
 
     // Set defaults for button 1
     tx_button_color_t default_actions1 = {
@@ -1233,18 +1236,18 @@ RxConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 }
 
 void
-RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, bool narrow)
+RxConfig::SetPwmChannel(uint8_t ch, uint16_t failsafe, uint8_t inputCh, bool inverted, uint8_t mode, uint8_t stretched)
 {
     if (ch > PWM_MAX_CHANNELS)
         return;
 
     rx_config_pwm_t *pwm = &m_config.pwmChannels[ch];
-    rx_config_pwm_t newConfig;
+    rx_config_pwm_t newConfig{};
     newConfig.val.failsafe = failsafe;
     newConfig.val.inputChannel = inputCh;
     newConfig.val.inverted = inverted;
     newConfig.val.mode = mode;
-    newConfig.val.narrow = narrow;
+    newConfig.val.stretched = stretched;
     if (pwm->raw == newConfig.raw)
         return;
 
