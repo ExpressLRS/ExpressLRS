@@ -148,10 +148,6 @@ void DynamicPower_Update(uint32_t now)
   // the calculation could exceed 100% during a rate change or initial connect when the LQs are not synced
   lq_current = std::min(lq_current * 100 / std::max((uint32_t)LBTSuccessCalc.getLQ(), (uint32_t)1U), (uint32_t)100U);
 #endif
-  if (lq_current >= 99)
-  {
-      dynpower_stat_snr.add(snrScaled);
-  }
   uint32_t lq_avg = dynpower_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
   dynpower_mavg_lq.add(lq_current);
@@ -195,11 +191,17 @@ void DynamicPower_Update(uint32_t now)
     int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
     int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
 
+    // Incorporate the current value if LQ is meets the desired LQ standard
+    if (lq_current >= 99)
+    {
+        dynpower_stat_snr.add(snrScaled);
+    }
     // is SNR stat ready? = is the buffer fully stuffed?
     if(dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE)
     {
-      int32_t snr_stat_mean = static_cast<int32_t>(dynpower_stat_snr.mean()*16);
-      int32_t snr_stat_stdev = static_cast<int32_t>(dynpower_stat_snr.standardDeviation()*16);
+      static_assert(dynpower_stat_snr.FIXED_POINT_SHIFT >= 4, "StdDevAccumulator must be at least 4 bits of decimal fixed point");
+      int32_t snr_stat_mean = dynpower_stat_snr.meanRaw() >> (dynpower_stat_snr.FIXED_POINT_SHIFT - 4);
+      int32_t snr_stat_stdev = dynpower_stat_snr.standardDeviationRaw() >> (dynpower_stat_snr.FIXED_POINT_SHIFT - 4);
 
       // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
       // Base scale factor is 13/4 (3.25), reduce it proportionally when LQ < 100
@@ -213,6 +215,7 @@ void DynamicPower_Update(uint32_t now)
       int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
       int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.0); // to ensure at least -1.0 dB split between thresholds
 
+      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_thre_up_scaled, snr_thre_dn_scaled, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
       snr_stat_threshold_dn = snr_thre_dn_scaled;
     }

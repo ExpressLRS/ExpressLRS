@@ -3,12 +3,6 @@
 #include <cstdint>
 #include <cmath>
 
-// Fixed-point arithmetic constants
-// Using 16-bit fixed-point with 8 fractional bits (Q8.8 format)
-#define FIXED_POINT_SHIFT 8
-#define FIXED_POINT_SCALE (1 << FIXED_POINT_SHIFT)
-#define FIXED_POINT_MASK (FIXED_POINT_SCALE - 1)
-
 // Fast integer square root using binary search
 // algorithm adopted from https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_(base_2)
 uint16_t fast_sqrt_uint(uint32_t x)
@@ -43,7 +37,12 @@ uint16_t fast_sqrt_uint(uint32_t x)
 class StdevAccumulator
 {
 public:
-    static const size_t WINDOW_SIZE = 48;
+    static constexpr size_t WINDOW_SIZE = 48;
+    // Fixed-point arithmetic constants
+    // Using 16-bit fixed-point with 8 fractional bits (Q8.8 format)
+    static constexpr uint32_t FIXED_POINT_SHIFT = 8;
+    static constexpr uint32_t FIXED_POINT_SCALE = 1 << FIXED_POINT_SHIFT;
+    static constexpr uint32_t FIXED_POINT_MASK = FIXED_POINT_SCALE - 1;
 
     StdevAccumulator()
     {
@@ -81,34 +80,44 @@ public:
     /// @return Mean as float, or 0.0f if no data
     float mean()
     {
+        return static_cast<float>(meanRaw()) / FIXED_POINT_SCALE;
+    }
+
+    int32_t meanRaw()
+    {
         if (_count == 0)
         {
-            return 0.0f;
+            return 0;
         }
 
         if (!_dirty)
         {
-            return static_cast<float>(_lastMeanFixed) / FIXED_POINT_SCALE;
+            return _lastMeanFixed;
         }
 
         // Fixed-point division using bit shifting
         _lastMeanFixed = (_sum << FIXED_POINT_SHIFT) / _count;
         // Don't clear _dirty here, as stdev may still need update
-        return static_cast<float>(_lastMeanFixed) / FIXED_POINT_SCALE;
+        return _lastMeanFixed;
     }
 
     /// @brief Computes and returns the standard deviation of the current buffer contents.
     /// @return Standard deviation as float, or 0.0f if not enough data
     float standardDeviation()
     {
+        return static_cast<float>(standardDeviationRaw()) / FIXED_POINT_SCALE;
+    }
+
+    int32_t standardDeviationRaw()
+    {
         if (_count < 2)
         {
-            return 0.0f;
+            return 0;
         }
 
         if (!_dirty)
         {
-            return static_cast<float>(_lastStdevFixed) / FIXED_POINT_SCALE;
+            return _lastStdevFixed;
         }
 
         // Calculate mean in fixed-point
@@ -136,7 +145,7 @@ public:
         // Note: sqrt(variance * 256) = sqrt(variance) * 16, so we need to scale back to 256
         _lastStdevFixed = fast_sqrt_uint(varianceFixed) << 4;
         _dirty = false;
-        return static_cast<float>(_lastStdevFixed) / FIXED_POINT_SCALE;
+        return _lastStdevFixed;
     }
 
     /// @brief Returns the number of valid entries (up to WINDOW_SIZE)
