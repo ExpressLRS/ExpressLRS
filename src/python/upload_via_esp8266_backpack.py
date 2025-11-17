@@ -33,25 +33,9 @@ def process_http_result(output_json_file: str) -> int:
     return retval
 
 
-def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
+def do_upload(elrs_bin_target, pio_target, upload_addr, env):
     bootloader_target = None
     app_start = 0 # eka bootloader offset
-
-    # Parse upload flags:
-    upload_flags = env.get('UPLOAD_FLAGS', [])
-    for line in upload_flags:
-        flags = line.split()
-        for flag in flags:
-            if "VECT_OFFSET=" in flag:
-                offset = flag.split("=")[1]
-                if "0x" in offset:
-                    offset = int(offset, 16)
-                else:
-                    offset = int(offset, 10)
-                app_start = offset
-            if "BOOTLOADER=" in flag:
-                bootloader_file = flag.split("=")[1]
-                bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
 
     bin_upload_output = os.path.splitext(elrs_bin_target)[0] + '-output.json'
     if os.path.exists(bin_upload_output):
@@ -70,16 +54,8 @@ def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
         do_bin_upload = False
     if pio_target == 'uploadforce':
         cmd += ["-F", "force=1"]
-    if isstm:
-        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
-        cmd += ["-F", "type=tx"]
     if do_bin_upload:
         cmd += "-F", "data=@%s" % (elrs_bin_target),
-
-    if bootloader_target is not None and isstm:
-        cmd_bootloader = ["curl", "--max-time", "60",
-            "--retry", "2", "--retry-delay", "1",
-            "-F", "data=@%s" % (bootloader_target,), "-F", "flash_address=0x0000"]
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is not None:
@@ -90,15 +66,6 @@ def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
         addr = "http://%s/%s" % (addr, uri)
         print(" ** UPLOADING TO: %s" % addr)
         try:
-            # Flash bootloader first if set
-            if bootloader_target is not None:
-                print("** Flashing Bootloader...")
-                print(cmd_bootloader)
-                subprocess.check_call(cmd_bootloader + [addr])
-                print("** Bootloader Flashed!")
-                print()
-
-            # Flash main application binary
             subprocess.check_call(cmd + [addr])
             returncode = process_http_result(bin_upload_output)
         except subprocess.CalledProcessError as e:
@@ -123,5 +90,4 @@ def on_upload(source, target, env):
                 raise Exception("No valid binary found!")
 
     pio_target = target[0].name
-    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
-    return do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)
+    return do_upload(elrs_bin_target, pio_target, upload_addr, env)

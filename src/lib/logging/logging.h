@@ -25,22 +25,17 @@
 #define DEBUG_ENABLED
 #endif
 
-#if defined(TARGET_TX)
-extern Stream *TxBackpack;
-#if defined(PLATFORM_ESP32_S3)
+extern Stream *BackpackOrLogStrm;
+#if defined(TARGET_TX) && defined(PLATFORM_ESP32_S3)
 #define LOGGING_UART (Serial)
 #else
-#define LOGGING_UART (*TxBackpack)
-#endif
-#else
-extern Stream *SerialLogger;
-#define LOGGING_UART (*SerialLogger)
+#define LOGGING_UART (*BackpackOrLogStrm)
 #endif
 
 // #define LOG_USE_PROGMEM
 
 void debugPrintf(const char* fmt, ...);
-#if defined(LOG_INIT)
+#if defined(DEBUG_INIT)
 void debugCreateInitLogger();
 void debugFreeInitLogger();
 #else
@@ -48,7 +43,7 @@ void debugFreeInitLogger();
 #define debugFreeInitLogger()
 #endif
 
-#if defined(CRITICAL_FLASH) || ((defined(DEBUG_RCVR_LINKSTATS)) && !defined(DEBUG_LOG))
+#if defined(DEBUG_RCVR_LINKSTATS) && !defined(DEBUG_LOG)
   #define ERRLN(msg, ...)
 #else
   #define ERRLN(msg, ...) IFNE(__VA_ARGS__)({ \
@@ -58,7 +53,7 @@ void debugFreeInitLogger();
   },LOGGING_UART.println("ERROR: " msg))
 #endif
 
-#if defined(DEBUG_LOG) && !defined(CRITICAL_FLASH)
+#if defined(DEBUG_LOG)
   #define DBGCR   LOGGING_UART.println()
   #define DBGW(c) LOGGING_UART.write(c)
   #ifndef LOG_USE_PROGMEM

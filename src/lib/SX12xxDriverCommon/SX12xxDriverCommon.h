@@ -37,6 +37,7 @@ public:
 
     #define RXBuffSize 16
     WORD_ALIGNED_ATTR uint8_t RXdataBuffer[RXBuffSize];
+    WORD_ALIGNED_ATTR uint8_t RXdataBufferSecond[RXBuffSize];
 
     ///////////Radio Variables////////
     uint32_t currFreq;  // This actually the reg value! TODO fix the naming!
@@ -44,10 +45,10 @@ public:
     bool IQinverted;
 
     SX12XX_Radio_Number_t processingPacketRadio;
-    SX12XX_Radio_Number_t lastSuccessfulPacketRadio;
     SX12XX_Radio_Number_t transmittingRadio;
+    SX12XX_Radio_Number_t strongestReceivingRadio;
     SX12XX_Radio_Number_t GetProcessingPacketRadio() { return processingPacketRadio; }
-    SX12XX_Radio_Number_t GetLastSuccessfulPacketRadio() { return lastSuccessfulPacketRadio; }
+    SX12XX_Radio_Number_t GetStrongestReceivingRadio() { return strongestReceivingRadio; }
     SX12XX_Radio_Number_t GetLastTransmitRadio() {return transmittingRadio; }
 
     /////////////Packet Stats//////////
@@ -55,8 +56,8 @@ public:
     int8_t LastPacketRSSI2;
     int8_t LastPacketSNRRaw; // in RADIO_SNR_SCALE units
     int8_t FuzzySNRThreshold;
-
-    bool isFirstRxIrq = true;
+    bool gotRadio[2] = {false, false};
+    bool hasSecondRadioGotData = false;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     typedef struct rxSignalStats_s

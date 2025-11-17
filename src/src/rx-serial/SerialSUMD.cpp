@@ -1,5 +1,6 @@
 #include "SerialSUMD.h"
-#include "CRSF.h"
+
+#include "crsf_protocol.h"
 #include "device.h"
 
 #define SUMD_HEADER_SIZE		3														// 3 Bytes header

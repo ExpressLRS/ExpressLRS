@@ -1,7 +1,5 @@
 #pragma once
 
-#include "targets.h"
-
 class STK8xxx
 {
 private:

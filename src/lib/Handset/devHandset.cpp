@@ -2,10 +2,11 @@
 
 #ifdef TARGET_TX
 
-#include "CRSF.h"
 #include "CRSFHandset.h"
 #include "POWERMGNT.h"
 #include "devHandset.h"
+
+#include "CRSFEndpoint.h"
 
 #if defined(PLATFORM_ESP32)
 #include "AutoDetect.h"
@@ -13,16 +14,17 @@
 
 Handset *handset;
 
-static void initialize()
+static bool initialize()
 {
 #if defined(PLATFORM_ESP32)
     if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
     {
         handset = new AutoDetect();
-        return;
+        return true;
     }
 #endif
     handset = new CRSFHandset();
+    return true;
 }
 
 static int start()
@@ -40,16 +42,11 @@ static int timeout()
     return DURATION_IMMEDIATELY;
 }
 
-static int event()
-{
-    // An event should be generated every time the TX power changes
-    CRSF::LinkStatistics.uplink_TX_Power = powerToCrsfPower(PowerLevelContainer::currPower());
-    return DURATION_IGNORE;
-}
-
 device_t Handset_device = {
     .initialize = initialize,
     .start = start,
-    .event = event,
-    .timeout = timeout};
+    .event = nullptr,
+    .timeout = timeout,
+    .subscribe = EVENT_NONE,
+};
 #endif

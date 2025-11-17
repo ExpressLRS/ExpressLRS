@@ -91,19 +91,6 @@ public:
      */
     static void phaseShift(int32_t newPhaseShift);
 
-#if defined(PLATFORM_STM32)
-    /**
-     * @brief Schedule a pause of the specified duration, in microseconds.
-     *
-     * Will pause until the TICK interrupt, then the next timer will
-     * fire after "duration - interval/2" after that
-     * 65535us max!
-     *
-     * @param duration  in microseconds
-     */
-    static void pause(uint32_t duration);
-#endif
-
     static volatile bool running;
     static volatile bool isTick;
 

@@ -71,8 +71,8 @@
 
 typedef enum
 {
-    LR1121_LORA_PACKET_VARIABLE_LENGTH = 0x00, //!< The packet is on variable size, header included
-    LR1121_LORA_PACKET_FIXED_LENGTH = 0x01,    //!< The packet is known on both sides, no header included in the packet
+    LR1121_LORA_PACKET_VARIABLE_LENGTH = 0x00, //!< The packet length is variable size, header included in the packet
+    LR1121_LORA_PACKET_FIXED_LENGTH = 0x01,    //!< The packet length is known on both sides, no header included in the packet
     LR1121_LORA_PACKET_EXPLICIT = LR1121_LORA_PACKET_VARIABLE_LENGTH,
     LR1121_LORA_PACKET_IMPLICIT = LR1121_LORA_PACKET_FIXED_LENGTH,
 } lr11xx_RadioLoRaPacketLengthsModes_t;
@@ -83,7 +83,6 @@ typedef enum
     LR1121_MODE_STDBY_RC,     //! The radio is in standby mode with RC oscillator
     LR1121_MODE_STDBY_XOSC,   //! The radio is in standby mode with XOSC oscillator
     LR1121_MODE_FS,           //! The radio is in frequency synthesis mode
-    LR1121_MODE_RX,           //! The radio is in receive mode
     LR1121_MODE_RX_CONT,      //! The radio is in continuous receive mode
     LR1121_MODE_TX,           //! The radio is in transmit mode
     LR1121_MODE_CAD           //! The radio is in channel activity detection mode

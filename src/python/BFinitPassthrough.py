@@ -37,7 +37,7 @@ def _validate_serialrx(rl, config, expected):
     return found
 
 
-def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
+def bf_passthrough_init(port, requestedBaudrate):
     sys.stdout.flush()
     dbg_print("======== PASSTHROUGH INIT ========")
     dbg_print("  Trying to initialize %s @ %s" % (port, requestedBaudrate))
@@ -49,7 +49,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     rl = SerialHelper.SerialHelper(s, 3., ['CCC', "# "])
     rl.clear()
     # Send start command '#'
-    rl.write_str("#", half_duplex, False)
+    rl.write_str("#", False)
     start = rl.read_line(2.).strip()
     #dbg_print("BF INIT: '%s'" % start.replace("\r", ""))
     if "CCC" in start:
@@ -58,7 +58,7 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
         raise PassthroughEnabled("No CLI available. Already in passthrough mode?, If this fails reboot FC and try again!")
 
     serial_check = []
-    if not _validate_serialrx(rl, "serialrx_provider", [["CRSF", "ELRS"], "GHST"][half_duplex]):
+    if not _validate_serialrx(rl, "serialrx_provider", ["CRSF", "ELRS"]):
         serial_check.append("Serial Receiver Protocol is not set to CRSF! Hint: set serialrx_provider = CRSF")
     if not _validate_serialrx(rl, "serialrx_inverted", "OFF"):
         serial_check.append("Serial Receiver UART is inverted! Hint: set serialrx_inverted = OFF")
@@ -111,22 +111,18 @@ def bf_passthrough_init(port, requestedBaudrate, half_duplex=False):
     dbg_print("======== PASSTHROUGH DONE ========")
 
 
-def reset_to_bootloader(port, baud, target, action, accept=None, half_duplex=False, chip_type='ESP82') -> int:
+def reset_to_bootloader(port, baud, target, action, accept=None, chip_type='ESP82') -> int:
     dbg_print("======== RESET TO BOOTLOADER ========")
     s = serial.Serial(port=port, baudrate=baud,
         bytesize=8, parity='N', stopbits=1,
         timeout=1, xonxoff=0, rtscts=0)
     rl = SerialHelper.SerialHelper(s, 3.)
     rl.clear()
-    if half_duplex:
-        BootloaderInitSeq = bootloader.get_init_seq('GHST', chip_type)
-        dbg_print("  * Using half duplex (GHST)")
-    else:
-        BootloaderInitSeq = bootloader.get_init_seq('CRSF', chip_type)
-        dbg_print("  * Using full duplex (CRSF)")
-        #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
-        rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
-        time.sleep(0.2)
+    BootloaderInitSeq = bootloader.get_init_seq(chip_type)
+    dbg_print("  * Using full duplex (CRSF)")
+    #this is the training sequ for the ROM bootloader, we send it here so it doesn't auto-neg to the wrong baudrate by the BootloaderInitSeq that we send to reset ELRS
+    rl.write(b'\x07\x07\x12\x20' + 32 * b'\x55')
+    time.sleep(0.2)
     rl.write(BootloaderInitSeq)
     s.flush()
     rx_target = rl.read_line().strip().upper()
@@ -169,8 +165,6 @@ def main(custom_args = None):
         help="The target firmware that is going to be uploaded")
     parser.add_argument("-nr", "--no-reset", action="store_false",
         dest="reset_to_bl", help="Do not send reset_to_bootloader command sequence")
-    parser.add_argument("-hd", "--half-duplex", action="store_true",
-        dest="half_duplex", help="Use half duplex mode")
     parser.add_argument("-t", "--type", type=str, default="ESP82",
         help="Defines flash target type which is sent to target in reboot command")
     parser.add_argument("-a", "--action", type=str, default="upload",
@@ -190,7 +184,7 @@ def main(custom_args = None):
         dbg_print(str(err))
 
     if args.reset_to_bl:
-        returncode = reset_to_bootloader(args.port, args.baud, args.target, args.action, args.accept, args.half_duplex, args.type)
+        returncode = reset_to_bootloader(args.port, args.baud, args.target, args.action, args.accept, args.type)
 
     return returncode
 

@@ -36,7 +36,7 @@ public:
     {
     }
 
-    void init(uint8_t pin, bool idlelow)
+    void init(uint8_t pin, bool idlelow = false)
     {
         _pin = pin;
         _idlelow = idlelow,

@@ -24,22 +24,19 @@
 
 ///////////////////////////////////////
 
-extern bool connectionHasModelMatch;
-
 static device_affinity_t *uiDevices;
 static uint8_t deviceCount;
 
-static bool eventFired[2] = {false, false};
-static connectionState_e lastConnectionState[2] = {disconnected, disconnected};
+static uint32_t eventFired[2] = {0, 0};
 static bool lastModelMatch[2] = {false, false};
 
 static unsigned long deviceTimeout[16] = {0};
 
 #if MULTICORE
-static TaskHandle_t xDeviceTask = NULL;
-static SemaphoreHandle_t taskSemaphore;
-static SemaphoreHandle_t completeSemaphore;
-static void deviceTask(void *pvArgs);
+static TaskHandle_t xDeviceTask = nullptr;
+static SemaphoreHandle_t semCore0Begin = nullptr;
+static SemaphoreHandle_t semCore0Complete = nullptr;
+[[noreturn]] static void deviceTask(void *pvArgs);
 #define CURRENT_CORE  xPortGetCoreID()
 #else
 #define CURRENT_CORE -1
@@ -51,8 +48,22 @@ void devicesRegister(device_affinity_t *devices, uint8_t count)
     deviceCount = count;
 
     #if MULTICORE
-        taskSemaphore = xSemaphoreCreateBinary();
-        completeSemaphore = xSemaphoreCreateBinary();
+        // devicesRegister() comes in on CORE 1 from setup()
+        // but we need two tasks, one for each core to run their respective init/start/timeout functions
+        // Use two semaphores to create an interlocking pattern with CORE 0 waiting for CORE 1's calls to each function
+        // (both semaphores are created "taken")
+        // CORE 0 blocks for semCore0Begin
+        // CORE 1 devicesInit()
+        // CORE 1 give semCore0Begin -- milestone 1
+        // CORE 1 wait for semCore0Complete -- given in milestone 2
+        // CORE 0 wait for semCore0Begin -- given in milestone 1
+        // CORE 0 devicesInit()
+        // CORE 0 give semCore0Complete -- milestone 2
+        // repeat pattern for devicesStart()
+        // CORE 0 blocks for semCore0Begin
+        // ..
+        semCore0Begin = xSemaphoreCreateBinary();
+        semCore0Complete = xSemaphoreCreateBinary();
         disableCore0WDT();
         xTaskCreatePinnedToCore(deviceTask, "deviceTask", 32768, NULL, 0, &xDeviceTask, 0);
     #endif
@@ -64,16 +75,18 @@ void devicesInit()
 
     for(size_t i=0 ; i<deviceCount ; i++) {
         if (uiDevices[i].core == core || core == -1) {
-            if (uiDevices[i].device->initialize) {
-                (uiDevices[i].device->initialize)();
+            if (uiDevices[i].device->initialize && !(uiDevices[i].device->initialize)()) {
+                uiDevices[i].device->start = nullptr;
+                uiDevices[i].device->event = nullptr;
+                uiDevices[i].device->timeout = nullptr;
             }
         }
     }
     #if MULTICORE
     if (core == 1)
     {
-        xSemaphoreGive(taskSemaphore);
-        xSemaphoreTake(completeSemaphore, portMAX_DELAY);
+        xSemaphoreGive(semCore0Begin);
+        xSemaphoreTake(semCore0Complete, portMAX_DELAY);
     }
     #endif
 }
@@ -97,8 +110,8 @@ void devicesStart()
     #if MULTICORE
     if (core == 1)
     {
-        xSemaphoreGive(taskSemaphore);
-        xSemaphoreTake(completeSemaphore, portMAX_DELAY);
+        xSemaphoreGive(semCore0Begin);
+        xSemaphoreTake(semCore0Complete, portMAX_DELAY);
     }
     #endif
 }
@@ -110,13 +123,15 @@ void devicesStop()
     #endif
 }
 
-void devicesTriggerEvent()
+void devicesTriggerEvent(uint32_t events)
 {
-    eventFired[0] = true;
-    eventFired[1] = true;
+    eventFired[0] |= events;
+    eventFired[1] |= events;
     #if MULTICORE
-    // Release teh semaphore so the tasks on core 0 run now
-    xSemaphoreGive(taskSemaphore);
+    // Break the wait in deviceTask's loop. Don't do this if all the deviceStart()s haven't completed
+    // or this will trigger CORE 0's interlocking startup to progress too early
+    if (semCore0Complete == nullptr)
+        xSemaphoreGive(semCore0Begin);
     #endif
 }
 
@@ -126,15 +141,16 @@ static int _devicesUpdate(unsigned long now)
     const int32_t coreMulti = (core == -1) ? 0 : core;
 
     bool newModelMatch = connectionHasModelMatch && teamraceHasModelMatch;
-    bool handleEvents = eventFired[coreMulti] || lastConnectionState[coreMulti] != connectionState || lastModelMatch[coreMulti] != newModelMatch;
-    eventFired[coreMulti] = false;
-    lastConnectionState[coreMulti] = connectionState;
+    uint32_t events = eventFired[coreMulti];
+    eventFired[coreMulti] = 0;
+    bool handleEvents = events != 0 || lastModelMatch[coreMulti] != newModelMatch;
     lastModelMatch[coreMulti] = newModelMatch;
 
-    for(size_t i=0 ; i<deviceCount ; i++)
+    if (handleEvents)
     {
-        if (uiDevices[i].core == core || core == -1) {
-            if (handleEvents && uiDevices[i].device->event)
+        for(size_t i=0 ; i<deviceCount ; i++)
+        {
+            if ((uiDevices[i].core == core || core == -1) && (uiDevices[i].device->event && (uiDevices[i].device->subscribe & events) != 0))
             {
                 int delay = (uiDevices[i].device->event)();
                 if (delay != DURATION_IGNORE)
@@ -171,19 +187,22 @@ void devicesUpdate(unsigned long now)
 }
 
 #if MULTICORE
-static void deviceTask(void *pvArgs)
+[[noreturn]] static void deviceTask(void *pvArgs)
 {
-    xSemaphoreTake(taskSemaphore, portMAX_DELAY);
+    xSemaphoreTake(semCore0Begin, portMAX_DELAY);
     devicesInit();
-    xSemaphoreGive(completeSemaphore);
-    xSemaphoreTake(taskSemaphore, portMAX_DELAY);
+    xSemaphoreGive(semCore0Complete);
+    xSemaphoreTake(semCore0Begin, portMAX_DELAY);
     devicesStart();
-    xSemaphoreGive(completeSemaphore);
+    xSemaphoreGive(semCore0Complete);
+    // No longer need the complete semaphore, use it as an indicator all setup has completed
+    vSemaphoreDelete(semCore0Complete);
+    semCore0Complete = nullptr;
     for (;;)
     {
         int delay = _devicesUpdate(millis());
-        // sleep the core until the desired time or it's awakened by an event
-        xSemaphoreTake(taskSemaphore, delay == DURATION_NEVER ? portMAX_DELAY : pdMS_TO_TICKS(delay));
+        // sleep the core until the desired time, or it's awakened by an event
+        xSemaphoreTake(semCore0Begin, delay == DURATION_NEVER ? portMAX_DELAY : pdMS_TO_TICKS(delay));
     }
 }
 #endif

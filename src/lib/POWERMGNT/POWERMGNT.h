@@ -7,20 +7,6 @@
 #include <nvs.h>
 #endif
 
-#ifndef POWER_OUTPUT_VALUES
-    // These are "fake" values as the power on the RX is not user selectable
-    #define MinPower PWR_10mW
-    #define MaxPower PWR_10mW
-#endif
-
-#if !defined(DefaultPower)
-    #define DefaultPower PWR_50mW
-#endif
-
-#if !defined(HighPower)
-#define HighPower MaxPower
-#endif
-
 typedef enum
 {
     PWR_10mW = 0,
@@ -36,7 +22,7 @@ typedef enum
 } PowerLevels_e;
 
 uint8_t powerToCrsfPower(PowerLevels_e Power);
-PowerLevels_e crsfpowerToPower(uint8_t crsfpower);
+PowerLevels_e crsfPowerToPower(uint8_t crsfpower);
 
 class PowerLevelContainer
 {
@@ -97,19 +83,12 @@ public:
 
     /**
      * @brief Get the MaxPower level supported by this device.
-     * For devices that support the HighPower override, i.e. R9M with the fan hack,
-     * the MaxPower is normally HighPower unless the 'unlock_higher_power' option
-     * is set at compile time.
      *
      * @return PowerLevels_e the maximum power level supported
      */
     static PowerLevels_e getMaxPower() {
         PowerLevels_e power;
-        #if defined(TARGET_RX)
-            power = MaxPower;
-        #else
-            power = firmwareOptions.unlock_higher_power ? MaxPower : HighPower;
-        #endif
+        power = MaxPower;
         #if defined(Regulatory_Domain_EU_CE_2400)
             if (power > PWR_100mW)
             {

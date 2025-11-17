@@ -1,4 +1,4 @@
-#ifdef HAS_TFT_SCREEN
+#if defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
 
 #include <Arduino_GFX_Library.h>
 #include "Pragma_Sans36pt7b.h"
@@ -7,11 +7,11 @@
 
 #include "tftdisplay.h"
 
+#include "CRSFRouter.h"
+#include "common.h"
+#include "logging.h"
 #include "logos.h"
 #include "options.h"
-#include "logging.h"
-#include "common.h"
-#include "CRSF.h"
 
 #include "WiFi.h"
 extern WiFiMode_t wifiMode;
@@ -125,12 +125,12 @@ static Arduino_GFX *gfx;
 
 void TFTDisplay::init()
 {
-    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
     {
-        pinMode(GPIO_PIN_TFT_BL, OUTPUT);
+        pinMode(GPIO_PIN_SCREEN_BL, OUTPUT);
     }
-    bus = new Arduino_ESP32SPI(GPIO_PIN_TFT_DC, GPIO_PIN_TFT_CS, GPIO_PIN_TFT_SCLK, GPIO_PIN_TFT_MOSI, GFX_NOT_DEFINED, HSPI);
-    gfx = new Arduino_ST7735(bus, GPIO_PIN_TFT_RST, OPT_OLED_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
+    bus = new Arduino_ESP32SPI(GPIO_PIN_SCREEN_DC, GPIO_PIN_SCREEN_CS, GPIO_PIN_SCREEN_SCK, GPIO_PIN_SCREEN_MOSI, GFX_NOT_DEFINED, HSPI);
+    gfx = new Arduino_ST7735(bus, GPIO_PIN_SCREEN_RST, OPT_SCREEN_REVERSED ? 3 : 1 /* rotation */, true , 80, 160, 26, 1, 26, 1);
 
     gfx->begin();
     doScreenBackLight(SCREEN_BACKLIGHT_ON);
@@ -138,9 +138,9 @@ void TFTDisplay::init()
 
 void TFTDisplay::doScreenBackLight(screen_backlight_t state)
 {
-    if (GPIO_PIN_TFT_BL != UNDEF_PIN)
+    if (GPIO_PIN_SCREEN_BL != UNDEF_PIN)
     {
-        digitalWrite(GPIO_PIN_TFT_BL, state);
+        digitalWrite(GPIO_PIN_SCREEN_BL, state);
     }
 }
 
@@ -182,7 +182,7 @@ void TFTDisplay::displaySplashScreen()
                     SCREEN_X - SCREEN_FONT_GAP*2, SCREEN_NORMAL_FONT_SIZE + INIT_PAGE_FONT_PADDING*2, BLACK);
 
     char buffer[50];
-    snprintf(buffer, sizeof(buffer), "%s  ELRS-%.6s", HARDWARE_VERSION, version);
+    snprintf(buffer, sizeof(buffer), "ELRS-%.6s", version);
     displayFontCenter(INIT_PAGE_FONT_START_X, SCREEN_X - INIT_PAGE_FONT_START_X, INIT_PAGE_FONT_START_Y,
                         SCREEN_NORMAL_FONT_SIZE, SCREEN_NORMAL_FONT,
                         String(buffer), WHITE, BLACK);
@@ -412,35 +412,35 @@ void TFTDisplay::displayLinkstats()
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIRST);
     gfx->print("Uplink");
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_SECOND);
-    gfx->print(CRSF::LinkStatistics.uplink_Link_quality);
+    gfx->print(linkStats.uplink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_THIRD);
-    gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_1);
-    if (CRSF::LinkStatistics.uplink_RSSI_2 != 0)
+    gfx->print((int8_t)linkStats.uplink_RSSI_1);
+    if (linkStats.uplink_RSSI_2 != 0)
     {
         gfx->print('/');
-        gfx->print((int8_t)CRSF::LinkStatistics.uplink_RSSI_2);
+        gfx->print((int8_t)linkStats.uplink_RSSI_2);
     }
 
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FOURTH);
-    gfx->print(CRSF::LinkStatistics.uplink_SNR);
+    gfx->print(linkStats.uplink_SNR);
     gfx->setCursor(LINKSTATS_COL_SECOND, LINKSTATS_ROW_FIFTH);
-    gfx->print(CRSF::LinkStatistics.active_antenna);
+    gfx->print(linkStats.active_antenna);
 
     // Downlink Linkstats
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FIRST);
     gfx->print("Downlink");
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_SECOND);
-    gfx->print(CRSF::LinkStatistics.downlink_Link_quality);
+    gfx->print(linkStats.downlink_Link_quality);
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_THIRD);
-    gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_1);
+    gfx->print((int8_t)linkStats.downlink_RSSI_1);
     if (isDualRadio())
     {
         gfx->print('/');
-        gfx->print((int8_t)CRSF::LinkStatistics.downlink_RSSI_2);
+        gfx->print((int8_t)linkStats.downlink_RSSI_2);
     }
 
     gfx->setCursor(LINKSTATS_COL_THIRD, LINKSTATS_ROW_FOURTH);
-    gfx->print(CRSF::LinkStatistics.downlink_SNR);
+    gfx->print(linkStats.downlink_SNR);
 }
 
 #endif

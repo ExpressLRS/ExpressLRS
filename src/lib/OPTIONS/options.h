@@ -27,16 +27,14 @@ typedef struct _options {
     uint32_t    flash_discriminator;    // Discriminator value used to determine if the device has been reflashed and therefore
                                         // the SPIFSS settings are obsolete and the flashed settings should be used in preference
     uint32_t    fan_min_runtime;
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     int32_t     wifi_auto_on_interval;
     char        home_wifi_ssid[33];
     char        home_wifi_password[65];
-#endif
 #if defined(TARGET_RX)
     uint32_t    uart_baud;
     bool        _unused1:1; // invert_tx
     bool        lock_on_first_connection:1;
-    bool        _unused2:1; // r9mm_mini_sbus
+    bool        dji_permanently_armed:1;
     bool        is_airport:1;
 #endif
 #if defined(TARGET_TX) || defined(UNIT_TEST)
@@ -44,10 +42,6 @@ typedef struct _options {
     bool        _unused1:1;
     bool        unlock_higher_power:1;
     bool        is_airport:1;
-#if defined(GPIO_PIN_BUZZER)
-    uint8_t     buzzer_mode;            // 0 = disable all, 1 = beep once, 2 = disable startup beep, 3 = default tune, 4 = custom tune
-    uint16_t    buzzer_melody[32][2];
-#endif
     uint32_t    uart_baud;              // only use for airport
 #endif
 } __attribute__((packed)) firmware_options_t;
@@ -58,12 +52,13 @@ constexpr size_t ELRSOPTS_DEVICENAME_SIZE = 16;
 constexpr size_t ELRSOPTS_OPTIONS_SIZE = 512;
 constexpr size_t ELRSOPTS_HARDWARE_SIZE = 2048;
 
-#if defined(TARGET_UNIFIED_TX) || defined(TARGET_UNIFIED_RX)
-extern firmware_options_t firmwareOptions;
-extern char product_name[];
 extern char device_name[];
-extern uint32_t logo_image;
+extern firmware_options_t firmwareOptions;
 extern bool options_init();
+
+#if !defined(UNIT_TEST)
+extern char product_name[];
+extern uint32_t logo_image;
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
@@ -71,10 +66,4 @@ extern void saveOptions();
 #include "EspFlashStream.h"
 bool options_HasStringInFlash(EspFlashStream &strmFlash);
 void options_SetTrueDefaults();
-#else
-extern firmware_options_t firmwareOptions;
-extern const char device_name[];
-extern const char *product_name;
-extern bool options_init();
-
 #endif

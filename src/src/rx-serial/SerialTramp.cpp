@@ -1,29 +1,53 @@
 #include "SerialTramp.h"
-#include "msptypes.h"
+
 #include "freqTable.h"
+#include "msptypes.h"
 #if defined(PLATFORM_ESP32)
 #include <hal/uart_ll.h>
 #endif
 
-void SerialTramp::setTXMode()
+#define TRAMP_FRAME_SIZE 16
+#define TRAMP_HEADER 0x0F
+// check value for MSP_SET_VTX_CONFIG to determine if the value is encoded
+// band/channel or frequency in MHz (3 bits for the band and 3 bits for the channel)
+#define VTXCOMMON_MSP_BANDCHAN_CHKVAL ((uint16_t)((7 << 3) + 7))
+
+SerialTramp::SerialTramp(Stream &out, Stream &in, int8_t serial1TXpin) : SerialIO(&out, &in)
 {
 #if defined(PLATFORM_ESP32)
-    pinMode(halfDuplexPin, OUTPUT);                                 // set half duplex GPIO to OUTPUT
-    digitalWrite(halfDuplexPin, HIGH);                              // set half duplex GPIO to high level
+    // we are on UART1, use Serial1 TX assigned pin for half-duplex
+    UTXDoutIdx = U1TXD_OUT_IDX;
+    URXDinIdx = U1RXD_IN_IDX;
+    halfDuplexPin = serial1TXpin;
+#endif
+    setRXMode();
+    crsfRouter.addConnector(this);
+}
+
+ SerialTramp::~SerialTramp()
+{
+    crsfRouter.removeConnector(this);
+}
+
+void SerialTramp::setTXMode() const
+{
+#if defined(PLATFORM_ESP32)
+    pinMode(halfDuplexPin, OUTPUT);                                 // set half-duplex GPIO to OUTPUT
+    digitalWrite(halfDuplexPin, HIGH);                              // set half-duplex GPIO to high level
     pinMatrixOutAttach(halfDuplexPin, UTXDoutIdx, false, false);    // attach GPIO as output of UART TX
 #endif
 }
 
-void SerialTramp::setRXMode()
+void SerialTramp::setRXMode() const
 {
 #if defined(PLATFORM_ESP32)
-    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half duplex GPIO to INPUT
-    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half duplex GPIO as input to UART RX
+    pinMode(halfDuplexPin, INPUT_PULLUP);                           // set half-duplex GPIO to INPUT
+    pinMatrixInAttach(halfDuplexPin, URXDinIdx, false);             // attach half-duplex GPIO as input to UART RX
 #endif
 }
 
-// Calculate tramp protocol checksum of provided buffer
-uint8_t checksum(uint8_t *buf)
+// Calculate tramp protocol checksum of the provided buffer
+static uint8_t checksum(const uint8_t *buf)
 {
     uint8_t cksum = 0;
 
@@ -56,13 +80,14 @@ void SerialTramp::sendQueuedData(uint32_t maxBytesToSend)
 #endif
 }
 
-// Up to us how we want to define these; official Tramp VTXes are 600mW max but other non-IRC VTXes
+// Up to us how we want to define these; official Tramp VTXes are 600mW max, but other non-IRC VTXes
 // implementing Tramp might support more. This seems like a reasonable tradeoff.
 // In Lua, we have 1-8, so we'll define those here and leave 0=0.
 uint16_t powerLevelLUT[9] = { 0, 10, 25, 200, 400, 600, 1000, 1600, 3000 };
 
-void SerialTramp::queueMSPFrameTransmission(uint8_t* data)
+void SerialTramp::forwardMessage(const crsf_header_t *message)
 {
+    auto data = (uint8_t *)message;
     // What we're handed here is MSP wrapped in CRSF, so our offsets are thrown off
     uint8_t innerLength = data[6];
     if (innerLength < 2) {

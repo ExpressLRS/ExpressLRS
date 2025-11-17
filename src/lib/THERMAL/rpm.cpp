@@ -5,6 +5,8 @@
 #include <driver/pcnt.h>
 #include <soc/pcnt_struct.h>
 
+#define TACHO_PULSES_PER_REV 4
+
 static volatile int overflow = 0;
 static uint32_t lastTime = 0;
 
@@ -51,7 +53,7 @@ uint32_t get_rpm()
     pcnt_get_counter_value(PCNT_UNIT_0, &counter);
     pcnt_counter_clear(PCNT_UNIT_0);
     uint32_t now = millis();
-    uint32_t rpm = ((overflow * 30000) + counter) * 60000 / 4 / (now - lastTime);
+    uint32_t rpm = ((overflow * 30000) + counter) * 60000 / TACHO_PULSES_PER_REV / (now - lastTime);
     overflow = 0;
     lastTime = now;
     return rpm;

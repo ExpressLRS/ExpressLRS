@@ -1,17 +1,19 @@
-#if defined(GPIO_PIN_PWM_OUTPUTS)
+#if defined(TARGET_RX)
 
 #include "devServoOutput.h"
+#include "OTA.h"
 #include "PWM.h"
-#include "CRSF.h"
 #include "config.h"
+#include "crsf_protocol.h"
 #include "logging.h"
 #include "rxtx_intf.h"
 
 static int8_t servoPins[PWM_MAX_CHANNELS];
 static pwm_channel_t pwmChannels[PWM_MAX_CHANNELS];
 static uint16_t pwmChannelValues[PWM_MAX_CHANNELS];
+static bool initialized = false;
 
-#if (defined(PLATFORM_ESP32))
+#if defined(PLATFORM_ESP32)
 static DShotRMT *dshotInstances[PWM_MAX_CHANNELS] = {nullptr};
 const uint8_t RMT_MAX_CHANNELS = 8;
 #endif
@@ -20,6 +22,8 @@ const uint8_t RMT_MAX_CHANNELS = 8;
 static bool newChannelsAvailable;
 // Absolute max failsafe time if no update is received, regardless of LQ
 static constexpr uint32_t FAILSAFE_ABS_TIMEOUT_MS = 1000U;
+
+typedef void (*servoWrite_fn)(uint8_t ch, uint16_t us);
 
 void ICACHE_RAM_ATTR servoNewChannelsAvailable()
 {
@@ -49,47 +53,78 @@ uint16_t servoOutputModeToFrequency(eServoOutputMode mode)
     }
 }
 
+static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
+{
+#if defined(PLATFORM_ESP32)
+    // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
+    if (dshotInstances[ch] == nullptr)
+        return;
+
+    // check if we actually want a pulse (for no-pulse failsafe)
+    if (us > 0)
+    {
+        uint16_t dshotVal;
+        us = constrain(us, 1000, 2000);
+        if (chMode == somDShot)
+        {
+            dshotVal = fmap(us, 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+        }
+        else // somDShot3D
+        {
+            if (us == 1500) { // stopped
+                dshotVal = 0;
+            }
+            else if (us > 1500) { // forward
+                dshotVal = fmap(us, 1501, 2000, 1048, 2047);
+            }
+            else { // reverse
+                dshotVal = fmap(us, 1499, 1000, 48, 1047);
+            }
+        }
+        dshotInstances[ch]->send_dshot_value(dshotVal);
+    }
+    else
+    {
+        // getting an actual zero microsecond command means the failsafe mode is no-pulse
+        dshotInstances[ch]->set_looping(false);
+    }
+#endif /* PLATFORM_ESP32 */
+}
+
 static void servoWrite(uint8_t ch, uint16_t us)
 {
     const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-#if defined(PLATFORM_ESP32)
-    if ((eServoOutputMode)chConfig->val.mode == somDShot)
+    const eServoOutputMode chMode = (eServoOutputMode)chConfig->val.mode;
+    if (chMode == somDShot || chMode == somDShot3D)
     {
-        // DBGLN("Writing DShot output: us: %u, ch: %d", us, ch);
-        if (dshotInstances[ch])
-        {
-            dshotInstances[ch]->send_dshot_value(((constrain(us, 1000, 2000) - 1000) * 2) + 47); // Convert PWM signal in us to DShot value
-        }
+        servoWriteDshot(chMode, ch, us);
     }
-    else
-#endif
-    if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
+    else if (servoPins[ch] != UNDEF_PIN && pwmChannelValues[ch] != us)
     {
         pwmChannelValues[ch] = us;
-        if ((eServoOutputMode)chConfig->val.mode == somOnOff)
+        if (chMode == somOnOff)
         {
             digitalWrite(servoPins[ch], us > 1500);
         }
-        else if ((eServoOutputMode)chConfig->val.mode == som10KHzDuty)
+        else if (chMode == som10KHzDuty)
         {
             PWM.setDuty(pwmChannels[ch], constrain(us, 1000, 2000) - 1000);
         }
         else
         {
-            PWM.setMicroseconds(pwmChannels[ch], us / (chConfig->val.narrow + 1));
+            PWM.setMicroseconds(pwmChannels[ch], us);
         }
     }
 }
 
 static void servosFailsafe()
 {
-    constexpr unsigned SERVO_FAILSAFE_MIN = 988U;
     for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
     {
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         if (chConfig->val.failsafeMode == PWMFAILSAFE_SET_POSITION) {
             // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
-            uint16_t us = chConfig->val.failsafe + SERVO_FAILSAFE_MIN;
+            uint16_t us = chConfig->val.failsafe + CHANNEL_VALUE_FS_US_MIN;
             // Always write the failsafe position even if the servo has never been started,
             // so all the servos go to their expected position
             servoWrite(ch, us);
@@ -103,33 +138,68 @@ static void servosFailsafe()
     }
 }
 
+static void servoCalcAllChannels(servoWrite_fn write)
+{
+    for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
+    {
+        const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+        const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
+        // crsfVal might 0 if this is a switch channel, and it has not been
+        // received yet. Delay initializing the servo until the channel is valid
+        if (crsfVal == 0)
+        {
+            continue;
+        }
+
+        uint16_t us;
+        if (chConfig->val.stretched)
+        {
+            if (OtaIsFullRes)
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 500, 2500);
+            else
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
+        }
+        else
+        {
+            us = CRSF_to_US(crsfVal);
+        }
+        // Flip the output around the mid-value if inverted
+        // (1500 - usOutput) + 1500
+        if (chConfig->val.inverted)
+        {
+            us = 3000U - us;
+        }
+        write(ch, us);
+    } /* for each servo */
+}
+
+static void servoUsToFailsafeConfig(uint8_t ch, uint16_t us)
+{
+    rx_config_pwm_t newPwmCh;
+    newPwmCh.raw = config.GetPwmChannel(ch)->raw;
+    newPwmCh.val.failsafe = constrain(us, CHANNEL_VALUE_FS_US_MIN, CHANNEL_VALUE_FS_US_MAX) - CHANNEL_VALUE_FS_US_MIN;
+    //DBGLN("FSCH(%u) us=%u", ch, us);
+    config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+void servoCurrentToFailsafeConfig()
+{
+    servoCalcAllChannels(&servoUsToFailsafeConfig);
+}
+
 static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
+
+    #if defined(PLATFORM_ESP32)
+    DShotRMT::poll();
+    #endif
+
     if (newChannelsAvailable)
     {
         newChannelsAvailable = false;
         lastUpdate = now;
-        for (int ch = 0 ; ch < GPIO_PIN_PWM_OUTPUTS_COUNT ; ++ch)
-        {
-            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-            const unsigned crsfVal = ChannelData[chConfig->val.inputChannel];
-            // crsfVal might 0 if this is a switch channel, and it has not been
-            // received yet. Delay initializing the servo until the channel is valid
-            if (crsfVal == 0)
-            {
-                continue;
-            }
-
-            uint16_t us = CRSF_to_US(crsfVal);
-            // Flip the output around the mid-value if inverted
-            // (1500 - usOutput) + 1500
-            if (chConfig->val.inverted)
-            {
-                us = 3000U - us;
-            }
-            servoWrite(ch, us);
-        } /* for each servo */
+        servoCalcAllChannels(&servoWrite);
     }     /* if newChannelsAvailable */
 
     // LQ goes to 0 (100 packets missed in a row)
@@ -142,11 +212,11 @@ static void servosUpdate(unsigned long now)
     }
 }
 
-static void initialize()
+static bool initialize()
 {
     if (!OPT_HAS_SERVO_OUTPUT)
     {
-        return;
+        return false;
     }
 
 #if defined(PLATFORM_ESP32)
@@ -157,7 +227,7 @@ static void initialize()
         pwmChannelValues[ch] = UINT16_MAX;
         pwmChannels[ch] = -1;
         int8_t pin = GPIO_PIN_PWM_OUTPUTS[ch];
-#if (defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)) && (defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32))
+#if defined(DEBUG_LOG) || defined(DEBUG_RCVR_LINKSTATS)
         // Disconnect the debug UART pins if DEBUG_LOG
         if (pin == U0RXD_GPIO_NUM || pin == U0TXD_GPIO_NUM)
         {
@@ -171,7 +241,7 @@ static void initialize()
             pin = UNDEF_PIN;
         }
 #if defined(PLATFORM_ESP32)
-        else if (mode == somDShot)
+        else if (mode == somDShot || mode == somDShot3D)
         {
             if (rmtCH < RMT_MAX_CHANNELS)
             {
@@ -179,6 +249,7 @@ static void initialize()
                 auto rmtChannel = (rmt_channel_t)rmtCH;
                 DBGLN("Initializing DShot: gpio: %u, ch: %d, rmtChannel: %u", gpio, ch, rmtChannel);
                 pinMode(pin, OUTPUT);
+                digitalWrite(pin, LOW);
                 dshotInstances[ch] = new DShotRMT(gpio, rmtChannel); // Initialize the DShotRMT instance
                 rmtCH++;
             }
@@ -202,38 +273,18 @@ static void initialize()
             digitalWrite(pin, LOW);
         }
     }
-}
-
-static int start()
-{
-    for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-    {
-        const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
-        auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
-        if (frequency && servoPins[ch] != UNDEF_PIN)
-        {
-            pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
-        }
-#if defined(PLATFORM_ESP32)
-        else if (((eServoOutputMode)chConfig->val.mode) == somDShot)
-        {
-            dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
-            dshotInstances[ch]->send_dshot_value(0);         // Set throttle low so the ESC can continue initialsation
-        }
-#endif
-    }
-    return DURATION_NEVER;
+    return true;
 }
 
 static int event()
 {
-    if (!OPT_HAS_SERVO_OUTPUT || connectionState == disconnected)
+    if (connectionState == disconnected)
     {
         // Disconnected should come after failsafe on the RX,
         // so it is safe to shut down when disconnected
         return DURATION_NEVER;
     }
-    else if (connectionState == wifiUpdate)
+    if (connectionState == wifiUpdate)
     {
         for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
         {
@@ -253,6 +304,25 @@ static int event()
         }
         return DURATION_NEVER;
     }
+    if (!initialized && connectionState == connected)
+    {
+        initialized = true;
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+            const auto frequency = servoOutputModeToFrequency((eServoOutputMode)chConfig->val.mode);
+            if (frequency && servoPins[ch] != UNDEF_PIN)
+            {
+                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+            }
+#if defined(PLATFORM_ESP32)
+            else if ((eServoOutputMode)chConfig->val.mode == somDShot || (eServoOutputMode)chConfig->val.mode == somDShot3D)
+            {
+                dshotInstances[ch]->begin(DSHOT300, false); // Set DShot protocol and bidirectional dshot bool
+            }
+#endif
+        }
+    }
     return DURATION_IMMEDIATELY;
 }
 
@@ -264,9 +334,10 @@ static int timeout()
 
 device_t ServoOut_device = {
     .initialize = initialize,
-    .start = start,
+    .start = nullptr,
     .event = event,
     .timeout = timeout,
+    .subscribe = EVENT_CONNECTION_CHANGED
 };
 
 #endif
