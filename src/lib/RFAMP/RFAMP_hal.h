@@ -28,7 +28,6 @@ private:
     uint64_t rx_enable_clr_bits;
 #else
     bool rx_enabled;
-    bool tx1_enabled;
-    bool tx2_enabled;
+    bool tx_enabled;
 #endif
 };
