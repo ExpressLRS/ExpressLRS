@@ -3,14 +3,6 @@
 #include <cstdint>
 #include <cmath>
 
-// run in IRAM for speed up when running on ESP32
-#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP32S3)
-#include "esp_attr.h"
-#define STDEV_INLINE inline IRAM_ATTR
-#else
-#define STDEV_INLINE inline
-#endif
-
 // Fixed-point arithmetic constants
 // Using 16-bit fixed-point with 8 fractional bits (Q8.8 format)
 #define FIXED_POINT_SHIFT 8
@@ -19,7 +11,8 @@
 
 // Fast integer square root using binary search
 // algorithm adopted from https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_(base_2)
-STDEV_INLINE uint16_t fast_sqrt_uint(uint32_t x) {
+uint16_t fast_sqrt_uint(uint32_t x)
+{
     if (x == 0) {
         return 0;
     }
@@ -60,7 +53,7 @@ public:
     /// @brief Adds a new int8_t sample into the circular buffer.
     ///        If full, the oldest value is overwritten (moving window).
     ///        Only minimal work should be done here for interrupt safety.
-    void ICACHE_RAM_ATTR add(int8_t value)
+    void add(int8_t value)
     {
         int8_t old = _buffer[_index];
         _buffer[_index] = value;

@@ -65,11 +65,6 @@ void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
     dynpower_updated = snrScaled;
 }
 
-void ICACHE_RAM_ATTR DynamicPower_SnrThresholdUpdate(int8_t rawSnrScaled)
-{
-    dynpower_stat_snr.add(rawSnrScaled);
-}
-
 void DynamicPower_Update(uint32_t now)
 {
   int8_t snrScaled = dynpower_updated;
@@ -153,6 +148,10 @@ void DynamicPower_Update(uint32_t now)
   // the calculation could exceed 100% during a rate change or initial connect when the LQs are not synced
   lq_current = std::min(lq_current * 100 / std::max((uint32_t)LBTSuccessCalc.getLQ(), (uint32_t)1U), (uint32_t)100U);
 #endif
+  if (lq_current >= 99)
+  {
+      dynpower_stat_snr.add(snrScaled);
+  }
   uint32_t lq_avg = dynpower_mavg_lq;
   int32_t lq_diff = lq_avg - lq_current;
   dynpower_mavg_lq.add(lq_current);

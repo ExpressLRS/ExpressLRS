@@ -142,11 +142,6 @@ void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
 {
   int8_t snrScaled = ls->SNR;
   DynamicPower_TelemetryUpdate(snrScaled);
-  if (ls->lq >= 99)
-  {
-    DynamicPower_SnrThresholdUpdate(snrScaled);
-  }
-
 
   // Antenna is the high bit in the RSSI_1 value
   // RSSI received is signed, inverted polarity (positive value = -dBm)
