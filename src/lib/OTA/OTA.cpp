@@ -232,9 +232,9 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     ota8->dbg_linkstats.packetNum = packetCnt++;
 #else
     // Sources:
-    // 8ch always: low=0 high=5
-    // 12ch isHighAux=false: low=0 high=5
-    // 12ch isHighAux=true:  low=0 high=9
+    // 8ch always: low=0 high=4
+    // 12ch isHighAux=false: low=0 high=4
+    // 12ch isHighAux=true:  low=0 high=8
     // 16ch isHighAux=false: low=0 high=4
     // 16ch isHighAux=true:  low=8 high=12
     uint8_t chSrcLow;
