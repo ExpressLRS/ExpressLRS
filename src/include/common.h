@@ -337,6 +337,7 @@ inline void setConnectionState(connectionState_e newState) {
 extern bool crsfBatterySensorDetected;
 extern bool crsfBaroSensorDetected;
 
+void ChannelDataReset();
 uint32_t uidMacSeedGet();
 bool isDualRadio();
 void EnterBindingModeSafely(); // defined in rx_main/tx_main
