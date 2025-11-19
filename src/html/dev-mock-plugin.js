@@ -63,8 +63,8 @@ export function devMockPlugin() {
                 {"config": 0, "pin": 0, "features": 12},
                 {"config": 1536, "pin": 4, "features": 12 + 16},
                 {"config": 2048, "pin": 5, "features": 12 + 16},
-                {"config": 3584, "pin": 1, "features": 1 + 16},
-                {"config": 4608, "pin": 3, "features": 2 + 16}
+                {"config": 3584, "pin": 1, "features": 1 + 4 + 8 + 16 + 32+ 64},
+                {"config": 4608, "pin": 3, "features": 2 + 4 + 8 + 16 + 32+ 64}
             ],
             vbind: 0,
             // TX config
