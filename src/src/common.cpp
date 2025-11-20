@@ -167,6 +167,15 @@ expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams = nullptr;
 // Current state of channels, CRSF format
 uint32_t ChannelData[CRSF_NUM_CHANNELS];
 
+/***
+ * @brief Reset all ChannelData to CRSF_CHANNEL_VALUE_UNSET
+ */
+void ChannelDataReset()
+{
+    for (auto &ch : ChannelData)
+        ch = CRSF_CHANNEL_VALUE_UNSET;
+}
+
 uint8_t ICACHE_RAM_ATTR TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval)
 {
     // !! TLM_RATIO_STD/TLM_RATIO_DISARMED should be converted by the caller !!

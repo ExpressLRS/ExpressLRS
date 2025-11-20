@@ -7,20 +7,21 @@
 #define PACKED __attribute__((packed))
 
 #define CRSF_CRC_POLY 0xd5
- 
+
 #define CHANNEL_VALUE_FS_US_MIN         476  // stretch failsafe limit - changing this requires edits in getPwmFormData()
-#define CHANNEL_VALUE_FS_US_ELIMITS_MIN 885  // ELimits failsafe min
+#define CHANNEL_VALUE_FS_US_ELIMITS_MIN 880  // ELimits failsafe min
 #define CHANNEL_VALUE_FS_US_MID         1500 // center
-#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2115 // Elimits failsafe max
+#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2120 // Elimits failsafe max
 #define CHANNEL_VALUE_FS_US_MAX         2523 // stretch failsafe limit
 
-#define CRSF_CHANNEL_VALUE_EXT_MIN 0    // 885us with E.Limits on (-120%) 
+#define CRSF_CHANNEL_VALUE_EXT_MIN 0    // 880us with E.Limits on (-121.1%)
 #define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
 #define CRSF_CHANNEL_VALUE_1000 191
 #define CRSF_CHANNEL_VALUE_MID  992
 #define CRSF_CHANNEL_VALUE_2000 1792
 #define CRSF_CHANNEL_VALUE_MAX  1811 // 2012us - actual CRSF max is 1984 with E.Limits on
-#define CRSF_CHANNEL_VALUE_EXT_MAX 1984 // 2115us with E.Limits on (+120%) 
+#define CRSF_CHANNEL_VALUE_EXT_MAX 1984 // 2120us with E.Limits on (+121.1%)
+#define CRSF_CHANNEL_VALUE_UNSET 0xffff // used internally to indicate no channel value has been received
 
 #define CRSF_MAX_PACKET_LEN 64
 
