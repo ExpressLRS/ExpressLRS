@@ -11,7 +11,7 @@
 #include <LBT.h>
 
 #include "MeanAccumulator.h"
-
+#include "StdevAccumulator.h"
 
 // LQ-based boost defines
 #define DYNPOWER_LQ_BOOST_THRESH_DIFF 20  // If LQ is dropped suddenly for this amount (relative), immediately boost to the max power configured.
@@ -43,8 +43,10 @@ private:
 
 static MovingAvg<DYNPOWER_LQ_MOVING_AVG_K, 16> dynpower_mavg_lq;
 static MeanAccumulator<int32_t, int8_t, -128> dynpower_mean_rssi;
+static StdevAccumulator dynpower_stat_snr;
 static int8_t dynpower_updated;
 static uint32_t dynpower_last_linkstats_millis;
+static uint8_t dynpower_curr_rf_idx;
 
 static void DynamicPower_SetToConfigPower()
 {
@@ -55,6 +57,7 @@ void DynamicPower_Init()
 {
     dynpower_mavg_lq = 100;
     dynpower_updated = DYNPOWER_UPDATE_NOUPDATE;
+    dynpower_curr_rf_idx = 0;
 }
 
 void ICACHE_RAM_ATTR DynamicPower_TelemetryUpdate(int8_t snrScaled)
@@ -71,6 +74,11 @@ void DynamicPower_Update(uint32_t now)
   bool lastTlmMissed = snrScaled == DYNPOWER_UPDATE_MISSED;
 
   int8_t rssi = (linkStats.active_antenna == 0) ? linkStats.uplink_RSSI_1 : linkStats.uplink_RSSI_2;
+  if(ExpressLRS_currAirRate_RFperfParams->index != dynpower_curr_rf_idx)
+  {
+    dynpower_curr_rf_idx = ExpressLRS_currAirRate_RFperfParams->index;
+    dynpower_stat_snr.reset();
+  }
 
   // power is too strong and saturate the RX LNA
   if (newTlmAvail && (rssi >= -5))
@@ -150,7 +158,9 @@ void DynamicPower_Update(uint32_t now)
       return;
   }
 
+  int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
   PowerLevels_e startPowerLevel = POWERMGNT::currPower();
+
   if (ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp == DYNPOWER_SNR_THRESH_NONE)
   {
     // =============  RSSI-based power increment ==============
@@ -160,7 +170,6 @@ void DynamicPower_Update(uint32_t now)
 
     if (dynpower_mean_rssi.getCount() >= DYNPOWER_RSSI_CNT)
     {
-      int32_t expected_RXsensitivity = ExpressLRS_currAirRate_RFperfParams->RXsensitivity;
       int8_t rssi_inc_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_UP;
       int8_t rssi_dec_threshold = expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN;
       int8_t avg_rssi = dynpower_mean_rssi.mean(); // resets it too
@@ -178,18 +187,57 @@ void DynamicPower_Update(uint32_t now)
   } // ^^ if RSSI-based
   else
   {
+    // default thresholds from the config (as a fallback)
+    int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
+    int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
+
+    // Incorporate the current value if LQ is meets the desired LQ standard
+    if (lq_current >= 99)
+    {
+        dynpower_stat_snr.add(snrScaled);
+    }
+    // is SNR stat ready? = is the buffer fully stuffed?
+    if(dynpower_stat_snr.getCount() >= dynpower_stat_snr.WINDOW_SIZE)
+    {
+      static_assert(dynpower_stat_snr.FIXED_POINT_SHIFT >= 4, "StdDevAccumulator must be at least 4 bits of decimal fixed point");
+      int32_t snr_stat_mean = dynpower_stat_snr.meanRaw() >> (dynpower_stat_snr.FIXED_POINT_SHIFT - 4);
+      int32_t snr_stat_stdev = dynpower_stat_snr.standardDeviationRaw() >> (dynpower_stat_snr.FIXED_POINT_SHIFT - 4);
+
+      // Fuzzy logic: reduce scale factor when LQ is getting low for more conservative power management
+      // Base scale factor is 13/4 (3.25), reduce it proportionally when LQ < 100
+      int32_t scale_factor_numerator = 13;
+      if (lq_current < 100) {
+        // scale factor will be 1 (=-0.25 sd for power up threshold) when LQ is 85
+        scale_factor_numerator = std::max((int32_t)(scale_factor_numerator - ((100 - lq_current) * (scale_factor_numerator-1)) / 15), (int32_t)1);
+      }
+
+      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/4)/16); // Dynamic scale based on LQ
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
+      int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.0); // to ensure at least -1.0 dB split between thresholds
+
+      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_thre_up_scaled, snr_thre_dn_scaled, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
+      snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
+      snr_stat_threshold_dn = snr_thre_dn_scaled;
+    }
+
     // =============  SNR-based power increment ==============
     // Decrease the power if SNR above threshold and LQ is good
     // Increase the power for each (X) SNR below the threshold
-    if (snrScaled >= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
+    if (snrScaled >= snr_stat_threshold_dn && lq_avg >= DYNPOWER_LQ_THRESH_DN)
     {
-      DBGVLN("-power (snr)"); // Verbose because this spams when idle
+      if(POWERMGNT::currPower() > MinPower) // prevent spamming when idle
+      {
+        DBGLN("-power (snr) %d >= %d", snrScaled, snr_stat_threshold_dn);
+      }
       POWERMGNT::decPower();
     }
 
-    while ((snrScaled <= ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp) && (powerHeadroom > 0))
+    // use RSSI_DN threshold to make sure the signal is still in good range but with some distance for SNR to exhibit a fair distribution
+    bool isSignalBad = (rssi <= (expected_RXsensitivity + DYNPOWER_RSSI_THRESH_DN)) || (lq_avg <= 95);
+
+    while ((snrScaled <= snr_stat_threshold_up) && (powerHeadroom > 0) && isSignalBad)
     {
-      DBGLN("+power (snr)");
+      DBGLN("+power (snr) %d <= %d", snrScaled, snr_stat_threshold_up);
       POWERMGNT::incPower();
       // Every power doubling will theoretically increase the SNR by 3dB, but closer to 2dB in testing
       snrScaled += SNR_SCALE(2);
