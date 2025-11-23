@@ -70,7 +70,7 @@ static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
             if (us == 1000) { // stopped
                 dshotVal = 0;
             }
-            else if {
+            else {
                 dshotVal = fmap(us, 1001, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
             }         
         }
