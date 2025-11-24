@@ -20,7 +20,7 @@ static int prev_pin = -1; // we need to remember what the previous GPIO pin used
 static bool has_inited = false;
 static bool has_deinited = false;
 
-static rmt_item32_t dshot_tx_rmt_item[DSHOT_PACKET_LENGTH + 1];
+static rmt_item32_t dshot_tx_rmt_item[DSHOT_PACKET_LENGTH+1];  // ...last packet is the RMT end marker
 
 static void unassign_prev_pin(int pin, bool bidir);
 
@@ -66,9 +66,9 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 			break;
 
 		case DSHOT300:
-			ticks_per_bit = 32; // ...Bit Period Time 3.33 us
-			ticks_zero_high = 12; // ...zero time 1.25 us
-			ticks_one_high = 24; // ...one time 2.50 us
+			ticks_per_bit = 33; // ...Bit Period Time 3.33 us
+			ticks_zero_high = 13; // ...zero time 1.25 us
+			ticks_one_high = 25; // ...one time 2.50 us
 			break;
 
 		case DSHOT600:
@@ -110,10 +110,10 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 	};
 
 	// setup the RMT end marker
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH-1].duration0 = 0;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH-1].level0 = HIGH;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH-1].duration1 = 0;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH-1].level1 = LOW;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration0 = 0;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level0 = HIGH;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration1 = 0;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level1 = LOW;
 
 	if (has_inited) { // only do installation once
 		return true;
@@ -170,14 +170,9 @@ void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t te
 }
 
 rmt_item32_t* DShotRMT::encode_dshot_to_rmt(uint16_t parsed_packet) {
-	dshot_tx_rmt_item[DSHOT_PAUSE_BIT].duration1 = 0;
-	dshot_tx_rmt_item[DSHOT_PAUSE_BIT].duration0 = 10000 - (16*ticks_per_bit) - 1;
-
 	if (bidirectional) {
-		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level0 = HIGH; // ...pause "bit" added to each frame
-		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level1 = HIGH;
 		// ..."invert" the signal duration
-		for (int i = 0; i < DSHOT_PAUSE_BIT; i++, parsed_packet <<= 1) 	{
+		for (int i = 0; i < DSHOT_PACKET_LENGTH; i++, parsed_packet <<= 1) 	{
 			if (parsed_packet & 0b1000000000000000) {
 				// set one
 				dshot_tx_rmt_item[i].duration0 = ticks_one_low;
@@ -195,10 +190,7 @@ rmt_item32_t* DShotRMT::encode_dshot_to_rmt(uint16_t parsed_packet) {
 	}
 	// ..."normal" DShot mode / "bidirectional" mode OFF
 	else {
-		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level0 = LOW;
-		dshot_tx_rmt_item[DSHOT_PAUSE_BIT].level1 = LOW;
-
-		for (int i = 0; i < DSHOT_PAUSE_BIT; i++, parsed_packet <<= 1) 	{
+		for (int i = 0; i < DSHOT_PACKET_LENGTH; i++, parsed_packet <<= 1) 	{
 			if (parsed_packet & 0b1000000000000000) {
 				// set one
 				dshot_tx_rmt_item[i].duration0 = ticks_one_high;
@@ -248,7 +240,7 @@ void DShotRMT::output_rmt_data() {
 	rmt_tx_stop(rmt_channel);
 	set_pin();
 	encode_dshot_to_rmt(prepare_rmt_data(next_packet));
-	rmt_fill_tx_items(rmt_channel, dshot_tx_rmt_item, DSHOT_PACKET_LENGTH, 0);
+	rmt_fill_tx_items(rmt_channel, dshot_tx_rmt_item,sizeof(dshot_tx_rmt_item)/sizeof(dshot_tx_rmt_item[0]), 0);
 	rmt_tx_start(rmt_channel, true);
 	has_new_data = false;
 }
@@ -270,26 +262,17 @@ void DShotRMT::poll() {
 	if (cur_node == NULL) { // no instances initalized, do nothing
 		return;
 	}
-	static uint32_t last_time_us = 0;
-	uint32_t now_us = micros();
-	if ((now_us - last_time_us) < 500) {
-		// make sure enough time has passed (RMT driver does not indicate end of transmission at the right time)
-		// the number 500 is found by using a logic analyzer to see how often a dshot packet gets cut off
+	if (rmt_wait_tx_done(rmt_channel, 0) == ESP_ERR_TIMEOUT)
 		return;
-	}
-	rmt_channel_status_result_t status;
-	if (rmt_get_channel_status(&status) != ESP_OK || status.status[rmt_channel] != RMT_CHANNEL_IDLE) {
-		// make sure RMT is actually idle
-		return;
-	}
+
 	DShotRMT* inst = cur_node;
 	cur_node = (DShotRMT*)inst->next_node; // cycle through linked list
+	uint32_t now_us = micros();
 	if (inst->has_new_data || //  send if required
 		(inst->looping && (now_us - inst->last_send_time) >= 2000) // limit looping speed
 		) {
 		inst->output_rmt_data(); // actually send the data, this will set the pin first, and clear the has_new_data flag
 		inst->last_send_time = now_us;
-		last_time_us = now_us;
 	}
 }
 

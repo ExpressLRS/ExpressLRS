@@ -15,14 +15,13 @@
 #include <driver/rmt.h>
 
 constexpr auto DSHOT_CLK_DIVIDER = 8; // ...slow down RMT clock to 0.1 microseconds / 100 nanoseconds per cycle
-constexpr auto DSHOT_PACKET_LENGTH = 18; // ...last packet is the pause followed by RMT end marker
+constexpr auto DSHOT_PACKET_LENGTH = 16;
 
 constexpr auto DSHOT_THROTTLE_MIN = 48;
 constexpr auto DSHOT_THROTTLE_MAX = 2047;
 constexpr auto DSHOT_NULL_PACKET = 0b0000000000000000;
 
 constexpr auto DSHOT_PAUSE = 21; // ...21bit is recommended, but to be sure
-constexpr auto DSHOT_PAUSE_BIT = 16;
 
 constexpr auto F_CPU_RMT = APB_CLK_FREQ;
 constexpr auto RMT_CYCLES_PER_SEC = (F_CPU_RMT / DSHOT_CLK_DIVIDER);
