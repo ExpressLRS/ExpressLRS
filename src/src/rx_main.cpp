@@ -18,6 +18,7 @@
 #include "rx-serial/SerialIO.h"
 #include "rx-serial/SerialNOOP.h"
 #include "rx-serial/SerialCRSF.h"
+#include "rx-serial/SerialMSP.h"
 #include "rx-serial/SerialSBUS.h"
 #include "rx-serial/SerialSUMD.h"
 #include "rx-serial/SerialAirPort.h"
@@ -1308,6 +1309,10 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP)
+    {
+        serialBaud = 115200;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1367,6 +1372,10 @@ static void setupSerial()
     else if (config.GetSerialProtocol() == PROTOCOL_MSP_DISPLAYPORT)
     {
         serialIO = new SerialDisplayport(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_MSP)
+    {
+        serialIO = new SerialMSP(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
@@ -1475,6 +1484,10 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_GPS:
             Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_MSP:
+            Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
+            serial1IO = new SerialMSP(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
 }

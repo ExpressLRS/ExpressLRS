@@ -23,6 +23,7 @@ typedef enum
 
 uint8_t powerToCrsfPower(PowerLevels_e Power);
 PowerLevels_e crsfPowerToPower(uint8_t crsfpower);
+uint16_t crsfPowerToMilliwatts(uint8_t crsfpower);
 
 class PowerLevelContainer
 {
