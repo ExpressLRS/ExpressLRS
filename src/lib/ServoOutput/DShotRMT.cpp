@@ -111,7 +111,7 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 
 	// setup the RMT end marker
 	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration0 = 0;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level0 = HIGH;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level0 = LOW;
 	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration1 = 0;
 	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level1 = LOW;
 
