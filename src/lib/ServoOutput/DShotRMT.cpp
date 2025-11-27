@@ -60,27 +60,27 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 
 	switch (mode) {
 		case DSHOT150:
-			ticks_per_bit = 64; // ...Bit Period Time 6.67 us
-			ticks_zero_high = 24; // ...zero time 2.50 us
-			ticks_one_high = 48; // ...one time 5.00 us
+			ticks_per_bit = 133; // ...Bit Period Time 6.67 us
+			ticks_zero_high = 50; // ...zero time 2.50 us
+			ticks_one_high = 100; // ...one time 5.00 us
 			break;
 
 		case DSHOT300:
-			ticks_per_bit = 33; // ...Bit Period Time 3.33 us
-			ticks_zero_high = 13; // ...zero time 1.25 us
-			ticks_one_high = 25; // ...one time 2.50 us
+			ticks_per_bit = 67; // ...Bit Period Time 3.33 us
+			ticks_zero_high = 25; // ...zero time 1.25 us
+			ticks_one_high = 50; // ...one time 2.50 us
 			break;
 
 		case DSHOT600:
-			ticks_per_bit = 16; // ...Bit Period Time 1.67 us
-			ticks_zero_high = 6; // ...zero time 0.625 us
-			ticks_one_high = 12; // ...one time 1.25 us
+			ticks_per_bit = 33; // ...Bit Period Time 1.67 us
+			ticks_zero_high = 12; // ...zero time 0.625 us
+			ticks_one_high = 25; // ...one time 1.25 us
 			break;
 
 		case DSHOT1200:
-			ticks_per_bit = 8; // ...Bit Period Time 0.83 us
-			ticks_zero_high = 3; // ...zero time 0.313 us
-			ticks_one_high = 6; // ...one time 0.625 us
+			ticks_per_bit = 17; // ...Bit Period Time 0.83 us
+			ticks_zero_high = 6; // ...zero time 0.313 us
+			ticks_one_high = 13; // ...one time 0.625 us
 			break;
 
 		// ...because having a default is "good style"

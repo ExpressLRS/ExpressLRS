@@ -14,7 +14,7 @@
 // ...utilizing the IR Module library for generating the DShot signal
 #include <driver/rmt.h>
 
-constexpr auto DSHOT_CLK_DIVIDER = 8; // ...slow down RMT clock to 0.1 microseconds / 100 nanoseconds per cycle
+constexpr auto DSHOT_CLK_DIVIDER = 4; // ...slow down RMT clock to 0.05 microseconds / 50 nanoseconds per cycle
 constexpr auto DSHOT_PACKET_LENGTH = 16;
 
 constexpr auto DSHOT_THROTTLE_MIN = 48;
