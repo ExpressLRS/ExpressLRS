@@ -32,7 +32,7 @@ constexpr auto RMT_CYCLES_PER_ESP_CYCLE = (F_CPU / RMT_CYCLES_PER_SEC);
 // Date:	04.07.2021
 
 enum dshot_cmd_t {
-	DSHOT_CMD_MOTOR_STOP, // Currently not implemented - STOP Motors
+	DSHOT_CMD_MOTOR_STOP, 				// Currently not implemented - STOP Motors
 	DSHOT_CMD_BEEP1,					// Wait at least length of beep (380ms) before next command
 	DSHOT_CMD_BEEP2,					// Wait at least length of beep (380ms) before next command
 	DSHOT_CMD_BEEP3,					// Wait at least length of beep (400ms) before next command
