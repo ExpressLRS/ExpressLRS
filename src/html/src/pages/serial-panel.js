@@ -3,6 +3,9 @@ import {customElement, state} from "lit/decorators.js"
 import '../assets/mui.js'
 import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
+import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js";
+
+const PROTOCOL_AIRPORT = 10
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
@@ -17,7 +20,7 @@ class SerialPanel extends LitElement {
 
     createRenderRoot() {
         this.isAirport = elrsState.options['is-airport']
-        this.serial1Protocol = this.isAirport ? 10 : elrsState.config['serial-protocol']
+        this.serial1Protocol = this.isAirport ? PROTOCOL_AIRPORT : elrsState.config['serial-protocol']
         this.serial2Protocol = elrsState.config['serial1-protocol']
         this.baudRate = elrsState.options['rcvr-uart-baud']
         this.sbusFailsafe = elrsState.config['sbus-failsafe']
@@ -107,8 +110,8 @@ class SerialPanel extends LitElement {
         if (!elrsState.config['pwm']) return true
         // If a PWM pin is defined as serial, then it should be enabled
         for(const pwm of elrsState.config.pwm) {
-            const mode = (pwm.config >> 15) & 0xF
-            if (mode === 10) // This is the index for SerialRX/TX
+            const mode = (pwm.config >> 16) & 0xF
+            if (mode === PWM_MODE_SERIAL)
                 return true
         }
         // If any of the PWM pins are defined to support serial (but it's not selected) then disabled serial
@@ -125,8 +128,8 @@ class SerialPanel extends LitElement {
             return elrsState.config['serial1-protocol'] !== undefined
         }
         for(const pwm of elrsState.config.pwm) {
-            const mode = (pwm.config >> 15) & 15
-            if (mode === 13 || mode === 14)
+            const mode = (pwm.config >> 16) & 15
+            if (mode === PWM_MODE_SERIAL2RX || mode === PWM_MODE_SERIAL2TX)
                 return true
         }
         return false
@@ -134,7 +137,7 @@ class SerialPanel extends LitElement {
 
     _updateSerial1(e) {
         this.serial1Protocol = parseInt(e.target.value)
-        this.isAirport = this.serial1Protocol === 10
+        this.isAirport = this.serial1Protocol === PROTOCOL_AIRPORT
         if (this.serial1Protocol === 0 || this.serial1Protocol === 1) {
             this.baudRate = 420000
             this.requestUpdate()
