@@ -103,13 +103,21 @@ class SerialPanel extends LitElement {
     }
 
     _hasSerial1() {
+        // If there's no PWM pins then serial must be enabled
         if (!elrsState.config['pwm']) return true
+        // If a PWM pin is defined as serial, then it should be enabled
         for(const pwm of elrsState.config.pwm) {
             const mode = (pwm.config >> 15) & 0xF
-            if (mode === 9 || mode === 10 )
+            if (mode === 10) // This is the index for SerialRX/TX
                 return true
         }
-        return false
+        // If any of the PWM pins are defined to support serial (but it's not selected) then disabled serial
+        for(const pwm of elrsState.config.pwm) {
+            if (pwm.features & 3 !== 0)
+                return false
+        }
+        // No PWM pins are defined as serial so use what the hardware dictates
+        return !!elrsState.settings.has_serial_pins
     }
 
     _hasSerial2() {

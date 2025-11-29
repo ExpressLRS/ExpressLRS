@@ -360,6 +360,10 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
     }
+    if (GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN)
+    {
+        json["settings"]["has_serial_pins"] = true;
+    }
     #endif
     json["settings"]["product_name"] = product_name;
     json["settings"]["lua_name"] = device_name;
