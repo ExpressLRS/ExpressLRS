@@ -67,12 +67,17 @@ static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
         us = constrain(us, 1000, 2000);
         if (chMode == somDShot)
         {
-            dshotVal = fmap(us, 1000, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+            if (us == 1000) { // stopped
+                dshotVal = DSHOT_CMD_MOTOR_STOP;
+            }
+            else {
+                dshotVal = fmap(us, 1001, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
+            }         
         }
         else // somDShot3D
         {
             if (us == 1500) { // stopped
-                dshotVal = 0;
+                dshotVal = DSHOT_CMD_MOTOR_STOP;
             }
             else if (us > 1500) { // forward
                 dshotVal = fmap(us, 1501, 2000, 1048, 2047);
