@@ -72,16 +72,12 @@ class BindingPanel extends LitElement {
                         </div>
                     ` : ''}
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled=${this._saveDisabled()}
+                            ?disabled=${!this.checkChanged()}
                             @click="${this._submitOptions}">Save
                     </button>
                 </form>
             </div>
         `
-    }
-
-    _saveDisabled() {
-        return !(this.bindType !== elrsState.config.vbind || this.uidData.uidtype === 'Modified')
     }
 
     _isValidUidByte(s) {
@@ -193,4 +189,9 @@ class BindingPanel extends LitElement {
         })
         // /FEATURE:NOT IS_TX
     }
+
+    checkChanged() {
+        return this.bindType !== elrsState.config.vbind || this.uidData.uidtype === 'Modified'
+    }
+
 }

@@ -86,7 +86,7 @@ class WifiPanel extends LitElement {
                             <label for="pwd">WiFi password</label>
                         </div>
                     </div>
-                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Save</button>
+                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}" ?disabled="${!(this.checkChanged() || this.selectedValue!=='0')}">Save</button>
                 </form>
             </div>
             <div class="mui-panel" ?hidden="${elrsState.settings.mode === 'STA'}">
@@ -162,5 +162,13 @@ class WifiPanel extends LitElement {
         }
         xmlhttp.open('GET', 'networks.json', true)
         xmlhttp.send()
+    }
+
+    checkChanged() {
+        let changed = false
+        changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
+        changed |= this.network?.value.length !== 0
+        changed |= this.password?.value.length !== 0
+        return !!changed
     }
 }

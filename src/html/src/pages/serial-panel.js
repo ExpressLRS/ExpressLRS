@@ -91,7 +91,7 @@ class SerialPanel extends LitElement {
                     </div>
                     ` : ''}
                     <button class="mui-btn mui-btn--small mui-btn--primary"
-                            ?disabled="${!this._changed()}"
+                            ?disabled="${!this.checkChanged()}"
                             @click="${this._saveSerial}"
                     >Save</button>
                 </form>
@@ -171,7 +171,7 @@ class SerialPanel extends LitElement {
             this.djiArmed !== elrsState.options['dji-permanently-armed']
     }
 
-    _changed() {
+    checkChanged() {
         return this._configChanged() || this._optionsChanged()
     }
 

@@ -5,6 +5,7 @@ import {elrsState, formatBand} from './utils/state.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
+import {cuteAlert} from "./utils/feedback.js";
 
 @customElement('elrs-app')
 export class App extends LitElement {
@@ -99,12 +100,6 @@ export class App extends LitElement {
     }
 
     firstUpdated(_changedProperties) {
-        ['hardware', 'cw', 'lr1121', 'binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
-            .forEach(id => {
-                const el = this.querySelector(`#menu-${id}`)
-                if (el) el.addEventListener('click', () => setTimeout(this.renderRoute))
-            })
-
         window.addEventListener('hashchange', this.renderRoute)
 
         // Initial load sequence
@@ -272,12 +267,16 @@ export class App extends LitElement {
             return
         }
 
-        // Navigation guard: ask current page component if we can leave
+        // Navigation guard: ask the current page component if we can leave
         const currentEl = this.mainEl?.firstElementChild
         if (currentEl && typeof currentEl.checkChanged === 'function') {
             try {
-                const canLeave = await currentEl.checkChanged()
-                if (canLeave === false) {
+                let hasChanges = currentEl.checkChanged()
+                let navigate = true;
+                if (hasChanges === true) {
+                   navigate = (await cuteAlert({type: 'question', message: 'Do you wish to navigate away and discard changes to this page?', title: 'Configuration Changed', confirmText: 'Discard', cancelText: 'Cancel'})) === 'confirm'
+                }
+                if (navigate === false) {
                     // Revert the hash to the previous route and exit
                     if (this.currentRoute && this.currentRoute !== route) {
                         if (('#' + this.currentRoute) !== location.hash) {

@@ -64,7 +64,7 @@ class TxOptionsPanel extends LitElement {
                     ` : ''}
 
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled="${!this.hasChanges()}"
+                            ?disabled="${!this.checkChanged()}"
                             @click="${this.save}"
                     >
                         Save
@@ -99,7 +99,7 @@ class TxOptionsPanel extends LitElement {
         })
     }
 
-    hasChanges() {
+    checkChanged() {
         let changed = false
         // FEATURE: HAS_SUBGHZ
         changed |= this.domain !== elrsState.options['domain']
@@ -108,6 +108,6 @@ class TxOptionsPanel extends LitElement {
         changed |= this.fanRuntime !== elrsState.options['fan-runtime']
         changed |= this.isAirport !== elrsState.options['is-airport']
         changed |= this.baudRate !== elrsState.options['airport-uart-baud']
-        return changed
+        return !!changed
     }
 }

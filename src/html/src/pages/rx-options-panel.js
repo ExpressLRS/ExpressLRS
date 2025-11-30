@@ -78,7 +78,7 @@ class RxOptionsPanel extends LitElement {
                     </div>
 
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled="${!this.hasChanges()}"
+                            ?disabled="${!this.checkChanged()}"
                             @click="${this.save}"
                     >
                         Save
@@ -120,7 +120,7 @@ class RxOptionsPanel extends LitElement {
         })
     }
 
-    hasChanges() {
+    checkChanged() {
         let changed = false
         // FEATURE: HAS_SUBGHZ
         changed |= this.domain !== elrsState.options['domain']
@@ -129,6 +129,6 @@ class RxOptionsPanel extends LitElement {
         changed |= this.enableModelMatch && this.modelId !== elrsState.config['modelid']
         changed |= !this.enableModelMatch && this.modelId !== 255
         changed |= this.forceTlmOff !== elrsState.config['force-tlm']
-        return changed
+        return !!changed
     }
 }
