@@ -325,4 +325,17 @@ class ConnectionsPanel extends LitElement {
             })
         })
     }
+
+    checkChanged() {
+        const data = this._getPwmFormData()
+        console.log(data)
+        for (let i = 0; i < data.length; i++) {
+            if (elrsState.config.pwm[i].config !== data[i]) {
+                console.log(`PWM ${i + 1} changed`)
+                return false
+            }
+        }
+        return true
+    }
+
 }

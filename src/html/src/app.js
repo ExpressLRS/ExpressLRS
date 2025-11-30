@@ -13,6 +13,9 @@ export class App extends LitElement {
 
     menu = svg`<svg width="40" height="40" viewBox="0 0 512 512"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="48" d="M88 152h336M88 256h336M88 360h336"/></svg>`
 
+    // Track the currently rendered route so we can restore it when a page blocks navigation
+    currentRoute = null
+
     constructor() {
         super()
         // Bind methods used as callbacks to preserve `this`
@@ -262,6 +265,33 @@ export class App extends LitElement {
 
     async renderRoute() {
         const route = (location.hash || '#info').replace('#', '')
+
+        // If we are already on this route, do nothing
+        if (this.currentRoute && route === this.currentRoute) {
+            this.setActiveMenu(route)
+            return
+        }
+
+        // Navigation guard: ask current page component if we can leave
+        const currentEl = this.mainEl?.firstElementChild
+        if (currentEl && typeof currentEl.checkChanged === 'function') {
+            try {
+                const canLeave = await currentEl.checkChanged()
+                if (canLeave === false) {
+                    // Revert the hash to the previous route and exit
+                    if (this.currentRoute && this.currentRoute !== route) {
+                        if (('#' + this.currentRoute) !== location.hash) {
+                            location.hash = '#' + this.currentRoute
+                        }
+                        this.setActiveMenu(this.currentRoute)
+                    }
+                    return
+                }
+            } catch {
+                // If the hook throws, proceed with navigation
+            }
+        }
+
         await this.ensureLoadedForRoute(route)
         this.setActiveMenu(route)
         try {
@@ -274,6 +304,7 @@ export class App extends LitElement {
         const content = this.buildRouteContent(route)
         await this.replaceMainWithTransition(content)
         this.scrollMainToTop()
+        this.currentRoute = route
     }
 
     showSidedrawer() {
