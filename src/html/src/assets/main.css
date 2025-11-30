@@ -135,7 +135,11 @@ body.hide-sidedrawer #footer {
 }
 
 #sidedrawer-brand {
-    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 0 15px;
 }
 
 #sidedrawer ul {

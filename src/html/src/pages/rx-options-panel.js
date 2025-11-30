@@ -97,6 +97,7 @@ class RxOptionsPanel extends LitElement {
 
     save(e) {
         e.preventDefault()
+        const {pwm, ...config} = elrsState.config
         const changes = {
             options: {
                 ...elrsState.options,
@@ -106,7 +107,7 @@ class RxOptionsPanel extends LitElement {
                 'lock-on-first-connection': this.lockOnFirst,
             },
             config: {
-                ...elrsState.config,
+                ...config,
                 'modelid': this.enableModelMatch ? this.modelId : 255,
                 'force-tlm': this.forceTlmOff
             }

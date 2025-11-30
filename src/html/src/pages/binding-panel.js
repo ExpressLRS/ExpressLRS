@@ -175,8 +175,9 @@ class BindingPanel extends LitElement {
         })
         // /FEATURE:IS_TX
         // FEATURE:NOT IS_TX
+        const {pwm, ...config} = elrsState.config
         const rx_changes =  {
-            ...elrsState.config,
+            ...config,
             uid: this.uid,
             vbind: this.bindType
         }
