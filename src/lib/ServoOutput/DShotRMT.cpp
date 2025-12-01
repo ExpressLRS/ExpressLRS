@@ -15,6 +15,7 @@ static const rmt_channel_t rmt_channel = (rmt_channel_t)0; // instead of using m
 static DShotRMT *head_node = NULL, *cur_node = NULL, *tail_node; // linked list of all initailized RMT instances
 
 static int prev_pin = -1; // we need to remember what the previous GPIO pin used was to remove it from the RMT (setting a new RMT pin does not unset the previous pin)
+static bool prev_bidirectional = false;
 
 // latch status to indicate if the RMT driver has been installed or uninstalled, so we don't do it twice
 static bool has_inited = false;
@@ -95,6 +96,10 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 	ticks_zero_low = (ticks_per_bit - ticks_zero_high);
 	ticks_one_low = (ticks_per_bit - ticks_one_high);
 
+	if (has_inited) { // only do installation once
+		return true;
+	}
+
 	rmt_config_t dshot_tx_rmt_config = {
 		.rmt_mode = RMT_MODE_TX,
 		.channel = rmt_channel,
@@ -102,22 +107,15 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 		.clk_div = DSHOT_CLK_DIVIDER,
 		.mem_block_num = uint8_t(RMT_CHANNEL_MAX - uint8_t(rmt_channel)),
 		.tx_config = {
-			.idle_level = bidirectional ? RMT_IDLE_LEVEL_HIGH : RMT_IDLE_LEVEL_LOW,
 			.carrier_en = false,
 			.loop_en = false,
-			.idle_output_en = true,
+			.idle_output_en = false,
 		},
 	};
 
-	// setup the RMT end marker
+	// Add RMT end marker, the level is set per transmission
 	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration0 = 0;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level0 = LOW;
 	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].duration1 = 0;
-	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level1 = LOW;
-
-	if (has_inited) { // only do installation once
-		return true;
-	}
 
 	// ...setup selected dshot mode
 	rmt_config(&dshot_tx_rmt_config);
@@ -129,7 +127,6 @@ bool DShotRMT::begin(dshot_mode_t dshot_mode, bool is_bidirectional) {
 		 // only do installation once
 		has_inited = true;
 		has_deinited = false;
-		encode_dshot_to_rmt(DSHOT_NULL_PACKET); // cache default timings
 		#ifdef DSHOTC3_DEBUG_INIT
 		DBGLN("Dshot RMT installed");
 		#endif
@@ -163,99 +160,85 @@ void DShotRMT::send_dshot_value(uint16_t throttle_value, telemetric_request_t te
 	}
 
 	next_packet.telemetric_request = telemetric_request;
-	next_packet.checksum = this->calc_dshot_chksum(next_packet);
 
 	has_new_data = true;
 	// only cache the next packet but don't need to encode it or send it yet, it'll be sent later
 }
 
 rmt_item32_t* DShotRMT::encode_dshot_to_rmt(uint16_t parsed_packet) {
-	if (bidirectional) {
-		// ..."invert" the signal duration
-		for (int i = 0; i < DSHOT_PACKET_LENGTH; i++, parsed_packet <<= 1) 	{
-			if (parsed_packet & 0b1000000000000000) {
-				// set one
-				dshot_tx_rmt_item[i].duration0 = ticks_one_low;
-				dshot_tx_rmt_item[i].duration1 = ticks_one_high;
-			}
-			else {
-				// set zero
-				dshot_tx_rmt_item[i].duration0 = ticks_zero_low;
-				dshot_tx_rmt_item[i].duration1 = ticks_zero_high;
-			}
-
-			dshot_tx_rmt_item[i].level0 = LOW;
-			dshot_tx_rmt_item[i].level1 = HIGH;
-		}
+	uint32_t level0;
+	uint32_t level1;
+	if (bidirectional)
+	{
+		level0 = LOW;
+		level1 = HIGH;
 	}
-	// ..."normal" DShot mode / "bidirectional" mode OFF
-	else {
-		for (int i = 0; i < DSHOT_PACKET_LENGTH; i++, parsed_packet <<= 1) 	{
-			if (parsed_packet & 0b1000000000000000) {
-				// set one
-				dshot_tx_rmt_item[i].duration0 = ticks_one_high;
-				dshot_tx_rmt_item[i].duration1 = ticks_one_low;
-			}
-			else {
-				// set zero
-				dshot_tx_rmt_item[i].duration0 = ticks_zero_high;
-				dshot_tx_rmt_item[i].duration1 = ticks_zero_low;
-			}
-
-			dshot_tx_rmt_item[i].level0 = HIGH;
-			dshot_tx_rmt_item[i].level1 = LOW;
-		}
+	else // ..."normal" DShot mode / "bidirectional" mode OFF
+	{
+		level0 = HIGH;
+		level1 = LOW;
 	}
+
+	for (unsigned i = 0; i < DSHOT_PACKET_LENGTH; i++, parsed_packet <<= 1)
+	{
+		if (parsed_packet & 0b1000000000000000)
+		{
+			// set one
+			dshot_tx_rmt_item[i].duration0 = ticks_one_high;
+			dshot_tx_rmt_item[i].duration1 = ticks_one_low;
+		}
+		else
+		{
+			// set zero
+			dshot_tx_rmt_item[i].duration0 = ticks_zero_high;
+			dshot_tx_rmt_item[i].duration1 = ticks_zero_low;
+		}
+
+		dshot_tx_rmt_item[i].level0 = level0;
+		dshot_tx_rmt_item[i].level1 = level1;
+	}
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level0 = level1;
+	dshot_tx_rmt_item[DSHOT_PACKET_LENGTH].level1 = level1;
 
 	return dshot_tx_rmt_item;
 }
 
 // ...just returns the checksum
 // DOES NOT APPEND CHECKSUM!!!
-uint16_t DShotRMT::calc_dshot_chksum(const dshot_packet_t& dshot_packet) {
-	// ...same initial 12bit data for bidirectional or "normal" mode
-	uint16_t packet = (dshot_packet.throttle_value << 1) | dshot_packet.telemetric_request;
+uint16_t DShotRMT::calc_dshot_chksum(uint16_t packet) {
+	uint16_t csum = (packet ^ (packet >> 4) ^ (packet >> 8));
 
-	if (bidirectional) {
-		// ...calc the checksum "inverted" / bidirectional mode
-		return (~(packet ^ (packet >> 4) ^ (packet >> 8))) & 0x0F;
-	} else {
-		// ...calc the checksum "normal" mode
-		return (packet ^ (packet >> 4) ^ (packet >> 8)) & 0x0F;
+	if (bidirectional)
+	{
+		csum = ~csum;
 	}
+	return csum & 0x0F;
 }
 
 uint16_t DShotRMT::prepare_rmt_data(const dshot_packet_t& dshot_packet) {
-	auto chksum = calc_dshot_chksum(dshot_packet);
-
 	// ..."construct" the packet
 	uint16_t prepared_to_encode = (dshot_packet.throttle_value << 1) | dshot_packet.telemetric_request;
-	prepared_to_encode = (prepared_to_encode << 4) | chksum;
+	uint16_t chksum = calc_dshot_chksum(prepared_to_encode);
+	prepared_to_encode = (prepared_to_encode << 4) | chksum;//dshot_packet.checksum;
 
 	return prepared_to_encode;
 }
 
 // ...finally output using ESP32 RMT
 void DShotRMT::output_rmt_data() {
-	rmt_tx_stop(rmt_channel);
 	set_pin();
 	encode_dshot_to_rmt(prepare_rmt_data(next_packet));
-	rmt_fill_tx_items(rmt_channel, dshot_tx_rmt_item,sizeof(dshot_tx_rmt_item)/sizeof(dshot_tx_rmt_item[0]), 0);
+	rmt_fill_tx_items(rmt_channel, dshot_tx_rmt_item, sizeof(dshot_tx_rmt_item)/sizeof(dshot_tx_rmt_item[0]), 0);
 	rmt_tx_start(rmt_channel, true);
 	has_new_data = false;
 }
 
 void DShotRMT::set_pin() {
-	if (prev_pin >= 0) { // if there was a previously used pin that needs to be decoupled from RMT
-		// rmt_set_pin and rmt_config only seems to add pins to the RMT mux
-		// they do not remove pins
-		// so we must manually remove the previous pin from the mux
-		unassign_prev_pin(prev_pin, bidirectional);
-	}
 	pinMode(gpio_num, OUTPUT);
+	rmt_set_idle_level(rmt_channel, true, bidirectional ? RMT_IDLE_LEVEL_HIGH : RMT_IDLE_LEVEL_LOW);
 	rmt_set_gpio(rmt_channel, RMT_MODE_TX, gpio_num, false);
-	rmt_set_idle_level(rmt_channel, bidirectional ? false : true, bidirectional ? RMT_IDLE_LEVEL_HIGH : RMT_IDLE_LEVEL_LOW);
 	prev_pin = gpio_num;
+	prev_bidirectional = bidirectional;
 }
 
 void DShotRMT::poll() {
@@ -264,6 +247,14 @@ void DShotRMT::poll() {
 	}
 	if (rmt_wait_tx_done(rmt_channel, 0) == ESP_ERR_TIMEOUT)
 		return;
+
+	if (prev_pin != -1) { // if there was a previously used pin that needs to be decoupled from RMT
+		// rmt_set_pin and rmt_config only seems to add pins to the RMT mux
+		// they do not remove pins
+		// so we must manually remove the previous pin from the mux
+		unassign_prev_pin(prev_pin, prev_bidirectional);
+		prev_pin = -1;
+	}
 
 	DShotRMT* inst = cur_node;
 	cur_node = (DShotRMT*)inst->next_node; // cycle through linked list
@@ -278,22 +269,20 @@ void DShotRMT::poll() {
 
 static void unassign_prev_pin(int pin, bool bidir)
 {
-	if (bidir == false) {
-		gpio_set_level((gpio_num_t)pin, 0);
-	}
+	gpio_set_level((gpio_num_t)pin, bidir ? HIGH : LOW);
 
 	gpio_config_t conf = {
 		.pin_bit_mask = (1ULL<<pin),
-		.mode = bidir ? GPIO_MODE_DISABLE : GPIO_MODE_OUTPUT,
+		.mode = bidir ? GPIO_MODE_INPUT : GPIO_MODE_OUTPUT,
 		.pull_up_en = bidir ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
-		.pull_down_en = bidir ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE,
+		.pull_down_en = bidir ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_DISABLE,
 		.intr_type = GPIO_INTR_DISABLE
 	};
 	gpio_config(&conf);
 
-	if (bidir == false) {
-		gpio_set_level((gpio_num_t)pin, 0);
-	}
+	gpio_set_level((gpio_num_t)pin, bidir ? HIGH : LOW);
+	rmt_set_idle_level(rmt_channel, false, RMT_IDLE_LEVEL_LOW);
+	pinMatrixOutDetach((gpio_num_t)pin, 0, 0);
 }
 
 #endif

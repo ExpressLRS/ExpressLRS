@@ -119,7 +119,7 @@ private:
 	uint32_t last_send_time = 0;
 
 	rmt_item32_t* encode_dshot_to_rmt(uint16_t parsed_packet);
-	uint16_t calc_dshot_chksum(const dshot_packet_t& dshot_packet);
+	uint16_t calc_dshot_chksum(uint16_t packet);
 	uint16_t prepare_rmt_data(const dshot_packet_t& dshot_packet);
 	void output_rmt_data();
 	void set_pin();
