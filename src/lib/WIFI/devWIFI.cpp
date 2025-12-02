@@ -331,7 +331,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
     #if defined(PLATFORM_ESP32)
-    if (GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN)
+    if ((GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN) || GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
     {
       json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     }

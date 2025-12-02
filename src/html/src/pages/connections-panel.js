@@ -315,15 +315,7 @@ class ConnectionsPanel extends LitElement {
     _savePwmConfig(e) {
         e.preventDefault();
         const data = this._getPwmFormData()
-        saveConfig({
-            ...elrsState.config,
-            'pwm': data
-        }, () => {
-            let i = 0
-            elrsState.config.pwm.forEach((item) => {
-                item.config = data[i++]
-            })
-        })
+        saveConfig({'pwm': data})
     }
 
     checkChanged() {

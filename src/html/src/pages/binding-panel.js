@@ -157,7 +157,6 @@ class BindingPanel extends LitElement {
 
         // FEATURE:IS_TX
         let tx_changes = {
-            ...elrsState.options,
             customised: true,
             uid: this.uid
         }
@@ -166,14 +165,11 @@ class BindingPanel extends LitElement {
             this.originalUIDType = 'Overridden'
             this.phrase.value = ''
             this._updateUIDType(this.originalUIDType)
-            elrsState.options = tx_changes
             return this.requestUpdate()
         })
         // /FEATURE:IS_TX
         // FEATURE:NOT IS_TX
-        const {pwm, ...config} = elrsState.config
         const rx_changes =  {
-            ...config,
             uid: this.uid,
             vbind: this.bindType
         }
@@ -184,7 +180,6 @@ class BindingPanel extends LitElement {
                 this.phrase.value = ''
                 this._updateUIDType(this.originalUIDType)
             }
-            elrsState.config = rx_changes
             return this.requestUpdate()
         })
         // /FEATURE:NOT IS_TX

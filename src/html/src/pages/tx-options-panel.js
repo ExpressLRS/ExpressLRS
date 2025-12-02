@@ -84,7 +84,6 @@ class TxOptionsPanel extends LitElement {
     save(e) {
         e.preventDefault()
         const changes = {
-            ...elrsState.options,
             // FEATURE: HAS_SUBGHZ
             'domain': this.domain,
             // /FEATURE: HAS_SUBGHZ
@@ -94,7 +93,6 @@ class TxOptionsPanel extends LitElement {
             'airport-uart-baud': this.baudRate
         }
         saveOptions(changes, () => {
-            elrsState.options = changes
             return this.requestUpdate()
         })
     }

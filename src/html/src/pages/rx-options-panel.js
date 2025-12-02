@@ -97,24 +97,19 @@ class RxOptionsPanel extends LitElement {
 
     save(e) {
         e.preventDefault()
-        const {pwm, ...config} = elrsState.config
         const changes = {
             options: {
-                ...elrsState.options,
                 // FEATURE: HAS_SUBGHZ
                 'domain': this.domain,
                 // /FEATURE: HAS_SUBGHZ
                 'lock-on-first-connection': this.lockOnFirst,
             },
             config: {
-                ...config,
                 'modelid': this.enableModelMatch ? this.modelId : 255,
                 'force-tlm': this.forceTlmOff
             }
         }
         saveOptionsAndConfig(changes, () => {
-            elrsState.options = changes.options
-            elrsState.config = changes.config
             this.modelId = changes.config.modelid
             return this.requestUpdate()
         })

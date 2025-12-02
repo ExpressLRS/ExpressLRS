@@ -177,16 +177,13 @@ class SerialPanel extends LitElement {
 
     _saveSerial(e) {
         e.preventDefault()
-        const {pwm, ...config} = elrsState.config
         saveOptionsAndConfig({
                 options: {
-                    ...elrsState.options,
                     'is-airport': this.isAirport,
                     'rcvr-uart-baud': this.baudRate,
                     'dji-permanently-armed': this.djiArmed,
                 },
                 config: {
-                    ...config,
                     'serial-protocol': this.isAirport ? 0 : this.serial1Protocol,
                     'serial1-protocol': this.serial2Protocol,
                     'sbus-failsafe': this.sbusFailsafe
