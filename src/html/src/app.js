@@ -114,9 +114,10 @@ export class App extends LitElement {
             const resp = await fetch('/config')
             if (!resp.ok) throw new Error('Failed to load config')
             const data = await resp.json()
-            elrsState.settings = data.settings || null
-            elrsState.options = data.options || null
-            elrsState.config = data.config || null
+            elrsState.settings = data.settings || {}
+            elrsState.options = data.options || {}
+            elrsState.config = data.config || {}
+            elrsState.options.customised = true
             document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
             this.requestUpdate()
         } catch (e) {
@@ -191,7 +192,9 @@ export class App extends LitElement {
             ]
             // FEATURE:IS_TX
             imports.push(import('./pages/tx-options-panel.js'))
+            // FEATURE:NOT IS_8285
             imports.push(import('./pages/models-panel.js'))
+            // /FEATURE:NOT IS_8285
             imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX

@@ -71,7 +71,7 @@ class RxOptionsPanel extends LitElement {
                     <br/>
                     <div class="mui-checkbox">
                         <input id='force-tlm' name='force-tlm' type='checkbox'
-                               ?checked=${this.forceTlmOff}
+                               ?checked="${this.forceTlmOff}"
                                @change="${(e) => this.forceTlmOff = e.target.checked}"
                         />
                         <label for="force-tlm">Force telemetry OFF on this receiver</label>

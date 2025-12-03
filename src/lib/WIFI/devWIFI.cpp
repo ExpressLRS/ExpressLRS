@@ -234,6 +234,10 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
+  file.close();
+  String options;
+  serializeJson(json, options);
+  setOptions(options);
   request->send(200);
 }
 
@@ -525,7 +529,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   if (modelid < 0 || modelid > 63) modelid = 255;
   config.SetModelId((uint8_t)modelid);
 
-  long forceTlm = json["force-tlm"] | 0;
+  long forceTlm = json["force-tlm"] | false;
   config.SetForceTlmOff(forceTlm != 0);
 
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));

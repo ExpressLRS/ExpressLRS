@@ -48,7 +48,7 @@ export function saveOptions(changes, successCB) {
 }
 
 export function saveOptionsAndConfig(changes, successCB) {
-    const newOptions = {...elrsState.options, ...changes}
+    const newOptions = {...elrsState.options, ...changes.options}
     postJSON('/options.json', newOptions, {
         onload: async () => {
             saveConfig(changes.config, () => {

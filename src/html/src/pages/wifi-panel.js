@@ -78,11 +78,15 @@ class WifiPanel extends LitElement {
                     <div id="credentials" ?hidden="${this.selectedValue === '2' || this.selectedValue === '3'}">
                         <div class="autocomplete mui-textfield" style="position:relative;">
                             <div style="display: ${this.showLoader ? 'block' : 'none'};" class="loader"></div>
-                            <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"/>
+                            <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"
+                                value="${elrsState.options['wifi-ssid']}"
+                            />
                             <label for="ssid">WiFi SSID</label>
                         </div>
                         <div class="mui-textfield">
-                            <input id="pwd" size='64' name='password' type='password'/>
+                            <input id="pwd" size='64' name='password' type='password'
+                                value="${elrsState.options['wifi-password']}"
+                            />
                             <label for="pwd">WiFi password</label>
                         </div>
                     </div>
@@ -132,7 +136,7 @@ class WifiPanel extends LitElement {
                 }, function () {
                     elrsState.options = {
                         ...elrsState.options,
-                        'wifi-ssid': self.network.value
+                        'wifi-on-interval': self.wifiOnInterval
                     }
                 })(event)
                 break
@@ -167,8 +171,8 @@ class WifiPanel extends LitElement {
     checkChanged() {
         let changed = false
         changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
-        changed |= this.network?.value.length !== 0
-        changed |= this.password?.value.length !== 0
+        changed |= this.network?.value !== elrsState.options['wifi-ssid']
+        changed |= this.password?.value !== elrsState.options['wifi-password']
         return !!changed
     }
 }
