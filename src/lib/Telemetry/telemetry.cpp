@@ -171,7 +171,7 @@ bool Telemetry::RXhandleUARTin(uint8_t data)
 
             break;
         case RECEIVING_LENGTH:
-            if (data == 0 || data >= CRSF_MAX_PACKET_LEN)
+            if (data < (1 + CRSF_FRAME_NOT_COUNTED_BYTES) || data >= CRSF_MAX_PACKET_LEN)
             {
                 telemetry_state = TELEMETRY_IDLE;
                 return false;
