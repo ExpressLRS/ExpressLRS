@@ -23,7 +23,7 @@
 #define CRSF_CHANNEL_VALUE_EXT_MAX 1984 // 2120us with E.Limits on (+121.1%)
 #define CRSF_CHANNEL_VALUE_UNSET 0xffff // used internally to indicate no channel value has been received
 
-#define CRSF_MIN_PACKET_LEN 5
+#define CRSF_MIN_PACKET_LEN 4
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
