@@ -19,20 +19,41 @@ export function formatBand() {
 }
 
 export function saveConfig(changes, successCB) {
-    saveJSONWithReboot('Configuration Update Succeeded', 'Configuration Update Failed', '/config', changes, successCB)
+    const currentPWM = elrsState.config.pwm
+    if (changes.pwm) {
+        // update pwm settings
+        for (let i = 0; i < currentPWM.length; i++) {
+            currentPWM[i].config = changes.pwm[i]
+        }
+    } else if (currentPWM) {
+        // preserve original pwm settings
+        changes.pwm = []
+        for (let i = 0; i < currentPWM.length; i++) {
+            changes.pwm.push(currentPWM[i].config)
+        }
+    }
+    const newConfig = {...elrsState.config, ...changes}
+    saveJSONWithReboot('Configuration Update Succeeded', 'Configuration Update Failed', '/config', newConfig, () => {
+        elrsState.config = {...newConfig, pwm: currentPWM}
+        if (successCB) successCB()
+    })
 }
 
 export function saveOptions(changes, successCB) {
-    saveJSONWithReboot('Configuration Update Succeeded', 'Configuration Update Failed', '/options.json', changes, successCB)
+    const newOptions = {...elrsState.options, ...changes, customised: true}
+    saveJSONWithReboot('Configuration Update Succeeded', 'Configuration Update Failed', '/options.json', newOptions, () => {
+        elrsState.options = newOptions
+        if (successCB) successCB()
+    })
 }
 
 export function saveOptionsAndConfig(changes, successCB) {
-    postJSON('/options.json', changes.options, {
+    const newOptions = {...elrsState.options, ...changes.options, customised: true}
+    postJSON('/options.json', newOptions, {
         onload: async () => {
-            elrsState.options = changes.options
             saveConfig(changes.config, () => {
-                elrsState.config = changes.config
-                return successCB()
+                elrsState.options = newOptions
+                if (successCB) successCB()
             })
         },
         onerror: async (xhr) => {

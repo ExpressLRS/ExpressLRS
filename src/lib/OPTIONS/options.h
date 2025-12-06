@@ -62,6 +62,7 @@ extern uint32_t logo_image;
 extern String& getOptions();
 extern String& getHardware();
 extern void saveOptions();
+void setOptions(String &options);
 
 #include "EspFlashStream.h"
 bool options_HasStringInFlash(EspFlashStream &strmFlash);

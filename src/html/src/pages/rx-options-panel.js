@@ -38,6 +38,12 @@ class RxOptionsPanel extends LitElement {
                         <label for="domain">Regulatory domain</label>
                     </div>
                     <!-- /FEATURE:HAS_SUBGHZ -->
+                    <h2>Lock on first connection</h2>
+                    RF Mode Locking - Default mode is for the RX to cycle through the available RF modes with 5s pauses
+                    going from highest to lowest mode and finding which mode the TX is transmitting. This allows the RX to
+                    cycle, but once a connection has been established, the Rx will no longer cycle through the RF modes
+                    (until it receives a power reset).
+                    <br/>
                     <div class="mui-checkbox">
                         <input id="lock" type='checkbox'
                                ?checked="${this.lockOnFirst}"
@@ -71,14 +77,14 @@ class RxOptionsPanel extends LitElement {
                     <br/>
                     <div class="mui-checkbox">
                         <input id='force-tlm' name='force-tlm' type='checkbox'
-                               ?checked=${this.forceTlmOff}
+                               ?checked="${this.forceTlmOff}"
                                @change="${(e) => this.forceTlmOff = e.target.checked}"
                         />
                         <label for="force-tlm">Force telemetry OFF on this receiver</label>
                     </div>
 
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled="${!this.hasChanges()}"
+                            ?disabled="${!this.checkChanged()}"
                             @click="${this.save}"
                     >
                         Save
@@ -99,27 +105,23 @@ class RxOptionsPanel extends LitElement {
         e.preventDefault()
         const changes = {
             options: {
-                ...elrsState.options,
                 // FEATURE: HAS_SUBGHZ
                 'domain': this.domain,
                 // /FEATURE: HAS_SUBGHZ
                 'lock-on-first-connection': this.lockOnFirst,
             },
             config: {
-                ...elrsState.config,
                 'modelid': this.enableModelMatch ? this.modelId : 255,
                 'force-tlm': this.forceTlmOff
             }
         }
         saveOptionsAndConfig(changes, () => {
-            elrsState.options = changes.options
-            elrsState.config = changes.config
             this.modelId = changes.config.modelid
             return this.requestUpdate()
         })
     }
 
-    hasChanges() {
+    checkChanged() {
         let changed = false
         // FEATURE: HAS_SUBGHZ
         changed |= this.domain !== elrsState.options['domain']
@@ -128,6 +130,6 @@ class RxOptionsPanel extends LitElement {
         changed |= this.enableModelMatch && this.modelId !== elrsState.config['modelid']
         changed |= !this.enableModelMatch && this.modelId !== 255
         changed |= this.forceTlmOff !== elrsState.config['force-tlm']
-        return changed
+        return !!changed
     }
 }

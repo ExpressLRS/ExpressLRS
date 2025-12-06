@@ -55,7 +55,7 @@ export function devMockPlugin() {
             uid: [5, 4, 3, 2, 1, 0],  // current UID, different to options if traditional binding or on-loan
             // RX config
             modelid: 62,
-            'force-tlm': false,
+            'force-tlm': true,
             'serial-protocol': 1,
             'serial1-protocol': 0,
             'sbus-failsafe': 0,
@@ -63,8 +63,8 @@ export function devMockPlugin() {
                 {"config": 0, "pin": 0, "features": 12},
                 {"config": 1536, "pin": 4, "features": 12 + 16},
                 {"config": 2048, "pin": 5, "features": 12 + 16},
-                {"config": 3584, "pin": 1, "features": 1 + 16},
-                {"config": 4608, "pin": 3, "features": 2 + 16}
+                {"config": 3584, "pin": 1, "features": 1 + 4 + 8 + 16 + 32+ 64},
+                {"config": 4608, "pin": 3, "features": 2 + 4 + 8 + 16 + 32+ 64}
             ],
             vbind: 0,
             // TX config
@@ -126,11 +126,12 @@ export function devMockPlugin() {
                     return readBody().then((body) => {
                         try {
                             const data = JSON.parse(body || '{}')
-                            if (data['button-actions']) stubState.config['button-actions'] = data['button-actions']
-                            if (data['pwm']) {
+                            const pwm = stubState.config.pwm
+                            stubState.config = {...data, pwm}
+                            if (data.pwm) {
                                 let i = 0
-                                stubState.config['pwm'].forEach((item) => {
-                                    item.config = data['pwm'][i++]
+                                stubState.config.pwm.forEach((item) => {
+                                    item.config = data.pwm[i++]
                                 })
                             }
                         } catch (e) {

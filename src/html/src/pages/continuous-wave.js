@@ -77,12 +77,13 @@ export class ContinuousWave extends LitElement {
                     <br>
                     <div class="mui-textfield">
                         <input id="measured" type='number' required @input="${this._measured}"
+                               placeholder="Enter peak/center frequency of measured continuous wave"
                                @keypress="${(e) => {
                                    if (e.which !== 8 && e.which !== 0 && e.which < 48 || e.which > 57)
                                        e.preventDefault();
                                }}"
                         />
-                        <label for="measured">Center Frequency</label>
+                        <label for="measured">Measured Center Frequency</label>
                     </div>
                     <div style="display: ${this.result.calculated ? 'block' : 'none'};">
                         <table class="mui-table mui-table--bordered">

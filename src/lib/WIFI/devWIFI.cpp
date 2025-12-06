@@ -212,6 +212,11 @@ static void HandleReset(AsyncWebServerRequest *request)
   }
   if (request->hasArg("options")) {
     SPIFFS.remove("/options.json");
+#if defined(TARGET_RX)
+    config.SetModelId(255);
+    config.SetForceTlmOff(false);
+    config.Commit();
+#endif
   }
   if (request->hasArg("lr1121")) {
     SPIFFS.remove("/lr1121.txt");
@@ -234,6 +239,10 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
 
   File file = SPIFFS.open("/options.json", "w");
   serializeJson(json, file);
+  file.close();
+  String options;
+  serializeJson(json, options);
+  setOptions(options);
   request->send(200);
 }
 
@@ -331,7 +340,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     #if defined(TARGET_RX)
     json["config"]["serial-protocol"] = config.GetSerialProtocol();
     #if defined(PLATFORM_ESP32)
-    if (GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN)
+    if ((GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN) || GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
     {
       json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
     }
@@ -359,6 +368,10 @@ static void GetConfiguration(AsyncWebServerRequest *request)
                (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
       #endif
       json["config"]["pwm"][ch]["features"] = features;
+    }
+    if (GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN)
+    {
+        json["settings"]["has_serial_pins"] = true;
     }
     #endif
     json["settings"]["product_name"] = product_name;
@@ -521,7 +534,7 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   if (modelid < 0 || modelid > 63) modelid = 255;
   config.SetModelId((uint8_t)modelid);
 
-  long forceTlm = json["force-tlm"] | 0;
+  long forceTlm = json["force-tlm"] | false;
   config.SetForceTlmOff(forceTlm != 0);
 
   config.SetBindStorage((rx_config_bindstorage_t)(json["vbind"] | 0));
