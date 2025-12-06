@@ -72,7 +72,7 @@ static void servoWriteDshot(eServoOutputMode chMode, uint8_t ch, uint16_t us)
             }
             else {
                 dshotVal = fmap(us, 1001, 2000, DSHOT_THROTTLE_MIN, DSHOT_THROTTLE_MAX); // Convert PWM signal in us to DShot value
-            }         
+            }
         }
         else // somDShot3D
         {
@@ -195,10 +195,6 @@ void servoCurrentToFailsafeConfig()
 static void servosUpdate(unsigned long now)
 {
     static uint32_t lastUpdate;
-
-    #if defined(PLATFORM_ESP32)
-    DShotRMT::poll();
-    #endif
 
     if (newChannelsAvailable)
     {
