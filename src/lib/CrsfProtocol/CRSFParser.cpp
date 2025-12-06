@@ -30,7 +30,8 @@ bool CRSFParser::processByte(CRSFConnector *origin, const uint8_t inputByte, con
             break;
 
         case RECEIVING_LENGTH:
-            if (inputByte < (1 + CRSF_FRAME_NOT_COUNTED_BYTES) || inputByte >= CRSF_MAX_PACKET_LEN)
+            if (inputByte < (CRSF_MIN_PACKET_LEN - CRSF_FRAME_NOT_COUNTED_BYTES) ||
+                inputByte > (CRSF_MAX_PACKET_LEN - CRSF_FRAME_NOT_COUNTED_BYTES))
             {
                 telemetry_state = TELEMETRY_IDLE;
                 return false;
