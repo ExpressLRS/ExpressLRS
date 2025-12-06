@@ -52,8 +52,10 @@ class BindingPanel extends LitElement {
                             Enter a new binding phrase to replace the current binding information.
                             This will persist across reboots, but <b>will be reset</b> if the firmware is flashed with a
                             binding phrase.
-                            Note: The Binding phrase is not remembered, it is a temporary field used to generate the
+                            Note: The Binding phrase is not remembered; it is a temporary field used to generate the
                             binding UID.
+                            You may also enter a binding UID directly (as six comma-separated numbers), which will be
+                            copied to the UID field and used as-is.
                             <br/><br/>
                             <div class="mui-textfield">
                                 <input type="text" id="phrase" placeholder="Binding Phrase"
@@ -72,16 +74,12 @@ class BindingPanel extends LitElement {
                         </div>
                     ` : ''}
                     <button class="mui-btn mui-btn--primary"
-                            ?disabled=${this._saveDisabled()}
+                            ?disabled=${!this.checkChanged()}
                             @click="${this._submitOptions}">Save
                     </button>
                 </form>
             </div>
         `
-    }
-
-    _saveDisabled() {
-        return !(this.bindType !== elrsState.config.vbind || this.uidData.uidtype === 'Modified')
     }
 
     _isValidUidByte(s) {
@@ -161,7 +159,6 @@ class BindingPanel extends LitElement {
 
         // FEATURE:IS_TX
         let tx_changes = {
-            ...elrsState.options,
             customised: true,
             uid: this.uid
         }
@@ -170,13 +167,11 @@ class BindingPanel extends LitElement {
             this.originalUIDType = 'Overridden'
             this.phrase.value = ''
             this._updateUIDType(this.originalUIDType)
-            elrsState.options = tx_changes
             return this.requestUpdate()
         })
         // /FEATURE:IS_TX
         // FEATURE:NOT IS_TX
         const rx_changes =  {
-            ...elrsState.config,
             uid: this.uid,
             vbind: this.bindType
         }
@@ -187,9 +182,13 @@ class BindingPanel extends LitElement {
                 this.phrase.value = ''
                 this._updateUIDType(this.originalUIDType)
             }
-            elrsState.config = rx_changes
             return this.requestUpdate()
         })
         // /FEATURE:NOT IS_TX
     }
+
+    checkChanged() {
+        return this.bindType !== elrsState.config.vbind || this.uidData.uidtype === 'Modified'
+    }
+
 }

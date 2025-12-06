@@ -5,6 +5,10 @@ import {elrsState, saveConfig} from "../utils/state.js";
 import {_} from "../utils/libs.js";
 import {postWithFeedback} from "../utils/feedback.js";
 
+export const PWM_MODE_SERIAL = 10;
+export const PWM_MODE_SERIAL2RX = 14;
+export const PWM_MODE_SERIAL2TX = 15;
+
 @customElement('connections-panel')
 class ConnectionsPanel extends LitElement {
     pinModes = []
@@ -52,7 +56,7 @@ class ConnectionsPanel extends LitElement {
                             <table class="pwmtbl mui-table">
                                 <thead>
                                 <tr>
-                                    <th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert?</th><th class="mui--text-center fixed-column">Stretch?</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th>
+                                    <th class="fixed-column">Output</th><th class="mui--text-center fixed-column">Features</th><th>Mode</th><th>Input</th><th class="mui--text-center fixed-column">Invert</th><th class="mui--text-center fixed-column">Stretch</th><th class="mui--text-center fixed-column pwmitm">Failsafe Mode</th><th class="mui--text-center fixed-column pwmitm">Failsafe Pos</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -127,7 +131,7 @@ class ConnectionsPanel extends LitElement {
                 <select id="${id}" class="pwmitm" @change="${onchange}">
                     ${arOptions.map((item, idx) => {
                         if (item) {
-                            return html`<option value="${idx}" ?selected=${idx === val} ?disabled=${item === 'Disabled'}>${item}</option>`
+                            return html`<option value="${idx}" ?selected=${idx === val}>${item}</option>`
                         }
                         return null
                     })}
@@ -167,49 +171,24 @@ class ConnectionsPanel extends LitElement {
             const features = item.features
             const modes = ['50Hz', '60Hz', '100Hz', '160Hz', '333Hz', '400Hz', '10KHzDuty', 'On/Off']
             if (features & 16) {
-                modes.push('DShot')
-                modes.push('DShot-3D');
+                modes.push('DShot', 'DShot-3D');
             } else {
-                modes.push(undefined)
-                modes.push(undefined)
+                modes.push(undefined, undefined)
             }
             if (features & 1) {
-                modes.push('Serial TX')
-                modes.push(undefined)  // SCL
-                modes.push(undefined)  // SDA
-                modes.push(undefined)  // true PWM
                 this.pinRxIndex = index
+                modes.push('Serial TX')
             } else if (features & 2) {
-                modes.push('Serial RX')
-                modes.push(undefined)  // SCL
-                modes.push(undefined)  // SDA
-                modes.push(undefined)  // true PWM
                 this.pinTxIndex = index
-            } else {
-                modes.push(undefined)  // Serial
-                if (features & 4) {
-                    modes.push('I2C SCL')
-                } else {
-                    modes.push(undefined)
-                }
-                if (features & 8) {
-                    modes.push('I2C SDA')
-                } else {
-                    modes.push(undefined)
-                }
-                modes.push(undefined)  // true PWM
-            }
-
-            if (features & 32) {
-                modes.push('Serial2 RX')
+                modes.push('Serial RX')
             } else {
                 modes.push(undefined)
             }
-            if (features & 64) {
-                modes.push('Serial2 TX')
-            } else {
-                modes.push(undefined)
-            }
+            modes.push(features & 4 ? 'I2C SCL' : undefined)
+            modes.push(features & 8 ? 'I2C SDA' : undefined)
+            modes.push(undefined)  // true PWM (not yet supported)
+            modes.push(features & 32 ? 'Serial2 RX' : undefined)
+            modes.push(features & 64 ? 'Serial2 TX' : undefined)
 
             htmlFields.push(html`
                 <tr><td class="mui--text-center mui--text-title">${index + 1}</td>
@@ -240,9 +219,11 @@ class ConnectionsPanel extends LitElement {
             _(`pwm_${index}_fsmode`).disabled = onoff
         }
 
-        setDisabled(index, pinMode.value > 9);
+        // disable extra fields for serial & i2c pins
+        setDisabled(index, Number.parseInt(pinMode.value) >= PWM_MODE_SERIAL);
+
         const updateOthers = (value, enable) => {
-            if (value > 9) { // disable others
+            if (value > PWM_MODE_SERIAL) { // disable others
                 elrsState.config.pwm.forEach((item, other) => {
                     if (other !== index) {
                         document.querySelectorAll(`#pwm_${other}_mode option`).forEach(opt => {
@@ -262,14 +243,16 @@ class ConnectionsPanel extends LitElement {
         if (this.pinRxIndex !== undefined && this.pinTxIndex !== undefined) {
             const pinRxMode = _(`pwm_${this.pinRxIndex}_mode`)
             const pinTxMode = _(`pwm_${this.pinTxIndex}_mode`)
+            const pinRxModeValue = Number.parseInt(pinRxMode.value)
+            const pinTxModeValue = Number.parseInt(pinTxMode.value)
             if (index === this.pinRxIndex) {
-                if (pinRxMode.value === '9') { // Serial
-                    pinTxMode.value = 9
+                if (pinRxModeValue === PWM_MODE_SERIAL) { // Serial
+                    pinTxMode.value = PWM_MODE_SERIAL
                     setDisabled(this.pinRxIndex, true)
                     setDisabled(this.pinTxIndex, true)
                     pinTxMode.disabled = true
                 }
-                else {
+                else if (pinTxModeValue === PWM_MODE_SERIAL) {
                     pinTxMode.value = 0
                     setDisabled(this.pinRxIndex, false)
                     setDisabled(this.pinTxIndex, false)
@@ -277,28 +260,30 @@ class ConnectionsPanel extends LitElement {
                 }
             }
             if (index === this.pinTxIndex) {
-                if (pinTxMode.value === '9') { // Serial
-                    pinRxMode.value = 9
+                if (pinTxModeValue === PWM_MODE_SERIAL) { // Serial
+                    pinRxMode.value = PWM_MODE_SERIAL
                     setDisabled(this.pinRxIndex, true)
                     setDisabled(this.pinTxIndex, true)
                     pinTxMode.disabled = true
                 }
             }
             const pinTx = pinTxMode.value
-            if (pinRxMode.value !== '9') pinTxMode.value = pinTx
+            if (pinRxModeValue !== PWM_MODE_SERIAL) pinTxMode.value = pinTx
         }
 
     }
 
     _failsafeModeChange(failsafeMode, index) {
-        const failsafeField = _(`pwm_${index}_fs`)
-        if (failsafeMode.value === '0') {
-            failsafeField.disabled = false
-            failsafeField.style.display = 'block'
-        }
-        else {
-            failsafeField.disabled = true
-            failsafeField.style.display = 'none'
+        const mode = _(`pwm_${index}_mode`).value
+        if (mode < PWM_MODE_SERIAL) {
+            const failsafeField = _(`pwm_${index}_fs`)
+            if (failsafeMode.value === '0') {
+                failsafeField.disabled = false
+                failsafeField.style.display = 'block'
+            } else {
+                failsafeField.disabled = true
+                failsafeField.style.display = 'none'
+            }
         }
     }
 
@@ -330,14 +315,17 @@ class ConnectionsPanel extends LitElement {
     _savePwmConfig(e) {
         e.preventDefault();
         const data = this._getPwmFormData()
-        saveConfig({
-            ...elrsState.config,
-            'pwm': data
-        }, () => {
-            let i = 0
-            elrsState.config.pwm.forEach((item) => {
-                item.config = data[i++]
-            })
-        })
+        saveConfig({'pwm': data})
     }
+
+    checkChanged() {
+        const data = this._getPwmFormData()
+        for (let i = 0; i < data.length; i++) {
+            if (elrsState.config.pwm[i].config !== data[i]) {
+                return true
+            }
+        }
+        return false
+    }
+
 }

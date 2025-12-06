@@ -55,6 +55,12 @@ String& getOptions()
     return builtinOptions;
 }
 
+void setOptions(String &options)
+{
+    builtinOptions.clear();
+    builtinOptions.concat(options);
+}
+
 void saveOptions(Stream &stream, bool customised)
 {
     JsonDocument doc;
@@ -89,6 +95,8 @@ void saveOptions(Stream &stream, bool customised)
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
     serializeJson(doc, stream);
+    builtinOptions.clear();
+    serializeJson(doc, builtinOptions);
 }
 
 void saveOptions()

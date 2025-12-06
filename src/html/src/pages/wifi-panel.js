@@ -78,15 +78,19 @@ class WifiPanel extends LitElement {
                     <div id="credentials" ?hidden="${this.selectedValue === '2' || this.selectedValue === '3'}">
                         <div class="autocomplete mui-textfield" style="position:relative;">
                             <div style="display: ${this.showLoader ? 'block' : 'none'};" class="loader"></div>
-                            <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"/>
+                            <input id="ssid" name="network" type="text" placeholder="SSID" autocomplete="off"
+                                value="${elrsState.options['wifi-ssid']}"
+                            />
                             <label for="ssid">WiFi SSID</label>
                         </div>
                         <div class="mui-textfield">
-                            <input id="pwd" size='64' name='password' type='password'/>
+                            <input id="pwd" size='64' name='password' type='password'
+                                value="${elrsState.options['wifi-password']}"
+                            />
                             <label for="pwd">WiFi password</label>
                         </div>
                     </div>
-                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}">Save</button>
+                    <button class="mui-btn mui-btn--primary" @click="${this._setupNetwork}" ?disabled="${!(this.checkChanged() || this.selectedValue!=='0')}">Save</button>
                 </form>
             </div>
             <div class="mui-panel" ?hidden="${elrsState.settings.mode === 'STA'}">
@@ -115,6 +119,7 @@ class WifiPanel extends LitElement {
                         'wifi-ssid': self.network.value,
                         'wifi-password': self.password.value,
                         'wifi-on-interval': self.wifiOnInterval,
+                        customised: true
                     }
                 })(event)
                 break
@@ -132,7 +137,8 @@ class WifiPanel extends LitElement {
                 }, function () {
                     elrsState.options = {
                         ...elrsState.options,
-                        'wifi-ssid': self.network.value
+                        'wifi-on-interval': self.wifiOnInterval,
+                        customised: true
                     }
                 })(event)
                 break
@@ -162,5 +168,13 @@ class WifiPanel extends LitElement {
         }
         xmlhttp.open('GET', 'networks.json', true)
         xmlhttp.send()
+    }
+
+    checkChanged() {
+        let changed = false
+        changed |= this.wifiOnInterval !== elrsState.options['wifi-on-interval']
+        changed |= this.network?.value !== elrsState.options['wifi-ssid']
+        changed |= this.password?.value !== elrsState.options['wifi-password']
+        return !!changed
     }
 }

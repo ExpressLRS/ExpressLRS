@@ -5,6 +5,7 @@ import {elrsState, formatBand} from './utils/state.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
+import {cuteAlert} from "./utils/feedback.js";
 
 @customElement('elrs-app')
 export class App extends LitElement {
@@ -12,6 +13,9 @@ export class App extends LitElement {
     @query("#main") accessor mainEl
 
     menu = svg`<svg width="40" height="40" viewBox="0 0 512 512"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="48" d="M88 152h336M88 256h336M88 360h336"/></svg>`
+
+    // Track the currently rendered route so we can restore it when a page blocks navigation
+    currentRoute = null
 
     constructor() {
         super()
@@ -96,12 +100,6 @@ export class App extends LitElement {
     }
 
     firstUpdated(_changedProperties) {
-        ['hardware', 'cw', 'lr1121', 'binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
-            .forEach(id => {
-                const el = this.querySelector(`#menu-${id}`)
-                if (el) el.addEventListener('click', () => setTimeout(this.renderRoute))
-            })
-
         window.addEventListener('hashchange', this.renderRoute)
 
         // Initial load sequence
@@ -116,9 +114,9 @@ export class App extends LitElement {
             const resp = await fetch('/config')
             if (!resp.ok) throw new Error('Failed to load config')
             const data = await resp.json()
-            elrsState.settings = data.settings || null
-            elrsState.options = data.options || null
-            elrsState.config = data.config || null
+            elrsState.settings = data.settings || {}
+            elrsState.options = data.options || {}
+            elrsState.config = data.config || {}
             document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
             this.requestUpdate()
         } catch (e) {
@@ -193,7 +191,9 @@ export class App extends LitElement {
             ]
             // FEATURE:IS_TX
             imports.push(import('./pages/tx-options-panel.js'))
+            // FEATURE:NOT IS_8285
             imports.push(import('./pages/models-panel.js'))
+            // /FEATURE:NOT IS_8285
             imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
@@ -262,6 +262,37 @@ export class App extends LitElement {
 
     async renderRoute() {
         const route = (location.hash || '#info').replace('#', '')
+
+        // If we are already on this route, do nothing
+        if (this.currentRoute && route === this.currentRoute) {
+            this.setActiveMenu(route)
+            return
+        }
+
+        // Navigation guard: ask the current page component if we can leave
+        const currentEl = this.mainEl?.firstElementChild
+        if (currentEl && typeof currentEl.checkChanged === 'function') {
+            try {
+                let hasChanges = currentEl.checkChanged()
+                let navigate = true;
+                if (hasChanges === true) {
+                   navigate = (await cuteAlert({type: 'question', message: 'Do you wish to navigate away and discard changes to this page?', title: 'Configuration Changed', confirmText: 'Discard', cancelText: 'Cancel'})) === 'confirm'
+                }
+                if (navigate === false) {
+                    // Revert the hash to the previous route and exit
+                    if (this.currentRoute && this.currentRoute !== route) {
+                        if (('#' + this.currentRoute) !== location.hash) {
+                            location.hash = '#' + this.currentRoute
+                        }
+                        this.setActiveMenu(this.currentRoute)
+                    }
+                    return
+                }
+            } catch {
+                // If the hook throws, proceed with navigation
+            }
+        }
+
         await this.ensureLoadedForRoute(route)
         this.setActiveMenu(route)
         try {
@@ -274,6 +305,7 @@ export class App extends LitElement {
         const content = this.buildRouteContent(route)
         await this.replaceMainWithTransition(content)
         this.scrollMainToTop()
+        this.currentRoute = route
     }
 
     showSidedrawer() {

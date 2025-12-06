@@ -4,8 +4,6 @@
     background-color: #4686a0;
     color: rgba(255, 255, 255, 0.75);
     background-image: linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
-    background-position: top left, center center, center center;
-    background-size: auto, cover, cover;
 }
 
 .upload > label > input {
@@ -24,8 +22,7 @@
 	padding: 10px 16px 10px 16px;
 }
 .upload {
-	padding: 0;
-	tab-index: -1;
+    padding: 0;
 }
 
 body, input, select, textarea {
@@ -152,17 +149,6 @@ img.icon-pwm {
     height: 28px;
 }
 
-/* Safari */
-@-webkit-keyframes spin {
-	0% { -webkit-transform: rotate(0deg); }
-	100% { -webkit-transform: rotate(360deg); }
-}
-
-@keyframes spin {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
-}
-
 /*==========================*/
 
 /* Alert box design by Igor Ferrão de Souza: https://www.linkedin.com/in/igor-ferr%C3%A3o-de-souza-4122407b/ */
@@ -283,25 +269,23 @@ img.icon-pwm {
   }
 
   .alert-title {
-	font-size: 18px !important;
-	font-family: "Source Sans Pro", Helvetica, sans-serif;
-	font-weight: 700;
-	font-size: 15px;
-	margin-bottom: 35px;
-	color: #222;
-	align-self: center;
+    font-size: 18px !important;
+    font-family: "Source Sans Pro", Helvetica, sans-serif;
+    font-weight: 700;
+    margin-bottom: 35px;
+    color: #222;
+    align-self: center;
   }
 
   .alert-message {
-	font-size: 15px !important;
-	color: #666;
-	font-family: "Source Sans Pro", Helvetica, sans-serif;
-	font-weight: 400;
-	font-size: 15px;
-	text-align: center;
-	margin-bottom: 35px;
-	line-height: 1.6;
-	align-self: center;
+    font-size: 15px !important;
+    color: #666;
+    font-family: "Source Sans Pro", Helvetica, sans-serif;
+    font-weight: 400;
+    text-align: center;
+    margin-bottom: 35px;
+    line-height: 1.6;
+    align-self: center;
   }
 
   .question-buttons {
@@ -388,15 +372,6 @@ img.icon-pwm {
 
   /*==========================*/
 
-  .elrs-inline-form {
-	  display: flex;
-	  align-items: center;
-  }
-
-  .elrs-inline-form > * {
-	margin-right: 5px;
-  }
-
   .badge {
 	color: white;
 	padding: 4px 8px;
@@ -404,11 +379,3 @@ img.icon-pwm {
 	text-align: center;
 	border-radius: 5px;
   }
-
-#sidedrawer-brand {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 10px;
-	padding: 0 15px;
-}
