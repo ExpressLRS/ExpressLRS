@@ -119,6 +119,7 @@ class WifiPanel extends LitElement {
                         'wifi-ssid': self.network.value,
                         'wifi-password': self.password.value,
                         'wifi-on-interval': self.wifiOnInterval,
+                        customised: true
                     }
                 })(event)
                 break
@@ -136,7 +137,8 @@ class WifiPanel extends LitElement {
                 }, function () {
                     elrsState.options = {
                         ...elrsState.options,
-                        'wifi-on-interval': self.wifiOnInterval
+                        'wifi-on-interval': self.wifiOnInterval,
+                        customised: true
                     }
                 })(event)
                 break

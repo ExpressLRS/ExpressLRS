@@ -117,7 +117,6 @@ export class App extends LitElement {
             elrsState.settings = data.settings || {}
             elrsState.options = data.options || {}
             elrsState.config = data.config || {}
-            elrsState.options.customised = true
             document.title = 'ExpressLRS ' + data.settings["module-type"] + ' WebUI'
             this.requestUpdate()
         } catch (e) {

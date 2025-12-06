@@ -40,7 +40,7 @@ export function saveConfig(changes, successCB) {
 }
 
 export function saveOptions(changes, successCB) {
-    const newOptions = {...elrsState.options, ...changes}
+    const newOptions = {...elrsState.options, ...changes, customised: true}
     saveJSONWithReboot('Configuration Update Succeeded', 'Configuration Update Failed', '/options.json', newOptions, () => {
         elrsState.options = newOptions
         if (successCB) successCB()
@@ -48,7 +48,7 @@ export function saveOptions(changes, successCB) {
 }
 
 export function saveOptionsAndConfig(changes, successCB) {
-    const newOptions = {...elrsState.options, ...changes.options}
+    const newOptions = {...elrsState.options, ...changes.options, customised: true}
     postJSON('/options.json', newOptions, {
         onload: async () => {
             saveConfig(changes.config, () => {
