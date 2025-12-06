@@ -212,6 +212,11 @@ static void HandleReset(AsyncWebServerRequest *request)
   }
   if (request->hasArg("options")) {
     SPIFFS.remove("/options.json");
+#if defined(TARGET_RX)
+    config.SetModelId(255);
+    config.SetForceTlmOff(false);
+    config.Commit();
+#endif
   }
   if (request->hasArg("lr1121")) {
     SPIFFS.remove("/lr1121.txt");

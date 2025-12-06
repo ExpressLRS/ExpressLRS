@@ -38,6 +38,12 @@ class RxOptionsPanel extends LitElement {
                         <label for="domain">Regulatory domain</label>
                     </div>
                     <!-- /FEATURE:HAS_SUBGHZ -->
+                    <h2>Lock on first connection</h2>
+                    RF Mode Locking - Default mode is for the RX to cycle through the available RF modes with 5s pauses
+                    going from highest to lowest mode and finding which mode the TX is transmitting. This allows the RX to
+                    cycle, but once a connection has been established, the Rx will no longer cycle through the RF modes
+                    (until it receives a power reset).
+                    <br/>
                     <div class="mui-checkbox">
                         <input id="lock" type='checkbox'
                                ?checked="${this.lockOnFirst}"

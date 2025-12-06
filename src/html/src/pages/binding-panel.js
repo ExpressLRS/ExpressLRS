@@ -52,8 +52,10 @@ class BindingPanel extends LitElement {
                             Enter a new binding phrase to replace the current binding information.
                             This will persist across reboots, but <b>will be reset</b> if the firmware is flashed with a
                             binding phrase.
-                            Note: The Binding phrase is not remembered, it is a temporary field used to generate the
+                            Note: The Binding phrase is not remembered; it is a temporary field used to generate the
                             binding UID.
+                            You may also enter a binding UID directly (as six comma-separated numbers), which will be
+                            copied to the UID field and used as-is.
                             <br/><br/>
                             <div class="mui-textfield">
                                 <input type="text" id="phrase" placeholder="Binding Phrase"
