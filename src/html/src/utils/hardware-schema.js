@@ -41,7 +41,7 @@ const HARDWARE_SCHEMA = [
 
     {
         title: 'Radio Chip Pins & Options', rows: [
-            /* FEATURE: NOT IS_SX127X */
+            /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_busy',
                 label: 'BUSY pin',
@@ -49,8 +49,8 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'GPIO Input connected to SX128x busy pin'
             },
-            /* /FEATURE: NOT IS_SX127X */
-            /* FEATURE: IS_SX127X */
+            /* /FEATURE: NOT HAS_SX127X */
+            /* FEATURE: HAS_SX127X */
             {
                 id: 'radio_dio0',
                 label: 'DIO0 pin',
@@ -58,8 +58,8 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for SX127x'
             },
-            /* /FEATURE: IS_SX127X */
-            /* FEATURE: NOT IS_SX127X */
+            /* /FEATURE: HAS_SX127X */
+            /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_dio1',
                 label: 'DIO1 pin',
@@ -67,7 +67,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for SX128x/LR1121'
             },
-            /* /FEATURE: NOT IS_SX127X */
+            /* /FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_miso',
                 label: 'MISO pin',
@@ -103,7 +103,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Clock pin connected to (possibly) multiple SX1280/127x'
             },
-            /* FEATURE: NOT IS_SX127X */
+            /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_busy_2',
                 label: 'BUSY_2 pin',
@@ -111,8 +111,8 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Busy pin for second SX1280'
             },
-            /* /FEATURE: NOT IS_SX127X */
-            /* FEATURE: IS_SX127X */
+            /* /FEATURE: NOT HAS_SX127X */
+            /* FEATURE: HAS_SX127X */
             {
                 id: 'radio_dio0_2',
                 label: 'DIO0_2 pin',
@@ -120,8 +120,8 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for second SX127x'
             },
-            /* /FEATURE: IS_SX127X */
-            /* FEATURE: NOT IS_SX127X */
+            /* /FEATURE: HAS_SX127X */
+            /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_dio1_2',
                 label: 'DIO1_2 pin',
@@ -129,7 +129,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'input',
                 desc: 'Interrupt pin for second SX1280'
             },
-            /* /FEATURE: NOT IS_SX127X */
+            /* /FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_nss_2',
                 label: 'NSS_2 pin',
@@ -144,7 +144,7 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Reset pin connected to second SX1280/127x'
             },
-            /* FEATURE: NOT IS_SX127X */
+            /* FEATURE: NOT HAS_SX127X */
             {
                 id: 'radio_dcdc',
                 label: 'DCDC enabled',
@@ -152,8 +152,8 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)'
             },
-            /* /FEATURE: NOT IS_SX127X */
-            /* FEATURE: IS_SX127X */
+            /* /FEATURE: NOT HAS_SX127X */
+            /* FEATURE: HAS_SX127X */
             {
                 id: 'radio_rfo_hf',
                 label: 'RFO_HF enabled',
@@ -161,8 +161,8 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
-            /* /FEATURE: IS_SX127X */
-            /* FEATURE: IS_LR1121 */
+            /* /FEATURE: HAS_SX127X */
+            /* FEATURE: HAS_LR1121 */
             {
                 id: 'radio_rfsw_ctrl',
                 label: 'LR1121 RF Switch Controls',
@@ -171,7 +171,7 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'Comma-separated list of 8 values used for setting the LR1121 RF switch controls'
             },
-            /* /FEATURE: IS_LR1121 */
+            /* /FEATURE: HAS_LR1121 */
         ]
     },
 
@@ -305,6 +305,7 @@ const HARDWARE_SCHEMA = [
                 size: 40,
                 desc: 'Comma-separated list of values that set the power output (if using a DAC then these set the Semtech power output)'
             },
+            /* FEATURE: HAS_LR1121 */
             {
                 id: 'power_values_dual',
                 label: 'Dual Power Value(s)',
@@ -312,6 +313,7 @@ const HARDWARE_SCHEMA = [
                 size: 40,
                 desc: 'Comma-separated list of values that set the higher frequency power output of a dual band Tx/Rx'
             },
+            /* /FEATURE: HAS_LR1121 */
             {
                 id: 'power_lna_gain',
                 label: 'PA LNA Gain',
