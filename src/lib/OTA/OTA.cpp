@@ -342,6 +342,8 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
         channelData[ch] = UINT10_to_CRSF(rawChannelData[ch] >> 1);
     }
     channelData[4] = BIT_to_CRSF(isArmed);
+    // Copy the armed flag into CH14/AUX10 for consistency with fullres
+    channelData[13] = channelData[4];
 #endif
 }
 
@@ -444,8 +446,8 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, 
     {
         chDstLow = 0;
         chDstHigh = (ota8->rc.isHighAux) ? 8 : 4;
-        // For 8ch and 12ch mode, Arm status is placed in CH13/AUX8
-        channelData[AUX8] = BIT_to_CRSF(isArmed);
+        // For 8ch and 12ch mode, Arm status is placed in CH14/AUX10 just like non-fullres
+        channelData[13] = BIT_to_CRSF(isArmed);
     }
 
     // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
