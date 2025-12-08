@@ -250,17 +250,6 @@ const HARDWARE_SCHEMA = [
                 desc: 'Minimum selectable power output'
             },
             {
-                id: 'power_high',
-                label: 'High Power',
-                type: 'select',
-                options: [
-                    {value: 0, label: '10mW'}, {value: 1, label: '25mW'}, {value: 2, label: '50mW'},
-                    {value: 3, label: '100mW'}, {value: 4, label: '250mW'}, {value: 5, label: '500mW'},
-                    {value: 6, label: '1000mW'}, {value: 7, label: '2000mW'}
-                ],
-                desc: 'Highest selectable power output (if option for higher power is NOT enabled)'
-            },
-            {
                 id: 'power_max',
                 label: 'Max Power',
                 type: 'select',
@@ -269,7 +258,7 @@ const HARDWARE_SCHEMA = [
                     {value: 3, label: '100mW'}, {value: 4, label: '250mW'}, {value: 5, label: '500mW'},
                     {value: 6, label: '1000mW'}, {value: 7, label: '2000mW'}
                 ],
-                desc: "Absolute maximum selectable power output (only available if 'higher power' option is enabled)"
+                desc: "Maximum selectable power output"
             },
             {
                 id: 'power_default',

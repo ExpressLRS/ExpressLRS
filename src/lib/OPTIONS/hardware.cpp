@@ -50,7 +50,6 @@ static const struct {
     {HARDWARE_power_txen_2, "power_txen_2", INT},
     {HARDWARE_power_lna_gain, "power_lna_gain", INT},
     {HARDWARE_power_min, "power_min", INT},
-    {HARDWARE_power_high, "power_high", INT},
     {HARDWARE_power_max, "power_max", INT},
     {HARDWARE_power_default, "power_default", INT},
     {HARDWARE_power_pdet, "power_pdet", INT},
