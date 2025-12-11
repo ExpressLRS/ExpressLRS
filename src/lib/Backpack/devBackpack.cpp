@@ -35,7 +35,7 @@ static uint32_t lastPTRValidTimeMs;
 
 #include "hwTimer.h"
 
-[[noreturn]] static void startPassthrough(const bool useUSB = false)
+[[noreturn]] static void startPassthrough(const bool useUSBSerial = false)
 {
     // stop everything
     devicesStop();
@@ -45,31 +45,16 @@ static uint32_t lastPTRValidTimeMs;
 
     Stream *uplink = &CRSFHandset::Port;
 
-    uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
-    // get ready for passthrough
-    if (GPIO_PIN_RCSIGNAL_RX == GPIO_PIN_RCSIGNAL_TX)
-    {
+    const uint32_t baud = PASSTHROUGH_BAUD == -1 ? BACKPACK_LOGGING_BAUD : PASSTHROUGH_BAUD;
 #if defined(PLATFORM_ESP32_S3)
-        // if UART0 is connected to the backpack then use the USB for the uplink
-        if (useUSB)
-        {
-            uplink = &Serial;
-            Serial.setTxBufferSize(1024);
-            Serial.setRxBufferSize(16384);
-        }
-        else
-        {
-            CRSFHandset::Port.begin(baud, SERIAL_8N1, 44, 43); // pins are configured as 44 and 43
-            CRSFHandset::Port.setTxBufferSize(1024);
-            CRSFHandset::Port.setRxBufferSize(16384);
-        }
-#else
-        CRSFHandset::Port.begin(baud, SERIAL_8N1, 3, 1); // default pin configuration 3 and 1
-        CRSFHandset::Port.setTxBufferSize(1024);
-        CRSFHandset::Port.setRxBufferSize(16384);
-#endif
+    if (useUSBSerial)
+    {
+        uplink = &USBSerial;
+        USBSerial.setTxBufferSize(1024);
+        USBSerial.setRxBufferSize(16384);
     }
     else
+#endif
     {
         CRSFHandset::Port.begin(baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
         CRSFHandset::Port.setTxBufferSize(1024);
@@ -162,9 +147,9 @@ void checkBackpackUpdate()
             0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0xc0
         };
         static int resync_pos = 0;
-        while(Serial.available())
+        while(USBSerial.available())
         {
-            int byte = Serial.read();
+            const int byte = USBSerial.read();
             if (byte == resync[resync_pos])
             {
                 resync_pos++;
