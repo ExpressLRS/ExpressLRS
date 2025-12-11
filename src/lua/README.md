@@ -1,7 +1,9 @@
 
-# Which file do I need?
-* For transmitters on master, ExpressLRS 2.x, or 3.0 -> elrsV3.lua
-* For transmitters on 1.x -> ELRS.lua
+`elrs.lua` works with all versions of ExpressLRS from v2.0 to current. There is no requirement to use an e.g. elrsV3.lua for 3.x, just use elrs.lua.
+
+## Old ELRS.lua
+
+When copying the lua to you handset, delete any old versions such as ELRS.lua, elrsV2.lua, or elrsV3.lua. The version-labeled filenames have been obsoleted.
 
 ### Downloading from Github:
 Click the file link above, find the "Raw" button near the top of that page. Right-click, Save link as.., copy the .lua file into the /SCRIPTS/TOOLS directory of the SD card on your handset.
