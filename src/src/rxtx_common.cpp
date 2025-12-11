@@ -24,7 +24,6 @@ boolean i2c_enabled = false;
 
 static void setupWire()
 {
-#if defined(PLATFORM_ESP32)
     int gpio_scl = GPIO_PIN_SCL;
     int gpio_sda = GPIO_PIN_SDA;
 
@@ -60,7 +59,6 @@ static void setupWire()
         Wire.setClock(400000);
         i2c_enabled = true;
     }
-#endif
 }
 
 void setupTargetCommon()
