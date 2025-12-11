@@ -95,7 +95,29 @@ static void ModelV6toV7(v6_model_config_t const * const v6, v7_model_config_t * 
 
 static void ModelV7toV8(v7_model_config_t const * const v7, model_config_t * const v8)
 {
-    v8->rate = v7->rate;
+    uint8_t newRate = v7->rate;
+#if defined(RADIO_LR1121)
+    switch (newRate)
+    {
+        case 0: newRate = 3; break; // lora 900 200Hz
+        case 1: newRate = 4; break; // lora 900 100Hz Full
+        case 2: newRate = 5; break; // lora 900 100Hz
+        case 3: newRate = 6; break; // lora 900 50Hz
+        case 4: newRate = 12; break; // lora 2.4 500Hz
+        case 5: newRate = 13; break; // lora 2.4 333Hz Full
+        case 6: newRate = 14; break; // lora 2.4 250Hz
+        case 7: newRate = 15; break; // lora 2.4 150Hz
+        case 8: newRate = 16; break; // lora 2.4 100Hz Full
+        case 9: newRate = 17; break; // lora 2.4 50Hz
+        case 10: newRate = 18; break; // lora dual 150Hz
+        case 11: newRate = 19; break; // lora dual 100Hz Full
+        case 12: newRate = 1; break; // lora 900 250Hz
+        case 13: newRate = 2; break; // lora 900 200Hz Full
+        case 14: newRate = 10; break; // fsk 2.4 500Hz dvda
+        case 15: newRate = 0; break; // fsk 900 1000Hz
+    }
+#endif
+    v8->rate = newRate;
     v8->tlm = v7->tlm;
     v8->power = v7->power;
     v8->switchMode = v7->switchMode;
