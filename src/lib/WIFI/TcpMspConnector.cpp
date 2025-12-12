@@ -25,29 +25,30 @@ void TcpMspConnector::begin()
 
 void TcpMspConnector::handleNewClient(void *arg, AsyncClient *client)
 {
-    DBGLN("\nTCPSOCKET client (%x) connected ip: %s", client, client->remoteIP().toString().c_str());
+    DBGLN("TCP(%x) connected ip %s", client, client->remoteIP().toString().c_str());
     ((TcpMspConnector *)arg)->clientConnect(client);
 }
 
 void TcpMspConnector::handleDataIn(void *arg, AsyncClient *client, void *data, const size_t len)
 {
+    DBGLN("TCP(%x) read %u", client, len);
     ((TcpMspConnector *)arg)->processData(client, data, len);
 }
 
 void TcpMspConnector::handleDisconnect(void *arg, AsyncClient *client)
 {
-    DBGLN("\n client %s disconnected \n", client->remoteIP().toString().c_str());
+    DBGLN("TCP(%x) disconnected", client);
     ((TcpMspConnector *)arg)->clientDisconnect(client);
 }
 
 void TcpMspConnector::handleTimeOut(void *arg, AsyncClient *client, uint32_t time)
 {
-    DBGLN("\nclient ACK timeout ip: %s", client->remoteIP().toString().c_str());
+    DBGLN("TCP(%x) timeout", client);
 }
 
 void TcpMspConnector::handleError(void *arg, AsyncClient *client, int8_t error)
 {
-    DBGLN("\nclient %x connection error %s", client, client->errorToString(error));
+    DBGLN("TCP(%x) connection error %s", client, client->errorToString(error));
     ((TcpMspConnector *)arg)->clientDisconnect(client);
 }
 
@@ -92,8 +93,10 @@ void TcpMspConnector::forwardMessage(const crsf_header_t *message)
 {
     if (TCPclient != nullptr && (message->type == CRSF_FRAMETYPE_MSP_RESP || message->type == CRSF_FRAMETYPE_MSP_REQ))
     {
+        DBGLN("TCP(CRSF) msg %u", message->frame_size);
         crsf2msp->parse((uint8_t *)message, [&](const uint8_t *data, const size_t len) {
             TCPclient->write((const char *)data, len);
+            DBGLN("TCP(%x) write %u", TCPclient, len);
         });
     }
 }

@@ -29,7 +29,7 @@ private:
     static void handleDisconnect(void *arg, AsyncClient *client);
     static void handleTimeOut(void *arg, AsyncClient *client, uint32_t time);
     static void handleError(void *arg, AsyncClient *client, int8_t error);
-    static constexpr uint32_t clientTimeoutS = 2U;
+    static constexpr uint32_t clientTimeoutS = 10U;
 
     void clientConnect(AsyncClient * client);
     void clientDisconnect(AsyncClient *client);
