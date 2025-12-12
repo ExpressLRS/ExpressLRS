@@ -71,7 +71,7 @@ static uint32_t lastPTRValidTimeMs;
     }
     else
     {
-        CRSFHandset::Port.begin(baud, SERIAL_8N1, GPIO_PIN_RCSIGNAL_RX, GPIO_PIN_RCSIGNAL_TX);
+        CRSFHandset::Port.begin(baud, SERIAL_8N1, U0RXD_GPIO_NUM, U0TXD_GPIO_NUM);
         CRSFHandset::Port.setTxBufferSize(1024);
         CRSFHandset::Port.setRxBufferSize(16384);
     }
