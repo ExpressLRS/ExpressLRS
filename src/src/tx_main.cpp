@@ -1569,7 +1569,7 @@ void loop()
 #if defined(RADIO_LR1121)
     // Send half of the bind packets on the 2.4GHz domain
     if (BindingSendCount == BindingSpamAmount / 2) {
-      SetRFLinkRate(RATE_DUALBAND_BINDING);
+      SetRFLinkRate(enumRatetoIndex(RATE_DUALBAND_BINDING));
       // Increment BindingSendCount so that SetRFLinkRate is only called once.
       BindingSendCount++;
     }
