@@ -207,10 +207,6 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
-#if defined(RADIO_LR1121)
-static uint32_t BindingRateChangeTime;
-#endif
-#define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
 void reconfigureSerial();
@@ -1711,6 +1707,11 @@ static void ExitBindingMode()
 
 static void updateBindingMode(unsigned long now)
 {
+#if defined(RADIO_LR1121)
+    static uint32_t BindingRateChangeMs;
+    constexpr uint32_t BindingRateChangeCyclePeriodMs = 125U;
+#endif
+
     // Exit binding mode if the config has been modified, indicating UID has been set
     if (InBindingMode && config.IsModified())
     {
@@ -1719,16 +1720,16 @@ static void updateBindingMode(unsigned long now)
 
 #if defined(RADIO_LR1121)
     // Change frequency domains every 500ms.  This will allow single LR1121 receivers to receive bind packets from SX12XX Tx modules.
-    else if (InBindingMode && (now - BindingRateChangeTime) > BindingRateChangeCyclePeriod)
+    else if (InBindingMode && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
     {
-        BindingRateChangeTime = now;
-        if (ExpressLRS_currAirRate_Modparams->index == RATE_DUALBAND_BINDING)
+        BindingRateChangeMs = now;
+        if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_DUALBAND_BINDING)
         {
             SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
         }
         else
         {
-            SetRFLinkRate(RATE_DUALBAND_BINDING, true);
+            SetRFLinkRate(enumRatetoIndex(RATE_DUALBAND_BINDING), true);
         }
 
         Radio.RXnb();
