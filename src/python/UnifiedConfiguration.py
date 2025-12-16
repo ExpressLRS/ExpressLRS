@@ -108,6 +108,45 @@ def setDefaultProductForTarget(target_name: str, product_name: str) -> None:
     with open('.pio/default_target_config.json', 'w') as f:
         json.dump(data, f, indent=4)
 
+def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, frequency: str, platform: str) -> dict:
+    products = []
+    for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][]', targets):
+        products.append(k)
+    if frequency == 'dual':
+        for k in jmespath.search(f'[*."{moduletype}_2400".*][][?platform==`{platform}`][]', targets):
+            if '_LR1121_' in k['firmware']:
+                products.append(k)
+        for k in jmespath.search(f'[*."{moduletype}_900".*][][?platform==`{platform}`][]', targets):
+            if '_LR1121_' in k['firmware']:
+                products.append(k)
+
+    if not products:
+        return None
+
+    # Sort the list by product name, case insensitive, and print the list
+    products = sorted(products, key=lambda p: p['product_name'].casefold())
+    print(f'0) Leave bare (no configuration)')
+    for i, p in enumerate(products):
+        print(f"{i+1}) {p['product_name']}")
+    default_prod = getDefaultProductForTarget(target_name)
+    # Make sure default_conf is a valid product name, set to '0' if not or default_prod is blank
+    default_prod = default_prod if any(p['product_name'] == default_prod for p in products) else '0'
+    print(f'default) {default_prod}')
+    print('Choose a configuration to load into the firmware file')
+
+    choice = input()
+    if choice == '':
+        choice = default_prod
+    if choice == '0':
+        return None
+
+    # First see if choice is a valid product name from the list
+    config = next((p for p in products if p['product_name'] == choice), None)
+    # else choice is an integer
+    config = config if config else products[int(choice)-1]
+
+    return config
+
 def doConfiguration(file, defines, config, target_name, moduletype, frequency, platform, device_name, rx_as_tx):
     product_name = "Unified"
     lua_name = "Unified"
@@ -125,35 +164,7 @@ def doConfiguration(file, defines, config, target_name, moduletype, frequency, p
         print('The current compile options (user defines) have been included.')
         print('You will be able to configure the hardware via the web UI on the device.')
     else:
-        products = []
-        for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][]', targets):
-            products.append(k)
-        if frequency == 'dual':
-            for k in jmespath.search(f'[*."{moduletype}_2400".*][][?platform==`{platform}`][]', targets):
-                if '_LR1121_' in k['firmware']:
-                    products.append(k)
-            for k in jmespath.search(f'[*."{moduletype}_900".*][][?platform==`{platform}`][]', targets):
-                if '_LR1121_' in k['firmware']:
-                    products.append(k)
-        # Sort the list by product name, case insensitive, and print the list
-        products = sorted(products, key=lambda p: p['product_name'].casefold())
-        print(f'0) Leave bare (no configuration)')
-        for i, p in enumerate(products):
-            print(f"{i+1}) {p['product_name']}")
-        default_prod = getDefaultProductForTarget(target_name)
-        # Make sure default_conf is a valid product name, set to '0' if not or default_prod is blank
-        default_prod = default_prod if any(p['product_name'] == default_prod for p in products) else '0'
-        print(f'default) {default_prod}')
-        print('Choose a configuration to load into the firmware file')
-
-        choice = input()
-        if choice == '':
-            choice = default_prod
-        if choice != '0':
-            # First see if choice is a valid product name from the list
-            config = next((p for p in products if p['product_name'] == choice), None)
-            # else choice is an integer
-            config = config if config else products[int(choice)-1]
+        config = interactiveProductSelect(targets, target_name, moduletype, frequency, platform)
 
     if config is not None:
         product_name = config['product_name']
