@@ -1657,13 +1657,15 @@ static void EnterBindingMode()
         return;
     }
 
-    // Binding uses 50Hz, and InvertIQ
-    OtaCrcInitializer = OTA_VERSION_ID;
-    InBindingMode = true;
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
     config.ReturnLoan();
     config.Commit();
+
+    // Binding uses 50Hz, and InvertIQ
+    OtaCrcInitializer = OTA_VERSION_ID;
+    OtaNonce = 0;
+    InBindingMode = true;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
