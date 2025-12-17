@@ -13,10 +13,10 @@ setuptools.setup(
     entry_points={
         "console_scripts": ["flash=binary_configurator:main"],
     },
-    install_requires=['pyserial'],
+    install_requires=['pyserial', 'zopflipy'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.10',
 )

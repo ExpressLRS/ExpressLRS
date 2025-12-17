@@ -266,10 +266,12 @@ def main():
         args.file.close()
 
         if options.mcuType == MCUType.ESP8266:
-            import gzip
+            import zopfli
             with open(args.file.name, 'rb') as f_in:
-                with gzip.open('firmware.bin.gz', 'wb') as f_out:
-                    shutil.copyfileobj(f_in, f_out)
+                with open('firmware.bin.gz', 'wb') as f_out:
+                    compressor = zopfli.ZopfliCompressor(zopfli.ZOPFLI_FORMAT_GZIP)
+                    gzipped = compressor.compress(f_in.read()) + compressor.flush()
+                    f_out.write(gzipped)
 
         if args.flash:
             args.target = config.get('firmware')

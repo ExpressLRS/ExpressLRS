@@ -1,6 +1,7 @@
 import gzip
 import shutil
 import os, glob
+import zopfli
 
 FIRMWARE_PACKING_ENABLED = True
 
@@ -32,8 +33,10 @@ def binary_compress(target_file, source_file):
         if target_file == source_file:
             shutil.move(source_file, source_file_bak)
         with open(source_file_bak, 'rb') as f_in:
-            with gzip.open(target_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+            with open(target_file, 'wb') as f_out:
+                compressor = zopfli.ZopfliCompressor(zopfli.ZOPFLI_FORMAT_GZIP)
+                gzipped = compressor.compress(f_in.read()) + compressor.flush()
+                f_out.write(gzipped)
         """ Set modification time on compressed file so incremental build works """
         shutil.copystat(source_file_bak, target_file)
         """ print compression info """
