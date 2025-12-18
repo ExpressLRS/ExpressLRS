@@ -1006,22 +1006,38 @@ static void startMDNS()
 
 static void addCaptivePortalHandlers()
 {
-    // windows 11 captive portal workaround
-    server.on("/connecttest.txt", [](AsyncWebServerRequest *request) { request->redirect("http://logout.net"); });
-    // A 404 stops win 10 keep calling this repeatedly and panicking the esp32
-    server.on("/wpad.dat", [](AsyncWebServerRequest *request) { request->send(404); });
+    // Windows 11 captive portal workaround
+    server.on("/connecttest.txt", [](AsyncWebServerRequest *request) {
+        request->redirect("http://logout.net");
+    });
 
-    server.on("/generate_204", WebUpdateHandleRoot); // Android
-    server.on("/gen_204", WebUpdateHandleRoot); // Android
-    server.on("/library/test/success.html", WebUpdateHandleRoot); // apple call home
-    server.on("/hotspot-detect.html", WebUpdateHandleRoot); // apple call home
-    server.on("/connectivity-check.html", WebUpdateHandleRoot); // ubuntu
-    server.on("/check_network_status.txt", WebUpdateHandleRoot); // ubuntu
-    server.on("/ncsi.txt", WebUpdateHandleRoot); // windows call home
-    server.on("/canonical.html", WebUpdateHandleRoot); // firefox captive portal call home
-    server.on("/fwlink", WebUpdateHandleRoot);
-    server.on("/redirect", WebUpdateHandleRoot); // microsoft redirect
-    server.on("/success.txt", [](AsyncWebServerRequest *request) { request->send(200); }); // firefox captive portal call home
+    // A 404 stops win 10 keep calling this repeatedly and panicking the esp32
+    server.on("/wpad.dat", [](AsyncWebServerRequest *request) {
+        request->send(404);
+    });
+
+    // Firefox captive portal call home
+    server.on("/success.txt", [](AsyncWebServerRequest *request) {
+        request->send(200);
+    });
+
+    // URIs that should redirect to WebUpdateHandleRoot
+    const char* rootUris[] = {
+        "/",                             // Actual root
+        "/generate_204",                 // Android
+        "/gen_204",                      // Android
+        "/library/test/success.html",    // Apple call home
+        "/hotspot-detect.html",          // Apple call home
+        "/connectivity-check.html",      // Ubuntu
+        "/check_network_status.txt",     // Ubuntu
+        "/ncsi.txt",                     // Windows call home
+        "/canonical.html",               // Firefox captive portal call home
+        "/fwlink",                       // Microsoft
+        "/redirect"                      // Microsoft redirect
+    };
+
+    for (const char* uri : rootUris)
+        server.on(uri, WebUpdateHandleRoot);
 }
 
 static void startServices()
@@ -1034,7 +1050,6 @@ static void startServices()
     return;
   }
 
-  server.on("/", WebUpdateHandleRoot);
   for (auto asset : WEB_ASSETS)
   {
       server.on(asset.path, WebUpdateSendContent);
