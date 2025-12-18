@@ -39,15 +39,14 @@
 #include "RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
+#include <LittleFS.h>
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
-#include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include "devSerialUpdate.h"
 #include "devVTXSPI.h"
 #include "devMSPVTX.h"
 #include "devThermal.h"
-#include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
 
@@ -1949,9 +1948,9 @@ void resetConfigAndReboot()
     // all this flash write is taking too long
     yield();
     // Remove options.json and hardware.json
-    SPIFFS.format();
+    LittleFS.format();
     yield();
-    SPIFFS.begin();
+    LittleFS.begin();
     options_SetTrueDefaults();
 
     ESP.restart();

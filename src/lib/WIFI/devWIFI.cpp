@@ -4,11 +4,7 @@
 
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
-#if defined(PLATFORM_ESP8266)
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
+#include <LittleFS.h>
 
 #if defined(PLATFORM_ESP32)
 #include <WiFi.h>
@@ -176,7 +172,7 @@ static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
   static File file;
   static size_t bytes;
   if (!file || request->url() != file.name()) {
-    file = SPIFFS.open(request->url(), "w");
+    file = LittleFS.open(request->url(), "w");
     bytes = 0;
   }
   file.write(data, len);
@@ -193,7 +189,7 @@ static void getFile(AsyncWebServerRequest *request)
   } else if (request->url() == "/hardware.json") {
     request->send(200, "application/json", getHardware());
   } else {
-    request->send(SPIFFS, request->url().c_str(), "text/plain", true);
+    request->send(LittleFS, request->url().c_str(), "text/plain", true);
   }
 }
 
@@ -208,10 +204,10 @@ static void HandleReboot(AsyncWebServerRequest *request)
 static void HandleReset(AsyncWebServerRequest *request)
 {
   if (request->hasArg("hardware")) {
-    SPIFFS.remove("/hardware.json");
+    LittleFS.remove("hardware.json");
   }
   if (request->hasArg("options")) {
-    SPIFFS.remove("/options.json");
+    LittleFS.remove("options.json");
 #if defined(TARGET_RX)
     config.SetModelId(255);
     config.SetForceTlmOff(false);
@@ -219,7 +215,7 @@ static void HandleReset(AsyncWebServerRequest *request)
 #endif
   }
   if (request->hasArg("lr1121")) {
-    SPIFFS.remove("/lr1121.txt");
+    LittleFS.remove("lr1121.txt");
   }
   if (request->hasArg("model") || request->hasArg("config")) {
     config.SetDefaults(true);
@@ -237,7 +233,7 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
     return;
   }
 
-  File file = SPIFFS.open("/options.json", "w");
+  File file = LittleFS.open("options.json", "w");
   serializeJson(json, file);
   file.close();
   String options;
@@ -1062,7 +1058,7 @@ static void startServices()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-  server.on("/hardware.json", getFile).onBody(putFile);
+  server.on("/hardware.json", HTTP_GET, getFile, nullptr, putFile);
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
