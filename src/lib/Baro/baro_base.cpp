@@ -18,25 +18,19 @@ uint8_t BaroI2CBase::m_address = 0;
 int32_t BaroBase::pressureToAltitude(uint32_t pressurePa)
 {
     const size_t LUT_CNT = 6;
-    const uint32_t pressureTable[LUT_CNT] = { 101325, 89875, 79495, 70108, 61640, 54020 };
-    const uint32_t altitudeTable[LUT_CNT] = { 0, 100000, 200000, 300000, 400000, 500000 };
+    const int32_t pressureTable[LUT_CNT] = { 101325, 89875, 79495, 70108, 61640, 54020 };
+    const int32_t altitudeTable[LUT_CNT] = { 0, 100000, 200000, 300000, 400000, 500000 };
 
-    if (pressurePa >= pressureTable[0])
-        return 0;
-    if (pressurePa <= pressureTable[LUT_CNT-1])
-        return altitudeTable[LUT_CNT-1];
-
-    int8_t i = 0;
-    while (pressurePa < pressureTable[i + 1])
+    unsigned i = 0;
+    while (i < LUT_CNT-2 && (int32_t)pressurePa < pressureTable[i + 1])
         i++;
 
-    // Linear interpolation
-    uint32_t p0 = pressureTable[i];
-    uint32_t p1 = pressureTable[i + 1];
-    uint32_t a0 = altitudeTable[i];
-    uint32_t a1 = altitudeTable[i + 1];
+    // Linear interpolation, note that >5000m the error grows exponentially
+    int32_t p0 = pressureTable[i];
+    int32_t p1 = pressureTable[i + 1];
+    int32_t a0 = altitudeTable[i];
+    int32_t a1 = altitudeTable[i + 1];
 
-    //return a0 + ((a1 - a0) * (p0 - (int32_t)pressurePa)) / (p0 - p1);
     return map(pressurePa, p0, p1, a0, a1);
 }
 
