@@ -1,8 +1,8 @@
 #include <math.h>
+#include <Arduino.h>
 #include <Wire.h>
 
 #include "baro_base.h"
-#include <Arduino.h>
 
 uint8_t BaroI2CBase::m_address = 0;
 
