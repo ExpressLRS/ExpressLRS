@@ -270,9 +270,9 @@ static const char *GetConfigUidType(const JsonObject json)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-  bool exportMode = request->hasArg("export");
+  const bool exportMode = request->hasArg("export");
   auto *response = new AsyncJsonResponse();
-  JsonObject json = response->getRoot();
+  const auto json = response->getRoot();
 
   if (!exportMode)
   {
@@ -281,7 +281,8 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     json["options"] = options;
   }
 
-  JsonArray uid = json["config"]["uid"].to<JsonArray>();
+  const auto cfg = json["config"].to<JsonObject>();
+  const auto uid = cfg["uid"].to<JsonArray>();
   copyArray(UID, UID_LEN, uid);
 
 #if defined(TARGET_TX)
@@ -293,66 +294,74 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   for (int button=0 ; button<button_count ; button++)
   {
     const tx_button_color_t *buttonColor = config.GetButtonActions(button);
+    const auto btn = cfg["button-actions"][button].to<JsonObject>();
     if (hardware_int(button == 0 ? HARDWARE_button_led_index : HARDWARE_button2_led_index) != -1) {
-      json["config"]["button-actions"][button]["color"] = buttonColor->val.color;
+      btn["color"] = buttonColor->val.color;
     }
     for (int pos=0 ; pos<button_GetActionCnt() ; pos++)
     {
-      json["config"]["button-actions"][button]["action"][pos]["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
-      json["config"]["button-actions"][button]["action"][pos]["count"] = buttonColor->val.actions[pos].count;
-      json["config"]["button-actions"][button]["action"][pos]["action"] = buttonColor->val.actions[pos].action;
+      const auto action = btn["action"][pos].to<JsonObject>();
+      action["is-long-press"] = buttonColor->val.actions[pos].pressType ? true : false;
+      action["count"] = buttonColor->val.actions[pos].count;
+      action["action"] = buttonColor->val.actions[pos].action;
     }
   }
   if (exportMode)
   {
-    json["config"]["fan-mode"] = config.GetFanMode();
-    json["config"]["power-fan-threshold"] = config.GetPowerFanThreshold();
+    cfg["fan-mode"] = config.GetFanMode();
+    cfg["power-fan-threshold"] = config.GetPowerFanThreshold();
 
-    json["config"]["motion-mode"] = config.GetMotionMode();
+    cfg["motion-mode"] = config.GetMotionMode();
 
-    json["config"]["vtx-admin"]["band"] = config.GetVtxBand();
-    json["config"]["vtx-admin"]["channel"] = config.GetVtxChannel();
-    json["config"]["vtx-admin"]["pitmode"] = config.GetVtxPitmode();
-    json["config"]["vtx-admin"]["power"] = config.GetVtxPower();
-    json["config"]["backpack"]["dvr-start-delay"] = config.GetDvrStartDelay();
-    json["config"]["backpack"]["dvr-stop-delay"] = config.GetDvrStopDelay();
-    json["config"]["backpack"]["dvr-aux-channel"] = config.GetDvrAux();
+    const auto vtxAdmin = cfg["vtx-admin"].to<JsonObject>();
+    vtxAdmin["band"] = config.GetVtxBand();
+    vtxAdmin["channel"] = config.GetVtxChannel();
+    vtxAdmin["pitmode"] = config.GetVtxPitmode();
+    vtxAdmin["power"] = config.GetVtxPower();
+
+    const auto backpack = cfg["backpack"].to<JsonObject>();
+    backpack["dvr-start-delay"] = config.GetDvrStartDelay();
+    backpack["dvr-stop-delay"] = config.GetDvrStopDelay();
+    backpack["dvr-aux-channel"] = config.GetDvrAux();
 
     for (int model = 0 ; model < CONFIG_TX_MODEL_CNT ; model++)
     {
       const model_config_t &modelConfig = config.GetModelConfig(model);
       String strModel(model);
-      JsonObject modelJson = json["config"]["model"][strModel].to<JsonObject>();
+      const auto modelJson = cfg["model"][strModel].to<JsonObject>();
       modelJson["packet-rate"] = modelConfig.rate;
       modelJson["telemetry-ratio"] = modelConfig.tlm;
       modelJson["switch-mode"] = modelConfig.switchMode;
-      modelJson["power"]["max-power"] = modelConfig.power;
-      modelJson["power"]["dynamic-power"] = modelConfig.dynamicPower;
-      modelJson["power"]["boost-channel"] = modelConfig.boostChannel;
       modelJson["model-match"] = modelConfig.modelMatch;
       modelJson["tx-antenna"] = modelConfig.txAntenna;
+      const auto power = cfg["power"].to<JsonObject>();
+      power["max-power"] = modelConfig.power;
+      power["dynamic-power"] = modelConfig.dynamicPower;
+      power["boost-channel"] = modelConfig.boostChannel;
     }
   }
 #endif /* TARGET_TX */
 
   if (!exportMode)
   {
+    const auto settings = json["settings"].to<JsonObject>();
     #if defined(TARGET_RX)
-    json["config"]["serial-protocol"] = config.GetSerialProtocol();
+    cfg["serial-protocol"] = config.GetSerialProtocol();
     #if defined(PLATFORM_ESP32)
     if ((GPIO_PIN_SERIAL1_RX != UNDEF_PIN && GPIO_PIN_SERIAL1_TX != UNDEF_PIN) || GPIO_PIN_PWM_OUTPUTS_COUNT > 0)
     {
-      json["config"]["serial1-protocol"] = config.GetSerial1Protocol();
+      cfg["serial1-protocol"] = config.GetSerial1Protocol();
     }
     #endif
-    json["config"]["sbus-failsafe"] = config.GetFailsafeMode();
-    json["config"]["modelid"] = config.GetModelId();
-    json["config"]["force-tlm"] = config.GetForceTlmOff();
-    json["config"]["vbind"] = config.GetBindStorage();
+    cfg["sbus-failsafe"] = config.GetFailsafeMode();
+    cfg["modelid"] = config.GetModelId();
+    cfg["force-tlm"] = config.GetForceTlmOff();
+    cfg["vbind"] = config.GetBindStorage();
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-      json["config"]["pwm"][ch]["config"] = config.GetPwmChannel(ch)->raw;
-      json["config"]["pwm"][ch]["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      const auto channel = cfg["channel"][ch].to<JsonObject>();
+      channel["config"] = config.GetPwmChannel(ch)->raw;
+      channel["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
       uint8_t features = 0;
       auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
       if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
@@ -367,44 +376,44 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       else if ((GPIO_PIN_SERIAL1_RX == UNDEF_PIN || GPIO_PIN_SERIAL1_TX == UNDEF_PIN) &&
                (!(features & 1) && !(features & 2))) features |= 96; // Both Serial1 RX/TX supported (on any pin if not already featured for Serial 1)
       #endif
-      json["config"]["pwm"][ch]["features"] = features;
+      channel["features"] = features;
     }
     if (GPIO_PIN_RCSIGNAL_RX != UNDEF_PIN && GPIO_PIN_RCSIGNAL_TX != UNDEF_PIN)
     {
-        json["settings"]["has_serial_pins"] = true;
+        settings["has_serial_pins"] = true;
     }
     #endif
-    json["settings"]["product_name"] = product_name;
-    json["settings"]["lua_name"] = device_name;
-    json["settings"]["uidtype"] = GetConfigUidType(json);
-    json["settings"]["ssid"] = station_ssid;
-    json["settings"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
-    json["settings"]["custom_hardware"] = hardware_flag(HARDWARE_customised);
-    json["settings"]["target"] = &target_name[4];
-    json["settings"]["version"] = VERSION;
-    json["settings"]["git-commit"] = commit;
+    settings["product_name"] = product_name;
+    settings["lua_name"] = device_name;
+    settings["uidtype"] = GetConfigUidType(json);
+    settings["ssid"] = station_ssid;
+    settings["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    settings["custom_hardware"] = hardware_flag(HARDWARE_customised);
+    settings["target"] = &target_name[4];
+    settings["version"] = VERSION;
+    settings["git-commit"] = commit;
 #if defined(TARGET_TX)
-    json["settings"]["module-type"] = "TX";
+    settings["module-type"] = "TX";
 #endif
 #if defined(TARGET_RX)
-    json["settings"]["module-type"] = "RX";
+    settings["module-type"] = "RX";
 #endif
 #if defined(RADIO_SX128X)
-    json["settings"]["radio-type"] = "SX128X";
-    json["settings"]["has_low_band"] = false;
-    json["settings"]["has_high_band"] = true;
-    json["settings"]["reg_domain_high"] = FHSSconfig->domain;
+    settings["radio-type"] = "SX128X";
+    settings["has_low_band"] = false;
+    settings["has_high_band"] = true;
+    settings["reg_domain_high"] = FHSSconfig->domain;
 #elif defined(RADIO_SX127X)
-    json["settings"]["radio-type"] = "SX127X";
-    json["settings"]["has_low_band"] = true;
-    json["settings"]["has_high_band"] = false;
-    json["settings"]["reg_domain_low"] = FHSSconfig->domain;
+    settings["radio-type"] = "SX127X";
+    settings["has_low_band"] = true;
+    settings["has_high_band"] = false;
+    settings["reg_domain_low"] = FHSSconfig->domain;
 #elif defined(RADIO_LR1121)
-    json["settings"]["radio-type"] = "LR1121";
-    json["settings"]["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
-    json["settings"]["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
-    json["settings"]["reg_domain_low"] = FHSSconfig->domain;
-    json["settings"]["reg_domain_high"] = FHSSconfigDualBand->domain;
+    settings["radio-type"] = "LR1121";
+    settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
+    settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
+    settings["reg_domain_low"] = FHSSconfig->domain;
+    settings["reg_domain_high"] = FHSSconfigDualBand->domain;
 #endif
   }
 
@@ -445,27 +454,29 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   if (json["power-fan-threshold"].is<JsonVariant>()) config.SetPowerFanThreshold(json["power-fan-threshold"]);
   if (json["motion-mode"].is<JsonVariant>()) config.SetMotionMode(json["motion-mode"]);
 
-  if (json["vtx-admin"].is<JsonVariant>())
+  if (json["vtx-admin"].is<JsonObject>())
   {
-    if (json["vtx-admin"]["band"].is<JsonVariant>()) config.SetVtxBand(json["vtx-admin"]["band"]);
-    if (json["vtx-admin"]["channel"].is<JsonVariant>()) config.SetVtxChannel(json["vtx-admin"]["channel"]);
-    if (json["vtx-admin"]["pitmode"].is<JsonVariant>()) config.SetVtxPitmode(json["vtx-admin"]["pitmode"]);
-    if (json["vtx-admin"]["power"].is<JsonVariant>()) config.SetVtxPower(json["vtx-admin"]["power"]);
+    const auto vtxAdmin = json["vtx-admin"].as<JsonObject>();
+    if (vtxAdmin["band"].is<JsonVariant>()) config.SetVtxBand(vtxAdmin["band"]);
+    if (vtxAdmin["channel"].is<JsonVariant>()) config.SetVtxChannel(vtxAdmin["channel"]);
+    if (vtxAdmin["pitmode"].is<JsonVariant>()) config.SetVtxPitmode(vtxAdmin["pitmode"]);
+    if (vtxAdmin["power"].is<JsonVariant>()) config.SetVtxPower(vtxAdmin["power"]);
   }
 
   if (json["backpack"].is<JsonVariant>())
   {
-    if (json["backpack"]["dvr-start-delay"].is<JsonVariant>()) config.SetDvrStartDelay(json["backpack"]["dvr-start-delay"]);
-    if (json["backpack"]["dvr-stop-delay"].is<JsonVariant>()) config.SetDvrStopDelay(json["backpack"]["dvr-stop-delay"]);
-    if (json["backpack"]["dvr-aux-channel"].is<JsonVariant>()) config.SetDvrAux(json["backpack"]["dvr-aux-channel"]);
+    const auto backpack = json["backpack"].as<JsonObject>();
+    if (backpack["dvr-start-delay"].is<JsonVariant>()) config.SetDvrStartDelay(backpack["dvr-start-delay"]);
+    if (backpack["dvr-stop-delay"].is<JsonVariant>()) config.SetDvrStopDelay(backpack["dvr-stop-delay"]);
+    if (backpack["dvr-aux-channel"].is<JsonVariant>()) config.SetDvrAux(backpack["dvr-aux-channel"]);
   }
 
   if (json["model"].is<JsonVariant>())
   {
     for(JsonPair kv : json["model"].as<JsonObject>())
     {
-      uint8_t model = atoi(kv.key().c_str());
-      JsonObject modelJson = kv.value();
+      const uint8_t model = atoi(kv.key().c_str());
+      const auto modelJson = kv.value().as<JsonObject>();
 
       config.SetModelId(model);
       if (modelJson["packet-rate"].is<JsonVariant>()) config.SetRate(modelJson["packet-rate"]);
@@ -479,7 +490,7 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
       }
       if (modelJson["model-match"].is<JsonVariant>()) config.SetModelMatch(modelJson["model-match"]);
       // if (modelJson["tx-antenna"].is<JsonVariant>()) config.SetTxAntenna(modelJson["tx-antenna"]);
-      // have to commmit after each model is updated
+      // have to commit after each model is updated
       config.Commit();
     }
   }
@@ -501,7 +512,7 @@ static void WebUpdateButtonColors(AsyncWebServerRequest *request, JsonVariant &j
 */
 static void JsonUidToConfig(JsonVariant &json)
 {
-  JsonArray juid = json["uid"].as<JsonArray>();
+  const auto juid = json["uid"].as<JsonArray>();
   size_t juidLen = constrain(juid.size(), 0, UID_LEN);
   uint8_t newUid[UID_LEN] = { 0 };
 
