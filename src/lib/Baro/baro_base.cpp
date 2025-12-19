@@ -18,7 +18,7 @@ uint8_t BaroI2CBase::m_address = 0;
 int32_t BaroBase::pressureToAltitude(uint32_t pressurePa)
 {
     const size_t LUT_CNT = 6;
-    const int32_t pressureTable[LUT_CNT] = { 101325, 89875, 79495, 70108, 61640, 54020 };
+    const int32_t pressureTable[LUT_CNT] = { 1013250, 898750, 794950, 701080, 616400, 540200 };
     const int32_t altitudeTable[LUT_CNT] = { 0, 100000, 200000, 300000, 400000, 500000 };
 
     unsigned i = 0;
