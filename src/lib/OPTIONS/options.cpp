@@ -97,7 +97,7 @@ void saveOptions(Stream &stream, bool customised)
 
 void saveOptions()
 {
-    File options = LittleFS.open("options.json", "w");
+    File options = LittleFS.open("/options.json", "w");
     saveOptions(options, true);
     options.close();
 }
@@ -143,7 +143,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     }
 
     // load options.json from the SPIFFS partition
-    File file = LittleFS.open("options.json", "r");
+    File file = LittleFS.open("/options.json", "r");
     if (file && !file.isDirectory())
     {
         DeserializationError error = deserializeJson(spiffsDoc, file);
@@ -218,7 +218,7 @@ void options_SetTrueDefaults()
     doc["domain"] = firmwareOptions.domain;
     doc["flash-discriminator"] = firmwareOptions.flash_discriminator;
 
-    File options = LittleFS.open("options.json", "w");
+    File options = LittleFS.open("/options.json", "w");
     serializeJson(doc, options);
     options.close();
 }

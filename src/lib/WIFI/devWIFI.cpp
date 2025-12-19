@@ -171,13 +171,17 @@ static void putFile(AsyncWebServerRequest *request, uint8_t *data, size_t len, s
 {
   static File file;
   static size_t bytes;
-  if (!file || request->url() != file.name()) {
+  if (!file ||
+    // Request URI starts with a / and LittleFS File::name() does not include it, ESP32 doesn't have File::fullName()
+    strcmp(&request->url().c_str()[1], file.name()) != 0)
+  {
     file = LittleFS.open(request->url(), "w");
     bytes = 0;
   }
   file.write(data, len);
   bytes += len;
-  if (bytes == total) {
+  if (bytes == total)
+  {
     file.close();
   }
 }
@@ -204,10 +208,10 @@ static void HandleReboot(AsyncWebServerRequest *request)
 static void HandleReset(AsyncWebServerRequest *request)
 {
   if (request->hasArg("hardware")) {
-    LittleFS.remove("hardware.json");
+    LittleFS.remove("/hardware.json");
   }
   if (request->hasArg("options")) {
-    LittleFS.remove("options.json");
+    LittleFS.remove("/options.json");
 #if defined(TARGET_RX)
     config.SetModelId(255);
     config.SetForceTlmOff(false);
@@ -215,7 +219,7 @@ static void HandleReset(AsyncWebServerRequest *request)
 #endif
   }
   if (request->hasArg("lr1121")) {
-    LittleFS.remove("lr1121.txt");
+    LittleFS.remove("/lr1121.txt");
   }
   if (request->hasArg("model") || request->hasArg("config")) {
     config.SetDefaults(true);
@@ -233,7 +237,7 @@ static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
     return;
   }
 
-  File file = LittleFS.open("options.json", "w");
+  File file = LittleFS.open("/options.json", "w");
   serializeJson(json, file);
   file.close();
   String options;
@@ -1073,7 +1077,7 @@ static void startServices()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-  server.on("/hardware.json", HTTP_GET, getFile, nullptr, putFile);
+  server.on("/hardware.json", HTTP_GET | HTTP_POST, getFile, nullptr, putFile);
   server.on("/options.json", HTTP_GET, getFile);
   server.on("/reboot", HandleReboot);
   server.on("/reset", HandleReset);
