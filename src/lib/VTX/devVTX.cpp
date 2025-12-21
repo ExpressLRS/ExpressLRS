@@ -21,7 +21,7 @@
 // reset between the user switching equipment. This is so we don't get into
 // a loop of connect -> send -> write eeprom -> disconnect -> ...
 // See https://github.com/ExpressLRS/ExpressLRS/issues/2976
-#define VTX_DISCONNECT_DEBOUNCE_MS (1 * 1000)
+#define VTX_DISCONNECT_DEBOUNCE_MS (10 * 1000)
 
 static int pitmodeAuxState = PITMODE_NOT_INITIALISED;
 static bool sendEepromWrite = true;
