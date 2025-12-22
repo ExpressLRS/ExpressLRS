@@ -3,7 +3,7 @@
 #include "LR1121_hal.h"
 #include "logging.h"
 
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <SPIEx.h>
 
 #define LR1121_FIRMWARE_TYPE 0xF3
@@ -70,7 +70,7 @@ void LR1121Driver::End()
 bool LR1121Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
 {
     firmware_version_t version = GetFirmwareVersion(radioNumber);
-    if (!SPIFFS.exists("/lr1121.txt") && (version.type != LR1121_FIRMWARE_TYPE || version.version != LR11XX_FIRMWARE_VERSION))
+    if (!LittleFS.exists("/lr1121.txt") && (version.type != LR1121_FIRMWARE_TYPE || version.version != LR11XX_FIRMWARE_VERSION))
     {
         DBGLN("Upgrading radio #%d", radioNumber);
         // do upgrade

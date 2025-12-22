@@ -39,15 +39,14 @@
 #include "RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
+#include <LittleFS.h>
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
-#include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include "devSerialUpdate.h"
 #include "devVTXSPI.h"
 #include "devMSPVTX.h"
 #include "devThermal.h"
-#include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
 
@@ -468,7 +467,7 @@ bool ICACHE_RAM_ATTR HandleSendDataDl()
     bool tlmQueued = false;
     if (firmwareOptions.is_airport)
     {
-        tlmQueued = apInputBuffer.size() > 0;
+        tlmQueued = ((SerialAirPort *)serialIO)->isTlmQueued();
     }
     else
     {
@@ -508,7 +507,7 @@ bool ICACHE_RAM_ATTR HandleSendDataDl()
         otaPkt.std.type = PACKET_TYPE_DATA;
         if (firmwareOptions.is_airport)
         {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
+            OtaPackAirportData(&otaPkt, &((SerialAirPort *)serialIO)->apInputBuffer);
         }
         else if (OtaIsFullRes)
         {
@@ -872,8 +871,8 @@ void GotConnection(unsigned long now)
 
     if (firmwareOptions.is_airport)
     {
-        apInputBuffer.flush();
-        apOutputBuffer.flush();
+        ((SerialAirPort *)serialIO)->apInputBuffer.flush();
+        ((SerialAirPort *)serialIO)->apOutputBuffer.flush();
     }
 
     DBGLN("got conn");
@@ -929,6 +928,12 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_DataUl(OTA_Packet_s const * const otaPktPtr)
 {
+    if (firmwareOptions.is_airport)
+    {
+        OtaUnpackAirportData(otaPktPtr, &((SerialAirPort *)serialIO)->apOutputBuffer);
+        return;
+    }
+
     uint8_t packageIndex;
     uint8_t const * payload;
     uint8_t dataLen;
@@ -1132,14 +1137,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_DATA:
-        if (firmwareOptions.is_airport)
-        {
-            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        }
-        else
-        {
-            ProcessRfPacket_DataUl(otaPktPtr);
-        }
+        ProcessRfPacket_DataUl(otaPktPtr);
         break;
     default:
         break;
@@ -1952,9 +1950,9 @@ void resetConfigAndReboot()
     // all this flash write is taking too long
     yield();
     // Remove options.json and hardware.json
-    SPIFFS.format();
+    LittleFS.format();
     yield();
-    SPIFFS.begin();
+    LittleFS.begin();
     options_SetTrueDefaults();
 
     ESP.restart();
