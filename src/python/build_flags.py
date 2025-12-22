@@ -130,6 +130,10 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
+def cleanDefaultProductForTarget(target_name: str) -> None:
+    from UnifiedConfiguration import clearDefaultProductForTarget
+    clearDefaultProductForTarget(target_name)
+
 json_flags['flash-discriminator'] = randint(1,2**32-1)
 json_flags['wifi-on-interval'] = -1
 
@@ -175,6 +179,10 @@ else:
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
+
+# Remove the default product if this is a "clean" task
+if env.GetOption("clean"):
+    cleanDefaultProductForTarget(target_name)
 
 env['OPTIONS_JSON'] = json_flags
 env['BUILD_FLAGS'] = build_flags

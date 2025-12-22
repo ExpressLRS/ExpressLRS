@@ -75,6 +75,8 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
         firmware_file.write(config['prior_target_name'].upper().encode())
         firmware_file.write(b'\0')
 
+# Return the product name for the last hardware.json that was appended for the given PIO env target
+# e.g. Unified_ESP32_LR1121_via_WIFI -> "RadioMaster Nomad 2.4/900 TX"
 def getDefaultProductForTarget(target_name: str) -> str:
     if target_name is None or target_name == '':
         return ''
@@ -90,6 +92,9 @@ def getDefaultProductForTarget(target_name: str) -> str:
         # No file or json.JSONDecodeError
         return ''
 
+# Save the product name of a hardware configuration appended to a target, for a future default
+# target_name: e.g. Unified_ESP32_LR1121_via_WIFI
+# product_name: e.g. RadioMaster Nomad 2.4/900 TX
 def setDefaultProductForTarget(target_name: str, product_name: str) -> None:
     if target_name is None or target_name == '':
         return
@@ -108,6 +113,36 @@ def setDefaultProductForTarget(target_name: str, product_name: str) -> None:
     with open('.pio/default_target_config.json', 'w') as f:
         json.dump(data, f, indent=4)
 
+# Remove the default product name for a given target (e.g. Unified_ESP32_LR1121_via_WIFI)
+# so there will not be a default on future runs. Used in "clean" operation
+def clearDefaultProductForTarget(target_name: str) -> None:
+    # remove the "_via_WIFI" etc method
+    target_wo_method = re.sub('_VIA_.*', '', target_name.upper())
+    data = {}
+    try:
+        with open('.pio/default_target_config.json', 'r') as f:
+            data = json.load(f)
+    except:
+        # No file or json.JSONDecodeError
+        pass
+
+    data.pop(target_wo_method, None)
+    with open('.pio/default_target_config.json', 'w') as f:
+        json.dump(data, f, indent=4)
+
+def is_pio_upload():
+    # SCons.Script is only available when run via 'pio run'?
+    scons_module = sys.modules.get("SCons.Script")
+    if not scons_module:
+        return False
+
+    try:
+        # COMMAND_LINE_TARGETS = ['upload'] when this is an upload build
+        targets = getattr(scons_module, "COMMAND_LINE_TARGETS", [])
+        return "upload" in targets
+    except Exception:
+        return False
+
 def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, frequency: str, platform: str) -> dict:
     products = []
     for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][]', targets):
@@ -125,20 +160,26 @@ def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, f
 
     # Sort the list by product name, case insensitive, and print the list
     products = sorted(products, key=lambda p: p['product_name'].casefold())
-    print(f'0) Leave bare (no configuration)')
-    for i, p in enumerate(products):
-        print(f"{i+1}) {p['product_name']}")
+    # Find a default if this target has been build before
     default_prod = getDefaultProductForTarget(target_name)
     # Make sure default_conf is a valid product name, set to '0' if not or default_prod is blank
     default_prod = default_prod if any(p['product_name'] == default_prod for p in products) else '0'
-    print(f'default) {default_prod}')
-    print('Choose a configuration to load into the firmware file')
 
-    choice = input()
-    if choice == '':
+    if (default_prod != '0') and is_pio_upload():
+        print(f'Upload using default product "{default_prod}" (use Clean to clear default)')
         choice = default_prod
-    if choice == '0':
-        return None
+    else:
+        print(f'0) Leave bare (no configuration)')
+        for i, p in enumerate(products):
+            print(f"{i+1}) {p['product_name']}")
+        print(f'default) {default_prod}')
+        print('Choose a configuration to load into the firmware file')
+
+        choice = input()
+        if choice == '':
+            choice = default_prod
+        if choice == '0':
+            return None
 
     # First see if choice is a valid product name from the list
     config = next((p for p in products if p['product_name'] == choice), None)
