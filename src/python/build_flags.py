@@ -198,4 +198,3 @@ elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = OFF\n")
 
 sys.stdout.flush()
-time.sleep(.5)
