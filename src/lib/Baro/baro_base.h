@@ -28,7 +28,7 @@ public:
 
     // Base functions
     bool isInitialized() const { return m_initialized; }
-    int32_t pressureToAltitude(uint32_t pressurePa);
+    int32_t pressureToAltitude(uint32_t pressuredPa);
     // Properties
     int32_t getAltitudeHome() const { return m_altitudeHome; }
     void setAltitudeHome(int32_t altitudeHome) { m_altitudeHome = altitudeHome; }

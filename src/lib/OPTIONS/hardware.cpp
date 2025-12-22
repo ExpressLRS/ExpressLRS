@@ -2,11 +2,7 @@
 #include "options.h"
 #include "helpers.h"
 #include "logging.h"
-#if defined(PLATFORM_ESP8266)
-#include <FS.h>
-#else
-#include <SPIFFS.h>
-#endif
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 
 typedef enum {
@@ -150,7 +146,7 @@ static String builtinHardwareConfig;
 
 String& getHardware()
 {
-    File file = SPIFFS.open("/hardware.json", "r");
+    File file = LittleFS.open("/hardware.json", "r");
     if (!file || file.isDirectory())
     {
         if (file)
@@ -226,7 +222,7 @@ bool hardware_init(EspFlashStream &strmFlash)
 
     Stream *strmSrc;
     JsonDocument doc;
-    File file = SPIFFS.open("/hardware.json", "r");
+    File file = LittleFS.open("/hardware.json", "r");
     if (!file || file.isDirectory()) {
         constexpr size_t hardwareConfigOffset = ELRSOPTS_PRODUCTNAME_SIZE + ELRSOPTS_DEVICENAME_SIZE + ELRSOPTS_OPTIONS_SIZE;
         strmFlash.setPosition(hardwareConfigOffset);

@@ -39,15 +39,14 @@
 #include "RXOTAConnector.h"
 #include "rx-serial/devSerialIO.h"
 
+#include <LittleFS.h>
 #if defined(PLATFORM_ESP8266)
 #include <user_interface.h>
-#include <FS.h>
 #elif defined(PLATFORM_ESP32)
 #include "devSerialUpdate.h"
 #include "devVTXSPI.h"
 #include "devMSPVTX.h"
 #include "devThermal.h"
-#include <SPIFFS.h>
 #include "esp_task_wdt.h"
 #endif
 
@@ -207,10 +206,6 @@ static uint8_t debugRcvrLinkstatsFhssIdx;
 #endif
 
 bool BindingModeRequest = false;
-#if defined(RADIO_LR1121)
-static uint32_t BindingRateChangeTime;
-#endif
-#define BindingRateChangeCyclePeriod 125
 
 extern void setWifiUpdateMode();
 void reconfigureSerial();
@@ -472,7 +467,7 @@ bool ICACHE_RAM_ATTR HandleSendDataDl()
     bool tlmQueued = false;
     if (firmwareOptions.is_airport)
     {
-        tlmQueued = apInputBuffer.size() > 0;
+        tlmQueued = ((SerialAirPort *)serialIO)->isTlmQueued();
     }
     else
     {
@@ -512,7 +507,7 @@ bool ICACHE_RAM_ATTR HandleSendDataDl()
         otaPkt.std.type = PACKET_TYPE_DATA;
         if (firmwareOptions.is_airport)
         {
-            OtaPackAirportData(&otaPkt, &apInputBuffer);
+            OtaPackAirportData(&otaPkt, &((SerialAirPort *)serialIO)->apInputBuffer);
         }
         else if (OtaIsFullRes)
         {
@@ -876,8 +871,8 @@ void GotConnection(unsigned long now)
 
     if (firmwareOptions.is_airport)
     {
-        apInputBuffer.flush();
-        apOutputBuffer.flush();
+        ((SerialAirPort *)serialIO)->apInputBuffer.flush();
+        ((SerialAirPort *)serialIO)->apOutputBuffer.flush();
     }
 
     DBGLN("got conn");
@@ -933,6 +928,12 @@ void ICACHE_RAM_ATTR OnELRSBindMSP(uint8_t* newUid4)
 
 static void ICACHE_RAM_ATTR ProcessRfPacket_DataUl(OTA_Packet_s const * const otaPktPtr)
 {
+    if (firmwareOptions.is_airport)
+    {
+        OtaUnpackAirportData(otaPktPtr, &((SerialAirPort *)serialIO)->apOutputBuffer);
+        return;
+    }
+
     uint8_t packageIndex;
     uint8_t const * payload;
     uint8_t dataLen;
@@ -1136,14 +1137,7 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
             && !InBindingMode;
         break;
     case PACKET_TYPE_DATA:
-        if (firmwareOptions.is_airport)
-        {
-            OtaUnpackAirportData(otaPktPtr, &apOutputBuffer);
-        }
-        else
-        {
-            ProcessRfPacket_DataUl(otaPktPtr);
-        }
+        ProcessRfPacket_DataUl(otaPktPtr);
         break;
     default:
         break;
@@ -1657,13 +1651,15 @@ static void EnterBindingMode()
         return;
     }
 
-    // Binding uses 50Hz, and InvertIQ
-    OtaCrcInitializer = OTA_VERSION_ID;
-    InBindingMode = true;
     // Any method of entering bind resets a loan
     // Model can be reloaned immediately by binding now
     config.ReturnLoan();
     config.Commit();
+
+    // Binding uses 50Hz, and InvertIQ
+    OtaCrcInitializer = OTA_VERSION_ID;
+    OtaNonce = 0;
+    InBindingMode = true;
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
@@ -1711,6 +1707,11 @@ static void ExitBindingMode()
 
 static void updateBindingMode(unsigned long now)
 {
+#if defined(RADIO_LR1121)
+    static uint32_t BindingRateChangeMs;
+    constexpr uint32_t BindingRateChangeCyclePeriodMs = 125U;
+#endif
+
     // Exit binding mode if the config has been modified, indicating UID has been set
     if (InBindingMode && config.IsModified())
     {
@@ -1719,16 +1720,16 @@ static void updateBindingMode(unsigned long now)
 
 #if defined(RADIO_LR1121)
     // Change frequency domains every 500ms.  This will allow single LR1121 receivers to receive bind packets from SX12XX Tx modules.
-    else if (InBindingMode && (now - BindingRateChangeTime) > BindingRateChangeCyclePeriod)
+    else if (InBindingMode && (now - BindingRateChangeMs) > BindingRateChangeCyclePeriodMs)
     {
-        BindingRateChangeTime = now;
-        if (ExpressLRS_currAirRate_Modparams->index == RATE_DUALBAND_BINDING)
+        BindingRateChangeMs = now;
+        if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_DUALBAND_BINDING)
         {
             SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
         }
         else
         {
-            SetRFLinkRate(RATE_DUALBAND_BINDING, true);
+            SetRFLinkRate(enumRatetoIndex(RATE_DUALBAND_BINDING), true);
         }
 
         Radio.RXnb();
@@ -1949,9 +1950,9 @@ void resetConfigAndReboot()
     // all this flash write is taking too long
     yield();
     // Remove options.json and hardware.json
-    SPIFFS.format();
+    LittleFS.format();
     yield();
-    SPIFFS.begin();
+    LittleFS.begin();
     options_SetTrueDefaults();
 
     ESP.restart();

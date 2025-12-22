@@ -180,6 +180,26 @@ if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]
 
+# Slim down the ESP8266 targets by not force-including float in scanf/printf
+if env.get('PIOPLATFORM', '') == 'espressif8266':
+    env.Replace(LINKFLAGS=[
+        "-Os",
+        "-nostdlib",
+        "-Wl,--no-check-sections",
+        "-Wl,-static",
+        "-Wl,--gc-sections",
+        "-Wl,-wrap,system_restart_local",
+        "-Wl,-wrap,spi_flash_read",
+        "-u", "app_entry",
+        #"-u", "_printf_float",
+        #"-u", "_scanf_float",
+        "-u", "_DebugExceptionVector",
+        "-u", "_DoubleExceptionVector",
+        "-u", "_KernelExceptionVector",
+        "-u", "_NMIExceptionVector",
+        "-u", "_UserExceptionVector"
+    ])
+
 # Remove the default product if this is a "clean" task
 if env.GetOption("clean"):
     cleanDefaultProductForTarget(target_name)
