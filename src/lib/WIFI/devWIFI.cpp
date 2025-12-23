@@ -359,7 +359,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     cfg["vbind"] = config.GetBindStorage();
     for (int ch=0; ch<GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
     {
-      const auto channel = cfg["channel"][ch].to<JsonObject>();
+      const auto channel = cfg["pwm"][ch].to<JsonObject>();
       channel["config"] = config.GetPwmChannel(ch)->raw;
       channel["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
       uint8_t features = 0;
