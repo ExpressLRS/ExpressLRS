@@ -102,7 +102,6 @@
 #define OPT_HAS_SCREEN (hardware_int(HARDWARE_screen_type) > 0)
 #define OPT_HAS_OLED_I2C (hardware_int(HARDWARE_screen_type)==1)
 #define OPT_HAS_OLED_SPI (hardware_int(HARDWARE_screen_type)==2)
-#define OPT_HAS_OLED_SPI_SMALL (hardware_int(HARDWARE_screen_type)==3)
 #define OPT_HAS_TFT_SCREEN (hardware_int(HARDWARE_screen_type)==4)
 
 #define GPIO_PIN_SCREEN_CS hardware_pin(HARDWARE_screen_cs)         // SPI
