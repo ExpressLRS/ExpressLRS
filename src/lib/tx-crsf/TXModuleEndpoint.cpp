@@ -120,11 +120,24 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     //
     // sends channel data and also communicates commanded armed status in arming mode Switch.
     // frame len 24 -> arming mode CH5: use channel 5 value
-    // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
+    // frame len 25 -> use status byte for arming mode, commanded arming status and crsf error processing
     //
-    armCmd = message->frame_size == CRSF_FRAME_SIZE(sizeof(crsf_channels_t))
-        ? CRSF_to_BIT(localChannelData[AUX1])
-        : (payload[readByteIndex] & CRSF_CHANNELS_STATUS_FLAG_ARM);
+
+    if (message->frame_size == CRSF_FRAME_SIZE(sizeof(crsf_channels_t)))
+    {
+        armCmd = CRSF_to_BIT(localChannelData[AUX1]);
+    }
+    else
+    {
+        if (payload[readByteIndex] & CRSF_CHANNELS_STATUS_ARMING_MODE_CH5)
+        {
+            armCmd = CRSF_to_BIT(localChannelData[AUX1]);
+        }
+        else
+        {
+            armCmd = (payload[readByteIndex] & CRSF_CHANNELS_STATUS_FLAG_ARMING_MODE_SWITCH_ARMED);
+        }
+    }
 
     // monitoring arming state
     if (lastArmCmd != armCmd)
