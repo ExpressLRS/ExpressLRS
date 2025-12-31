@@ -9,6 +9,12 @@
  * TX interface
  ***/
 #if defined(TARGET_TX)
+void SetSyncSpam();
+
+void tx_SetPacketRateIdx(uint8_t idx, bool forceChange);
+void tx_SetSwitchMode(uint8_t idx);
+void tx_SetAntennaMode(uint8_t idx);
+void tx_SetTlmRatio(uint8_t idx);
 #endif
 
 /***

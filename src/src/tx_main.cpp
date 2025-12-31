@@ -428,9 +428,29 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 {
     // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
     // range for 4ch mode
-    if (packetSize == OTA4_PACKET_SIZE&& eSwitchMode > smHybridOr16ch)
+    if (packetSize == OTA4_PACKET_SIZE && eSwitchMode > smHybridOr16ch)
         return smWideOr8ch;
     return eSwitchMode;
+}
+
+void tx_SetPacketRateIdx(uint8_t idx, bool forceChange)
+{
+  crsfTransmitter.SetPacketRateIdx(idx, forceChange);
+}
+
+void tx_SetSwitchMode(uint8_t idx)
+{
+  crsfTransmitter.SetSwitchMode(idx);
+}
+
+void tx_SetAntennaMode(uint8_t idx)
+{
+  crsfTransmitter.SetAntennaMode(idx);
+}
+
+void tx_SetTlmRatio(uint8_t idx)
+{
+  crsfTransmitter.SetTlmRatio(idx);
 }
 
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
@@ -793,10 +813,6 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
-  // Adjust the air rate based on the current baud rate
-  auto index = adjustPacketRateForBaud(config.GetRate());
-  config.SetRate(index);
-
   // Write the uncommitted eeprom values (may block for a while)
   uint32_t changes = config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
