@@ -87,13 +87,31 @@ typedef enum : uint8_t
 } crsf_frame_type_e;
 
 typedef enum : uint8_t {
-    CRSF_COMMAND_SUBCMD_RX = 0x10
+    CRSF_COMMAND_SUBCMD_RX = 0x10,
+    #if defined(WMEXTENSION)
+    CRSF_COMMAND_CC = 0xa0,
+    CRSF_COMMAND_SWITCH = 0xa1
+    #endif
 } crsf_command_e;
 
 typedef enum : uint8_t {
     CRSF_COMMAND_SUBCMD_RX_BIND = 0x01,
     CRSF_COMMAND_MODEL_SELECT_ID = 0x05,
     CRSF_HANDSET_SUBCMD_TIMING = 0x10,
+    #if defined(WMEXTENSION)
+    CRSF_SUBCMD_SWITCH_SET = 0x01,
+    CRSF_SUBCMD_SWITCH_PROP = 0x02,
+    CRSF_SUBCMD_SWITCH_SET4 = 0x07,
+    CRSF_SUBCMD_SWITCH_SET64 = 0x08,
+    CRSF_SUBCMD_SWITCH_SET4M = 0x09,
+    CRSF_SUBCMD_SWITCH_SETRGB = 0x0a,
+    CRSF_SUBCMD_SWITCH_IM = 0x10,
+    CRSF_SUBCMD_SWITCH_IM_PSTART = 0x11,
+    CRSF_SUBCMD_SWITCH_IM_PSTOPALL = 0x12,
+    CRSF_SUBCMD_SWITCH_IM_SLAVESET = 0x13,
+    CRSF_SUBCMD_CC_SETCHANNEL = 0x03,
+    CRSF_SUBCMD_CC_SETCHANNEL_EXT = 0x04,
+    #endif
 } crsf_subcommand_e;
 
 enum {

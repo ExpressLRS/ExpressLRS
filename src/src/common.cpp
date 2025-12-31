@@ -165,7 +165,11 @@ expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams = nullptr;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams = nullptr;
 
 // Current state of channels, CRSF format
+#if defined(WMEXTENSION)
+uint32_t ChannelData[CRSF_NUM_CHANNELS + CRSF_EXTRA_CHANNELS];
+#else
 uint32_t ChannelData[CRSF_NUM_CHANNELS];
+#endif
 
 /***
  * @brief Reset all ChannelData to CRSF_CHANNEL_VALUE_UNSET

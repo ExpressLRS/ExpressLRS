@@ -53,6 +53,11 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
     {
         EnterBindingModeSafely();
     }
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+    else if (message->type == CRSF_FRAMETYPE_COMMAND && ((extMessage->payload[0] == CRSF_COMMAND_SWITCH) || (extMessage->payload[0] == CRSF_COMMAND_CC))) {
+        msw.decode((const uint8_t*)(&extMessage->payload[0]));
+    }   
+#endif
     else if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_RX_CONFIG && extMessage->payload[3] == MSP_ELRS_MODEL_ID)
     {
         DBGLN("Set ModelId=%u", extMessage->payload[4]);
@@ -86,5 +91,11 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
             extMessage->payload[1]
         );
     }
+}
+#endif
+
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+const MultiSwitch& RXEndpoint::multiSwitch() const {
+    return msw;
 }
 #endif

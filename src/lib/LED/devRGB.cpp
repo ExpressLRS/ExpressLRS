@@ -28,6 +28,12 @@ static NeoPixelBus<NeoGrbFeature, METHOD> *stripgrb;
 static NeoPixelBus<NeoRgbFeature, METHOD> *striprgb;
 #endif
 
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+#include "../../src/rx_wmextension.h"
+#include "RXEndpoint.h"
+extern RXEndpoint crsfReceiver;
+#endif
+
 void WS281Binit()
 {
     if (OPT_WS2812_IS_GRB)
@@ -68,6 +74,31 @@ void WS281BsetLED(int index, uint32_t color)
 
 void WS281BsetLED(uint32_t color)
 {
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+    if (crsfReceiver.multiSwitch().hasData()) {
+        if (OPT_WS2812_IS_GRB)
+        {
+            stripgrb->SetPixelColor(statusLEDs[0], RgbColor(color >> 16, color >> 8, color));
+        }
+        else
+        {
+            striprgb->SetPixelColor(statusLEDs[0], RgbColor(color >> 16, color >> 8, color));
+        }
+    }
+    else {
+        for (int i=0 ; i<statusLEDcount ; i++)
+        {
+            if (OPT_WS2812_IS_GRB)
+            {
+                stripgrb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
+            }
+            else
+            {
+                striprgb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
+            }
+        }
+    }
+    #else 
     for (int i=0 ; i<statusLEDcount ; i++)
     {
         if (OPT_WS2812_IS_GRB)
@@ -79,6 +110,7 @@ void WS281BsetLED(uint32_t color)
             striprgb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
         }
     }
+    #endif
     if (OPT_WS2812_IS_GRB)
     {
         stripgrb->Show();
@@ -263,6 +295,23 @@ constexpr uint8_t LEDSEQ_UPDATE[] = { 20, 5, 5, 5, 5, 40 };   // 200ms on, 2x 50
 
 static blinkyColor_t blinkyColor;
 
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+void updateSwitchLeds() {
+    for (int i=1 ; i<statusLEDcount ; i++)
+    {
+       const uint32_t color = crsfReceiver.multiSwitch().ledState(i - 1) ? crsfReceiver.multiSwitch().ledColor(i - 1) : 0;
+        if (OPT_WS2812_IS_GRB)
+        {
+            stripgrb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
+        }
+        else
+        {
+            striprgb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
+        }
+    }
+}
+#endif
+
 static int blinkyUpdate() {
     static constexpr uint8_t hueStepValue = 1;
     static constexpr uint8_t lightnessStep = 5;
@@ -425,8 +474,16 @@ static int timeout()
         // Set the color and we're done!
         blinkyColor.h = ExpressLRS_currAirRate_Modparams->index * 256 / RATE_MAX;
         blinkyColor.v = fmap(POWERMGNT::currPower(), 0, PWR_COUNT-1, 10, 128);
-        WS281BsetLED(HsvToRgb(blinkyColor));
-        return DURATION_NEVER;
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+            if (crsfReceiver.multiSwitch().hasData()) {
+                updateSwitchLeds();
+            }
+            WS281BsetLED(HsvToRgb(blinkyColor));
+            return (2 * NORMAL_UPDATE_INTERVAL);
+#else
+            WS281BsetLED(HsvToRgb(blinkyColor));
+            return DURATION_NEVER;
+#endif
     case tentative:
         // Set the color and we're done!
         blinkyColor.h = ExpressLRS_currAirRate_Modparams->index * 256 / RATE_MAX;
