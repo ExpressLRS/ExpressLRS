@@ -98,7 +98,7 @@ void WS281BsetLED(uint32_t color)
             }
         }
     }
-    #else 
+#else 
     for (int i=0 ; i<statusLEDcount ; i++)
     {
         if (OPT_WS2812_IS_GRB)
@@ -110,7 +110,7 @@ void WS281BsetLED(uint32_t color)
             striprgb->SetPixelColor(statusLEDs[i], RgbColor(color >> 16, color >> 8, color));
         }
     }
-    #endif
+#endif
     if (OPT_WS2812_IS_GRB)
     {
         stripgrb->Show();
