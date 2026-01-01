@@ -11,6 +11,12 @@
 constexpr auto UNCONNECTED_CALLBACK_INTERVAL_MS = 10;
 constexpr auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
+#if defined(WMEXTENSION)
+#include "common.h"
+#include "RXEndpoint.h"
+extern RXEndpoint crsfReceiver;
+#endif
+
 uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     static auto sendPackets = false;
@@ -58,6 +64,31 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     }
     else
     {
+#if defined(WMEXTENSION)
+        uint8_t offset = 0;
+        if (streamOut == serial1_protocol_tx) {
+            const uint8_t cflags = crsfReceiver.multiSwitch().channelFlags();
+            if (cflags & 0b01) {
+                offset = 16;
+            }
+        }
+        PackedRCdataOut.ch0 = channelData[0 + offset];
+        PackedRCdataOut.ch1 = channelData[1 + offset];
+        PackedRCdataOut.ch2 = channelData[2 + offset];
+        PackedRCdataOut.ch3 = channelData[3 + offset];
+        PackedRCdataOut.ch4 = channelData[4 + offset];
+        PackedRCdataOut.ch5 = channelData[5 + offset];
+        PackedRCdataOut.ch6 = channelData[6 + offset];
+        PackedRCdataOut.ch7 = channelData[7 + offset];
+        PackedRCdataOut.ch8 = channelData[8 + offset];
+        PackedRCdataOut.ch9 = channelData[9 + offset];
+        PackedRCdataOut.ch10 = channelData[10 + offset];
+        PackedRCdataOut.ch11 = channelData[11 + offset];
+        PackedRCdataOut.ch12 = channelData[12 + offset];
+        PackedRCdataOut.ch13 = channelData[13 + offset];
+        PackedRCdataOut.ch14 = channelData[14 + offset];
+        PackedRCdataOut.ch15 = channelData[15 + offset];
+#else
         PackedRCdataOut.ch0 = channelData[0];
         PackedRCdataOut.ch1 = channelData[1];
         PackedRCdataOut.ch2 = channelData[2];
@@ -74,6 +105,7 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         PackedRCdataOut.ch13 = channelData[13];
         PackedRCdataOut.ch14 = channelData[14];
         PackedRCdataOut.ch15 = channelData[15];
+#endif
     }
 
     uint8_t extraData = 0;
