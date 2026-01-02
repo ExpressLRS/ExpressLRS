@@ -62,11 +62,20 @@ void PPMHandset::handleInput()
         vRingbufferReturnItem(rb, static_cast<void *>(items));
         lastPPM = now;
 
+#if defined(WMCRSF_CHAN_EXT)
+        PerformChannelOverrides(localChannelData, numChannels, 0);
+#else
         PerformChannelOverrides(localChannelData, numChannels);
+#endif
 
         SetArmed(numChannels < 5 || CRSF_to_BIT(localChannelData[4]));
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+        if (channelCount > 0)
+            RCDataReceived(localChannelData, numChannels, 0);
+#else
         if (channelCount > 0)
             RCDataReceived(localChannelData, numChannels);
+#endif
     }
     else if (lastPPM && now - 1000 > lastPPM)
     {

@@ -2,7 +2,11 @@
 
 #include "common.h"
 
+#if defined(WMCRSF_CHAN_EXT)
+typedef void (*RcChannelsOverrideCallback_fn)(uint32_t channels[], size_t channelCnt, uint8_t offset);
+#else
 typedef void (*RcChannelsOverrideCallback_fn)(uint32_t channels[], size_t channelCnt);
+#endif
 
 /**
  * @brief Abstract class that is extended to provide an interface to a handset.
@@ -85,15 +89,33 @@ public:
      * @brief Run any RcChannelsOverride callback
      *        Should be called by incoming ChannelData generators before RCDataReceived()
      */
+#if defined(WMCRSF_CHAN_EXT)
+    void PerformChannelOverrides(uint32_t channels[], size_t channelCount, const uint8_t offset)
+    {
+        if (RcChannelsOverrideCallback)
+            RcChannelsOverrideCallback(channels, channelCount, offset);
+    }
+#else
     void PerformChannelOverrides(uint32_t channels[], size_t channelCount)
     {
         if (RcChannelsOverrideCallback)
             RcChannelsOverrideCallback(channels, channelCount);
     }
+#endif
 
     /**
      * Inform the handset that a valid RC packet has been received
      */
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+    void RCDataReceived(uint32_t channels[], size_t channelCount, const uint8_t offset)
+    {
+        RCdataLastRecv = micros();
+        for (unsigned ch=0; ch<channelCount; ++ch)
+            ChannelData[ch + offset] = channels[ch];
+        if (RCdataCallback)
+            RCdataCallback();
+    }
+#else
     void RCDataReceived(uint32_t channels[], size_t channelCount)
     {
         RCdataLastRecv = micros();
@@ -102,6 +124,8 @@ public:
         if (RCdataCallback)
             RCdataCallback();
     }
+#endif
+
 
     /**
      * @return the time in microseconds when the last RC packet was received from the handset

@@ -26,7 +26,11 @@ public:
 
     bool handleRaw(const crsf_header_t *message) override;
     void handleMessage(const crsf_header_t *message) override;
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+    void RcPacketToChannelsData(const crsf_header_t *message, uint8_t offset = 0);
+#else
     void RcPacketToChannelsData(const crsf_header_t *message);
+#endif
 
     void updateFolderNames();
     void registerParameters() override;

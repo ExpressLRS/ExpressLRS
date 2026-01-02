@@ -107,16 +107,29 @@ typedef struct {
     // but they are speficied in each type in the union as the other bits there
     // are not universal
     union {
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
         /** PACKET_TYPE_RCDATA **/
         struct {
             uint8_t packetType: 2,
-                    stubbornAck: 1,
-                    uplinkPower: 3,     // CRSF_power_level - 1 (1-8 is 0-7 in the air)
-                    isHighAux: 1,       // true if chHigh are AUX6-9
-                    isArmed: 1;         // Arm
+                stubbornAck: 1,
+                uplinkPowerReduced: 2,     // CRSF_power_level - 1 (1-8 is 0-3 in the air)
+                chGroup: 2,       // 0-3
+                isArmed: 1;         // Arm
             OTA_Channels_4x10 chLow;    // CH0-CH3
             OTA_Channels_4x10 chHigh;   // AUX2-5 or AUX6-9
         } PACKED rc;
+#else
+        /** PACKET_TYPE_RCDATA **/
+        struct {
+            uint8_t packetType: 2,
+                stubbornAck: 1,
+                uplinkPower: 3,     // CRSF_power_level - 1 (1-8 is 0-7 in the air)
+                isHighAux: 1,       // true if chHigh are AUX6-9
+                isArmed: 1;         // Arm
+            OTA_Channels_4x10 chLow;    // CH0-CH3
+            OTA_Channels_4x10 chHigh;   // AUX2-5 or AUX6-9
+        } PACKED rc;
+#endif
         /** PACKET_TYPE_RCDATA w/ DEBUG_RCVR_LINKSTATS **/
         struct {
             uint8_t packetType; // actually struct rc's first byte
