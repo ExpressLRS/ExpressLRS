@@ -66,12 +66,14 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     {
 #if defined(WMEXTENSION)
         uint8_t offset = 0;
+#if defined(PLATFORM_ESP32)
         if (streamOut == serial1_protocol_tx) {
             const uint8_t cflags = crsfReceiver.multiSwitch().channelFlags();
             if (cflags & 0b01) {
                 offset = 16;
             }
         }
+#endif
         PackedRCdataOut.ch0 = channelData[0 + offset];
         PackedRCdataOut.ch1 = channelData[1 + offset];
         PackedRCdataOut.ch2 = channelData[2 + offset];
