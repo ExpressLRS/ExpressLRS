@@ -40,7 +40,6 @@
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
-extern TXModuleEndpoint crsfTransmitter;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 #if defined(RADIO_LR1121)
@@ -402,7 +401,7 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 }
 
 void TXModuleEndpoint::updateModelID() {
-  itoa(crsfTransmitter.modelId, modelMatchUnit+6, 10);
+  itoa(modelId, modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -718,6 +717,21 @@ void TXModuleEndpoint::SetTlmRatio(uint8_t idx)
   }
 }
 
+void TXModuleEndpoint::SetPowerMax(uint8_t idx)
+{
+  config.SetPower(idx);
+  if (!config.IsModified())
+  {
+      ResetPower();
+  }
+}
+
+void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
+{
+  config.SetDynamicPower(idx > 0);
+  config.SetBoostChannel((idx - 1) > 0 ? idx - 1 : 0);
+}
+
 /***
  * @brief: Update the dynamic strings used for folder names and labels
  ***/
@@ -883,7 +897,7 @@ void TXModuleEndpoint::registerParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? crsfTransmitter.modelId : 0xff);
+          msp.addByte(newModelMatch ? modelId : 0xff);
           crsfRouter.AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
         }
         updateModelID();
@@ -893,16 +907,11 @@ void TXModuleEndpoint::registerParameters()
     // POWER folder
     registerParameter(&luaPowerFolder);
     filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
-    registerParameter(&luaPower, [](propertiesCommon *item, uint8_t arg) {
-      config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
-      if (!config.IsModified())
-      {
-          ResetPower();
-      }
+    registerParameter(&luaPower, [this](propertiesCommon *item, uint8_t arg) {
+      SetPowerMax(constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
     }, luaPowerFolder.common.id);
-    registerParameter(&luaDynamicPower, [](propertiesCommon *item, uint8_t arg) {
-      config.SetDynamicPower(arg > 0);
-      config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
+    registerParameter(&luaDynamicPower, [this](propertiesCommon *item, uint8_t arg) {
+      SetDynamicPower(arg);
     }, luaPowerFolder.common.id);
   }
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN) {

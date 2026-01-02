@@ -433,26 +433,6 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
     return eSwitchMode;
 }
 
-void tx_SetPacketRateIdx(uint8_t idx, bool forceChange)
-{
-  crsfTransmitter.SetPacketRateIdx(idx, forceChange);
-}
-
-void tx_SetSwitchMode(uint8_t idx)
-{
-  crsfTransmitter.SetSwitchMode(idx);
-}
-
-void tx_SetAntennaMode(uint8_t idx)
-{
-  crsfTransmitter.SetAntennaMode(idx);
-}
-
-void tx_SetTlmRatio(uint8_t idx)
-{
-  crsfTransmitter.SetTlmRatio(idx);
-}
-
 void SetRFLinkRate(uint8_t index) // Set speed of RF link
 {
   expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);

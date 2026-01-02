@@ -1,7 +1,7 @@
 #include "OLED/oleddisplay.h"
 #include "TFT/tftdisplay.h"
 
-#include "rxtx_intf.h"
+#include "TXModuleEndpoint.h"
 #include "config.h"
 #include "helpers.h"
 #include "logging.h"
@@ -229,16 +229,16 @@ static void saveValueIndex(bool init)
     switch (state_machine.getParentState())
     {
         case STATE_PACKET:
-            tx_SetPacketRateIdx(val, false);
+            crsfTransmitter.SetPacketRateIdx(val, false);
             break;
         case STATE_SWITCH:
-            tx_SetSwitchMode(val);
+            crsfTransmitter.SetSwitchMode(val);
             break;
         case STATE_ANTENNA:
-            tx_SetAntennaMode(val);
+            crsfTransmitter.SetAntennaMode(val);
             break;
         case STATE_TELEMETRY:
-            tx_SetTlmRatio(val);
+            crsfTransmitter.SetTlmRatio(val);
             break;
         case STATE_POWERSAVE:
             config.SetMotionMode(values_index);
@@ -248,15 +248,10 @@ static void saveValueIndex(bool init)
             break;
 
         case STATE_POWER_MAX:
-            config.SetPower(values_index);
-            if (!config.IsModified())
-            {
-                ResetPower();
-            }
+            crsfTransmitter.SetPowerMax(val);
             break;
         case STATE_POWER_DYNAMIC:
-            config.SetDynamicPower(values_index > 0);
-            config.SetBoostChannel((values_index - 1) > 0 ? values_index - 1 : 0);
+            crsfTransmitter.SetDynamicPower(val);
             break;
 
         case STATE_VTX_BAND:
