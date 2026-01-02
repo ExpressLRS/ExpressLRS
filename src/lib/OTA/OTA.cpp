@@ -213,7 +213,7 @@ void ICACHE_RAM_ATTR GenerateChannelDataHybridWide(OTA_Packet_s * const otaPktPt
     ota4->rc.switches = value;
 }
 
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch_32(OTA_Packet8_s * const ota8, const uint32_t *channelData, bool const stubbornAck, uint8_t const g)
 {
     // All channel data is 10 bit apart from AUX1 which is 1 bit
@@ -317,7 +317,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
 }
 #endif
 
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 static void ICACHE_RAM_ATTR GenerateChannelData8ch(OTA_Packet_s * const otaPktPtr, const uint32_t *channelData, bool const stubbornAck)
 {
     GenerateChannelData8ch12ch_32((OTA_Packet8_s * const)otaPktPtr, channelData, stubbornAck, 0);
@@ -329,7 +329,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch(OTA_Packet_s * const otaPktPt
 }
 #endif
 
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 #if defined(UNIT_TEST)
 void OtaSetFullResNextChannelSet(bool) {}
 #endif

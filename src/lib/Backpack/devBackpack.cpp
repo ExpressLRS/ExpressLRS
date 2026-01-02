@@ -302,7 +302,7 @@ static void headtrackPublishChannelsToEdgeTX()
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&rcPacket, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, sizeof(rcPacket) - 2);
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &rcPacket.h);
 }
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 void headtrackOverrideChannels(uint32_t channels[], size_t channelCount, const uint8_t)
 #else
 void headtrackOverrideChannels(uint32_t channels[], size_t channelCount)

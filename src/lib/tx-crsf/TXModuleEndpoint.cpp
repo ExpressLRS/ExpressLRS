@@ -91,7 +91,7 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
     }
 }
 
-#if defined (WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message, const uint8_t offset) // data is packed as 11 bits per channel
 {
     const auto payload = (uint8_t *)message + sizeof(crsf_header_t);

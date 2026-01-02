@@ -2,7 +2,7 @@
 
 #include "common.h"
 
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 typedef void (*RcChannelsOverrideCallback_fn)(uint32_t channels[], size_t channelCnt, uint8_t offset);
 #else
 typedef void (*RcChannelsOverrideCallback_fn)(uint32_t channels[], size_t channelCnt);
@@ -89,7 +89,7 @@ public:
      * @brief Run any RcChannelsOverride callback
      *        Should be called by incoming ChannelData generators before RCDataReceived()
      */
-#if defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
     void PerformChannelOverrides(uint32_t channels[], size_t channelCount, const uint8_t offset)
     {
         if (RcChannelsOverrideCallback)
