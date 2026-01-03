@@ -369,7 +369,12 @@ UnpackChannelData_t OtaUnpackChannelData;
 uint32_t debugRcvrLinkstatsPacketId;
 #else
 
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+template<typename T>
+static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, T* const dest)
+#else
 static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChannels4x10, uint32_t * const dest)
+#endif
 {
     uint8_t const * const payload = (uint8_t const * const)srcChannels4x10;
     constexpr unsigned numOfChannels = 4;
@@ -492,6 +497,27 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
 }
 #if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
 // static uint32_t dbgCounter = 0;
+#if defined(WMFILTER32)
+struct ExpMean {
+    void operator=(const uint32_t in) {
+        input = in;
+    }
+    uint32_t process() {
+        value = ((1000 - w) * value + w * input) / 1000;
+        return value;
+    }
+private:
+#if defined(WMFILTER32W)
+    uint32_t w = WMFILTER32W;
+#else
+    uint32_t w = 500;
+#endif
+    uint32_t input = CRSF_CHANNEL_VALUE_MID;
+    uint32_t value = CRSF_CHANNEL_VALUE_MID;
+};
+static std::array<ExpMean, 32> ch32Filters{};
+#endif
+
 bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
@@ -503,6 +529,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
 #else
     uint8_t chDstLow = 0;
     uint8_t chDstHigh = 0;
+    // DBGLN("%d : Up16 %d", millis(), ota8->rc.chGroup);
     if (OtaSwitchModeCurrent == smHybridOr16ch)
     {
         // DBGLN("Up16 %d", ota8->rc.chGroup);
@@ -533,11 +560,18 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
         // For 8ch and 12ch mode, Arm status is placed in CH14/AUX10 just like non-fullres
         channelData[13] = BIT_to_CRSF(isArmed);
     }
-
-           // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
-           // ** Different than the 10bit encoding in Hybrid/Wide mode **
+#if defined(WMFILTER32)
+    UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &ch32Filters[chDstLow]);
+    UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &ch32Filters[chDstHigh]);
+    for(uint8_t i = 0; i < ch32Filters.size(); ++i) {
+        channelData[i] = ch32Filters[i].process();
+    }
+#else
+      // Analog channels packed 10bit covering the entire CRSF extended range (i.e. not just 988-2012)
+      // ** Different than the 10bit encoding in Hybrid/Wide mode **
     UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channelData[chDstLow]);
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh]);
+#endif
 
     // if (++dbgCounter == 10) {
     //     dbgCounter = 0;
