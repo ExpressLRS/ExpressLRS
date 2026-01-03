@@ -68,7 +68,6 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
         uint8_t offset = 0;
 #if defined(PLATFORM_ESP32)
         if (streamOut == serial1_protocol_tx) {
-
 #if defined(WMCRSF_CHAN_EXT)
             offset = 16;
 #else
@@ -76,9 +75,12 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
             if (cflags & 0b01) {
                 offset = 16;
             }
-#endif
+#endif // CHAN_EXT
         }
-#endif
+#endif // PLATFORM
+
+        // DBGLN("SBus ch0+o:%d, %d", channelData[0 + offset], offset);
+
         PackedRCdataOut.ch0 = channelData[0 + offset];
         PackedRCdataOut.ch1 = channelData[1 + offset];
         PackedRCdataOut.ch2 = channelData[2 + offset];

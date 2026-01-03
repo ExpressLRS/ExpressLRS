@@ -408,6 +408,11 @@ void CRSFEndpoint::sendDeviceInformationPacket()
     device->serialNo = htobe32(0x454C5253);                  // ['E', 'L', 'R', 'S'], seen [0x00, 0x0a, 0xe7, 0xc6] // "Serial 177-714694" (value is 714694)
     device->hardwareVer = 0;                                 // unused currently by us, seen [ 0x00, 0x0b, 0x10, 0x01 ] // "Hardware: V 1.01" / "Bootloader: V 3.06"
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
+
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+    device->softwareVer = (0x80 << 24); // set flag to indicate 32 channels version
+#endif
+
     device->fieldCnt = lastParameter;
     device->parameterVersion = 0;
     crsfRouter.SetExtendedHeaderAndCrc((crsf_ext_header_t *)deviceInformation, CRSF_FRAMETYPE_DEVICE_INFO, DEVICE_INFORMATION_FRAME_SIZE, requestOrigin, device_id);

@@ -138,7 +138,11 @@ uint32_t SerialSUMD3::sendRCFrame(const bool frameAvailable, const bool frameMis
 }
 
 void SerialSUMD3::composeFrame(const uint8_t fCode, const uint32_t* const channelData, uint8_t* const data) {
+#if defined(WMSUMDV3_SWAP)
+    const uint8_t cflags = 0b10;
+#else
     const uint8_t cflags = crsfReceiver.multiSwitch().channelFlags();
+#endif
     uint8_t i = 3;
     if (fCode == 0x02) {
         for(uint8_t c = 0; c < 16; c++) {

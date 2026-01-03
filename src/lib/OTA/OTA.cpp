@@ -491,6 +491,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaP
     return stubbornAck;
 }
 #if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+// static uint32_t dbgCounter = 0;
 bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
@@ -504,6 +505,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
     uint8_t chDstHigh = 0;
     if (OtaSwitchModeCurrent == smHybridOr16ch)
     {
+        // DBGLN("Up16 %d", ota8->rc.chGroup);
         switch (ota8->rc.chGroup & 0x03){
         case 0:
             chDstLow = 0;
@@ -525,6 +527,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
     }
     else
     {
+        DBGLN("Up8 %d", ota8->rc.chGroup);
         chDstLow = 0;
         chDstHigh = (ota8->rc.chGroup > 0) ? 8 : 4;
         // For 8ch and 12ch mode, Arm status is placed in CH14/AUX10 just like non-fullres
@@ -535,6 +538,12 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
            // ** Different than the 10bit encoding in Hybrid/Wide mode **
     UnpackChannels4x10ToUInt11(&ota8->rc.chLow, &channelData[chDstLow]);
     UnpackChannels4x10ToUInt11(&ota8->rc.chHigh, &channelData[chDstHigh]);
+
+    // if (++dbgCounter == 10) {
+    //     dbgCounter = 0;
+    //     DBGLN("Up ch0:%d, ch16: %d", channelData[0], channelData[16]);
+    // }
+
 #endif
     // Restore the uplink_TX_Power range 0-7 -> 1-8
     linkStats.uplink_TX_Power = constrain(2 * (ota8->rc.uplinkPowerReduced + 1), 1, 8);
