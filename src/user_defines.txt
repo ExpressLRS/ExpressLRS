@@ -13,6 +13,18 @@
 # Leave commented to use traditional binding
 #-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
+# WM Options
+
+# activate Extensions (MultiSwitch, SumDV3, LedRGB)
+#-DWMEXTENSION
+# activate 32 channels extension (sbus@serial: ch1-16, sbus@serial1: ch17-ch32)
+#-DWMCRSF_CHAN_EXT
+# output ch17-32 on sumdv3 ch1-16
+#-DWMSUMDV3_SWAP
+# low-pass filter of channel values for very low rates
+#-DWMFILTER32
+#-DWMFILTER32W=500
+
 
 ### REGULATORY DOMAIN: ###
 
