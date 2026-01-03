@@ -15,6 +15,18 @@
 static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
 static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet stuct is invalid!");
 
+#if defined(WMEXTENSION) && defined(DEBUG_LOG)
+static void pdebug(const char* const msg) {
+    static uint32_t counter = 0;
+    if (++counter >= 10) {
+        counter = 0;
+        DBGLN(msg, millis());
+    }
+}
+#else
+static void pdebug(const char* const msg) {}
+#endif
+
 bool OtaIsFullRes;
 volatile uint8_t OtaNonce;
 uint16_t OtaCrcInitializer;
@@ -405,6 +417,7 @@ static void UnpackChannels4x10ToUInt11(OTA_Channels_4x10 const * const srcChanne
 
 static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * const ota4, uint32_t *channelData)
 {
+    pdebug("UHC: %d");
     isArmed = ota4->rc.isArmed;
 
 #if defined(DEBUG_RCVR_LINKSTATS)
@@ -439,6 +452,7 @@ static void ICACHE_RAM_ATTR UnpackChannelDataHybridCommon(OTA_Packet4_s const * 
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
+    pdebug("UHS8: %d");
     OTA_Packet4_s const * const ota4 = (OTA_Packet4_s const * const)otaPktPtr;
     UnpackChannelDataHybridCommon(ota4, channelData);
 
@@ -476,6 +490,7 @@ bool ICACHE_RAM_ATTR UnpackChannelDataHybridSwitch8(OTA_Packet_s const * const o
  */
 bool ICACHE_RAM_ATTR UnpackChannelDataHybridWide(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
+    pdebug("UHW: %d");
     OTA_Packet4_s const * const ota4 = (OTA_Packet4_s const * const)otaPktPtr;
     UnpackChannelDataHybridCommon(ota4, channelData);
 
@@ -520,6 +535,7 @@ static std::array<ExpMean, 32> ch32Filters{};
 
 bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
+    pdebug("U8ch32: %d");
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
     isArmed = ota8->rc.isArmed;
@@ -586,6 +602,7 @@ bool ICACHE_RAM_ATTR UnpackChannelData8ch_32(OTA_Packet_s const * const otaPktPt
 #else
 bool ICACHE_RAM_ATTR UnpackChannelData8ch(OTA_Packet_s const * const otaPktPtr, uint32_t *channelData)
 {
+    pdebug("U8ch: %d");
     OTA_Packet8_s const * const ota8 = (OTA_Packet8_s const * const)otaPktPtr;
 
     isArmed = ota8->rc.isArmed;
