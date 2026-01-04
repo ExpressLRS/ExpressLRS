@@ -19,6 +19,8 @@
 #-DWMEXTENSION
 # activate 32 channels extension (sbus@serial: ch1-16, sbus@serial2: ch17-ch32)
 #-DWMCRSF_CHAN_EXT
+# output crsf 0x16 and 0x26 in on go (concatenate both packages)
+#-DWMCRSF_CH_OUT_CONCAT
 # output ch17-32 on sumdv3 ch1-16
 #-DWMSUMDV3_SWAP
 # low-pass filter of channel values for very low rates

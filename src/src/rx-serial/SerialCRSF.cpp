@@ -27,6 +27,129 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
     }
 }
 
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+#if defined(WMCRSF_CH_OUT_CONCAT)
+void SerialCRSF::sendRCFrame_part(uint32_t *channelData, const bool isHigh)
+{
+    const uint8_t offset = isHigh ? 16 : 0;
+
+    crsf_channels_s PackedRCdataOut {};
+    PackedRCdataOut.ch0 = channelData[0 + offset];
+    PackedRCdataOut.ch1 = channelData[1 + offset];
+    PackedRCdataOut.ch2 = channelData[2 + offset];
+    PackedRCdataOut.ch3 = channelData[3 + offset];
+    PackedRCdataOut.ch4 = channelData[4 + offset];
+    PackedRCdataOut.ch5 = channelData[5 + offset];
+    PackedRCdataOut.ch6 = channelData[6 + offset];
+    PackedRCdataOut.ch7 = channelData[7 + offset];
+    PackedRCdataOut.ch8 = channelData[8 + offset];
+    PackedRCdataOut.ch9 = channelData[9 + offset];
+    PackedRCdataOut.ch10 = channelData[10 + offset];
+    PackedRCdataOut.ch11 = channelData[11 + offset];
+    PackedRCdataOut.ch12 = channelData[12 + offset];
+    PackedRCdataOut.ch13 = channelData[13 + offset];
+
+           // In 16ch mode, do not output RSSI/LQ on channels
+    if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
+    {
+        PackedRCdataOut.ch14 = channelData[14 + offset];
+        PackedRCdataOut.ch15 = channelData[15 + offset];
+    }
+    else
+    {
+        // Not in 16-channel mode, send LQ and RSSI dBm
+        int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
+
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkStats.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                  ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+    }
+
+    const uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+        // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+        CRSF_SYNC_BYTE,
+        CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
+        isHigh ? CRSF_FRAMETYPE_RC_CHANNELS_EXTENDED : CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
+
+    uint8_t crc = crsfRouter.crsf_crc.calc(outBuffer[2]);
+    crc = crsfRouter.crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
+
+    _outputPort->write(outBuffer, sizeof(outBuffer));
+    _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
+    _outputPort->write(crc);
+}
+uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData) {
+    if (!frameAvailable)
+        return DURATION_IMMEDIATELY;
+
+    sendRCFrame_part(channelData, false);
+    sendRCFrame_part(channelData, true);
+    return DURATION_IMMEDIATELY;
+}
+#else
+uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
+{
+    if (!frameAvailable)
+        return DURATION_IMMEDIATELY;
+
+    const uint8_t offset = sendHighChannels ? 16 : 0;
+    crsf_channels_s PackedRCdataOut {};
+    PackedRCdataOut.ch0 = channelData[0 + offset];
+    PackedRCdataOut.ch1 = channelData[1 + offset];
+    PackedRCdataOut.ch2 = channelData[2 + offset];
+    PackedRCdataOut.ch3 = channelData[3 + offset];
+    PackedRCdataOut.ch4 = channelData[4 + offset];
+    PackedRCdataOut.ch5 = channelData[5 + offset];
+    PackedRCdataOut.ch6 = channelData[6 + offset];
+    PackedRCdataOut.ch7 = channelData[7 + offset];
+    PackedRCdataOut.ch8 = channelData[8 + offset];
+    PackedRCdataOut.ch9 = channelData[9 + offset];
+    PackedRCdataOut.ch10 = channelData[10 + offset];
+    PackedRCdataOut.ch11 = channelData[11 + offset];
+    PackedRCdataOut.ch12 = channelData[12 + offset];
+    PackedRCdataOut.ch13 = channelData[13 + offset];
+
+           // In 16ch mode, do not output RSSI/LQ on channels
+    if (OtaIsFullRes && OtaSwitchModeCurrent == smHybridOr16ch)
+    {
+        PackedRCdataOut.ch14 = channelData[14 + offset];
+        PackedRCdataOut.ch15 = channelData[15 + offset];
+    }
+    else
+    {
+        // Not in 16-channel mode, send LQ and RSSI dBm
+        int32_t rssiDBM = linkStats.active_antenna == 0 ? -linkStats.uplink_RSSI_1 : -linkStats.uplink_RSSI_2;
+
+        PackedRCdataOut.ch14 = UINT10_to_CRSF(fmap(linkStats.uplink_Link_quality, 0, 100, 0, 1023));
+        PackedRCdataOut.ch15 = UINT10_to_CRSF(map(constrain(rssiDBM, ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50),
+                                                  ExpressLRS_currAirRate_RFperfParams->RXsensitivity, -50, 0, 1023));
+    }
+
+    const uint8_t outBuffer[] = {
+        // No need for length prefix as we aren't using the FIFO
+        // CRSF on a serial port _always_ has 0xC8 as a sync byte rather than the device_id.
+        // See https://github.com/tbs-fpv/tbs-crsf-spec/blob/main/crsf.md#frame-details
+        CRSF_SYNC_BYTE,
+        CRSF_FRAME_SIZE(sizeof(PackedRCdataOut)),
+        sendHighChannels ? CRSF_FRAMETYPE_RC_CHANNELS_EXTENDED : CRSF_FRAMETYPE_RC_CHANNELS_PACKED
+    };
+
+    uint8_t crc = crsfRouter.crsf_crc.calc(outBuffer[2]);
+    crc = crsfRouter.crsf_crc.calc((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut), crc);
+
+    _outputPort->write(outBuffer, sizeof(outBuffer));
+    _outputPort->write((byte *)&PackedRCdataOut, sizeof(PackedRCdataOut));
+    _outputPort->write(crc);
+
+    sendHighChannels = !sendHighChannels;
+
+    return DURATION_IMMEDIATELY;
+}
+#endif
+#else
 uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t *channelData)
 {
     if (!frameAvailable)
@@ -81,6 +204,7 @@ uint32_t SerialCRSF::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     _outputPort->write(crc);
     return DURATION_IMMEDIATELY;
 }
+#endif
 
 void SerialCRSF::processBytes(uint8_t *bytes, const uint16_t size)
 {
