@@ -21,7 +21,7 @@ void debugPrintf(const char* fmt, ...)
   c = GETCHAR;
   while(c) {
     if (c == '%') {
-      if (v) LOGGING_UART.write(v, fmt - v);
+      if (v) LOGGING_UART.write((uint8_t*)v, fmt - v);
       fmt++;
       c = GETCHAR;
       v = buf;
@@ -60,7 +60,7 @@ void debugPrintf(const char* fmt, ...)
     c = GETCHAR;
   }
   va_end(vlist);
-  if (v) LOGGING_UART.write(v, fmt - v);
+  if (v) LOGGING_UART.write((uint8_t*)v, fmt - v);
 }
 
 #if defined(DEBUG_INIT)
