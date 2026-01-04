@@ -596,8 +596,13 @@ bool CRSFHandset::UARTwdt()
             UARTwdtLastChecked -= 3 * (UARTwdtInterval >> 2);
         }
 
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+        GoodPktsCountResult = GoodPktsCount / 2; // we receive 2 channel packets from handset
+        BadPktsCountResult = BadPktsCount / 2;
+#else
         GoodPktsCountResult = GoodPktsCount;
         BadPktsCountResult = BadPktsCount;
+#endif
         BadPktsCount = 0;
         GoodPktsCount = 0;
     }
