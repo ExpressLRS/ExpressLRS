@@ -15,6 +15,14 @@ void AutoDetect::Begin()
 {
     constexpr auto divisor = 80 / RMT_TICKS_PER_US;
 
+    // If we are using a default serial PIN then we have to disconnect it from UART module and attach to the RMT module
+    if (GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_TX == U0RXD_GPIO_NUM)
+    {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[GPIO_PIN_RCSIGNAL_RX], PIN_FUNC_GPIO);
+        pinMode(GPIO_PIN_RCSIGNAL_RX, INPUT);
+        gpio_matrix_in(GPIO_PIN_RCSIGNAL_RX, RMT_SIG_IN0_IDX, false);
+    }
+
     rmt_config_t rmt_rx_config = RMT_DEFAULT_CONFIG_RX(static_cast<gpio_num_t>(GPIO_PIN_RCSIGNAL_RX), PPM_RMT_CHANNEL);
     rmt_rx_config.clk_div = divisor;
     rmt_rx_config.rx_config.filter_ticks_thresh = 1;
@@ -39,8 +47,8 @@ void AutoDetect::migrateTo(Handset *that) const
     that->registerCallbacks(connected, disconnected);
     that->Begin();
     that->setPacketInterval(RequestedRCpacketInterval);
-    delete this;
     handset = that;
+    delete this;
 }
 
 void AutoDetect::startPPM() const
@@ -50,6 +58,20 @@ void AutoDetect::startPPM() const
 
 void AutoDetect::startCRSF() const
 {
+    // Stop the RMT from running
+    rmt_rx_stop(PPM_RMT_CHANNEL);
+    rmt_driver_uninstall(PPM_RMT_CHANNEL);
+    // If we're using a default serial PIN then reattach to the UART module and call the default UART
+    // Begin function to get things setup correctly
+    if (GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_TX == U0RXD_GPIO_NUM)
+    {
+        // Reconnect the pins back onto the UART module
+        gpio_matrix_in(GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
+        gpio_matrix_out(GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
+        // Initialise the UART
+        Serial.begin(115200);
+    }
+    // Now we can migrate to the CRSF handler
     migrateTo(new CRSFHandset());
 }
 
