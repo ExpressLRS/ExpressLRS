@@ -36,7 +36,10 @@ void sendMAVLinkTelemetryToBackpack(uint8_t *) {}
 #include "TXOTAConnector.h"
 #include "TXUSBConnector.h"
 
-#if defined(PLATFORM_ESP8266)
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#include "USB.h"
+#define USBSerial Serial
+#elif defined(PLATFORM_ESP8266)
 #include <user_interface.h>
 #endif
 
@@ -1272,6 +1275,10 @@ static void setupSerial()
   }
 #endif
   BackpackOrLogStrm = serialPort;
+
+#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+  Serial.begin(firmwareOptions.uart_baud);
+#endif
 
 // Setup TxUSB
 #if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
