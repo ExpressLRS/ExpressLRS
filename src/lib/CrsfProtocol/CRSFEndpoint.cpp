@@ -410,7 +410,7 @@ void CRSFEndpoint::sendDeviceInformationPacket()
     device->softwareVer = htobe32(VersionStrToU32(version)); // seen [ 0x00, 0x00, 0x05, 0x0f ] // "Firmware: V 5.15"
 
 #if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
-    device->softwareVer = (0x80 << 24); // set flag to indicate 32 channels version
+    device->softwareVer |= (0x80 << 24); // set flag to indicate 32 channels version
 #endif
 
     device->fieldCnt = lastParameter;
