@@ -13,7 +13,7 @@ Stream *BackpackOrLogStrm;
 void debugPrintf(const char* fmt, ...)
 {
   char c;
-  const char *v;
+  const char *v = nullptr;
   char buf[21];
   va_list  vlist;
   va_start(vlist,fmt);
@@ -21,6 +21,7 @@ void debugPrintf(const char* fmt, ...)
   c = GETCHAR;
   while(c) {
     if (c == '%') {
+      if (v) LOGGING_UART.write(v, fmt - v);
       fmt++;
       c = GETCHAR;
       v = buf;
@@ -51,13 +52,15 @@ void debugPrintf(const char* fmt, ...)
           break;
       }
       LOGGING_UART.write((uint8_t*)v, strlen(v));
+      v = nullptr;
     } else {
-      LOGGING_UART.write(c);
+      if (!v) v = fmt;
     }
     fmt++;
     c = GETCHAR;
   }
   va_end(vlist);
+  if (v) LOGGING_UART.write(v, fmt - v);
 }
 
 #if defined(DEBUG_INIT)
