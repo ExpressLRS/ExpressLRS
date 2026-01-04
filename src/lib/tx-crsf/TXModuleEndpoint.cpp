@@ -1,5 +1,6 @@
 #include "TXModuleEndpoint.h"
 
+#include "rxtx_intf.h"
 #include "CRSFHandset.h"
 #include "logging.h"
 
@@ -12,9 +13,6 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
 void ModelUpdateReq();
-void SetSyncSpam();
-void sendELRSstatus(crsf_addr_e origin);
-void luaSupressCriticalErrors();
 
 void TXModuleEndpoint::begin()
 {
@@ -83,7 +81,6 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
             }
         }
         parameterUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);
-        SetSyncSpam();
     }
 }
 
