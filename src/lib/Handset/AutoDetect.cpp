@@ -16,7 +16,7 @@ void AutoDetect::Begin()
     constexpr auto divisor = 80 / RMT_TICKS_PER_US;
 
     // If we are using a default serial PIN then we have to disconnect it from UART module and attach to the RMT module
-    if (GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_TX == U0RXD_GPIO_NUM)
+    if (GPIO_PIN_RCSIGNAL_RX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM)
     {
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[GPIO_PIN_RCSIGNAL_RX], PIN_FUNC_GPIO);
         pinMode(GPIO_PIN_RCSIGNAL_RX, INPUT);
@@ -63,11 +63,10 @@ void AutoDetect::startCRSF() const
     rmt_driver_uninstall(PPM_RMT_CHANNEL);
     // If we're using a default serial PIN then reattach to the UART module and call the default UART
     // Begin function to get things setup correctly
-    if (GPIO_PIN_RCSIGNAL_TX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_TX == U0RXD_GPIO_NUM)
+    if (GPIO_PIN_RCSIGNAL_RX == U0TXD_GPIO_NUM || GPIO_PIN_RCSIGNAL_RX == U0RXD_GPIO_NUM)
     {
-        // Reconnect the pins back onto the UART module
-        gpio_matrix_in(GPIO_PIN_RCSIGNAL_RX, U0RXD_IN_IDX, false);
-        gpio_matrix_out(GPIO_PIN_RCSIGNAL_TX, U0TXD_OUT_IDX, false, false);
+        // Reconnect the pin back onto the UART module via the IOMUX
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[GPIO_PIN_RCSIGNAL_RX], 0);
         // Initialise the UART
         Serial.begin(115200);
     }
