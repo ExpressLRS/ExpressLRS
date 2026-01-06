@@ -27,7 +27,7 @@ void SerialCRSF::forwardMessage(const crsf_header_t *message)
     }
 }
 
-#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT) && !defined(WMCRSF_NO_HIGH_CHANNELS)
 #if defined(WMCRSF_CH_OUT_CONCAT)
 void SerialCRSF::sendRCFrame_part(uint32_t *channelData, const bool isHigh)
 {

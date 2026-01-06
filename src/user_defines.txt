@@ -17,16 +17,23 @@
 
 # activate Extensions (MultiSwitch, SumDV3, LedRGB)
 #-DWMEXTENSION
+
 # activate 32 channels extension (sbus@serial: ch1-16, sbus@serial2: ch17-ch32)
 #-DWMCRSF_CHAN_EXT
-# output crsf 0x16 and 0x26 in on go (concatenate both packages)
-# otherwise two distinct packages are send round robin
-#-DWMCRSF_CH_OUT_CONCAT
+
 # output ch17-32 on sumdv3 ch1-16
 #-DWMSUMDV3_SWAP
-# low-pass filter of channel values for very low rates
+
+# output crsf 0x16 and 0x26 in on go (concatenate both packages), otherwise round robin
+#-DWMCRSF_CH_OUT_CONCAT
+
+# do not output 0x26 packets / ch17-32
+#-DWMCRSF_NO_HIGH_CHANNELS
+
+# low-pass filter of channel values
 #-DWMFILTER32
 #-DWMFILTER32W=500
+
 
 
 ### REGULATORY DOMAIN: ###
