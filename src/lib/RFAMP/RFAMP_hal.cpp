@@ -211,15 +211,15 @@ void ICACHE_RAM_ATTR RFAMP_hal::TXRXdisable()
     }
     if (tx_enabled)
     {
-        if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
-        {
-            digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
-        }
         if (GPIO_PIN_TX_ENABLE != UNDEF_PIN)
         {
             digitalWrite(GPIO_PIN_TX_ENABLE, LOW);
         }
         tx_enabled = false;
+    }
+    if (GPIO_PIN_PA_ENABLE != UNDEF_PIN)
+    {
+        digitalWrite(GPIO_PIN_PA_ENABLE, LOW);
     }
 #endif
 }
