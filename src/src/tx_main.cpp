@@ -1,5 +1,3 @@
-#include "wm_ext_defines.h"
-
 #include "rxtx_common.h"
 
 #include "CRSFHandset.h"

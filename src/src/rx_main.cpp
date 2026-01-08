@@ -1,5 +1,3 @@
-#include "wm_ext_defines.h"
-
 #include "CRSFRouter.h"
 #include "LowPassFilter.h"
 #include "rxtx_common.h"
