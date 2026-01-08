@@ -16,13 +16,13 @@
 # WM Options
 
 # activate Extensions (MultiSwitch, SumDV3, LedRGB)
-#-DWMEXTENSION
+-DWMEXTENSION
 
 # activate 32 channels extension (sbus@serial: ch1-16, sbus@serial2: ch17-ch32)
-#-DWMCRSF_CHAN_EXT
+-DWMCRSF_CHAN_EXT
 
 # output ch17-32 on sumdv3 ch1-16
-#-DWMSUMDV3_SWAP
+-DWMSUMDV3_SWAP
 
 # output crsf 0x16 and 0x26 in on go (concatenate both packages), otherwise round robin
 #-DWMCRSF_CH_OUT_CONCAT
@@ -31,8 +31,8 @@
 #-DWMCRSF_NO_HIGH_CHANNELS
 
 # low-pass filter of channel values
-#-DWMFILTER32
-#-DWMFILTER32W=500
+-DWMFILTER32
+-DWMFILTER32W=500
 
 
 
