@@ -201,7 +201,9 @@ void ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, uint8_t *buffer, 
 
 uint8_t ICACHE_RAM_ATTR SX1280Hal::ReadRegister(uint16_t address, SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t data;
+    // this buffer is SENT over SPI too, initialize it to avoid sending unitialized data over the SPI bus.
+    uint8_t data = 0;
+
     ReadRegister(address, &data, 1, radioNumber);
     return data;
 }
