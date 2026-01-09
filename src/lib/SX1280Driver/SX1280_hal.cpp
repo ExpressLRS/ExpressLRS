@@ -90,7 +90,10 @@ void SX1280Hal::init()
     SPIEx.setMISO(GPIO_PIN_MISO);
     SPIEx.setSCLK(GPIO_PIN_SCK);
     SPIEx.begin();
-    SPIEx.setClockDivider(SPI_CLOCK_DIV4); // 72 / 8 = 9 MHz
+    // For the exact frequency, check the system clock tree (sysclk, ahb, apb1/apb2 prescaler)
+    // Some MCUs: 72 / 4 = 18 MHz
+    // STM32L432: APB1/APB2 = 80Mhz, 80 / 4 = 20Mhz
+    SPIEx.setClockDivider(SPI_CLOCK_DIV4);
 #endif
 
     //attachInterrupt(digitalPinToInterrupt(GPIO_PIN_BUSY), this->busyISR, CHANGE); //not used atm
