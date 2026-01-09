@@ -11,7 +11,11 @@ const char commit[] {LATEST_COMMIT, 0};
 #if defined(UNIT_TEST)
 const char version[] = "1.2.3";
 #else
+#if defined(WMEXTENSION)
+const char version[] = "wmextensions";
+#else
 const char version[] = {LATEST_VERSION, 0};
+#endif
 #endif
 
 #if defined(TARGET_TX)
