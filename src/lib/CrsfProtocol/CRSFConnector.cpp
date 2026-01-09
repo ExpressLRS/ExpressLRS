@@ -24,7 +24,7 @@ void CRSFConnector::debugCRSF(const char *str, const crsf_header_t *message)
     DBGLN("type: %x", message->type);
     if (message->type >= CRSF_FRAMETYPE_DEVICE_PING)
     {
-        const auto ext = (crsf_ext_header_t *)message;
+        [[maybe_unused]] const auto ext = (crsf_ext_header_t *)message;
         DBGLN("dest: %x", ext->dest_addr);
         DBGLN("orig: %x", ext->orig_addr);
     }

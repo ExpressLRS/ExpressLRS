@@ -216,13 +216,21 @@ typedef enum : uint8_t {
 typedef union {
     struct {
         uint32_t failsafe:11,    // us output during failsafe +476 (e.g. 1024 here would be 1500us)
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+                inputChannel:5, // 0-based input channel
+#else
                  inputChannel:4, // 0-based input channel
+#endif
                  inverted:1,     // invert channel output
                  mode:4,         // Output mode (eServoOutputMode)
                  stretched:1,    // expand the channel input to 500us - 2500us
                  narrow:1,       // Narrow output mode (half pulse width)
                  failsafeMode:2, // failsafe output mode (eServoOutputFailsafeMode)
-                 unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+            unused:7;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+#else
+            unused:8;       // FUTURE: When someone complains "everyone" uses inverted polarity PWM or something :/
+#endif
     } val;
     uint32_t raw;
 } rx_config_pwm_t;

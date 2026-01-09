@@ -101,25 +101,29 @@ static const int bitorder[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 
 void ESP32S3LedDriverGRB::SetPixelColor(uint16_t indexPixel, RgbColor color)
 {
-    int loc = indexPixel * 24;
-    for(int bitpos = 0 ; bitpos < 8 ; bitpos++)
-    {
-        int bit = bitorder[bitpos];
-        out_buffer[loc + bitpos + 0] = (color.G & bit) ? 0xFFE0 : 0xF000;
-        out_buffer[loc + bitpos + 8] = (color.R & bit) ? 0xFFE0 : 0xF000;
-        out_buffer[loc + bitpos + 16] = (color.B & bit) ? 0xFFE0 : 0xF000;
+    if (indexPixel < num_leds) {
+        const int loc = indexPixel * 24;
+        for(int bitpos = 0 ; bitpos < 8 ; bitpos++)
+        {
+            int bit = bitorder[bitpos];
+            out_buffer[loc + bitpos + 0] = (color.G & bit) ? 0xFFE0 : 0xF000;
+            out_buffer[loc + bitpos + 8] = (color.R & bit) ? 0xFFE0 : 0xF000;
+            out_buffer[loc + bitpos + 16] = (color.B & bit) ? 0xFFE0 : 0xF000;
+        }
     }
 }
 
 void ESP32S3LedDriverRGB::SetPixelColor(uint16_t indexPixel, RgbColor color)
 {
-    int loc = indexPixel * 24;
-    for(int bitpos = 0 ; bitpos < 8 ; bitpos++)
-    {
-        int bit = bitorder[bitpos];
-        out_buffer[loc + bitpos + 0] = (color.R & bit) ? 0xFFE0 : 0xF000;
-        out_buffer[loc + bitpos + 8] = (color.G & bit) ? 0xFFE0 : 0xF000;
-        out_buffer[loc + bitpos + 16] = (color.B & bit) ? 0xFFE0 : 0xF000;
+    if (indexPixel < num_leds) {
+        const int loc = indexPixel * 24;
+        for(int bitpos = 0 ; bitpos < 8 ; bitpos++)
+        {
+            int bit = bitorder[bitpos];
+            out_buffer[loc + bitpos + 0] = (color.R & bit) ? 0xFFE0 : 0xF000;
+            out_buffer[loc + bitpos + 8] = (color.G & bit) ? 0xFFE0 : 0xF000;
+            out_buffer[loc + bitpos + 16] = (color.B & bit) ? 0xFFE0 : 0xF000;
+        }
     }
 }
 

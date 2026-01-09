@@ -2,6 +2,10 @@
 #define RX_ENDPOINT_H
 #include "CRSFEndpoint.h"
 
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+#include "../../src/rx_wmextension.h"
+#endif
+
 class RXEndpoint final : public CRSFEndpoint {
 public:
     RXEndpoint();
@@ -11,9 +15,16 @@ public:
     void registerParameters() override;
     void updateParameters() override;
 
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+    const MultiSwitch& multiSwitch() const;
+#endif
 private:
     void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg);
     void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg);
+
+#if defined(WMEXTENSION) && defined(TARGET_RX)
+    MultiSwitch msw;
+#endif
 };
 
 #endif //RX_ENDPOINT_H

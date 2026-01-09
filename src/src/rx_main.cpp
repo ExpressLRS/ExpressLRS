@@ -50,6 +50,10 @@
 #include "esp_task_wdt.h"
 #endif
 
+#if defined(WMEXTENSION)
+#include "rx_wmextension.h"
+#endif
+
 //
 // Code encapsulated by the ARDUINO_CORE_INVERT_FIX #ifdef temporarily fixes EpressLRS issue #2609 which is caused
 // by the Arduino core (see https://github.com/espressif/arduino-esp32/issues/9896) and fixed
@@ -1352,7 +1356,11 @@ static void setupSerial()
     }
     else if (sumdSerialOutput)
     {
+#if defined(WMEXTENSION)
+        serialIO = new SerialSUMD3(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+#else 
         serialIO = new SerialSUMD(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+#endif
     }
     else if (mavlinkSerialOutput)
     {
@@ -1448,7 +1456,11 @@ static void setupSerial1()
             break;
         case PROTOCOL_SERIAL1_SUMD:
             Serial1.begin(115200, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
+#if defined(WMEXTENSION)
+            serial1IO = new SerialSUMD3(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+#else
             serial1IO = new SerialSUMD(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+#endif
             break;
         case PROTOCOL_SERIAL1_HOTT_TLM:
             Serial1.begin(19200, SERIAL_8N2, serial1RXpin, serial1TXpin, false);

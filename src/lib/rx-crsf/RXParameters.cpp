@@ -1,3 +1,5 @@
+#if defined(TARGET_RX)
+
 #include "targets.h"
 #if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
@@ -151,7 +153,11 @@ static int8Parameter luaMappingChannelIn = {
     {
       0,                 // value
       1,                 // min
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+      CRSF_NUM_CHANNELS + CRSF_EXTRA_CHANNELS, // max
+#else
       CRSF_NUM_CHANNELS, // max
+#endif
     }
   },
   STR_EMPTYSPACE
@@ -648,4 +654,6 @@ void RXEndpoint::updateParameters()
     LUA_FIELD_HIDE(luaTargetSysId)
   }
 }
+#endif
+
 #endif

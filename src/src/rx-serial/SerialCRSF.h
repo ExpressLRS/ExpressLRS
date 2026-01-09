@@ -25,4 +25,12 @@ private:
     CRSFParser crsfParser;
 
     void processBytes(uint8_t *bytes, uint16_t size) override;
+
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+#if !defined(WMCRSF_CH_OUT_CONCAT)
+    bool sendHighChannels = false;
+#else
+    void sendRCFrame_part(uint32_t *channelData, const bool isHigh);
+#endif
+#endif
 };

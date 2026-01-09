@@ -60,7 +60,11 @@ static constexpr char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Ra
 static constexpr char tlmRatiosMav[] = ";;;;;;;;1:2;";
 static constexpr char switchmodeOpts4ch[] = "Wide;Hybrid";
 static constexpr char switchmodeOpts4chMav[] = ";Hybrid";
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+static constexpr char switchmodeOpts8ch[] = "8ch;32ch Rate/4;12ch Mixed";
+#else
 static constexpr char switchmodeOpts8ch[] = "8ch;16ch Rate/2;12ch Mixed";
+#endif
 static constexpr char switchmodeOpts8chMav[] = ";16ch Rate/2;";
 static constexpr char antennamodeOpts[] = "Gemini;Ant 1;Ant 2;Switch";
 static constexpr char antennamodeOptsDualBand[] = "Gemini;;;";

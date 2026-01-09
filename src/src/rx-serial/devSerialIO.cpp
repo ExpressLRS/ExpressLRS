@@ -230,12 +230,21 @@ static int timeout(devserial_ctx_t *ctx)
     // Copy the current ChannelData to a local buffer as we don't know how many accesses
     // there will be to each channel slot in the array, and the global buffer may be updated
     // in-between access to each channel slot.
+#if defined(WMEXTENSION) && defined(WMCRSF_CHAN_EXT)
+    WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS + CRSF_EXTRA_CHANNELS];
+    for (unsigned i = 0; i < (CRSF_NUM_CHANNELS + CRSF_EXTRA_CHANNELS); i++)
+    {
+        const uint32_t crsfVal = ChannelData[i];
+        localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_EXT_MIN : crsfVal;
+    }
+#else
     WORD_ALIGNED_ATTR uint32_t localChannelData[CRSF_NUM_CHANNELS];
     for (unsigned i = 0; i < CRSF_NUM_CHANNELS; i++)
     {
         const uint32_t crsfVal = ChannelData[i];
         localChannelData[i] = (crsfVal == CRSF_CHANNEL_VALUE_UNSET) ? CRSF_CHANNEL_VALUE_EXT_MIN : crsfVal;
     }
+#endif
     return (*(ctx->io))->sendRCFrame(sendChannels, missed, localChannelData);
 }
 
