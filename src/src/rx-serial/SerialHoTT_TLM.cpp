@@ -252,7 +252,7 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
         sendCRSFgps(now);
     }
 
-    // HoTT GAM, EAM, ESC -> send battery, Rpm, Temp, Cells, Volt, Airspee packet
+    // HoTT GAM, EAM, ESC -> send battery, Rpm, Temp, Cells, Volt
     if (device[GAM].present || device[EAM].present || device[ESC].present)
     {
         sendCRSFbattery(now);
@@ -274,8 +274,10 @@ void SerialHoTT_TLM::scheduleCRSFtelemetry(uint32_t now)
         sendCRSFtemp(now, deviceToUse);
         sendCRSFcells(now, deviceToUse);
         sendCRSFvolt(now, deviceToUse);
-        sendCRSFairspeed(now, deviceToUse);
     }
+
+    // send Airspeed
+    sendCRSFairspeed(now);
 }
 
 void SerialHoTT_TLM::sendCRSFvario(uint32_t now)
@@ -547,22 +549,30 @@ void SerialHoTT_TLM::sendCRSFvolt(uint32_t now, HoTTDevices device)
     lastVoltCRC = crc;
 }
 
-void SerialHoTT_TLM::sendCRSFairspeed(uint32_t now, HoTTDevices device)
+void SerialHoTT_TLM::sendCRSFairspeed(uint32_t now)
 {
     // prepare CRSF telemetry packet
     CRSF_MK_FRAME_T(crsf_sensor_airspeed_t) crsfAirspeed = {0};
 
-    if (device == EAM)
+    if (device[VARIO].present)
     {
-        crsfAirspeed.p.speed = htobe16(eam.speed * HOTT_SPEED_SCALE_EAM);
+        crsfAirspeed.p.speed = htobe16(vario.compassDir * HOTT_SPEED_SCALE_1_2);
     }
-    else if (device == GAM)
+    else if (device[GPS].present)
     {
-        crsfAirspeed.p.speed = htobe16(gam.speed * HOTT_SPEED_SCALE_GAM);
+        crsfAirspeed.p.speed = htobe16(*((uint16_t *)(&gps.pitch)) * HOTT_SPEED_SCALE_1_1);
     }
-    else if (device == ESC)
+    else if (device[EAM].present)
     {
-        crsfAirspeed.p.speed = htobe16(esc.speed * HOTT_SPEED_SCALE_EAM);
+        crsfAirspeed.p.speed = htobe16(eam.speed * HOTT_SPEED_SCALE_1_1);
+    }
+    else if (device[GAM].present)
+    {
+        crsfAirspeed.p.speed = htobe16(gam.speed * HOTT_SPEED_SCALE_1_1);
+    }
+    else if (device[ESC].present)
+    {
+        crsfAirspeed.p.speed = htobe16(esc.speed * HOTT_SPEED_SCALE_1_1);
     }
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfAirspeed, CRSF_FRAMETYPE_AIRSPEED, CRSF_FRAME_SIZE(sizeof(crsf_sensor_airspeed_t)));

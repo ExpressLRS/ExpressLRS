@@ -306,7 +306,7 @@ private:
     void sendCRSFtemp(uint32_t now, HoTTDevices device);
     void sendCRSFcells(uint32_t now, HoTTDevices device);
     void sendCRSFvolt(uint32_t now, HoTTDevices device);
-    void sendCRSFairspeed(uint32_t now, HoTTDevices device);
+    void sendCRSFairspeed(uint32_t now);
 
     uint16_t getHoTTvoltage();
     uint16_t getHoTTcurrent();
