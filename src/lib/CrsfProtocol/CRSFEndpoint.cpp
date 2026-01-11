@@ -296,17 +296,40 @@ void CRSFEndpoint::registerParameter(void *definition, const parameterHandlerCal
     paramCallbacks[lastParameter] = callback;
 }
 
-void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElrs, const uint8_t parameterType, const uint8_t parameterIndex, const uint8_t parameterArg)
+void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElrs, const uint8_t parameterType, const uint8_t parameterIndex, void *payload)
 {
     propertiesCommon *parameter = paramDefinitions[parameterIndex];
     requestOrigin = origin;
+    uint8_t parameterArg = *((uint8_t *)payload);
 
     switch (parameterType)
     {
     case CRSF_FRAMETYPE_PARAMETER_WRITE:
         if (parameterIndex < MAX_CRSF_PARAMETERS && paramCallbacks[parameterIndex])
         {
-            DBGLN("Set parameter [%s]=%u", parameter->name, parameterArg);
+            uint8_t *argBytes = (uint8_t*)payload;
+            int32_t arg = 0;
+            switch (parameter->type)
+            {
+                case CRSF_UINT32:
+                case CRSF_INT32:
+                    arg = (argBytes[0] << 24) | (argBytes[1] << 16) | (argBytes[2] << 8) | argBytes[3];
+                    if (parameter->type == CRSF_INT32) arg = (int32_t)arg;
+                    break;
+                case CRSF_UINT16:
+                case CRSF_INT16:
+                    arg = (argBytes[0] << 8) | argBytes[1];
+                    if (parameter->type == CRSF_INT16) arg = (int16_t)arg;
+                    break;
+                case CRSF_UINT8:
+                case CRSF_INT8:
+                default:
+                    arg = argBytes[0];
+                    if (parameter->type == CRSF_INT8) arg = (int8_t)arg;
+                    break;
+            }
+            DBGLN("Set parameter [%s]=%u", parameter->name, arg);
+
             // While the command is executing, the handset will send `WRITE state=lcsQuery`.
             // paramCallbacks will set the value when nextStatusChunk == 0, or send any
             // remaining chunks when nextStatusChunk != 0
@@ -316,7 +339,7 @@ void CRSFEndpoint::parameterUpdateReq(const crsf_addr_e origin, const bool isElr
             }
             else
             {
-                paramCallbacks[parameterIndex](parameter, parameterArg);
+                paramCallbacks[parameterIndex](parameter, arg);
             }
         }
         break;
