@@ -2090,6 +2090,8 @@ void setup()
         // pre-initialise serial must be done before anything as some libs write
         // to the serial port and they'll block if the buffer fills
         #if defined(DEBUG_LOG)
+        Serial.setTx(GPIO_PIN_RCSIGNAL_TX);
+        Serial.setRx(GPIO_PIN_RCSIGNAL_RX);
         Serial.begin(serialBaud);
         SerialLogger = &Serial;
         #else
