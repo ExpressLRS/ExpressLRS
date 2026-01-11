@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <unity.h>
@@ -21,9 +22,13 @@ public:
 
     // mock class helper methods
     void fireDevicePacket() { sendDeviceInformationPacket(); }
-    void sendParamUpdateReq(crsf_addr_e destAddr, uint8_t paramId, uint8_t paramValue, uint8_t paramValue2)
+    void sendParamUpdateReq(crsf_addr_e destAddr, uint8_t paramId, uint8_t paramIndex, uint32_t value, uint8_t valueSize)
     {
-        parameterUpdateReq(destAddr, false, paramId, paramValue, paramValue2);
+        assert(valueSize > 0 && valueSize <= 4);
+        uint8_t payload[4] = {0};
+        for (size_t i = 0; i < valueSize; ++i)
+            payload[i] = static_cast<uint8_t>((value >> ((valueSize - 1 - i) * 8)) & 0xFF);
+        parameterUpdateReq(destAddr, false, paramId, paramIndex, payload);
     }
 } crsfEndpoint;
 
@@ -70,7 +75,7 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(22, DEVICE_INFORMATION_PAYLOAD_LENGTH);
     TEST_ASSERT_EQUAL(28, DEVICE_INFORMATION_LENGTH);
 
-    crsfEndpoint.sendParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, 0, 0, 0);
+    crsfEndpoint.sendParamUpdateReq(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_PING, 0, 0, 1);
     crsfEndpoint.fireDevicePacket();
 
     crsf_ext_header_t *header = (crsf_ext_header_t *) connector.data.data();
