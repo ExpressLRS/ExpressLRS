@@ -567,7 +567,12 @@ void ICACHE_RAM_ATTR SendRCdataToRF()
     {
       OtaPackAirportData(&otaPkt, &apInputBuffer);
     }
-    else if ((NextPacketIsDataUl && DataUlSender.IsActive()) || dontSendChannelData)
+    /* When in MAVLink standalone mode, force DATA packets in every OTA slot so
+     * the link is dedicated to telemetry/MAVLink (100% telemetry).
+     * This suppresses RC packets for the duration that the TX advertises MAVLink mode.
+     */
+    else if ((config.GetLinkMode() == TX_MAVLINK_MODE) || ((NextPacketIsDataUl && DataUlSender.IsActive()) || dontSendChannelData))    
+    //else if ((NextPacketIsDataUl && DataUlSender.IsActive()) || dontSendChannelData)
     {
       otaPkt.std.type = PACKET_TYPE_DATA;
       if (OtaIsFullRes)
