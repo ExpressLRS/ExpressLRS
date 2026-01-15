@@ -1,5 +1,6 @@
 #include "TXModuleEndpoint.h"
 
+#include "rxtx_intf.h"
 #include "CRSFHandset.h"
 #include "CRSFRouter.h"
 #include "FHSS.h"
@@ -7,9 +8,8 @@
 #include "POWERMGNT.h"
 #include "config.h"
 #include "helpers.h"
+#include "deferred.h"
 #include "msptypes.h"
-
-uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
 
 #define STR_LUA_ALLAUX         "AUX1;AUX2;AUX3;AUX4;AUX5;AUX6;AUX7;AUX8;AUX9;AUX10"
 
@@ -40,7 +40,6 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 #define HAS_RADIO (GPIO_PIN_SCK != UNDEF_PIN)
 
 extern char backpackVersion[];
-extern TXModuleEndpoint crsfTransmitter;
 
 #if defined(Regulatory_Domain_EU_CE_2400)
 #if defined(RADIO_LR1121)
@@ -323,7 +322,7 @@ extern TxConfig config;
 extern void VtxTriggerSend();
 extern void ResetPower();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
-extern void SetSyncSpam();
+extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
 extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
@@ -402,7 +401,7 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 }
 
 void TXModuleEndpoint::updateModelID() {
-  itoa(crsfTransmitter.modelId, modelMatchUnit+6, 10);
+  itoa(modelId, modelMatchUnit+6, 10);
   strcat(modelMatchUnit, ")");
 }
 
@@ -636,6 +635,103 @@ static void updateFolderName_VtxAdmin()
   }
 }
 
+void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
+{
+  if (idx >= RATE_MAX)
+    return;
+
+  uint8_t actualRate = adjustPacketRateForBaud(idx);
+  // No change, don't do anything
+  if (actualRate == ExpressLRS_currAirRate_Modparams->index)
+    return;
+
+  const auto newModParams = get_elrs_airRateConfig(actualRate);
+  uint8_t newSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)config.GetSwitchMode(), newModParams->PayloadLength);
+  // Force Gemini when using dual band modes.
+  uint8_t newAntennaMode = (newModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL) ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
+  // If the switch mode is going to change, block the change while connected
+  bool isDisconnected = connectionState == disconnected;
+  // Don't allow the switch mode to change if the TX is in mavlink mode
+  // Wide switch mode is not compatible with mavlink, and the switch mode is
+  // autoconfigured when entering mavlink mode
+  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+  if (forceChange || (newSwitchMode == OtaSwitchModeCurrent) || (isDisconnected && !isMavlinkMode))
+  {
+    // This must be deferred because this can be called from any thread.
+    // Deferring it forces it to run in the main loop, which otherwise
+    // would cause a race condition with the syncspam needing to get out
+    // before the rate change
+    deferExecutionMillis(10, [actualRate, newSwitchMode, newAntennaMode]() {
+      config.SetRate(actualRate);
+      config.SetSwitchMode(newSwitchMode);
+      config.SetAntennaMode(newAntennaMode);
+      SetSyncSpam();
+    });
+    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, actualRate != idx);
+    // No need to set OtaSerializers, the rate is changing so all of that will be reconfigured
+  } else {
+    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+  }
+}
+
+void TXModuleEndpoint::SetSwitchMode(uint8_t idx)
+{
+  // Only allow changing switch mode when disconnected since we need to guarantee
+  // the pack and unpack functions are matched
+  bool isDisconnected = connectionState == disconnected;
+  // Don't allow the switch mode to change if the TX is in mavlink mode
+  // Wide switchmode is not compatible with mavlink, and the switchmode is
+  // auto-configured when entering mavlink mode
+  bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+  if (isDisconnected && !isMavlinkMode)
+  {
+    config.SetSwitchMode(idx);
+    OtaUpdateSerializers((OtaSwitchMode_e)idx, ExpressLRS_currAirRate_Modparams->PayloadLength);
+  }
+  else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
+  {
+    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
+  }
+}
+
+void TXModuleEndpoint::SetAntennaMode(uint8_t idx)
+{
+  // Force Gemini when using dual band modes.
+  uint8_t newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : idx;
+  config.SetAntennaMode(newAntennaMode);
+}
+
+void TXModuleEndpoint::SetTlmRatio(uint8_t idx)
+{
+  const auto eRatio = (expresslrs_tlm_ratio_e)idx;
+  if (eRatio <= TLM_RATIO_DISARMED)
+  {
+    const bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
+    // Don't allow TLM ratio changes if using AIRPORT or Mavlink
+    if (!firmwareOptions.is_airport && !isMavlinkMode)
+    {
+      config.SetTlm(eRatio);
+      // Update the telemetry ratio immediately, rather than wait the agonizing 5 seconds for the next sync
+      SetSyncSpam();
+    }
+  }
+}
+
+void TXModuleEndpoint::SetPowerMax(uint8_t idx)
+{
+  config.SetPower(idx);
+  if (!config.IsModified())
+  {
+      ResetPower();
+  }
+}
+
+void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
+{
+  config.SetDynamicPower(idx > 0);
+  config.SetBoostChannel((idx - 1) > 0 ? idx - 1 : 0);
+}
+
 /***
  * @brief: Update the dynamic strings used for folder names and labels
  ***/
@@ -726,7 +822,7 @@ void TXModuleEndpoint::registerParameters()
       strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
     }
 
-    registerParameter(&luaRFBand, [](propertiesCommon *item, uint8_t arg) {
+    registerParameter(&luaRFBand, [this](propertiesCommon *item, uint8_t arg) {
       if (arg != rfMode)
       {
         // Choose the fastest supported packet rate in this RF band.
@@ -738,17 +834,17 @@ void TXModuleEndpoint::registerParameters()
             const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
             if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
             {
-              config.SetRate(i);
+              SetPacketRateIdx(i, true);
               break;
             }
             if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
             {
-              config.SetRate(i);
+              SetPacketRateIdx(i, true);
               break;
             }
             if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
             {
-              config.SetRate(i);
+              SetPacketRateIdx(i, true);
               break;
             }
           }
@@ -758,72 +854,22 @@ void TXModuleEndpoint::registerParameters()
     });
 #endif
     registerParameter(&luaAirRate, [this](propertiesCommon *item, uint8_t arg) {
-      if (arg < RATE_MAX)
-      {
-        uint8_t selectedRate = RATE_MAX - 1 - arg;
-        uint8_t actualRate = adjustPacketRateForBaud(selectedRate);
-        uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-          (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
-        // If the switch mode is going to change, block the change while connected
-        bool isDisconnected = connectionState == disconnected;
-        // Don't allow the switch mode to change if the TX is in mavlink mode
-        // Wide switch mode is not compatible with mavlink, and the switch mode is
-        // autoconfigured when entering mavlink mode
-        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-        if (newSwitchMode == OtaSwitchModeCurrent || (isDisconnected && !isMavlinkMode))
-        {
-          config.SetRate(actualRate);
-          config.SetSwitchMode(newSwitchMode);
-          if (actualRate != selectedRate)
-          {
-            setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, true);
-          }
-        }
-        else
-        {
-          setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-        }
-      }
+      uint8_t selectedRate = RATE_MAX - 1 - arg;
+      SetPacketRateIdx(selectedRate, true);
     });
-    registerParameter(&luaTlmRate, [](propertiesCommon *item, uint8_t arg) {
-      const auto eRatio = (expresslrs_tlm_ratio_e)arg;
-      if (eRatio <= TLM_RATIO_DISARMED)
-      {
-          const bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-        // Don't allow TLM ratio changes if using AIRPORT or Mavlink
-        if (!firmwareOptions.is_airport && !isMavlinkMode)
-        {
-          config.SetTlm(eRatio);
-        }
-      }
+    registerParameter(&luaTlmRate, [this](propertiesCommon *item, uint8_t arg) {
+      SetTlmRatio(arg);
     });
     if (!firmwareOptions.is_airport)
     {
       registerParameter(&luaSwitch, [this](propertiesCommon *item, uint8_t arg) {
-        // Only allow changing switch mode when disconnected since we need to guarantee
-        // the pack and unpack functions are matched
-        bool isDisconnected = connectionState == disconnected;
-        // Don't allow the switch mode to change if the TX is in mavlink mode
-        // Wide switchmode is not compatible with mavlink, and the switchmode is
-        // auto-configured when entering mavlink mode
-        bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-        if (isDisconnected && !isMavlinkMode)
-        {
-          config.SetSwitchMode(arg);
-          OtaUpdateSerializers((OtaSwitchMode_e)arg, ExpressLRS_currAirRate_Modparams->PayloadLength);
-        }
-        else if (!isMavlinkMode) // No need to display warning as no switch change can be made while in Mavlink mode.
-        {
-          setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
-        }
+        SetSwitchMode(arg);
       });
     }
     if (isDualRadio())
     {
-      registerParameter(&luaAntenna, [](propertiesCommon *item, uint8_t arg) {
-        // Force Gemini when using dual band modes.
-        uint8_t newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : arg;
-        config.SetAntennaMode(newAntennaMode);
+      registerParameter(&luaAntenna, [this](propertiesCommon *item, uint8_t arg) {
+        SetAntennaMode(arg);
       });
     }
     registerParameter(&luaLinkMode, [this](propertiesCommon *item, uint8_t arg) {
@@ -851,7 +897,7 @@ void TXModuleEndpoint::registerParameters()
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
           msp.addByte(MSP_ELRS_MODEL_ID);
-          msp.addByte(newModelMatch ? crsfTransmitter.modelId : 0xff);
+          msp.addByte(newModelMatch ? modelId : 0xff);
           crsfRouter.AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
         }
         updateModelID();
@@ -861,16 +907,11 @@ void TXModuleEndpoint::registerParameters()
     // POWER folder
     registerParameter(&luaPowerFolder);
     filterOptions(&luaPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
-    registerParameter(&luaPower, [](propertiesCommon *item, uint8_t arg) {
-      config.SetPower((PowerLevels_e)constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
-      if (!config.IsModified())
-      {
-          ResetPower();
-      }
+    registerParameter(&luaPower, [this](propertiesCommon *item, uint8_t arg) {
+      SetPowerMax(constrain(arg + POWERMGNT::getMinPower(), POWERMGNT::getMinPower(), POWERMGNT::getMaxPower()));
     }, luaPowerFolder.common.id);
-    registerParameter(&luaDynamicPower, [](propertiesCommon *item, uint8_t arg) {
-      config.SetDynamicPower(arg > 0);
-      config.SetBoostChannel((arg - 1) > 0 ? arg - 1 : 0);
+    registerParameter(&luaDynamicPower, [this](propertiesCommon *item, uint8_t arg) {
+      SetDynamicPower(arg);
     }, luaPowerFolder.common.id);
   }
   if (GPIO_PIN_FAN_EN != UNDEF_PIN || GPIO_PIN_FAN_PWM != UNDEF_PIN) {

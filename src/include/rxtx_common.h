@@ -1,7 +1,7 @@
 #pragma once
 
 #include "targets.h"
-#include "common.h"
+#include "rxtx_intf.h"
 #include "config.h"
 #include "FHSS.h"
 #include "helpers.h"
