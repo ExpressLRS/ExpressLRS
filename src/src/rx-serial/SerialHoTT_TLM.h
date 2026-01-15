@@ -39,8 +39,8 @@
 #define HOTT_VSPD_OFFSET 30000
 #define HOTT_CELL_SCALE 20
 #define HOTT_VOLT_SCALE 100
-#define HOTT_SPEED_SCALE_EAM 10
-#define HOTT_SPEED_SCALE_GAM 20
+#define HOTT_SPEED_SCALE_1_1 10
+#define HOTT_SPEED_SCALE_1_2 20
 
 //
 // GAM data frame data structure
