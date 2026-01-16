@@ -138,7 +138,7 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
         }
         else
         {
-            armCmd = status & CRSF_CHANNELS_STATUS_ARMED;   // status byte present and ArM using Switch selected
+            armCmd = status & CRSF_CHANNELS_STATUS_ARMED;   // status byte present and Arm using Switch selected
         }
     }
 
