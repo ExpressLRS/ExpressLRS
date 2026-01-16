@@ -35,7 +35,7 @@ static uint32_t lastPTRValidTimeMs;
 
 #include "hwTimer.h"
 
-[[noreturn]] static void startPassthrough(const bool useUSBSerial = false)
+[[noreturn]] static void startPassthrough(const bool useUSBSerial)
 {
     // stop everything
     devicesStop();
@@ -137,7 +137,7 @@ void checkBackpackUpdate()
     {
         if (GPIO_PIN_BACKPACK_EN != UNDEF_PIN && debouncedRead(GPIO_PIN_BOOT0) == 0)
         {
-            startPassthrough();
+            startPassthrough(false);
         }
 #if defined(PLATFORM_ESP32_S3)
         // Start passthrough mode if an Espressif resync packet is detected on the USB port
