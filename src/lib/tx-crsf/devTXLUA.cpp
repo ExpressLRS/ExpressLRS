@@ -2,8 +2,6 @@
 #include "common.h"
 #include "device.h"
 
-extern TXModuleEndpoint crsfTransmitter;
-
 static int event()
 {
   if (connectionState < FAILURE_STATES)

@@ -34,6 +34,13 @@ public:
 
     uint8_t modelId = 0; // The model ID as received from the Transmitter
 
+    // Config change helpers
+    void SetPacketRateIdx(uint8_t idx, bool forceChange);
+    void SetSwitchMode(uint8_t idx);
+    void SetAntennaMode(uint8_t idx);
+    void SetTlmRatio(uint8_t idx);
+    void SetPowerMax(uint8_t idx);
+    void SetDynamicPower(uint8_t idx);
 protected:
     void devicePingCalled() override;
     void updateModelID();
@@ -54,5 +61,7 @@ private:
     void updateTlmBandwidth();
     void updateBackpackOpts();
 };
+
+extern TXModuleEndpoint crsfTransmitter;
 
 #endif //TX_MODULE_ENDPOINT_H

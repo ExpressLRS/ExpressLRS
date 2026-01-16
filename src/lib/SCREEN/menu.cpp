@@ -1,7 +1,7 @@
 #include "OLED/oleddisplay.h"
 #include "TFT/tftdisplay.h"
 
-#include "common.h"
+#include "TXModuleEndpoint.h"
 #include "config.h"
 #include "helpers.h"
 #include "logging.h"
@@ -22,7 +22,6 @@ extern bool VRxBackpackWiFiReadyToSend;
 extern void VtxTriggerSend();
 extern void ResetPower();
 extern void setWifiUpdateMode();
-extern void SetSyncSpam();
 extern uint8_t adjustPacketRateForBaud(uint8_t rate);
 extern uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSize);
 
@@ -229,49 +228,17 @@ static void saveValueIndex(bool init)
     auto val = values_index;
     switch (state_machine.getParentState())
     {
-        case STATE_PACKET: {
-            uint8_t actualRate = adjustPacketRateForBaud(val);
-            uint8_t newSwitchMode = adjustSwitchModeForAirRate(
-                (OtaSwitchMode_e)config.GetSwitchMode(), get_elrs_airRateConfig(actualRate)->PayloadLength);
-            // Force Gemini when using dual band modes.
-            uint8_t newAntennaMode = get_elrs_airRateConfig(actualRate)->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
-            // If the switch mode is going to change, block the change while connected
-            if (newSwitchMode == OtaSwitchModeCurrent || connectionState == disconnected)
-            {
-                deferExecutionMillis(100, [actualRate, newSwitchMode, newAntennaMode](){
-                    config.SetRate(actualRate);
-                    config.SetSwitchMode(newSwitchMode);
-                    config.SetAntennaMode(newAntennaMode);
-                    OtaUpdateSerializers((OtaSwitchMode_e)newSwitchMode, ExpressLRS_currAirRate_Modparams->PayloadLength);
-                    SetSyncSpam();
-                });
-            }
+        case STATE_PACKET:
+            crsfTransmitter.SetPacketRateIdx(val, false);
             break;
-        }
-        case STATE_SWITCH: {
-            // Only allow changing switch mode when disconnected since we need to guarantee
-            // the pack and unpack functions are matched
-            if (connectionState == disconnected)
-            {
-                deferExecutionMillis(100, [val](){
-                    config.SetSwitchMode(val);
-                    OtaUpdateSerializers((OtaSwitchMode_e)val, ExpressLRS_currAirRate_Modparams->PayloadLength);
-                    SetSyncSpam();
-                });
-            }
+        case STATE_SWITCH:
+            crsfTransmitter.SetSwitchMode(val);
             break;
-        }
-        case STATE_ANTENNA: {
-            // Force Gemini when using dual band modes.
-            int newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : values_index;
-            config.SetAntennaMode(newAntennaMode);
+        case STATE_ANTENNA:
+            crsfTransmitter.SetAntennaMode(val);
             break;
-        }
         case STATE_TELEMETRY:
-            deferExecutionMillis(100, [val](){
-                config.SetTlm(val);
-                SetSyncSpam();
-            });
+            crsfTransmitter.SetTlmRatio(val);
             break;
         case STATE_POWERSAVE:
             config.SetMotionMode(values_index);
@@ -281,15 +248,10 @@ static void saveValueIndex(bool init)
             break;
 
         case STATE_POWER_MAX:
-            config.SetPower(values_index);
-            if (!config.IsModified())
-            {
-                ResetPower();
-            }
+            crsfTransmitter.SetPowerMax(val);
             break;
         case STATE_POWER_DYNAMIC:
-            config.SetDynamicPower(values_index > 0);
-            config.SetBoostChannel((values_index - 1) > 0 ? values_index - 1 : 0);
+            crsfTransmitter.SetDynamicPower(val);
             break;
 
         case STATE_VTX_BAND:
