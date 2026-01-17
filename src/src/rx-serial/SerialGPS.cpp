@@ -61,7 +61,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL) {
             int32_t degrees = atoi(ptr) / 100;
             char minutes[20];
-            strncpy(minutes, ptr + 2, 19);
+            ptr = strchr(ptr, '.') - 2;
+            strncpy(minutes, ptr, 19);
             int32_t minutesPart = parseDecimalToScaled(minutes, 10000000) / 60;
             
             gpsData.lat = degrees * 10000000 + minutesPart;
@@ -77,7 +78,8 @@ void SerialGPS::processSentence(uint8_t *sentence, uint8_t size)
         if (ptr != NULL) {
             int32_t degrees = atoi(ptr) / 100;
             char minutes[20];
-            strncpy(minutes, ptr + 2, 19);
+            ptr = strchr(ptr, '.') - 2;
+            strncpy(minutes, ptr, 19);
             int32_t minutesPart = parseDecimalToScaled(minutes, 10000000) / 60;
             
             gpsData.lon = degrees * 10000000 + minutesPart;
