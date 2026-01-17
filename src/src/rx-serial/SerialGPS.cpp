@@ -29,7 +29,7 @@ int32_t parseDecimalToScaled(const char* str, int32_t scale) {
         }
 
         // Process up to scaleDecimals digits
-        for (int i = 0; i < scaleDecimals && dec[i]; i++) {
+        for (int i = 0; i < scaleDecimals && dec[i] >= '0' && dec[i] <= '9'; i++) {
             decimalPart = decimalPart * 10 + (dec[i] - '0');
             divisor *= 10;
         }
