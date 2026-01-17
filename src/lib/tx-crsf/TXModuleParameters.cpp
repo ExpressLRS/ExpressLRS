@@ -798,60 +798,64 @@ static void recalculatePacketRateOptions(int minInterval)
 
 void TXModuleEndpoint::registerParameters()
 {
-    setStringValue(&luaInfo, luaBadGoodString);
+  setStringValue(&luaInfo, luaBadGoodString);
 
-    auto wifiBleCallback = [&](propertiesCommon *item, const uint8_t arg) { handleWifiBle(item, arg); };
-    auto sendCallback = [&](propertiesCommon *item, const uint8_t arg) { handleSimpleSendCmd(item, arg); };
+  auto wifiBleCallback = [&](propertiesCommon *item, const uint8_t arg) { handleWifiBle(item, arg); };
+  auto sendCallback = [&](propertiesCommon *item, const uint8_t arg) { handleSimpleSendCmd(item, arg); };
 
-    if (HAS_RADIO) {
+  if (HAS_RADIO) {
 #if defined(RADIO_LR1121)
-    // Copy the frequency part out of the domain to the display string
-    char *bands = luastrRFBands;
-    for (const char *domain = FHSSconfig->domain; *domain ; domain++)
+    // Only allow selection of the band if both bands have power values defined
+    if (POWER_OUTPUT_VALUES_DUAL_COUNT != 0 && POWER_OUTPUT_VALUES_DUAL_COUNT != 0)
     {
-      if (isdigit(*domain))
+      // Copy the frequency part out of the domain to the display string
+      char *bands = luastrRFBands;
+      for (const char *domain = FHSSconfig->domain; *domain ; domain++)
       {
-        *bands++ = *domain;
-      }
-    }
-    *bands = '\0';
-    strlcat(luastrRFBands, "MHz;2.4GHz", sizeof(luastrRFBands));
-    // Only double LR1121 supports Dual Band modes
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-      strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
-    }
-
-    registerParameter(&luaRFBand, [this](propertiesCommon *item, uint8_t arg) {
-      if (arg != rfMode)
-      {
-        // Choose the fastest supported packet rate in this RF band.
-        rfMode = static_cast<RFMode>(arg);
-        for (int i=0; i < RATE_MAX ; i++)
+        if (isdigit(*domain))
         {
-          if (isSupportedRFRate(i))
+          *bands++ = *domain;
+        }
+      }
+      *bands = '\0';
+      strlcat(luastrRFBands, "MHz;2.4GHz", sizeof(luastrRFBands));
+      // Only double LR1121 supports Dual Band modes
+      if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+      {
+        strlcat(luastrRFBands, ";X-Band", sizeof(luastrRFBands));
+      }
+
+      registerParameter(&luaRFBand, [this](propertiesCommon *item, uint8_t arg) {
+        if (arg != rfMode)
+        {
+          // Choose the fastest supported packet rate in this RF band.
+          rfMode = static_cast<RFMode>(arg);
+          for (int i=0; i < RATE_MAX ; i++)
           {
-            const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
-            if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
+            if (isSupportedRFRate(i))
             {
-              SetPacketRateIdx(i, true);
-              break;
-            }
-            if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
-            {
-              SetPacketRateIdx(i, true);
-              break;
-            }
-            if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
-            {
-              SetPacketRateIdx(i, true);
-              break;
+              const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
+              if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
+              {
+                SetPacketRateIdx(i, true);
+                break;
+              }
+              if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
+              {
+                SetPacketRateIdx(i, true);
+                break;
+              }
+              if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+              {
+                SetPacketRateIdx(i, true);
+                break;
+              }
             }
           }
+          recalculatePacketRateOptions(handset->getMinPacketInterval());
         }
-        recalculatePacketRateOptions(handset->getMinPacketInterval());
-      }
-    });
+      });
+    }
 #endif
     registerParameter(&luaAirRate, [this](propertiesCommon *item, uint8_t arg) {
       uint8_t selectedRate = RATE_MAX - 1 - arg;
