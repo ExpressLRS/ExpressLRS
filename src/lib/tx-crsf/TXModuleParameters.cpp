@@ -806,7 +806,7 @@ void TXModuleEndpoint::registerParameters()
   if (HAS_RADIO) {
 #if defined(RADIO_LR1121)
     // Only allow selection of the band if both bands have power values defined
-    if (POWER_OUTPUT_VALUES_DUAL_COUNT != 0 && POWER_OUTPUT_VALUES_DUAL_COUNT != 0)
+    if (POWER_OUTPUT_VALUES_COUNT != 0 && POWER_OUTPUT_VALUES_DUAL_COUNT != 0)
     {
       // Copy the frequency part out of the domain to the display string
       char *bands = luastrRFBands;
