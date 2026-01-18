@@ -842,6 +842,8 @@ void RxConfig::Load()
         case 9: // fallthrough
         case 10:
             UpgradeEepromV9V10(version); break;
+        case 11:
+            UpgradeEepromV11(); break;
     }
     m_modified = EVENT_CONFIG_MODEL_CHANGED; // anything to force write
     Commit();
@@ -1037,6 +1039,16 @@ void RxConfig::UpgradeEepromV9V10(uint8_t ver)
     }
     for (unsigned ch=0; ch<16; ++ch)
         PwmConfigV9(&old.pwmChannels[ch], &m_config.pwmChannels[ch]);
+}
+
+void RxConfig::UpgradeEepromV11()
+{
+    // Servo limits upgrade
+    for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch) {
+        // We're adding servo limits, set sane defaults
+        m_config.pwmLimits[ch].val.min = 885; // allow extended range
+        m_config.pwmLimits[ch].val.max = 2135; // allow extended range
+    }
 }
 
 /**
@@ -1247,6 +1259,7 @@ RxConfig::SetDefaults(bool commit)
         const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN :
                                             CHANNEL_VALUE_FS_US_MID - CHANNEL_VALUE_FS_US_MIN; // ch2 is throttle, failsafe it to 880
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
+        SetPwmChannelLimits(ch, 885, 2135);
     }
 
     m_config.teamraceChannel = AUX7; // CH11
@@ -1301,6 +1314,38 @@ RxConfig::SetPwmChannelRaw(uint8_t ch, uint32_t raw)
 
     pwm->raw = raw;
     m_modified = EVENT_CONFIG_PWM_CHANGE;
+}
+
+void
+RxConfig::SetPwmChannelLimits(uint8_t ch, uint16_t min, uint16_t max)
+{
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_limits_t *limits = &m_config.pwmLimits[ch];
+    rx_config_pwm_limits_t new_limits;
+    new_limits.val.min = min;
+    new_limits.val.max = max;
+
+    if (limits->raw == new_limits.raw)
+        return;
+
+    limits->raw = new_limits.raw;
+    m_modified = true;
+}
+
+void
+RxConfig::SetPwmChannelLimitsRaw(uint8_t ch, uint32_t raw)
+{
+    if (ch > PWM_MAX_CHANNELS)
+        return;
+
+    rx_config_pwm_limits_t *limits = &m_config.pwmLimits[ch];
+    if (limits->raw == raw)
+        return;
+
+    limits->raw = raw;
+    m_modified = true;
 }
 
 void
