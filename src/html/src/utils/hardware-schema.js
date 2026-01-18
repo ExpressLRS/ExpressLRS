@@ -153,7 +153,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)'
             },
             /* /FEATURE: NOT HAS_SX127X */
-            /* FEATURE: HAS_SX127X */
+            /* FEATURE: NOT HAS_SX128X */
             {
                 id: 'radio_rfo_hf',
                 label: 'RFO_HF enabled',
@@ -161,7 +161,7 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
-            /* /FEATURE: HAS_SX127X */
+            /* /FEATURE: NOT HAS_SX128X */
             /* FEATURE: HAS_LR1121 */
             {
                 id: 'radio_rfsw_ctrl',
