@@ -171,6 +171,30 @@ static selectionParameter luaMappingInverted = {
     STR_EMPTYSPACE
 };
 
+static int16Parameter luaMappingLimitMin = {
+    { "Limit Min", CRSF_INT16 },
+    {
+        {
+            htobe16(1500),
+            htobe16(CHANNEL_VALUE_FS_US_MIN),
+            htobe16(CHANNEL_VALUE_FS_US_MAX),
+        }
+    },
+    STR_US,
+};
+
+static int16Parameter luaMappingLimitMax = {
+    { "Limit Max", CRSF_INT16 },
+    {
+        {
+            htobe16(1500),
+            htobe16(CHANNEL_VALUE_FS_US_MIN),
+            htobe16(CHANNEL_VALUE_FS_US_MAX),
+        }
+    },
+    STR_US,
+};
+
 static commandParameter luaSetFailsafe = {
     {"Set Failsafe Pos", CRSF_COMMAND},
     lcsIdle, // step
@@ -370,9 +394,12 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
     // update the related fields to represent the selected channel
     const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
     setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
     setTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
     setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+    setUint16Value(&luaMappingLimitMin, limits->val.min);
+    setUint16Value(&luaMappingLimitMax, limits->val.max);
 }
 
 static void luaparamMappingChannelIn(propertiesCommon *item, uint8_t arg)
@@ -449,6 +476,28 @@ static void luaparamMappingInverted(propertiesCommon *item, uint8_t arg)
   newPwmCh.val.inverted = arg;
 
   config.SetPwmChannelRaw(ch, newPwmCh.raw);
+}
+
+static void luaparamMappingLimitMin(propertiesCommon *item, uint16_t arg)
+{
+  UNUSED(item);
+  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+  rx_config_pwm_limits_t newLimits;
+  newLimits.raw = config.GetPwmChannelLimits(ch)->raw;
+  newLimits.val.min = arg;
+
+  config.SetPwmChannelLimitsRaw(ch, newLimits.raw);
+}
+
+static void luaparamMappingLimitMax(propertiesCommon *item, uint16_t arg)
+{
+  UNUSED(item);
+  const uint8_t ch = luaMappingChannelOut.properties.u.value - 1;
+  rx_config_pwm_limits_t newLimits;
+  newLimits.raw = config.GetPwmChannelLimits(ch)->raw;
+  newLimits.val.max = arg;
+
+  config.SetPwmChannelLimitsRaw(ch, newLimits.raw);
 }
 
 void RXEndpoint::luaparamSetFailsafe(propertiesCommon *item, uint8_t arg)
@@ -559,6 +608,8 @@ void RXEndpoint::registerParameters()
     registerParameter(&luaMappingChannelIn, &luaparamMappingChannelIn, luaMappingFolder.common.id);
     registerParameter(&luaMappingOutputMode, &luaparamMappingOutputMode, luaMappingFolder.common.id);
     registerParameter(&luaMappingInverted, &luaparamMappingInverted, luaMappingFolder.common.id);
+    registerParameter(&luaMappingLimitMin, &luaparamMappingLimitMin, luaMappingFolder.common.id);
+    registerParameter(&luaMappingLimitMax, &luaparamMappingLimitMax, luaMappingFolder.common.id);
     registerParameter(&luaSetFailsafe, [&](propertiesCommon* item, uint8_t arg) {
         luaparamSetFailsafe(item, arg);
     });
@@ -618,9 +669,12 @@ void RXEndpoint::updateParameters()
   if (OPT_HAS_SERVO_OUTPUT)
   {
     const rx_config_pwm_t *pwmCh = config.GetPwmChannel(luaMappingChannelOut.properties.u.value - 1);
+    const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(luaMappingChannelOut.properties.u.value - 1);
     setUint8Value(&luaMappingChannelIn, pwmCh->val.inputChannel + 1);
     setTextSelectionValue(&luaMappingOutputMode, pwmCh->val.mode);
     setTextSelectionValue(&luaMappingInverted, pwmCh->val.inverted);
+    setUint16Value(&luaMappingLimitMin, limits->val.min);
+    setUint16Value(&luaMappingLimitMax, limits->val.max);
   }
 
   if (config.GetModelId() == 255)
