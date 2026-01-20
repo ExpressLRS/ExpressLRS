@@ -242,15 +242,15 @@ void TxConfig::Load()
                 nvs_set_u32(handle, model, Model_to_U32(newModel));
             }
 
+            if (version == TX_CONFIG_VERSION)
+            {
+                U32_to_Model(value, &m_config.model_config[i]);
+            }
+
             // validate the currently selected rate is supported by the hardware and choose an appropriate default if not
             if (!isSupportedRFRate(m_config.model_config[i].rate)) {
                 m_config.model_config[i].rate = enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ);
                 nvs_set_u32(handle, model, Model_to_U32(&m_config.model_config[i]));
-            }
-
-            if (version == TX_CONFIG_VERSION)
-            {
-                U32_to_Model(value, &m_config.model_config[i]);
             }
         }
     } // for each model
