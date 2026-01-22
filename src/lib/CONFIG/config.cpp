@@ -1256,6 +1256,16 @@ RxConfig::SetAntennaMode(uint8_t antennaMode)
 }
 
 void
+RxConfig::SetAntennaGroup(uint8_t antennaGroup)
+{
+    if (m_config.antennaGroup != antennaGroup)
+    {
+        m_config.antennaGroup = antennaGroup;
+        m_modified = EVENT_CONFIG_MODEL_CHANGED;
+    }
+}
+
+void
 RxConfig::SetDefaults(bool commit)
 {
     // Reset everything to 0/false and then just set anything that zero is not appropriate
