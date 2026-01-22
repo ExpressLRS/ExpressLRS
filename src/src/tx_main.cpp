@@ -132,10 +132,6 @@ void switchDiversityAntennas()
     diversityAntennaState = !diversityAntennaState;
     digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
   }
-  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-  {
-    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
-  }
 }
 
 void ICACHE_RAM_ATTR LinkStatsFromOta(OTA_LinkStats_s * const ls)
@@ -1321,11 +1317,6 @@ static void setupTarget()
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
     digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
-  }
-  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-  {
-    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 
   setupSerial();

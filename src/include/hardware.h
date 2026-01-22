@@ -30,7 +30,6 @@ typedef enum {
 
     // Radio Antenna
     HARDWARE_ant_ctrl,
-    HARDWARE_ant_ctrl_compl,
 
     // Radio power
     HARDWARE_power_enable,

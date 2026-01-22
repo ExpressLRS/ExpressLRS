@@ -184,13 +184,6 @@ const HARDWARE_SCHEMA = [
                 icon: 'output',
                 desc: 'Pin connected to Antenna select pin on power amplifier'
             },
-            {
-                id: 'ant_ctrl_compl',
-                label: 'CTRL_COMPL pin',
-                type: 'uint',
-                icon: 'output',
-                desc: 'Inverted CTRL for devices using antenna selectors that need separate pins for A/B selection'
-            },
         ]
     },
 
