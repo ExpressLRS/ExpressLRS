@@ -181,11 +181,20 @@ const HARDWARE_SCHEMA = [
         title: 'Radio Antenna', rows: [
             {
                 id: 'ant_ctrl',
-                label: 'CTRL pin',
+                label: 'Antenna select pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Pin connected to Antenna select pin on power amplifier'
+                desc: 'Pin connected to Antenna select pin on power amplifier or switch'
             },
+            /* FEATURE: NOT IS_TX */
+            {
+                id: 'ant_group',
+                label: 'Antenna group pin',
+                type: 'uint',
+                icon: 'output',
+                desc: 'Secondary pin connected to an antenna switch, used to select from internal/external antenna port(s) via Lua'
+            },
+            /* /FEATURE: NOT IS_TX */
         ]
     },
 
