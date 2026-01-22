@@ -206,6 +206,8 @@ static IRAM_ATTR void timer1Interrupt() {
 #else
   constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(4);
 #endif
+  // Schedule the timer this much earlier to account for time to get to the first pin flip. Should be significantly lower than DELTAIRQ_CS
+  constexpr int32_t PRESCHEDULE_CS = DELTAIRQ_CS * 3 / 8;
   // Disable the timer while in the interrupt, even though it should be one-shot anyway
   T1C = 0;
   T1I = 0;
@@ -290,7 +292,7 @@ static IRAM_ATTR void timer1Interrupt() {
 
   // cycleDeltaNextEvent should be pretty close to or above DELTAIRQ_CS
   // schedule the timer a little early to allow time to get to the pin switch code before the deadline
-  T1L = (cycleDeltaNextEvent - (DELTAIRQ_CS/4)) >> (turbo ? 1 : 0);
+  T1L = (cycleDeltaNextEvent - PRESCHEDULE_CS) >> (turbo ? 1 : 0);
   T1C = (1 << TCTE); //timer1_enable(TIM_DIV1, TIM_EDGE, TIM_SINGLE)
 }
 
