@@ -92,6 +92,13 @@ static selectionParameter luaAntennaMode = {
     STR_EMPTYSPACE
 };
 
+static selectionParameter luaAntennaGroup = {
+    {"Ant. Group", CRSF_TEXT_SELECTION},
+    0, // value
+    "u.FL;Builtin",
+    STR_EMPTYSPACE
+};
+
 static folderParameter luaTeamraceFolder = {
     {"Team Race", CRSF_FOLDER},
 };
@@ -548,6 +555,13 @@ void RXEndpoint::registerParameters()
     });
   }
 
+  if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+  {
+    registerParameter(&luaAntennaGroup, [](propertiesCommon* item, uint8_t arg){
+      config.SetAntennaGroup(arg);
+    });
+  }
+
   if (POWERMGNT::getMinPower() != POWERMGNT::getMaxPower())
   {
     filterOptions(&luaTlmPower, POWERMGNT::getMinPower(), POWERMGNT::getMaxPower(), strPowerLevels);
@@ -617,6 +631,11 @@ void RXEndpoint::updateParameters()
   if (GPIO_PIN_ANT_CTRL != UNDEF_PIN)
   {
     setTextSelectionValue(&luaAntennaMode, config.GetAntennaMode());
+  }
+
+  if (GPIO_PIN_ANT_GROUP != UNDEF_PIN)
+  {
+    setTextSelectionValue(&luaAntennaGroup, config.GetAntennaGroup());
   }
 
   if (MinPower != MaxPower)
