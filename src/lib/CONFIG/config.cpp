@@ -1001,7 +1001,7 @@ void RxConfig::UpgradeEepromV7V8(uint8_t ver)
         m_config.pwmChannels[ch].val.failsafe = toFailsafeV10(old.pwmChannels[ch].val.failsafe);
         m_config.pwmChannels[ch].val.inputChannel = old.pwmChannels[ch].val.inputChannel;
         m_config.pwmChannels[ch].val.inverted = old.pwmChannels[ch].val.inverted;
-        m_config.pwmChannels[ch].val.mode = old.pwmChannels[ch].val.mode;
+        m_config.pwmChannels[ch].val.mode = toServoOutputModeCurrent(7, old.pwmChannels[ch].val.mode);
         m_config.pwmChannels[ch].val.narrow = old.pwmChannels[ch].val.narrow;
     }
 }
