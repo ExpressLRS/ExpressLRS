@@ -90,9 +90,9 @@ protected:
      * @param isElrs Boolean indicating if this is an ELRS-specific parameter
      * @param parameterType The type of parameter being updated
      * @param parameterIndex The index of the parameter to update
-     * @param parameterArg The chunk number for multipart parameters or value for 'write' requests
+     * @param payload Pointer to the start of the parameter payload or chunk number for multipart parameters
      */
-    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, uint8_t parameterArg);
+    void parameterUpdateReq(crsf_addr_e origin, bool isElrs, uint8_t parameterType, uint8_t parameterIndex, void *payload);
 
     /**
      * Sends a command response back to the CRSF network.
