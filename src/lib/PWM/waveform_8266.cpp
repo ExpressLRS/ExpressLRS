@@ -198,16 +198,16 @@ static inline IRAM_ATTR uint32_t earliest(uint32_t a, uint32_t b) {
 #endif
 
 static IRAM_ATTR void timer1Interrupt() {
-  // Maximum delay between IRQs
-  constexpr uint32_t MAXINTERVAL_CS = microsecondsToClockCycles(10000);
+  // Maximum delay between IRQs. 25ms to guarantee no extra interrupts at 50Hz output (20ms)
+  constexpr uint32_t MAXINTERVAL_CS = microsecondsToClockCycles(25000);
   // Keep running until the next event is at least this far in the future
 #if F_CPU == 80000000
-  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(6);
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(8);
 #else
-  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(4);
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(5);
 #endif
   // Schedule the timer this much earlier to account for time to get to the first pin flip. Should be significantly lower than DELTAIRQ_CS
-  constexpr int32_t PRESCHEDULE_CS = DELTAIRQ_CS * 3 / 8;
+  constexpr int32_t PRESCHEDULE_CS = microsecondsToClockCycles(3);
   // Disable the timer while in the interrupt, even though it should be one-shot anyway
   T1C = 0;
   T1I = 0;
@@ -235,7 +235,7 @@ static IRAM_ATTR void timer1Interrupt() {
   if (wvfState.waveformEnabled) {
     // Time the loop and use it to allow an edge to happen early if another round of loops would cause it to be late
     // For 160M clock and 10 pins checked with 1 flipping, this code takes ~250 clock cyles to run so start with an estimate
-    int32_t lastLoopCs = microsecondsToClockCycles(1);
+    int32_t lastLoopCs = (wvfState.endPin - wvfState.startPin) * (40 >> (turbo ? 1 : 0));
     do {
       uint32_t loopStartCs = GetCycleCountIRQ();
       uint32_t nextEventCycle = loopStartCs + MAXINTERVAL_CS;
