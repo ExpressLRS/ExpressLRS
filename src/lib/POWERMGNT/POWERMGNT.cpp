@@ -267,7 +267,7 @@ void POWERMGNT::setPower(PowerLevels_e Power)
         dacWrite(GPIO_PIN_RFamp_APC2, SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES, powerIdx));
         #endif
     }
-    else
+    else if (POWER_OUTPUT_VALUES != nullptr)
     {
         CurrentSX1280Power = SAFE_GET_POWER_VALUE(POWER_OUTPUT_VALUES, powerIdx) + powerCaliValues[Power];
         Radio.SetOutputPower(CurrentSX1280Power);
