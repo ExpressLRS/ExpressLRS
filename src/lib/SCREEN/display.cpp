@@ -38,7 +38,16 @@ const char *Display::main_menu_strings[][2] = {
     {"VRX", "WIFI"},
 };
 
-#if defined(RADIO_SX128X)
+#if defined(RADIO_SX127X)
+static const char *rate_string[] = {
+    "200Hz",
+    "100 Full",
+    "100Hz",
+    "50Hz",
+    "25Hz",
+    "D50Hz"
+};
+#elif defined(RADIO_SX128X)
 const char *rate_string[] = {
     "F1000Hz",
     "F500Hz",
@@ -77,14 +86,31 @@ static const char *rate_string[] = {
     "X150Hz",
     "X100Full"
 };
-#else
+#elif defined(RADIO_LR2021)
 static const char *rate_string[] = {
+    // 900
+    "K1000Full",
+    "250Hz",
+    "200Full",
     "200Hz",
-    "100 Full",
+    "100Full",
     "100Hz",
     "50Hz",
     "25Hz",
-    "D50Hz"
+    "D50",
+    // 2.4
+    "K1000",
+    "DK500",
+    "DK250",
+    "500Hz",
+    "333Full",
+    "250Hz",
+    "150Hz",
+    "100Full",
+    "50Hz",
+    // Dual
+    "X150Hz",
+    "X100Full"
 };
 #endif
 

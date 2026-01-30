@@ -780,7 +780,7 @@ TxConfig::SetDefaults(bool commit)
         SetModelId(i);
         #if defined(RADIO_SX127X)
             SetRate(enumRatetoIndexSafe(RATE_LORA_900_200HZ));
-        #elif defined(RADIO_LR1121)
+        #elif defined(RADIO_LR1121) || defined(RADIO_LR2021)
             SetRate(enumRatetoIndexSafe(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ));
         #elif defined(RADIO_SX128X)
             SetRate(enumRatetoIndexSafe(RATE_LORA_2G4_250HZ));

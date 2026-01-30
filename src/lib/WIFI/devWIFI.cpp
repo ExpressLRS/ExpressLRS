@@ -509,18 +509,24 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["module-type"] = "RX";
     settings["voltage_source_count"] = getDefinedVoltageSourceCount();
 #endif
-#if defined(RADIO_SX128X)
-    settings["radio-type"] = "SX128X";
-    settings["has_low_band"] = false;
-    settings["has_high_band"] = true;
-    settings["reg_domain_high"] = FHSSconfig->domain;
-#elif defined(RADIO_SX127X)
+#if defined(RADIO_SX127X)
     settings["radio-type"] = "SX127X";
     settings["has_low_band"] = true;
     settings["has_high_band"] = false;
     settings["reg_domain_low"] = FHSSconfig->domain;
+#elif defined(RADIO_SX128X)
+    settings["radio-type"] = "SX128X";
+    settings["has_low_band"] = false;
+    settings["has_high_band"] = true;
+    settings["reg_domain_high"] = FHSSconfig->domain;
 #elif defined(RADIO_LR1121)
     settings["radio-type"] = "LR1121";
+    settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
+    settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
+    settings["reg_domain_low"] = FHSSconfig->domain;
+    settings["reg_domain_high"] = FHSSconfigDualBand->domain;
+#elif defined(RADIO_LR2021)
+    settings["radio-type"] = "LR2021";
     settings["has_low_band"] = POWER_OUTPUT_VALUES_COUNT != 0;
     settings["has_high_band"] = POWER_OUTPUT_VALUES_DUAL_COUNT != 0;
     settings["reg_domain_low"] = FHSSconfig->domain;
@@ -983,7 +989,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   if (request->hasArg("radio")) {
     SX12XX_Radio_Number_t radio = request->arg("radio").toInt() == 1 ? SX12XX_Radio_1 : SX12XX_Radio_2;
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     bool setSubGHz = false;
     setSubGHz = request->arg("subGHz").toInt() == 1;
 #endif
@@ -998,7 +1004,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     Radio.startCWTest(setSubGHz ? FHSSconfig->freq_center : FHSSconfigDualBand->freq_center, radio);
 #else
     Radio.startCWTest(FHSSconfig->freq_center, radio);
@@ -1009,7 +1015,7 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
   } else {
     int radios = (GPIO_PIN_NSS_2 == UNDEF_PIN) ? 1 : 2;
     request->send(200, "application/json", String("{\"radios\": ") + radios + ", \"center\": "+ FHSSconfig->freq_center +
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
             ", \"center2\": "+ FHSSconfigDualBand->freq_center +
 #endif
             "}");

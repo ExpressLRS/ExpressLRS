@@ -7,10 +7,12 @@
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
-#elif defined(RADIO_LR1121)
-#include "LR1121Driver.h"
 #elif defined(RADIO_SX128X)
 #include "SX1280Driver.h"
+#elif defined(RADIO_LR1121)
+#include "LR1121Driver.h"
+#elif defined(RADIO_LR2021)
+#include "LR2021Driver.h"
 #else
 #error "Radio configuration is not valid!"
 #endif
@@ -159,7 +161,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t sf;
     uint8_t cr;
     uint8_t PreambleLen;
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
     uint8_t bw2;
     uint8_t sf2;
     uint8_t cr2;
@@ -277,6 +279,12 @@ enum eAuxChannels : uint8_t
 
 extern SX127xDriver Radio;
 
+#elif defined(RADIO_SX128X)
+#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
+#define RATE_BINDING RATE_LORA_2G4_50HZ
+
+extern SX1280Driver Radio;
+
 #elif defined(RADIO_LR1121)
 #define RATE_MAX 20
 #define RATE_BINDING RATE_LORA_900_50HZ
@@ -284,11 +292,13 @@ extern SX127xDriver Radio;
 
 extern LR1121Driver Radio;
 
-#elif defined(RADIO_SX128X)
-#define RATE_MAX 10     // 2xFLRC + 2xDVDA + 4xLoRa + 2xFullRes
-#define RATE_BINDING RATE_LORA_2G4_50HZ
+#elif defined(RADIO_LR2021)
+#define RATE_MAX 20
+#define RATE_BINDING RATE_LORA_900_50HZ
+#define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 
-extern SX1280Driver Radio;
+extern LR2021Driver Radio;
+
 #endif
 #endif // UNIT_TEST
 
@@ -323,7 +333,7 @@ extern bool crsfBaroSensorDetected;
 void ChannelDataReset();
 bool isDualRadio();
 
-#if defined(RADIO_LR1121)
+#if defined(RADIO_LR1121) || defined(RADIO_LR2021)
 bool isSupportedRFRate(uint8_t index);
 #else
 inline bool isSupportedRFRate(uint8_t index) { return true; }
