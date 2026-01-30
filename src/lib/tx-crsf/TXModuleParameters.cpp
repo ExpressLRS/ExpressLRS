@@ -647,7 +647,7 @@ void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
   const auto newModParams = get_elrs_airRateConfig(actualRate);
   uint8_t newSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)config.GetSwitchMode(), newModParams->PayloadLength);
   // Force Gemini when using dual band modes.
-  uint8_t newAntennaMode = (newModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL) ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
+  uint8_t newAntennaMode = (newModParams->radio_type == RADIO_MODULATION_LORA_DUAL) ? TX_RADIO_MODE_GEMINI : config.GetAntennaMode();
   // If the switch mode is going to change, block the change while connected
   bool isDisconnected = connectionState == disconnected;
   // Don't allow the switch mode to change if the TX is in mavlink mode
@@ -696,7 +696,7 @@ void TXModuleEndpoint::SetSwitchMode(uint8_t idx)
 void TXModuleEndpoint::SetAntennaMode(uint8_t idx)
 {
   // Force Gemini when using dual band modes.
-  uint8_t newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? TX_RADIO_MODE_GEMINI : idx;
+  uint8_t newAntennaMode = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_MODULATION_LORA_DUAL ? TX_RADIO_MODE_GEMINI : idx;
   config.SetAntennaMode(newAntennaMode);
 }
 
@@ -763,15 +763,15 @@ static void recalculatePacketRateOptions(int minInterval)
             const auto radio_type = get_elrs_airRateConfig(rate)->radio_type;
             if (rfMode == RF_MODE_900)
             {
-                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900;
+                rateAllowed = radio_type == RADIO_MODULATION_GFSK_900 || radio_type == RADIO_MODULATION_LORA_900;
             }
             if (rfMode == RF_MODE_2G4)
             {
-                rateAllowed = radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4;
+                rateAllowed = radio_type == RADIO_MODULATION_GFSK_2G4 || radio_type == RADIO_MODULATION_LORA_2G4;
             }
             if (rfMode == RF_MODE_DUAL)
             {
-                rateAllowed = radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
+                rateAllowed = radio_type == RADIO_MODULATION_LORA_DUAL;
             }
         }
 #endif
@@ -834,17 +834,17 @@ void TXModuleEndpoint::registerParameters()
             if (isSupportedRFRate(i))
             {
               const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
-              if (rfMode == RF_MODE_900 && (radio_type == RADIO_TYPE_LR1121_GFSK_900 || radio_type == RADIO_TYPE_LR1121_LORA_900))
+              if (rfMode == RF_MODE_900 && (radio_type == RADIO_MODULATION_GFSK_900 || radio_type == RADIO_MODULATION_LORA_900))
               {
                 SetPacketRateIdx(i, true);
                 break;
               }
-              if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_2G4))
+              if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_MODULATION_GFSK_2G4 || radio_type == RADIO_MODULATION_LORA_2G4))
               {
                 SetPacketRateIdx(i, true);
                 break;
               }
-              if (rfMode == RF_MODE_DUAL && radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+              if (rfMode == RF_MODE_DUAL && radio_type == RADIO_MODULATION_LORA_DUAL)
               {
                 SetPacketRateIdx(i, true);
                 break;
@@ -1022,11 +1022,11 @@ void TXModuleEndpoint::updateParameters()
   // calculate RFMode from current packet-rate
   switch (get_elrs_airRateConfig(currentRate)->radio_type)
   {
-    case RADIO_TYPE_LR1121_LORA_900:
-    case RADIO_TYPE_LR1121_GFSK_900:
+    case RADIO_MODULATION_LORA_900:
+    case RADIO_MODULATION_GFSK_900:
       rfMode = RF_MODE_900;
       break;
-    case RADIO_TYPE_LR1121_LORA_DUAL:
+    case RADIO_MODULATION_LORA_DUAL:
       rfMode = RF_MODE_DUAL;
       break;
     default:
@@ -1041,7 +1041,7 @@ void TXModuleEndpoint::updateParameters()
   setTextSelectionValue(&luaTlmRate, config.GetTlm());
   luaTlmRate.options = isMavlinkMode ? tlmRatiosMav : tlmRatios;
 
-  luaAntenna.options = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_TYPE_LR1121_LORA_DUAL ? antennamodeOptsDualBand : antennamodeOpts;
+  luaAntenna.options = get_elrs_airRateConfig(config.GetRate())->radio_type == RADIO_MODULATION_LORA_DUAL ? antennamodeOptsDualBand : antennamodeOpts;
 
   setTextSelectionValue(&luaSwitch, config.GetSwitchMode());
   if (isMavlinkMode)

@@ -18,7 +18,7 @@ static uint32_t validRSSIdelayUs = 0;
 static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type)
 {
 #if defined(RADIO_LR1121)
-  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+  if (radio_type == RADIO_MODULATION_LORA_2G4 || radio_type == RADIO_MODULATION_LORA_DUAL)
   {
     switch((lr11xx_radio_lora_sf_t)SF)
     {
@@ -29,7 +29,7 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
       default: return 240;
     }
   }
-  if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
+  if (radio_type == RADIO_MODULATION_GFSK_2G4)
   {
     return 40; // 40us settling time; documentation says Twait for 467 kHz bandwidth is 30.68us
   }
@@ -51,7 +51,7 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
   // SF7 ~218us (60us + SF7 symbol time)
   // SF8 ~376us (60us + SF8 symbol time) Empirical testing shows 480us to be the sweet-spot
 
-  if (radio_type == RADIO_TYPE_SX128x_LORA)
+  if (radio_type == RADIO_MODULATION_LORA_2G4)
   {
     switch((SX1280_RadioLoRaSpreadingFactors_t)SF)
     {
@@ -62,7 +62,7 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
       default: return 480;
     }
   }
-  if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  if (radio_type == RADIO_MODULATION_FLRC_2G4)
   {
     return 60 + 20; // switching time (60us) + 20us settling time (seems fine when testing)
   }
@@ -74,7 +74,7 @@ void LbtEnableIfRequired()
 {
     LbtIsEnabled = config.GetPower() > PWR_10mW;
 #if defined(RADIO_LR1121)
-    LbtIsEnabled = LbtIsEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL);
+    LbtIsEnabled = LbtIsEnabled && (ExpressLRS_currAirRate_Modparams->radio_type == RADIO_MODULATION_LORA_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_MODULATION_GFSK_2G4 || ExpressLRS_currAirRate_Modparams->radio_type == RADIO_MODULATION_LORA_DUAL);
 #endif
     validRSSIdelayUs = SpreadingFactorToRSSIvalidDelayUs(ExpressLRS_currAirRate_Modparams->sf, ExpressLRS_currAirRate_Modparams->radio_type);
 }
@@ -88,7 +88,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
   // TODO: Maybe individual adjustment offset for differences in
   // rssi reading between bandwidth setting is also necessary when other BW than 0.8MHz are used.
 #if defined(RADIO_LR1121)
-  if (radio_type == RADIO_TYPE_LR1121_LORA_2G4 || radio_type == RADIO_TYPE_LR1121_LORA_DUAL)
+  if (radio_type == RADIO_MODULATION_LORA_2G4 || radio_type == RADIO_MODULATION_LORA_DUAL)
   {
     switch(txPower)
     {
@@ -100,7 +100,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  if (radio_type == RADIO_TYPE_LR1121_GFSK_2G4)
+  if (radio_type == RADIO_MODULATION_GFSK_2G4)
   {
     switch(txPower)
     {
@@ -113,7 +113,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
     }
   }
 #elif defined(RADIO_SX128X)
-  if (radio_type == RADIO_TYPE_SX128x_LORA)
+  if (radio_type == RADIO_MODULATION_LORA_2G4)
   {
     switch(txPower)
     {
@@ -125,7 +125,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, uint8_t
       default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  if (radio_type == RADIO_TYPE_SX128x_FLRC)
+  if (radio_type == RADIO_MODULATION_FLRC_2G4)
   {
     switch(txPower)
     {
@@ -193,7 +193,7 @@ SX12XX_Radio_Number_t ICACHE_RAM_ATTR LbtChannelIsClear(SX12XX_Radio_Number_t ra
   {
     // If using dualband, radio1 is always SubGHz and no CCA is required.
     // Leave rssiInst1=-128 so it always passes.
-    if (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_TYPE_LR1121_LORA_DUAL)
+    if (ExpressLRS_currAirRate_Modparams->radio_type != RADIO_MODULATION_LORA_DUAL)
     {
         rssiInst1 = Radio.GetRssiInst(SX12XX_Radio_1);
     }
