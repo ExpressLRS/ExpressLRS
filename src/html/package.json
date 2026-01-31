@@ -20,7 +20,19 @@
     "build:sx127x-tx-8285": "npm run clean && VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_SX127X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx127x-tx-8285.h",
     "build:sx127x-rx-8285": "npm run clean && VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX127X=true VITE_FEATURE_IS_8285=true vite build && cp dist/esp32_fs.h headers/web-sx127x-rx-8285.h",
     "build:all": "npm run build:lr1121-tx && npm run build:lr1121-rx && npm run build:sx128x-tx && npm run build:sx128x-rx && npm run build:sx127x-tx && npm run build:sx127x-rx && npm run build:sx128x-tx-8285 && npm run build:sx128x-rx-8285 && npm run build:sx127x-tx-8285 && npm run build:sx127x-rx-8285",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:tx-win": "set VITE_FEATURE_IS_TX=true && set VITE_FEATURE_HAS_LR1121=true && set VITE_FEATURE_HAS_SUBGHZ=true && vite",
+    "build:lr1121-tx-win": "npm run clean && set VITE_FEATURE_IS_TX=true  && set VITE_FEATURE_HAS_LR1121=true && vite build && copy dist\\esp32_fs.h headers\\web-lr1121-tx.h",
+    "build:lr1121-rx-win": "npm run clean && set VITE_FEATURE_IS_TX=false && set VITE_FEATURE_HAS_LR1121=true && vite build && copy dist\\esp32_fs.h headers\\web-lr1121-rx.h",
+    "build:sx128x-tx-win": "npm run clean && set VITE_FEATURE_IS_TX=true  && set VITE_FEATURE_HAS_SX128X=true && vite build && copy dist\\esp32_fs.h headers\\web-sx128x-tx.h",
+    "build:sx128x-rx-win": "npm run clean && set VITE_FEATURE_IS_TX=false && set VITE_FEATURE_HAS_SX128X=true && vite build && copy dist\\esp32_fs.h headers\\web-sx128x-rx.h",
+    "build:sx127x-tx-win": "npm run clean && set VITE_FEATURE_IS_TX=true  && set VITE_FEATURE_HAS_SX127X=true && vite build && copy dist\\esp32_fs.h headers\\web-sx127x-tx.h",
+    "build:sx127x-rx-win": "npm run clean && set VITE_FEATURE_IS_TX=false && set VITE_FEATURE_HAS_SX127X=true && vite build && copy dist\\esp32_fs.h headers\\web-sx127x-rx.h",
+    "build:sx128x-tx-8285-win": "npm run clean && set VITE_FEATURE_IS_TX=true  && set VITE_FEATURE_HAS_SX128X=true && set vite_FEATURE_IS_8285=true && vite build && copy dist\\esp32_fs.h headers\\web-sx128x-tx-8285.h",
+    "build:sx128x-rx-8285-win": "npm run clean && set VITE_FEATURE_IS_TX=false && set VITE_FEATURE_HAS_SX128X=true && set vite_FEATURE_IS_8285=true && vite build && copy dist\\esp32_fs.h headers\\web-sx128x-rx-8285.h",
+    "build:sx127x-tx-8285-win": "npm run clean && set VITE_FEATURE_IS_TX=true  && set VITE_FEATURE_HAS_SX127X=true && set vite_FEATURE_IS_8285=true && vite build && copy dist\\esp32_fs.h headers\\web-sx127x-tx-8285.h",
+    "build:sx127x-rx-8285-win": "npm run clean && set VITE_FEATURE_IS_TX=false && set VITE_FEATURE_HAS_SX127X=true && set vite_FEATURE_IS_8285=true && vite build && copy dist\\esp32_fs.h headers\\web-sx127x-rx-8285.h",
+    "build:all-win": "npm run build:lr1121-tx-win && npm run build:lr1121-rx-win && npm run build:sx128x-tx-win && npm run build:sx128x-rx-win && npm run build:sx127x-tx-win && npm run build:sx127x-rx-win && npm run build:sx128x-tx-8285-win && npm run build:sx128x-rx-8285-win && npm run build:sx127x-tx-8285-win && npm run build:sx127x-rx-8285-win"
   },
   "dependencies": {
     "@lit-app/state": "^1.0.0",
