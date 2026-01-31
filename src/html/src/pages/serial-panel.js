@@ -9,7 +9,7 @@ const PROTOCOL_AIRPORT = 10
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
-    SERIAL_OPTIONS = ["CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "MAVLINK", "DisplayPort", "GPS"]
+    SERIAL_OPTIONS = ["CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "IRC Tramp", "TBS SmartAudio", "DisplayPort", "GPS"]
 
     @state() accessor serial1Protocol
     @state() accessor serial2Protocol
