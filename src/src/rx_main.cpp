@@ -1573,8 +1573,14 @@ static void setupRadio()
     Radio.currFreq = FHSSgetInitialFreq();
 #if defined(RADIO_SX127X)
     //Radio.currSyncWord = UID[3];
-#endif
+    bool init_success = Radio.Begin();
+#elif defined(RADIO_SX128X)
+    bool init_success = Radio.Begin();
+#elif defined(RADIO_LR1121)
     bool init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#elif defined(RADIO_LR2021)
+    bool init_success = Radio.Begin(FHSSconfig->freq_center, FHSSconfigDualBand->freq_center);
+#endif
     POWERMGNT::init();
     if (!init_success)
     {

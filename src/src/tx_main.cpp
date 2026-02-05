@@ -1444,7 +1444,16 @@ void setup()
     #else
     if (GPIO_PIN_SCK != UNDEF_PIN)
     {
-      init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#if defined(RADIO_SX127X)
+        //Radio.currSyncWord = UID[3];
+        init_success = Radio.Begin();
+#elif defined(RADIO_SX128X)
+        init_success = Radio.Begin();
+#elif defined(RADIO_LR1121)
+        init_success = Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#elif defined(RADIO_LR2021)
+        init_success = Radio.Begin(FHSSconfig->freq_center, FHSSconfigDualBand->freq_center);
+#endif
     }
     else
     {

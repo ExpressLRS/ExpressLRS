@@ -999,7 +999,15 @@ static void HandleContinuousWave(AsyncWebServerRequest *request) {
     request->send(response);
 
     Radio.TXdoneCallback = [](){};
+#if defined(RADIO_SX127X)
+    Radio.Begin();
+#elif defined(RADIO_SX128X)
+    Radio.Begin();
+#elif defined(RADIO_LR1121)
     Radio.Begin(FHSSgetMinimumFreq(), FHSSgetMaximumFreq());
+#elif defined(RADIO_LR2021)
+    Radio.Begin(FHSSconfig->freq_center, FHSSconfigDualBand->freq_center);
+#endif
 
     POWERMGNT::init();
     POWERMGNT::setPower(POWERMGNT::getMinPower());

@@ -93,7 +93,7 @@ bool LR2021Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
     return true;
 }
 
-bool LR2021Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
+bool LR2021Driver::Begin(uint32_t lowBandFreq, uint32_t highBandFreq)
 {
     hal.init();
     hal.reset();
@@ -129,11 +129,13 @@ bool LR2021Driver::Begin(uint32_t minimumFrequency, uint32_t maximumFrequency)
     const uint8_t RegMode = OPT_USE_HARDWARE_DCDC ? 0x02 : 0x00;
     CHECK("LR2021_SYSTEM_SET_REGMODE_OC", hal.WriteCommand(LR2021_SYSTEM_SET_REGMODE_OC, &RegMode, 1, SX12XX_Radio_All)); // Enable DCDC converter instead of LDO
 
-    // 2.1.3.1 CalibImage
-    uint8_t CalImagebuf[2];
-    CalImagebuf[0] = ((minimumFrequency / 1000000 ) - 1) / 4;       // Freq1 = floor( (fmin_mhz - 1)/4)
-    CalImagebuf[1] = 1 + ((maximumFrequency / 1000000 ) + 1) / 4;   // Freq2 = ceil( (fmax_mhz + 1)/4)
-    hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_IMAGE_OC, CalImagebuf, sizeof(CalImagebuf), SX12XX_Radio_All);
+    // 6.4.2 Calibrate
+    constexpr uint8_t calibrate = 0x7F;
+    CHECK("LR2021_SYSTEM_CALIBRATE_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_OC, &calibrate, 1, SX12XX_Radio_All));
+
+    // 6.4.2 CalibFE
+    const uint8_t calibrateFE[]{(uint8_t)((lowBandFreq / 4000000) >> 8), (uint8_t)(lowBandFreq / 4000000), (uint8_t)(((highBandFreq / 4000000) >> 8) | 0x80), (uint8_t)(highBandFreq / 4000000)};
+    CHECK("LR2021_SYSTEM_CALIBRATE_FRONTEND_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_FRONTEND_OC, calibrateFE, sizeof(calibrateFE), SX12XX_Radio_All));
 
     return true;
 }

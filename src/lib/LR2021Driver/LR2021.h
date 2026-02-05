@@ -25,7 +25,7 @@ public:
 
     ////////////////Configuration Functions/////////////
     LR2021Driver();
-    bool Begin(uint32_t minimumFrequency, uint32_t maximumFrequency);
+    bool Begin(uint32_t lowBandFreq, uint32_t highBandFreq);
     void End();
     void SetTxIdleMode() { SetMode(LR2021_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
