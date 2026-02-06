@@ -616,14 +616,18 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 #endif
 }
 
-inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
+inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, uint8_t *buf)
 {
-    // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    const int8_t rssi = -(int8_t)(buf[useFSK ? 3 : 5] / 2);
+    if (useFSK) {
+        CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
+        CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
+    } else {
+        CHECK("LR2021_RADIO_GET_LORA_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_LORA_PACKET_STATUS_OC, radioNumber));
+        CHECK("LR2021_RADIO_GET_LORA_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
+    }
 
-    // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
-    // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
-    // rssi[i = -(int8_t)(status[3] / 2); // SignalRssiPkt
+    // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt
+    const int8_t rssi = -(int8_t)buf[useFSK ? 4 : 5];
 
     // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
