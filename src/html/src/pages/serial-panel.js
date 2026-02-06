@@ -5,13 +5,13 @@ import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js";
 
+export const SERIAL_OPTIONS1 = ["CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "MAVLink", "DisplayPort", "GPS", "AirPort"]
+export const SERIAL_OPTIONS2 = ["Off", "CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "IRC Tramp", "TBS SmartAudio", "DisplayPort", "GPS"]
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
-    SERIAL_OPTIONS1 = ["CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "MAVLink", "DisplayPort", "GPS", "AirPort"]
-    SERIAL_OPTIONS2 = ["Off", "CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "IRC Tramp", "TBS SmartAudio", "DisplayPort", "GPS"]
 
-    PROTOCOL_AIRPORT = this.SERIAL_OPTIONS1.length - 1
+    PROTOCOL_AIRPORT = SERIAL_OPTIONS1.length - 1
 
     @state() accessor serial1Protocol
     @state() accessor serial2Protocol
@@ -41,7 +41,7 @@ class SerialPanel extends LitElement {
                     ${this._hasSerial1() ? html`
                     <div class="mui-select">
                         <select name='serial-protocol' @change=${this._updateSerial1}>
-                            ${_renderOptions(this.SERIAL_OPTIONS1, this.serial1Protocol)}
+                            ${_renderOptions(SERIAL_OPTIONS1, this.serial1Protocol)}
                         </select>
                         <label>Serial 1 Protocol</label>
                     </div>
@@ -49,7 +49,7 @@ class SerialPanel extends LitElement {
                     ${this._hasSerial2() ? html`
                     <div class="mui-select">
                         <select name='serial1-protocol' @change=${this._updateSerial2}>
-                            ${_renderOptions(this.SERIAL_OPTIONS2, this.serial2Protocol)}
+                            ${_renderOptions(SERIAL_OPTIONS2, this.serial2Protocol)}
                         </select>
                         <label>Serial 2 Protocol</label>
                     </div>

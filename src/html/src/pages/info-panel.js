@@ -2,6 +2,7 @@ import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import {elrsState, formatBand} from "../utils/state.js";
 import '../assets/mui.js';
+import {SERIAL_OPTIONS1} from './serial-panel.js'
 
 @customElement('info-panel')
 class InfoPanel extends LitElement {
@@ -51,6 +52,12 @@ class InfoPanel extends LitElement {
                                 : ''}
                         ${elrsState.config['force-tlm'] !== false ?
                                 html`<tr><td><b>Force Telemetry Off</b></td><td>Enabled</td></tr>`
+                                : ''}
+                        ${elrsState.config['pwm'] === undefined && elrsState.config['serial-protocol'] !== 0 ?
+                                html`<tr><td><b>Serial Protocol</b></td><td>${SERIAL_OPTIONS1[elrsState.config['serial-protocol']]}</td></tr>`
+                                : ''}
+                        ${elrsState.config['pwm'] === undefined && elrsState.options['rcvr-uart-baud'] !== 420000 ?
+                                html`<tr><td><b>Baud Rate</b></td><td>${elrsState.options['rcvr-uart-baud']}</td></tr>`
                                 : ''}
                         <!-- /FEATURE: NOT IS_TX -->
                         <!-- FEATURE: IS_TX -->
