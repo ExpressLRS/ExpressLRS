@@ -88,7 +88,7 @@ function App.handleBack()
   if Navigation.isAtRoot() then
     Dialogs.showConfirm({
       title = "Exit",
-      message = "Exit ExpressLRS configurator?",
+      message = "Exit ExpressLRS Lua script?",
       onConfirm = function() App.shouldExit = true end
     })
   else
@@ -1213,27 +1213,7 @@ function UI.build()
     -- Normal field rendering for root (nil) or a subfolder ID
     if currentFolder == nil then
       -- Device name row at root level
-      local deviceRow = fieldContainer:rectangle({
-        w = lvgl.PERCENT_SIZE + 100,
-        thickness = 0,
-        flexFlow = lvgl.FLOW_ROW,
-        flexPad = 0
-      })
-      local deviceLabelRect = deviceRow:rectangle({
-        w = lvgl.PERCENT_SIZE + 50,
-        thickness = 0
-      })
-      deviceLabelRect:label({
-        text = "Device",
-        color = COLOR_THEME_PRIMARY1
-      })
-      local deviceValueRect = deviceRow:rectangle({
-        w = lvgl.PERCENT_SIZE + 50,
-        thickness = 0
-      })
-      deviceValueRect:label({
-        text = function() return Protocol.deviceName or "Searching..." end
-      })
+      UI.createInfoRow(fieldContainer, { name = "Device", value = Protocol.deviceName or "Searching..." })
     end
 
     local fieldsInFolder = Protocol.getFieldsInFolder(currentFolder)
