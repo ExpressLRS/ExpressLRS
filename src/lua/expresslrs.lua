@@ -70,7 +70,7 @@ function App.changeDevice(devId)
     else
       Navigation.reset()
     end
-    UI.invalidate()
+    return UI.invalidate()
   end
 end
 
@@ -79,7 +79,7 @@ function App.openFolder(folderId, folderName)
   Protocol.flushPendingSaves()
   Navigation.openFolder(folderId, folderName)
   Protocol.loadFolderChildren(folderId)
-  UI.invalidate()
+  return UI.invalidate()
 end
 
 -- Back button handler: navigate back or show exit confirmation
@@ -486,7 +486,7 @@ function Protocol.fieldGetStrOrOpts(data, offset, last, isOpts)
     end
   until b == 0
 
-  return (r or opt), offset, vcnt, collectgarbage("collect")
+  return (r or opt), offset, vcnt
 end
 
 function Protocol.fieldGetValue(data, offset, size)
@@ -526,7 +526,7 @@ end
 
 function Protocol.fieldIntLoad(field, data, offset)
   local loadFn = (field.type % 2 == 0) and fieldUnsignedLoad or fieldSignedLoad
-  loadFn(field, data, offset, math.floor(field.type / 2) + 1)
+  return loadFn(field, data, offset, math.floor(field.type / 2) + 1)
 end
 
 function Protocol.fieldFloatLoad(field, data, offset)
@@ -755,8 +755,9 @@ function Protocol.parseParameterInfoMessage(data)
       field.type = bit32.band(Protocol.fieldData[offset + 1], 0x7f)
       field.hidden = bit32.btest(Protocol.fieldData[offset + 1], 0x80) or nil
       field.name, offset = Protocol.fieldGetStrOrOpts(Protocol.fieldData, offset + 2, field.name)
-      if Protocol.handlers[field.type + 1] and Protocol.handlers[field.type + 1].load then
-        Protocol.handlers[field.type + 1].load(field, Protocol.fieldData, offset)
+      local handler = Protocol.handlers[field.type + 1]
+      if handler and handler.load then
+        handler.load(field, Protocol.fieldData, offset)
       end
       if field.min == 0 then field.min = nil end
       if field.max == 0 then field.max = nil end
@@ -1128,33 +1129,23 @@ function UI.buildFieldWidget(pg, field, folderWidth)
   local fieldType = field.type
 
   if fieldType == Protocol.CRSF.FOLDER then
-    UI.createFolderWidget(pg, field, folderWidth)
-    return
+    return UI.createFolderWidget(pg, field, folderWidth)
   end
 
   if fieldType == Protocol.CRSF.COMMAND then
-    UI.createCommandWidget(pg, field)
-    return
+    return UI.createCommandWidget(pg, field)
   end
 
   if fieldType <= Protocol.CRSF.INT16 or fieldType == Protocol.CRSF.FLOAT then
-    UI.createNumberRow(pg, field)
-    return
+    return UI.createNumberRow(pg, field)
   end
 
   if fieldType == Protocol.CRSF.TEXT_SELECTION then
-    UI.createChoiceRow(pg, field)
-    return
+    return UI.createChoiceRow(pg, field)
   end
 
-  if fieldType == Protocol.CRSF.STRING then
-    UI.createInfoRow(pg, field)
-    return
-  end
-
-  if fieldType == Protocol.CRSF.INFO then
-    UI.createInfoRow(pg, field)
-    return
+  if fieldType == Protocol.CRSF.STRING or fieldType == Protocol.CRSF.INFO then
+    return UI.createInfoRow(pg, field)
   end
 end
 
@@ -1665,6 +1656,10 @@ local function run(event, touchState)
     local currentFolder = Navigation.getCurrent()
     local folderReady = Protocol.isFolderLoaded(currentFolder)
     if folderReady and not UI.folderWasReady then
+      -- Reclaim memory from temporary tables created during field parsing.
+      -- Done once per folder load rather than per-field to avoid repeated
+      -- full GC cycles on the hot path (fieldGetStrOrOpts).
+      collectgarbage("collect")
       if UI.uiBuilt then
         UI.invalidate()
       end
