@@ -1,11 +1,10 @@
 #ifndef UNIT_TEST
 
 #include "LR2021_hal.h"
-#include "LR2021_Regs.h"
 #include "logging.h"
 #include <SPIEx.h>
 
-LR2021Hal *LR2021Hal::instance = NULL;
+LR2021Hal *LR2021Hal::instance = nullptr;
 
 LR2021Hal::LR2021Hal()
 {
@@ -69,14 +68,14 @@ void LR2021Hal::init()
     SPIEx.setFrequency(16000000);
 #endif
 
-    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), this->dioISR_1, RISING);
+    attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1), dioISR_1, RISING);
     if (GPIO_PIN_DIO1_2 != UNDEF_PIN)
     {
-        attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1_2), this->dioISR_2, RISING);
+        attachInterrupt(digitalPinToInterrupt(GPIO_PIN_DIO1_2), dioISR_2, RISING);
     }
 }
 
-void LR2021Hal::reset(bool bootloader)
+void LR2021Hal::reset(const bool bootloader)
 {
     DBGLN("LR2021 Reset");
 
@@ -120,7 +119,7 @@ void LR2021Hal::reset(bool bootloader)
     WaitOnBusy(SX12XX_Radio_All);
 }
 
-void ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, const uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(size + 2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
@@ -130,23 +129,24 @@ void ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, uint8_t *buffer, 
     memcpy(OutBuffer + 2, buffer, size);
 
     WaitOnBusy(radioNumber);
-    SPIEx.write(radioNumber, OutBuffer, size + 2);
+    SPIEx.read(radioNumber, OutBuffer, size + 2);
+    return OutBuffer[0] << 8 | OutBuffer[1];
 }
 
-void ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::WriteCommand(uint16_t command, SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t OutBuffer[WORD_PADDED(2)] = {
         (uint8_t)((command & 0xFF00) >> 8),
-        (uint8_t)(command & 0x00FF)
-    };
+        (uint8_t)(command & 0x00FF)};
 
     WaitOnBusy(radioNumber);
-    SPIEx.write(radioNumber, OutBuffer, 2);
+    SPIEx.read(radioNumber, OutBuffer, 2);
+    return OutBuffer[0] << 8 | OutBuffer[1];
 }
 
-void ICACHE_RAM_ATTR LR2021Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
+uint16_t ICACHE_RAM_ATTR LR2021Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12XX_Radio_Number_t radioNumber)
 {
-    WORD_ALIGNED_ATTR uint8_t InBuffer[WORD_PADDED(size)] = {0};
+    WORD_ALIGNED_ATTR uint8_t InBuffer[WORD_PADDED(size)] = {};
 
     memcpy(InBuffer, buffer, size);
 
@@ -154,6 +154,7 @@ void ICACHE_RAM_ATTR LR2021Hal::ReadCommand(uint8_t *buffer, uint8_t size, SX12X
     SPIEx.read(radioNumber, InBuffer, size);
 
     memcpy(buffer, InBuffer, size);
+    return InBuffer[0] << 8 | InBuffer[1];
 }
 
 bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
@@ -166,40 +167,62 @@ bool ICACHE_RAM_ATTR LR2021Hal::WaitOnBusy(SX12XX_Radio_Number_t radioNumber)
     {
         if (radioNumber == SX12XX_Radio_1)
         {
-            if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+            if (digitalRead(GPIO_PIN_BUSY) == LOW)
+            {
+                return true;
+            }
         }
         else if (radioNumber == SX12XX_Radio_2)
         {
-            if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+            if (GPIO_PIN_BUSY_2 == UNDEF_PIN || digitalRead(GPIO_PIN_BUSY_2) == LOW)
+            {
+                return true;
+            }
         }
         else if (radioNumber == SX12XX_Radio_All)
         {
             if (GPIO_PIN_BUSY_2 != UNDEF_PIN)
             {
-                if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW) return true;
+                if (digitalRead(GPIO_PIN_BUSY) == LOW && digitalRead(GPIO_PIN_BUSY_2) == LOW)
+                {
+                    return true;
+                }
             }
             else
             {
-                if (digitalRead(GPIO_PIN_BUSY) == LOW) return true;
+                if (digitalRead(GPIO_PIN_BUSY) == LOW)
+                {
+                    return true;
+                }
             }
         }
         // Use this time to call micros().
-        uint32_t now = micros();
-        if (startTime == 0) startTime = now;
-        if ((now - startTime) > wtimeoutUS) return false;
+        const uint32_t now = micros();
+        if (startTime == 0)
+        {
+            startTime = now;
+        }
+        if ((now - startTime) > wtimeoutUS)
+        {
+            return false;
+        }
     }
 }
 
 void ICACHE_RAM_ATTR LR2021Hal::dioISR_1()
 {
     if (instance->IsrCallback_1)
+    {
         instance->IsrCallback_1();
+    }
 }
 
 void ICACHE_RAM_ATTR LR2021Hal::dioISR_2()
 {
     if (instance->IsrCallback_2)
+    {
         instance->IsrCallback_2();
+    }
 }
 
 #endif // UNIT_TEST

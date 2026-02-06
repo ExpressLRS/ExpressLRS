@@ -1,21 +1,14 @@
 #pragma once
 
-#include "targets.h"
-#include "SX12xxDriverCommon.h"
 #include "LR2021_Regs.h"
+#include "SX12xxDriverCommon.h"
+#include "targets.h"
 
 #ifdef PLATFORM_ESP8266
 #include <cstdint>
 #endif
 
 #define RADIO_SNR_SCALE 4
-
-typedef struct
-{
-    uint8_t hardware;
-    uint8_t type;
-    uint16_t version;
-} __attribute__((packed)) firmware_version_t;
 
 class BufferCodec
 {
@@ -25,7 +18,7 @@ public:
     virtual void decode(uint8_t *out, uint8_t *in, uint32_t len);
 };
 
-class LR2021Driver: public SX12xxDriverCommon
+class LR2021Driver : public SX12xxDriverCommon
 {
 public:
     static LR2021Driver *instance;
@@ -42,12 +35,11 @@ public:
     void SetOutputPower(int8_t power, bool isSubGHz = true);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
-
     bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
     // bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
     bool FrequencyErrorAvailable() const { return false; }
 
-    void TXnb(uint8_t *data, bool sendGeminiBuffer, uint8_t * dataGemini, SX12XX_Radio_Number_t radioNumber);
+    void TXnb(uint8_t *data, bool sendGeminiBuffer, uint8_t *dataGemini, SX12XX_Radio_Number_t radioNumber);
     void RXnb();
 
     uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
@@ -58,16 +50,10 @@ public:
     void GetLastPacketStats();
     void CheckForSecondPacket();
 
-    // Firmware update methods
-    firmware_version_t GetFirmwareVersion(SX12XX_Radio_Number_t radioNumber, uint16_t command = LR2021_SYSTEM_GET_VERSION_OC);
-    int BeginUpdate(SX12XX_Radio_Number_t radioNumber, uint32_t expectedSize);
-    int WriteUpdateBytes(const uint8_t *bytes, uint32_t size);
-    int EndUpdate();
-
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0x7f;
+    static constexpr uint8_t PWRPENDING_NONE = 0x7f;
 
     // LR2021_RadioOperatingModes_t currOpmode;
     bool useFSK;
@@ -109,7 +95,7 @@ private:
     void DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf);
 
     bool RXnbISR(SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
-    void TXnbISR(); // ISR for non-blocking TX routine
+    void TXnbISR();                                  // ISR for non-blocking TX routine
     void CommitOutputPower();
     void WriteOutputPower(uint8_t pwr, bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
     void SetPaConfig(bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
