@@ -1025,22 +1025,6 @@ function UI.createChoiceRow(pg, field)
 end
 
 function UI.createNumberRow(pg, field)
-  local row = pg:rectangle({
-    w = lvgl.PERCENT_SIZE + 100,
-    thickness = 0,
-    flexFlow = lvgl.FLOW_ROW,
-    flexPad = 0
-  })
-
-  local labelRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
-    thickness = 0
-  })
-  labelRect:label({
-    text = field.name or "",
-    color = COLOR_THEME_PRIMARY1
-  })
-
   local displayFn
   if field.type == Protocol.CRSF.FLOAT then
     displayFn = function(val)
@@ -1052,51 +1036,35 @@ function UI.createNumberRow(pg, field)
     end
   end
 
-  local ctrlRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
-    thickness = 0,
-    flexFlow = lvgl.FLOW_ROW,
-    align = LEFT
-  })
-  ctrlRect:numberEdit({
-    min = field.min or 0,
-    max = field.max or 255,
-    get = function() return field.value or 0 end,
-    set = function(val)
-      field.value = val
-      Protocol.debounceSave(field)
-    end,
-    display = displayFn,
-    active = function() return not field.grey end
+  pg:build({
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, thickness=0, flexFlow=lvgl.FLOW_ROW, flexPad=0, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, children={
+        {type="label", text=field.name or "", color=COLOR_THEME_PRIMARY1},
+      }},
+      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
+        {type="numberEdit", min=field.min or 0, max=field.max or 255,
+          get=function() return field.value or 0 end,
+          set=function(val)
+            field.value = val
+            Protocol.debounceSave(field)
+          end,
+          display=displayFn,
+          active=function() return not field.grey end},
+      }},
+    }},
   })
 end
 
 function UI.createInfoRow(pg, field)
-  local row = pg:rectangle({
-    w = lvgl.PERCENT_SIZE + 100,
-    thickness = 0,
-    flexFlow = lvgl.FLOW_ROW,
-    flexPad = 0
-  })
-
-  local labelRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
-    thickness = 0
-  })
-  labelRect:label({
-    text = field.name or "",
-    color = COLOR_THEME_PRIMARY1
-  })
-
-  local ctrlRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
-    thickness = 0,
-    flexFlow = lvgl.FLOW_ROW,
-    align = LEFT
-  })
-  ctrlRect:button({
-    text = field.value or "",
-    press = function() end
+  pg:build({
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, thickness=0, flexFlow=lvgl.FLOW_ROW, flexPad=0, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, children={
+        {type="label", text=field.name or "", color=COLOR_THEME_PRIMARY1},
+      }},
+      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
+        {type="button", text=field.value or "", press=function() end},
+      }},
+    }},
   })
 end
 
@@ -1306,27 +1274,23 @@ function ModelMismatchDialog.show(onContinue, onExit)
     flexPad = lvgl.PAD_SMALL
   })
 
-  local content = dg:box({
-    x = 10,
-    flexFlow = lvgl.FLOW_COLUMN,
-    flexPad = lvgl.PAD_SMALL,
-  })
-  content:label({ text = "Receiver connected but Model ID doesn't match." })
-  content:label({ text = "This prevents controlling the wrong model." })
-  content:label({ text = "To use this receiver:" })
-  content:label({ text = "Set Model Match to OFF" })
-
   dg:build({
-    {type = "box", flexFlow = lvgl.FLOW_ROW, flexPad = lvgl.PAD_SMALL, w = lvgl.PERCENT_SIZE + 100, children = {
-      {type = "button", text = "Continue", w = lvgl.PERCENT_SIZE + 48, press = function()
+    {type="box", x=10, flexFlow=lvgl.FLOW_COLUMN, flexPad=lvgl.PAD_SMALL, children={
+      {type="label", text="Receiver connected but Model ID doesn't match."},
+      {type="label", text="This prevents controlling the wrong model."},
+      {type="label", text="To use this receiver:"},
+      {type="label", text="Set Model Match to OFF"},
+    }},
+    {type="box", flexFlow=lvgl.FLOW_ROW, flexPad=lvgl.PAD_SMALL, w=lvgl.PERCENT_SIZE+100, children={
+      {type="button", text="Continue", w=lvgl.PERCENT_SIZE+48, press=function()
         dg:close()
         onContinue()
       end},
-      {type = "button", text = "Exit to Change Model", w = lvgl.PERCENT_SIZE + 48, press = function()
+      {type="button", text="Exit to Change Model", w=lvgl.PERCENT_SIZE+48, press=function()
         dg:close()
         onExit()
-      end}
-    }}
+      end},
+    }},
   })
 
   return dg
@@ -1348,25 +1312,21 @@ function NoModuleDialog.show(onExit)
     close = onExit
   })
 
-  local content = dg:box({
-    x = 10,
-    flexFlow = lvgl.FLOW_COLUMN,
-    flexPad = lvgl.PAD_SMALL
-  })
-  content:label({ text = "- Internal/External module enabled" })
-  content:label({ text = "- Protocol set to CRSF" })
-  content:label({ text = "- Minimum Baud rate (depends on packet rate):" })
-  content:label({ text = "  400k for 250Hz", font = SMLSIZE })
-  content:label({ text = "  921k for 500Hz", font = SMLSIZE })
-  content:label({ text = "  1.87M for F1000", font = SMLSIZE })
-
   dg:build({
-    {type = "box", flexFlow = lvgl.FLOW_ROW, w = lvgl.PERCENT_SIZE + 100, align = CENTER, children = {
-      {type = "button", text = "Exit", w = lvgl.PERCENT_SIZE + 98, press = function()
+    {type="box", x=10, flexFlow=lvgl.FLOW_COLUMN, flexPad=lvgl.PAD_SMALL, children={
+      {type="label", text="- Internal/External module enabled"},
+      {type="label", text="- Protocol set to CRSF"},
+      {type="label", text="- Minimum Baud rate (depends on packet rate):"},
+      {type="label", text="  400k for 250Hz", font=SMLSIZE},
+      {type="label", text="  921k for 500Hz", font=SMLSIZE},
+      {type="label", text="  1.87M for F1000", font=SMLSIZE},
+    }},
+    {type="box", flexFlow=lvgl.FLOW_ROW, w=lvgl.PERCENT_SIZE+100, align=CENTER, children={
+      {type="button", text="Exit", w=lvgl.PERCENT_SIZE+98, press=function()
         dg:close()
         onExit()
-      end}
-    }}
+      end},
+    }},
   })
 
   return dg
@@ -1421,30 +1381,15 @@ function CommandPage.showConfirm(name, info, onConfirm, onCancel)
     align = CENTER,
   })
 
-  container:rectangle({ w = lvgl.PERCENT_SIZE + 100, h = lvgl.PAD_LARGE, thickness = 0 })
-
-  container:label({ text = name or "Command", w = lvgl.PERCENT_SIZE + 100, align = CENTER, font = BOLD })
-  container:label({ text = info or "", w = lvgl.PERCENT_SIZE + 100, align = CENTER, color = COLOR_THEME_DISABLED })
-
-  container:rectangle({ w = lvgl.PERCENT_SIZE + 100, h = lvgl.PAD_LARGE, thickness = 0 })
-
-  local btnRow = container:box({
-    w = lvgl.PERCENT_SIZE + 100,
-    flexFlow = lvgl.FLOW_ROW,
-    flexPad = lvgl.PAD_SMALL,
-    align = CENTER,
-  })
-
-  btnRow:button({
-    text = "Confirm",
-    w = lvgl.PERCENT_SIZE + 49,
-    press = onConfirm,
-  })
-
-  btnRow:button({
-    text = "Cancel",
-    w = lvgl.PERCENT_SIZE + 49,
-    press = onCancel,
+  container:build({
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, h=lvgl.PAD_LARGE, thickness=0},
+    {type="label", text=name or "Command", w=lvgl.PERCENT_SIZE+100, align=CENTER, font=BOLD},
+    {type="label", text=info or "", w=lvgl.PERCENT_SIZE+100, align=CENTER, color=COLOR_THEME_DISABLED},
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, h=lvgl.PAD_LARGE, thickness=0},
+    {type="box", w=lvgl.PERCENT_SIZE+100, flexFlow=lvgl.FLOW_ROW, flexPad=lvgl.PAD_SMALL, align=CENTER, children={
+      {type="button", text="Confirm", w=lvgl.PERCENT_SIZE+49, press=onConfirm},
+      {type="button", text="Cancel", w=lvgl.PERCENT_SIZE+49, press=onCancel},
+    }},
   })
 
   return pg
@@ -1467,22 +1412,11 @@ function CommandPage.showExecuting(title, onCancel)
 
   createSpinner(container)
 
-  container:rectangle({ w = lvgl.PERCENT_SIZE + 100, h = lvgl.PAD_SMALL, thickness = 0 })
-
-  container:label({
-    text = "Hold [RTN] to exit and keep running",
-    w = lvgl.PERCENT_SIZE + 100,
-    align = CENTER,
-    color = COLOR_THEME_DISABLED,
-  })
-
-
-  container:rectangle({ w = lvgl.PERCENT_SIZE + 100, h = lvgl.PAD_LARGE, thickness = 0 })
-
-  container:button({
-    text = "Cancel command",
-    w = lvgl.PERCENT_SIZE + 100,
-    press = onCancel,
+  container:build({
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, h=lvgl.PAD_SMALL, thickness=0},
+    {type="label", text="Hold [RTN] to exit and keep running", w=lvgl.PERCENT_SIZE+100, align=CENTER, color=COLOR_THEME_DISABLED},
+    {type="rectangle", w=lvgl.PERCENT_SIZE+100, h=lvgl.PAD_LARGE, thickness=0},
+    {type="button", text="Cancel command", w=lvgl.PERCENT_SIZE+100, press=onCancel},
   })
 
   return pg
