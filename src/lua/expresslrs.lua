@@ -464,7 +464,7 @@ end
 
 function Protocol.fieldGetStrOrOpts(data, offset, last, isOpts)
   local r = last or (isOpts and {})
-  local opt = ''
+  local optParts = {}
   local vcnt = 0
   repeat
     local b = data[offset]
@@ -472,21 +472,23 @@ function Protocol.fieldGetStrOrOpts(data, offset, last, isOpts)
 
     if not last then
       if r and (b == 59 or b == 0) then
-        r[#r + 1] = opt
-        if opt ~= '' then
+        r[#r + 1] = table.concat(optParts)
+        if #optParts > 0 then
           vcnt = vcnt + 1
-          opt = ''
+          optParts = {}
         end
       elseif b ~= 0 then
-        opt = opt .. (({
+        -- Translate legacy OpenTX arrow bytes (0xC0/0xC1) from ELRS firmware
+        -- to EdgeTX CHAR_UP/CHAR_DOWN glyphs
+        optParts[#optParts + 1] = ({
           [192] = CHAR_UP or (__opentx and __opentx.CHAR_UP),
           [193] = CHAR_DOWN or (__opentx and __opentx.CHAR_DOWN)
-        })[b] or string.char(b))
+        })[b] or string.char(b)
       end
     end
   until b == 0
 
-  return (r or opt), offset, vcnt
+  return (r or table.concat(optParts)), offset, vcnt
 end
 
 function Protocol.fieldGetValue(data, offset, size)
