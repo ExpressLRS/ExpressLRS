@@ -1,8 +1,8 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
 import {elrsState, formatBand} from "../utils/state.js";
+import {SERIAL_OPTIONS1} from '../utils/globals.js'
 import '../assets/mui.js';
-import {SERIAL_OPTIONS1} from './serial-panel.js'
 
 @customElement('info-panel')
 class InfoPanel extends LitElement {
