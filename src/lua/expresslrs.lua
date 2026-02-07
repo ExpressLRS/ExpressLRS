@@ -1059,7 +1059,11 @@ function UI.createNumberRow(pg, field)
           get=function() return field.value or 0 end,
           set=function(val)
             field.value = val
-            Protocol.debounceSave(field)
+          end,
+          edited=function(val)
+            field.value = val
+            Protocol.fieldIntSave(field)
+            Protocol.reloadParentFolder(field)
           end,
           display=displayFn,
           active=function() return not field.disabled end},
