@@ -971,18 +971,22 @@ function UI.createChoiceRow(pg, field)
 
   local labelRect = row:rectangle({
     w = lvgl.PERCENT_SIZE + 50,
-    thickness = 0
-  })
-  labelRect:label({
-    text = field.name or "",
-    color = COLOR_THEME_PRIMARY1
+    h = lvgl.UI_ELEMENT_HEIGHT,
+    thickness = 0,
+    children = {
+        {
+            type = lvgl.LABEL,
+            y = lvgl.PAD_SMALL,
+            text = field.name or ""
+        }
+    }
   })
 
   local ctrlRect = row:rectangle({
     w = lvgl.PERCENT_SIZE + 50,
     thickness = 0,
     flexFlow = lvgl.FLOW_ROW,
-    align = LEFT
+    align = LEFT + VCENTER
   })
 
   if UI.isBooleanField(field) then
@@ -1019,9 +1023,15 @@ function UI.createChoiceRow(pg, field)
   end
 
   if field.unit and field.unit ~= "" then
-    ctrlRect:label({
-      text = " " .. field.unit,
-      color = COLOR_THEME_PRIMARY1
+    ctrlRect:box({
+      h = lvgl.UI_ELEMENT_HEIGHT,
+      children = {
+          {
+              type = lvgl.LABEL,
+              y = lvgl.PAD_SMALL,
+              text = " " .. field.unit
+          }
+      }
     })
   end
 end
