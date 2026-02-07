@@ -547,7 +547,7 @@ function Protocol.fieldTextSelLoad(field, data, offset)
   local cached = field.dirty == nil and field.values
   field.values, offset, vcnt = Protocol.fieldGetStrOrOpts(data, offset, cached, true)
   if not cached then
-    field.grey = vcnt <= 1
+    field.disabled = vcnt <= 1
   end
   field.value = data[offset]
   field.unit = Protocol.fieldGetStrOrOpts(data, offset + 4)
@@ -997,7 +997,7 @@ function UI.createChoiceRow(pg, field)
         Protocol.fieldIntSave(field)
         Protocol.reloadRelatedFields(field)
       end,
-      active = function() return not field.grey end
+      active = function() return not field.disabled end
     })
   else
     local filteredValues = {}
@@ -1018,7 +1018,7 @@ function UI.createChoiceRow(pg, field)
         Protocol.fieldIntSave(field)
         Protocol.reloadRelatedFields(field)
       end,
-      active = function() return not field.grey end
+      active = function() return not field.disabled end
     })
   end
 
@@ -1061,7 +1061,7 @@ function UI.createNumberRow(pg, field)
             Protocol.debounceSave(field)
           end,
           display=displayFn,
-          active=function() return not field.grey end},
+          active=function() return not field.disabled end},
       }},
     }},
   })
