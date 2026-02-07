@@ -1031,7 +1031,6 @@ function UI.createChoiceRow(pg, field)
               type = lvgl.LABEL,
               y = lvgl.PAD_SMALL,
               text = " " .. field.unit,
-              color = COLOR_THEME_PRIMARY1
           }
       }
     })
@@ -1076,7 +1075,7 @@ function UI.createInfoRow(pg, field)
         {type="label", text=field.name or "", color=COLOR_THEME_PRIMARY1},
       }},
       {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
-        {type="button", text=field.value or "", press=function() end},
+        {type="label", text=field.value or ""},
       }},
     }},
   })
