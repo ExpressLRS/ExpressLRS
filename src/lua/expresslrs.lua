@@ -256,6 +256,9 @@ Protocol = {
   -- Debounce: deferred saves for continuous controls (numberEdit)
   DEBOUNCE_SAVE_DELAY = 30,  -- 300ms in getTime() ticks (10ms each)
   pendingSaves = {},  -- keyed by field.id: { field, timeout }
+
+  -- Connection transition tracking (for auto-discovery on reconnect)
+  wasConnected = false,
 }
 
 -- Reset Protocol state
@@ -292,6 +295,7 @@ function Protocol.reset()
   Protocol.expectChunksRemain = -1
   Protocol.backgroundLoading = false
   Protocol.pendingSaves = {}
+  Protocol.wasConnected = false
 end
 
 -- Default telemetry wrappers: delegate to real EdgeTX functions
@@ -704,7 +708,8 @@ function Protocol.parseDeviceInfoMessage(data)
   local id = data[2]
   local newName, offset = Protocol.fieldGetStrOrOpts(data, 3)
   local device = Protocol.getDevice(id)
-  if device == nil then
+  local isNew = (device == nil)
+  if isNew then
     device = { id = id }
     Protocol.devices[#Protocol.devices + 1] = device
   end
@@ -714,8 +719,9 @@ function Protocol.parseDeviceInfoMessage(data)
 
   -- Return signal - caller handles device change and navigation
   -- shouldChangeDevice: true if this is info about the currently selected device
+  -- isNewDevice: true if this device was not previously known
   local shouldChangeDevice = (Protocol.deviceId == id)
-  return { shouldChangeDevice = shouldChangeDevice, deviceId = id }
+  return { shouldChangeDevice = shouldChangeDevice, deviceId = id, isNewDevice = isNew }
 end
 
 function Protocol.parseParameterInfoMessage(data)
@@ -828,6 +834,14 @@ function Protocol.poll()
       Protocol.parseElrsInfoMessage(data)
     end
   until command == nil
+
+  -- Auto-discover other devices when link transitions to connected
+  local connected = Protocol.isConnected()
+  if connected and not Protocol.wasConnected and #Protocol.devices <= 1 then
+    Protocol.push(Protocol.CRSF.FRAMETYPE_DEVICE_PING, { Protocol.CRSF.ADDRESS_BROADCAST, Protocol.CRSF.ADDRESS_RADIO_TRANSMITTER })
+    Protocol.devicesRefreshTimeout = getTime() + 100
+  end
+  Protocol.wasConnected = connected
 
   local time = getTime()
   -- Flush any debounced saves whose timer has expired
@@ -1589,8 +1603,12 @@ local function run(event, touchState)
     if pollResult.deviceInfo.shouldChangeDevice then
       App.changeDevice(pollResult.deviceInfo.deviceId)
     end
-    -- Refresh UI if user is viewing "Other Devices" list (new device may have appeared)
-    if Navigation.getCurrent() == Navigation.FOLDER_OTHER_DEVICES then
+    -- Refresh UI if a new device appeared (shows "Other Devices" button at root,
+    -- or updates the device list if already viewing that folder).
+    -- At root level, wait until the folder has finished loading before rebuilding.
+    if pollResult.deviceInfo.isNewDevice and UI.folderWasReady then
+      UI.invalidate()
+    elseif Navigation.getCurrent() == Navigation.FOLDER_OTHER_DEVICES then
       UI.invalidate()
     end
   end

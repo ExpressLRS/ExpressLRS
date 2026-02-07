@@ -13,8 +13,22 @@
 -- Configuration: Change scenario here to test different states
 -- ============================================================================
 
+-- Scenarios:
+--   "normal"         TX + RX connected. Happy path with full telemetry, link
+--                    stats, and all parameters from both devices.
+--   "disconnected"   TX present but no RX. Shows "No link" in subtitle.
+--                    No receiver device in Other Devices list.
+--   "reconnect"      Starts disconnected, then transitions to connected after
+--                    ~5 seconds. Tests auto-discovery of Other Devices on
+--                    reconnect without restarting the script.
+--   "model_mismatch" TX + RX connected but with Model ID mismatch flag set.
+--                    Triggers the Model Mismatch warning dialog.
+--   "armed"          TX + RX connected with the "is Armed" warning flag set.
+--                    Shows armed warning in subtitle.
+--   "no_module"      No CRSF module found at all. Triggers the "No Module
+--                    Found" error dialog immediately.
 local config = {
-  scenario = "normal",  -- "normal" | "disconnected" | "model_mismatch" | "armed" | "no_module"
+  scenario = "normal",
 }
 
 -- ============================================================================
@@ -641,7 +655,18 @@ updateTlmBandwidth(txDevice)
 -- Scenario State
 -- ============================================================================
 
-local hasRxDevice = (config.scenario ~= "disconnected")
+-- Reconnect scenario timing
+local reconnectDelay = 500  -- ~5 seconds (getTime() ticks at 10ms)
+local startTime = nil       -- set on first mockPush/mockPop call
+
+-- Dynamic RX availability (replaces static hasRxDevice boolean)
+local function isRxAvailable()
+  if config.scenario == "reconnect" then
+    if not startTime then return false end
+    return getTime() - startTime >= reconnectDelay
+  end
+  return config.scenario ~= "disconnected"
+end
 
 -- ELRS Lua flag bits (from TXModuleEndpoint.h):
 --   bit 0: LUA_FLAG_CONNECTED
@@ -652,7 +677,9 @@ local hasRxDevice = (config.scenario ~= "disconnected")
 --   bit 5: LUA_FLAG_ERROR_CONNECTED (critical)
 --   bit 6: LUA_FLAG_ERROR_BAUDRATE (critical)
 local function getElrsFlags()
-  if config.scenario == "model_mismatch" then
+  if config.scenario == "reconnect" then
+    return isRxAvailable() and 0x01 or 0x00
+  elseif config.scenario == "model_mismatch" then
     return 0x05  -- connected + model mismatch
   elseif config.scenario == "armed" then
     return 0x09  -- connected + armed
@@ -735,6 +762,8 @@ end
 -- ============================================================================
 
 local function mockPush(command, data)
+  if not startTime then startTime = getTime() end
+
   if command == CRSF.FRAMETYPE_DEVICE_PING then
     local destAddr = data[2] or CRSF.ADDRESS_RADIO_TRANSMITTER
 
@@ -744,7 +773,7 @@ local function mockPush(command, data)
     -- RX device responds with delay (relayed over air link)
     -- Uses deferred delivery so it arrives in the next poll cycle,
     -- after the TX DEVICE_INFO has been processed
-    if hasRxDevice then
+    if isRxAvailable() then
       queuePushDeferred(CRSF.FRAMETYPE_DEVICE_INFO, encodeDeviceInfo(rxDevice, destAddr))
     end
     return true
@@ -843,6 +872,7 @@ end
 -- ============================================================================
 
 local function mockPop()
+  if not startTime then startTime = getTime() end
   return queuePop()
 end
 
