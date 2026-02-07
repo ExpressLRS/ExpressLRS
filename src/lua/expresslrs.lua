@@ -8,6 +8,7 @@
 ---- # LVGL version for EdgeTX 2.11.4+                                       #
 ---- #########################################################################
 local VERSION = "r1 LVGL"
+local VERSION_CHECK_ENABLED = true
 
 -- ============================================================================
 -- App Module: Application state and coordinators
@@ -1548,12 +1549,80 @@ local function handleWarning()
 end
 
 -- ============================================================================
+-- EdgeTX version check
+-- ============================================================================
+
+local versionCheckResult = nil
+
+-- Check EdgeTX version: requires 2.11.5+, 2.12-rc4+, or 3.0+
+-- Called once from init(); result stored in versionCheckResult.
+--
+-- Version logic truth table:
+--   2.11.4      -> FAIL
+--   2.11.5      -> PASS
+--   2.11.6      -> PASS
+--   2.12.0-rc3  -> FAIL
+--   2.12.0-rc4  -> PASS
+--   2.12.0      -> PASS  (release)
+--   2.12.1      -> PASS
+--   3.0.0       -> PASS
+local function checkEdgeTxVersion()
+  local ver, radio, maj, minor, rev = getVersion()
+
+  if maj >= 3 then
+    return true
+  elseif maj == 2 and minor >= 13 then
+    return true
+  elseif maj == 2 and minor == 12 then
+    local rc = string.match(ver, "%-rc(%d+)")
+    if rc then
+      return tonumber(rc) >= 4
+    end
+    return true  -- release or dev build
+  elseif maj == 2 and minor == 11 and rev >= 5 then
+    return true
+  end
+
+  return false
+end
+
+local function showVersionRequired()
+  lvgl.clear()
+
+  local dg = lvgl.dialog({
+    title = "EdgeTX Version Not Supported",
+    flexFlow = lvgl.FLOW_COLUMN,
+    flexPad = lvgl.PAD_SMALL,
+    close = function() App.shouldExit = true end
+  })
+
+  dg:build({
+    {type="box", x=10, flexFlow=lvgl.FLOW_COLUMN, flexPad=lvgl.PAD_SMALL, children={
+      {type="label", text="Requires EdgeTX:"},
+      {type="label", text="- 2.11.5 or later"},
+      {type="label", text="- 2.12-rc4 or later"},
+      {type="label", text="- 3.0 or later"},
+    }},
+    {type="box", flexFlow=lvgl.FLOW_ROW, w=lvgl.PERCENT_SIZE+100, align=CENTER, children={
+      {type="button", text="Exit", w=lvgl.PERCENT_SIZE+98, press=function()
+        dg:close()
+        App.shouldExit = true
+      end},
+    }},
+  })
+end
+
+-- ============================================================================
 -- Init
 -- ============================================================================
 
 local function init()
   if lvgl == nil then
     return
+  end
+
+  if VERSION_CHECK_ENABLED then
+    versionCheckResult = checkEdgeTxVersion()
   end
 
   setMock()
@@ -1566,7 +1635,8 @@ end
 local function showLvglRequired()
   lcd.clear()
   lcd.drawText(10, 10, "LVGL support required", MIDSIZE)
-  lcd.drawText(10, 30, "EdgeTX 2.11.4+ needed", 0)
+  lcd.drawText(10, 30, "Color LCD radio with", 0)
+  lcd.drawText(10, 50, "EdgeTX 2.11.5+, 2.12-rc4+, or 3.0+ needed", 0)
 end
 
 -- ============================================================================
@@ -1579,6 +1649,18 @@ local function run(event, touchState)
   -- Check for LVGL support
   if lvgl == nil then
     showLvglRequired()
+    return 0
+  end
+
+  -- Check EdgeTX version (result computed once in init)
+  if versionCheckResult == false then
+    if not UI.uiBuilt then
+      showVersionRequired()
+      UI.uiBuilt = true
+    end
+    if App.shouldExit then
+      return 2
+    end
     return 0
   end
 
