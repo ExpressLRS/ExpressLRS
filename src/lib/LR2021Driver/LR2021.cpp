@@ -623,6 +623,7 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 
 inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, uint8_t *buf)
 {
+    memset(buf, 0, 8);
     if (useFSK) {
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
