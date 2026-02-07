@@ -633,7 +633,7 @@ inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Numbe
     }
 
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt
-    const int8_t rssi = -(int8_t)buf[useFSK ? 4 : 5];
+    const int8_t rssi = -(int8_t)buf[useFSK ? 4 : 6];
 
     // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
