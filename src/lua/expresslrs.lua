@@ -977,7 +977,8 @@ function UI.createChoiceRow(pg, field)
         {
             type = lvgl.LABEL,
             y = lvgl.PAD_SMALL,
-            text = field.name or ""
+            text = field.name or "",
+            color = COLOR_THEME_PRIMARY1
         }
     }
   })
@@ -1029,7 +1030,8 @@ function UI.createChoiceRow(pg, field)
           {
               type = lvgl.LABEL,
               y = lvgl.PAD_SMALL,
-              text = " " .. field.unit
+              text = " " .. field.unit,
+              color = COLOR_THEME_PRIMARY1
           }
       }
     })
@@ -1359,7 +1361,7 @@ local function createSpinner(parent)
   local wrapper = parent:box({
     flexFlow = lvgl.FLOW_ROW,
     flexPad = lvgl.PAD_MEDIUM,
-    color = lvgl.COLOR_THEME_PRIMARY2,
+    color = COLOR_THEME_PRIMARY2,
     w = lvgl.PERCENT_SIZE + 100,
     align = CENTER
   })
@@ -1367,7 +1369,7 @@ local function createSpinner(parent)
     radius = r,
     thickness = 4,
     rounded = true,
-    color = lvgl.COLOR_THEME_PRIMARY1,
+    color = COLOR_THEME_PRIMARY1,
     startAngle = function()
       spinnerAngle = (spinnerAngle + 8) % 360
       return spinnerAngle
