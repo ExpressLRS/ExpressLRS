@@ -1205,6 +1205,9 @@ function UI.build()
 
   local currentFolder = Navigation.getCurrent()
 
+  -- Top spacer for visual breathing room (mirrors bottom spacer)
+  -- fieldContainer:rectangle({ w = lvgl.PERCENT_SIZE + 100, h = lvgl.PAD_TINY, thickness = 0 })
+
   if currentFolder == Navigation.FOLDER_OTHER_DEVICES then
     -- Render device list directly from Protocol.devices
     for _, device in ipairs(Protocol.devices) do
