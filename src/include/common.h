@@ -293,7 +293,7 @@ extern SX1280Driver Radio;
 extern LR1121Driver Radio;
 
 #elif defined(RADIO_LR2021)
-#define RATE_MAX 20
+#define RATE_MAX 24
 #define RATE_BINDING RATE_LORA_900_50HZ
 #define RATE_DUALBAND_BINDING RATE_LORA_2G4_50HZ
 

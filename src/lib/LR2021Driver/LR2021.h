@@ -30,7 +30,9 @@ public:
     void SetTxIdleMode() { SetMode(LR2021_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
                 uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, radio_band_modulation_t modulation,
-                uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
+                uint8_t fskSyncWord1, uint8_t fskSyncWord2,
+                uint32_t flrcSyncWord, uint16_t flrcCrcSeed,
+                SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
     void SetOutputPower(int8_t power, bool isSubGHz = true);
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
@@ -84,6 +86,10 @@ private:
     void SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber);
     void SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber);
 
+    // FLRC functions
+    void ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint32_t bt, SX12XX_Radio_Number_t radioNumber);
+    void SetPacketParamsFLRC(uint8_t PreambleLength, uint32_t syncWord, uint16_t crcSeed, SX12XX_Radio_Number_t radioNumber);
+
     void SetDioIrqParams();
     void SetDioAsRfSwitch();
     void CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber);
@@ -97,6 +103,6 @@ private:
     bool RXnbISR(SX12XX_Radio_Number_t radioNumber); // ISR for non-blocking RX routine
     void TXnbISR();                                  // ISR for non-blocking TX routine
     void CommitOutputPower();
-    void WriteOutputPower(uint8_t pwr, bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
+    void WriteOutputPower(uint8_t power, SX12XX_Radio_Number_t radioNumber);
     void SetPaConfig(bool isSubGHz, SX12XX_Radio_Number_t radioNumber);
 };

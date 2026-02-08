@@ -49,6 +49,7 @@ void ICACHE_RAM_ATTR CopyCodec::decode(uint8_t *out, uint8_t *in, const uint32_t
     memcpy(out, in, len);
 }
 
+#if defined(DEBUG_LOG)
 #define CHECK(msg, x)                        \
     do                                       \
     {                                        \
@@ -58,6 +59,9 @@ void ICACHE_RAM_ATTR CopyCodec::decode(uint8_t *out, uint8_t *in, const uint32_t
             DBGLN("FAILED %s %x", msg, err); \
         }                                    \
     } while (false)
+#else
+#define CHECK(msg, x) x
+#endif
 
 LR2021Driver::LR2021Driver()
 {
@@ -76,12 +80,12 @@ void LR2021Driver::End()
 
 bool LR2021Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t buffer[4] = {};
-    hal.WriteCommand(LR2021_SYSTEM_GET_VERSION_OC, radioNumber);
-    CHECK("GET_FIRMWARE", hal.ReadCommand(buffer, sizeof(buffer), radioNumber));
+    uint8_t buffer[4] {};
+    CHECK("LR2021_SYSTEM_GET_VERSION_OC", hal.WriteCommand(LR2021_SYSTEM_GET_VERSION_OC, radioNumber));
+    CHECK("LR2021_SYSTEM_GET_VERSION_OC(resp)", hal.ReadCommand(buffer, sizeof(buffer), radioNumber));
     hal.WaitOnBusy(radioNumber);
 
-    uint16_t version = (uint16_t)(buffer[2] << 8 | buffer[3]);
+    const uint16_t version = uint16_t(buffer[2] << 8 | buffer[3]);
     if (version != 0x0118)
     {
         DBGLN("LR2021 #%d failed to be detected %x.", radioNumber, version);
@@ -117,7 +121,10 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
     CHECK("LR2021_RADIO_SET_RX_TX_FALLBACK_MODE_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_TX_FALLBACK_MODE_OC, &FBbuf, 1, SX12XX_Radio_All));
 
     // 6.3.17 SetDefaultRxTxTimeout
-    constexpr uint8_t timeouts[]{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00};
+    constexpr uint8_t timeouts[] {
+        0xFF, 0xFF, 0xFF,
+        0x00, 0x00, 0x00,
+    };
     CHECK("LR2021_RADIO_SET_DEFAULT_RX_TX_TIMEOUT_OC", hal.WriteCommand(LR2021_RADIO_SET_DEFAULT_RX_TX_TIMEOUT_OC, timeouts, sizeof(timeouts), SX12XX_Radio_All));
 
     SetDioAsRfSwitch();
@@ -132,7 +139,7 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
     CHECK("LR2021_SYSTEM_CALIBRATE_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_OC, &calibrate, 1, SX12XX_Radio_All));
 
     // 6.4.2 CalibFE
-    const uint8_t calibrateFE[]{(uint8_t)((lowBandFreq / 4000000) >> 8), (uint8_t)(lowBandFreq / 4000000), (uint8_t)(((highBandFreq / 4000000) >> 8) | 0x80), (uint8_t)(highBandFreq / 4000000)};
+    const uint8_t calibrateFE[]{uint8_t((lowBandFreq / 4000000) >> 8), uint8_t(lowBandFreq / 4000000), uint8_t(((highBandFreq / 4000000) >> 8) | 0x80), uint8_t(highBandFreq / 4000000)};
     CHECK("LR2021_SYSTEM_CALIBRATE_FRONTEND_OC", hal.WriteCommand(LR2021_SYSTEM_CALIBRATE_FRONTEND_OC, calibrateFE, sizeof(calibrateFE), SX12XX_Radio_All));
 
     return true;
@@ -142,7 +149,7 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
 void LR2021Driver::startCWTest(const uint32_t freq, const SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
-    Config(LR2021_RADIO_LORA_BW_62, LR2021_RADIO_LORA_SF6, LR2021_RADIO_LORA_CR_4_8, freq, 12, false, 8, false, 0, 0, radioNumber);
+    Config(LR2021_RADIO_LORA_BW_62, LR2021_RADIO_LORA_SF6, LR2021_RADIO_LORA_CR_4_8, freq, 12, false, 8, RADIO_MODULATION_LORA_2G4, 0, 0, 0, 0, radioNumber);
     constexpr uint8_t mode = 0x02;
     CHECK("LR2021_RADIO_SET_TX_TEST_MODE_OC", hal.WriteCommand(LR2021_RADIO_SET_TX_TEST_MODE_OC, &mode, 1, radioNumber));
 }
@@ -150,9 +157,11 @@ void LR2021Driver::startCWTest(const uint32_t freq, const SX12XX_Radio_Number_t 
 void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, const uint32_t regfreq,
                           const uint8_t PreambleLength, const bool InvertIQ, const uint8_t _PayloadLength,
                           const radio_band_modulation_t _modulation, const uint8_t fskSyncWord1, const uint8_t fskSyncWord2,
+                          const uint32_t flrcSyncWord, const uint16_t flrcCrcSeed,
                           const SX12XX_Radio_Number_t radioNumber)
 {
     PayloadLength = _PayloadLength;
+    modulation = _modulation;
 
     const bool isSubGHz = regfreq < 1000000000;
 
@@ -176,17 +185,21 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
 
     SetMode(LR2021_MODE_STDBY_RC, radioNumber);
 
-    modulation = _modulation;
     codec = &copyCodec;
-    if (isGFSKModulation(modulation))
+    if (isFLRCModulation(modulation)) {
+        DBGLN("Config FLRC");
+        ConfigModParamsFLRC(bw, cr, sf, radioNumber);
+        SetPacketParamsFLRC(PreambleLength, flrcSyncWord, flrcCrcSeed, radioNumber);
+    }
+    else if (isGFSKModulation(modulation))
     {
         DBGLN("Config FSK");
-        uint32_t bitrate = (uint32_t)bw * 10000;
-        uint8_t bwf = sf;
-        uint32_t fdev = (uint32_t)cr * 1000;
+        const uint32_t bitrate = (uint32_t)bw * 10000;
+        const uint8_t bwf = sf;
+        const uint32_t fdev = (uint32_t)cr * 1000;
         ConfigModParamsFSK(bitrate, bwf, fdev, radioNumber);
 
-        // Increase packet length for FEC used only on 1000Hz 2.5GHz.
+        // Increase packet length for FEC used only on 1000Hz 2.4GHz.
         if (!isSubGHz)
         {
             codec = &fecCodec;
@@ -211,16 +224,17 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     }
 
     SetFrequencyReg(regfreq, radioNumber, false);
+
     // 7.2.2 SetRxPath
     if (isSubGHz)
     {
-        constexpr uint8_t buf[] = {0x00, 0x00};
-        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, 2, radioNumber));
+        constexpr uint8_t buf[] {0x00, 0x00};
+        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber));
     }
     else
     {
-        constexpr uint8_t buf[] = {0x01, 0x04};
-        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, 2, radioNumber));
+        const uint8_t buf[] {0x01, uint8_t(isFLRCModulation(modulation) ? 0x00 : 0x04)};
+        CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber));
     }
 
     ClearIrqStatus(radioNumber);
@@ -230,6 +244,46 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     CommitOutputPower();
 }
 
+void LR2021Driver::ConfigModParamsLoRa(const uint8_t bw, const uint8_t sf, const uint8_t cr, const SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.1.1 SetPacketType
+    constexpr uint8_t packetType = LR2021_RADIO_PKT_TYPE_LORA;
+    CHECK("LR2021_RADIO_SET_PKT_TYPE_OC", hal.WriteCommand(LR2021_RADIO_SET_PKT_TYPE_OC, &packetType, 1, radioNumber));
+
+    // 8.3.1 SetModulationParams
+    const uint8_t buf[] {
+        uint8_t(sf << 4 | bw),
+        uint8_t(cr << 4),
+    };
+    CHECK("LR2021_RADIO_SET_LORA_MODULATION_PARAM_OC", hal.WriteCommand(LR2021_RADIO_SET_LORA_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber));
+
+    if (radioNumber & SX12XX_Radio_1 && radio1isSubGHz)
+    {
+        CorrectRegisterForSF6(sf, SX12XX_Radio_1);
+    }
+
+    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
+    {
+        if (radioNumber & SX12XX_Radio_2 && radio2isSubGHz)
+        {
+            CorrectRegisterForSF6(sf, SX12XX_Radio_2);
+        }
+    }
+}
+
+void LR2021Driver::SetPacketParamsLoRa(const uint8_t PreambleLength, const lr20xx_RadioLoRaPacketLengthsModes_t HeaderType,
+                                       const uint8_t PayloadLength, const uint8_t InvertIQ, const SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.3.2 SetPacketParams
+    const uint8_t buf[] {
+        uint8_t(PreambleLength >> 8),   // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
+        PreambleLength,                 // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
+        PayloadLength,                  // PayloadLen defines the size of the payload
+        uint8_t(HeaderType << 2 | InvertIQ),
+    };
+    CHECK("LR2021_RADIO_SET_LORA_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_LORA_PACKET_PARAMS_OC, buf, sizeof(buf), radioNumber));
+}
+
 void LR2021Driver::ConfigModParamsFSK(const uint32_t Bitrate, const uint8_t BWF, const uint32_t Fdev, const SX12XX_Radio_Number_t radioNumber)
 {
     // 8.1.1 SetPacketType
@@ -237,36 +291,40 @@ void LR2021Driver::ConfigModParamsFSK(const uint32_t Bitrate, const uint8_t BWF,
     CHECK("LR2021_RADIO_SET_PKT_TYPE_OC", hal.WriteCommand(LR2021_RADIO_SET_PKT_TYPE_OC, &packetType, 1, radioNumber));
 
     // 11.3.1 SetFskModulationParams
-    uint8_t buf[9];
-    buf[0] = Bitrate >> 24;
-    buf[1] = Bitrate >> 16;
-    buf[2] = Bitrate >> 8;
-    buf[3] = Bitrate >> 0;
-    buf[4] = LR2021_RADIO_GFSK_PULSE_SHAPE_OFF; // Pulse Shape - 0x00: No filter applied
-    buf[5] = BWF;
-    buf[6] = Fdev >> 16;
-    buf[7] = Fdev >> 8;
-    buf[8] = Fdev >> 0;
+    const uint8_t buf[] {
+        uint8_t(Bitrate >> 24),
+        uint8_t(Bitrate >> 16),
+        uint8_t(Bitrate >> 8),
+        uint8_t(Bitrate),
+        LR2021_RADIO_GFSK_PULSE_SHAPE_OFF, // Pulse Shape - 0x00: No filter applied
+        BWF,
+        uint8_t(Fdev >> 16),
+        uint8_t(Fdev >> 8),
+        uint8_t(Fdev >> 0),
+    };
     CHECK("LR2021_RADIO_SET_FSK_MODULATION_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_MODULATION_PARAMS_OC, buf, sizeof(buf), radioNumber));
 }
 
 void LR2021Driver::SetPacketParamsFSK(const uint8_t PreambleLength, const uint8_t PayloadLength, const SX12XX_Radio_Number_t radioNumber)
 {
     // 11.3.2 SetFskPacketParams
-    uint8_t buf[8];
-    buf[0] = 0;                                             // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[1] = PreambleLength;                                // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[2] = LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS; // Pbl Detect
-    buf[3] = 0x00;                                          //
-    buf[4] = 0;                                             // MSB PayloadLen
-    buf[5] = PayloadLength;                                 // LSB PayloadLen
-    buf[6] = LR2021_RADIO_GFSK_CRC_OFF << 4 | LR2021_RADIO_GFSK_DC_FREE_WHITENING;
-    CHECK("LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC, buf, 8, radioNumber));
+    const uint8_t packetParams[] {
+        0,                                             // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
+        PreambleLength,                                // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
+        LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS, // Pbl Detect
+        0x00,                                          //
+        0,                                             // MSB PayloadLen
+        PayloadLength,                                 // LSB PayloadLen
+        LR2021_RADIO_GFSK_CRC_OFF << 4 | LR2021_RADIO_GFSK_DC_FREE_WHITENING,
+    };
+    CHECK("LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC, packetParams, sizeof(packetParams), radioNumber));
 
-    // 11.3.3 SetFskPacketParams
-    buf[0] = 0x01; // SX127x/SX126x/lr20xx compatible whitening enable 0x0100 seed
-    buf[1] = 0x00;
-    CHECK("LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC, buf, 2, radioNumber));
+    // 11.3.3 SetFskWhiteningParams
+    constexpr uint8_t whiteningParams[] {
+        0x01, // SX127x/SX126x/lr20xx compatible whitening enable 0x0100 seed
+        0x00,
+    };
+    CHECK("LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC, whiteningParams, sizeof(whiteningParams), radioNumber));
 }
 
 void LR2021Driver::SetFSKSyncWord(const uint8_t fskSyncWord1, const uint8_t fskSyncWord2, const SX12XX_Radio_Number_t radioNumber)
@@ -275,6 +333,65 @@ void LR2021Driver::SetFSKSyncWord(const uint8_t fskSyncWord1, const uint8_t fskS
     // SyncWordLen is 16 bits as set in SetPacketParamsFSK().  Fill the rest with preamble bytes.
     const uint8_t syncBuf[] {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, fskSyncWord1, fskSyncWord2, 0x90};
     CHECK("LR2021_RADIO_SET_FSK_SYNC_WORD_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_SYNC_WORD_OC, syncBuf, sizeof(syncBuf), radioNumber));
+}
+
+void LR2021Driver::ConfigModParamsFLRC(const uint8_t bw, const uint8_t cr, const uint32_t bt, const SX12XX_Radio_Number_t radioNumber)
+{
+    // 8.1.1 SetPacketType
+    constexpr uint8_t packetType = LR2021_RADIO_PKT_TYPE_FLRC;
+    CHECK("LR2021_RADIO_SET_PKT_TYPE_OC", hal.WriteCommand(LR2021_RADIO_SET_PKT_TYPE_OC, &packetType, 1, radioNumber));
+
+    // 18.4.1 SetFlrcModulationParams
+    const uint8_t buf[] {
+        bw,
+        uint8_t(cr << 4 | bt),
+    };
+    CHECK("LR2021_RADIO_SET_FLRC_MODULATION_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FLRC_MODULATION_PARAMS_OC, buf, sizeof(buf), radioNumber));
+}
+
+void LR2021Driver::SetPacketParamsFLRC(const uint8_t PreambleLength, const uint32_t syncWord, const uint16_t crcSeed, const SX12XX_Radio_Number_t radioNumber)
+{
+    // 18.4.2 SetFlrcPacketParams
+    const uint8_t preambleBits = (PreambleLength / 4) - 1;
+    const uint8_t buf[] {
+        uint8_t(preambleBits << 2 | 2), // 32bit preamble, 32bit sync_len
+        1 << 6 | 1 << 3 | 1 << 2 | 2,   // syncword 1, match 1, fixed len, 24bit/3-byte crc
+        0,                              // MSB PayloadLen
+        PayloadLength,                  // LSB PayloadLen
+    };
+    CHECK("LR2021_RADIO_SET_FLRC_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FLRC_PACKET_PARAMS_OC, buf, sizeof(buf), radioNumber));
+
+    // 11.3.4 SetFskCrcParams (This is shared across _all_ the FSK based modulations.)
+    /*
+     * From DS_SX1280-1_V3.2.pdf table 14-40
+     * P24(x) = x^24 + x^22 + x^20 + x^19 + x^18 + x^16 + x^14 + x^13 + x^11 + x^10 + x^8 + x^7+ x^6 + x^3 + x + 1
+     *
+     * NB: the documentation for the SX1280 CRC Table 14-40 shows only 2 registers (i.e. 16 bit) for the initialization value,
+     * however, for 3-byte CRC (24-bits) there would eed to be a 3rd top 8-bits byte, it appears that the default value on the SX1280
+     * for this is 0xFF, hence that value in the parameters below.
+     */
+    constexpr uint32_t polynomial = 1<<24 | 1<<22 | 1<<20 | 1<<19 | 1<<18 | 1<<16 | 1<<14 | 1<<13 | 1<<11 | 1<<10 | 1<<8 | 1<<7 | 1<<6 | 1<<3 | 1<<1 | 1;
+    const uint8_t crcParams[] {
+        uint8_t(polynomial >> 24), uint8_t(polynomial >> 16), uint8_t(polynomial >> 8), uint8_t(polynomial),
+        0, 0xFF, uint8_t(crcSeed >> 8), uint8_t(crcSeed)
+    };
+    CHECK("LR2021_RADIO_SET_FSK_CRC_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_CRC_PARAMS_OC, crcParams, sizeof(crcParams), radioNumber));
+
+    // 18.4.5 SetFlrcSyncword
+    uint8_t syncWordBuf[] {1, uint8_t(syncWord >> 24), uint8_t(syncWord >> 16), uint8_t(syncWord >> 8), uint8_t(syncWord)};
+
+    /*
+     * DS_SX1280-1_V3.2.pdf - 16.4 FLRC Modem: Increased PER in FLRC Packets with Synch Word
+     * Simplified from the SX1280 as we only use CR 1/2
+     */
+    if ((syncWordBuf[1] == 0x8C && syncWordBuf[2] == 0x38) || (syncWordBuf[1] == 0x63 && syncWordBuf[2] == 0x0E))
+    {
+        const uint8_t temp = syncWordBuf[1];
+        syncWordBuf[1] = syncWordBuf[2];
+        syncWordBuf[2] = temp;
+    }
+
+    CHECK("LR2021_RADIO_SET_FLRC_SYNCWORD_OC", hal.WriteCommand(LR2021_RADIO_SET_FLRC_SYNCWORD_OC, syncWordBuf, sizeof(syncWordBuf), radioNumber));
 }
 
 void LR2021Driver::SetDioAsRfSwitch()
@@ -293,9 +410,18 @@ void LR2021Driver::SetDioAsRfSwitch()
      *  1  | SubG RX
      *  0  | Standby
      */
-    constexpr uint8_t default_rfsw_ctrl[]{0x10, 0x08, 0x02, 0x4, 0, 0, 0};
-    uint8_t switchbuf[2];
+    constexpr uint8_t default_rfsw_ctrl[] {
+        0x10,   // DIO5 = 2.4 TX
+        0x08,   // DIO6 = 2.4 RX
+        0x02,   // DIO7 = subGHz TX
+        0x04,   // DIO8 = subGHz RX
+        0x00,   // DIO9 = nothing
+        0x00,   // DIO10 = nothing
+        0x00,   // DIO11 = nothing
+    };
+
     // set all DIOs as RF output, and set the RF state for the DIO
+    uint8_t switchbuf[2];
     for (int i = 5; i <= 11; i++)
     {
         switchbuf[0] = i;
@@ -304,8 +430,10 @@ void LR2021Driver::SetDioAsRfSwitch()
         switchbuf[1] = LR1121_RFSW_CTRL ? LR1121_RFSW_CTRL[i - 5] : default_rfsw_ctrl[i - 5];
         CHECK("LR2021_SYSTEM_SET_DIO_RF_SWITCH_CFG_OC", hal.WriteCommand(LR2021_SYSTEM_SET_DIO_RF_SWITCH_CFG_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All));
     }
+
+    // Set DIO9 as IRQ
     switchbuf[0] = 9;    // DIO9
-    switchbuf[1] = 0x13; // IRQ, SLEEP PullAuto
+    switchbuf[1] = 0x10; // IRQ, SLEEP PullNone
     CHECK("LR2021_SYSTEM_SET_DIO_FUNCTION_OC", hal.WriteCommand(LR2021_SYSTEM_SET_DIO_FUNCTION_OC, switchbuf, sizeof(switchbuf), SX12XX_Radio_All));
 }
 
@@ -315,23 +443,21 @@ void LR2021Driver::CorrectRegisterForSF6(const uint8_t sf, const SX12XX_Radio_Nu
     // - SF6 can be made compatible with the SX127x family in implicit mode via a register setting.
     // 3.7.3 WriteRegMemMask32
 
-    if ((lr20xx_radio_lora_sf_t)sf == LR2021_RADIO_LORA_SF6)
+    if (sf == LR2021_RADIO_LORA_SF6)
     {
-        uint8_t wrbuf[11];
-        // Address
-        wrbuf[0] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 16; // MSB
-        wrbuf[1] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 8;  // MSB
-        wrbuf[2] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 0;  // MSB
-        // Mask
-        wrbuf[3] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 24; // MSB
-        wrbuf[4] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 16; // bit18=1 and bit23=0
-        wrbuf[5] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 8;
-        wrbuf[6] = LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 0;
-        // Data
-        wrbuf[7] = 0x00;       // MSB
-        wrbuf[8] = 0b00001000; // bit19=1
-        wrbuf[9] = 0x00;
-        wrbuf[10] = 0x00;
+        constexpr uint8_t wrbuf[] {
+            // Address
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 16), // MSB
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 8),  // MSB
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS >> 0),  // MSB
+            // Mask
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 24),    // MSB
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 16),    // bit18=1 and bit23=0
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 8),
+            uint8_t(LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK >> 0),
+            // Data (bit 19 set)
+            0x00, 0x08, 0x00, 0x00,
+        };
         CHECK("LR2021_REGMEM_WRITE_REGMEM32_MASK_OC", hal.WriteCommand(LR2021_REGMEM_WRITE_REGMEM32_MASK_OC, wrbuf, sizeof(wrbuf), radioNumber));
     }
 }
@@ -381,18 +507,21 @@ void ICACHE_RAM_ATTR LR2021Driver::CommitOutputPower()
 
     if (pwrForceUpdate)
     {
-        WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio1isSubGHz, SX12XX_Radio_1);
+        WriteOutputPower(radio1isSubGHz ? pwrCurrentLF : pwrCurrentHF, SX12XX_Radio_1);
         if (GPIO_PIN_NSS_2 != UNDEF_PIN)
         {
-            WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, radio2isSubGHz, SX12XX_Radio_2);
+            WriteOutputPower(radio2isSubGHz ? pwrCurrentLF : pwrCurrentHF, SX12XX_Radio_2);
         }
         pwrForceUpdate = false;
     }
 }
 
-void ICACHE_RAM_ATTR LR2021Driver::WriteOutputPower(const uint8_t power, const bool isSubGHz, const SX12XX_Radio_Number_t radioNumber)
+void ICACHE_RAM_ATTR LR2021Driver::WriteOutputPower(const uint8_t power, const SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t Txbuf[2] = {power, LR2021_RADIO_RAMP_48_US};
+    const uint8_t Txbuf[] {
+        power,
+        LR2021_RADIO_RAMP_48_US,
+    };
 
     // 9.5.2 SetTxParams
     CHECK("LR2021_RADIO_SET_TX_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_TX_PARAMS_OC, Txbuf, sizeof(Txbuf), radioNumber));
@@ -400,21 +529,23 @@ void ICACHE_RAM_ATTR LR2021Driver::WriteOutputPower(const uint8_t power, const b
 
 void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t Pabuf[3] = {0};
-
     // 7.3.1 SetPaConfig
     if (isSubGHz)
     {
-        Pabuf[0] = LR2021_RADIO_PA_SEL_LF;
-        Pabuf[1] = 7 << 4 | 6; // PaDutyCycle
-        Pabuf[2] = 16;         // PaHFDutyCycle
+        constexpr uint8_t Pabuf[] {
+            LR2021_RADIO_PA_SEL_LF,
+            7 << 4 | 6, // PaDutyCycle
+            16,         // PaHFDutyCycle
+        };
         CHECK("LR2021_RADIO_SET_PA_CFG_OC", hal.WriteCommand(LR2021_RADIO_SET_PA_CFG_OC, Pabuf, 3, radioNumber));
     }
     else
     {
-        Pabuf[0] = LR2021_RADIO_PA_SEL_HF;
-        Pabuf[1] = 6 << 4 | 0; // PaDutyCycle | PaSlices
-        Pabuf[2] = 30;         // PaHFDutyCycle
+        constexpr uint8_t Pabuf[] {
+            LR2021_RADIO_PA_SEL_HF,
+            6 << 4 | 0, // PaDutyCycle | PaSlices
+            30,         // PaHFDutyCycle
+        };
         CHECK("LR2021_RADIO_SET_PA_CFG_OC", hal.WriteCommand(LR2021_RADIO_SET_PA_CFG_OC, Pabuf, 3, radioNumber));
     }
 }
@@ -465,51 +596,13 @@ void LR2021Driver::SetMode(const lr20xx_RadioOperatingModes_t OPmode, const SX12
     }
 }
 
-void LR2021Driver::ConfigModParamsLoRa(const uint8_t bw, const uint8_t sf, const uint8_t cr, const SX12XX_Radio_Number_t radioNumber)
-{
-    // 8.1.1 SetPacketType
-    constexpr uint8_t packetType = LR2021_RADIO_PKT_TYPE_LORA;
-    CHECK("LR2021_RADIO_SET_PKT_TYPE_OC", hal.WriteCommand(LR2021_RADIO_SET_PKT_TYPE_OC, &packetType, 1, radioNumber));
-
-    // 8.3.1 SetModulationParams
-    uint8_t buf[2];
-    buf[0] = sf << 4 | bw;
-    buf[1] = cr << 4;
-    CHECK("LR2021_RADIO_SET_LORA_MODULATION_PARAM_OC", hal.WriteCommand(LR2021_RADIO_SET_LORA_MODULATION_PARAM_OC, buf, sizeof(buf), radioNumber));
-
-    if (radioNumber & SX12XX_Radio_1 && radio1isSubGHz)
-    {
-        CorrectRegisterForSF6(sf, SX12XX_Radio_1);
-    }
-
-    if (GPIO_PIN_NSS_2 != UNDEF_PIN)
-    {
-        if (radioNumber & SX12XX_Radio_2 && radio2isSubGHz)
-        {
-            CorrectRegisterForSF6(sf, SX12XX_Radio_2);
-        }
-    }
-}
-
-void LR2021Driver::SetPacketParamsLoRa(const uint8_t PreambleLength, const lr20xx_RadioLoRaPacketLengthsModes_t HeaderType,
-                                       const uint8_t PayloadLength, const uint8_t InvertIQ, const SX12XX_Radio_Number_t radioNumber)
-{
-    // 8.3.2 SetPacketParams
-    uint8_t buf[4];
-    buf[0] = PreambleLength >> 8; // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[1] = PreambleLength;      // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised;
-    buf[2] = PayloadLength;       // PayloadLen defines the size of the payload
-    buf[3] = HeaderType << 2 | InvertIQ;
-    CHECK("LR2021_RADIO_SET_PKT_PARAM_OC", hal.WriteCommand(LR2021_RADIO_SET_LORA_PACKET_PARAMS_OC, buf, sizeof(buf), radioNumber));
-}
-
 void ICACHE_RAM_ATTR LR2021Driver::SetFrequencyReg(const uint32_t freq, const SX12XX_Radio_Number_t radioNumber, const bool doRx, const uint32_t rxTime)
 {
-    uint8_t buf[4] = {
-        (uint8_t)(freq >> 24),
-        (uint8_t)(freq >> 16),
-        (uint8_t)(freq >> 8),
-        (uint8_t)(freq),
+    const uint8_t buf[] {
+        uint8_t(freq >> 24),
+        uint8_t(freq >> 16),
+        uint8_t(freq >> 8),
+        uint8_t(freq),
     };
     // 7.2.1 SetRfFrequency
     CHECK("LR2021_RADIO_SET_RF_FREQUENCY_OC", hal.WriteCommand(LR2021_RADIO_SET_RF_FREQUENCY_OC, buf, 4, radioNumber));
@@ -524,27 +617,37 @@ void ICACHE_RAM_ATTR LR2021Driver::SetFrequencyReg(const uint32_t freq, const SX
 void LR2021Driver::SetDioIrqParams()
 {
     constexpr uint32_t enable = LR2021_IRQ_TX_DONE | LR2021_IRQ_RX_DONE;
-    uint8_t buf[]{9, (uint8_t)(enable >> 24), (uint8_t)(enable >> 16), (uint8_t)(enable >> 8), (uint8_t)(enable)};
+    constexpr uint8_t buf[] {
+        9,
+        uint8_t(enable >> 24), uint8_t(enable >> 16), uint8_t(enable >> 8), uint8_t(enable),
+    };
     CHECK("LR2021_SYSTEM_SET_DIOIRQPARAMS_OC", hal.WriteCommand(LR2021_SYSTEM_SET_DIOIRQPARAMS_OC, buf, sizeof(buf), SX12XX_Radio_All));
 }
 
 // 3.4.1 GetStatus
 uint32_t ICACHE_RAM_ATTR LR2021Driver::GetIrqStatus(const SX12XX_Radio_Number_t radioNumber)
 {
-    uint8_t status[6] = {0};
-    status[0] = LR2021_SYSTEM_CLEAR_IRQ_OC >> 8;
-    status[1] = LR2021_SYSTEM_CLEAR_IRQ_OC & 0xFF;
-    status[2] = 0xFF;
-    status[3] = 0xFF;
-    status[4] = 0xFF;
-    status[5] = 0xFF;
+    uint8_t status[] {
+        LR2021_SYSTEM_CLEAR_IRQ_OC >> 8,
+        LR2021_SYSTEM_CLEAR_IRQ_OC & 0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+    };
     CHECK("LR2021_SYSTEM_CLEAR_IRQ_OC(Get)", hal.ReadCommand(status, sizeof(status), radioNumber));
     return status[2] << 24 | status[3] << 16 | status[4] << 8 | status[5];
 }
 
 void ICACHE_RAM_ATTR LR2021Driver::ClearIrqStatus(const SX12XX_Radio_Number_t radioNumber)
 {
-    GetIrqStatus(radioNumber);
+    constexpr uint8_t status[] {
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+    };
+    CHECK("LR2021_SYSTEM_CLEAR_IRQ_OC(Clr)", hal.WriteCommand(LR2021_SYSTEM_CLEAR_IRQ_OC, status, sizeof(status), radioNumber));
 }
 
 void ICACHE_RAM_ATTR LR2021Driver::TXnbISR()
@@ -560,17 +663,6 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnbISR()
 void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuffer, uint8_t *dataGemini, const SX12XX_Radio_Number_t radioNumber)
 {
     transmittingRadio = radioNumber;
-
-    // //catch TX timeout
-    // if (currOpmode == SX1280_MODE_TX)
-    // {
-    //     DBGLN("Timeout!");
-    //     SetMode(SX1280_MODE_FS, SX12XX_Radio_All);
-    //     ClearIrqStatus(SX1280_IRQ_RADIO_ALL, SX12XX_Radio_All);
-    //     TXnbISR();
-    //     return;
-    // }
-
     if (radioNumber == SX12XX_Radio_NONE)
     {
         SetMode(fallBackMode, SX12XX_Radio_All);
@@ -623,22 +715,30 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, uint8_t *buf)
 {
     memset(buf, 0, 8);
-    if (isGFSKModulation(modulation)) {
+    if (isGFSKModulation(modulation))
+    {
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
-    } else {
+    }
+    else if (isFLRCModulation(modulation))
+    {
+        CHECK("LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC, radioNumber));
+        CHECK("LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC", hal.ReadCommand(buf, 7, radioNumber));
+    }
+    else
+    {
         CHECK("LR2021_RADIO_GET_LORA_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_LORA_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_LORA_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
     }
 
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt
-    const int8_t rssi = -(int8_t)buf[isGFSKModulation(modulation) ? 4 : 6];
+    const int8_t rssi = -(int8_t)buf[isLoRaModulation(modulation) ? 6 : 4];
 
     // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
 
     // Update whatever SNRs we have
-    LastPacketSNRRaw = isGFSKModulation(modulation) ? 0 : (int8_t)buf[4];
+    LastPacketSNRRaw = isLoRaModulation(modulation) ? (int8_t)buf[4] : 0;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     // stat updates
