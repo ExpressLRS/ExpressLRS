@@ -4,12 +4,12 @@ import '../assets/mui.js'
 import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js";
-
-const PROTOCOL_AIRPORT = 10
+import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js";
 
 @customElement('serial-panel')
 class SerialPanel extends LitElement {
-    SERIAL_OPTIONS = ["CRSF", "Inverted CRSF", "SBUS", "Inverted SBUS", "SUMD", "DJI RS Pro", "HoTT Telemetry", "MAVLINK", "DisplayPort", "GPS"]
+
+    PROTOCOL_AIRPORT = SERIAL_OPTIONS1.length - 1
 
     @state() accessor serial1Protocol
     @state() accessor serial2Protocol
@@ -20,7 +20,7 @@ class SerialPanel extends LitElement {
 
     createRenderRoot() {
         this.isAirport = elrsState.options['is-airport']
-        this.serial1Protocol = this.isAirport ? PROTOCOL_AIRPORT : elrsState.config['serial-protocol']
+        this.serial1Protocol = this.isAirport ? this.PROTOCOL_AIRPORT : elrsState.config['serial-protocol']
         this.serial2Protocol = elrsState.config['serial1-protocol']
         this.baudRate = elrsState.options['rcvr-uart-baud']
         this.sbusFailsafe = elrsState.config['sbus-failsafe']
@@ -39,7 +39,7 @@ class SerialPanel extends LitElement {
                     ${this._hasSerial1() ? html`
                     <div class="mui-select">
                         <select name='serial-protocol' @change=${this._updateSerial1}>
-                            ${_renderOptions([...this.SERIAL_OPTIONS, "AirPort"], this.serial1Protocol)}
+                            ${_renderOptions(SERIAL_OPTIONS1, this.serial1Protocol)}
                         </select>
                         <label>Serial 1 Protocol</label>
                     </div>
@@ -47,7 +47,7 @@ class SerialPanel extends LitElement {
                     ${this._hasSerial2() ? html`
                     <div class="mui-select">
                         <select name='serial1-protocol' @change=${this._updateSerial2}>
-                            ${_renderOptions(["Off", ...this.SERIAL_OPTIONS], this.serial2Protocol)}
+                            ${_renderOptions(SERIAL_OPTIONS2, this.serial2Protocol)}
                         </select>
                         <label>Serial 2 Protocol</label>
                     </div>
@@ -137,7 +137,7 @@ class SerialPanel extends LitElement {
 
     _updateSerial1(e) {
         this.serial1Protocol = parseInt(e.target.value)
-        this.isAirport = this.serial1Protocol === PROTOCOL_AIRPORT
+        this.isAirport = this.serial1Protocol === this.PROTOCOL_AIRPORT
         if (this.serial1Protocol === 0 || this.serial1Protocol === 1) {
             this.baudRate = 420000
             this.requestUpdate()
