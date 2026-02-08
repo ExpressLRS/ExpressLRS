@@ -104,6 +104,7 @@ def patch_unified(args, options):
         args.file,
         JSONEncoder().encode(json_flags),
         args.target,
+        None,
         'tx' if options.deviceType is DeviceType.TX else 'rx',
         '2400' if options.radioChip is RadioType.SX1280 else '900' if options.radioChip is RadioType.SX127X else 'dual',
         '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
