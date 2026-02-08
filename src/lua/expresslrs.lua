@@ -314,6 +314,12 @@ function Protocol.isConnected()
   return bit32.btest(Protocol.elrsFlags, 1)
 end
 
+-- Response timeout for PARAMETER_READ (from upstream elrsV3.lua):
+-- 0.5s for local TX module, 5s for remote devices relayed over air link.
+function Protocol.fieldResponseTimeout()
+  return Protocol.deviceIsELRS_TX and 50 or 500
+end
+
 -- Check if a CRSF-compatible module is available
 function Protocol.hasCrsfModule()
   for modIdx = 0, 1 do
@@ -364,7 +370,7 @@ function Protocol.isFolderLoaded(folderId)
   if not folder or not folder.children then return false end
   for _, childId in ipairs(folder.children) do
     local child = Protocol.fields[childId]
-    if not child or not child.name then return false end
+    if not child or not child.name or child.nameStale then return false end
   end
   return true
 end
@@ -611,8 +617,18 @@ end
 
 function Protocol.reloadParentFolder(field)
   if field.parent and Protocol.fields[field.parent] then
-    Protocol.fields[field.parent].name = nil
+    -- Mark stale instead of clearing name to nil. This keeps the old folder
+    -- name visible in the UI while the reload is in-flight, avoiding a gap
+    -- where the folder disappears (getFieldsInFolder skips nil-named fields).
+    Protocol.fields[field.parent].nameStale = true
     Protocol.loadQueue[#Protocol.loadQueue + 1] = field.parent
+    -- Delay the READ so it doesn't race the WRITE on the CRSF bus.
+    -- Firmware needs time to process the write and update folder names.
+    -- Uses the same device-dependent timeout as poll() PARAMETER_READ.
+    local minTimeout = getTime() + Protocol.fieldResponseTimeout()
+    if Protocol.fieldTimeout < minTimeout then
+      Protocol.fieldTimeout = minTimeout
+    end
   end
 end
 
@@ -763,7 +779,9 @@ function Protocol.parseParameterInfoMessage(data)
       field.parent = (Protocol.fieldData[offset] ~= 0) and Protocol.fieldData[offset] or nil
       field.type = bit32.band(Protocol.fieldData[offset + 1], 0x7f)
       field.hidden = bit32.btest(Protocol.fieldData[offset + 1], 0x80) or nil
-      field.name, offset = Protocol.fieldGetStrOrOpts(Protocol.fieldData, offset + 2, field.name)
+      local cachedName = (not field.nameStale) and field.name or nil
+      field.name, offset = Protocol.fieldGetStrOrOpts(Protocol.fieldData, offset + 2, cachedName)
+      field.nameStale = nil
       local handler = Protocol.handlers[field.type + 1]
       if handler and handler.load then
         handler.load(field, Protocol.fieldData, offset)
@@ -873,7 +891,7 @@ function Protocol.poll()
   elseif time > Protocol.fieldTimeout and Protocol.fieldsCount ~= 0 then
     if #Protocol.loadQueue > 0 then
       Protocol.push(Protocol.CRSF.FRAMETYPE_PARAMETER_READ, { Protocol.deviceId, Protocol.handsetId, Protocol.loadQueue[#Protocol.loadQueue], Protocol.fieldChunk })
-      Protocol.fieldTimeout = time + (Protocol.deviceIsELRS_TX and 50 or 500)
+      Protocol.fieldTimeout = time + Protocol.fieldResponseTimeout()
     else
       Protocol.backgroundLoading = false
     end

@@ -103,6 +103,16 @@ local queueHead = 1
 local deferredQueue = {}
 local deferredReady = false
 
+-- Deferred folder name updates simulate the firmware event loop gap:
+-- PARAMETER_WRITE callbacks set config values immediately, but
+-- updateFolderNames() runs on the NEXT event loop iteration.
+-- A PARAMETER_READ arriving before that gets stale dynName.
+-- Delay is time-based (getTime() ticks, 10ms each) to be independent of
+-- how often mockPop is called within a single Protocol.poll() cycle.
+local FOLDER_NAMES_UPDATE_TICKS = 2  -- 20ms delay
+local folderNamesReadyAt = 0
+local folderNamesDevice = nil
+
 local function queuePush(command, data)
   packetQueue[#packetQueue + 1] = { command = command, data = data }
 end
@@ -839,24 +849,15 @@ local function mockPush(command, data)
           queuePush(CRSF.FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
             encodeParameterEntry(device, param, 0, destAddr))
         else
-          -- Value write: update the stored value
+          -- Value write: update the stored value immediately (matches
+          -- firmware config.Set*() which stores in RAM right away).
           param.value = writeValue
-          -- Refresh dynamic folder names (e.g. "TX Power (250 Dyn)")
-          updateFolderNames(device)
-          -- Refresh telemetry bandwidth display (affected by Packet Rate, Telem Ratio, Switch Mode)
-          updateTlmBandwidth(device)
-          -- If this param lives inside a folder, re-send the parent folder entry
-          -- so the Lua script picks up the updated dynName in the UI header
-          if param.parent and param.parent ~= 0 then
-            local parentParam = findParam(device, param.parent)
-            if parentParam and bit32.band(parentParam.type, 0x7F) == CRSF.FOLDER then
-              local destAddr = data[2] or CRSF.ADDRESS_RADIO_TRANSMITTER
-              parentParam._device = device
-              queuePush(CRSF.FRAMETYPE_PARAMETER_SETTINGS_ENTRY,
-                encodeParameterEntry(device, parentParam, 0, destAddr))
-              parentParam._device = nil
-            end
-          end
+          -- Defer folder name and bandwidth updates to the next poll cycle.
+          -- Real firmware runs updateFolderNames() in the event loop, not
+          -- in the PARAMETER_WRITE handler. No auto-send of parent folder
+          -- entry either -- the Lua script must explicitly PARAMETER_READ.
+          folderNamesReadyAt = getTime() + FOLDER_NAMES_UPDATE_TICKS
+          folderNamesDevice = device
         end
       end
     end
@@ -873,7 +874,18 @@ end
 
 local function mockPop()
   if not startTime then startTime = getTime() end
-  return queuePop()
+
+  local command, data = queuePop()
+
+  -- Apply deferred folder name updates once enough real time has elapsed.
+  -- Until then, any PARAMETER_READ for a folder returns the stale dynName.
+  if folderNamesDevice and getTime() >= folderNamesReadyAt then
+    updateFolderNames(folderNamesDevice)
+    updateTlmBandwidth(folderNamesDevice)
+    folderNamesDevice = nil
+  end
+
+  return command, data
 end
 
 -- ============================================================================
