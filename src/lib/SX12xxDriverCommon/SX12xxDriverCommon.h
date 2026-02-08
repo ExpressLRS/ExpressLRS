@@ -12,6 +12,22 @@ enum
     SX12XX_Radio_All  = 0b00000011      // bit mask for both radios
 };
 
+enum {
+    RADIO_MODULATION_LORA_900 = 0,
+    RADIO_MODULATION_LORA_2G4,
+    RADIO_MODULATION_LORA_DUAL,
+
+    RADIO_MODULATION_FLRC_900 = 100,
+    RADIO_MODULATION_FLRC_2G4,
+
+    RADIO_MODULATION_GFSK_900 = 200,
+    RADIO_MODULATION_GFSK_2G4,
+};
+
+inline bool isLoRaModulation(const uint8_t modulation) { return modulation / 100 == 0; }
+inline bool isFLRCModulation(const uint8_t modulation) { return modulation / 100 == 1; }
+inline bool isGFSKModulation(const uint8_t modulation) { return modulation / 100 == 2; }
+
 class SX12xxDriverCommon
 {
 public:

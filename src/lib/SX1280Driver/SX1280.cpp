@@ -145,9 +145,9 @@ void SX1280Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 
 void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength,
-                          uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t flrc)
+                          uint32_t flrcSyncWord, uint16_t flrcCrcSeed, uint8_t modulation)
 {
-    uint8_t const mode = (flrc) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
+    const uint8_t mode = isFLRCModulation(modulation) ? SX1280_PACKET_TYPE_FLRC : SX1280_PACKET_TYPE_LORA;
 
     PayloadLength = _PayloadLength;
     IQinverted = InvertIQ;

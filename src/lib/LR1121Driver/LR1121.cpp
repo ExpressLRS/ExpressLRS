@@ -54,7 +54,6 @@ void ICACHE_RAM_ATTR CopyCodec::decode(uint8_t *out, uint8_t *in, const uint32_t
 
 LR1121Driver::LR1121Driver(): SX12xxDriverCommon()
 {
-    useFSK = false;
     instance = this;
     strongestReceivingRadio = SX12XX_Radio_1;
     fallBackMode = LR1121_MODE_FS;
@@ -167,7 +166,7 @@ void LR1121Driver::startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber)
 
 void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
                           uint8_t PreambleLength, bool InvertIQ, uint8_t _PayloadLength,
-                          bool setFSKModulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
+                          uint8_t _modulation, uint8_t fskSyncWord1, uint8_t fskSyncWord2,
                           SX12XX_Radio_Number_t radioNumber)
 {
     PayloadLength = _PayloadLength;
@@ -190,14 +189,14 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     SetMode(LR1121_MODE_STDBY_RC, radioNumber);
 
-    useFSK = setFSKModulation;
+    this->modulation = _modulation;
 
     // 8.1.1 SetPacketType
-    uint8_t buf[1] = {useFSK ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA};
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, buf, sizeof(buf), radioNumber);
+    uint8_t buf = isGFSKModulation(modulation) ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA;
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, &buf, 1, radioNumber);
 
     codec = &copyCodec;
-    if (useFSK)
+    if (isGFSKModulation(modulation))
     {
         DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
@@ -664,7 +663,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 inline void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t radioNumber, const uint8_t *buf)
 {
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt/2.
-    const int8_t rssi = -(int8_t)(buf[useFSK ? 3 : 5] / 2);
+    const int8_t rssi = -(int8_t)(buf[isGFSKModulation(modulation) ? 3 : 5] / 2);
 
     // SignalRssiPkt is an estimation of RSSI of the LoRa signal (after despreading) on last packet received, in two’s
     // complement format [negated, dBm, fixdt(0,8,1)]. Actual RSSI in dB is -SignalRssiPkt/2.
@@ -674,7 +673,7 @@ inline void ICACHE_RAM_ATTR LR1121Driver::DecodeRssiSnr(SX12XX_Radio_Number_t ra
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
 
     // Update whatever SNRs we have
-    LastPacketSNRRaw = useFSK ? 0 : (int8_t)buf[4];
+    LastPacketSNRRaw = isGFSKModulation(modulation) ? 0 : (int8_t)buf[4];
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     // stat updates
