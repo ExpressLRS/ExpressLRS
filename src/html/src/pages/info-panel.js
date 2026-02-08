@@ -1,6 +1,6 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import {elrsState, formatBand} from "../utils/state.js";
+import {elrsState, formatBand, formatWifiRssi} from "../utils/state.js";
 import {SERIAL_OPTIONS1} from '../utils/globals.js'
 import '../assets/mui.js';
 
@@ -25,6 +25,7 @@ class InfoPanel extends LitElement {
                     <tr><td><b>Radio</b></td><td>${elrsState.settings['radio-type']}</td></tr>
                     <tr><td><b>Domain</b></td><td>${formatBand()}</td></tr>
                     <tr><td><b>Binding UID</b></td><td>${elrsState.config.uid.toString()}</td></tr>
+                    <tr><td><b>WiFi State</b></td><td>${formatWifiRssi()}</td></tr>
                     </tbody>
                 </table>
             </div>
