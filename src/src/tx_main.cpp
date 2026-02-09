@@ -916,8 +916,9 @@ static void UpdateConnectDisconnectStatus()
   {
     if (connectionState != connected)
     {
-      setConnectionState(connected);
       DBGLN("got downlink conn");
+      RxDisconnected_Ms = 0;
+      setConnectionState(connected);
 
       apInputBuffer.flush();
       apOutputBuffer.flush();
