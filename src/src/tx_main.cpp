@@ -1396,9 +1396,9 @@ static void checkSendLinkStatsToHandset(uint32_t now)
     // If we have gone to disconnected state, keep sending the ghost linkstats for some time
     if (RxDisconnected_Ms)
     {
-      constexpr uint32_t LOST_NOTIFICATION_MAX_DELAY_MS = 5000U;
+      constexpr uint32_t LOST_NOTIFICATION_MAX_DELAY_MS = 3000U;
       // Delay a variable amount based on the LQ. Lower LQ, lower time before we tell the handset what's up
-      uint32_t TelemetryLostCalloutDelay_Ms = map(linkStats.uplink_Link_quality, 0, 100, 0, LOST_NOTIFICATION_MAX_DELAY_MS);
+      uint32_t TelemetryLostCalloutDelay_Ms = map(constrain(linkStats.uplink_Link_quality, 50, 100), 50, 100, 0, LOST_NOTIFICATION_MAX_DELAY_MS);
       if (now - RxDisconnected_Ms > TelemetryLostCalloutDelay_Ms)
       {
         RxDisconnected_Ms = 0;
