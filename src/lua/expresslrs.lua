@@ -994,6 +994,11 @@ end
 -- UI: Widget creators
 -- ============================================================================
 
+-- Narrow screens (e.g. FlySky EL18 portrait, PA01) need more room for controls
+local IS_NARROW = LCD_W < 400
+local LABEL_PCT = IS_NARROW and 42 or 50
+local CTRL_PCT  = 100 - LABEL_PCT
+
 function UI.createChoiceRow(pg, field)
   local row = pg:rectangle({
     w = lvgl.PERCENT_SIZE + 100,
@@ -1003,7 +1008,7 @@ function UI.createChoiceRow(pg, field)
   })
 
   local labelRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
+    w = lvgl.PERCENT_SIZE + LABEL_PCT,
     h = lvgl.UI_ELEMENT_HEIGHT,
     thickness = 0,
     children = {
@@ -1017,7 +1022,7 @@ function UI.createChoiceRow(pg, field)
   })
 
   local ctrlRect = row:rectangle({
-    w = lvgl.PERCENT_SIZE + 50,
+    w = lvgl.PERCENT_SIZE + CTRL_PCT,
     thickness = 0,
     flexFlow = lvgl.FLOW_ROW,
     align = LEFT + VCENTER
@@ -1084,10 +1089,10 @@ function UI.createNumberRow(pg, field)
 
   pg:build({
     {type="rectangle", w=lvgl.PERCENT_SIZE+100, thickness=0, flexFlow=lvgl.FLOW_ROW, flexPad=0, children={
-      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+LABEL_PCT, thickness=0, children={
         {type="label", text=field.name or "", color=COLOR_THEME_PRIMARY1},
       }},
-      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+CTRL_PCT, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
         {type="numberEdit", min=field.min or 0, max=field.max or 255,
           get=function() return field.value or 0 end,
           set=function(val)
@@ -1108,10 +1113,10 @@ end
 function UI.createInfoRow(pg, field)
   pg:build({
     {type="rectangle", w=lvgl.PERCENT_SIZE+100, thickness=0, flexFlow=lvgl.FLOW_ROW, flexPad=0, children={
-      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+LABEL_PCT, thickness=0, children={
         {type="label", text=field.name or "", color=COLOR_THEME_PRIMARY1},
       }},
-      {type="rectangle", w=lvgl.PERCENT_SIZE+50, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
+      {type="rectangle", w=lvgl.PERCENT_SIZE+CTRL_PCT, thickness=0, flexFlow=lvgl.FLOW_ROW, align=LEFT, children={
         {type="label", text=field.value or ""},
       }},
     }},
@@ -1229,8 +1234,9 @@ function UI.build()
     end
 
     local fieldsInFolder = Protocol.getFieldsInFolder(currentFolder)
-    local FOLDERS_PER_ROW = 3
-    local folderWidth = math.floor(100 / FOLDERS_PER_ROW) - 1
+    -- Narrow screens (e.g. FlySky EL18 portrait, PA01) are too narrow for 3 folders per row
+    local FOLDERS_PER_ROW = IS_NARROW and 1 or 3
+    local folderWidth = math.floor(100 / FOLDERS_PER_ROW)
     local i = 1
     while i <= #fieldsInFolder do
       local field = fieldsInFolder[i]
@@ -1243,19 +1249,26 @@ function UI.build()
           i = i + 1
         end
 
-        for j = 1, #folderBatch, FOLDERS_PER_ROW do
-          local rowContainer = fieldContainer:box({
-            w = lvgl.PERCENT_SIZE + 100,
-            flexFlow = lvgl.FLOW_ROW,
-            flexPad = lvgl.PAD_SMALL,
-            align = CENTER,
-            color = COLOR_THEME_PRIMARY2
-          })
+        if FOLDERS_PER_ROW == 1 then
+          -- Single column: add each folder directly, no row wrapper needed
+          for j = 1, #folderBatch do
+            UI.createFolderWidget(fieldContainer, folderBatch[j])
+          end
+        else
+          for j = 1, #folderBatch, FOLDERS_PER_ROW do
+            local rowContainer = fieldContainer:box({
+              w = lvgl.PERCENT_SIZE + 100,
+              flexFlow = lvgl.FLOW_ROW,
+              flexPad = 0,
+              align = CENTER,
+              color = COLOR_THEME_PRIMARY2
+            })
 
-          for k = 0, FOLDERS_PER_ROW - 1 do
-            local folderField = folderBatch[j + k]
-            if folderField then
-              UI.createFolderWidget(rowContainer, folderField, lvgl.PERCENT_SIZE + folderWidth)
+            for k = 0, FOLDERS_PER_ROW - 1 do
+              local folderField = folderBatch[j + k]
+              if folderField then
+                UI.createFolderWidget(rowContainer, folderField, lvgl.PERCENT_SIZE + folderWidth)
+              end
             end
           end
         end
