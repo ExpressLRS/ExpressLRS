@@ -27,7 +27,7 @@ export function devMockPlugin() {
             ssid: 'ExpressLRS TX',
             mode: 'AP',
             custom_hardware: true,
-            has_low_band: false,
+            has_low_band: true,
             has_high_band: true,
             reg_domain_low: 'EU868',
             reg_domain_high: 'CE_LBT',
