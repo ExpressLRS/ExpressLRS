@@ -21,6 +21,7 @@ export const FEATURES = {
   HAS_SX128X: toBool(ENV.VITE_FEATURE_HAS_SX128X, false),
   HAS_SX127X: toBool(ENV.VITE_FEATURE_HAS_SX127X, false),
   HAS_LR1121: toBool(ENV.VITE_FEATURE_HAS_LR1121, false),
+  // "derived" flags below, also check feature-blocks-plugins.js
   HAS_SUBGHZ: toBool(ENV.VITE_FEATURE_HAS_LR1121, false) || toBool(ENV.VITE_FEATURE_HAS_SX127X, false),
 }
 

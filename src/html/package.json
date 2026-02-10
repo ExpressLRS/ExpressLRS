@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite",
+    "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true vite",
     "dev:rx": "vite",
     "clean": "rimraf dist",
     "build": "npm run clean && vite build",
