@@ -167,7 +167,7 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     }
 
     IQinverted = InvertIQ;
-    lr11xx_radio_lora_iq_t inverted = InvertIQ ? LR2021_RADIO_LORA_IQ_INVERTED : LR2021_RADIO_LORA_IQ_STANDARD;
+    lr20xx_radio_lora_iq_t inverted = InvertIQ ? LR2021_RADIO_LORA_IQ_INVERTED : LR2021_RADIO_LORA_IQ_STANDARD;
     // IQinverted is always STANDARD for 900
     if (isSubGHz)
     {
@@ -202,9 +202,9 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
         ConfigModParamsLoRa(bw, sf, cr, radioNumber);
 
 #if defined(DEBUG_FREQ_CORRECTION) // TODO Check if this available with the LR2021?
-        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR2021_LORA_PACKET_EXPLICIT;
+        lr20xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR2021_LORA_PACKET_EXPLICIT;
 #else
-        lr11xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR2021_LORA_PACKET_IMPLICIT;
+        lr20xx_RadioLoRaPacketLengthsModes_t packetLengthType = LR2021_LORA_PACKET_IMPLICIT;
 #endif
 
         SetPacketParamsLoRa(PreambleLength, packetLengthType, PayloadLength, inverted, radioNumber);
@@ -264,7 +264,7 @@ void LR2021Driver::SetPacketParamsFSK(const uint8_t PreambleLength, const uint8_
     CHECK("LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC, buf, 8, radioNumber));
 
     // 11.3.3 SetFskPacketParams
-    buf[0] = 0x01; // SX127x/SX126x/LR11xx compatible whitening enable 0x0100 seed
+    buf[0] = 0x01; // SX127x/SX126x/lr20xx compatible whitening enable 0x0100 seed
     buf[1] = 0x00;
     CHECK("LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC, buf, 2, radioNumber));
 }
@@ -315,7 +315,7 @@ void LR2021Driver::CorrectRegisterForSF6(const uint8_t sf, const SX12XX_Radio_Nu
     // - SF6 can be made compatible with the SX127x family in implicit mode via a register setting.
     // 3.7.3 WriteRegMemMask32
 
-    if ((lr11xx_radio_lora_sf_t)sf == LR2021_RADIO_LORA_SF6)
+    if ((lr20xx_radio_lora_sf_t)sf == LR2021_RADIO_LORA_SF6)
     {
         uint8_t wrbuf[11];
         // Address
@@ -419,7 +419,7 @@ void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX
     }
 }
 
-void LR2021Driver::SetMode(const lr11xx_RadioOperatingModes_t OPmode, const SX12XX_Radio_Number_t radioNumber)
+void LR2021Driver::SetMode(const lr20xx_RadioOperatingModes_t OPmode, const SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[5] = {0};
 
@@ -491,7 +491,7 @@ void LR2021Driver::ConfigModParamsLoRa(const uint8_t bw, const uint8_t sf, const
     }
 }
 
-void LR2021Driver::SetPacketParamsLoRa(const uint8_t PreambleLength, const lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,
+void LR2021Driver::SetPacketParamsLoRa(const uint8_t PreambleLength, const lr20xx_RadioLoRaPacketLengthsModes_t HeaderType,
                                        const uint8_t PayloadLength, const uint8_t InvertIQ, const SX12XX_Radio_Number_t radioNumber)
 {
     // 8.3.2 SetPacketParams

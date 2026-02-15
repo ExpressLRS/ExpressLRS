@@ -65,7 +65,7 @@ private:
     bool pwrForceUpdate;
     bool radio1isSubGHz;
     bool radio2isSubGHz;
-    lr11xx_RadioOperatingModes_t fallBackMode;
+    lr20xx_RadioOperatingModes_t fallBackMode;
     BufferCodec *codec;
 
     WORD_ALIGNED_ATTR uint8_t rx_buf[32] = {};
@@ -73,11 +73,11 @@ private:
 
     bool CheckVersion(SX12XX_Radio_Number_t radioNumber);
 
-    void SetMode(lr11xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
+    void SetMode(lr20xx_RadioOperatingModes_t OPmode, SX12XX_Radio_Number_t radioNumber);
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
-    void SetPacketParamsLoRa(uint8_t PreambleLength, lr11xx_RadioLoRaPacketLengthsModes_t HeaderType,
+    void SetPacketParamsLoRa(uint8_t PreambleLength, lr20xx_RadioLoRaPacketLengthsModes_t HeaderType,
                              uint8_t PayloadLength, uint8_t InvertIQ, SX12XX_Radio_Number_t radioNumber);
     // FSK functions
     void ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber);

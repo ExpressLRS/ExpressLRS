@@ -71,10 +71,10 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
     {
         switch((lr20xx_radio_lora_sf_t)SF)
         {
-        case LR20XX_RADIO_LORA_SF5: return 22;
-        case LR20XX_RADIO_LORA_SF6: return 22;
-        case LR20XX_RADIO_LORA_SF7: return 22;
-        case LR20XX_RADIO_LORA_SF8: return 240;
+        case LR2021_RADIO_LORA_SF5: return 22;
+        case LR2021_RADIO_LORA_SF6: return 22;
+        case LR2021_RADIO_LORA_SF7: return 22;
+        case LR2021_RADIO_LORA_SF8: return 240;
         default: return 240;
         }
     }

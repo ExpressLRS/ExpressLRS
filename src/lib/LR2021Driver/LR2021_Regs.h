@@ -51,7 +51,7 @@ typedef enum
     LR2021_LORA_PACKET_FIXED_LENGTH = 0x01,    //!< The packet length is known on both sides, no header included in the packet
     LR2021_LORA_PACKET_EXPLICIT = LR2021_LORA_PACKET_VARIABLE_LENGTH,
     LR2021_LORA_PACKET_IMPLICIT = LR2021_LORA_PACKET_FIXED_LENGTH,
-} lr11xx_RadioLoRaPacketLengthsModes_t;
+} lr20xx_RadioLoRaPacketLengthsModes_t;
 
 typedef enum
 {
@@ -62,7 +62,7 @@ typedef enum
     LR2021_MODE_RX_CONT,      //! The radio is in continuous receive mode
     LR2021_MODE_TX,           //! The radio is in transmit mode
     LR2021_MODE_CAD           //! The radio is in channel activity detection mode
-} lr11xx_RadioOperatingModes_t;
+} lr20xx_RadioOperatingModes_t;
 
 enum
 {
@@ -109,7 +109,7 @@ typedef enum
 {
     LR2021_RADIO_PA_SEL_LF = 0x00, //!< Low-power Power Amplifier
     LR2021_RADIO_PA_SEL_HF = 0x80, //!< High-frequency Power Amplifier
-} lr11xx_radio_pa_selection_t;
+} lr20xx_radio_pa_selection_t;
 
 typedef enum // USED
 {
@@ -119,7 +119,7 @@ typedef enum // USED
 typedef enum
 {
     LR2021_RADIO_RAMP_48_US = 0x05, //!< 48 us Ramp Time (Default)
-} lr11xx_radio_ramp_time_t;
+} lr20xx_radio_ramp_time_t;
 
 typedef enum
 {
@@ -131,14 +131,14 @@ typedef enum
     LR2021_RADIO_LORA_SF10 = 0x0A, //!< Spreading Factor 10
     LR2021_RADIO_LORA_SF11 = 0x0B, //!< Spreading Factor 11
     LR2021_RADIO_LORA_SF12 = 0x0C, //!< Spreading Factor 12
-} lr11xx_radio_lora_sf_t;
+} lr20xx_radio_lora_sf_t;
 
 typedef enum
 {
     LR2021_RADIO_LORA_BW_62 = 0x03,  //!< Bandwidth 62.50 kHz
     LR2021_RADIO_LORA_BW_500 = 0x06, //!< Bandwidth 500.00 kHz
     LR2021_RADIO_LORA_BW_800 = 0x0F, //!< Bandwidth 812.00 kHz, 2G4 and compatible with LR112x chips only
-} lr11xx_radio_lora_bw_t;
+} lr20xx_radio_lora_bw_t;
 
 typedef enum
 {
@@ -151,30 +151,30 @@ typedef enum
     LR2021_RADIO_LORA_CR_LI_4_8 = 0x07, //!< Coding Rate 4/8 Long Interleaver
     LR2021_RADIO_LORA_CC_LI_4_6 = 0x08, //!< Convolutional Code 4/6 Long Interleaver
     LR2021_RADIO_LORA_CC_LI_4_8 = 0x09, //!< Convolutional Code 4/8 Long Interleaver
-} lr11xx_radio_lora_cr_t;
+} lr20xx_radio_lora_cr_t;
 
 typedef enum
 {
     LR2021_RADIO_LORA_IQ_STANDARD = 0x00, //!< IQ standard
     LR2021_RADIO_LORA_IQ_INVERTED = 0x01, //!< IQ inverted
-} lr11xx_radio_lora_iq_t;
+} lr20xx_radio_lora_iq_t;
 
 typedef enum
 {
     LR2021_RADIO_PKT_TYPE_LORA = 0x00, //!< LoRa modulation
     LR2021_RADIO_PKT_TYPE_FSK = 0x02,  //!< FSK modulation
     LR2021_RADIO_PKT_TYPE_FLRC = 0x05, //!< FLRC modulation
-} lr11xx_radio_pkt_type_t;
+} lr20xx_radio_pkt_type_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_CRC_OFF = 0x00, //!< CRC check deactivated
-} lr11xx_radio_gfsk_crc_type_t;
+} lr20xx_radio_gfsk_crc_type_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_DC_FREE_WHITENING = 0x01, //!< Whitening enabled
-} lr11xx_radio_gfsk_dc_free_t;
+} lr20xx_radio_gfsk_dc_free_t;
 
 typedef enum
 {
@@ -183,12 +183,12 @@ typedef enum
     LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_16BITS = 0x10,
     LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_24BITS = 0x18,
     LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_32BITS = 0x20
-} lr11xx_radio_gfsk_preamble_detector_t;
+} lr20xx_radio_gfsk_preamble_detector_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_BW_476000 = 81    //!< Bandwidth 476.2 kHz
-} lr11xx_radio_gfsk_bw_t;
+} lr20xx_radio_gfsk_bw_t;
 
 typedef enum
 {
@@ -197,17 +197,17 @@ typedef enum
     LR2021_RADIO_GFSK_PULSE_SHAPE_BT_05 = 0x09, //!< Gaussian BT 0.5
     LR2021_RADIO_GFSK_PULSE_SHAPE_BT_07 = 0x0A, //!< Gaussian BT 0.7
     LR2021_RADIO_GFSK_PULSE_SHAPE_BT_1 = 0x0B   //!< Gaussian BT 1.0
-} lr11xx_radio_gfsk_pulse_shape_t;
+} lr20xx_radio_gfsk_pulse_shape_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_BITRATE_300k = 30
-} lr11xx_radio_gfsk_bitrate_t;
+} lr20xx_radio_gfsk_bitrate_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_FDEV_100k = 100
-} lr11xx_radio_gfsk_fdev_t;
+} lr20xx_radio_gfsk_fdev_t;
 
 #define LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS (0x00F30A14)
 #define LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK (3 << 18)
