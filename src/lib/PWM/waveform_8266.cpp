@@ -52,24 +52,18 @@
 #include <Arduino.h>
 #include "ets_sys.h"
 
-// Maximum delay between IRQs
-#define MAXIRQUS (10000)
-
 // Waveform generator can create tones, PWM, and servos
 typedef struct {
   uint32_t nextServiceCycle;   // ESP cycle timer when a transition required
-  uint32_t timeHighCycles;     // Actual running waveform period (adjusted using desiredCycles)
+  uint32_t timeHighCycles;     // Ideal waveform period
   uint32_t timeLowCycles;      //
-  uint32_t desiredHighCycles;  // Ideal waveform period to drive the error signal
-  uint32_t desiredLowCycles;   //
   uint32_t nextHighLowUs;      // Waveform ideal (us) "on deck", waiting to be changed next cycle
                                // packed into 32 bits to be atomic read/write, 65535us max
-  uint32_t lastEdge;           // Cycle when this generator last changed
 } Waveform;
 
 class WVFState {
 public:
-  Waveform waveform[17];        // State of all possible pins
+  Waveform waveform[17]{};        // State of all possible pins
   uint32_t waveformState = 0;   // Is the pin high or low, updated in NMI so no access outside the NMI code
   uint32_t waveformEnabled = 0; // Is it actively running, updated in NMI so no access outside the NMI code
 
@@ -82,9 +76,9 @@ public:
   // we can avoid looking at the other pins.
   uint16_t startPin = 0;
   uint16_t endPin = 0;
+  bool timerRunning = false;
 };
 static WVFState wvfState;
-
 
 // Ensure everything is read/written to RAM
 #define MEMBARRIER() { __asm__ volatile("" ::: "memory"); }
@@ -94,20 +88,22 @@ static WVFState wvfState;
 
 // Interrupt on/off control
 static void timer1Interrupt();
-static bool timerRunning = false;
+
+extern "C" IRAM_ATTR int __wrap_stopWaveform(uint8_t pin) { return true; }
+extern "C" IRAM_ATTR bool __wrap__stopPWM(uint8_t pin) { return true; }
 
 static __attribute__((noinline)) void initTimer() {
-  if (!timerRunning) {
+  if (!wvfState.timerRunning) {
     timer1_disable();
     ETS_FRC_TIMER1_INTR_ATTACH(NULL, NULL);
     ETS_FRC_TIMER1_NMI_INTR_ATTACH(timer1Interrupt);
     timer1_enable(TIM_DIV1, TIM_EDGE, TIM_SINGLE);
-    timerRunning = true;
+    wvfState.timerRunning = true;
     timer1_write(microsecondsToClockCycles(10));
   }
 }
 
-static IRAM_ATTR void forceTimerInterrupt() {
+static void forceTimerInterrupt() {
   if (T1L > microsecondsToClockCycles(10)) {
     T1L = microsecondsToClockCycles(10);
   }
@@ -116,11 +112,11 @@ static IRAM_ATTR void forceTimerInterrupt() {
 // If there are no more scheduled activities, shut down Timer 1.
 // Otherwise, do nothing.
 static void disableIdleTimer() {
- if (timerRunning && !wvfState.waveformEnabled) {
+  if (wvfState.timerRunning && !wvfState.waveformEnabled) {
     ETS_FRC_TIMER1_NMI_INTR_ATTACH(NULL);
     timer1_disable();
     timer1_isr_init();
-    timerRunning = false;
+    wvfState.timerRunning = false;
   }
 }
 
@@ -128,7 +124,7 @@ static void disableIdleTimer() {
 // waveform smoothly on next low->high transition.  For immediate change, stopWaveform()
 // first, then it will immediately begin.
 void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
-   if ((gpio > 16) || isFlashInterfacePin(gpio)) {
+  if ((gpio > 16) || isFlashInterfacePin(gpio)) {
     return;
   }
   Waveform *wave = &wvfState.waveform[gpio];
@@ -140,10 +136,9 @@ void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
     MEMBARRIER();
     // The waveform will be updated some time in the future on the next period for the signal
   } else { //  if (!(wvfState.waveformEnabled & mask)) {
-    wave->timeHighCycles = wave->desiredHighCycles = microsecondsToClockCycles(timeHighUS);
-    wave->timeLowCycles = wave->desiredLowCycles = microsecondsToClockCycles(timeLowUS);
+    wave->timeHighCycles = microsecondsToClockCycles(timeHighUS);
+    wave->timeLowCycles = microsecondsToClockCycles(timeLowUS);
     wave->nextHighLowUs = 0;
-    wave->lastEdge = 0;
     wave->nextServiceCycle = ESP.getCycleCount() + microsecondsToClockCycles(1);
     wvfState.waveformToEnable |= mask;
     MEMBARRIER();
@@ -159,7 +154,7 @@ void startWaveform8266(uint8_t gpio, uint32_t timeHighUS, uint32_t timeLowUS) {
 // Stops a waveform on a pin
 void stopWaveform8266(uint8_t gpio) {
   // Can't possibly need to stop anything if there is no timer active
-  if (!timerRunning) {
+  if (!wvfState.timerRunning) {
     return;
   }
   // If user sends in a pin >16 but <32, this will always point to a 0 bit
@@ -196,31 +191,27 @@ static inline IRAM_ATTR uint32_t earliest(uint32_t a, uint32_t b) {
     return (da < db) ? a : b;
 }
 
-// The SDK and hardware take some time to actually get to our NMI code, so
-// decrement the next IRQ's timer value by a bit so we can actually catch the
-// real CPU cycle counter we want for the waveforms.
-
-// The SDK also sometimes is running at a different speed the the Arduino core
-// so the ESP cycle counter is actually running at a variable speed.
-// adjust(x) takes care of adjusting a delta clock cycle amount accordingly.
 #if F_CPU == 80000000
-  #define DELTAIRQ (microsecondsToClockCycles(9)/4)
-  #define adjust(x) ((x) << (turbo ? 1 : 0))
+#define adjust(x) ((x) << (turbo ? 1 : 0))
 #else
-  #define DELTAIRQ (microsecondsToClockCycles(9)/8)
-  #define adjust(x) ((x) >> 0)
+#define adjust(x) ((x) >> 0)
 #endif
 
-// When the time to the next edge is greater than this, RTI and set another IRQ to minimize CPU usage
-#define MINIRQTIME microsecondsToClockCycles(10)
-
 static IRAM_ATTR void timer1Interrupt() {
-  // Flag if the core is at 160 MHz, for use by adjust()
-  bool turbo = (*(uint32_t*)0x3FF00014) & 1 ? true : false;
-
-  uint32_t now = GetCycleCountIRQ();
-  uint32_t nextEventCycle = now + microsecondsToClockCycles(MAXIRQUS);
-  uint32_t timeoutCycle = now + microsecondsToClockCycles(14);
+  // Maximum delay between IRQs. 25ms to guarantee no extra interrupts at 50Hz output (20ms)
+  constexpr uint32_t MAXINTERVAL_CS = microsecondsToClockCycles(25000);
+  // Keep running until the next event is at least this far in the future
+#if F_CPU == 80000000
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(8);
+#else
+  constexpr int32_t DELTAIRQ_CS = microsecondsToClockCycles(5);
+#endif
+  // Schedule the timer this much earlier to account for time to get to the first pin flip. Should be significantly lower than DELTAIRQ_CS
+  constexpr int32_t PRESCHEDULE_CS = microsecondsToClockCycles(3);
+  // Disable the timer while in the interrupt, even though it should be one-shot anyway
+  T1C = 0;
+  T1I = 0;
+  int32_t cycleDeltaNextEvent = MAXINTERVAL_CS;
 
   if (wvfState.waveformToEnable || wvfState.waveformToDisable) {
     // Handle enable/disable requests from main app
@@ -235,13 +226,22 @@ static IRAM_ATTR void timer1Interrupt() {
     wvfState.endPin = 32 - __builtin_clz(wvfState.waveformEnabled);
   }
 
-  bool done = false;
+  // Flag if the core is at 160 MHz, for use by adjust()
+  #if F_CPU == 80000000
+  const bool turbo = (*(uint32_t*)0x3FF00014) & 1 ? true : false;
+  #else
+  const bool turbo = true;
+  #endif
   if (wvfState.waveformEnabled) {
+    // Time the loop and use it to allow an edge to happen early if another round of loops would cause it to be late
+    // For 160M clock and 10 pins checked with 1 flipping, this code takes ~250 clock cyles to run so start with an estimate
+    int32_t lastLoopCs = (wvfState.endPin - wvfState.startPin) * (40 >> (turbo ? 1 : 0));
     do {
-      nextEventCycle = GetCycleCountIRQ() + microsecondsToClockCycles(MAXIRQUS);
+      uint32_t loopStartCs = GetCycleCountIRQ();
+      uint32_t nextEventCycle = loopStartCs + MAXINTERVAL_CS;
 
-      for (auto gpio = wvfState.startPin; gpio <= wvfState.endPin; gpio++) {
-        uint32_t mask = 1<< gpio;
+      for (auto gpio = wvfState.startPin; gpio < wvfState.endPin; gpio++) {
+        const uint32_t mask = 1 << gpio;
 
         // If it's not on, ignore!
         if (!(wvfState.waveformEnabled & mask)) {
@@ -250,73 +250,50 @@ static IRAM_ATTR void timer1Interrupt() {
 
         Waveform *wave = &wvfState.waveform[gpio];
 
-        // Check for toggles
+        uint32_t now = GetCycleCountIRQ();
         int32_t cyclesToGo = wave->nextServiceCycle - now;
-        if (cyclesToGo < 0) {
+        if (cyclesToGo < (lastLoopCs / 2)) {
           uint32_t nextEdgeCycles;
-          uint32_t desired = 0;
-          uint32_t *timeToUpdate;
-          wvfState.waveformState ^= mask;
           if (wvfState.waveformState & mask) {
+            GPOC = mask;
+            if (gpio == 16) { // Special handling for GPIO16
+              GP16O = 0;
+            }
+            nextEdgeCycles = wave->timeLowCycles;
+          } else {
+            GPOS = mask;
             if (gpio == 16) { // Special handling for GPIO16
               GP16O = 1;
             }
-            GPOS = mask;
 
             if (wave->nextHighLowUs != 0) {
               // Copy over next full-cycle timings
               uint32_t next = wave->nextHighLowUs;
               wave->nextHighLowUs = 0; // indicate the change has taken place
-              wave->timeHighCycles = wave->desiredHighCycles = microsecondsToClockCycles(next >> 16);
-              wave->timeLowCycles = wave->desiredLowCycles = microsecondsToClockCycles(next & 0xffff);
-              wave->lastEdge = 0;
-            }
-            if (wave->lastEdge) {
-              desired = wave->desiredLowCycles;
-              timeToUpdate = &wave->timeLowCycles;
+              wave->timeHighCycles = microsecondsToClockCycles(next >> 16);
+              wave->timeLowCycles = microsecondsToClockCycles(next & 0xffff);
             }
             nextEdgeCycles = wave->timeHighCycles;
-          } else {
-            if (gpio == 16) { // Special handling for GPIO16
-              GP16O = 0;
-            }
-            GPOC = mask;
-            desired = wave->desiredHighCycles;
-            timeToUpdate = &wave->timeHighCycles;
-            nextEdgeCycles = wave->timeLowCycles;
           }
-          if (desired) {
-            desired = adjust(desired);
-            int32_t err = desired - (now - wave->lastEdge);
-            if (abs(err) < desired) { // If we've lost > the entire phase, ignore this error signal
-                err /= 2;
-                *timeToUpdate += err;
-            }
-          }
+          wvfState.waveformState ^= mask;
           nextEdgeCycles = adjust(nextEdgeCycles);
           wave->nextServiceCycle = now + nextEdgeCycles;
-          wave->lastEdge = now;
         }
         nextEventCycle = earliest(nextEventCycle, wave->nextServiceCycle);
       }
 
       // Exit the loop if we've hit the fixed runtime limit or the next event is known to be after that timeout would occur
-      now = GetCycleCountIRQ();
-      int32_t cycleDeltaNextEvent = nextEventCycle - now;
-      int32_t cyclesLeftTimeout = timeoutCycle - now;
-      done = (cycleDeltaNextEvent > cyclesLeftTimeout) || (cyclesLeftTimeout < 0);
-    } while (!done);
+      uint32_t loopEndCs = GetCycleCountIRQ();
+      cycleDeltaNextEvent = nextEventCycle - loopEndCs;
+      // Save the duration of the loop for the next early timeout
+      lastLoopCs = loopEndCs - loopStartCs;
+    } while (cycleDeltaNextEvent < DELTAIRQ_CS);
   } // if (wvfState.waveformEnabled)
 
-  int32_t nextEventCycles = nextEventCycle - now;
-
-  if (nextEventCycles < MINIRQTIME) {
-    nextEventCycles = MINIRQTIME;
-  }
-  nextEventCycles -= DELTAIRQ;
-
-  // Do it here instead of global function to save time and because we know it's edge-IRQ
-  T1L = nextEventCycles >> (turbo ? 1 : 0);
+  // cycleDeltaNextEvent should be pretty close to or above DELTAIRQ_CS
+  // schedule the timer a little early to allow time to get to the pin switch code before the deadline
+  T1L = (cycleDeltaNextEvent - PRESCHEDULE_CS) >> (turbo ? 1 : 0);
+  T1C = (1 << TCTE); //timer1_enable(TIM_DIV1, TIM_EDGE, TIM_SINGLE)
 }
 
 #endif
