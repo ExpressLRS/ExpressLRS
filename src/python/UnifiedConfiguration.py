@@ -77,7 +77,8 @@ def appendToFirmware(firmware_file, product_name, lua_name, defines, config, lay
 
 # Return the product name for the last hardware.json that was appended for the given PIO env target
 # e.g. Unified_ESP32_LR1121_via_WIFI -> "RadioMaster Nomad 2.4/900 TX"
-def getDefaultProductForTarget(target_name: str) -> str:
+# Second return value is if the user has enabled autoupload in the json file
+def getDefaultProductForTarget(target_name: str) -> tuple[str, bool]:
     if target_name is None or target_name == '':
         return ''
 
@@ -87,10 +88,11 @@ def getDefaultProductForTarget(target_name: str) -> str:
         with open('.pio/default_target_config.json', 'r') as f:
             data = json.load(f)
             product_name = data.get(target_wo_method)
-            return product_name
+            autoupload = bool(data.get('autoupload'))
+            return product_name, autoupload
     except:
         # No file or json.JSONDecodeError
-        return ''
+        return '', False
 
 # Save the product name of a hardware configuration appended to a target, for a future default
 # target_name: e.g. Unified_ESP32_LR1121_via_WIFI
@@ -161,11 +163,11 @@ def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, f
     # Sort the list by product name, case insensitive, and print the list
     products = sorted(products, key=lambda p: p['product_name'].casefold())
     # Find a default if this target has been build before
-    default_prod = getDefaultProductForTarget(target_name)
+    default_prod, autoupload = getDefaultProductForTarget(target_name)
     # Make sure default_conf is a valid product name, set to '0' if not or default_prod is blank
     default_prod = default_prod if any(p['product_name'] == default_prod for p in products) else '0'
 
-    if (default_prod != '0') and is_pio_upload():
+    if (default_prod != '0') and is_pio_upload() and autoupload:
         print(f'Upload using default product "{default_prod}" (use Clean to clear default)')
         choice = default_prod
     else:
