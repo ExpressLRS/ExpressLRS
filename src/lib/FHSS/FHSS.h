@@ -23,6 +23,12 @@
 #endif
 
 #define FHSS_SEQUENCE_LEN 256
+#define FHSS_MAX_EXCLUDED_RANGES 4
+
+typedef struct {
+    uint8_t start;  // First excluded channel index
+    uint8_t end;    // Last excluded channel index (inclusive)
+} fhss_excluded_range_t;
 
 typedef struct {
     const char  *domain;
@@ -30,6 +36,8 @@ typedef struct {
     uint32_t    freq_stop;
     uint32_t    freq_count;
     uint32_t    freq_center;
+    uint8_t     excluded_count;  // Number of excluded channel ranges
+    fhss_excluded_range_t excluded_ranges[FHSS_MAX_EXCLUDED_RANGES];
 } fhss_config_t;
 
 extern volatile uint8_t FHSSptr;
@@ -40,7 +48,7 @@ extern int32_t FreqCorrection_2;    // Only used for the SX1276
 extern uint16_t primaryBandCount;
 extern uint32_t freq_spread;
 extern uint8_t FHSSsequence[];
-extern uint_fast8_t sync_channel;
+extern uint8_t sync_channel;
 extern const fhss_config_t *FHSSconfig;
 
 // DualBand Variables
@@ -50,7 +58,7 @@ extern bool FHSSuseDualBand;
 extern uint16_t secondaryBandCount;
 extern uint32_t freq_spread_DualBand;
 extern uint8_t FHSSsequence_DualBand[];
-extern uint_fast8_t sync_channel_DualBand;
+extern uint8_t sync_channel_DualBand;
 extern const fhss_config_t *FHSSconfigDualBand;
 #else
 // Single band radios never leave the primary band. The constants let the
@@ -61,7 +69,7 @@ constexpr bool FHSSuseDualBand = false;
 constexpr uint16_t secondaryBandCount = 0;
 [[maybe_unused]] static uint32_t &freq_spread_DualBand = freq_spread;
 [[maybe_unused]] static uint8_t *const FHSSsequence_DualBand = FHSSsequence;
-[[maybe_unused]] static uint_fast8_t &sync_channel_DualBand = sync_channel;
+[[maybe_unused]] static uint8_t &sync_channel_DualBand = sync_channel;
 [[maybe_unused]] static const fhss_config_t *&FHSSconfigDualBand = FHSSconfig;
 #endif
 
@@ -70,9 +78,11 @@ extern char version_domain[];
 
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
-// build one band's sequence from freqCount alone and return the number of
-// entries written, always a whole multiple of freqCount
-uint16_t FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
+// Build one band's sequence and return the number of entries written, always
+// a whole multiple of the band's usable (non-excluded) channel count.
+uint16_t FHSSrandomiseFHSSsequenceBuild(uint32_t seed, const fhss_config_t *config, uint8_t sync_channel, uint8_t *sequence);
+// Return the valid channel approximately half a band away from channel.
+uint8_t FHSSgetGeminiChannel(const fhss_config_t *config, uint8_t channel);
 
 // add domain info for Lua
 void addDomainInfo(char *version_domain, uint8_t maxlen);
@@ -195,16 +205,16 @@ static inline const char *FHSSgetRegulatoryDomain()
 static inline uint32_t FHSSGeminiFreq(uint8_t FHSSsequenceIdx)
 {
     uint32_t freq;
-    uint32_t numfhss = FHSSgetChannelCount();
-    uint8_t offSetIdx = (FHSSsequenceIdx + (numfhss / 2)) % numfhss; 
 
     if (FHSSusePrimaryFreqBand)
     {
-        freq = FHSSconfig->freq_start + (freq_spread * offSetIdx / FREQ_SPREAD_SCALE) - FreqCorrection_2;
+        const uint8_t pairedChannel = FHSSgetGeminiChannel(FHSSconfig, FHSSsequenceIdx);
+        freq = FHSSconfig->freq_start + (freq_spread * pairedChannel / FREQ_SPREAD_SCALE) - FreqCorrection_2;
     }
     else
     {
-        freq = FHSSconfigDualBand->freq_start + (freq_spread_DualBand * offSetIdx / FREQ_SPREAD_SCALE);
+        const uint8_t pairedChannel = FHSSgetGeminiChannel(FHSSconfigDualBand, FHSSsequenceIdx);
+        freq = FHSSconfigDualBand->freq_start + (freq_spread_DualBand * pairedChannel / FREQ_SPREAD_SCALE);
     }
 
     return freq;
