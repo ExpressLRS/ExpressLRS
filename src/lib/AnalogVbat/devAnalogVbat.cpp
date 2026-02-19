@@ -70,12 +70,18 @@ static void reportVbat()
         adc = esp_adc_cal_raw_to_voltage(adc, vbatAdcUnitCharacterics);
 #endif
 
-    int32_t vbat;
+    int32_t vbat, vbat_mV;
     // For negative offsets, anything between abs(OFFSET) and 0 is considered 0
     if (ANALOG_VBAT_OFFSET < 0 && adc <= -ANALOG_VBAT_OFFSET)
-        vbat = 0;
+	{	
+        vbat    = 0;
+        vbat_mV = 0;
+	}
     else
-        vbat = ((int32_t)adc - ANALOG_VBAT_OFFSET) * 100 / ANALOG_VBAT_SCALE;
+	{
+        vbat    = ((int32_t)adc - ANALOG_VBAT_OFFSET) * 100 / ANALOG_VBAT_SCALE;
+        vbat_mV = ((int32_t)adc - ANALOG_VBAT_OFFSET) * 10000 / ANALOG_VBAT_SCALE;
+	}	
 
     CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
     // Values are MSB first (BigEndian)
@@ -84,6 +90,12 @@ static void reportVbat()
 
     crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
+	
+    // CRSF_FRAMETYPE_CELLS (0x0E): source_id=0 (main battery) + total voltage in mV (1mV resolution), BigEndian.
+    CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfcells = { 0 };
+    crsfcells.p = { 0, htobe16((uint16_t)(vbat_mV)) };
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_cells_t)));
+    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
 }
 
 static int timeout()
