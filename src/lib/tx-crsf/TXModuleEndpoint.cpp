@@ -1,5 +1,6 @@
 #include "TXModuleEndpoint.h"
 
+#include "rxtx_intf.h"
 #include "CRSFHandset.h"
 #include "logging.h"
 
@@ -12,9 +13,6 @@ RTC_DATA_ATTR int rtcModelId = 0;
 #endif
 
 void ModelUpdateReq();
-void SetSyncSpam();
-void sendELRSstatus(crsf_addr_e origin);
-void luaSupressCriticalErrors();
 
 void TXModuleEndpoint::begin()
 {
@@ -83,7 +81,6 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
             }
         }
         parameterUpdateReq(requestOrigin, isElrsCalling, packetType, extMessage->payload[0], extMessage->payload[1]);
-        SetSyncSpam();
     }
 }
 
@@ -120,11 +117,30 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     //
     // sends channel data and also communicates commanded armed status in arming mode Switch.
     // frame len 24 -> arming mode CH5: use channel 5 value
-    // frame len 25 -> arming mode Switch: use commanded arming status in extra byte
+    // frame len 25 -> use status byte for arming mode, commanded arming status
     //
-    armCmd = message->frame_size == CRSF_FRAME_SIZE(sizeof(crsf_channels_t))
-        ? CRSF_to_BIT(localChannelData[AUX1])
-        : (payload[readByteIndex] & CRSF_CHANNELS_STATUS_FLAG_ARM);
+    // ARMMODE_CH5 | ARMED | Meaning
+    //      0      |   0   | Arm using Switch, not armed
+    //      0      |   1   | Arm using Switch, is armed
+    //      1      |   x   | Arm using CH5, armed/not armed depending on CH5 value
+    //
+
+    if (message->frame_size == CRSF_FRAME_SIZE(sizeof(crsf_channels_t)))
+    {
+        armCmd = CRSF_to_BIT(localChannelData[AUX1]);       // no status byte present, us CH5 to arm
+    }
+    else
+    {
+        const uint8_t status = payload[readByteIndex];
+        if (status & CRSF_CHANNELS_STATUS_ARMING_MODE_CH5)
+        {
+            armCmd = CRSF_to_BIT(localChannelData[AUX1]);   // status byte present and Arm using CH5 selected
+        }
+        else
+        {
+            armCmd = status & CRSF_CHANNELS_STATUS_ARMED;   // status byte present and Arm using Switch selected
+        }
+    }
 
     // monitoring arming state
     if (lastArmCmd != armCmd)

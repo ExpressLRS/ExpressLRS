@@ -1,6 +1,7 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import {elrsState, formatBand} from "../utils/state.js";
+import {elrsState, formatBand, formatWifiRssi} from "../utils/state.js";
+import {SERIAL_OPTIONS1} from '../utils/globals.js'
 import '../assets/mui.js';
 
 @customElement('info-panel')
@@ -24,6 +25,7 @@ class InfoPanel extends LitElement {
                     <tr><td><b>Radio</b></td><td>${elrsState.settings['radio-type']}</td></tr>
                     <tr><td><b>Domain</b></td><td>${formatBand()}</td></tr>
                     <tr><td><b>Binding UID</b></td><td>${elrsState.config.uid.toString()}</td></tr>
+                    <tr><td><b>WiFi State</b></td><td>${formatWifiRssi()}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -51,6 +53,12 @@ class InfoPanel extends LitElement {
                                 : ''}
                         ${elrsState.config['force-tlm'] !== false ?
                                 html`<tr><td><b>Force Telemetry Off</b></td><td>Enabled</td></tr>`
+                                : ''}
+                        ${elrsState.config['pwm'] === undefined && elrsState.config['serial-protocol'] !== 0 ?
+                                html`<tr><td><b>Serial Protocol</b></td><td>${SERIAL_OPTIONS1[elrsState.config['serial-protocol']]}</td></tr>`
+                                : ''}
+                        ${elrsState.config['pwm'] === undefined && elrsState.options['rcvr-uart-baud'] !== 420000 ?
+                                html`<tr><td><b>Baud Rate</b></td><td>${elrsState.options['rcvr-uart-baud']}</td></tr>`
                                 : ''}
                         <!-- /FEATURE: NOT IS_TX -->
                         <!-- FEATURE: IS_TX -->

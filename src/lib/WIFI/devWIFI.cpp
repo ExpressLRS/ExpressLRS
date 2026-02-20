@@ -7,6 +7,7 @@
 #include <LittleFS.h>
 
 #if defined(PLATFORM_ESP32)
+#include <esp_wifi.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Update.h>
@@ -268,6 +269,27 @@ static const char *GetConfigUidType(const JsonObject json)
 #endif
 }
 
+static int8_t wifi_GetClientRssi()
+{
+  if (wifiMode == WIFI_STA)
+    return WiFi.RSSI();
+
+#if defined(PLATFORM_ESP32)
+  // If AP mode, only return an RSSI if there is just one client connected
+  // This could take the request's IP address, find it in tcpip_adapter_get_sta_list(), match it by MAC to ap_sta_list,
+  // but there should just be one client
+  wifi_sta_list_t staList;
+  if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK)
+  {
+    if (staList.num == 1)
+      return staList.sta[0].rssi;
+  }
+#endif
+  // ESP8266 doesn't seem to store connected station RSSI :/
+
+  return 0;
+}
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   const bool exportMode = request->hasArg("export");
@@ -310,7 +332,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   {
     cfg["fan-mode"] = config.GetFanMode();
     cfg["power-fan-threshold"] = config.GetPowerFanThreshold();
-
     cfg["motion-mode"] = config.GetMotionMode();
 
     const auto vtxAdmin = cfg["vtx-admin"].to<JsonObject>();
@@ -320,9 +341,11 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     vtxAdmin["power"] = config.GetVtxPower();
 
     const auto backpack = cfg["backpack"].to<JsonObject>();
+    backpack["disabled"] = config.GetBackpackDisable();
     backpack["dvr-start-delay"] = config.GetDvrStartDelay();
     backpack["dvr-stop-delay"] = config.GetDvrStopDelay();
     backpack["dvr-aux-channel"] = config.GetDvrAux();
+    backpack["telemetry-mode"] = config.GetBackpackTlmMode();
 
     for (int model = 0 ; model < CONFIG_TX_MODEL_CNT ; model++)
     {
@@ -332,8 +355,11 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       modelJson["packet-rate"] = modelConfig.rate;
       modelJson["telemetry-ratio"] = modelConfig.tlm;
       modelJson["switch-mode"] = modelConfig.switchMode;
+      modelJson["link-mode"] = modelConfig.linkMode;
       modelJson["model-match"] = modelConfig.modelMatch;
       modelJson["tx-antenna"] = modelConfig.txAntenna;
+      modelJson["ptr-start-chan"] = modelConfig.ptrStartChannel;
+      modelJson["ptr-enable-chan"] = modelConfig.ptrEnableChannel;
       const auto power = cfg["power"].to<JsonObject>();
       power["max-power"] = modelConfig.power;
       power["dynamic-power"] = modelConfig.dynamicPower;
@@ -388,6 +414,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["uidtype"] = GetConfigUidType(json);
     settings["ssid"] = station_ssid;
     settings["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    settings["wifi_dbm"] = wifi_GetClientRssi();
     settings["custom_hardware"] = hardware_flag(HARDWARE_customised);
     settings["target"] = &target_name[4];
     settings["version"] = VERSION;
@@ -466,9 +493,11 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
   if (json["backpack"].is<JsonVariant>())
   {
     const auto backpack = json["backpack"].as<JsonObject>();
+    if (backpack["disabled"].is<JsonVariant>()) config.SetBackpackDisable(backpack["disabled"]);
     if (backpack["dvr-start-delay"].is<JsonVariant>()) config.SetDvrStartDelay(backpack["dvr-start-delay"]);
     if (backpack["dvr-stop-delay"].is<JsonVariant>()) config.SetDvrStopDelay(backpack["dvr-stop-delay"]);
     if (backpack["dvr-aux-channel"].is<JsonVariant>()) config.SetDvrAux(backpack["dvr-aux-channel"]);
+    if (backpack["telemetry-mode"].is<JsonVariant>()) config.SetBackpackTlmMode(backpack["telemetry-mode"]);
   }
 
   if (json["model"].is<JsonVariant>())
@@ -482,14 +511,17 @@ static void ImportConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
       if (modelJson["packet-rate"].is<JsonVariant>()) config.SetRate(modelJson["packet-rate"]);
       if (modelJson["telemetry-ratio"].is<JsonVariant>()) config.SetTlm(modelJson["telemetry-ratio"]);
       if (modelJson["switch-mode"].is<JsonVariant>()) config.SetSwitchMode(modelJson["switch-mode"]);
+      if (modelJson["link-mode"].is<JsonVariant>()) config.SetLinkMode(modelJson["link-mode"]);
+      if (modelJson["model-match"].is<JsonVariant>()) config.SetModelMatch(modelJson["model-match"]);
+      if (modelJson["tx-antenna"].is<JsonVariant>()) config.SetAntennaMode(modelJson["tx-antenna"]);
+      if (modelJson["ptr-start-chan"].is<JsonVariant>()) config.SetPTRStartChannel(modelJson["ptr-start-chan"]);
+      if (modelJson["ptr-enable-chan"].is<JsonVariant>()) config.SetPTREnableChannel(modelJson["ptr-enable-chan"]);
       if (modelJson["power"].is<JsonVariant>())
       {
         if (modelJson["power"]["max-power"].is<JsonVariant>()) config.SetPower(modelJson["power"]["max-power"]);
         if (modelJson["power"]["dynamic-power"].is<JsonVariant>()) config.SetDynamicPower(modelJson["power"]["dynamic-power"]);
         if (modelJson["power"]["boost-channel"].is<JsonVariant>()) config.SetBoostChannel(modelJson["power"]["boost-channel"]);
       }
-      if (modelJson["model-match"].is<JsonVariant>()) config.SetModelMatch(modelJson["model-match"]);
-      // if (modelJson["tx-antenna"].is<JsonVariant>()) config.SetTxAntenna(modelJson["tx-antenna"]);
       // have to commit after each model is updated
       config.Commit();
     }

@@ -130,6 +130,10 @@ def get_git_sha():
 def get_version():
     return string_to_ascii(env.get('GIT_VERSION'))
 
+def cleanDefaultProductForTarget(target_name: str) -> None:
+    from UnifiedConfiguration import clearDefaultProductForTarget
+    clearDefaultProductForTarget(target_name)
+
 json_flags['flash-discriminator'] = randint(1,2**32-1)
 json_flags['wifi-on-interval'] = -1
 
@@ -196,6 +200,10 @@ if env.get('PIOPLATFORM', '') == 'espressif8266':
         "-u", "_UserExceptionVector"
     ])
 
+# Remove the default product if this is a "clean" task
+if env.GetOption("clean"):
+    cleanDefaultProductForTarget(target_name)
+
 env['OPTIONS_JSON'] = json_flags
 env['BUILD_FLAGS'] = build_flags
 sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
@@ -210,4 +218,3 @@ elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
         sys.stdout.write("\u001b[32mAUTO_WIFI_ON_INTERVAL = OFF\n")
 
 sys.stdout.flush()
-time.sleep(.5)
