@@ -78,7 +78,7 @@ static uint32_t SpreadingFactorToRSSIvalidDelayUs(uint8_t SF, uint8_t radio_type
         default: return 240;
         }
     }
-    if (radio_type == RadioBandMod::Combined::GFSK_2G4)
+    if (radio_type == RadioBandMod::Combined::GFSK_2G4 || radio_type == RadioBandMod::Combined::FLRC_2G4)
     {
         return 40; // 40us settling time; documentation says Twait for 467 kHz bandwidth is 30.68us
     }
@@ -141,7 +141,7 @@ static int8_t ICACHE_RAM_ATTR PowerEnumToLBTLimit(PowerLevels_e txPower, RadioBa
       default: return -71 + LBT_RSSI_THRESHOLD_OFFSET_DB;
     }
   }
-  if (radio_type == RadioBandMod::Combined::GFSK_2G4)
+  if (radio_type == RadioBandMod::Combined::GFSK_2G4 || radio_type == RadioBandMod::Combined::FLRC_2G4)
   {
     switch(txPower)
     {
