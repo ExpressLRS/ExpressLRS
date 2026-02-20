@@ -13,20 +13,35 @@ enum
 };
 
 enum {
-    RADIO_MODULATION_LORA_900 = 0,
-    RADIO_MODULATION_LORA_2G4,
-    RADIO_MODULATION_LORA_DUAL,
-
-    RADIO_MODULATION_FLRC_900 = 100,
-    RADIO_MODULATION_FLRC_2G4,
-
-    RADIO_MODULATION_GFSK_900 = 200,
-    RADIO_MODULATION_GFSK_2G4,
+    RADIO_BAND_900 = 0,
+    RADIO_BAND_2G4 = 1,
+    RADIO_BAND_DUAL = 2,
 };
 
-inline bool isLoRaModulation(const uint8_t modulation) { return modulation / 100 == 0; }
-inline bool isFLRCModulation(const uint8_t modulation) { return modulation / 100 == 1; }
-inline bool isGFSKModulation(const uint8_t modulation) { return modulation / 100 == 2; }
+enum {
+    RADIO_MOD_LORA = 0 << 4,
+    RADIO_MOD_FLRC = 1 << 4,
+    RADIO_MOD_GFSK = 2 << 4,
+};
+
+#define RADIO_MOD_MASK 0xF0
+#define RADIO_BAND_MASK 0x0F
+
+enum {
+    RADIO_MODULATION_LORA_900 = RADIO_MOD_LORA + RADIO_BAND_900,
+    RADIO_MODULATION_LORA_2G4 = RADIO_MOD_LORA + RADIO_BAND_2G4,
+    RADIO_MODULATION_LORA_DUAL = RADIO_MOD_LORA + RADIO_BAND_DUAL,
+
+    RADIO_MODULATION_FLRC_900 = RADIO_MOD_FLRC + RADIO_BAND_900,
+    RADIO_MODULATION_FLRC_2G4 = RADIO_MOD_FLRC + RADIO_BAND_2G4,
+
+    RADIO_MODULATION_GFSK_900 = RADIO_MOD_GFSK + RADIO_BAND_900,
+    RADIO_MODULATION_GFSK_2G4 = RADIO_MOD_GFSK + RADIO_BAND_2G4,
+};
+
+inline bool isLoRaModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_LORA; }
+inline bool isFLRCModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_FLRC; }
+inline bool isGFSKModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_GFSK; }
 
 class SX12xxDriverCommon
 {

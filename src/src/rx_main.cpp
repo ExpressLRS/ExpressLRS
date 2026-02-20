@@ -316,7 +316,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     hwTimer::updateInterval(interval);
 
 #if defined(RADIO_LR1121)
-    FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_MODULATION_LORA_2G4) && !(ModParams->radio_type == RADIO_MODULATION_GFSK_2G4);
+    FHSSusePrimaryFreqBand = (ModParams->radio_type & RADIO_BAND_MASK) != RADIO_BAND_2G4;
     FHSSuseDualBand = ModParams->radio_type == RADIO_MODULATION_LORA_DUAL;
 #endif
 
