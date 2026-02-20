@@ -42,8 +42,11 @@
 #define LR2021_POWER_MIN_HF_PA (-39) // High Frequency PA 0.5dBm steps
 #define LR2021_POWER_MAX_HF_PA (24)
 
-#define LR2021_IRQ_TX_DONE bit(19)
-#define LR2021_IRQ_RX_DONE bit(18)
+typedef enum
+{
+    LR2021_IRQ_RX_DONE = 1UL << 18,
+    LR2021_IRQ_TX_DONE = 1UL << 19,
+} lr20xx_RadioInterruptBits_t;
 
 typedef enum
 {
@@ -173,13 +176,25 @@ typedef enum
 
 typedef enum
 {
-    LR2021_RADIO_GFSK_CRC_OFF = 0x00, //!< CRC check deactivated
+    LR2021_RADIO_GFSK_CRC_OFF = 0 << 4, //!< CRC check deactivated
 } lr20xx_radio_gfsk_crc_type_t;
 
 typedef enum
 {
     LR2021_RADIO_GFSK_DC_FREE_WHITENING = 0x01, //!< Whitening enabled
 } lr20xx_radio_gfsk_dc_free_t;
+
+typedef enum
+{
+    LR2021_GFSK_WHITENING_TYPE_SX126X_LR11XX = 0 << 4, //<! whitening type: compatible with SX126x and LR2021
+    LR2021_GFSK_WHITENING_TYPE_SX128X = 1 << 4, //!< compatible with SX128x
+} lr20xx_radio_gfsk_whitening_type_t;
+
+typedef enum
+{
+    LR2021_GFSK_SYNCWORD_BIT_ORDER_LSB = 0 << 7,
+    LR2021_GFSK_SYNCWORD_BIT_ORDER_MSB = 1 << 7,
+} lr20xx_radio_gfsk_syncword_bit_order_t;
 
 typedef enum
 {
@@ -228,6 +243,26 @@ typedef enum
 {
     LR2021_RADIO_FLRC_CR_1_2 = 0x00
 } lr20xx_radio_flrc_cr_t;
+
+typedef enum
+{
+    LR2021_RADIO_FLRC_PAYLOAD_FIXED_LEN = 1 << 2
+} lr20xx_radio_flrc_packet_format_t;
+
+typedef enum
+{
+    LR2021_RADIO_FLRC_SYNC_0BITS = 0,
+    LR2021_RADIO_FLRC_SYNC_16BITS = 1,
+    LR2021_RADIO_FLRC_SYNC_32BITS = 2,
+} lr20xx_radio_flrc_sync_bits_t;
+
+typedef enum
+{
+    LR2021_RADIO_FLRC_CRC_OFF = 0,
+    LR2021_RADIO_FLRC_CRC_16BITS = 1,
+    LR2021_RADIO_FLRC_CRC_24BITS = 2,
+    LR2021_RADIO_FLRC_CRC_32BITS = 3,
+} lr20xx_radio_flrc_crc_bits_t;
 
 #define LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_ADDRESS (0x00F30A14)
 #define LR20XX_WORKAROUND_LORA_SX1276_COMPATIBILITY_REGISTER_MASK (3 << 18)

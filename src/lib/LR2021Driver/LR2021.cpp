@@ -312,17 +312,18 @@ void LR2021Driver::SetPacketParamsFSK(const uint8_t PreambleLength, const uint8_
         0,                                             // MSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
         PreambleLength,                                // LSB PbLengthTX defines the length of the LoRa packet preamble. Minimum of 12 with SF5 and SF6, and of 8 for other SF advised
         LR2021_RADIO_GFSK_PREAMBLE_DETECTOR_MIN_8BITS, // Pbl Detect
-        0x00,                                          //
+        0x00,                                          // Payload len in bytes / address filtering disabled / fixed length packet
         0,                                             // MSB PayloadLen
         PayloadLength,                                 // LSB PayloadLen
-        LR2021_RADIO_GFSK_CRC_OFF << 4 | LR2021_RADIO_GFSK_DC_FREE_WHITENING,
+        LR2021_RADIO_GFSK_CRC_OFF | LR2021_RADIO_GFSK_DC_FREE_WHITENING,
     };
     CHECK("LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_PACKET_PARAMS_OC, packetParams, sizeof(packetParams), radioNumber));
 
     // 11.3.3 SetFskWhiteningParams
+    constexpr uint16_t lr1121DefaultWhitening = 0x0100;
     constexpr uint8_t whiteningParams[] {
-        0x01, // SX127x/SX126x/lr20xx compatible whitening enable 0x0100 seed
-        0x00,
+        LR2021_GFSK_WHITENING_TYPE_SX126X_LR11XX | lr1121DefaultWhitening >> 8,
+        lr1121DefaultWhitening & 0xFF,
     };
     CHECK("LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_WHITENING_PARAMS_OC, whiteningParams, sizeof(whiteningParams), radioNumber));
 }
@@ -330,8 +331,8 @@ void LR2021Driver::SetPacketParamsFSK(const uint8_t PreambleLength, const uint8_
 void LR2021Driver::SetFSKSyncWord(const uint8_t fskSyncWord1, const uint8_t fskSyncWord2, const SX12XX_Radio_Number_t radioNumber)
 {
     // 11.3.5 SetFskSyncWord
-    // SyncWordLen is 16 bits as set in SetPacketParamsFSK().  Fill the rest with preamble bytes.
-    const uint8_t syncBuf[] {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, fskSyncWord1, fskSyncWord2, 0x90};
+    // SyncWordLen is 16 bits.  Fill the rest with preamble bytes.
+    const uint8_t syncBuf[] {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, fskSyncWord1, fskSyncWord2, LR2021_GFSK_SYNCWORD_BIT_ORDER_MSB | 16};
     CHECK("LR2021_RADIO_SET_FSK_SYNC_WORD_OC", hal.WriteCommand(LR2021_RADIO_SET_FSK_SYNC_WORD_OC, syncBuf, sizeof(syncBuf), radioNumber));
 }
 
@@ -353,11 +354,12 @@ void LR2021Driver::SetPacketParamsFLRC(const uint8_t PreambleLength, const uint3
 {
     // 18.4.2 SetFlrcPacketParams
     const uint8_t preambleBits = (PreambleLength / 4) - 1;
+    constexpr uint8_t syncWordIndex = 1;
     const uint8_t buf[] {
-        uint8_t(preambleBits << 2 | 2), // 32bit preamble, 32bit sync_len
-        1 << 6 | 1 << 3 | 1 << 2 | 2,   // syncword 1, match 1, fixed len, 24bit/3-byte crc
-        0,                              // MSB PayloadLen
-        PayloadLength,                  // LSB PayloadLen
+        uint8_t(preambleBits << 2 | LR2021_RADIO_FLRC_SYNC_32BITS),                                                     // 32bit preamble, 32bit sync_len
+        syncWordIndex << 6 | syncWordIndex << 3 | LR2021_RADIO_FLRC_PAYLOAD_FIXED_LEN | LR2021_RADIO_FLRC_CRC_24BITS,   // syncword 1, match 1, fixed len, 24bit/3-byte crc
+        0,                                                                                                              // MSB PayloadLen
+        PayloadLength,                                                                                                  // LSB PayloadLen
     };
     CHECK("LR2021_RADIO_SET_FLRC_PACKET_PARAMS_OC", hal.WriteCommand(LR2021_RADIO_SET_FLRC_PACKET_PARAMS_OC, buf, sizeof(buf), radioNumber));
 
@@ -370,7 +372,7 @@ void LR2021Driver::SetPacketParamsFLRC(const uint8_t PreambleLength, const uint3
      * however, for 3-byte CRC (24-bits) there would eed to be a 3rd top 8-bits byte, it appears that the default value on the SX1280
      * for this is 0xFF, hence that value in the parameters below.
      */
-    constexpr uint32_t polynomial = 1<<24 | 1<<22 | 1<<20 | 1<<19 | 1<<18 | 1<<16 | 1<<14 | 1<<13 | 1<<11 | 1<<10 | 1<<8 | 1<<7 | 1<<6 | 1<<3 | 1<<1 | 1;
+    constexpr uint32_t polynomial = 0x5D6DCB;
     const uint8_t crcParams[] {
         uint8_t(polynomial >> 24), uint8_t(polynomial >> 16), uint8_t(polynomial >> 8), uint8_t(polynomial),
         0, 0xFF, uint8_t(crcSeed >> 8), uint8_t(crcSeed)
@@ -535,7 +537,7 @@ void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX
         constexpr uint8_t Pabuf[] {
             LR2021_RADIO_PA_SEL_LF,
             7 << 4 | 6, // PaDutyCycle
-            16,         // PaHFDutyCycle
+            16,         // PaHFDutyCycle (default when not using HF)
         };
         CHECK("LR2021_RADIO_SET_PA_CFG_OC", hal.WriteCommand(LR2021_RADIO_SET_PA_CFG_OC, Pabuf, 3, radioNumber));
     }
@@ -543,7 +545,7 @@ void ICACHE_RAM_ATTR LR2021Driver::SetPaConfig(const bool isSubGHz, const SX12XX
     {
         constexpr uint8_t Pabuf[] {
             LR2021_RADIO_PA_SEL_HF,
-            6 << 4 | 0, // PaDutyCycle | PaSlices
+            6 << 4 | 7, // PaDutyCycle | PaSlices (default when not using LF)
             30,         // PaHFDutyCycle
         };
         CHECK("LR2021_RADIO_SET_PA_CFG_OC", hal.WriteCommand(LR2021_RADIO_SET_PA_CFG_OC, Pabuf, 3, radioNumber));
