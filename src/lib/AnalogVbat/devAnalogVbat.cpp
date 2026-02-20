@@ -13,6 +13,9 @@
 #define VBAT_SAMPLE_INTERVAL    100U
 #endif
 
+constexpr uint8_t SIZE_8BIT = 1;
+constexpr uint8_t SIZE_16BIT = 2;
+
 typedef uint16_t vbatAnalogStorage_t;
 static MedianAvgFilter<vbatAnalogStorage_t, VBAT_SMOOTH_CNT>vbatSmooth;
 static uint8_t vbatUpdateScale;
@@ -83,28 +86,26 @@ static void reportVbat()
         vbat_mV = ((int32_t)adc - ANALOG_VBAT_OFFSET) * 10000 / ANALOG_VBAT_SCALE;
 	}	
 
-    CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
-    // Values are MSB first (BigEndian)
-    crsfbatt.p.voltage = htobe16((uint16_t)vbat);
-    // No sensors for current, capacity, or remaining available
+    if (!crsfBatterySensorDetected)
+    {
+        CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
+        // Values are MSB first (BigEndian)
+        crsfbatt.p.voltage = htobe16((uint16_t)vbat);
+        // No sensors for current, capacity, or remaining available
 
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
-    crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
-	
-    // CRSF_FRAMETYPE_CELLS (0x0E): source_id=0 (main battery) + total voltage in mV (1mV resolution), BigEndian.
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
+        crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
+    }
+
+    // CRSF_FRAMETYPE_CELLS (0x0E): source_id = 128 + 0 (main battery Volt sensor) + total voltage in mV (1mV resolution), BigEndian.
     CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfcells = { 0 };
-    crsfcells.p = { 0, htobe16((uint16_t)(vbat_mV)) };
-    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(sizeof(crsf_sensor_cells_t)));
+    crsfcells.p = { 128 + 0, htobe16((uint16_t)(vbat_mV)) };
+    crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(sizeof(SIZE_8BIT + SIZE_16BIT)));
     crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
 }
 
 static int timeout()
 {
-    if (crsfBatterySensorDetected)
-    {
-        return DURATION_NEVER;
-    }
-
     uint32_t adc = analogRead(GPIO_ANALOG_VBAT);
 #if defined(PLATFORM_ESP32) && defined(DEBUG_VBAT_ADC)
     // When doing DEBUG_VBAT_ADC, every value is adjusted (for logging)
