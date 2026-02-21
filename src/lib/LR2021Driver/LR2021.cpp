@@ -61,7 +61,6 @@ void ICACHE_RAM_ATTR CopyCodec::decode(uint8_t *out, uint8_t *in, const uint32_t
 
 LR2021Driver::LR2021Driver()
 {
-    useFSK = false;
     instance = this;
     strongestReceivingRadio = SX12XX_Radio_1;
     fallBackMode = LR2021_MODE_FS;
@@ -144,13 +143,13 @@ void LR2021Driver::startCWTest(const uint32_t freq, const SX12XX_Radio_Number_t 
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
     Config(LR2021_RADIO_LORA_BW_62, LR2021_RADIO_LORA_SF6, LR2021_RADIO_LORA_CR_4_8, freq, 12, false, 8, false, 0, 0, radioNumber);
-    uint8_t mode = 0x02;
+    constexpr uint8_t mode = 0x02;
     CHECK("LR2021_RADIO_SET_TX_TEST_MODE_OC", hal.WriteCommand(LR2021_RADIO_SET_TX_TEST_MODE_OC, &mode, 1, radioNumber));
 }
 
 void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, const uint32_t regfreq,
                           const uint8_t PreambleLength, const bool InvertIQ, const uint8_t _PayloadLength,
-                          const bool setFSKModulation, const uint8_t fskSyncWord1, const uint8_t fskSyncWord2,
+                          const radio_band_modulation_t _modulation, const uint8_t fskSyncWord1, const uint8_t fskSyncWord2,
                           const SX12XX_Radio_Number_t radioNumber)
 {
     PayloadLength = _PayloadLength;
@@ -177,9 +176,9 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
 
     SetMode(LR2021_MODE_STDBY_RC, radioNumber);
 
-    useFSK = setFSKModulation;
+    modulation = _modulation;
     codec = &copyCodec;
-    if (useFSK)
+    if (isGFSKModulation(modulation))
     {
         DBGLN("Config FSK");
         uint32_t bitrate = (uint32_t)bw * 10000;
@@ -624,7 +623,7 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, uint8_t *buf)
 {
     memset(buf, 0, 8);
-    if (useFSK) {
+    if (isGFSKModulation(modulation)) {
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
     } else {
@@ -633,13 +632,13 @@ inline void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Numbe
     }
 
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt
-    const int8_t rssi = -(int8_t)buf[useFSK ? 4 : 6];
+    const int8_t rssi = -(int8_t)buf[isGFSKModulation(modulation) ? 4 : 6];
 
     // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
 
     // Update whatever SNRs we have
-    LastPacketSNRRaw = useFSK ? 0 : (int8_t)buf[4];
+    LastPacketSNRRaw = isGFSKModulation(modulation) ? 0 : (int8_t)buf[4];
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     // stat updates

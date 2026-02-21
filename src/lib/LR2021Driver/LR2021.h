@@ -29,7 +29,7 @@ public:
     void End();
     void SetTxIdleMode() { SetMode(LR2021_MODE_FS, SX12XX_Radio_All); }; // set Idle mode used when switching from RX to TX
     void Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t freq,
-                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, bool setFSKModulation,
+                uint8_t PreambleLength, bool InvertIQ, uint8_t PayloadLength, radio_band_modulation_t modulation,
                 uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber = SX12XX_Radio_All);
     void SetFrequencyReg(uint32_t freq, SX12XX_Radio_Number_t radioNumber, bool doRx = false, uint32_t rxTime = 0);
     void SetOutputPower(int8_t power, bool isSubGHz = true);
@@ -56,7 +56,7 @@ private:
     static constexpr uint8_t PWRPENDING_NONE = 0x7f;
 
     // LR2021_RadioOperatingModes_t currOpmode;
-    bool useFSK;
+    radio_band_modulation_t modulation;
     bool modeSupportsFei;
     uint8_t pwrCurrentLF;
     uint8_t pwrPendingLF;
