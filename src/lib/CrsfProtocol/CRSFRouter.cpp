@@ -105,8 +105,8 @@ void CRSFRouter::SetHeaderAndCrc(crsf_header_t *frame, const crsf_frame_type_e f
     frame->frame_size = frameSize;
     frame->type = frameType;
 
-    const uint8_t crc = crsf_crc.calc((uint8_t *)frame + CRSF_FRAME_NOT_COUNTED_BYTES, frameSize - 1, 0);
-    ((uint8_t*)frame)[frameSize + CRSF_FRAME_NOT_COUNTED_BYTES - 1] = crc;
+    const uint8_t crc = crsf_crc.calc((uint8_t *)&frame->type, frameSize - 1);
+    frame->payload[frameSize - CRSF_FRAME_NOT_COUNTED_BYTES] = crc;
 }
 
 void CRSFRouter::SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, const crsf_frame_type_e frameType, const uint8_t frameSize, const crsf_addr_e destAddr, const crsf_addr_e origAddr)
@@ -116,16 +116,12 @@ void CRSFRouter::SetExtendedHeaderAndCrc(crsf_ext_header_t *frame, const crsf_fr
     SetHeaderAndCrc((crsf_header_t *)frame, frameType, frameSize);
 }
 
-void CRSFRouter::makeLinkStatisticsPacket(uint8_t *buffer)
+void CRSFRouter::makeLinkStatisticsPacket(crsf_header_t *frame)
 {
     // Note: size of crsfLinkStatistics_t used, not full elrsLinkStatistics_t
     constexpr uint8_t payloadLen = sizeof(crsfLinkStatistics_t);
-
-    buffer[0] = CRSF_SYNC_BYTE;
-    buffer[1] = CRSF_FRAME_SIZE(payloadLen);
-    buffer[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
-    memcpy(&buffer[3], &linkStats, payloadLen);
-    buffer[payloadLen + 3] = crsf_crc.calc(&buffer[2], payloadLen + 1);
+    memcpy(frame->payload, &linkStats, payloadLen);
+    SetHeaderAndCrc(frame, CRSF_FRAMETYPE_LINK_STATISTICS, CRSF_FRAME_SIZE(payloadLen));
 }
 
 void CRSFRouter::SetMspV2Request(uint8_t *frame, const uint16_t function, const uint8_t *payload, const uint8_t payloadLength)
