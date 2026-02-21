@@ -77,7 +77,7 @@ static void reportVbat()
     int32_t vbat_mV;
     // For negative offsets, anything between abs(OFFSET) and 0 is considered 0
     if (ANALOG_VBAT_OFFSET < 0 && adc <= -ANALOG_VBAT_OFFSET)
-	{	
+	{
         vbat_mV = 0;
 	}
     else
@@ -97,16 +97,16 @@ static void reportVbat()
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
             crsfbatt.p.voltage = htobe16((uint16_t)vbat_mV / 100);  // VBat, 100mV resolution, BigEndian
                                                                     // No values for current, capacity, or remaining available
-            crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
+            crsfRouter.SetHeaderAndCrc(&crsfbatt.h, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
             crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
         }
 
         // CRSF_FRAMETYPE_CELLS (0x0E)
         CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfcells = { 0 };
-        crsfcells.p.source_id = 128 + 0;                        // Volt sensor ID 0 
+        crsfcells.p.source_id = 128 + 0;                        // Volt sensor ID 0
         crsfcells.p.cell[0] = htobe16((uint16_t)(vbat_mV));     // VBat, 1mV resolution, BigEndian
         constexpr size_t payloadLen = sizeof(crsfcells.p.source_id) + sizeof(crsfcells.p.cell[0]);
-        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadLen));
+        crsfRouter.SetHeaderAndCrc(&crsfcells.h, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadLen));
         crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
 
         lastVBatSentMs = now;
