@@ -104,7 +104,7 @@ static void reportVbat()
         // CRSF_FRAMETYPE_CELLS (0x0E)
         CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfcells = { 0 };
         crsfcells.p.source_id = 128 + 0;                        // Volt sensor ID 0 
-        crsfcells.p.cell[0] = htobe16((uint16_t)(vbat_mV));      // VBat, 1mV resolution, BigEndian
+        crsfcells.p.cell[0] = htobe16((uint16_t)(vbat_mV));     // VBat, 1mV resolution, BigEndian
         constexpr size_t payloadLen = sizeof(crsfcells.p.source_id) + sizeof(crsfcells.p.cell[0]);
         crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadLen));
         crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
