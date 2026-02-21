@@ -6,6 +6,7 @@
 #include "FHSS.h"
 #include "OTA.h"
 #include "POWERMGNT.h"
+#include "SX12xxDriverCommon.h"
 #include "config.h"
 #include "helpers.h"
 #include "deferred.h"
@@ -73,12 +74,7 @@ static char luastrPacketRates[] = STR_LUA_PACKETRATES;
 
 #if defined(RADIO_LR1121)
 static char luastrRFBands[32];
-static enum RFMode : uint8_t
-{
-    RF_MODE_900 = 0,
-    RF_MODE_2G4 = 1,
-    RF_MODE_DUAL = 2,
-} rfMode;
+static radio_band_t rfMode;
 
 static selectionParameter luaRFBand = {
     {"RF Band", CRSF_TEXT_SELECTION},
@@ -761,18 +757,7 @@ static void recalculatePacketRateOptions(int minInterval)
         if (rateAllowed)
         {
             const auto radio_type = get_elrs_airRateConfig(rate)->radio_type;
-            if (rfMode == RF_MODE_900)
-            {
-                rateAllowed = radio_type == RADIO_MODULATION_GFSK_900 || radio_type == RADIO_MODULATION_LORA_900;
-            }
-            if (rfMode == RF_MODE_2G4)
-            {
-                rateAllowed = radio_type == RADIO_MODULATION_GFSK_2G4 || radio_type == RADIO_MODULATION_LORA_2G4;
-            }
-            if (rfMode == RF_MODE_DUAL)
-            {
-                rateAllowed = radio_type == RADIO_MODULATION_LORA_DUAL;
-            }
+            rateAllowed = (radio_type & RADIO_BAND_MASK) == rfMode;
         }
 #endif
         const char *semi = strchrnul(pos, ';');
@@ -828,27 +813,13 @@ void TXModuleEndpoint::registerParameters()
         if (arg != rfMode)
         {
           // Choose the fastest supported packet rate in this RF band.
-          rfMode = static_cast<RFMode>(arg);
+          rfMode = static_cast<radio_band_t>(arg);
           for (int i=0; i < RATE_MAX ; i++)
           {
-            if (isSupportedRFRate(i))
+            if (isSupportedRFRate(i) && rfMode == (get_elrs_airRateConfig(i)->radio_type & RADIO_BAND_MASK))
             {
-              const auto radio_type = get_elrs_airRateConfig(i)->radio_type;
-              if (rfMode == RF_MODE_900 && (radio_type == RADIO_MODULATION_GFSK_900 || radio_type == RADIO_MODULATION_LORA_900))
-              {
-                SetPacketRateIdx(i, true);
-                break;
-              }
-              if (rfMode == RF_MODE_2G4 && (radio_type == RADIO_MODULATION_GFSK_2G4 || radio_type == RADIO_MODULATION_LORA_2G4))
-              {
-                SetPacketRateIdx(i, true);
-                break;
-              }
-              if (rfMode == RF_MODE_DUAL && radio_type == RADIO_MODULATION_LORA_DUAL)
-              {
-                SetPacketRateIdx(i, true);
-                break;
-              }
+              SetPacketRateIdx(i, true);
+              break;
             }
           }
           recalculatePacketRateOptions(handset->getMinPacketInterval());
@@ -1020,19 +991,7 @@ void TXModuleEndpoint::updateParameters()
   uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
 #if defined(RADIO_LR1121)
   // calculate RFMode from current packet-rate
-  switch (get_elrs_airRateConfig(currentRate)->radio_type)
-  {
-    case RADIO_MODULATION_LORA_900:
-    case RADIO_MODULATION_GFSK_900:
-      rfMode = RF_MODE_900;
-      break;
-    case RADIO_MODULATION_LORA_DUAL:
-      rfMode = RF_MODE_DUAL;
-      break;
-    default:
-      rfMode = RF_MODE_2G4;
-      break;
-  }
+  rfMode = static_cast<radio_band_t>(get_elrs_airRateConfig(currentRate)->radio_type & RADIO_BAND_MASK);
   setTextSelectionValue(&luaRFBand, rfMode);
 #endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());

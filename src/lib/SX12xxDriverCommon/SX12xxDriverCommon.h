@@ -12,11 +12,11 @@ enum
     SX12XX_Radio_All  = 0b00000011      // bit mask for both radios
 };
 
-enum {
+typedef enum {
     RADIO_BAND_900 = 0,
     RADIO_BAND_2G4 = 1,
     RADIO_BAND_DUAL = 2,
-};
+} radio_band_t;
 
 enum {
     RADIO_MOD_LORA = 0 << 4,
