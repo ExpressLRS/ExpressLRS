@@ -313,7 +313,6 @@ local function fieldFolderOpen(field)
   currentFolderName = field.name
 
   local backFld = fields[#fields]
-  backFld.type = 14
   backFld.name = "----BACK----"
   -- Store the lineIndex and pageOffset to return to in the backFld
   backFld.li = lineIndex
@@ -364,7 +363,7 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function fieldBackExec(field)
-  if field.grandParent  then
+  if field.grandParent  then -- Back from Sub-menu 
     fieldFolderOpen(fields[field.grandParent])
   elseif field.parent then
     lineIndex = field.li or 1
@@ -377,7 +376,6 @@ local function fieldBackExec(field)
     currentFolderId = nil
     currentFolderName = nil
   else -- Executing EXIT 
-    currentFolderName = nil
     exitscript = 1
   end
 end
@@ -621,7 +619,7 @@ local function lcd_title_color()
     lcd.drawText(COL1 + 1, barTextSpacing, elrsFlagsInfo, CUSTOM_COLOR)
   else
     lcd.drawText(COL1 + 1, barTextSpacing, deviceName, CUSTOM_COLOR)
-    lcd.drawText(LCD_W/2,   barTextSpacing, currentFolderName or "", CENTER + BOLD + CUSTOM_COLOR)
+    lcd.drawText(LCD_W / 2, barTextSpacing, currentFolderName or "", CENTER + BOLD + CUSTOM_COLOR)
     lcd.drawText(LCD_W - 5, barTextSpacing, goodBadPkt, RIGHT + BOLD + CUSTOM_COLOR)
   end
   -- progress bar
@@ -652,7 +650,7 @@ local function lcd_title_bw()
       lcd.drawText(COL1, 1, elrsFlagsInfo, INVERS)
     else
       -- Due to space, show the folder name, or if top level, deviceName
-      lcd.drawText(COL1, 1,(currentFolderName or deviceName), INVERS)
+      lcd.drawText(COL1, 1, currentFolderName or deviceName, INVERS)
     end
   end
 end
