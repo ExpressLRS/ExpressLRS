@@ -13,12 +13,9 @@
 #define VBAT_SAMPLE_INTERVAL    100U
 #endif
 
-constexpr uint8_t SIZE_8BIT = 1;
-constexpr uint8_t SIZE_16BIT = 2;
-
-#define VBAT_MIN_CRSFRATE 5000    // send VBat telemetry on change but at least every 5000ms
-static uint32_t lastVBatSent = 0; // last time VBat was sent
-static int32_t lastVBatValue = 0; // last measured VBat value
+#define VBAT_MIN_CRSFRATE 5000      // send VBat telemetry on change but at least every 5000ms
+static uint32_t lastVBatSentMs = 0; // last time VBat was sent
+static int32_t lastVBatValue = 0;   // last measured VBat value
 
 typedef uint16_t vbatAnalogStorage_t;
 static MedianAvgFilter<vbatAnalogStorage_t, VBAT_SMOOTH_CNT>vbatSmooth;
@@ -77,46 +74,45 @@ static void reportVbat()
         adc = esp_adc_cal_raw_to_voltage(adc, vbatAdcUnitCharacterics);
 #endif
 
-    int32_t vbat, vbat_mV;
+    int32_t vbat_mV;
     // For negative offsets, anything between abs(OFFSET) and 0 is considered 0
     if (ANALOG_VBAT_OFFSET < 0 && adc <= -ANALOG_VBAT_OFFSET)
 	{	
-        vbat    = 0;
         vbat_mV = 0;
 	}
     else
 	{
-        vbat    = (((int32_t)adc - ANALOG_VBAT_OFFSET) * 100) / ANALOG_VBAT_SCALE;
         vbat_mV = (((int32_t)adc - ANALOG_VBAT_OFFSET) * 10000) / ANALOG_VBAT_SCALE;
 	}
 
     uint32_t now = millis();
 
     // send packet only if min rate timer expired or VBat value has changed
-    if ((now - lastVBatSent >= VBAT_MIN_CRSFRATE) || (vbat != lastVBatValue))
+    if ((now - lastVBatSentMs >= VBAT_MIN_CRSFRATE) || (vbat_mV != lastVBatValue))
     {
         // send battery packets (0x08) only if no external decive is sending 0x08 packets
         if (!crsfBatterySensorDetected)
         {
             // CRSF_FRAMETYPE_BATTERY (0x08)
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
-            crsfbatt.p.voltage = htobe16((uint16_t)vbat);   // VBat, 100mV resolution, BigEndian
-                                                            // No values for current, capacity, or remaining available
+            crsfbatt.p.voltage = htobe16((uint16_t)vbat_mV / 100);  // VBat, 100mV resolution, BigEndian
+                                                                    // No values for current, capacity, or remaining available
             crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfbatt, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
             crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
         }
 
         // CRSF_FRAMETYPE_CELLS (0x0E)
         CRSF_MK_FRAME_T(crsf_sensor_cells_t) crsfcells = { 0 };
-        crsfcells.p.source_id = 128 + 0;                    // Volt sensor ID 0 
-        crsfcells.p.cell[0] = htobe16((uint16_t)(vbat_mV)); // VBat, 1mV resolution, BigEndian
-        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(sizeof(SIZE_8BIT + SIZE_16BIT)));
+        crsfcells.p.source_id = 128 + 0;                        // Volt sensor ID 0 
+        crsfcells.p.cell[0] = htobe16((uint16_t)(vbat_mV));      // VBat, 1mV resolution, BigEndian
+        constexpr size_t payloadLen = sizeof(crsfcells.p.source_id) + sizeof(crsfcells.p.cell[0]);
+        crsfRouter.SetHeaderAndCrc((crsf_header_t *)&crsfcells, CRSF_FRAMETYPE_CELLS, CRSF_FRAME_SIZE(payloadLen));
         crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
 
-        lastVBatSent = now;
+        lastVBatSentMs = now;
     }
 
-    lastVBatValue = vbat;
+    lastVBatValue = vbat_mV;
 }
 
 static int timeout()
