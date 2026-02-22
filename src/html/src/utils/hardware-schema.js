@@ -47,7 +47,7 @@ const HARDWARE_SCHEMA = [
                 label: 'BUSY pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'GPIO Input connected to SX128x busy pin'
+                desc: 'GPIO Input connected to transceiver busy pin'
             },
             /* /FEATURE: NOT HAS_SX127X */
             /* FEATURE: HAS_SX127X */
@@ -56,7 +56,7 @@ const HARDWARE_SCHEMA = [
                 label: 'DIO0 pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Interrupt pin for SX127x'
+                desc: 'Interrupt pin from transceiver'
             },
             /* /FEATURE: HAS_SX127X */
             /* FEATURE: NOT HAS_SX127X */
@@ -65,7 +65,7 @@ const HARDWARE_SCHEMA = [
                 label: 'DIO1 pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Interrupt pin for SX128x/LR1121'
+                desc: 'Interrupt pin from transceiver'
             },
             /* /FEATURE: NOT HAS_SX127X */
             {
@@ -73,35 +73,35 @@ const HARDWARE_SCHEMA = [
                 label: 'MISO pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'MISO connected to (possibly) multiple SX1280/127x'
+                desc: 'MISO connected to (possibly) multiple transceiver'
             },
             {
                 id: 'radio_mosi',
                 label: 'MOSI pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'MOSI connected to (possibly) multiple SX1280/127x'
+                desc: 'MOSI connected to (possibly) multiple transceiver'
             },
             {
                 id: 'radio_nss',
                 label: 'NSS pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Chip select pin for first SX1280/127x'
+                desc: 'Chip select pin for first transceiver'
             },
             {
                 id: 'radio_rst',
                 label: 'RST pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Reset pin connected to (possibly) multiple SX1280/127x'
+                desc: 'Reset pin connected to (possibly) multiple transceiver'
             },
             {
                 id: 'radio_sck',
                 label: 'SCK pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Clock pin connected to (possibly) multiple SX1280/127x'
+                desc: 'Clock pin connected to (possibly) multiple transceiver'
             },
             /* FEATURE: NOT IS_8285 */
             /* FEATURE: NOT HAS_SX127X */
@@ -110,7 +110,7 @@ const HARDWARE_SCHEMA = [
                 label: 'BUSY_2 pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Busy pin for second SX1280'
+                desc: 'Busy pin for second transceiver'
             },
             /* /FEATURE: NOT HAS_SX127X */
             /* FEATURE: HAS_SX127X */
@@ -119,7 +119,7 @@ const HARDWARE_SCHEMA = [
                 label: 'DIO0_2 pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Interrupt pin for second SX127x'
+                desc: 'Interrupt pin for second transceiver'
             },
             /* /FEATURE: HAS_SX127X */
             /* FEATURE: NOT HAS_SX127X */
@@ -128,7 +128,7 @@ const HARDWARE_SCHEMA = [
                 label: 'DIO1_2 pin',
                 type: 'uint',
                 icon: 'input',
-                desc: 'Interrupt pin for second SX1280'
+                desc: 'Interrupt pin for second transceiver'
             },
             /* /FEATURE: NOT HAS_SX127X */
             {
@@ -136,14 +136,14 @@ const HARDWARE_SCHEMA = [
                 label: 'NSS_2 pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Chip select pin for second SX1280'
+                desc: 'Chip select pin for second transceiver'
             },
             {
                 id: 'radio_rst_2',
                 label: 'RST_2 pin',
                 type: 'uint',
                 icon: 'output',
-                desc: 'Reset pin connected to second SX1280/127x'
+                desc: 'Reset pin connected to second transceiver'
             },
             /* /FEATURE: NOT IS_8285 */
             /* FEATURE: NOT HAS_SX127X */
@@ -164,16 +164,16 @@ const HARDWARE_SCHEMA = [
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
             /* /FEATURE: NOT HAS_SX128X */
-            /* FEATURE: HAS_LR1121 */
+            /* FEATURE: HAS_DUAL_BAND */
             {
                 id: 'radio_rfsw_ctrl',
-                label: 'LR1121 RF Switch Controls',
+                label: 'LRxxxx RF Switch Controls',
                 type: 'array',
                 size: 40,
                 icon: null,
-                desc: 'Comma-separated list of 8 values used for setting the LR1121 RF switch controls'
+                desc: 'Comma-separated list of values used for setting the LRxxxx RF switch controls (8 values for LR1121, 7 for LR2021)'
             },
-            /* /FEATURE: HAS_LR1121 */
+            /* /FEATURE: HAS_DUAL_BAND */
         ]
     },
 
@@ -300,7 +300,7 @@ const HARDWARE_SCHEMA = [
                 size: 40,
                 desc: 'Comma-separated list of values that set the power output (if using a DAC then these set the Semtech power output)'
             },
-            /* FEATURE: HAS_LR1121 */
+            /* FEATURE: HAS_DUAL_BAND */
             {
                 id: 'power_values_dual',
                 label: 'Dual Power Value(s)',
@@ -308,7 +308,7 @@ const HARDWARE_SCHEMA = [
                 size: 40,
                 desc: 'Comma-separated list of values that set the higher frequency power output of a dual band Tx/Rx'
             },
-            /* /FEATURE: HAS_LR1121 */
+            /* /FEATURE: HAS_DUAL_BAND */
             {
                 id: 'power_lna_gain',
                 label: 'PA LNA Gain',

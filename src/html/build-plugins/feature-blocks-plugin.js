@@ -8,6 +8,8 @@
 // Feature names map to VITE_FEATURE_<NAME> env vars after normalization.
 // "NOT NAME" and "!NAME" invert the sense of the flag.
 
+import { deriveFeatures } from '../features.js'
+
 // Simple boolean coercion for env strings
 function toBoolEnv(v, def) {
   if (v === undefined || v === null || v === '') return def
@@ -36,12 +38,17 @@ export function createFeatureBlockProcessor(env) {
     return { name: s, invert }
   }
 
+  const features = deriveFeatures(env)
+
   function getFlagForName(name, defaultValue) {
     const key = normalizeName(name)
-    // Add any other "derived" flags here, check features.js
-    if (name === 'HAS_SUBGHZ') {
-      return getFlagForName('HAS_LR1121', false) || getFlagForName('HAS_SX127X', false)
+
+    // Canonical features should come from shared derived feature logic.
+    if (Object.prototype.hasOwnProperty.call(features, key)) {
+      return features[key]
     }
+
+    // Fallback for any ad-hoc feature not present in FEATURES.
     const v = env[`VITE_FEATURE_HTML_${key}`] ?? env[`VITE_FEATURE_${key}`]
     return toBoolEnv(v, defaultValue)
   }
