@@ -229,20 +229,20 @@ bool ICACHE_RAM_ATTR isDualRadio()
 #if defined(RADIO_LR1121)
 bool isSupportedRFRate(uint8_t index)
 {
-    expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
+    const expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
 
     // Dual Band modes not supported for hardware with only a single LR1121
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN && ModParams->radio_type == RADIO_MODULATION_LORA_DUAL)
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN && (ModParams->radio_type & RADIO_BAND_MASK) == RADIO_BAND_DUAL)
     {
         return false;
     }
     // 900MHz and Dual Band modes not supported for hardware with no 900MHz power values
-    if (POWER_OUTPUT_VALUES_COUNT == 0 && (ModParams->radio_type == RADIO_MODULATION_LORA_900 || ModParams->radio_type == RADIO_MODULATION_GFSK_900 || ModParams->radio_type == RADIO_MODULATION_LORA_DUAL))
+    if (POWER_OUTPUT_VALUES_COUNT == 0 && (ModParams->radio_type & RADIO_BAND_MASK) != RADIO_BAND_2G4)
     {
         return false;
     }
     // 2.4GHz and Dual Band modes not supported for hardware with no 2.4GHz power values
-    if (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (ModParams->radio_type == RADIO_MODULATION_LORA_2G4 || ModParams->radio_type == RADIO_MODULATION_GFSK_2G4 || ModParams->radio_type == RADIO_MODULATION_LORA_DUAL))
+    if (POWER_OUTPUT_VALUES_DUAL_COUNT == 0 && (ModParams->radio_type & RADIO_BAND_MASK) != RADIO_BAND_900)
     {
         return false;
     }

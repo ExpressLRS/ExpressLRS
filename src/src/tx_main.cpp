@@ -462,7 +462,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 
 #if defined(RADIO_LR1121)
   FHSSusePrimaryFreqBand = (ModParams->radio_type & RADIO_BAND_MASK) != RADIO_BAND_2G4;
-  FHSSuseDualBand = ModParams->radio_type == RADIO_MODULATION_LORA_DUAL;
+  FHSSuseDualBand = (ModParams->radio_type & RADIO_BAND_MASK) == RADIO_BAND_DUAL;
 #endif
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
