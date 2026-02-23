@@ -56,6 +56,7 @@ void ESP32S3LedDriver::Begin()
     };
 
     i2s_pin_config_t pin_config = {
+        .mck_io_num = -1,
         .bck_io_num = -1,
         .ws_io_num = -1,
         .data_out_num = gpio_pin,
