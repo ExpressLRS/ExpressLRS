@@ -176,6 +176,8 @@ public:
     void SetBackpackTlmMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
+    void SetUID(uint8_t* uid);
+    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
 
     // State setters
     bool SetModelId(uint8_t modelId);
@@ -313,6 +315,7 @@ public:
     void SetTargetSysId(uint8_t sysID);
     void SetSourceSysId(uint8_t sysID);
     void SetBindStorage(rx_config_bindstorage_t value);
+    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
     void ReturnLoan();
 
 private:

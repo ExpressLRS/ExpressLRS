@@ -7,6 +7,36 @@
 #include "helpers.h"
 #include "logging.h"
 
+#if defined(PLATFORM_ESP32)
+#include <mbedtls/md5.h> // for BindPhraseToMd5()
+#endif
+
+void BindPhraseToMd5(uint8_t *phrase, size_t phraseLen, uint8_t md5Out[16])
+{
+    constexpr uint8_t BIND_KEY1[] = "-DMY_BINDING_PHRASE=\"";
+    constexpr uint8_t BIND_KEY2[] = "\""; //
+
+#if defined(PLATFORM_ESP8266)
+    md5_context_t md5;
+    MD5Init(&md5);
+    MD5Update(&md5, BIND_KEY1, sizeof(BIND_KEY1)-1);
+    MD5Update(&md5, phrase, phraseLen);
+    MD5Update(&md5, BIND_KEY2, sizeof(BIND_KEY2)-1);
+    MD5Final(md5Out, &md5);
+#elif defined(PLATFORM_ESP32)
+    mbedtls_md5_context md5;
+    mbedtls_md5_init(&md5);
+    mbedtls_md5_update_ret(&md5, BIND_KEY1, sizeof(BIND_KEY1)-1);
+    mbedtls_md5_update_ret(&md5, phrase, phraseLen);
+    mbedtls_md5_update_ret(&md5, BIND_KEY2, sizeof(BIND_KEY2)-1);
+    mbedtls_md5_finish_ret(&md5, md5Out);
+    mbedtls_md5_free(&md5);
+#else
+   // I dunno, for unit test?
+   memset(md5Out, 0, 16);
+#endif
+}
+
 #if defined(TARGET_TX)
 
 #define ALL_CHANGED         (EVENT_CONFIG_MODEL_CHANGED | EVENT_CONFIG_VTX_CHANGED | EVENT_CONFIG_MAIN_CHANGED | EVENT_CONFIG_FAN_CHANGED | EVENT_CONFIG_MOTION_CHANGED | EVENT_CONFIG_BUTTON_CHANGED | EVENT_CONFIG_VERSION_CHANGED)
@@ -791,6 +821,24 @@ TxConfig::SetModelId(uint8_t modelId)
 
     return false;
 }
+
+void TxConfig::SetUID(uint8_t* uid)
+{
+    // The UID is only stored in the options.json, not in nvs/eeprom like on the RX
+    // Emulate the setting as a config setting to have the same access method as the RX
+    firmwareOptions.hasUID = true;
+    memcpy(firmwareOptions.uid, uid, UID_LEN);
+    saveOptions();
+}
+
+void TxConfig::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
+{
+    uint8_t md5[16];
+    BindPhraseToMd5(phrase, phraseLen, md5);
+    // UID is the first UID_LEN of the md5
+    SetUID(md5);
+}
+
 #endif
 
 /////////////////////////////////////////////////////
@@ -1389,6 +1437,14 @@ void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
         m_config.bindStorage = value;
         m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
+}
+
+void RxConfig::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
+{
+    uint8_t md5[16];
+    BindPhraseToMd5(phrase, phraseLen, md5);
+    // UID is the first UID_LEN of the md5
+    SetUID(md5);
 }
 
 void RxConfig::SetTargetSysId(uint8_t value)
