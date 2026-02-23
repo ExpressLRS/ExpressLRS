@@ -58,6 +58,8 @@ private:
 
     void handleWifiBle(propertiesCommon *item, uint8_t arg);
     void handleSimpleSendCmd(propertiesCommon *item, uint8_t arg);
+    void handleMspGetRxConfig(crsf_ext_header_t *extMessage);
+    void handleMspSetRxConfig(crsf_ext_header_t *extMessage);
     void updateTlmBandwidth();
     void updateBackpackOpts();
 };

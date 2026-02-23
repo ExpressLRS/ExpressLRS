@@ -14,6 +14,8 @@ public:
 private:
     void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg);
     void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg);
+    void handleMspGetRxConfig(crsf_ext_header_t *extMessage);
+    void handleMspSetRxConfig(crsf_ext_header_t *extMessage);
 };
 
 #endif //RX_ENDPOINT_H

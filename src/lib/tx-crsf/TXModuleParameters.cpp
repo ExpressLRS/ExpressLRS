@@ -327,7 +327,6 @@ extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
 
 void TXModuleEndpoint::supressCriticalErrors()
@@ -519,7 +518,7 @@ void TXModuleEndpoint::handleWifiBle(propertiesCommon *item, uint8_t arg)
       sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
       if (connectionState == targetState)
       {
-        rebootTime = millis() + 400;
+        scheduleRebootTime(400);
       }
       break;
 
@@ -900,7 +899,7 @@ void TXModuleEndpoint::registerParameters()
           msp.reset();
           msp.makeCommand();
           msp.function = MSP_SET_RX_CONFIG;
-          msp.addByte(MSP_ELRS_MODEL_ID);
+          msp.addByte((uint8_t)MSP_ELRS_RX_CONFIG::MODEL_ID);
           msp.addByte(newModelMatch ? modelId : 0xff);
           crsfRouter.AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
         }
