@@ -52,8 +52,6 @@
 extern void setButtonColors(uint8_t b1, uint8_t b2);
 #endif
 
-extern unsigned long rebootTime;
-
 static char station_ssid[33];
 static char station_password[65];
 
@@ -203,7 +201,7 @@ static void HandleReboot(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Kill -9, no more CPU time!");
   response->addHeader("Connection", "close");
   request->send(response);
-  rebootTime = millis() + 100;
+  scheduleRebootTime(200);
 }
 
 static void HandleReset(AsyncWebServerRequest *request)
@@ -228,7 +226,7 @@ static void HandleReset(AsyncWebServerRequest *request)
   AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "Reset complete, rebooting...");
   response->addHeader("Connection", "close");
   request->send(response);
-  rebootTime = millis() + 100;
+  scheduleRebootTime(100);
 }
 
 static void UpdateSettings(AsyncWebServerRequest *request, JsonVariant &json)
@@ -728,7 +726,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       #else
         msg += "Please wait for a few seconds while the device reboots.\"}";
       #endif
-      rebootTime = millis() + 200;
+      scheduleRebootTime(200);
     } else {
       StreamString p = StreamString();
       if (Update.hasError()) {
