@@ -143,6 +143,7 @@ void CRSFRouter::SetMspV2Request(uint8_t *frame, const uint16_t function, const 
 
 void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const crsf_addr_e destination, const crsf_addr_e origin)
 {
+    // This allows up to 54 bytes of payload (?) in addition to the CRSF header/CRC and MSP header/CRC
     const uint8_t totalBufferLen = CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + ENCAPSULATED_MSP_HEADER_CRC_LEN + packet->payloadSize;
     if (totalBufferLen > CRSF_MAX_PACKET_LEN)
     {

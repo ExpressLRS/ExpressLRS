@@ -101,6 +101,27 @@ inline char *itoa(int32_t value, char *str, int base) { sprintf(str, "%d", value
 inline char *utoa(uint32_t value, char *str, int base) { sprintf(str, "%u", value); return str; }
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
+#if defined(_WIN32) || defined(__MINGW32__)
+// Flippin BSD functions, not available on windows for tests!
+static inline size_t strlcpy(char *dst, const char *src, size_t siz)
+{
+    size_t src_len = strlen(src);
+    if (siz) {
+        size_t copy = (src_len >= siz) ? siz - 1 : src_len;
+        memcpy(dst, src, copy);
+        dst[copy] = '\0';
+    }
+    return src_len;
+}
+
+static inline char *stpcpy(char *dst, const char *src)
+{
+    size_t len = strlen(src);
+    memcpy(dst, src, len + 1); // include null terminator
+    return dst + len;
+}
+#endif
+
 #ifdef _WIN32
 #define random rand
 #define srandom srand
