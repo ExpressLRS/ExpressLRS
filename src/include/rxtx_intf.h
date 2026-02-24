@@ -9,6 +9,7 @@
  * TX interface
  ***/
 #if defined(TARGET_TX)
+void SetSyncSpam();
 #endif
 
 /***

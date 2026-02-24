@@ -91,10 +91,10 @@ void CRSFRouter::deliverMessageTo(const crsf_addr_e destination, const crsf_head
 {
     for (const auto other : connectors)
     {
-        if (other->forwardsTo(destination))
+        if (destination == CRSF_ADDRESS_BROADCAST || other->forwardsTo(destination))
         {
             other->forwardMessage(message);
-            return;
+            if (destination != CRSF_ADDRESS_BROADCAST) return;
         }
     }
 }
@@ -152,7 +152,7 @@ void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const crsf_addr_e dest
     uint8_t outBuffer[ENCAPSULATED_MSP_MAX_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES];
 
     // CRSF extended frame header
-    outBuffer[0] = CRSF_ADDRESS_BROADCAST;                                                                 // address
+    outBuffer[0] = CRSF_SYNC_BYTE;                                                                         // address
     outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
     outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                                               // packet type
     outBuffer[3] = destination;                                                                            // destination

@@ -6,7 +6,7 @@
 #include "AsyncJson.h"
 #include <ESPAsyncWebServer.h>
 #include <StreamString.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 
 #include "common.h"
 #include "logging.h"
@@ -26,9 +26,9 @@ static void WebUploadLR1121ResponseHandler(AsyncWebServerRequest *request)
     {
         msg = String(R"({"status": "ok", "msg": "Update complete. Refresh page to see new version information."})");
         // add tag file for lr1121 custom firmware
-        if (!SPIFFS.exists("/lr1121.txt"))
+        if (!LittleFS.exists("/lr1121.txt"))
         {
-            File tagFile = SPIFFS.open("/lr1121.txt", "w");
+            File tagFile = LittleFS.open("/lr1121.txt", "w");
             tagFile.close();
         }
         DBGLN("Update complete");
@@ -86,7 +86,7 @@ static void GetLR1121Status(AsyncWebServerRequest *request)
     hal.end();
     hal.init();
     hal.reset();
-    json["manual"] = SPIFFS.exists("/lr1121.txt");
+    json["manual"] = LittleFS.exists("/lr1121.txt");
     ReadStatusForRadio(json["radio1"].to<JsonObject>(), SX12XX_Radio_1);
     if (GPIO_PIN_NSS_2 != UNDEF_PIN)
     {

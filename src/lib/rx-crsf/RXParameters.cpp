@@ -203,7 +203,6 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
 
     const char *no1Option    = ";";
     const char *no2Options   = ";;";
-    const char *dshot        = ";DShot;DShot 3D";
     const char *serial_RX    = ";Serial RX";
     const char *serial_TX    = ";Serial TX";
     const char *i2c_SCL      = ";I2C SCL;";
@@ -213,6 +212,7 @@ void RXEndpoint::luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg)
     const char *serial1_RX   = ";Serial2 RX;";
     const char *serial1_TX   = ";;Serial2 TX";
     const char *serial1_BOTH = ";Serial2 RX;Serial2 TX";
+    const char *dshot        = ";DShot;DShot 3D";
 #endif
 
     const char *pModeString;

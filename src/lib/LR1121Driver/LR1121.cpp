@@ -3,7 +3,7 @@
 #include "LR1121_hal.h"
 #include "logging.h"
 
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <SPIEx.h>
 
 #define LR1121_FIRMWARE_TYPE 0xF3
@@ -34,6 +34,7 @@ public:
 
 void ICACHE_RAM_ATTR FECCodec::encode(uint8_t *out, uint8_t *in, uint32_t len)
 {
+    memset(out, 0, len); // ensure that the buffer is zeroed to start
     FECEncode(in, out);
 }
 
@@ -70,7 +71,7 @@ void LR1121Driver::End()
 bool LR1121Driver::CheckVersion(const SX12XX_Radio_Number_t radioNumber)
 {
     firmware_version_t version = GetFirmwareVersion(radioNumber);
-    if (!SPIFFS.exists("/lr1121.txt") && (version.type != LR1121_FIRMWARE_TYPE || version.version != LR11XX_FIRMWARE_VERSION))
+    if (!LittleFS.exists("/lr1121.txt") && (version.type != LR1121_FIRMWARE_TYPE || version.version != LR11XX_FIRMWARE_VERSION))
     {
         DBGLN("Upgrading radio #%d", radioNumber);
         // do upgrade
@@ -643,7 +644,7 @@ void ICACHE_RAM_ATTR LR1121Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
     }
 
     WORD_ALIGNED_ATTR uint8_t outBuffer[32] = {0};
-    const uint8_t length = PayloadLength+3;
+    const uint8_t length = PayloadLength + 3; // 3 extra zero bytes for the 24-bit timeout
     codec->encode(outBuffer, data, PayloadLength);
     if (sendGeminiBuffer)
     {

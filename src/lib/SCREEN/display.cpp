@@ -54,11 +54,19 @@ const char *rate_string[] = {
 #elif defined(RADIO_LR1121)
 static const char *rate_string[] = {
     // 900
+    "K1000Full",
+    "250Hz",
+    "200Full",
     "200Hz",
     "100Full",
     "100Hz",
     "50Hz",
+    "25Hz",
+    "D50",
     // 2.4
+    "K1000",
+    "DK500",
+    "DK250",
     "500Hz",
     "333Full",
     "250Hz",
@@ -67,13 +75,7 @@ static const char *rate_string[] = {
     "50Hz",
     // Dual
     "X150Hz",
-    "X100Full",
-    // 900
-    "250Hz",
-    "200Full",
-    // K Modes
-    "DK500",
-    "K1000Full",
+    "X100Full"
 };
 #else
 static const char *rate_string[] = {

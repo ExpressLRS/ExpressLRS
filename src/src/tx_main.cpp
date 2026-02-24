@@ -428,7 +428,7 @@ uint8_t adjustSwitchModeForAirRate(OtaSwitchMode_e eSwitchMode, uint8_t packetSi
 {
     // Only the fullres modes have 3 switch modes, so reset the switch mode if outside the
     // range for 4ch mode
-    if (packetSize == OTA4_PACKET_SIZE&& eSwitchMode > smHybridOr16ch)
+    if (packetSize == OTA4_PACKET_SIZE && eSwitchMode > smHybridOr16ch)
         return smWideOr8ch;
     return eSwitchMode;
 }
@@ -793,10 +793,6 @@ void ModelUpdateReq()
 
 static void ConfigChangeCommit()
 {
-  // Adjust the air rate based on the current baud rate
-  auto index = adjustPacketRateForBaud(config.GetRate());
-  config.SetRate(index);
-
   // Write the uncommitted eeprom values (may block for a while)
   uint32_t changes = config.Commit();
   // Change params after the blocking finishes as a rate change will change the radio freq
@@ -1278,11 +1274,11 @@ static void setupSerial()
   BackpackOrLogStrm = serialPort;
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
   // Because we have ARDUINO_USB_MODE enabled, we use USBSerial as the USB device.
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
-#elif defined(PLATFORM_ESP32)
+#elif defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {
     // The backpack or Airpoirt is already assigned on UART0 (pins 3, 1)

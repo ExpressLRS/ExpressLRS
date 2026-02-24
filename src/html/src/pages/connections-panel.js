@@ -96,8 +96,7 @@ class ConnectionsPanel extends LitElement {
                             <ul>
                                 <li>"Set Position" sets the servo to an absolute "Failsafe Pos"
                                     <ul>
-                                        <li>Does not use "Invert" flag</li>
-                                        <li>Value will be halved if "750us" flag is set</li>
+                                        <li>Does not use "Invert" or "Stretch" flags</li>
                                         <li>Will be converted to binary for "On/Off" mode (>1500us = HIGH)</li>
                                     </ul>
                                 </li>

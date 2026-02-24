@@ -198,6 +198,12 @@ typedef struct crsf_channels_s
     unsigned ch15 : 11;
 } PACKED crsf_channels_t;
 
+/**
+ * Bits used in the byte following crsf_channels_t in the ExpressLRS extended CHANNELS_PACKED packet
+ */
+#define CRSF_CHANNELS_STATUS_ARMED              bit(0)    // Armed status in Arm using Switch mode
+#define CRSF_CHANNELS_STATUS_ARMING_MODE_CH5    bit(1)    // Arm using CH5 if bit is set
+
 typedef struct deviceInformationPacket_s
 {
     uint32_t serialNo;
