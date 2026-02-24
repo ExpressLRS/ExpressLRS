@@ -66,22 +66,18 @@ void RxTxEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
             {
                 //DBGLN("Set UID");
                 config.SetUID(mspPayload);
-                config.Commit();
-                scheduleRebootTime(400);
+                scheduleRebootTime(200);
             }
             break;
 
         case MSP_ELRS_RX_CONFIG::BIND_PHRASE:
-            if (payloadLen > 0)
-            {
-                #if defined(DEBUG_LOG)
-                mspPayload[payloadLen] = 0; // will overwrite CRC
-                DBGLN("Set bindphrase '%s'", (char *)mspPayload);
-                #endif
-                config.SetBindPhrase(mspPayload, payloadLen);
-                config.Commit();
-                scheduleRebootTime(400);
-            }
+            // 0 len payload supported to clear binding
+            #if defined(DEBUG_LOG)
+            mspPayload[payloadLen] = 0; // will overwrite CRC
+            DBGLN("Set bindphrase '%s'", (char *)mspPayload);
+            #endif
+            config.SetBindPhrase(mspPayload, payloadLen);
+            scheduleRebootTime(200);
             break;
 
         case MSP_ELRS_RX_CONFIG::MODEL_ID:

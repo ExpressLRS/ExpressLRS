@@ -111,7 +111,8 @@ void scheduleRebootTime(unsigned long inMs)
 void checkRebootTime(unsigned long now)
 {
     // If the reboot time is set and the current time is past the reboot time then reboot.
-    if (rebootTime_Ms != 0 && now > rebootTime_Ms) {
+    // Wait for any pending config change to be committed first
+    if (rebootTime_Ms != 0 && !config.IsModified() && now > rebootTime_Ms ) {
         ESP.restart();
     }
 }
