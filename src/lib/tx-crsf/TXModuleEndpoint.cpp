@@ -39,78 +39,17 @@ bool TXModuleEndpoint::handleRaw(const crsf_header_t *message)
     return false;
 }
 
-/**
- * Handles MSP_RX_CONFIG command
- */
-void TXModuleEndpoint::handleMspGetRxConfig(crsf_ext_header_t *extMessage)
-{
-    switch ((MSP_ELRS_RX_CONFIG)extMessage->payload[3])
-    {
-        case MSP_ELRS_RX_CONFIG::UID:
-            {
-                mspPacket_t msp;
-                msp.reset();
-                msp.makeResponse();
-                msp.function = MSP_RX_CONFIG;
-                msp.addByte((uint8_t)MSP_ELRS_RX_CONFIG::UID);
-                msp.addByte(UID[0]); msp.addByte(UID[1]); msp.addByte(UID[2]);
-                msp.addByte(UID[3]); msp.addByte(UID[4]); msp.addByte(UID[5]);
-                crsfRouter.AddMspMessage(&msp, extMessage->orig_addr, getDeviceId());
-                break;
-            }
-
-        default:
-            break;
-    }
-}
-
-/**
- * Handles MSP_SET_RX_CONFIG command
- */
-void TXModuleEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
-{
-    // Encapsulated MSP payload is 0x30, mspPayloadSize, command
-    // subtracting one for the subcommand in payload[3]
-    auto payloadLen = extMessage->payload[1] - 1;
-    auto mspPayload = &extMessage->payload[4];
-
-    switch ((MSP_ELRS_RX_CONFIG)extMessage->payload[3])
-    {
-        case MSP_ELRS_RX_CONFIG::UID:
-            if (payloadLen > 5)
-            {
-                //DBGLN("Set UID");
-                config.SetUID(mspPayload);
-                config.Commit();
-                scheduleRebootTime(400);
-            }
-            break;
-
-        case MSP_ELRS_RX_CONFIG::BIND_PHRASE:
-            if (payloadLen > 0)
-            {
-                #if defined(DEBUG_LOG)
-                mspPayload[payloadLen] = 0; // will overwrite CRC
-                DBGLN("Set bindphrase '%s'", (char *)mspPayload);
-                #endif
-                config.SetBindPhrase(mspPayload, payloadLen);
-                config.Commit();
-                scheduleRebootTime(400);
-            }
-            break;
-
-        default:
-            break;
-    }
-}
-
 void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
 {
     const crsf_frame_type_e packetType = message->type;
 
     const auto extMessage = (crsf_ext_header_t *)message;
+    if (handleRxTxMessage(message))
+    {
+        return;
+    }
     // Enter Binding Mode
-    if (packetType == CRSF_FRAMETYPE_COMMAND
+    else if (packetType == CRSF_FRAMETYPE_COMMAND
         && extMessage->frame_size >= 6 // official CRSF has 7 bytes with two CRCs
         && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
         && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
@@ -126,14 +65,6 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
         rtcModelId = modelId;
 #endif
         ModelUpdateReq();
-    }
-    else if (message->type == CRSF_FRAMETYPE_MSP_REQ && extMessage->payload[2] == MSP_RX_CONFIG)
-    {
-        handleMspGetRxConfig(extMessage);
-    }
-    else if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_RX_CONFIG)
-    {
-        handleMspSetRxConfig(extMessage);
     }
     else if (packetType == CRSF_FRAMETYPE_DEVICE_PING
         || packetType == CRSF_FRAMETYPE_PARAMETER_READ

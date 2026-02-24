@@ -2,6 +2,7 @@
 #include "TFT/tftdisplay.h"
 
 #include "TXModuleEndpoint.h"
+#include "rxtx_intf.h"
 #include "config.h"
 #include "helpers.h"
 #include "logging.h"

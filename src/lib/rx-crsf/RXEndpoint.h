@@ -1,8 +1,8 @@
 #ifndef RX_ENDPOINT_H
 #define RX_ENDPOINT_H
-#include "CRSFEndpoint.h"
+#include "RxTxEndpoint.h"
 
-class RXEndpoint final : public CRSFEndpoint {
+class RXEndpoint final : public RxTxEndpoint {
 public:
     RXEndpoint();
     bool handleRaw(const crsf_header_t *message) override;
@@ -14,8 +14,6 @@ public:
 private:
     void luaparamMappingChannelOut(propertiesCommon *item, uint8_t arg);
     void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg);
-    void handleMspGetRxConfig(crsf_ext_header_t *extMessage);
-    void handleMspSetRxConfig(crsf_ext_header_t *extMessage);
 };
 
 #endif //RX_ENDPOINT_H

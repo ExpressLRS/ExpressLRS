@@ -41,16 +41,11 @@
 #define ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE   4
 #define ENCAPSULATED_MSP_MAX_FRAME_LEN      (ENCAPSULATED_MSP_HEADER_CRC_LEN + ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
 
-// ELRS MSP_RX_CONFIG / MSP_SET_RX_CONFIG opcodes
+// ELRS MSP_RX_CONFIG / MSP_SET_RX_CONFIG opcodes for both RX and TX
 enum class MSP_ELRS_RX_CONFIG : uint8_t {
     UID             = 0x00,
     BIND_PHRASE     = 0x01,
     MODEL_ID        = 0x0A,
-};
-
-enum class MSP_ELRS_TX_CONFIG : uint8_t {
-    UID             = 0x00,
-    BIND_PHRASE     = 0x01,
 };
 
 // ELRS backpack protocol opcodes

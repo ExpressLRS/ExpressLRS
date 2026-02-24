@@ -1,6 +1,6 @@
 #ifndef TX_MODULE_ENDPOINT_H
 #define TX_MODULE_ENDPOINT_H
-#include "CRSFEndpoint.h"
+#include "RxTxEndpoint.h"
 
 enum warningFlags
 {
@@ -17,9 +17,9 @@ enum warningFlags
     LUA_FLAG_CRITICAL_WARNING2,
 };
 
-class TXModuleEndpoint final : public CRSFEndpoint {
+class TXModuleEndpoint final : public RxTxEndpoint {
 public:
-    TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER) {}
+    TXModuleEndpoint() : RxTxEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER) {}
     ~TXModuleEndpoint() override = default;
 
     void begin();
@@ -58,8 +58,6 @@ private:
 
     void handleWifiBle(propertiesCommon *item, uint8_t arg);
     void handleSimpleSendCmd(propertiesCommon *item, uint8_t arg);
-    void handleMspGetRxConfig(crsf_ext_header_t *extMessage);
-    void handleMspSetRxConfig(crsf_ext_header_t *extMessage);
     void updateTlmBandwidth();
     void updateBackpackOpts();
 };

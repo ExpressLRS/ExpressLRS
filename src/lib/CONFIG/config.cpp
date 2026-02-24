@@ -8,33 +8,36 @@
 #include "logging.h"
 
 #if defined(PLATFORM_ESP32)
-#include <mbedtls/md5.h> // for BindPhraseToMd5()
+#include <mbedtls/md5.h> // for SetBindPhrase()
 #endif
 
-void BindPhraseToMd5(uint8_t *phrase, size_t phraseLen, uint8_t md5Out[16])
+void BindphraseConfigurable::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
 {
-    constexpr uint8_t BIND_KEY1[] = "-DMY_BINDING_PHRASE=\"";
-    constexpr uint8_t BIND_KEY2[] = "\""; //
+    uint8_t UID_md5[16];
+    constexpr uint8_t BIND_KEY[] = "-DMY_BINDING_PHRASE=\"";
 
 #if defined(PLATFORM_ESP8266)
     md5_context_t md5;
     MD5Init(&md5);
-    MD5Update(&md5, BIND_KEY1, sizeof(BIND_KEY1)-1);
+    MD5Update(&md5, BIND_KEY, sizeof(BIND_KEY)-1);
     MD5Update(&md5, phrase, phraseLen);
-    MD5Update(&md5, BIND_KEY2, sizeof(BIND_KEY2)-1);
-    MD5Final(md5Out, &md5);
+    MD5Update(&md5, &BIND_KEY[sizeof(BIND_KEY)-2], 1); // just the " from the end
+    MD5Final(UID_md5, &md5);
 #elif defined(PLATFORM_ESP32)
     mbedtls_md5_context md5;
     mbedtls_md5_init(&md5);
-    mbedtls_md5_update_ret(&md5, BIND_KEY1, sizeof(BIND_KEY1)-1);
+    mbedtls_md5_update_ret(&md5, BIND_KEY, sizeof(BIND_KEY)-1);
     mbedtls_md5_update_ret(&md5, phrase, phraseLen);
-    mbedtls_md5_update_ret(&md5, BIND_KEY2, sizeof(BIND_KEY2)-1);
-    mbedtls_md5_finish_ret(&md5, md5Out);
+    mbedtls_md5_update_ret(&md5, &BIND_KEY[sizeof(BIND_KEY)-2], 1);
+    mbedtls_md5_finish_ret(&md5, UID_md5);
     mbedtls_md5_free(&md5);
 #else
    // I dunno, for unit test?
    memset(md5Out, 0, 16);
 #endif
+
+    // UID is the first UID_LEN of the md5
+    SetUID(UID_md5);
 }
 
 #if defined(TARGET_TX)
@@ -831,14 +834,6 @@ void TxConfig::SetUID(uint8_t* uid)
     saveOptions();
 }
 
-void TxConfig::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
-{
-    uint8_t md5[16];
-    BindPhraseToMd5(phrase, phraseLen, md5);
-    // UID is the first UID_LEN of the md5
-    SetUID(md5);
-}
-
 #endif
 
 /////////////////////////////////////////////////////
@@ -1437,14 +1432,6 @@ void RxConfig::SetBindStorage(rx_config_bindstorage_t value)
         m_config.bindStorage = value;
         m_modified = EVENT_CONFIG_MODEL_CHANGED;
     }
-}
-
-void RxConfig::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
-{
-    uint8_t md5[16];
-    BindPhraseToMd5(phrase, phraseLen, md5);
-    // UID is the first UID_LEN of the md5
-    SetUID(md5);
 }
 
 void RxConfig::SetTargetSysId(uint8_t value)

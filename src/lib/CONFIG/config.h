@@ -18,6 +18,13 @@
 #define TX_CONFIG_VERSION   8U
 #define RX_CONFIG_VERSION   11U
 
+class BindphraseConfigurable
+{
+public:
+    void SetUID(uint8_t uid[UID_LEN]) { /* hide this in base classes */ };
+    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
+};
+
 #if defined(TARGET_TX)
 
 #define CONFIG_TX_BUTTON_ACTION_CNT 2
@@ -114,7 +121,7 @@ typedef struct {
                                         // FUTURE: Custom button actions
 } tx_config_t;
 
-class TxConfig
+class TxConfig : public BindphraseConfigurable
 {
 public:
     TxConfig();
@@ -176,8 +183,7 @@ public:
     void SetBackpackTlmMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
-    void SetUID(uint8_t* uid);
-    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
+    void SetUID(uint8_t uid[UID_LEN]);
 
     // State setters
     bool SetModelId(uint8_t modelId);
@@ -258,7 +264,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     sourceSysId;
 } rx_config_t;
 
-class RxConfig
+class RxConfig : public BindphraseConfigurable
 {
 public:
     RxConfig();
@@ -294,7 +300,7 @@ public:
     bool IsOnLoan() const;
 
     // Setters
-    void SetUID(uint8_t* uid);
+    void SetUID(uint8_t uid[UID_LEN]);
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);
@@ -315,7 +321,6 @@ public:
     void SetTargetSysId(uint8_t sysID);
     void SetSourceSysId(uint8_t sysID);
     void SetBindStorage(rx_config_bindstorage_t value);
-    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
     void ReturnLoan();
 
 private:
