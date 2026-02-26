@@ -27,6 +27,7 @@
 #include "rx-serial/SerialSmartAudio.h"
 #include "rx-serial/SerialDisplayport.h"
 #include "rx-serial/SerialGPS.h"
+#include "rx-serial/SerialRLLLC.h"
 
 #include "devAnalogVbat.h"
 #include "devBaro.h"
@@ -1294,6 +1295,10 @@ static void setupSerial()
     {
         serialBaud = 115200;
     }
+    else if (config.GetSerialProtocol() == PROTOCOL_RLLLC)
+    {
+        serialBaud = 9600;
+    }
     bool invert = config.GetSerialProtocol() == PROTOCOL_SBUS || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO;
 
 #if defined(PLATFORM_ESP8266)
@@ -1357,6 +1362,10 @@ static void setupSerial()
     else if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
         serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+    }
+    else if (config.GetSerialProtocol() == PROTOCOL_RLLLC)
+    {
+        serialIO = new SerialRLLLC(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
     else if (hottTlmSerial)
     {
@@ -1461,6 +1470,10 @@ static void setupSerial1()
         case PROTOCOL_SERIAL1_GPS:
             Serial1.begin(115200, SERIAL_8N1, serial1RXpin, serial1TXpin, false);
             serial1IO = new SerialGPS(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
+            break;
+        case PROTOCOL_SERIAL1_RLLLC:
+            Serial1.begin(9600, SERIAL_8N1, UNDEF_PIN, serial1TXpin, false);
+            serial1IO = new SerialRLLLC(SERIAL1_PROTOCOL_TX, SERIAL1_PROTOCOL_RX);
             break;
     }
 }
