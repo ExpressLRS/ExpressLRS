@@ -18,6 +18,36 @@ export function formatBand() {
     }
 }
 
+export function formatWifiRssi() {
+    let wifiDesc = "";
+    if (elrsState.settings) {
+        if (elrsState.settings.mode === "STA")
+            wifiDesc = `Client [${elrsState.settings.ssid}]`;
+        else
+            wifiDesc = "AP mode";
+
+        // If we have dbm and it isn't 0, add it
+        if (elrsState.settings?.wifi_dbm)
+        {
+            let dbm = elrsState.settings.wifi_dbm;
+            wifiDesc += ` ${dbm}dBm `;
+            if (dbm > -30)
+                wifiDesc += "**GODLIKE**";
+            else if (dbm > -60)
+                wifiDesc += "excellent signal";
+            else if (dbm == -69)
+                wifiDesc += "nice signal";
+            else if (dbm > -80)
+                wifiDesc += "good signal";
+            else if (dbm > -90)
+                wifiDesc += "poor signal";
+            else
+                wifiDesc += "Unusable";
+        }
+    }
+    return wifiDesc;
+}
+
 export function saveConfig(changes, successCB) {
     const currentPWM = elrsState.config.pwm
     if (changes.pwm) {

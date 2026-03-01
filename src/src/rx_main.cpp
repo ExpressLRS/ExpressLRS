@@ -296,7 +296,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
     linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
-    debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
+    debugRcvrLinkstatsFhssIdx = FHSSusePrimaryFreqBand ? FHSSsequence[FHSSptr] : FHSSsequence_DualBand[FHSSptr];
     #endif
 }
 
