@@ -38,14 +38,10 @@ public:
     void startCWTest(uint32_t freq, SX12XX_Radio_Number_t radioNumber);
 
     bool GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber);
-    // bool FrequencyErrorAvailable() const { return modeSupportsFei && (LastPacketSNRRaw > 0); }
     bool FrequencyErrorAvailable() const { return false; }
 
     void TXnb(uint8_t *data, bool sendGeminiBuffer, uint8_t *dataGemini, SX12XX_Radio_Number_t radioNumber);
     void RXnb();
-
-    uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
-    void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
 
     void StartRssiInst(SX12XX_Radio_Number_t radioNumber);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
@@ -79,20 +75,22 @@ private:
 
     // LoRa functions
     void ConfigModParamsLoRa(uint8_t bw, uint8_t sf, uint8_t cr, SX12XX_Radio_Number_t radioNumber);
-    void SetPacketParamsLoRa(uint8_t PreambleLength, lr20xx_RadioLoRaPacketLengthsModes_t HeaderType,
-                             uint8_t PayloadLength, uint8_t InvertIQ, SX12XX_Radio_Number_t radioNumber);
+    void SetPacketParamsLoRa(uint8_t PreambleLength, uint8_t InvertIQ, SX12XX_Radio_Number_t radioNumber);
     // FSK functions
     void ConfigModParamsFSK(uint32_t Bitrate, uint8_t BWF, uint32_t Fdev, SX12XX_Radio_Number_t radioNumber);
-    void SetPacketParamsFSK(uint8_t PreambleLength, uint8_t PayloadLength, SX12XX_Radio_Number_t radioNumber);
+    void SetPacketParamsFSK(uint8_t PreambleLength, SX12XX_Radio_Number_t radioNumber);
     void SetFSKSyncWord(uint8_t fskSyncWord1, uint8_t fskSyncWord2, SX12XX_Radio_Number_t radioNumber);
 
     // FLRC functions
     void ConfigModParamsFLRC(uint8_t bw, uint8_t cr, uint32_t bt, SX12XX_Radio_Number_t radioNumber);
     void SetPacketParamsFLRC(uint8_t PreambleLength, uint32_t syncWord, uint16_t crcSeed, SX12XX_Radio_Number_t radioNumber);
 
-    void SetDioIrqParams();
+    void SetDioIrqParams(uint8_t dio);
     void SetDioAsRfSwitch();
     void CorrectRegisterForSF6(uint8_t sf, SX12XX_Radio_Number_t radioNumber);
+
+    uint32_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
+    void ClearIrqStatus(SX12XX_Radio_Number_t radioNumber);
 
     static void IsrCallback_1();
     static void IsrCallback_2();
