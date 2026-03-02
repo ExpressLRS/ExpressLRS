@@ -83,6 +83,11 @@ bool FHSSuseDualBand = false;
 uint16_t primaryBandCount;
 uint16_t secondaryBandCount;
 
+constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters (plus '\0') the Lua script can display
+                                                    // on color LCD radios w/o being overwritten by the commit info
+char version_domain[VERSION_DOMAIN_MAXLEN];
+
+
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
 {
     FHSSconfig = &domains[firmwareOptions.domain];
@@ -108,6 +113,9 @@ void FHSSrandomiseFHSSsequence(const uint32_t seed)
     FHSSrandomiseFHSSsequenceBuild(seed, FHSSconfigDualBand->freq_count, sync_channel_DualBand, FHSSsequence_DualBand);
     FHSSusePrimaryFreqBand = true;
 #endif
+
+    // add frequency and regulatory domain to the string used by the Lua script
+    addDomainInfo(version_domain, VERSION_DOMAIN_MAXLEN);
 }
 
 /**
@@ -167,7 +175,14 @@ void FHSSrandomiseFHSSsequenceBuild(const uint32_t seed, uint32_t freqCount, uin
 }
 
 /**
- * @brief add frequency and regulatory domain to the version string used by the Lua script
+ * @brief Add frequency and regulatory domain to the version string used by the Lua script. Outputs the version_domain string as:
+ * [version:0..20] [subGHz domain | 2.4GHz domain] truncated to maxlen-1 for single band devices
+ * [version:0..20] [subGHz domain]/[2.4GHz domain] truncated to maxlen-1 for dual band devices
+ * Examples:
+ *   4.0.0 CE_LBT
+ *   4.1.7 AU915
+ *   4.11.17 FCC915/ISM2G4
+ *   someBranch EU868/CE_LBT
  *
  * @param version_domain a pointer to a buffer holding the version and extra space for additional data
  * @param maxlen the size of the provided buffer

@@ -30,7 +30,6 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
 static char modelString[] = "000";
 static char pwmModes[] = "50Hz;60Hz;100Hz;160Hz;333Hz;400Hz;10kHzDuty;On/Off;DShot;DShot 3D;Serial RX;Serial TX;I2C SCL;I2C SDA;Serial2 RX;Serial2 TX";
-static char version_domain[26+1];   // max. number of characters (plus '\0') the Lua script can display on color LCD radios w/o being overwritten by the commit info
 
 static selectionParameter luaSerialProtocol = {
     {"Protocol", CRSF_TEXT_SELECTION},
@@ -578,8 +577,6 @@ void RXEndpoint::registerParameters()
   });
 
   registerParameter(&luaModelNumber);
-
-  addDomainInfo(version_domain, sizeof(version_domain)); 
   registerParameter(&luaELRSversion);
 }
 

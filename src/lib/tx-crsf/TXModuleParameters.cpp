@@ -50,7 +50,6 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
-static char version_domain[26+1];   // max. number of characters (plus '\0') the Lua script can display on color LCD radios w/o being overwritten by the commit info
 static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
@@ -1012,8 +1011,6 @@ void TXModuleEndpoint::registerParameters()
   }
 
   registerParameter(&luaInfo);
-
-  addDomainInfo(version_domain, sizeof(version_domain));
   registerParameter(&luaELRSversion);
 }
 
