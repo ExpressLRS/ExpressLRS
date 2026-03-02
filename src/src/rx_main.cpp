@@ -25,6 +25,7 @@
 #include "rx-serial/SerialMavlink.h"
 #include "rx-serial/SerialTramp.h"
 #include "rx-serial/SerialSmartAudio.h"
+#include "rx-serial/SerialTCP.h"
 #include "rx-serial/SerialDisplayport.h"
 #include "rx-serial/SerialGPS.h"
 
@@ -1262,7 +1263,8 @@ static void setupSerial()
         serialIO = new SerialNOOP();
         return;
     }
-    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || firmwareOptions.is_airport)
+    if (config.GetSerialProtocol() == PROTOCOL_CRSF || config.GetSerialProtocol() == PROTOCOL_INVERTED_CRSF || firmwareOptions.is_airport 
+        || config.GetSerialProtocol() == PROTOCOL_TCP_SERIAL)
     {
         serialBaud = firmwareOptions.uart_baud;
     }
@@ -1338,6 +1340,14 @@ static void setupSerial()
     {
         serialIO = new SerialAirPort(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
     }
+    #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+    else if (config.GetSerialProtocol() == PROTOCOL_TCP_SERIAL)
+    {
+        // Initialize TCP serial with default server configuration on port 5762
+        serialIO = new SerialTCP(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
+        ((SerialTCP *)serialIO)->initializeTCPSocket(TCP_SERVER, 5762);
+    }
+    #endif
     else if (sbusSerialOutput)
     {
         serialIO = new SerialSBUS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
