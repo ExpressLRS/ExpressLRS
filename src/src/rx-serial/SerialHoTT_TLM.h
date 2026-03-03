@@ -39,8 +39,8 @@
 #define HOTT_VSPD_OFFSET 30000
 #define HOTT_CELL_SCALE 20
 #define HOTT_VOLT_SCALE 100
-#define HOTT_SPEED_SCALE_EAM 10
-#define HOTT_SPEED_SCALE_GAM 20
+#define HOTT_SPEED_SCALE_1_1 10
+#define HOTT_SPEED_SCALE_1_2 20
 
 //
 // GAM data frame data structure
@@ -306,7 +306,7 @@ private:
     void sendCRSFtemp(uint32_t now, HoTTDevices device);
     void sendCRSFcells(uint32_t now, HoTTDevices device);
     void sendCRSFvolt(uint32_t now, HoTTDevices device);
-    void sendCRSFairspeed(uint32_t now, HoTTDevices device);
+    void sendCRSFairspeed(uint32_t now);
 
     uint16_t getHoTTvoltage();
     uint16_t getHoTTcurrent();
@@ -341,40 +341,42 @@ private:
         {SENSOR_ID_ESC_B, false},
         {SENSOR_ID_VARIO_B, false}};
 
-    bool escIsTurbine;
-
     FIFO<HOTT_MAX_BUF_LEN> hottInputBuffer;
+
+    uint32_t lastPoll;
+    uint32_t discoveryTimerStart;
+
+    uint32_t lastVarioSent = 0;
+    uint32_t lastGPSSent = 0;
+    uint32_t lastBatterySent = 0;
+    uint32_t lastRpmSent = 0;
+    uint32_t lastTempSent = 0;
+    uint32_t lastCellsSent = 0;
+    uint32_t lastVoltSent = 0;
+    uint32_t lastAirspeedSent = 0;
+
+    const int32_t MinScale = 1000000L;
+    const int32_t DegScale = 10000000L;
+    const uint8_t DegMinScale = 100;
+    const uint8_t SecScale = 100;
+    const uint8_t MinDivide = 6;
 
     bool discoveryMode = true;
     uint8_t nextDevice = FIRST_DEVICE;
     uint8_t nextDeviceID;
 
-    uint32_t lastPoll;
     uint8_t cmdSendState;
-    uint32_t discoveryTimerStart;
 
-    uint32_t lastVarioSent = 0;
-    uint32_t lastVarioCRC = 0;
-    uint32_t lastGPSSent = 0;
-    uint32_t lastGPSCRC = 0;
-    uint32_t lastBatterySent = 0;
-    uint32_t lastBatteryCRC = 0;
-    uint32_t lastRpmSent = 0;
-    uint32_t lastRpmCRC = 0;
-    uint32_t lastTempSent = 0;
-    uint32_t lastTempCRC = 0;
-    uint32_t lastCellsSent = 0;
-    uint32_t lastCellsCRC = 0;
-    uint32_t lastVoltSent = 0;
-    uint32_t lastVoltCRC = 0;
-    uint32_t lastAirspeedSent = 0;
-    uint32_t lastAirspeedCRC = 0;
+    uint8_t lastVarioCRC = 0;
+    uint8_t lastGPSCRC = 0;
+    uint8_t lastBatteryCRC = 0;
+    uint8_t lastRpmCRC = 0;
+    uint8_t lastTempCRC = 0;
+    uint8_t lastCellsCRC = 0;
+    uint8_t lastVoltCRC = 0;
+    uint8_t lastAirspeedCRC = 0;
 
-    const uint8_t DegMinScale = 100;
-    const uint8_t SecScale = 100;
-    const uint8_t MinDivide = 6;
-    const int32_t MinScale = 1000000L;
-    const int32_t DegScale = 10000000L;
+    bool escIsTurbine;
 };
 
 #endif
