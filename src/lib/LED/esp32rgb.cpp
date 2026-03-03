@@ -59,6 +59,7 @@ void ESP32LedDriver::Begin() const
     };
 
     const i2s_pin_config_t pin_config = {
+        .mck_io_num = I2S_PIN_NO_CHANGE,
         .bck_io_num = I2S_PIN_NO_CHANGE,
         .ws_io_num = I2S_PIN_NO_CHANGE,
         .data_out_num = gpio_pin,

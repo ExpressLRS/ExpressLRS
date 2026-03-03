@@ -1823,11 +1823,10 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            size_t linkStatsSize = sizeof(crsfLinkStatistics_t);
-            uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(linkStatsSize)];
-            crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+            CRSF_MK_FRAME_T(crsfLinkStatistics_t) linkStatisticsFrame;
+            crsfRouter.makeLinkStatisticsPacket(&linkStatisticsFrame.h);
             // the linkStats 'originates' from the OTA connector so we don't send it back there.
-            crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+            crsfRouter.deliverMessage(&otaConnector, &linkStatisticsFrame.h);
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
