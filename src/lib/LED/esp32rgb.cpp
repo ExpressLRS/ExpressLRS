@@ -56,11 +56,11 @@ void ESP32S3LedDriver::Begin()
     };
 
     i2s_pin_config_t pin_config = {
-        .mck_io_num = -1,
-        .bck_io_num = -1,
-        .ws_io_num = -1,
+        .mck_io_num = I2S_PIN_NO_CHANGE,
+        .bck_io_num = I2S_PIN_NO_CHANGE,
+        .ws_io_num = I2S_PIN_NO_CHANGE,
         .data_out_num = gpio_pin,
-        .data_in_num = -1,
+        .data_in_num = I2S_PIN_NO_CHANGE,
     };
 
     i2s_config.dma_buf_len = out_buffer_size;
