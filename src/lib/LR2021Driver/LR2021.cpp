@@ -711,9 +711,9 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 #endif
 }
 
-void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber, uint8_t *buf)
+void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber)
 {
-    memset(buf, 0, 8);
+    WORD_ALIGNED_ATTR uint8_t buf[8] {};
     if (isGFSKModulation(modulation))
     {
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
@@ -821,7 +821,7 @@ void ICACHE_RAM_ATTR LR2021Driver::GetLastPacketStats()
 
     // by default, set the strongest receiving radio to be the current processing radio (which got a successful packet)
     strongestReceivingRadio = processingPacketRadio;
-    DecodeRssiSnr(processingPacketRadio, rx_buf);
+    DecodeRssiSnr(processingPacketRadio);
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     irq_count_or++;
 #endif
@@ -832,7 +832,7 @@ void ICACHE_RAM_ATTR LR2021Driver::GetLastPacketStats()
         if (hasSecondRadioGotData)
         {
             const int8_t firstSNR = LastPacketSNRRaw;
-            DecodeRssiSnr(radioNumber, rx2_buf);
+            DecodeRssiSnr(radioNumber);
             LastPacketSNRRaw = fuzzy_snr(LastPacketSNRRaw, firstSNR, FuzzySNRThreshold);
             // Update the strongest receiving radio to be the one with better signal strength
             strongestReceivingRadio = LastPacketRSSI > LastPacketRSSI2 ? SX12XX_Radio_1 : SX12XX_Radio_2;
