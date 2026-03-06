@@ -50,9 +50,15 @@ extern uint8_t FHSSsequence_DualBand[];
 extern uint_fast8_t sync_channel_DualBand;
 extern const fhss_config_t *FHSSconfigDualBand;
 
+// version/domain string
+extern char version_domain[];
+
 // create and randomise an FHSS sequence
 void FHSSrandomiseFHSSsequence(uint32_t seed);
 void FHSSrandomiseFHSSsequenceBuild(uint32_t seed, uint32_t freqCount, uint_fast8_t sync_channel, uint8_t *sequence);
+
+// add domain info for Lua
+void addDomainInfo(char *version_domain, uint8_t maxlen);
 
 static inline uint32_t FHSSgetMinimumFreq(void)
 {
