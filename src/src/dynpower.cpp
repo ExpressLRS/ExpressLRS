@@ -191,7 +191,7 @@ void DynamicPower_Update(uint32_t now)
     int8_t snr_stat_threshold_up = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshUp;
     int8_t snr_stat_threshold_dn = ExpressLRS_currAirRate_RFperfParams->DynpowerSnrThreshDn;
 
-    // Incorporate the current value if LQ is meets the desired LQ standard
+    // Incorporate the current value if LQ meets the desired LQ standard
     if (lq_current >= 99)
     {
         dynpower_stat_snr.add(snrScaled);
@@ -211,13 +211,14 @@ void DynamicPower_Update(uint32_t now)
         scale_factor_numerator = std::max((int32_t)(scale_factor_numerator - ((100 - lq_current) * (scale_factor_numerator-1)) / 15), (int32_t)1);
       }
 
-      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - snr_stat_stdev*scale_factor_numerator/4)/16); // Dynamic scale based on LQ
-      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean + snr_stat_stdev*3/2)/16); // +1.5 sd
-      int8_t snr_thre_up_limit = static_cast<int8_t>((snr_stat_mean)/16)-SNR_SCALE(1.0); // to ensure at least -1.0 dB split between thresholds
+      int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev*scale_factor_numerator)/4)/16); // Dynamic scale based on LQ
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev*3)/2)/16);                      // fixed at 3/2sd = 1.5sd
+      int8_t snr_thre_up_limit = snr_thre_dn_scaled-SNR_SCALE(1.0);
 
-      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_thre_up_scaled, snr_thre_dn_scaled, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
       snr_stat_threshold_dn = snr_thre_dn_scaled;
+      //DBGLN("cur=%d tup=%d tdn=%d lim=%d mean=%d sd=%d", snrScaled, snr_thre_up_scaled, snr_thre_dn_scaled, snr_thre_up_limit, snr_stat_mean, snr_stat_stdev);
+      //DBGLN("cur %d t_up %d t_dn %d lqavg %d", snrScaled, snr_stat_threshold_up, snr_stat_threshold_dn, lq_avg);
     }
 
     // =============  SNR-based power increment ==============
