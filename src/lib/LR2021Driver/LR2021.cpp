@@ -231,6 +231,9 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     SetPaConfig(isSubGHz, radioNumber); // Must be called after changing rf modes between subG and 2.4G.  This sets the correct rf amps, and txen pins to be used.
     pwrForceUpdate = true;              // force an update of the output power because the band may have changed, and we need to configure the power for the band.
     CommitOutputPower();
+
+    CHECK("LR2021_SYSTEM_CLEAR_RX_FIFO_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_RX_FIFO_OC, radioNumber));
+    CHECK("LR2021_SYSTEM_CLEAR_TX_FIFO_OC", hal.WriteCommand(LR2021_SYSTEM_CLEAR_TX_FIFO_OC, radioNumber));
 }
 
 void LR2021Driver::ConfigModParamsLoRa(const uint8_t bw, const uint8_t sf, const uint8_t cr, const SX12XX_Radio_Number_t radioNumber)
