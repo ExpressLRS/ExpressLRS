@@ -2,6 +2,7 @@
 #include "TFT/tftdisplay.h"
 
 #include "TXModuleEndpoint.h"
+#include "rxtx_intf.h"
 #include "config.h"
 #include "helpers.h"
 #include "logging.h"
@@ -319,7 +320,7 @@ static void executeBLE(bool init)
 static void exitBLE(bool init)
 {
     if (connectionState == bleJoystick) {
-        rebootTime = millis() + 200;
+        scheduleRebootTime(200);
     }
 }
 
@@ -332,7 +333,7 @@ static void displayWiFiConfirm(bool init)
 static void exitWiFi(bool init)
 {
     if (connectionState == wifiUpdate) {
-        rebootTime = millis() + 200;
+        scheduleRebootTime(200);
     }
 }
 

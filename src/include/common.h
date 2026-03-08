@@ -340,7 +340,6 @@ extern bool crsfBaroSensorDetected;
 void ChannelDataReset();
 uint32_t uidMacSeedGet();
 bool isDualRadio();
-void EnterBindingModeSafely(); // defined in rx_main/tx_main
 
 #if defined(RADIO_LR1121)
 bool isSupportedRFRate(uint8_t index);

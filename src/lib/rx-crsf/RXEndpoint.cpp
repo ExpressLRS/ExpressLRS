@@ -5,13 +5,13 @@
 #include "devMSPVTX.h"
 #include "devVTXSPI.h"
 #include "freqTable.h"
+#include "rxtx_intf.h"
 #include "logging.h"
-#include "msptypes.h"
 
 extern void reset_into_bootloader();
 
 RXEndpoint::RXEndpoint()
-    : CRSFEndpoint(CRSF_ADDRESS_CRSF_RECEIVER)
+    : RxTxEndpoint(CRSF_ADDRESS_CRSF_RECEIVER)
 {
 }
 
@@ -49,14 +49,13 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
 {
     const auto extMessage = (crsf_ext_header_t *)message;
 
-    if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
+    if (handleRxTxMessage(message))
+    {
+        return;
+    }
+    else if (message->type == CRSF_FRAMETYPE_COMMAND && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)
     {
         EnterBindingModeSafely();
-    }
-    else if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_RX_CONFIG && extMessage->payload[3] == MSP_ELRS_MODEL_ID)
-    {
-        DBGLN("Set ModelId=%u", extMessage->payload[4]);
-        config.SetModelId(extMessage->payload[4]);
     }
 #if defined(PLATFORM_ESP32)
     else if (message->type == CRSF_FRAMETYPE_MSP_RESP)

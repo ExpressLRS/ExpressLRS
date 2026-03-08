@@ -1,11 +1,14 @@
 #include "TXModuleEndpoint.h"
 
 #include "rxtx_intf.h"
+#include "CRSFRouter.h"
 #include "CRSFHandset.h"
 #include "logging.h"
 
 #include "FHSS.h"
 #include "device.h"
+#include "msp.h"
+#include "msptypes.h"
 #include "config.h"
 
 #if defined(PLATFORM_ESP32)
@@ -41,8 +44,12 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
     const crsf_frame_type_e packetType = message->type;
 
     const auto extMessage = (crsf_ext_header_t *)message;
+    if (handleRxTxMessage(message))
+    {
+        return;
+    }
     // Enter Binding Mode
-    if (packetType == CRSF_FRAMETYPE_COMMAND
+    else if (packetType == CRSF_FRAMETYPE_COMMAND
         && extMessage->frame_size >= 6 // official CRSF has 7 bytes with two CRCs
         && extMessage->payload[0] == CRSF_COMMAND_SUBCMD_RX
         && extMessage->payload[1] == CRSF_COMMAND_SUBCMD_RX_BIND)

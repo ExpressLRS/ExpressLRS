@@ -109,7 +109,6 @@ RXOTAConnector otaConnector;
 bool crsfBatterySensorDetected = false;
 bool crsfBaroSensorDetected = false;
 
-unsigned long rebootTime = 0;
 extern bool webserverPreventAutoStart;
 bool pwmSerialDefined = false;
 uint32_t serialBaud;
@@ -2052,10 +2051,7 @@ void loop()
     // read and process any data from serial ports, send any queued non-RC data
     handleSerialIO();
 
-    // If the reboot time is set and the current time is past the reboot time then reboot.
-    if (rebootTime != 0 && now > rebootTime) {
-        ESP.restart();
-    }
+    checkRebootTime(now);
 
     CheckConfigChangePending();
     executeDeferredFunction(micros());

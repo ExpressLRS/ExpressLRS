@@ -21,6 +21,7 @@ static deferred_t deferred[maxDeferredFunctions] = {
 };
 
 boolean i2c_enabled = false;
+static unsigned long rebootTime_Ms = 0;
 
 static void setupWire()
 {
@@ -93,5 +94,25 @@ void executeDeferredFunction(unsigned long now)
             deferred[i].function();
             deferred[i].function = nullptr;
         }
+    }
+}
+
+/***
+ * @brief Set a time in milliseconds to reboot the MCU from the main loop thread
+ * */
+void scheduleRebootTime(unsigned long inMs)
+{
+    rebootTime_Ms = millis() + inMs;
+}
+
+/**
+ * @brief Call from the main thread to check if it is time to reboot. May not return.
+ */
+void checkRebootTime(unsigned long now)
+{
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    // Wait for any pending config change to be committed first
+    if (rebootTime_Ms != 0 && !config.IsModified() && now > rebootTime_Ms ) {
+        ESP.restart();
     }
 }
