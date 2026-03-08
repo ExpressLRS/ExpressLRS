@@ -28,17 +28,18 @@ jobs:
         id: validate
         run: |
           cd src/html
-          diff -qr out headers >/dev/null 2>&1
-          exit_code=$?
-          if [ "$exit_code" -eq 0 ]; then
-            echo "Artifact check passed."
+          if diff -qr out headers >/dev/null 2>&1; then
+            echo "::notice::Artifact check passed."
             exit 0
-          elif [ "$exit_code" -eq 1 ]; then
-            echo "🚨 **Web UI Artifacts Error:** Web UI artifacts have not been built and committed. Please build and commit them as part of this PR."
-            exit 1 # Fail the step
           else
-            echo "⚠️ **Artifact Check Error:** An unexpected error ($exit_code) occurred during file comparison. Check the workflow logs."
-            exit 2 # Fail the step
+            exit_code=$?
+            if [ "$exit_code" -eq 1 ]; then
+              echo "::error title=Web UI Artifacts Error::Web UI artifacts have not been built and committed. Please build and commit them as part of this PR."
+              exit 1
+            else
+              echo "::warning::An unexpected error ($exit_code) occurred during file comparison."
+              exit 2
+            fi
           fi
 
   test:
@@ -261,17 +262,18 @@ jobs:
         run: |
           aws --version
           if [[ -z $AWS_ACCESS_KEY_ID || -z $AWS_SECRET_ACCESS_KEY || -z $AWS_ENDPOINT_URL ]]; then
-            echo "Artifactory credentials are not defined. Most likely action is running from pull request. Not a bug."
+            echo "::warning title=Artifactory Skip::Credentials not defined. Skipping upload (expected for PRs from forks)."
             exit 0
           fi
-
-          aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null || ALLOW_UPLOAD=true
-          git describe --tags --exact-match HEAD && ALLOW_UPLOAD=true
-          if [ $ALLOW_UPLOAD ]; then
-            echo "Uploading firmware to artifactory"
+          
+          IS_TAG=$([[ "$GITHUB_REF_TYPE" == "tag" ]] && echo true || echo false)
+          ARTIFACT_EXISTS=$(aws s3api head-object --endpoint-url $AWS_ENDPOINT_URL --bucket expresslrs --key ExpressLRS/$GITHUB_SHA/firmware.zip > /dev/null 2>&1 && echo true || echo false)
+          
+          if [ "$IS_TAG" = "true" ] || [ "$ARTIFACT_EXISTS" = "false" ]; then
+            echo "Uploading firmware to artifactory..."
             aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/ExpressLRS/$GITHUB_SHA/firmware.zip
-
-            echo "Generating artifact index"
+          
+            echo "::group::Generating and Uploading Artifact Index"
             aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/ExpressLRS/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
             echo '{' > index.json
             echo '"branches": {' >> index.json
@@ -283,10 +285,11 @@ jobs:
             echo '' >> index.json
             echo '}' >> index.json
             echo '}' >> index.json
-
-            echo "Uploading artifact index"
+          
             aws s3 cp --endpoint-url $AWS_ENDPOINT_URL index.json s3://expresslrs/ExpressLRS/index.json
+            echo "::endgroup::"
+          
+            echo "::notice title=Artifactory Upload Success::Firmware for $GITHUB_SHA has been uploaded."
           else
-            echo "Not overwriting already existing artifact at $GITHUB_SHA"
-            exit 1
+            echo "::notice title=Artifactory Skip::Artifact already exists and this is not a tag push. Skipping overwrite."
           fi
