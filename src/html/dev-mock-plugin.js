@@ -26,6 +26,7 @@ export function devMockPlugin() {
             uidtype: 'Flashed',
             ssid: 'ExpressLRS TX',
             mode: 'AP',
+            rssi_dbm: -60,
             custom_hardware: true,
             has_low_band: false,
             has_high_band: true,

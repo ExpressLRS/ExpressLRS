@@ -296,7 +296,7 @@ void ICACHE_RAM_ATTR getRFlinkInfo()
     #if defined(DEBUG_RCVR_LINKSTATS)
     // DEBUG_RCVR_LINKSTATS gets full precision SNR, override the value
     linkStats.uplink_SNR = Radio.LastPacketSNRRaw;
-    debugRcvrLinkstatsFhssIdx = FHSSsequence[FHSSptr];
+    debugRcvrLinkstatsFhssIdx = FHSSusePrimaryFreqBand ? FHSSsequence[FHSSptr] : FHSSsequence_DualBand[FHSSptr];
     #endif
 }
 
@@ -678,10 +678,6 @@ static inline void switchAntenna()
         antenna = !antenna;
         (antenna == 0) ? LPF_UplinkRSSI0.reset() : LPF_UplinkRSSI1.reset(); // discard the outdated value after switching
         digitalWrite(GPIO_PIN_ANT_CTRL, antenna);
-        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-        {
-            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !antenna);
-        }
     }
 }
 
@@ -745,10 +741,6 @@ static void ICACHE_RAM_ATTR updateDiversity()
         else
         {
             digitalWrite(GPIO_PIN_ANT_CTRL, config.GetAntennaMode());
-            if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-            {
-                digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !config.GetAntennaMode());
-            }
             antenna = config.GetAntennaMode();
         }
     }
@@ -1529,11 +1521,6 @@ static void setupTarget()
     {
         pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
         digitalWrite(GPIO_PIN_ANT_CTRL, LOW);
-        if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-        {
-            pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
-            digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, HIGH);
-        }
     }
 
     setupTargetCommon();
@@ -1823,11 +1810,10 @@ static void checkSendLinkStatsToFc(uint32_t now)
         if ((connectionState != disconnected && connectionHasModelMatch && teamraceHasModelMatch) ||
             SendLinkStatstoFCForcedSends)
         {
-            size_t linkStatsSize = sizeof(crsfLinkStatistics_t);
-            uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(linkStatsSize)];
-            crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+            CRSF_MK_FRAME_T(crsfLinkStatistics_t) linkStatisticsFrame;
+            crsfRouter.makeLinkStatisticsPacket(&linkStatisticsFrame.h);
             // the linkStats 'originates' from the OTA connector so we don't send it back there.
-            crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
+            crsfRouter.deliverMessage(&otaConnector, &linkStatisticsFrame.h);
             SendLinkStatstoFCintervalLastSent = now;
             if (SendLinkStatstoFCForcedSends)
                 --SendLinkStatstoFCForcedSends;
