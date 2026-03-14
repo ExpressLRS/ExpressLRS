@@ -213,7 +213,7 @@ void DynamicPower_Update(uint32_t now)
       }
 
       int8_t snr_thre_up_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev*scale_factor_numerator)/4)/16);  // Dynamic scale based on LQ
-      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev*3)/2)/16);                       // fixed at 3/2sd = 1.5sd
+      int8_t snr_thre_dn_scaled = static_cast<int8_t>((snr_stat_mean - (snr_stat_stdev*2)/2)/16);                       // fixed at 2/2sd = 1.0sd
       int8_t snr_thre_up_limit = snr_thre_dn_scaled - SNR1dB;                                                           // 1dB min threshold separation
 
       snr_stat_threshold_up = std::min(snr_thre_up_scaled, snr_thre_up_limit);
