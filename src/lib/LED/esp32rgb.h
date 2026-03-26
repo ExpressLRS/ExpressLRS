@@ -1,48 +1,48 @@
+#pragma once
 #include <Arduino.h>
 
 class RgbColor
 {
 public:
-    RgbColor(uint8_t r, uint8_t g, uint8_t b) : R(r), G(g), B(b) {}
-    explicit RgbColor(uint8_t brightness) : R(brightness), G(brightness), B(brightness) {}
+    RgbColor(const uint8_t r, const uint8_t g, const uint8_t b) : R(r), G(g), B(b) {}
+    explicit RgbColor(const uint8_t brightness) : R(brightness), G(brightness), B(brightness) {}
 
     uint8_t R;
     uint8_t G;
     uint8_t B;
 };
 
-class ESP32S3LedDriver
+class ESP32LedDriver
 {
 public:
-    ESP32S3LedDriver(int count, int pin);
-    ~ESP32S3LedDriver();
+    ESP32LedDriver(int count, int pin);
+    virtual ~ESP32LedDriver();
 
-    void Begin();
-    void Show();
-    void ClearTo(RgbColor color, uint16_t first, uint16_t last);
-    virtual void SetPixelColor(uint16_t indexPixel, RgbColor color) = 0;
+    void Begin() const;
+    void Show() const;
+    void ClearTo(RgbColor color, int first, int last);
+    virtual void SetPixelColor(int indexPixel, RgbColor color) = 0;
 
 private:
-    RgbColor *ledsbuff = nullptr;
     uint16_t *out_buffer = nullptr;
     size_t out_buffer_size;
     int num_leds;
     int gpio_pin;
 
-    friend class ESP32S3LedDriverGRB;
-    friend class ESP32S3LedDriverRGB;
+    friend class ESP32LedDriverGRB;
+    friend class ESP32LedDriverRGB;
 };
 
-class ESP32S3LedDriverGRB : public ESP32S3LedDriver
+class ESP32LedDriverGRB final : public ESP32LedDriver
 {
 public:
-    ESP32S3LedDriverGRB(int count, int pin) : ESP32S3LedDriver(count, pin) {}
-    void SetPixelColor(uint16_t indexPixel, RgbColor color) override;
+    ESP32LedDriverGRB(const int count, const int pin) : ESP32LedDriver(count, pin) {}
+    void SetPixelColor(int indexPixel, RgbColor color) override;
 };
 
-class ESP32S3LedDriverRGB : public ESP32S3LedDriver
+class ESP32LedDriverRGB final : public ESP32LedDriver
 {
 public:
-    ESP32S3LedDriverRGB(int count, int pin) : ESP32S3LedDriver(count, pin) {}
-    void SetPixelColor(uint16_t indexPixel, RgbColor color) override;
+    ESP32LedDriverRGB(const int count, const int pin) : ESP32LedDriver(count, pin) {}
+    void SetPixelColor(int indexPixel, RgbColor color) override;
 };
