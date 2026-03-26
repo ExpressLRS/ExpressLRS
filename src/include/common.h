@@ -15,6 +15,7 @@
 #endif
 #else
 #include <cstdint>
+#include "SX12xxDriverCommon.h"
 #endif // UNIT_TEST
 
 #define UID_LEN             6
@@ -154,7 +155,7 @@ typedef struct expresslrs_rf_pref_params_s
 typedef struct expresslrs_mod_settings_s
 {
     uint8_t index;
-    uint8_t radio_type;
+    radio_band_modulation_t radio_type;
     expresslrs_RFrates_e enum_rate;
     uint8_t bw;
     uint8_t sf;

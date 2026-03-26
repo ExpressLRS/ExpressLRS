@@ -18,16 +18,16 @@ typedef enum {
     RADIO_BAND_DUAL = 2,
 } radio_band_t;
 
-enum {
+typedef enum {
     RADIO_MOD_LORA = 0 << 4,
     RADIO_MOD_FLRC = 1 << 4,
     RADIO_MOD_GFSK = 2 << 4,
-};
+} radio_modulation_t;
 
 #define RADIO_MOD_MASK 0xF0
 #define RADIO_BAND_MASK 0x0F
 
-enum {
+typedef enum {
     RADIO_MODULATION_LORA_900 = RADIO_MOD_LORA + RADIO_BAND_900,
     RADIO_MODULATION_LORA_2G4 = RADIO_MOD_LORA + RADIO_BAND_2G4,
     RADIO_MODULATION_LORA_DUAL = RADIO_MOD_LORA + RADIO_BAND_DUAL,
@@ -37,11 +37,11 @@ enum {
 
     RADIO_MODULATION_GFSK_900 = RADIO_MOD_GFSK + RADIO_BAND_900,
     RADIO_MODULATION_GFSK_2G4 = RADIO_MOD_GFSK + RADIO_BAND_2G4,
-};
+} radio_band_modulation_t;
 
-inline bool isLoRaModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_LORA; }
-inline bool isFLRCModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_FLRC; }
-inline bool isGFSKModulation(const uint8_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_GFSK; }
+inline bool isLoRaModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_LORA; }
+inline bool isFLRCModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_FLRC; }
+inline bool isGFSKModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_GFSK; }
 
 class SX12xxDriverCommon
 {
