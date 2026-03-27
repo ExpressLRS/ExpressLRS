@@ -10,6 +10,7 @@ import {SERIAL_OPTIONS1, SERIAL_OPTIONS2} from "../utils/globals.js";
 class SerialPanel extends LitElement {
 
     PROTOCOL_AIRPORT = SERIAL_OPTIONS1.length - 1
+    PROTOCOL_TCP_SERIAL = SERIAL_OPTIONS1.indexOf("TCP Serial")
 
     @state() accessor serial1Protocol
     @state() accessor serial2Protocol
@@ -57,7 +58,7 @@ class SerialPanel extends LitElement {
                         <input size='7' type='number'
                                @input=${(e) => this.baudRate = parseInt(e.target.value)}
                                .value="${this.baudRate}" />
-                        <label>CRSF/Airport baud</label>
+                        <label>UART baud</label>
                     </div>
                     ` : ''}
                     ${this._sbusSelected() ? html`
@@ -142,6 +143,10 @@ class SerialPanel extends LitElement {
             this.baudRate = 420000
             this.requestUpdate()
         }
+        else if (this.serial1Protocol === this.PROTOCOL_TCP_SERIAL) {
+            this.baudRate = 115200
+            this.requestUpdate()
+        }
     }
 
     _updateSerial2(e) {
@@ -149,7 +154,7 @@ class SerialPanel extends LitElement {
     }
 
     _displayBaudRate() {
-        return this.isAirport || this.serial1Protocol === 0 || this.serial1Protocol === 1 || this.serial2Protocol === 1 || this.serial2Protocol === 2
+        return this.isAirport || this.serial1Protocol === 0 || this.serial1Protocol === 1 || this.serial1Protocol === this.PROTOCOL_TCP_SERIAL || this.serial2Protocol === 1 || this.serial2Protocol === 2
     }
 
     _sbusSelected() {
