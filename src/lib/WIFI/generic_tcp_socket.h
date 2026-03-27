@@ -31,7 +31,10 @@ private:
 
     AsyncClient *getActiveClient();
     void flushOutgoingData();
+    void prepareClient(AsyncClient *client);
 
+    static void handleAck(void *arg, AsyncClient *client, size_t len, uint32_t time);
+    static void handlePoll(void *arg, AsyncClient *client);
     static void handleNewClient(void *arg, AsyncClient *client);
     static void handleDataIn(void *arg, AsyncClient *client, void *data, size_t len);
     static void handleDisconnect(void *arg, AsyncClient *client);

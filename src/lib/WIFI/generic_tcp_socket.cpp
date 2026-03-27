@@ -5,6 +5,34 @@
 
 GenericTCPSocket *GenericTCPSocket::instance = NULL;
 
+void GenericTCPSocket::prepareClient(AsyncClient *client)
+{
+    client->setNoDelay(true);
+    client->onAck(handleAck, NULL);
+    client->onPoll(handlePoll, NULL);
+    client->onData(handleDataIn, NULL);
+    client->onError(handleError, NULL);
+    client->onDisconnect(handleDisconnect, NULL);
+    client->onTimeout(handleTimeOut, NULL);
+    client->setRxTimeout(clientTimeoutS);
+}
+
+void GenericTCPSocket::handleAck(void *arg, AsyncClient *client, size_t len, uint32_t time)
+{
+    (void)arg;
+    (void)client;
+    (void)len;
+    (void)time;
+    instance->flushOutgoingData();
+}
+
+void GenericTCPSocket::handlePoll(void *arg, AsyncClient *client)
+{
+    (void)arg;
+    (void)client;
+    instance->flushOutgoingData();
+}
+
 AsyncClient *GenericTCPSocket::getActiveClient()
 {
     if (mode == TCP_SERVER)
@@ -49,6 +77,7 @@ void GenericTCPSocket::begin(ConnectionMode socketMode, uint16_t socketPort, IPA
     if (mode == TCP_SERVER)
     {
         tcpServer = new AsyncServer(port);
+        tcpServer->setNoDelay(true);
         tcpServer->onClient(handleNewClient, tcpServer);
         tcpServer->begin();
     }
@@ -69,11 +98,7 @@ void GenericTCPSocket::setupClient()
     tcpClient = new AsyncClient();
     if (tcpClient != nullptr)
     {
-        tcpClient->onData(handleDataIn, NULL);
-        tcpClient->onError(handleError, NULL);
-        tcpClient->onDisconnect(handleDisconnect, NULL);
-        tcpClient->onTimeout(handleTimeOut, NULL);
-        tcpClient->setRxTimeout(clientTimeoutS);
+        prepareClient(tcpClient);
 
         if (tcpClient->connect(remoteIP, port))
         {
@@ -240,6 +265,7 @@ void GenericTCPSocket::clientConnect(AsyncClient *client)
         currentClient->close();
     }
     currentClient = client;
+    flushOutgoingData();
 }
 
 void GenericTCPSocket::clientDisconnect(AsyncClient *client)
@@ -257,14 +283,8 @@ void GenericTCPSocket::handleNewClient(void *arg, AsyncClient *client)
 {
     DBGLN("\nGenericTCPSocket client (%x) connected ip: %s", client, client->remoteIP().toString().c_str());
 
+    instance->prepareClient(client);
     instance->clientConnect(client);
-
-    // register events
-    client->onData(handleDataIn, NULL);
-    client->onError(handleError, NULL);
-    client->onDisconnect(handleDisconnect, NULL);
-    client->onTimeout(handleTimeOut, NULL);
-    client->setRxTimeout(clientTimeoutS);
 }
 
 #endif

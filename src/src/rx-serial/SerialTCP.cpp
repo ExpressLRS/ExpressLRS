@@ -43,7 +43,6 @@ void SerialTCP::sendQueuedData(uint32_t maxBytesToSend)
         }
 
         _outputPort->write(tempBuffer, bytesRead);
-        _outputPort->flush();
         bytesWritten += bytesRead;
     }
 }
