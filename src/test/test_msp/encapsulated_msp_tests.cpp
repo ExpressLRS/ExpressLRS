@@ -53,7 +53,7 @@ void test_encapsulated_msp_send(void)
     TEST_ASSERT_EQUAL(14, len);
 
     // Assert that each byte sent to the stream matches expected
-    TEST_ASSERT_EQUAL(CRSF_ADDRESS_BROADCAST, data[0]);                  // device_addr
+    TEST_ASSERT_EQUAL(CRSF_SYNC_BYTE, data[0]);                  // device_addr
     TEST_ASSERT_EQUAL(12, data[1]);                                      // frame_size
     TEST_ASSERT_EQUAL(CRSF_FRAMETYPE_MSP_WRITE, data[2]);                // type
     TEST_ASSERT_EQUAL(CRSF_ADDRESS_FLIGHT_CONTROLLER, (uint8_t)data[3]); // dest_addr

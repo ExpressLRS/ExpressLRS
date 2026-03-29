@@ -246,6 +246,12 @@ void TxConfig::Load()
             {
                 U32_to_Model(value, &m_config.model_config[i]);
             }
+
+            // validate the currently selected rate is supported by the hardware and choose an appropriate default if not
+            if (!isSupportedRFRate(m_config.model_config[i].rate)) {
+                m_config.model_config[i].rate = enumRatetoIndex(POWER_OUTPUT_VALUES_COUNT == 0 ? RATE_LORA_2G4_250HZ : RATE_LORA_900_200HZ);
+                nvs_set_u32(handle, model, Model_to_U32(&m_config.model_config[i]));
+            }
         }
     } // for each model
 
@@ -992,7 +998,11 @@ void RxConfig::UpgradeEepromV7V8(uint8_t ver)
     for (unsigned ch=0; ch<16; ++ch)
     {
         m_config.pwmChannels[ch].raw = old.pwmChannels[ch].raw;
+        m_config.pwmChannels[ch].val.failsafe = toFailsafeV10(old.pwmChannels[ch].val.failsafe);
+        m_config.pwmChannels[ch].val.inputChannel = old.pwmChannels[ch].val.inputChannel;
+        m_config.pwmChannels[ch].val.inverted = old.pwmChannels[ch].val.inverted;
         m_config.pwmChannels[ch].val.mode = toServoOutputModeCurrent(ver, old.pwmChannels[ch].val.mode);
+        m_config.pwmChannels[ch].val.narrow = old.pwmChannels[ch].val.narrow;
     }
 }
 

@@ -7,6 +7,7 @@
 #include <LittleFS.h>
 
 #if defined(PLATFORM_ESP32)
+#include <esp_wifi.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Update.h>
@@ -268,6 +269,27 @@ static const char *GetConfigUidType(const JsonObject json)
 #endif
 }
 
+static int8_t wifi_GetClientRssi()
+{
+  if (wifiMode == WIFI_STA)
+    return WiFi.RSSI();
+
+#if defined(PLATFORM_ESP32)
+  // If AP mode, only return an RSSI if there is just one client connected
+  // This could take the request's IP address, find it in tcpip_adapter_get_sta_list(), match it by MAC to ap_sta_list,
+  // but there should just be one client
+  wifi_sta_list_t staList;
+  if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK)
+  {
+    if (staList.num == 1)
+      return staList.sta[0].rssi;
+  }
+#endif
+  // ESP8266 doesn't seem to store connected station RSSI :/
+
+  return 0;
+}
+
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
   const bool exportMode = request->hasArg("export");
@@ -392,6 +414,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
     settings["uidtype"] = GetConfigUidType(json);
     settings["ssid"] = station_ssid;
     settings["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+    settings["wifi_dbm"] = wifi_GetClientRssi();
     settings["custom_hardware"] = hardware_flag(HARDWARE_customised);
     settings["target"] = &target_name[4];
     settings["version"] = VERSION;

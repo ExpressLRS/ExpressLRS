@@ -74,6 +74,7 @@ static enum { stbIdle, stbRequested, stbBoosting } syncTelemBoostState = stbIdle
 
 static uint32_t LastTLMpacketRecv_Ms = 0;
 static uint32_t LinkStatsLastReported_Ms = 0;
+static uint32_t RxDisconnected_Ms = 0;
 static bool commitInProgress = false;
 
 LQCALC<100> LqTQly;
@@ -131,10 +132,6 @@ void switchDiversityAntennas()
   {
     diversityAntennaState = !diversityAntennaState;
     digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
-  }
-  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-  {
-    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 }
 
@@ -915,8 +912,9 @@ static void UpdateConnectDisconnectStatus()
   {
     if (connectionState != connected)
     {
-      setConnectionState(connected);
       DBGLN("got downlink conn");
+      RxDisconnected_Ms = 0;
+      setConnectionState(connected);
 
       apInputBuffer.flush();
       apOutputBuffer.flush();
@@ -928,8 +926,7 @@ static void UpdateConnectDisconnectStatus()
     (connectionState == awaitingModelId && (now - rfModeLastChangedMS) > ExpressLRS_currAirRate_RFperfParams->DisconnectTimeoutMs))
   {
     setConnectionState(disconnected);
-    linkStats.uplink_Link_quality = 0;
-    LinkStatsLastReported_Ms = 0; // Notify immediately
+    RxDisconnected_Ms = now;
     connectionHasModelMatch = true;
   }
 }
@@ -1274,11 +1271,11 @@ static void setupSerial()
   BackpackOrLogStrm = serialPort;
 
 // Setup TxUSB
-#if defined(PLATFORM_ESP32_S3) || defined(PLATFORM_ESP32_C3)
+#if defined(PLATFORM_ESP32_S3)
   // Because we have ARDUINO_USB_MODE enabled, we use USBSerial as the USB device.
   USBSerial.begin(firmwareOptions.uart_baud);
   TxUSB = &USBSerial;
-#elif defined(PLATFORM_ESP32)
+#elif defined(PLATFORM_ESP32) && !defined(PLATFORM_ESP32_C3)
   if (GPIO_PIN_DEBUG_RX == U0RXD_GPIO_NUM && GPIO_PIN_DEBUG_TX == U0TXD_GPIO_NUM)
   {
     // The backpack or Airpoirt is already assigned on UART0 (pins 3, 1)
@@ -1321,11 +1318,6 @@ static void setupTarget()
   {
     pinMode(GPIO_PIN_ANT_CTRL, OUTPUT);
     digitalWrite(GPIO_PIN_ANT_CTRL, diversityAntennaState);
-  }
-  if (GPIO_PIN_ANT_CTRL_COMPL != UNDEF_PIN)
-  {
-    pinMode(GPIO_PIN_ANT_CTRL_COMPL, OUTPUT);
-    digitalWrite(GPIO_PIN_ANT_CTRL_COMPL, !diversityAntennaState);
   }
 
   setupSerial();
@@ -1392,12 +1384,24 @@ static void checkSendLinkStatsToHandset(uint32_t now)
 {
   if ((now - LinkStatsLastReported_Ms) > firmwareOptions.tlm_report_interval)
   {
-    uint8_t linkStatisticsFrame[CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_SIZE(sizeof(crsfLinkStatistics_t))];
+    // If we have gone to disconnected state, keep sending the ghost linkstats for some time
+    if (RxDisconnected_Ms)
+    {
+      constexpr uint32_t LOST_NOTIFICATION_MAX_DELAY_MS = 3000U;
+      // Delay a variable amount based on the LQ. Lower LQ, lower time before we tell the handset what's up
+      uint32_t TelemetryLostCalloutDelay_Ms = map(constrain(linkStats.uplink_Link_quality, 50, 100), 50, 100, 0, LOST_NOTIFICATION_MAX_DELAY_MS);
+      if (now - RxDisconnected_Ms > TelemetryLostCalloutDelay_Ms)
+      {
+        RxDisconnected_Ms = 0;
+        linkStats.uplink_Link_quality = 0;
+      }
+    }
 
-    crsfRouter.makeLinkStatisticsPacket(linkStatisticsFrame);
+    CRSF_MK_FRAME_T(crsfLinkStatistics_t) linkStatisticsFrame;
+    crsfRouter.makeLinkStatisticsPacket(&linkStatisticsFrame.h);
     // the linkStats originates from the OTA connector so we don't send it back there.
-    crsfRouter.deliverMessage(&otaConnector, (crsf_header_t *)linkStatisticsFrame);
-    sendCRSFTelemetryToBackpack(linkStatisticsFrame);
+    crsfRouter.deliverMessage(&otaConnector, &linkStatisticsFrame.h);
+    sendCRSFTelemetryToBackpack((uint8_t *)&linkStatisticsFrame);
     LinkStatsLastReported_Ms = now;
   }
 }

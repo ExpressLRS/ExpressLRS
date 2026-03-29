@@ -153,7 +153,7 @@ const HARDWARE_SCHEMA = [
                 desc: 'Use the SX1280 DC-DC converter rather than LDO voltage regulator (15uH inductor must be present)'
             },
             /* /FEATURE: NOT HAS_SX127X */
-            /* FEATURE: HAS_SX127X */
+            /* FEATURE: NOT HAS_SX128X */
             {
                 id: 'radio_rfo_hf',
                 label: 'RFO_HF enabled',
@@ -161,7 +161,7 @@ const HARDWARE_SCHEMA = [
                 icon: null,
                 desc: 'SX127x PA to use, either the RFO_HF or PA_BOOST (depends on circuit design)'
             },
-            /* /FEATURE: HAS_SX127X */
+            /* /FEATURE: NOT HAS_SX128X */
             /* FEATURE: HAS_LR1121 */
             {
                 id: 'radio_rfsw_ctrl',
@@ -183,13 +183,6 @@ const HARDWARE_SCHEMA = [
                 type: 'uint',
                 icon: 'output',
                 desc: 'Pin connected to Antenna select pin on power amplifier'
-            },
-            {
-                id: 'ant_ctrl_compl',
-                label: 'CTRL_COMPL pin',
-                type: 'uint',
-                icon: 'output',
-                desc: 'Inverted CTRL for devices using antenna selectors that need separate pins for A/B selection'
             },
         ]
     },
@@ -250,17 +243,6 @@ const HARDWARE_SCHEMA = [
                 desc: 'Minimum selectable power output'
             },
             {
-                id: 'power_high',
-                label: 'High Power',
-                type: 'select',
-                options: [
-                    {value: 0, label: '10mW'}, {value: 1, label: '25mW'}, {value: 2, label: '50mW'},
-                    {value: 3, label: '100mW'}, {value: 4, label: '250mW'}, {value: 5, label: '500mW'},
-                    {value: 6, label: '1000mW'}, {value: 7, label: '2000mW'}
-                ],
-                desc: 'Highest selectable power output (if option for higher power is NOT enabled)'
-            },
-            {
                 id: 'power_max',
                 label: 'Max Power',
                 type: 'select',
@@ -269,7 +251,7 @@ const HARDWARE_SCHEMA = [
                     {value: 3, label: '100mW'}, {value: 4, label: '250mW'}, {value: 5, label: '500mW'},
                     {value: 6, label: '1000mW'}, {value: 7, label: '2000mW'}
                 ],
-                desc: "Absolute maximum selectable power output (only available if 'higher power' option is enabled)"
+                desc: "Maximum selectable power output"
             },
             {
                 id: 'power_default',
