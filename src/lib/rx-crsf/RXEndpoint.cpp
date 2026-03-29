@@ -82,8 +82,8 @@ void RXEndpoint::handleMessage(const crsf_header_t *message)
             extMessage->orig_addr,
             false,
             extMessage->type,
-            extMessage->payload[0],
-            extMessage->payload[1]
+            extMessage->payload[0],  // parameter index
+            extMessage->payload + 1  // start of parameter payload
         );
     }
 }
