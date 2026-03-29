@@ -107,6 +107,7 @@ function viteEsp32HeaderPlugin(options = {}) {
       }
 
       if (files.length === 0) return
+      files.sort()
 
       const genBy = 'vite-esp32-header plugin'
       const when = new Date().toISOString()
