@@ -363,7 +363,7 @@ local function fieldCommandDisplay(field, y, attr)
 end
 
 local function fieldBackExec(field)
-  if field.grandParent  then -- Back from Sub-menu 
+  if field.grandParent then -- Back from Sub-menu
     fieldFolderOpen(fields[field.grandParent])
   elseif field.parent then
     lineIndex = field.li or 1
