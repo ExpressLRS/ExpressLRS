@@ -76,6 +76,9 @@
 
 device_affinity_t ui_devices[] = {
   {&Serial0_device, 1},
+#if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
+  {&SerialTCP_device, 1},
+#endif
 #if defined(PLATFORM_ESP32)
   {&Serial1_device, 1},
   {&SerialUpdate_device, 1},
@@ -1343,9 +1346,7 @@ static void setupSerial()
     #if defined(PLATFORM_ESP32) || defined(PLATFORM_ESP8266)
     else if (config.GetSerialProtocol() == PROTOCOL_TCP_SERIAL)
     {
-        // Initialize TCP serial with default server configuration on port 5762
-        serialIO = new SerialTCP(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX);
-        ((SerialTCP *)serialIO)->initializeTCPSocket(TCP_SERVER, 5762);
+        serialIO = new SerialNOOP();
     }
     #endif
     else if (sbusSerialOutput)

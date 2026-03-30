@@ -72,7 +72,31 @@ static IPAddress ipAddress;
 
 #if defined(TARGET_RX)
 #include "TcpMspConnector.h"
+#include "../../src/rx-serial/SerialTCP.h"
 TcpMspConnector wifi2tcp;
+static constexpr uint16_t TCP_PORT_SERIAL = 5762;
+
+static void startSerialTcpService()
+{
+  if (serialTcpIsActive())
+  {
+    return;
+  }
+
+  serialTcpStart(Serial, Serial, TCP_PORT_SERIAL);
+  devicesTriggerEvent(EVENT_CONFIG_SERIAL_CHANGE);
+}
+
+static void stopSerialTcpService()
+{
+  if (!serialTcpIsActive())
+  {
+    return;
+  }
+
+  serialTcpStop();
+  devicesTriggerEvent(EVENT_CONFIG_SERIAL_CHANGE);
+}
 #endif
 
 #if defined(PLATFORM_ESP8266)
@@ -1161,6 +1185,10 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", wifi_hostname);
   #if defined(TARGET_RX)
   wifi2tcp.begin();
+  if (config.GetSerialProtocol() == PROTOCOL_TCP_SERIAL)
+  {
+    startSerialTcpService();
+  }
   #endif
 }
 
@@ -1274,6 +1302,20 @@ static int start()
 
 static int event()
 {
+#if defined(TARGET_RX)
+  if (config.GetSerialProtocol() == PROTOCOL_TCP_SERIAL)
+  {
+    if (servicesStarted && !serialTcpIsActive())
+    {
+      startSerialTcpService();
+    }
+  }
+  else if (serialTcpIsActive())
+  {
+    stopSerialTcpService();
+  }
+#endif
+
   if (connectionState == wifiUpdate || connectionState > FAILURE_STATES)
   {
     if (!wifiStarted) {
@@ -1283,6 +1325,9 @@ static int event()
   }
   else if (wifiStarted)
   {
+#if defined(TARGET_RX)
+    stopSerialTcpService();
+#endif
     wifiStarted = false;
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
@@ -1343,5 +1388,5 @@ device_t WIFI_device = {
   .start = start,
   .event = event,
   .timeout = timeout,
-  .subscribe = EVENT_CONNECTION_CHANGED
+  .subscribe = EVENT_CONNECTION_CHANGED | EVENT_CONFIG_SERIAL_CHANGE
 };
