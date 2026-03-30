@@ -395,7 +395,7 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
       else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
       else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
-      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
+      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SDA supported (only on this pin)
       else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
       #if defined(PLATFORM_ESP32)
       if (pin != 0) features |= 16; // DShot supported on all pins but GPIO0
