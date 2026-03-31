@@ -878,7 +878,7 @@ void RxConfig::CheckUpdateFlashedUid(bool skipDescrimCheck)
 static unsigned toFailsafeV10(unsigned oldFailsafe)
 {
     // the old failsafe was 988+value, new is 476+value
-    return oldFailsafe + (988 - CHANNEL_VALUE_FS_US_MIN);
+    return oldFailsafe + (US_CHANNEL_VALUE_STD_MIN - US_CHANNEL_VALUE_MIN);
 }
 
 /**
@@ -1056,8 +1056,8 @@ void RxConfig::UpgradeEepromV11()
     // Servo limits upgrade
     for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch) {
         // We're adding servo limits, set sane defaults
-        m_config.pwmLimits[ch].val.min = 885; // allow extended range
-        m_config.pwmLimits[ch].val.max = 2135; // allow extended range
+        m_config.pwmLimits[ch].val.min = US_CHANNEL_VALUE_EXT_MIN; // allow extended range
+        m_config.pwmLimits[ch].val.max = US_CHANNEL_VALUE_EXT_MAX; // allow extended range
     }
 }
 
@@ -1266,10 +1266,10 @@ RxConfig::SetDefaults(bool commit)
             }
 #endif
         }
-        const uint16_t failsafe = ch == 2 ? CHANNEL_VALUE_FS_US_ELIMITS_MIN - CHANNEL_VALUE_FS_US_MIN :
-                                            CHANNEL_VALUE_FS_US_MID - CHANNEL_VALUE_FS_US_MIN; // ch2 is throttle, failsafe it to 880
+        const uint16_t failsafe = ch == 2 ? US_CHANNEL_VALUE_EXT_MIN - US_CHANNEL_VALUE_MIN :
+                                            US_CHANNEL_VALUE_CENTER - US_CHANNEL_VALUE_MIN; // ch2 is throttle, failsafe it to 880
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
-        SetPwmChannelLimits(ch, 885, 2135);
+        SetPwmChannelLimits(ch, US_CHANNEL_VALUE_EXT_MIN, US_CHANNEL_VALUE_EXT_MAX);
     }
 
     m_config.teamraceChannel = AUX7; // CH11

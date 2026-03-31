@@ -129,7 +129,7 @@ static void servosFailsafe()
         const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
         if (chConfig->val.failsafeMode == PWMFAILSAFE_SET_POSITION) {
             // Note: Failsafe values do not respect the inverted flag, failsafe values are absolute
-            uint16_t us = chConfig->val.failsafe + CHANNEL_VALUE_FS_US_MIN;
+            uint16_t us = chConfig->val.failsafe + US_CHANNEL_VALUE_MIN;
             // Always write the failsafe position even if the servo has never been started,
             // so all the servos go to their expected position
             servoWrite(ch, us);
@@ -160,9 +160,9 @@ static void servoCalcAllChannels(servoWrite_fn write)
         if (chConfig->val.stretched)
         {
             if (OtaIsFullRes)
-                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, 500, 2500);
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_EXT_MIN, CRSF_CHANNEL_VALUE_EXT_MAX, US_CHANNEL_VALUE_MIN, US_CHANNEL_VALUE_MAX);
             else
-                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 500, 2500);
+                us = fmap(crsfVal, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_MIN, US_CHANNEL_VALUE_MAX);
         }
         else
         {
@@ -172,7 +172,7 @@ static void servoCalcAllChannels(servoWrite_fn write)
         // (1500 - usOutput) + 1500
         if (chConfig->val.inverted)
         {
-            us = 3000U - us;
+            us = (2 * US_CHANNEL_VALUE_CENTER) - us;
         }
 
         // Limit output values to configured limits
@@ -187,7 +187,7 @@ static void servoUsToFailsafeConfig(uint8_t ch, uint16_t us)
 {
     rx_config_pwm_t newPwmCh;
     newPwmCh.raw = config.GetPwmChannel(ch)->raw;
-    newPwmCh.val.failsafe = constrain(us, CHANNEL_VALUE_FS_US_MIN, CHANNEL_VALUE_FS_US_MAX) - CHANNEL_VALUE_FS_US_MIN;
+    newPwmCh.val.failsafe = constrain(us, US_CHANNEL_VALUE_MIN, US_CHANNEL_VALUE_MAX) - US_CHANNEL_VALUE_MIN;
     //DBGLN("FSCH(%u) us=%u", ch, us);
     config.SetPwmChannelRaw(ch, newPwmCh.raw);
 }

@@ -176,9 +176,9 @@ static int16Parameter luaMappingLimitMin = {
     { "Limit Min", CRSF_INT16 },
     {
         {
-            htobe16(1500),
-            htobe16(CHANNEL_VALUE_FS_US_MIN),
-            htobe16(CHANNEL_VALUE_FS_US_MAX),
+            htobe16(US_CHANNEL_VALUE_CENTER),
+            htobe16(US_CHANNEL_VALUE_MIN),
+            htobe16(US_CHANNEL_VALUE_MAX),
         }
     },
     STR_US,
@@ -188,9 +188,9 @@ static int16Parameter luaMappingLimitMax = {
     { "Limit Max", CRSF_INT16 },
     {
         {
-            htobe16(1500),
-            htobe16(CHANNEL_VALUE_FS_US_MIN),
-            htobe16(CHANNEL_VALUE_FS_US_MAX),
+            htobe16(US_CHANNEL_VALUE_CENTER),
+            htobe16(US_CHANNEL_VALUE_MIN),
+            htobe16(US_CHANNEL_VALUE_MAX),
         }
     },
     STR_US,
