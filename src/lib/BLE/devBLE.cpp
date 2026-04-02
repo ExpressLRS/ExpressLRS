@@ -58,6 +58,7 @@ void BluetoothJoystickBegin()
     gamepadConfig.setControllerType(CONTROLLER_TYPE_JOYSTICK); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
     gamepadConfig.setWhichAxes(true, true, true, true, true, true, true, true);	// Enable all axes
     gamepadConfig.setButtonCount(8);
+    gamepadConfig.setHatSwitchCount(0);
 
     bleGamepad = new BleGamepad("ELRS Joystick", "ELRS", 100);
     bleGamepad->setTXPowerLevel(9);

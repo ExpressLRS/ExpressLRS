@@ -174,6 +174,11 @@ static void servoCalcAllChannels(servoWrite_fn write)
         {
             us = 3000U - us;
         }
+
+        // Limit output values to configured limits
+        const rx_config_pwm_limits_t *limits = config.GetPwmChannelLimits(ch);
+        us = constrain(us, limits->val.min, limits->val.max);
+
         write(ch, us);
     } /* for each servo */
 }

@@ -388,12 +388,14 @@ static void GetConfiguration(AsyncWebServerRequest *request)
       const auto channel = cfg["pwm"][ch].to<JsonObject>();
       channel["config"] = config.GetPwmChannel(ch)->raw;
       channel["pin"] = GPIO_PIN_PWM_OUTPUTS[ch];
+      channel["limits"]["min"] = config.GetPwmChannelLimits(ch)->val.min;
+      channel["limits"]["max"] = config.GetPwmChannelLimits(ch)->val.max;
       uint8_t features = 0;
       auto pin = GPIO_PIN_PWM_OUTPUTS[ch];
       if (pin == U0TXD_GPIO_NUM) features |= 1;  // SerialTX supported
       else if (pin == U0RXD_GPIO_NUM) features |= 2;  // SerialRX supported
       else if (pin == GPIO_PIN_SCL) features |= 4;  // I2C SCL supported (only on this pin)
-      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SCL supported (only on this pin)
+      else if (pin == GPIO_PIN_SDA) features |= 8;  // I2C SDA supported (only on this pin)
       else if (GPIO_PIN_SCL == UNDEF_PIN || GPIO_PIN_SDA == UNDEF_PIN) features |= 12; // Both I2C SCL/SDA supported (on any pin)
       #if defined(PLATFORM_ESP32)
       if (pin != 0) features |= 16; // DShot supported on all pins but GPIO0
@@ -589,6 +591,13 @@ static void UpdateConfiguration(AsyncWebServerRequest *request, JsonVariant &jso
     uint32_t val = pwm[channel];
     //DBGLN("PWMch(%u)=%u", channel, val);
     config.SetPwmChannelRaw(channel, val);
+  }
+
+  JsonArray limits = json["limits"].as<JsonArray>();
+  for(uint32_t channel = 0 ; channel < limits.size() ; channel++)
+  {
+    uint32_t val = limits[channel];
+    config.SetPwmChannelLimitsRaw(channel, val);
   }
 
   config.Commit();
