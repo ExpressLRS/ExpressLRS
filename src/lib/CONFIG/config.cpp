@@ -1053,12 +1053,16 @@ void RxConfig::UpgradeEepromV9V10(uint8_t ver)
 
 void RxConfig::UpgradeEepromV11()
 {
+    // nothing do to, pwmLimts already set by setDefaults()
+
+    /*
     // Servo limits upgrade
     for (unsigned ch=0; ch<PWM_MAX_CHANNELS; ++ch) {
         // We're adding servo limits, set sane defaults
         m_config.pwmLimits[ch].val.min = US_CHANNEL_VALUE_EXT_MIN; // allow extended range
         m_config.pwmLimits[ch].val.max = US_CHANNEL_VALUE_EXT_MAX; // allow extended range
     }
+    */
 }
 
 /**
@@ -1269,7 +1273,7 @@ RxConfig::SetDefaults(bool commit)
         const uint16_t failsafe = ch == 2 ? US_CHANNEL_VALUE_EXT_MIN - US_CHANNEL_VALUE_MIN :
                                             US_CHANNEL_VALUE_CENTER - US_CHANNEL_VALUE_MIN; // ch2 is throttle, failsafe it to 880
         SetPwmChannel(ch, failsafe, ch, false, mode, false);
-        SetPwmChannelLimits(ch, US_CHANNEL_VALUE_EXT_MIN, US_CHANNEL_VALUE_EXT_MAX);
+        SetPwmChannelLimits(ch, US_CHANNEL_VALUE_MIN, US_CHANNEL_VALUE_MAX);
     }
 
     m_config.teamraceChannel = AUX7; // CH11
