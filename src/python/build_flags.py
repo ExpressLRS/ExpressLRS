@@ -149,7 +149,9 @@ if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     # disallow setting 2400s for 900
     if '-DRADIO_SX127X=1' in build_flags and \
             (fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400') or
-             fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400')):
+             fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400_Upper*') or
+             fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400') or
+             fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400_Upper*')):
         print_error('Regulatory_Domain 2400 not compatible with RADIO_SX127X/RADIO_LR1121')
 
     # require a domain be set for 900
@@ -173,9 +175,15 @@ if '-DRADIO_SX127X=1' in build_flags or '-DRADIO_LR1121=1' in build_flags:
     if fnmatch.filter(build_flags, '*-DRegulatory_Domain_US_433_WIDE'):
         json_flags['domain'] = 7
 else:
-    json_flags['domain'] = 0
+    # 2.4GHz radio (SX128X) - domain index selects into the domains[] array in FHSS.cpp
+    if fnmatch.filter(build_flags, '*-DRegulatory_Domain_ISM_2400_Upper*') or \
+            fnmatch.filter(build_flags, '*-DRegulatory_Domain_EU_CE_2400_Upper*'):
+        json_flags['domain'] = 1
+    else:
+        json_flags['domain'] = 0
 
-# Remove ISM_2400 domain flag if not unit test, it is defined per target config
+# Remove ISM_2400 domain flags if not unit test, they are defined per target config.
+# EU_CE variants are NOT removed here as they must reach the compiler for #if defined() checks in FHSS.cpp
 if fnmatch.filter(build_flags, '*Regulatory_Domain_ISM_2400*') and \
         target_name != "NATIVE":
     build_flags = [f for f in build_flags if "Regulatory_Domain_ISM_2400" not in f]

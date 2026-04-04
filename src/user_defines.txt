@@ -26,7 +26,9 @@
 #-DRegulatory_Domain_US_433_WIDE
 #-DRegulatory_Domain_FCC_915
 #-DRegulatory_Domain_ISM_2400
+#-DRegulatory_Domain_ISM_2400_Upper
 #-DRegulatory_Domain_EU_CE_2400
+#-DRegulatory_Domain_EU_CE_2400_Upper
 
 ### PERFORMANCE OPTIONS: ###
 
