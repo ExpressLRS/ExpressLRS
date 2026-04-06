@@ -251,3 +251,4 @@ typedef struct {
 // rateInitialIdx 4 bits -> 5
 // V11 changed
 // rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
+
