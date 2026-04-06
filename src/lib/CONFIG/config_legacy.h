@@ -13,7 +13,6 @@
  * RX V9 Feb 16 2024 (3.4.0)
  * RX V10 (4.0.0)
  * RX V11 (4.0.0)
- * RX V12 (4.1.0)
  *
  ***/
 
@@ -252,6 +251,3 @@ typedef struct {
 // rateInitialIdx 4 bits -> 5
 // V11 changed
 // rx_config_pwm_t to add stretch and changed failsafe from 988-2012 to 476-2523
-// V12
-// rx_config_pwm_limits_t to add pwm limits for gyro mechanical limits
-
