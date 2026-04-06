@@ -127,7 +127,7 @@ void SerialMavlink::sendQueuedData(uint32_t maxBytesToSend)
         mavlink_status_t status;
 
         // Try parse a mavlink message
-        if (mavlink_frame_char(MAVLINK_COMM_0, c, &msg, &status))
+        if (mavlink_frame_char(MAVLINK_COMM_0, c, &msg, &status) == MAVLINK_FRAMING_OK)
         {
             // Message decoded successfully
 
