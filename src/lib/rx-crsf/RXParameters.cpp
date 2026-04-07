@@ -1,6 +1,7 @@
 #include "targets.h"
 #if !defined(UNIT_TEST)
 #include "RXEndpoint.h"
+#include "FHSS.h"
 #include "POWERMGNT.h"
 #include "config.h"
 #include "deferred.h"
@@ -117,7 +118,7 @@ static stringParameter luaModelNumber = {
 };
 
 static stringParameter luaELRSversion = {
-    {version, CRSF_INFO},
+    {version_domain, CRSF_INFO},
     commit
 };
 

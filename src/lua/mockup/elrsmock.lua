@@ -19,6 +19,14 @@ return {
   {name='master', id=17, type=16, value='f00fcb'},
   {name='Float Tst', id=18, type=8, value=-15, step=5, prec=1000, min=-50, max=50, unit='flt', fmt='%.3fflt'},
 
+  {name='Nested Test', id=20, type=11},
+  {name='Nested 1.1', id=21, type=11, parent=20},
+    {name='F1', id=22, type=0, parent=21, value=1, step=1, min=1, max=8, unit=''},
+    {name='F2', id=23, type=0, parent=21, value=1, step=1, min=1, max=8, unit=''},
+  {name='Nested 1.2', id=24, type=11, parent=20},
+    {name='F3', id=25, type=0, parent=24, value=1, step=1, min=1, max=8, unit=''},
+    {name='F4', id=26, type=0, parent=24, value=1, step=1, min=1, max=8, unit=''},
+
   {name="----BACK----", type=14, parent=255},
   {name="----EXIT----", type=14, exit = true}
 }, "0/500   C", "ExpressLRS TX"

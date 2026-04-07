@@ -50,7 +50,6 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
-static char version_domain[20+1+6+1];
 static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
 static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
 static char modelMatchUnit[] = " (ID: 00)";
@@ -1011,14 +1010,6 @@ void TXModuleEndpoint::registerParameters()
   }
 
   registerParameter(&luaInfo);
-  if (strlen(version) < 21) {
-    strlcpy(version_domain, version, 21);
-    strlcat(version_domain, " ", sizeof(version_domain));
-  } else {
-    strlcpy(version_domain, version, 18);
-    strlcat(version_domain, "... ", sizeof(version_domain));
-  }
-  strlcat(version_domain, FHSSconfig->domain, sizeof(version_domain));
   registerParameter(&luaELRSversion);
 }
 

@@ -144,6 +144,8 @@ transitioning from FS mode and the other from Standby mode. This causes the tx d
 
     if (OPT_USE_HARDWARE_DCDC)
     {
+        DBGLN("Enabling DCDC regulator");
+
         // 5.1.1 SetRegMode
         uint8_t RegMode[1] = {1};
         hal.WriteCommand(LR11XX_SYSTEM_SET_REGMODE_OC, RegMode, sizeof(RegMode), SX12XX_Radio_All); // Enable DCDC converter instead of LDO

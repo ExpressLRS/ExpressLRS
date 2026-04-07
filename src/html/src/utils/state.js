@@ -9,10 +9,10 @@ class ElrsState extends State {
 
 export function formatBand() {
     if (elrsState.settings) {
-        if (elrsState.settings.reg_domain_low && elrsState.settings.reg_domain_high) {
+        if (elrsState.settings.has_low_band && elrsState.settings.has_high_band) {
             return elrsState.settings.reg_domain_low + '/' + elrsState.settings.reg_domain_high
         }
-        if (elrsState.settings.reg_domain_low)
+        if (elrsState.settings.has_low_band)
             return elrsState.settings.reg_domain_low
         return elrsState.settings.reg_domain_high
     }
