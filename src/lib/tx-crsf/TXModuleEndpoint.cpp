@@ -152,7 +152,7 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     // monitoring arming state
     if (lastArmCmd != armCmd)
     {
-        handset->SetArmed(armCmd);
+        isArmed = armCmd;
         lastArmCmd = armCmd;
 #if defined(PLATFORM_ESP32)
         devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);

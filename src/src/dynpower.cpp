@@ -1,7 +1,7 @@
 
 #include <dynpower.h>
 
-#include "CRSFRouter.h"
+#include "OTA.h"
 #include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
@@ -105,7 +105,7 @@ void DynamicPower_Update(uint32_t now)
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  bool armed = handset->IsArmed();
+  bool armed = isArmed;
   if ((connectionState == disconnected && armed) ||
     (boostChannel && (CRSF_to_BIT(ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {

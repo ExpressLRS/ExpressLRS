@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CRSFEndpoint.h"
+#include "msptypes.h"
 
 class RxTxEndpoint : public CRSFEndpoint {
 public:

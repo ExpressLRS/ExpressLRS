@@ -1,9 +1,10 @@
 #include "RxTxEndpoint.h"
-#include "CRSFRouter.h"
 
+#if !defined(UNIT_TEST)
+
+#include "CRSFRouter.h"
 #include "rxtx_intf.h"
 #include "config.h"
-#include "msptypes.h"
 #include "logging.h"
 
 bool RxTxEndpoint::handleRxTxMessage(const crsf_header_t *message)
@@ -94,3 +95,5 @@ void RxTxEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
             break;
     }
 }
+
+#endif /* !UNIT_TEST */

@@ -1,6 +1,7 @@
 #include "LR1121.h"
 #include "lr1121_transceiver_F30104.h"
 #include "LR1121_hal.h"
+#include "FEC.h"
 #include "logging.h"
 
 #include <LittleFS.h>

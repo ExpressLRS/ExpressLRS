@@ -830,7 +830,7 @@ void TxConfig::SetUID(uint8_t uid[UID_LEN])
 {
     // The UID is only stored in the options.json, not in nvs/eeprom like on the RX
     // Emulate the setting as a config setting to have the same access method as the RX
-    firmwareOptions.hasUID = UID_IS_BOUND(uid);
+    firmwareOptions.hasUID = OtaUidIsBound(uid);
     memcpy(firmwareOptions.uid, uid, UID_LEN);
     saveOptions();
 }
@@ -1128,7 +1128,7 @@ bool RxConfig::GetIsBound() const
 {
     if (m_config.bindStorage == BINDSTORAGE_VOLATILE)
         return false;
-    return UID_IS_BOUND(m_config.uid);
+    return OtaUidIsBound(m_config.uid);
 }
 
 bool RxConfig::IsOnLoan() const

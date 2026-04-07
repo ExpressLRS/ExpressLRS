@@ -1,7 +1,5 @@
 #pragma once
 
-#include "targets.h"
-
 #include "crsf_protocol.h"
 
 #include <functional>

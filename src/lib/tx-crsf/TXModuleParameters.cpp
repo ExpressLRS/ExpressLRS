@@ -387,7 +387,7 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 
   setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
   setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
+  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);

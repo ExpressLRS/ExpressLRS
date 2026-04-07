@@ -1,8 +1,7 @@
 #include "CRSFRouter.h"
 
+#include "OTA.h"
 #include "msptypes.h"
-
-elrsLinkStatistics_t linkStats {};
 
 void CRSFRouter::addConnector(CRSFConnector *connector)
 {
