@@ -1,6 +1,5 @@
 import {LitElement, html, svg} from 'lit'
 import {customElement, query} from "lit/decorators.js"
-import FEATURES from "./features.js"
 import {elrsState, formatBand} from './utils/state.js'
 import './components/elrs-footer.js'
 
@@ -188,25 +187,36 @@ export class App extends LitElement {
             case 'binding':
                 return '<binding-panel></binding-panel>'
             case 'options':
-                return FEATURES.IS_TX ? '<tx-options-panel></tx-options-panel>' : '<rx-options-panel></rx-options-panel>'
+            // FEATURE:IS_TX
+                return '<tx-options-panel></tx-options-panel>'
+            // /FEATURE:IS_TX
+            // FEATURE:NOT IS_TX
+                return '<rx-options-panel></rx-options-panel>'
+            // /FEATURE:NOT IS_TX
             case 'wifi':
                 return '<wifi-panel></wifi-panel>'
             case 'update':
                 return '<update-panel></update-panel>'
+            // FEATURE:NOT IS_TX
             case 'connections':
-                return !FEATURES.IS_TX && elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : ''
+                return elrsState.config.pwm !== undefined ? '<connections-panel></connections-panel>' : ''
             case 'serial':
-                return !FEATURES.IS_TX ? '<serial-panel></serial-panel>' : ''
+                return '<serial-panel></serial-panel>'
+            // /FEATURE:NOT IS_TX
+            // FEATURE:IS_TX
             case 'buttons':
-                return FEATURES.IS_TX ? '<buttons-panel></buttons-panel>' : ''
+                return '<buttons-panel></buttons-panel>'
+            // /FEATURE:IS_TX
             case 'hardware':
                 return '<hardware-layout></hardware-layout>'
             case 'cw':
                 return '<continuous-wave></continuous-wave>'
             case 'models':
                 return '<models-panel></models-panel>'
+            // FEATURE:HAS_LR1121
             case 'lr1121':
-                return FEATURES.HAS_LR1121 ? '<lr1121-updater></lr1121-updater>' : ''
+                return '<lr1121-updater></lr1121-updater>'
+            // /FEATURE:HAS_LR1121
             default:
                 return ''
         }
