@@ -96,6 +96,7 @@ export function htmlFeatureBlocksPlugin(env) {
 
   return {
     name: 'html-feature-blocks',
+    enforce: 'pre',
     transformIndexHtml(html) {
       return processHtml(html)
     },
