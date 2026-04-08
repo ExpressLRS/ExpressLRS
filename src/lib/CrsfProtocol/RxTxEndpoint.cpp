@@ -26,7 +26,7 @@ bool RxTxEndpoint::handleRxTxMessage(const crsf_header_t *message)
 }
 
 /**
- * Handles MSP_ELRS_RXTX_CONFIG command
+ * Handles REQ(get) of MSP_ELRS_RXTX_CONFIG command
  */
 void RxTxEndpoint::handleMspGetRxTxConfig(crsf_ext_header_t *extMessage)
 {
@@ -51,7 +51,7 @@ void RxTxEndpoint::handleMspGetRxTxConfig(crsf_ext_header_t *extMessage)
 }
 
 /**
- * Handles MSP_SET_RX_CONFIG command
+ * Handles WRITE(set) of MSP_ELRS_RXTX_CONFIG command
  */
 void RxTxEndpoint::handleMspSetRxTxConfig(crsf_ext_header_t *extMessage)
 {
