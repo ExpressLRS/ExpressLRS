@@ -150,8 +150,8 @@ export function devMockPlugin() {
         vsrc1_scale: 180,
         vsrc1_atten: 1,
         vsrc1_noreading: 8,
-        vsrc1_cal_min: 3300,
-        vsrc1_cal_max: 12600
+        // vsrc1_cal_min: 3300,
+        // vsrc1_cal_max: 12600
     }
     const voltageSources = []
 
@@ -188,7 +188,11 @@ export function devMockPlugin() {
                 calMax: Number(hardware[`${sourceDef.id}_cal_max`] ?? 0),
             })
         }
-        stubState.settings.voltage_source_count = countVoltageSourcesFromHardware(hardware)
+        if (stubState.settings['module-type'] === 'RX') {
+            stubState.settings.voltage_source_count = countVoltageSourcesFromHardware(hardware)
+        } else {
+            delete stubState.settings.voltage_source_count
+        }
     }
 
     syncVoltageSourcesFromHardware(hardwareState)
@@ -201,21 +205,11 @@ export function devMockPlugin() {
         const attenGain = atten <= 3 ? (4 - atten) : (8 - atten)
         const rawMedian = Math.max(readingFloor, Math.min(4095, Math.round(base + span * attenGain + jitter(2))))
         const spread = 2 + Math.abs(jitter(1))
-        const rawMin = Math.max(0, rawMedian - spread - Math.abs(jitter(1)))
         const rawMax = Math.min(4095, rawMedian + spread + Math.abs(jitter(1)))
-        const rawAvg = Math.round((rawMedian + rawMin + rawMax) / 3)
         const adcMedian = Math.max(0, Math.min(4095, rawMedian + jitter(1)))
-        const adcAvg = Math.round((adcMedian + rawAvg) / 2)
         return {
-            rawMin,
             rawMax,
-            rawMedian,
-            rawAvg,
-            adcMin: Math.max(0, rawMin + jitter(1)),
-            adcMax: Math.min(4095, rawMax + jitter(1)),
             adcMedian,
-            adcAvg,
-            spread: rawMax - rawMin,
             saturated: rawMax >= 4071,
             hasReading: rawMedian > readingFloor
         }
@@ -249,7 +243,11 @@ export function devMockPlugin() {
                 if (method === 'GET' && url === '/config') {
                     // Reset the networks scan delay counter whenever config is fetched
                     networkQueryCount = 0
-                    stubState.settings.voltage_source_count = voltageSources.length
+                    if (stubState.settings['module-type'] === 'RX') {
+                        stubState.settings.voltage_source_count = voltageSources.length
+                    } else {
+                        delete stubState.settings.voltage_source_count
+                    }
                     return sendDelayed(PAGE_LOAD_DELAY_MS, () => sendJSON(res, stubState))
                 }
                 if (method === 'GET' && (url === '/networks.json' || url.startsWith('/networks.json'))) {
@@ -361,35 +359,46 @@ export function devMockPlugin() {
                         } catch (_e) {
                         }
 
-                        const sourceId = payload.source || 'vbat'
-                        const source = voltageSources.find((item) => item.id === sourceId) || voltageSources[0]
-                        if (!source) {
-                            return sendJSON(res, {data: {hasReading: false}})
+                        const sampleForRequest = (requestPayload = {}) => {
+                            const sourceId = requestPayload.source || 'vbat'
+                            const source = voltageSources.find((item) => item.id === sourceId) || voltageSources[0]
+                            if (!source) {
+                                return {hasReading: false}
+                            }
+
+                            const stage = Number(requestPayload.stage ?? 0)
+                            const atten = Number(requestPayload.atten ?? source.atten ?? 0)
+
+                            let base = 180
+                            let span = 180
+                            let readingFloor = 0
+
+                            if (stage === 0) {
+                                base = 700
+                                span = 320
+                            } else if (stage === 1) {
+                                base = 320
+                                span = 150
+                            } else if (stage === 2) {
+                                base = Math.max(0, source.noReading - 12)
+                                span = 4
+                                readingFloor = Math.max(0, source.noReading - 24)
+                            } else if (stage === 3) {
+                                base = 540
+                                span = 210
+                            }
+
+                            return mockVoltageSample(atten, base, span, readingFloor)
                         }
 
-                        const stage = Number(payload.stage ?? 0)
-                        const atten = Number(payload.atten ?? source.atten ?? 0)
-
-                        let base = 180
-                        let span = 180
-                        let readingFloor = 0
-
-                        if (stage === 0) {
-                            base = 700
-                            span = 320
-                        } else if (stage === 1) {
-                            base = 320
-                            span = 150
-                        } else if (stage === 2) {
-                            base = Math.max(0, source.noReading - 12)
-                            span = 4
-                            readingFloor = Math.max(0, source.noReading - 24)
-                        } else if (stage === 3) {
-                            base = 540
-                            span = 210
+                        const requests = Array.isArray(payload.requests) ? payload.requests : []
+                        const samples = {}
+                        for (const requestPayload of requests) {
+                            const sourceId = requestPayload?.source
+                            if (!sourceId) continue
+                            samples[sourceId] = sampleForRequest(requestPayload)
                         }
-
-                        return sendJSON(res, {data: mockVoltageSample(atten, base, span, readingFloor)})
+                        return sendJSON(res, {samples})
                     })
                 }
 

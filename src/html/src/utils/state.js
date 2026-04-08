@@ -1,10 +1,29 @@
 import {State} from "@lit-app/state";
-import {post, saveJSONWithReboot, showAlert} from "./feedback.js";
+import {loadJSON, post, saveJSONWithReboot, showAlert} from "./feedback.js";
 
 class ElrsState extends State {
     config = {}
     options = {}
     settings = {}
+    hardware = {}
+}
+
+export function setHardwareState(hardware) {
+    elrsState.hardware = {...hardware}
+    elrsState.settings = {
+        ...elrsState.settings,
+        custom_hardware: !!hardware.customised
+    }
+}
+
+export async function loadHardware(force = false) {
+    if (!force && Object.keys(elrsState.hardware || {}).length > 0) {
+        return elrsState.hardware
+    }
+
+    const hardware = await loadJSON('/hardware.json')
+    setHardwareState(hardware)
+    return hardware
 }
 
 export function formatBand() {
@@ -77,18 +96,20 @@ export function saveOptions(changes, successCB) {
     })
 }
 
-export function saveOptionsAndConfig(changes, successCB) {
+export async function saveOptionsAndConfig(changes, successCB) {
     const newOptions = {...elrsState.options, ...changes.options, customised: true}
-    post('/options.json', newOptions, {
-        onload: async () => {
-            saveConfig(changes.config, () => {
-                elrsState.options = newOptions
-                if (successCB) successCB()
-            })
-        },
-        onerror: async (xhr) => {
-            await showAlert('error', 'Configuration Update Failed', xhr.responseText || 'Request failed')
-        }
+    await new Promise((resolve, reject) => {
+        post('/options.json', newOptions, {
+            onload: () => resolve(),
+            onerror: (xhr) => reject(new Error(xhr.responseText || 'Request failed'))
+        })
+    }).then(() => {
+        saveConfig(changes.config, () => {
+            elrsState.options = newOptions
+            if (successCB) successCB()
+        })
+    }).catch(async (error) => {
+        await showAlert('error', 'Configuration Update Failed', error?.message || 'Request failed')
     })
 }
 

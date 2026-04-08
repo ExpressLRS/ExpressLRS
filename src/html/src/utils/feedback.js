@@ -55,11 +55,13 @@ export async function loadJSON(url, errorMessage = 'Failed to load data', header
 }
 
 // Generic POST helper that can send JSON, FormData, or file uploads (no UI side-effects)
-export function post(url, data, { headers = {}, onprogress, onload, onerror, onabort } = {}) {
+export function post(url, data, { headers = {}, timeoutMs = 0, onprogress, onload, onerror, onabort, ontimeout } = {}) {
   const xhr = new XMLHttpRequest()
+  if (timeoutMs > 0) xhr.timeout = timeoutMs
   if (onprogress) xhr.upload.addEventListener('progress', onprogress, false)
   if (onerror) xhr.addEventListener('error', () => onerror(xhr), false)
   if (onabort) xhr.addEventListener('abort', () => onabort(xhr), false)
+  if (ontimeout) xhr.addEventListener('timeout', () => ontimeout(xhr), false)
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
@@ -199,11 +201,13 @@ export function cuteAlert({
 </div>
 `
 
-    body.insertAdjacentHTML('afterend', template)
+    const host = document.createElement('div')
+    host.innerHTML = template.trim()
+    const alertWrapper = host.firstElementChild
+    body.appendChild(alertWrapper)
 
-    const alertWrapper = document.querySelector('.alert-wrapper')
-    const alertFrame = document.querySelector('.alert-frame')
-    const alertClose = document.querySelector(`.${closeStyleTemplate}`)
+    const alertFrame = alertWrapper.querySelector('.alert-frame')
+    const alertClose = alertWrapper.querySelector(`.${closeStyleTemplate}`)
 
     function resolveIt() {
       alertWrapper.remove()
@@ -218,13 +222,13 @@ export function cuteAlert({
     }
 
     if (type === 'question') {
-      const confirmButton = document.querySelector('.confirm-button')
-      const cancelButton = document.querySelector('.cancel-button')
+      const confirmButton = alertWrapper.querySelector('.confirm-button')
+      const cancelButton = alertWrapper.querySelector('.cancel-button')
 
       confirmButton.addEventListener('click', confirmIt)
       cancelButton.addEventListener('click', resolveIt)
     } else {
-      const alertButton = document.querySelector('.alert-button')
+      const alertButton = alertWrapper.querySelector('.alert-button')
 
       alertButton.addEventListener('click', resolveIt)
     }

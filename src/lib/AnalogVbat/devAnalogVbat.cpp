@@ -35,6 +35,7 @@ typedef struct {
 static MedianAvgFilter<voltageAnalogStorage_t, VBAT_SMOOTH_CNT> voltageSmooth[VOLTAGE_SOURCE_COUNT];
 static bool voltageSourceConnected[VOLTAGE_SOURCE_COUNT];
 static uint8_t vbatUpdateScale;
+static bool calibrationActive;
 
 static const voltageSource_t voltageSources[VOLTAGE_SOURCE_COUNT] = {
     {HARDWARE_vbat, HARDWARE_vbat_offset, HARDWARE_vbat_scale, HARDWARE_vbat_atten, HARDWARE_vbat_noreading},
@@ -56,6 +57,11 @@ static esp_adc_cal_characteristics_t *voltageAdcUnitCharacterics[VOLTAGE_SOURCE_
 void Vbat_enableSlowUpdate(bool enable)
 {
     vbatUpdateScale = enable ? 2 : 1;
+}
+
+void Vbat_setCalibrationActive(bool active)
+{
+    calibrationActive = active;
 }
 
 static bool sourceIsDefined(uint8_t sourceIdx)
@@ -207,6 +213,9 @@ static void reportVbat()
 
 static int timeout()
 {
+    if (calibrationActive)
+        return VBAT_SAMPLE_INTERVAL * vbatUpdateScale;
+
     bool shouldReport = false;
     for (uint8_t sourceIdx = 0; sourceIdx < VOLTAGE_SOURCE_COUNT; ++sourceIdx)
     {

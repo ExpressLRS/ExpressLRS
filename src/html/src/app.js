@@ -78,6 +78,11 @@ export class App extends LitElement {
                         <strong>Advanced</strong>
                         <ul>
                             <li><a id="menu-hardware" href="#hardware"><span class="mui--align-middle icon--symbols icon--symbols--hardware"></span>Hardware Layout</a></li>
+                            <!-- FEATURE:NOT IS_TX -->
+                            ${elrsState.settings?.voltage_source_count > 0 ? html`
+                                <li><a id="menu-voltage" href="#voltage"><span class="mui--align-middle icon--symbols icon--symbols--voltage"></span>Voltage Calibration</a></li>
+                            ` : ''}
+                            <!-- /FEATURE:NOT IS_TX -->
                             <li><a id="menu-cw" href="#cw"><span class="mui--align-middle icon--symbols icon--symbols--wave"></span>Continuous Wave</a></li>
                             <!-- FEATURE:HAS_LR1121 -->
                             <li><a id="menu-lr1121" href="#lr1121"><span class="mui--align-middle icon--symbols icon--symbols--lr1121"></span>LR1121 Firmware</a></li>
@@ -221,6 +226,8 @@ export class App extends LitElement {
                 return elrsState.config.pwm !== undefined ? html`<connections-panel></connections-panel>` : null
             case 'serial':
                 return html`<serial-panel></serial-panel>`
+            case 'voltage':
+                return elrsState.settings?.voltage_source_count > 0 ? html`<voltage-calibration-panel></voltage-calibration-panel>` : null
             // /FEATURE:NOT IS_TX
             // FEATURE:IS_TX
             case 'buttons':
@@ -268,7 +275,7 @@ export class App extends LitElement {
         if (['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models'].includes(route)) {
             return this.loadGeneralGroup()
         }
-        if (['hardware', 'cw', 'lr1121'].includes(route)) {
+        if (['hardware', 'voltage', 'cw', 'lr1121'].includes(route)) {
             return this.loadAdvancedGroup()
         }
         return Promise.resolve()

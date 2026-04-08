@@ -376,6 +376,62 @@ img.icon-pwm {
     align-self: center;
   }
 
+  /* Wizard extensions */
+
+  .alert-frame.wizard {
+	width:min(760px,100%);
+	max-height:calc(100vh - 32px);
+	min-height:auto;
+	display:flex;
+	flex-direction:column;
+	overflow:hidden;
+  }
+
+  .alert-frame.wizard .alert-header {
+	height:auto;
+	min-height:96px;
+	position:relative;
+	align-items:center;
+	padding:0 16px 0 24px;
+	background:linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
+	color:#fff;
+  }
+
+  .alert-frame.wizard .alert-title-row {
+	display:flex;
+	align-items:center;
+	gap:12px;
+	min-width:0;
+	padding-right:32px;
+  }
+
+  .alert-frame.wizard .alert-title-icon {
+	width:20px;
+	height:20px;
+	flex:none;
+  }
+
+  .wizard-title {
+	color:inherit;
+	padding:0;
+	margin:0;
+	text-align:left;
+	align-self:auto;
+  }
+
+  .alert-frame.wizard .alert-close {
+	color:#fffb;
+	margin:0;
+	position:absolute;
+	top:8px;
+	right:8px;
+  }
+  .alert-frame.wizard .alert-body {
+	  text-align:left
+  }
+
+  /****/
+
   .question-buttons {
 	display: flex;
 	flex-direction: row;

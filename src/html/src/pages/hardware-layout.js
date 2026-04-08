@@ -3,7 +3,7 @@ import {customElement, state} from 'lit/decorators.js'
 import {loadJSON, postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
-import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js";
+import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js"
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
