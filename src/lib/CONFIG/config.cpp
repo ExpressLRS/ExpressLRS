@@ -15,7 +15,7 @@ void BindphraseConfigurable::SetBindPhrase(uint8_t *phrase, size_t phraseLen)
 {
     constexpr uint8_t BIND_KEY[] = "-DMY_BINDING_PHRASE=\"";
 
-    uint8_t UID_md5[16] = {0};
+    uint8_t UID_md5[16] {};
     // A blank binding phrase will just use the UID_md5 set to all zeroes, which is unbound
     if (phraseLen)
     {

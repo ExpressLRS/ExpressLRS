@@ -50,9 +50,6 @@ protected:
     void sendELRSstatus(crsf_addr_e origin);
 
 private:
-    bool armCmd = false; // Arm command from handset either via ch5 or arm message
-    bool lastArmCmd = false;
-
     char luaBadGoodString[10] {};
     uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 

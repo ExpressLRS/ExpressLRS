@@ -13,9 +13,9 @@
 static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
 static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet stuct is invalid!");
 
-uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
+uint8_t UID[UID_LEN] {};  // "bind phrase" ID
 elrsLinkStatistics_t linkStats {};
-bool isArmed;       // global arming status for other functions
+bool isArmed = false;       // global arming status for other functions
 bool OtaIsFullRes;
 volatile uint8_t OtaNonce;
 uint16_t OtaCrcInitializer;

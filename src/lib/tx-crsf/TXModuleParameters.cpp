@@ -897,8 +897,8 @@ void TXModuleEndpoint::registerParameters()
           mspPacket_t msp;
           msp.reset();
           msp.makeCommand();
-          msp.function = MSP_SET_RX_CONFIG;
-          msp.addByte((uint8_t)MSP_ELRS_RX_CONFIG::MODEL_ID);
+          msp.function = MSP_ELRS_RXTX_CONFIG;
+          msp.addByte((uint8_t)MSP_ELRS_RXTX_CONFIG_SUBCMD::MODEL_ID);
           msp.addByte(newModelMatch ? modelId : 0xff);
           crsfRouter.AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
         }
