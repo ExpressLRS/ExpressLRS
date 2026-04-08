@@ -12,6 +12,6 @@ public:
 protected:
     bool handleRxTxMessage(const crsf_header_t *message);
 
-    virtual void handleMspGetRxConfig(crsf_ext_header_t *extMessage);
-    virtual void handleMspSetRxConfig(crsf_ext_header_t *extMessage);
+    virtual void handleMspGetRxTxConfig(crsf_ext_header_t *extMessage);
+    virtual void handleMspSetRxTxConfig(crsf_ext_header_t *extMessage);
 };

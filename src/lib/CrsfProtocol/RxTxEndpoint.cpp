@@ -11,14 +11,14 @@ bool RxTxEndpoint::handleRxTxMessage(const crsf_header_t *message)
 {
     const auto extMessage = (crsf_ext_header_t *)message;
 
-    if (message->type == CRSF_FRAMETYPE_MSP_REQ && extMessage->payload[2] == MSP_RX_CONFIG)
+    if (message->type == CRSF_FRAMETYPE_MSP_REQ && extMessage->payload[2] == MSP_ELRS_RXTX_CONFIG)
     {
-        handleMspGetRxConfig(extMessage);
+        handleMspGetRxTxConfig(extMessage);
         return true;
     }
-    else if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_SET_RX_CONFIG)
+    if (message->type == CRSF_FRAMETYPE_MSP_WRITE && extMessage->payload[2] == MSP_ELRS_RXTX_CONFIG)
     {
-        handleMspSetRxConfig(extMessage);
+        handleMspSetRxTxConfig(extMessage);
         return true;
     }
 
@@ -26,19 +26,19 @@ bool RxTxEndpoint::handleRxTxMessage(const crsf_header_t *message)
 }
 
 /**
- * Handles MSP_RX_CONFIG command
+ * Handles MSP_ELRS_RXTX_CONFIG command
  */
-void RxTxEndpoint::handleMspGetRxConfig(crsf_ext_header_t *extMessage)
+void RxTxEndpoint::handleMspGetRxTxConfig(crsf_ext_header_t *extMessage)
 {
-    switch ((MSP_ELRS_RX_CONFIG)extMessage->payload[3])
+    switch ((MSP_ELRS_RXTX_CONFIG_SUBCMD)extMessage->payload[3])
     {
-        case MSP_ELRS_RX_CONFIG::UID:
+        case MSP_ELRS_RXTX_CONFIG_SUBCMD::UID:
             {
                 mspPacket_t msp;
                 msp.reset();
                 msp.makeResponse();
-                msp.function = MSP_RX_CONFIG;
-                msp.addByte((uint8_t)MSP_ELRS_RX_CONFIG::UID);
+                msp.function = MSP_ELRS_RXTX_CONFIG;
+                msp.addByte((uint8_t)MSP_ELRS_RXTX_CONFIG_SUBCMD::UID);
                 msp.addByte(UID[0]); msp.addByte(UID[1]); msp.addByte(UID[2]);
                 msp.addByte(UID[3]); msp.addByte(UID[4]); msp.addByte(UID[5]);
                 crsfRouter.AddMspMessage(&msp, extMessage->orig_addr, getDeviceId());
@@ -53,16 +53,16 @@ void RxTxEndpoint::handleMspGetRxConfig(crsf_ext_header_t *extMessage)
 /**
  * Handles MSP_SET_RX_CONFIG command
  */
-void RxTxEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
+void RxTxEndpoint::handleMspSetRxTxConfig(crsf_ext_header_t *extMessage)
 {
-    // Encapsulated MSP payload is 0x30, mspPayloadSize, command
-    // subtracting one for the subcommand in payload[3]
+    // Encapsulated MSP header is (0x30, mspPayloadSize, command)
+    // Subtract one from mspPayloadSize for the subcommand in payload[3]
     auto payloadLen = extMessage->payload[1] - 1;
     auto mspPayload = &extMessage->payload[4];
 
-    switch ((MSP_ELRS_RX_CONFIG)extMessage->payload[3])
+    switch ((MSP_ELRS_RXTX_CONFIG_SUBCMD)extMessage->payload[3])
     {
-        case MSP_ELRS_RX_CONFIG::UID:
+        case MSP_ELRS_RXTX_CONFIG_SUBCMD::UID:
             if (payloadLen > 5)
             {
                 //DBGLN("Set UID");
@@ -71,7 +71,7 @@ void RxTxEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
             }
             break;
 
-        case MSP_ELRS_RX_CONFIG::BIND_PHRASE:
+        case MSP_ELRS_RXTX_CONFIG_SUBCMD::BIND_PHRASE:
             // 0 len payload supported to clear binding
             #if defined(DEBUG_LOG)
             mspPayload[payloadLen] = 0; // will overwrite CRC
@@ -81,7 +81,7 @@ void RxTxEndpoint::handleMspSetRxConfig(crsf_ext_header_t *extMessage)
             scheduleRebootTime(200);
             break;
 
-        case MSP_ELRS_RX_CONFIG::MODEL_ID:
+        case MSP_ELRS_RXTX_CONFIG_SUBCMD::MODEL_ID:
             #if defined(TARGET_RX)
             if (payloadLen > 0)
             {
