@@ -38,8 +38,12 @@ function toHexArray(buf) {
   return lines.join(',\n')
 }
 
+function formatBytes(bytes) {
+  return `${bytes} bytes (${(bytes / 1024).toFixed(2)} KiB)`
+}
+
 function headerPreamble(generatedBy, dateStr) {
-  return `#pragma once\n#include <stddef.h>\n#include <stdint.h>\n#include <pgmspace.h>\n\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n// Represents one web asset (pre-compressed) stored in PROGMEM\ntypedef struct {\n  const char* path;\n  const char* content_type;\n  const unsigned char* data;\n  const size_t size;\n} WebAsset;\n`
+  return `#pragma once\n#include <stddef.h>\n#include <stdint.h>\n#include <pgmspace.h>\n\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n\ntypedef struct {\n  const char* path;\n  const char* content_type;\n  const unsigned char* data;\n  const size_t size;\n} WebAsset;\n`
 }
 
 function headerEpilogue() {
@@ -75,6 +79,7 @@ import { htmlFeatureBlocksPlugin } from './feature-blocks-plugin.js'
 
 function viteEsp32HeaderPlugin(options = {}) {
   const headerName = options.headerName || 'esp32_fs.h'
+  const headerOut = options.headerOut || null
   const includeMaps = options.includeMaps ?? false // whether to include source maps
 
   let outDir = 'dist'
@@ -111,9 +116,8 @@ function viteEsp32HeaderPlugin(options = {}) {
 
       const genBy = 'vite-esp32-header plugin'
       const when = new Date().toISOString()
-      let header = headerPreamble(genBy, when)
-
       const assetEntries = []
+      let totalCompressedBytes = 0
 
       for (const abs of files) {
         const rel = path.relative(distDir, abs).split(path.sep).join('/')
@@ -121,12 +125,25 @@ function viteEsp32HeaderPlugin(options = {}) {
         const id = toCIdentifier(rel)
         const data = await fs.readFile(abs)
         const compressed = Zopfli.gzipSync(data, { numiterations: 15 })
-        const hex = toHexArray(compressed)
+        totalCompressedBytes += compressed.length
         const contentType = guessContentType(rel)
-        header += `\n// ${webPath} (original ${data.length} bytes) -> compressed ${compressed.length} bytes\n`;
-        header += `static const unsigned char ${id}[] PROGMEM = {\n${hex}\n};\n`
-        header += `static const size_t ${id}_len = ${compressed.length};\n`
-        assetEntries.push({ webPath, id, contentType})
+        const hex = toHexArray(compressed)
+        assetEntries.push({ webPath, id, contentType, hex, originalBytes: data.length, compressedBytes: compressed.length })
+      }
+
+      let header = headerPreamble(genBy, when)
+      const outFile = headerOut
+        ? path.resolve(root, headerOut)
+        : path.join(distDir, headerName)
+      const artifactName = path.relative(root, outFile)
+
+      header += `\n// Artifact: ${artifactName}\n`
+      header += `// Total web asset payload: ${formatBytes(totalCompressedBytes)} across ${assetEntries.length} assets\n`
+
+      for (const entry of assetEntries) {
+        header += `\n// ${entry.webPath} (original ${entry.originalBytes} bytes) -> compressed ${entry.compressedBytes} bytes\n`
+        header += `static const unsigned char ${entry.id}[] PROGMEM = {\n${entry.hex}\n};\n`
+        header += `static const size_t ${entry.id}_len = ${entry.compressedBytes};\n`
       }
 
       header += '\n// File index for convenient iteration\n'
@@ -139,10 +156,12 @@ function viteEsp32HeaderPlugin(options = {}) {
       header += 'static const size_t WEB_ASSETS_COUNT = sizeof(WEB_ASSETS) / sizeof(WEB_ASSETS[0]);\n\n'
       header += headerEpilogue()
 
-      const outFile = path.join(distDir, headerName)
+      await fs.mkdir(path.dirname(outFile), { recursive: true })
       await fs.writeFile(outFile, header, 'utf8')
-      // eslint-disable-next-line no-console
-      console.log(`\n[${genBy}] Wrote ${path.relative(root, outFile)} with ${assetEntries.length} assets.`)
+      this.info(
+        `Wrote ${artifactName} with ${assetEntries.length} assets. ` +
+        `Total byte-array payload: ${formatBytes(totalCompressedBytes)}.`
+      )
     },
   }
 }
@@ -160,7 +179,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       htmlFeatureBlocksPlugin(env),
       minifyTemplateLiterals(),
-      viteEsp32HeaderPlugin(),
+      viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
       babel({
         babelConfig: {
           babelrc: false,
@@ -220,7 +239,6 @@ export default defineConfig(({ command, mode }) => {
           },
         },
       },
-      // Keep CSS separate; request was specifically about JS files
       cssCodeSplit: true,
       sourcemap: false,
     }
