@@ -324,14 +324,14 @@ const HARDWARE_SCHEMA = [
                 id: 'power_pdet_intercept',
                 label: 'Intercept',
                 type: 'float',
-                size: 20,
+                size: 10,
                 desc: 'Intercept and Slope are used together to calculate the dBm from the measured mV on the PDET pin'
             },
             {
                 id: 'power_pdet_slope',
                 label: 'Slope',
                 type: 'float',
-                size: 20,
+                size: 10,
                 desc: 'dBm = mV * slope + intercept, this is then used to adjust the actual output power accordingly'
             },
         ]

@@ -4,7 +4,7 @@ import '../assets/mui.js'
 import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
-import {_arrayInput, _intInput, _uintInput} from "../utils/libs.js";
+import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js";
 
 @customElement('hardware-layout')
 export class HardwareLayout extends LitElement {
@@ -85,6 +85,8 @@ export class HardwareLayout extends LitElement {
                     ${row.options?.map(opt => html`
                         <option value="${opt.value}">${opt.label}</option>`)}
                 </select>`
+            case 'float':
+                return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 10} maxlength=${row.size ?? 10} type="text" @keypress="${_floatInput}"/>`
             case 'int':
                 return html`<input id="${row.id}" name="${row.id}" size=${row.size ?? 3} maxlength=${row.size ?? 3} type="text" @keypress="${_intInput}"/>`
             case 'uint':
