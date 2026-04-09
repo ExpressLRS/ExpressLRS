@@ -228,24 +228,7 @@ export class App extends LitElement {
     async loadGeneralGroup() {
         if (this.generalGroupLoaded) return
         try {
-            const imports = [
-                import('./pages/binding-panel.js'),
-                import('./pages/wifi-panel.js'),
-                import('./pages/update-panel.js')
-            ]
-            // FEATURE:IS_TX
-            imports.push(import('./pages/tx-options-panel.js'))
-            // FEATURE:NOT IS_8285
-            imports.push(import('./pages/models-panel.js'))
-            // /FEATURE:NOT IS_8285
-            imports.push(import('./pages/buttons-panel.js'))
-            // /FEATURE:IS_TX
-            // FEATURE:NOT IS_TX
-            imports.push(import('./pages/rx-options-panel.js'))
-            imports.push(import('./pages/connections-panel.js'))
-            imports.push(import('./pages/serial-panel.js'))
-            // /FEATURE:NOT IS_TX
-            await Promise.all(imports)
+            await import('./page-groups/general-group.js')
         } finally {
             this.generalGroupLoaded = true
         }
@@ -254,14 +237,7 @@ export class App extends LitElement {
     async loadAdvancedGroup() {
         if (this.advancedGroupLoaded) return
         try {
-            const imports = [
-                import('./pages/hardware-layout.js'),
-                import('./pages/continuous-wave.js')
-            ]
-            // FEATURE:HAS_LR1121
-            imports.push(import('./pages/lr1121-updater.js'))
-            // /FEATURE:HAS_LR1121
-            await Promise.all(imports)
+            await import('./page-groups/advanced-group.js')
         } finally {
             this.advancedGroupLoaded = true
         }

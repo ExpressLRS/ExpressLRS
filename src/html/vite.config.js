@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
-import babel from 'vite-plugin-babel'
+import { transformAsync } from '@babel/core'
 import { promises as fs } from 'fs'
 import path from 'path'
 import Zopfli from 'node-zopfli-es'
@@ -42,7 +42,7 @@ function formatBytes(bytes) {
   return `${bytes} bytes (${(bytes / 1024).toFixed(2)} KiB)`
 }
 
-function headerPreamble(generatedBy, dateStr) {
+function headerPreamble() {
   return `#pragma once\n#include <stddef.h>\n#include <stdint.h>\n#include <pgmspace.h>\n\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n\ntypedef struct {\n  const char* path;\n  const char* content_type;\n  const unsigned char* data;\n  const size_t size;\n} WebAsset;\n`
 }
 
@@ -76,6 +76,35 @@ function guessContentType(filePath) {
 
 // HTML feature blocks plugin extracted to separate module
 import { htmlFeatureBlocksPlugin } from './feature-blocks-plugin.js'
+
+function babelDecoratorsPlugin() {
+  let root = process.cwd()
+
+  return {
+    name: 'babel-decorators',
+    configResolved(config) {
+      root = config.root || process.cwd()
+    },
+    async transform(code, id) {
+      const file = id.split('?')[0]
+      const normalized = file.split(path.sep).join('/')
+      const srcRoot = path.resolve(root, 'src').split(path.sep).join('/') + '/'
+
+      if (!normalized.startsWith(srcRoot) || !normalized.endsWith('.js')) {
+        return null
+      }
+
+      const result = await transformAsync(code, {
+        cwd: root,
+        root,
+        filename: file,
+        sourceMaps: true,
+      })
+
+      return result ? { code: result.code ?? code, map: result.map ?? null } : null
+    },
+  }
+}
 
 function viteEsp32HeaderPlugin(options = {}) {
   const headerName = options.headerName || 'esp32_fs.h'
@@ -131,7 +160,7 @@ function viteEsp32HeaderPlugin(options = {}) {
         assetEntries.push({ webPath, id, contentType, hex, originalBytes: data.length, compressedBytes: compressed.length })
       }
 
-      let header = headerPreamble(genBy, when)
+      let header = headerPreamble()
       const outFile = headerOut
         ? path.resolve(root, headerOut)
         : path.join(distDir, headerName)
@@ -180,16 +209,7 @@ export default defineConfig(({ command, mode }) => {
       htmlFeatureBlocksPlugin(env),
       minifyTemplateLiterals(),
       viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
-      babel({
-        babelConfig: {
-          babelrc: false,
-          configFile: false,
-          plugins: [
-            // Configure the decorators plugin with the desired version
-            ['@babel/plugin-proposal-decorators', { version: '2023-05' }],
-          ],
-        },
-      }),
+      babelDecoratorsPlugin(),
       ...(command === 'serve'
         ? [
             env.VITE_ELRS_PROXY_TARGET
@@ -198,11 +218,16 @@ export default defineConfig(({ command, mode }) => {
           ]
         : []),
     ],
+    optimizeDeps: {
+      rolldownOptions: {
+        plugins: [htmlFeatureBlocksPlugin(env)],
+      },
+    },
     esbuild: {
       legalComments: 'none'
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         input: {
           app: path.resolve(__dirname, 'index.html'),
         },
@@ -212,7 +237,6 @@ export default defineConfig(({ command, mode }) => {
           manualChunks(id) {
             const p = id.split('\\').join('/');
             const is = (name) => p.includes(`/src/pages/${name}.js`);
-            // Group General route modules
             if (
               is('binding-panel') ||
               is('wifi-panel') ||
@@ -226,7 +250,6 @@ export default defineConfig(({ command, mode }) => {
             ) {
               return 'general';
             }
-            // Group Advanced route modules
             if (
               is('hardware-layout') ||
               is('continuous-wave') ||
@@ -234,8 +257,7 @@ export default defineConfig(({ command, mode }) => {
             ) {
               return 'advanced';
             }
-            // Force everything else (including node_modules) into the main chunk
-            return 'main';
+            return undefined;
           },
         },
       },
