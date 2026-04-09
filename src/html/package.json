@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:tx": "VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true VITE_FEATURE_HAS_SUBGHZ=true vite",
-    "dev:rx": "vite",
+    "dev:rx": "VITE_FEATURE_IS_TX=false VITE_FEATURE_HAS_SX128X=true VITE_FEATURE_IS_8285=true vite",
     "clean": "rimraf dist",
     "build": "npm run clean && vite build",
     "build:lr1121-tx": "npm run clean && cross-env VITE_FEATURE_IS_TX=true VITE_FEATURE_HAS_LR1121=true vite build && shx cp dist/esp32_fs.h headers/web-lr1121-tx.h",
