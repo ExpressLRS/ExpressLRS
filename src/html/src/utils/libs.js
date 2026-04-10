@@ -1,7 +1,3 @@
-/* eslint-disable max-len */
-/* eslint-disable comma-dangle */
-/* eslint-disable require-jsdoc */
-
 // =========================================================
 
 import {html} from "lit";
