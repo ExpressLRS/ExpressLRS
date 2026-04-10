@@ -235,29 +235,15 @@ export default defineConfig(({ command, mode }) => {
           entryFileNames: 'assets/[name]-[hash].js',
           chunkFileNames: 'assets/[name]-[hash].js',
           manualChunks(id) {
-            const p = id.split('\\').join('/');
-            const is = (name) => p.includes(`/src/pages/${name}.js`);
+            const p = id.split('\\').join('/')
             if (
-              is('binding-panel') ||
-              is('wifi-panel') ||
-              is('update-panel') ||
-              is('tx-options-panel') ||
-              is('models-panel') ||
-              is('buttons-panel') ||
-              is('rx-options-panel') ||
-              is('connections-panel') ||
-              is('serial-panel')
+              (p.includes('/src/utils/') && !p.endsWith('/hardware-schema.js')) ||
+              p.endsWith('/src/components/filedrag.js') ||
+              p.endsWith('/src/assets/mui.js')
             ) {
-              return 'general';
+              return 'utils'
             }
-            if (
-              is('hardware-layout') ||
-              is('continuous-wave') ||
-              is('lr1121-updater')
-            ) {
-              return 'advanced';
-            }
-            return undefined;
+            return undefined
           },
         },
       },
