@@ -207,7 +207,10 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       htmlFeatureBlocksPlugin(env),
-      minifyTemplateLiterals(),
+      minifyTemplateLiterals({
+        include: ['src/**/*.js'],
+        exclude: ['node_modules/**'],
+      }),
       viteEsp32HeaderPlugin({ headerOut: env.ELRS_WEB_HEADER_OUT }),
       babelDecoratorsPlugin(),
       ...(command === 'serve'
