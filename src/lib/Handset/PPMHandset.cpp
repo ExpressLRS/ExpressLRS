@@ -56,7 +56,9 @@ void PPMHandset::handleInput()
             }
             channelCount++;
             const auto ppm = (item.duration0 + item.duration1) / RMT_TICKS_PER_US;
-            localChannelData[i] = fmap(constrain(ppm, 988, 2012), 988, 2012, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+            localChannelData[i] = fmap(constrain(ppm, US_CHANNEL_VALUE_STD_MIN, US_CHANNEL_VALUE_STD_MAX), 
+                                       US_CHANNEL_VALUE_STD_MIN, US_CHANNEL_VALUE_STD_MAX,
+                                       CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
         }
         numChannels = channelCount;
         vRingbufferReturnItem(rb, static_cast<void *>(items));
