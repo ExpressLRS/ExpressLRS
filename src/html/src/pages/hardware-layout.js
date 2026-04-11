@@ -1,6 +1,5 @@
 import {html, LitElement, nothing} from 'lit'
 import {customElement, state} from 'lit/decorators.js'
-import '../assets/mui.js'
 import {postWithFeedback, saveJSONWithReboot} from '../utils/feedback.js'
 import '../components/filedrag.js'
 import HARDWARE_SCHEMA from '../utils/hardware-schema.js'
@@ -27,8 +26,7 @@ export class HardwareLayout extends LitElement {
                     <file-drop id="filedrag" label="Upload" @file-drop=${this._onFileDrop}>or drop files here</file-drop>
                 </div>
                 <div class="mui-panel">
-                    <div class="mui-panel"
-                         style="display:${this.customised ? 'block' : 'none'}; background-color: #FFC107;">
+                    <div class="mui-panel warning-bg hardware-customised-warning" ?hidden="${!this.customised}">
                         This hardware configuration has been customized. This can be safely ignored if this is a custom hardware
                         build or for testing purposes.<br>
                         You can <a download href="/hardware.json">download</a> the configuration or
@@ -103,9 +101,13 @@ export class HardwareLayout extends LitElement {
         this._loadData()
     }
 
+    _field(id) {
+        return document.getElementById(id)
+    }
+
     _initTooltips() {
         const add = (cls, label) => {
-            const images = document.querySelectorAll('.' + cls)
+            const images = this.querySelectorAll('.' + cls)
             images.forEach(i => i.setAttribute('title', label))
         }
         add('icon-input', 'Digital Input')
@@ -130,7 +132,7 @@ export class HardwareLayout extends LitElement {
 
     _onFileDrop(e) {
         const files = e.detail.files
-        const form = document.getElementById('upload_hardware')
+        const form = this._field('upload_hardware')
         if (form) form.reset()
         for (const file of files) {
             const reader = new FileReader()
@@ -144,7 +146,7 @@ export class HardwareLayout extends LitElement {
 
     _updateHardwareSettings(data) {
         for (const [key, value] of Object.entries(data)) {
-            const el = document.getElementById(key)
+            const el = this._field(key)
             if (el) {
                 if (el.type === 'checkbox') {
                     el.checked = !!value
@@ -157,12 +159,12 @@ export class HardwareLayout extends LitElement {
     }
 
     _submitConfig() {
-        const form = document.getElementById('upload_hardware')
+        const form = this._field('upload_hardware')
         const formData = new FormData(form)
         // rebuild using original serializer logic
         const body = JSON.stringify(Object.fromEntries(formData), (k, v) => {
             if (v === '') return undefined
-            const el = document.getElementById(k)
+            const el = this._field(k)
             if (el && el.type === 'checkbox') {
                 return v === 'on'
             }

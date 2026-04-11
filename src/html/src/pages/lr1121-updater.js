@@ -1,8 +1,8 @@
 import {html, LitElement} from 'lit'
 import {customElement, query, state} from 'lit/decorators.js'
-import '../assets/mui.js'
 import '../components/filedrag.js'
 import {cuteAlert, postWithFeedback} from "../utils/feedback.js"
+import {overlay} from '../utils/overlay.js'
 
 @customElement('lr1121-updater')
 export class LR1121Updater extends LitElement {
@@ -126,7 +126,7 @@ export class LR1121Updater extends LitElement {
     _uploadFile(file) {
         try {
             // Show overlay
-            mui.overlay('on', {keyboard: false, static: true})
+            overlay('on', {keyboard: false, static: true})
             const ajax = new XMLHttpRequest()
             ajax.upload.addEventListener('progress', (event) => this._progressHandler(event), false)
             ajax.addEventListener('load', (event) => this._completeHandler(event), false)
@@ -141,7 +141,7 @@ export class LR1121Updater extends LitElement {
             ajax.send(formdata)
         } catch (e) {
             this._resetProgress()
-            mui.overlay('off')
+            overlay('off')
         }
     }
 
@@ -188,7 +188,7 @@ export class LR1121Updater extends LitElement {
     _showAlert(type, title, message) {
         this._resetProgress()
         try {
-            mui.overlay('off')
+            overlay('off')
         } catch (e) {
         }
         return cuteAlert({type, title, message})

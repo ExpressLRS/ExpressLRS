@@ -10,7 +10,7 @@ export class ElrsFooter extends LitElement {
     render() {
         return html`
             <footer id="footer" class="elrs-header">
-                <div style="align-items: center; display: flex; justify-content: space-around">
+                <div class="elrs-footer-links">
                     <a href="https://github.com/ExpressLRS/ExpressLRS">
                         <svg width="24" xmlns="http://www.w3.org/2000/svg" aria-label="GitHub" viewBox="0 0 512 512">
                             <rect width="512" height="512" rx="15%" fill="#181717"/>

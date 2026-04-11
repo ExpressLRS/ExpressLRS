@@ -1,6 +1,5 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
-import '../assets/mui.js'
 import {_renderOptions} from "../utils/libs.js"
 import {elrsState, saveOptionsAndConfig} from "../utils/state.js"
 import {PWM_MODE_SERIAL, PWM_MODE_SERIAL2RX, PWM_MODE_SERIAL2TX} from "./connections-panel.js";

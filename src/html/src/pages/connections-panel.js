@@ -1,6 +1,5 @@
 import {html, LitElement} from "lit";
 import {customElement} from "lit/decorators.js";
-import '../assets/mui.js';
 import {elrsState, saveConfig} from "../utils/state.js";
 import {_} from "../utils/libs.js";
 import {postWithFeedback} from "../utils/feedback.js";
@@ -43,7 +42,7 @@ class ConnectionsPanel extends LitElement {
             <div class="connections-panel-root">
                 <div class="mui-panel mui--text-title">PWM Pin Functions</div>
                 <div class="mui-panel warning-bg connections-mobile-warning">
-                    <div class="mui--text-title" style="margin-bottom: 8px;">Rotate to landscape</div>
+                    <div class="mui--text-title connections-mobile-title">Rotate to landscape</div>
                     <p>
                         The connections panel is too wide for small screens in portrait mode. Please rotate your device to
                         landscape mode to view and edit the settings.
@@ -83,12 +82,12 @@ class ConnectionsPanel extends LitElement {
                         </li>
                         <li><b>Mode:</b> Output frequency, 10KHz 0-100% duty cycle, binary On/Off, DShot, Serial, or I2C
                             (some options are pin dependant)
+                            <ul>
+                                <li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART
+                                    baud</b> on the <b><a href="#serial">Serial</a></b> page in the menu
+                                </li>
+                            </ul>
                         </li>
-                        <ul>
-                            <li>When enabling serial pins, be sure to select the <b>Serial Protocol</b> below and <b>UART
-                                baud</b> on the <b><a href="#serial">Serial</a></b> page in the menu
-                            </li>
-                        </ul>
                         <li><b>Input:</b> Input channel from the handset</li>
                         <li><b>Invert:</b> Invert input channel position</li>
                         <li><b>Stretch:</b> Stretch pulse width from mode limits to 500-2500us</li>

@@ -6,6 +6,37 @@
     background-image: linear-gradient(45deg, #9dc66b 5%, #4fa49a 30%, #4361c2);
 }
 
+.elrs-brand {
+    padding-top: 16px;
+}
+
+.elrs-brand-title {
+    padding-bottom: 16px;
+}
+
+.elrs-header-bar {
+    align-items: center;
+    display: flex;
+}
+
+.elrs-header-menu {
+    padding-left: 16px;
+}
+
+.elrs-header-meta {
+    padding-left: 15px;
+}
+
+.elrs-footer-links {
+    align-items: center;
+    display: flex;
+    justify-content: space-around;
+}
+
+.connections-mobile-title {
+    margin-bottom: 8px;
+}
+
 .upload > label > input {
 	clip: rect(0 0 0 0);
 	clip-path: inset(50%);

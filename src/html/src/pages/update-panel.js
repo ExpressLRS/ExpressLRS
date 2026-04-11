@@ -1,6 +1,5 @@
 import {html, LitElement} from "lit"
 import {customElement, state} from "lit/decorators.js"
-import '../assets/mui.js'
 import '../components/filedrag.js'
 import {cuteAlert} from "../utils/feedback.js"
 

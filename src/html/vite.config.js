@@ -241,8 +241,7 @@ export default defineConfig(({ command, mode }) => {
             const p = id.split('\\').join('/')
             if (
               (p.includes('/src/utils/') && !p.endsWith('/hardware-schema.js')) ||
-              p.endsWith('/src/components/filedrag.js') ||
-              p.endsWith('/src/assets/mui.js')
+              p.endsWith('/src/components/filedrag.js')
             ) {
               return 'utils'
             }
