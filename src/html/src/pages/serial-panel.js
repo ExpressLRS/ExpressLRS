@@ -98,11 +98,19 @@ class SerialPanel extends LitElement {
             </div>
             `: html`
             <div class="mui-panel info-bg">
-                This is a PWM receiver and none of the pins have been configured as serial IO pins.<br>
-                To enable serial IO, go to the <a href="#connections">connections</a> menu and configure one or more pins as Serial RX or TX.
+                ${this._canConfigureSerialOnPwm() || elrsState.settings.has_serial_pins ? 
+                    html`This is a PWM receiver and none of the pins have been configured as serial IO pins.<br>
+                    To enable serial IO, go to the <a href="#connections">connections</a> menu and configure one or more pins as Serial RX, Serial TX, Serial2 RX, or Serial2 TX.
+                    ` : html`This receiver does not have any serial-capable PWM pins available.`
+                }
             </div>
             `}
         `
+    }
+
+    _canConfigureSerialOnPwm() {
+        if (!elrsState.config['pwm']) return false
+        return elrsState.config.pwm.some((pwm) => (pwm.features & (3 | 96)) !== 0)
     }
 
     _hasSerial1() {
@@ -111,7 +119,7 @@ class SerialPanel extends LitElement {
         // If a PWM pin is defined as serial, then it should be enabled
         for(const pwm of elrsState.config.pwm) {
             const mode = (pwm.config >> 16) & 0xF
-            if (mode === PWM_MODE_SERIAL)
+            if (mode === PWM_MODE_SERIAL && (pwm.features & 3) !== 0)
                 return true
         }
         // If any of the PWM pins are defined to support serial (but it's not selected) then disabled serial
@@ -129,7 +137,7 @@ class SerialPanel extends LitElement {
         }
         for(const pwm of elrsState.config.pwm) {
             const mode = (pwm.config >> 16) & 15
-            if (mode === PWM_MODE_SERIAL2RX || mode === PWM_MODE_SERIAL2TX)
+            if ((mode === PWM_MODE_SERIAL2RX || mode === PWM_MODE_SERIAL2TX) && (pwm.features & 96) !== 0)
                 return true
         }
         return false
