@@ -1273,7 +1273,7 @@ RxConfig::SetDefaults(bool commit)
     {
         uint8_t mode = som50Hz;
         // setup defaults for hardware-defined I2C & Serial pins that are also IO pins
-        if (ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
+        if (!OPT_PWM_OUT_ONLY && ch < GPIO_PIN_PWM_OUTPUTS_COUNT)
         {
             if (GPIO_PIN_PWM_OUTPUTS[ch] == GPIO_PIN_SCL)
             {

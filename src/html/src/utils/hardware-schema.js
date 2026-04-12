@@ -709,11 +709,18 @@ const HARDWARE_SCHEMA = [
         title: 'PWM', rows: [
             {
                 id: 'pwm_outputs',
-                label: 'PWM output pins',
+                label: 'PWM pins',
                 type: 'array',
                 size: 40,
                 icon: 'pwm',
-                desc: 'Comma-separated list of pins used for PWM output'
+                desc: 'Comma-separated list of pins used for PWM (and other I/O features)'
+            },
+            {
+                id: 'pwm_out_only',
+                label: 'PWM pins are output-only',
+                type: 'checkbox',
+                icon: null,
+                desc: 'Enable this when the PWM pins are behind output-only buffers such as Schmitt triggers. Input or bidirectional functions like Serial and I2C will be disabled on PWM pins.'
             },
         ]
     },
