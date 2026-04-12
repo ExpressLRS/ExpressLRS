@@ -14,8 +14,6 @@
 #endif
 
 #define VBAT_MIN_CRSFRATE 5000      // send VBat telemetry on change but at least every 5000ms
-static uint32_t lastVBatSentMs = 0; // last time VBat was sent
-static int32_t lastVBatValue = 0;   // last measured VBat value
 
 typedef uint16_t voltageAnalogStorage_t;
 #if defined(PLATFORM_ESP8266)
@@ -148,7 +146,9 @@ static int start()
 static void reportVbat()
 {
     int32_t sourceMilliVolts[VOLTAGE_SOURCE_COUNT] = {0};
-    int32_t batterySensorMv = -1;
+    static int32_t lastSourceMilliVolts[VOLTAGE_SOURCE_COUNT] = {0};
+    static uint32_t lastTelemSentMs = 0;
+    bool triggerPacket = false;
 
     for (uint8_t sourceIdx = 0; sourceIdx < VOLTAGE_SOURCE_COUNT; ++sourceIdx)
     {
@@ -158,30 +158,28 @@ static void reportVbat()
         if (sourceHasReading(sourceIdx))
         {
             sourceMilliVolts[sourceIdx] = adcToMilliVolts(sourceIdx, readSmoothedAdc(sourceIdx));
+
+            if (sourceMilliVolts[sourceIdx] != lastSourceMilliVolts[sourceIdx])
+            {
+                lastSourceMilliVolts[sourceIdx] = sourceMilliVolts[sourceIdx];
+
+                triggerPacket = true;
+            }
         }
-
-        if (batterySensorMv < 0 && sourceHasReading(sourceIdx))
-            batterySensorMv = sourceMilliVolts[sourceIdx];
-    }
-
-    if (batterySensorMv < 0)
-    {
-        lastVBatValue = 0;
-        return;
     }
 
     uint32_t now = millis();
 
     // send packet only if min rate timer expired or VBat value has changed
-    if ((now - lastVBatSentMs >= VBAT_MIN_CRSFRATE) || (batterySensorMv != lastVBatValue))
+    if (triggerPacket || (now - lastTelemSentMs >= VBAT_MIN_CRSFRATE))
     {
         // send battery packets (0x08) only if no external decive is sending 0x08 packets
         if (!crsfBatterySensorDetected)
         {
             // CRSF_FRAMETYPE_BATTERY (0x08)
             CRSF_MK_FRAME_T(crsf_sensor_battery_t) crsfbatt = { 0 };
-            crsfbatt.p.voltage = htobe16((uint16_t)batterySensorMv / 100); // 100mV resolution, BigEndian
-                                                                           // No values for current, capacity, or remaining available
+            crsfbatt.p.voltage = htobe16((uint16_t)sourceMilliVolts[0] / 100); // 100mV resolution, BigEndian
+                                                                                   // No values for current, capacity, or remaining available
             crsfRouter.SetHeaderAndCrc(&crsfbatt.h, CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_FRAME_SIZE(sizeof(crsf_sensor_battery_t)));
             crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfbatt.h);
         }
@@ -205,10 +203,10 @@ static void reportVbat()
             crsfRouter.deliverMessageTo(CRSF_ADDRESS_RADIO_TRANSMITTER, &crsfcells.h);
         }
 
-        lastVBatSentMs = now;
-    }
+        triggerPacket = false;
 
-    lastVBatValue = batterySensorMv;
+        lastTelemSentMs = now;
+    }
 }
 
 static int timeout()
