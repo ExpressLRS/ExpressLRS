@@ -9,10 +9,13 @@ import {_arrayInput, _floatInput, _intInput, _uintInput} from "../utils/libs.js"
 export class HardwareLayout extends LitElement {
 
     @state() accessor customised = false
+    @state() accessor loadedHardwareJson = null
+    @state() accessor currentHardwareJson = '{}'
 
     static SCHEMA = HARDWARE_SCHEMA
 
     createRenderRoot() {
+        this._onFormEdited = this._onFormEdited.bind(this)
         return this
     }
 
@@ -33,11 +36,14 @@ export class HardwareLayout extends LitElement {
                         <a href="/reset?hardware" @click="${postWithFeedback('Hardware Configuration Reset', 'Reset failed', '/reset?hardware')}">reset</a>
                         to pre-configured defaults and reboot.
                     </div>
-                    <form id="upload_hardware" class="mui-form">
+                    <form id="upload_hardware" class="mui-form"
+                          @input=${this._onFormEdited}
+                          @change=${this._onFormEdited}>
                         ${this._renderTable()}
                         <br>
                         <input type="button" name="_ignore" value="Save Target Configuration"
-                               class="mui-btn mui-btn--primary" @click=${this._submitConfig} />
+                               class="mui-btn mui-btn--primary" @click=${this._submitConfig}
+                               ?disabled=${this._isSaveDisabled()} />
                     </form>
                 </div>
             </div>
@@ -123,6 +129,7 @@ export class HardwareLayout extends LitElement {
                 const data = JSON.parse(xmlhttp.responseText)
                 this.customised = !!data.customised
                 this._updateHardwareSettings(data)
+                this.loadedHardwareJson = this.currentHardwareJson
             }
         }
         xmlhttp.open('GET', '/hardware.json', true)
@@ -156,13 +163,27 @@ export class HardwareLayout extends LitElement {
                 }
             }
         }
+        this.currentHardwareJson = this._serializeCurrentConfig()
     }
 
     _submitConfig() {
+        const body = this.currentHardwareJson
+        // Use shared helper that prompts for reboot on success
+        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', {...JSON.parse(body), "customised": true}, () => {
+            this.loadedHardwareJson = body
+        })
+        return false
+    }
+
+    _onFormEdited() {
+        this.currentHardwareJson = this._serializeCurrentConfig()
+    }
+
+    _serializeCurrentConfig() {
         const form = this._field('upload_hardware')
+        if (!form) return '{}'
         const formData = new FormData(form)
-        // rebuild using original serializer logic
-        const body = JSON.stringify(Object.fromEntries(formData), (k, v) => {
+        return JSON.stringify(Object.fromEntries(formData), (k, v) => {
             if (v === '') return undefined
             const el = this._field(k)
             if (el && el.type === 'checkbox') {
@@ -174,8 +195,10 @@ export class HardwareLayout extends LitElement {
             }
             return isNaN(v) ? v : +v
         })
-        // Use shared helper that prompts for reboot on success
-        saveJSONWithReboot('Upload Succeeded', 'Upload Failed', '/hardware.json', {...JSON.parse(body), "customised": true})
-        return false
+    }
+
+    _isSaveDisabled() {
+        if (this.loadedHardwareJson === null) return true
+        return this.currentHardwareJson === this.loadedHardwareJson
     }
 }
