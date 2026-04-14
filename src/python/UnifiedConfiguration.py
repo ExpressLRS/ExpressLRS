@@ -102,7 +102,7 @@ def setDefaultProductForTarget(target_name: str, product_name: str) -> None:
         return
 
     # remove the "_via_WIFI" etc method
-    target_wo_method = re.sub('_VIA_.*', '', target_name.upper())
+    target_wo_method = re.sub('_via_.*', '', target_name)
     data = {}
     try:
         with open('.pio/default_target_config.json', 'r') as f:
@@ -119,7 +119,7 @@ def setDefaultProductForTarget(target_name: str, product_name: str) -> None:
 # so there will not be a default on future runs. Used in "clean" operation
 def clearDefaultProductForTarget(target_name: str) -> None:
     # remove the "_via_WIFI" etc method
-    target_wo_method = re.sub('_VIA_.*', '', target_name.upper())
+    target_wo_method = re.sub('_via_.*', '', target_name)
     data = {}
     try:
         with open('.pio/default_target_config.json', 'r') as f:
@@ -145,19 +145,13 @@ def is_pio_upload():
     except Exception:
         return False
 
-def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, frequency: str, platform: str) -> dict:
+def interactiveProductSelect(targets: dict, target_name: str) -> dict:
     products = []
-    for k in jmespath.search(f'[*."{moduletype}_{frequency}".*][][?platform==`{platform}`][]', targets):
+    target_wo_method = re.sub('_via_.*', '', target_name)
+    for k in jmespath.search(f'*.*.*[][]|[?firmware==`{target_wo_method}`]', targets):
         products.append(k)
-    if frequency == 'dual':
-        for k in jmespath.search(f'[*."{moduletype}_2400".*][][?platform==`{platform}`][]', targets):
-            if '_LR1121_' in k['firmware']:
-                products.append(k)
-        for k in jmespath.search(f'[*."{moduletype}_900".*][][?platform==`{platform}`][]', targets):
-            if '_LR1121_' in k['firmware']:
-                products.append(k)
 
-    if not products:
+    if len(products) == 0:
         return None
 
     # Sort the list by product name, case insensitive, and print the list
@@ -190,7 +184,7 @@ def interactiveProductSelect(targets: dict, target_name: str, moduletype: str, f
 
     return config
 
-def doConfiguration(file, defines, config, target_name, moduletype, frequency, platform, device_name, rx_as_tx):
+def doConfiguration(file, defines, config, target_name, device_name, rx_as_tx):
     product_name = "Unified"
     lua_name = "Unified"
     layout = None
@@ -207,47 +201,29 @@ def doConfiguration(file, defines, config, target_name, moduletype, frequency, p
         print('The current compile options (user defines) have been included.')
         print('You will be able to configure the hardware via the web UI on the device.')
     else:
-        config = interactiveProductSelect(targets, target_name, moduletype, frequency, platform)
+        config = interactiveProductSelect(targets, target_name)
 
     if config is not None:
         product_name = config['product_name']
         setDefaultProductForTarget(target_name, product_name)
         lua_name = config['lua_name']
-        dir = 'TX' if moduletype == 'tx' else 'RX'
+        dir = 'TX' if '_TX' in config['firmware'] else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
     lua_name = lua_name if device_name is None else device_name
     appendToFirmware(file, product_name, lua_name, defines, config, layout, rx_as_tx)
 
 def appendConfiguration(source, target, env):
-    target_name = env.get('PIOENV', '').upper()
+    target_name = env.get('PIOENV', '')
     device_name = env.get('DEVICE_NAME', None)
     config = env.GetProjectOption('board_config', None)
-    if 'UNIFIED_' not in target_name and config is None:
+    if 'Unified_' not in target_name and config is None:
         return
-
-    moduletype = ''
-    frequency = ''
-    if config is not None:
-        moduletype = 'tx' if '.tx_' in config else 'rx'
-        frequency = '2400' if '_2400.' in config else '900' if '_900.' in config else 'dual'
-    else:
-        moduletype = 'tx' if '_TX_' in target_name else 'rx'
-        frequency = '2400' if '_2400_' in target_name else '900' if '_900_' in target_name else 'dual'
-
-    if env.get('PIOPLATFORM', '') == 'espressif32':
-        platform = 'esp32'
-        if 'esp32-s3' in env.get('BOARD', ''):
-            platform = 'esp32-s3'
-        elif 'esp32-c3' in env.get('BOARD', ''):
-            platform = 'esp32-c3'
-    else:
-        platform = 'esp8285'
 
     defines = json.JSONEncoder().encode(env['OPTIONS_JSON'])
 
     with open(str(target[0]), "r+b") as firmware_file:
-        doConfiguration(firmware_file, defines, config, target_name, moduletype, frequency, platform, device_name, None)
+        doConfiguration(firmware_file, defines, config, target_name, device_name, None)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Configure Unified Firmware")
@@ -262,15 +238,13 @@ if __name__ == '__main__':
     with open('hardware/targets.json') as f:
         targets = json.load(f)
 
-    moduletype = 'tx' if '.tx_' in args.target else 'rx'
-
     config ='.'.join(map(lambda s: f'"{s}"', args.target.split('.')))
     config = jmespath.search(config, targets)
 
     if config is not None:
         product_name = config['product_name']
         lua_name = config['lua_name']
-        dir = 'TX' if moduletype == 'tx' else 'RX'
+        dir = 'TX' if '_TX' in config['firmware'] else 'RX'
         layout = f"hardware/{dir}/{config['layout_file']}"
 
     appendToFirmware(args.file, product_name, lua_name, args.options, config, layout, None)
