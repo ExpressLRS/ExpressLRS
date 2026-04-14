@@ -449,27 +449,15 @@ void TXModuleEndpoint::updateTlmBandwidth()
 
 void TXModuleEndpoint::updateBackpackOpts()
 {
-  if (config.GetBackpackDisable())
-  {
-    // If backpack is disabled, set all the Backpack select options to "Disabled"
-    LUA_FIELD_HIDE(luaDvrAux);
-    LUA_FIELD_HIDE(luaDvrStartDelay);
-    LUA_FIELD_HIDE(luaDvrStopDelay);
-    LUA_FIELD_HIDE(luaHeadTrackingEnableChannel);
-    LUA_FIELD_HIDE(luaHeadTrackingStartChannel);
-    LUA_FIELD_HIDE(luaBackpackTelemetry);
-    LUA_FIELD_HIDE(luaBackpackVersion);
-  }
-  else
-  {
-    LUA_FIELD_SHOW(luaDvrAux);
-    LUA_FIELD_SHOW(luaDvrStartDelay);
-    LUA_FIELD_SHOW(luaDvrStopDelay);
-    LUA_FIELD_SHOW(luaHeadTrackingEnableChannel);
-    LUA_FIELD_SHOW(luaHeadTrackingStartChannel);
-    LUA_FIELD_SHOW(luaBackpackTelemetry);
-    LUA_FIELD_SHOW(luaBackpackVersion);
-  }
+  const bool isBackpackEnabled = config.GetBackpackDisable() == false;
+
+  LUA_FIELD_VISIBLE(luaDvrAux, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaDvrStartDelay, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaDvrStopDelay, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaHeadTrackingEnableChannel, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaHeadTrackingStartChannel, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaBackpackTelemetry, isBackpackEnabled);
+  LUA_FIELD_VISIBLE(luaBackpackVersion, isBackpackEnabled);
 }
 
 void TXModuleEndpoint::updateVtxAdminOpts()
