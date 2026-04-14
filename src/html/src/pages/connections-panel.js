@@ -15,6 +15,7 @@ class ConnectionsPanel extends LitElement {
     pinTxIndex = undefined
 
     createRenderRoot() {
+        this._onFormEdited = this._onFormEdited.bind(this)
         return this
     }
 
@@ -50,7 +51,7 @@ class ConnectionsPanel extends LitElement {
                 </div>
                 <div class="mui-panel connections-panel">
                     Set PWM output mode and failsafe positions.
-                    <form>
+                    <form @input=${this._onFormEdited} @change=${this._onFormEdited}>
                         <div class="mui-panel pwmpnl">
                             <table class="pwmtbl mui-table">
                                 <thead>
@@ -64,7 +65,9 @@ class ConnectionsPanel extends LitElement {
                             </table>
                         </div>
                         <div>
-                            <button class="mui-btn mui-btn--small mui-btn--primary" @click="${this._savePwmConfig}">Save</button>
+                            <button class="mui-btn mui-btn--small mui-btn--primary"
+                                    ?disabled=${!this.checkChanged()}
+                                    @click="${this._savePwmConfig}">Save</button>
                             ${elrsState.options.customised ? html`
                                 <button class="mui-btn mui-btn--small mui-btn--danger mui--pull-right"
                                         @click="${postWithFeedback('Reset PWM Configuration', 'An error occurred resetting the configuration', '/reset?config', null)}"
@@ -285,7 +288,11 @@ class ConnectionsPanel extends LitElement {
         }
     }
 
-    _getPwmFormData() {
+    _onFormEdited() {
+        this.requestUpdate()
+    }
+
+    _getPwmFormData(normalizeFields = false) {
         let ch = 0
         let inField
         const outData = []
@@ -299,7 +306,7 @@ class ConnectionsPanel extends LitElement {
             let failsafe = failsafeField.value
             if (failsafe > 2523) failsafe = 2523;
             if (failsafe < 476) failsafe = 476;
-            failsafeField.value = failsafe
+            if (normalizeFields) failsafeField.value = failsafe
             let failsafeMode = failsafeModeField.value
 
             const raw = (failsafeMode << 22) | (stretch << 20) | (mode << 16) | (invert << 15) | (inChannel << 11) | (failsafe - 476)
@@ -312,8 +319,8 @@ class ConnectionsPanel extends LitElement {
 
     _savePwmConfig(e) {
         e.preventDefault();
-        const data = this._getPwmFormData()
-        saveConfig({'pwm': data})
+        const data = this._getPwmFormData(true)
+        saveConfig({'pwm': data}, () => this.requestUpdate())
     }
 
     checkChanged() {
