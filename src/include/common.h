@@ -155,7 +155,7 @@ typedef struct expresslrs_rf_pref_params_s
 typedef struct expresslrs_mod_settings_s
 {
     uint8_t index;
-    radio_band_modulation_t radio_type;
+    RadioBandMod::Combined radio_type;
     expresslrs_RFrates_e enum_rate;
     uint8_t bw;
     uint8_t sf;

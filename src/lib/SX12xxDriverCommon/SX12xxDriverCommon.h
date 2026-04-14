@@ -12,36 +12,41 @@ enum
     SX12XX_Radio_All  = 0b00000011      // bit mask for both radios
 };
 
-typedef enum {
-    RADIO_BAND_900 = 0,
-    RADIO_BAND_2G4 = 1,
-    RADIO_BAND_DUAL = 2,
-} radio_band_t;
+namespace RadioBandMod {
+    static constexpr uint8_t MOD_SHIFT = 4;
+    static constexpr uint8_t BAND_MASK = (1 << MOD_SHIFT) - 1; // 0x0F
+    static constexpr uint8_t MOD_MASK  = ~BAND_MASK;           // 0xF0
 
-typedef enum {
-    RADIO_MOD_LORA = 0 << 4,
-    RADIO_MOD_FLRC = 1 << 4,
-    RADIO_MOD_GFSK = 2 << 4,
-} radio_modulation_t;
+    enum Band : uint8_t { B900 = 0, B2G4 = 1, BDUAL = 2 };
+    enum Modulation : uint8_t { LORA = 0, FLRC = 1, GFSK = 2 };
 
-#define RADIO_MOD_MASK 0xF0
-#define RADIO_BAND_MASK 0x0F
+    static constexpr uint8_t pack(Modulation m, Band b) {
+        return (static_cast<uint8_t>(m) << MOD_SHIFT) | static_cast<uint8_t>(b);
+    }
 
-typedef enum {
-    RADIO_MODULATION_LORA_900 = RADIO_MOD_LORA + RADIO_BAND_900,
-    RADIO_MODULATION_LORA_2G4 = RADIO_MOD_LORA + RADIO_BAND_2G4,
-    RADIO_MODULATION_LORA_DUAL = RADIO_MOD_LORA + RADIO_BAND_DUAL,
+    static constexpr Modulation getModulation(uint8_t t)  { return static_cast<Modulation>((t & MOD_MASK) >> MOD_SHIFT); }
+    static constexpr Band getBand(uint8_t t) { return static_cast<Band>(t & BAND_MASK); }
 
-    RADIO_MODULATION_FLRC_900 = RADIO_MOD_FLRC + RADIO_BAND_900,
-    RADIO_MODULATION_FLRC_2G4 = RADIO_MOD_FLRC + RADIO_BAND_2G4,
+    enum Combined : uint8_t {
+        LORA_900  = pack(LORA, B900),
+        LORA_2G4  = pack(LORA, B2G4),
+        LORA_DUAL = pack(LORA, BDUAL),
+        FLRC_900  = pack(FLRC, B900),
+        FLRC_2G4  = pack(FLRC, B2G4),
+        GFSK_900  = pack(GFSK, B900),
+        GFSK_2G4  = pack(GFSK, B2G4),
+    };
 
-    RADIO_MODULATION_GFSK_900 = RADIO_MOD_GFSK + RADIO_BAND_900,
-    RADIO_MODULATION_GFSK_2G4 = RADIO_MOD_GFSK + RADIO_BAND_2G4,
-} radio_band_modulation_t;
+    // uint8_t used here as common type to allow Band, Modulation, or Combined to be passed
+    static constexpr bool isLoRa(uint8_t t) { return getModulation(t) == LORA; }
+    static constexpr bool isFLRC(uint8_t t) { return getModulation(t) == FLRC; }
+    static constexpr bool isGFSK(uint8_t t) { return getModulation(t) == GFSK; }
 
-inline bool isLoRaModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_LORA; }
-inline bool isFLRCModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_FLRC; }
-inline bool isGFSKModulation(const radio_band_modulation_t modulation) { return (modulation & RADIO_MOD_MASK) == RADIO_MOD_GFSK; }
+    static constexpr bool isB900(uint8_t t) { return getBand(t) == B900; }
+    static constexpr bool isB2G4(uint8_t t) { return getBand(t) == B2G4; }
+    static constexpr bool isBDUAL(uint8_t t) { return getBand(t) == BDUAL; }
+    static constexpr bool isSameBand(uint8_t a, uint8_t b) { return getBand(a) == getBand(b); }
+}
 
 class SX12xxDriverCommon
 {
