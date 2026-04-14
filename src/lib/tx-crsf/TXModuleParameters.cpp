@@ -541,7 +541,11 @@ void TXModuleEndpoint::handleSimpleSendCmd(propertiesCommon *item, uint8_t arg)
     }
     else if ((void *)item == (void *)&luaVtxSend)
     {
-      VtxTriggerSend();
+      // If VtxAdmin enabled then send, otherwise show brief "Not enabled" message
+      if (config.GetVtxBand() != 0)
+        VtxTriggerSend();
+      else
+        msg = "Not enabled";
     }
     else if ((void *)item == (void *)&luaRxWebUpdate)
     {
