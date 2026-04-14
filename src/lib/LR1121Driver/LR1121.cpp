@@ -193,7 +193,7 @@ void LR1121Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
 
     // 8.1.1 SetPacketType
     uint8_t buf = RadioBandMod::isGFSK(modulation) ? LR11XX_RADIO_PKT_TYPE_GFSK : LR11XX_RADIO_PKT_TYPE_LORA;
-    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, &buf, 1, radioNumber);
+    hal.WriteCommand(LR11XX_RADIO_SET_PKT_TYPE_OC, &buf, sizeof(buf), radioNumber);
 
     codec = &copyCodec;
     if (RadioBandMod::isGFSK(modulation))
