@@ -8,6 +8,15 @@
 #define SBUS_FLAG_SIGNAL_LOSS     (1 << 2)
 #define SBUS_FLAG_FAILSAFE_ACTIVE (1 << 3)
 
+// DJI RS PRO Limits 
+#define US_CHANNEL_VALUE_DJI_MIN        352 
+#define US_CHANNEL_VALUE_DJI_MAX        1696
+
+// DJI RS PRO Recenter and Selfie limits
+#define US_CHANNEL_VALUE_DJI_RCS_MIN    176
+#define US_CHANNEL_VALUE_DJI_RCS_MAX    848
+
+
 constexpr auto UNCONNECTED_CALLBACK_INTERVAL_MS = 10;
 constexpr auto SBUS_CALLBACK_INTERVAL_MS = 9;
 
@@ -39,22 +48,22 @@ uint32_t SerialSBUS::sendRCFrame(bool frameAvailable, bool frameMissed, uint32_t
     if (config.GetSerialProtocol() == PROTOCOL_DJI_RS_PRO)
 #endif
     {
-        PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch1 = fmap(channelData[1], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch2 = fmap(channelData[2], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch3 = fmap(channelData[3], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch4 = fmap(channelData[5], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696); // Record start/stop and photo
-        PackedRCdataOut.ch5 = fmap(channelData[6], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696); // Mode
-        PackedRCdataOut.ch6 = fmap(channelData[7], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 176,  848); // Recenter and Selfie
-        PackedRCdataOut.ch7 = fmap(channelData[8], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch8 = fmap(channelData[9], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch9 = fmap(channelData[10], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch10 = fmap(channelData[11], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch11 = fmap(channelData[12], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch12 = fmap(channelData[13], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch13 = fmap(channelData[14], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch14 = fmap(channelData[15], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 352, 1696);
-        PackedRCdataOut.ch15 = channelData[4] < CRSF_CHANNEL_VALUE_MID ? 352 : 1696;
+        PackedRCdataOut.ch0 = fmap(channelData[0], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch1 = fmap(channelData[1], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch2 = fmap(channelData[2], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch3 = fmap(channelData[3], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch4 = fmap(channelData[5], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX); // Record start/stop and photo
+        PackedRCdataOut.ch5 = fmap(channelData[6], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX); // Mode
+        PackedRCdataOut.ch6 = fmap(channelData[7], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_RCS_MIN, US_CHANNEL_VALUE_DJI_RCS_MIN); // Recenter and Selfie
+        PackedRCdataOut.ch7 = fmap(channelData[8], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch8 = fmap(channelData[9], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch9 = fmap(channelData[10], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch10 = fmap(channelData[11], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch11 = fmap(channelData[12], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch12 = fmap(channelData[13], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch13 = fmap(channelData[14], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch14 = fmap(channelData[15], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_DJI_MIN, US_CHANNEL_VALUE_DJI_MAX);
+        PackedRCdataOut.ch15 = channelData[4] < CRSF_CHANNEL_VALUE_MID ? US_CHANNEL_VALUE_DJI_MIN : US_CHANNEL_VALUE_DJI_MAX;
     }
     else
     {

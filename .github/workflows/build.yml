@@ -6,10 +6,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -47,18 +47,18 @@ jobs:
     steps:
 
     - name: Inject slug/short variables
-      uses: rlespinasse/github-slug-action@v4
+      uses: rlespinasse/github-slug-action@v5
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
 
     - name: Cache pip
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ matrix.target }}
@@ -70,7 +70,7 @@ jobs:
         pip install wheel
 
     - name: Cache PlatformIO
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.platformio
         key: ${{ runner.os }}-platformio
@@ -91,7 +91,7 @@ jobs:
       targets: ${{ steps.set-targets.outputs.targets }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - id: set-targets
       run: echo "targets=[$( (grep '\[env:.*UART\]' src/targets/unified.ini ; grep -r '\[env:.*STLINK\]' src/targets/) | sed 's/.*://' | sed s/.$// | egrep "(STLINK|UART)" | grep -v DEPRECATED | tr '\n' ','  | sed 's/,$/"\n/' | sed 's/,/","/'g | sed 's/^/"/')]" >> $GITHUB_OUTPUT
 
@@ -105,18 +105,18 @@ jobs:
     steps:
 
     - name: Inject slug/short variables
-      uses: rlespinasse/github-slug-action@v4
+      uses: rlespinasse/github-slug-action@v5
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
 
     - name: Cache pip
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ matrix.target }}
@@ -128,18 +128,18 @@ jobs:
         pip install wheel
 
     - name: Cache PlatformIO
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.platformio
         key: ${{ runner.os }}-platformio
 
     - name: Install Node
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version: 'latest'
 
     - name: Cache node-modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: src/html/node-modules
         key: ${{ runner.os }}-node-modules
@@ -185,7 +185,7 @@ jobs:
         esac
 
     - name: Store Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: temp-${{ matrix.target }}
         path: ~/artifacts/**/*
@@ -197,18 +197,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Checkout targets repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ExpressLRS/targets
           path: src/hardware
 
       - name: Get firmware artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -227,7 +227,7 @@ jobs:
         run: cd src ; find bootloader -name \*.bin -o -name \*.frk | grep -v src/ | cpio -pdm ../dist/firmware
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
@@ -238,7 +238,7 @@ jobs:
           shiv -c flash -o ../../dist/firmware/flasher.pyz pyserial .
 
       - name: Update firmware artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware
           path: dist/**/*
@@ -249,7 +249,7 @@ jobs:
           zip -r -9 ../firmware.zip ./firmware
 
       - name: Install downgraded AWS CLI
-        uses: unfor19/install-aws-cli-action@master
+        uses: unfor19/install-aws-cli-action@v1
         with:
           version: "2.22.35"
 

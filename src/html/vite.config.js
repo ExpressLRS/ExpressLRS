@@ -107,6 +107,7 @@ function viteEsp32HeaderPlugin(options = {}) {
       }
 
       if (files.length === 0) return
+      files.sort()
 
       const genBy = 'vite-esp32-header plugin'
       const when = new Date().toISOString()
@@ -149,6 +150,9 @@ function viteEsp32HeaderPlugin(options = {}) {
 // Simple dev mock server plugin
 import { devMockPlugin } from './dev-mock-plugin.js'
 
+// Proxy plugin for devlopment against real hardware
+import { devProxyPlugin } from './dev-proxy-plugin.js'
+
 // Export standard Vite config with the plugin enabled for builds
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -167,7 +171,13 @@ export default defineConfig(({ command, mode }) => {
           ],
         },
       }),
-      ...(command === 'serve' ? [devMockPlugin()] : []),
+      ...(command === 'serve'
+        ? [
+            env.VITE_ELRS_PROXY_TARGET
+              ? devProxyPlugin({ target: env.VITE_ELRS_PROXY_TARGET })
+              : devMockPlugin()
+          ]
+        : []),
     ],
     esbuild: {
       legalComments: 'none'
