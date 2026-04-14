@@ -75,8 +75,8 @@ typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
 
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_Limit(uint32_t ch11bit)
 {
-    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_MIN/MAX
-    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_STD_MIN/MAX
+    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX));
 }
 
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_Div2(uint32_t ch11bit)

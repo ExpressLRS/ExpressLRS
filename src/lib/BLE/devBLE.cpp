@@ -21,7 +21,7 @@ void BluetoothJoystickUpdateValues()
         int16_t data[8];
         for (uint8_t i = 0; i < 8; i++)
         {
-            data[i] = map(ChannelData[i], CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, bleGamepad->configuration.getAxesMin(), bleGamepad->configuration.getAxesMax());
+            data[i] = map(ChannelData[i], CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, bleGamepad->configuration.getAxesMin(), bleGamepad->configuration.getAxesMax());
         }
         bleGamepad->setAxes(data[0], data[1], data[4], data[5], data[2], data[3], data[6], data[7]);
 
