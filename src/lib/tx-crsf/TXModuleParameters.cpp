@@ -229,9 +229,9 @@ static folderParameter luaVtxFolder = {
 };
 
 static selectionParameter luaVtxBand = {
-    {"Band", CRSF_TEXT_SELECTION},
+    {"Band/Enable", CRSF_TEXT_SELECTION},
     0, // value
-    "Off;A;B;E;F;R;L",
+    "Disabled;A;B;E;F;R;L",
     STR_EMPTYSPACE
 };
 
@@ -470,6 +470,17 @@ void TXModuleEndpoint::updateBackpackOpts()
     LUA_FIELD_SHOW(luaBackpackTelemetry);
     LUA_FIELD_SHOW(luaBackpackVersion);
   }
+}
+
+void TXModuleEndpoint::updateVtxAdminOpts()
+{
+  const bool isVtxAdminEnabled = config.GetVtxBand() != 0;
+
+  LUA_FIELD_VISIBLE(luaVtxChannel, isVtxAdminEnabled);
+  LUA_FIELD_VISIBLE(luaVtxPwr, isVtxAdminEnabled);
+  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled);
+  // Can't toggle a COMMAND type, the lua will not refresh commands
+  //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
 }
 
 static void setBleJoystickMode()
@@ -742,6 +753,7 @@ void TXModuleEndpoint::updateFolderNames()
   // These aren't folder names, just string labels slapped in the units field generally
   updateTlmBandwidth();
   updateBackpackOpts();
+  updateVtxAdminOpts();
 }
 
 static void recalculatePacketRateOptions(int minInterval)

@@ -60,6 +60,7 @@ private:
     void handleSimpleSendCmd(propertiesCommon *item, uint8_t arg);
     void updateTlmBandwidth();
     void updateBackpackOpts();
+    void updateVtxAdminOpts();
 };
 
 extern TXModuleEndpoint crsfTransmitter;
