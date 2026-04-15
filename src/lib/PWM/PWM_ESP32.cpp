@@ -219,24 +219,39 @@ void PWMController::release(pwm_channel_t channel)
     }
 }
 
+static void setLedcMapped(pwm_channel_t channel, bool active, uint32_t raw)
+{
+    auto ch = LEDC_CHANNEL(channel);
+
+    if (active)
+    {
+        if (!ledc_config[ch].attached)
+        {
+            ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
+            ledc_config[ch].attached = true;
+        }
+
+        ledcWrite(ch, raw);
+    }
+    else
+    {
+        if (ledc_config[ch].attached)
+        {
+            ledcDetachPin(ledc_config[ch].pin);
+            ledc_config[ch].attached = false;
+        }
+    }
+}
+
 void PWMController::setDuty(pwm_channel_t channel, uint16_t duty)
 {
     if (IS_LEDC_CHANNEL(channel))
     {
         auto ch = LEDC_CHANNEL(channel);
-        if (duty > 0) {
-            if (ledc_config[ch].attached == false) {
-                ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
-                ledc_config[ch].attached = true;
-            }
-            ledcWrite(ch, map(duty, 0, 1000, 0, (1 << ledc_config[ch].resolution_bits) - 1));
-        }
-        else {
-            if (ledc_config[ch].attached) {
-                ledcDetachPin(ledc_config[ch].pin);
-                ledc_config[ch].attached = false;
-            }
-        }
+        uint32_t maxRaw = (1U << ledc_config[ch].resolution_bits) - 1;
+        uint32_t raw = map(duty, 0, 1000, 0, maxRaw);
+
+        setLedcMapped(channel, duty > 0, raw);
     }
 #if SOC_MCPWM_SUPPORTED
     else if (IS_MCPWM_CHANNEL(channel))
@@ -252,19 +267,10 @@ void PWMController::setMicroseconds(pwm_channel_t channel, uint16_t microseconds
     if (IS_LEDC_CHANNEL(channel))
     {
         auto ch = LEDC_CHANNEL(channel);
-        if (microseconds > 0) {
-            if (ledc_config[ch].attached == false) {
-                ledcAttachPinEx(ledc_config[ch].pin, ch, (ledc_timer_t)(ledc_config[ch].tmr_idx));
-                ledc_config[ch].attached = true;
-            }
-            ledcWrite(ch, map(microseconds, 0, ledc_config[ch].interval, 0, (1 << ledc_config[ch].resolution_bits) - 1));
-        }
-        else {
-            if (ledc_config[ch].attached) {
-                ledcDetachPin(ledc_config[ch].pin);
-                ledc_config[ch].attached = false;
-            }
-        }
+        uint32_t maxRaw = (1U << ledc_config[ch].resolution_bits) - 1;
+        uint32_t raw = map(microseconds, 0, ledc_config[ch].interval, 0, maxRaw);
+
+        setLedcMapped(channel, microseconds > 0, raw);
     }
 #if SOC_MCPWM_SUPPORTED
     else if (IS_MCPWM_CHANNEL(channel))
