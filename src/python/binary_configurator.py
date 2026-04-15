@@ -11,7 +11,7 @@ from enum import Enum
 import shutil
 
 import firmware
-from firmware import DeviceType, FirmwareOptions, RadioType, MCUType, TXType
+from firmware import DeviceType, FirmwareOptions, MCUType, TXType
 import UnifiedConfiguration
 import binary_flash
 from binary_flash import UploadMethod
@@ -105,9 +105,6 @@ def patch_unified(args, options):
         JSONEncoder().encode(json_flags),
         args.target,
         None,
-        'tx' if options.deviceType is DeviceType.TX else 'rx',
-        '2400' if options.radioChip is RadioType.SX1280 else '900' if options.radioChip is RadioType.SX127X else 'dual',
-        '32' if options.mcuType is MCUType.ESP32 and options.deviceType is DeviceType.RX else '',
         options.luaName,
         args.rx_as_tx
     )
@@ -257,7 +254,6 @@ def main():
         options = FirmwareOptions(
             MCUType.ESP32 if config['platform'].startswith('esp32') else MCUType.ESP8266,
             DeviceType.RX if '.rx_' in args.target else DeviceType.TX,
-            RadioType.SX127X if '_900.' in args.target else RadioType.SX1280 if '_2400.' in args.target else RadioType.LR1121,
             config['lua_name'] if 'lua_name' in config else '',
             config['stlink']['bootloader'] if 'stlink' in config else '',
             config['stlink']['offset'] if 'stlink' in config else 0,

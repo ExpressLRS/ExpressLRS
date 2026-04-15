@@ -16,6 +16,7 @@
 #endif
 #else
 #include <cstdint>
+#include "SX12xxDriverCommon.h"
 #endif // UNIT_TEST
 
 typedef enum : uint8_t
@@ -114,17 +115,6 @@ typedef enum : uint8_t
     RATE_LORA_DUAL_150HZ,
 } expresslrs_RFrates_e;
 
-enum {
-    RADIO_TYPE_SX127x_LORA,
-    RADIO_TYPE_LR1121_LORA_900,
-    RADIO_TYPE_LR1121_LORA_2G4,
-    RADIO_TYPE_LR1121_GFSK_900,
-    RADIO_TYPE_LR1121_GFSK_2G4,
-    RADIO_TYPE_LR1121_LORA_DUAL,
-    RADIO_TYPE_SX128x_LORA,
-    RADIO_TYPE_SX128x_FLRC,
-};
-
 typedef enum : uint8_t
 {
     TX_RADIO_MODE_GEMINI = 0,
@@ -163,7 +153,7 @@ typedef struct expresslrs_rf_pref_params_s
 typedef struct expresslrs_mod_settings_s
 {
     uint8_t index;
-    uint8_t radio_type;
+    RadioBandMod::Combined radio_type;
     expresslrs_RFrates_e enum_rate;
     uint8_t bw;
     uint8_t sf;
