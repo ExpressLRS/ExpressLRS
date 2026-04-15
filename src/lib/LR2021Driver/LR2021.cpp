@@ -145,14 +145,14 @@ bool LR2021Driver::Begin(const uint32_t lowBandFreq, const uint32_t highBandFreq
 void LR2021Driver::startCWTest(const uint32_t freq, const SX12XX_Radio_Number_t radioNumber)
 {
     // Set a basic Config that can be used for both 2.4G and SubGHz bands.
-    Config(LR2021_RADIO_LORA_BW_62, LR2021_RADIO_LORA_SF6, LR2021_RADIO_LORA_CR_4_8, freq, 12, false, 8, RADIO_MODULATION_LORA_2G4, 0, 0, 0, 0, radioNumber);
+    Config(LR2021_RADIO_LORA_BW_62, LR2021_RADIO_LORA_SF6, LR2021_RADIO_LORA_CR_4_8, freq, 12, false, 8, RadioBandMod::Combined::LORA_2G4, 0, 0, 0, 0, radioNumber);
     constexpr uint8_t mode = 0x02;
     CHECK("LR2021_RADIO_SET_TX_TEST_MODE_OC", hal.WriteCommand(LR2021_RADIO_SET_TX_TEST_MODE_OC, &mode, 1, radioNumber));
 }
 
 void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, const uint32_t regfreq,
                           const uint8_t PreambleLength, const bool InvertIQ, const uint8_t _PayloadLength,
-                          const radio_band_modulation_t _modulation, const uint8_t fskSyncWord1, const uint8_t fskSyncWord2,
+                          const RadioBandMod::Combined _modulation, const uint8_t fskSyncWord1, const uint8_t fskSyncWord2,
                           const uint32_t flrcSyncWord, const uint16_t flrcCrcSeed,
                           const SX12XX_Radio_Number_t radioNumber)
 {
@@ -182,12 +182,12 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     SetMode(LR2021_MODE_STDBY_RC, radioNumber);
 
     codec = &copyCodec;
-    if (isFLRCModulation(modulation)) {
+    if (RadioBandMod::isFLRC(modulation)) {
         DBGLN("Config FLRC");
         ConfigModParamsFLRC(bw, cr, sf, radioNumber);
         SetPacketParamsFLRC(PreambleLength, flrcSyncWord, flrcCrcSeed, radioNumber);
     }
-    else if (isGFSKModulation(modulation))
+    else if (RadioBandMod::isGFSK(modulation))
     {
         DBGLN("Config FSK");
         const uint32_t bitrate = static_cast<uint32_t>(bw) * 10000;
@@ -222,7 +222,7 @@ void LR2021Driver::Config(const uint8_t bw, const uint8_t sf, const uint8_t cr, 
     }
     else
     {
-        const uint8_t buf[] {0x01, static_cast<uint8_t>(isFLRCModulation(modulation) ? 0x00 : 0x04)};
+        const uint8_t buf[] {0x01, static_cast<uint8_t>(RadioBandMod::isFLRC(modulation) ? 0x00 : 0x04)};
         CHECK("LR2021_RADIO_SET_RX_PATH_OC", hal.WriteCommand(LR2021_RADIO_SET_RX_PATH_OC, buf, sizeof(buf), radioNumber));
     }
 
@@ -717,12 +717,12 @@ void ICACHE_RAM_ATTR LR2021Driver::TXnb(uint8_t *data, const bool sendGeminiBuff
 void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t radioNumber)
 {
     WORD_ALIGNED_ATTR uint8_t buf[8] {};
-    if (isGFSKModulation(modulation))
+    if (RadioBandMod::isGFSK(modulation))
     {
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FSK_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_FSK_PACKET_STATUS_OC", hal.ReadCommand(buf, 8, radioNumber));
     }
-    else if (isFLRCModulation(modulation))
+    else if (RadioBandMod::isFLRC(modulation))
     {
         CHECK("LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC", hal.WriteCommand(LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC, radioNumber));
         CHECK("LR2021_RADIO_GET_FLRC_PACKET_STATUS_OC", hal.ReadCommand(buf, 7, radioNumber));
@@ -734,13 +734,13 @@ void ICACHE_RAM_ATTR LR2021Driver::DecodeRssiSnr(const SX12XX_Radio_Number_t rad
     }
 
     // RssiPkt defines the average RSSI over the last packet received. RSSI value in dBm is –RssiPkt
-    const int8_t rssi = -static_cast<int8_t>(buf[isLoRaModulation(modulation) ? 6 : 4]);
+    const int8_t rssi = -static_cast<int8_t>(buf[RadioBandMod::isLoRa(modulation) ? 6 : 4]);
 
     // If radio # is 0, update LastPacketRSSI, otherwise LastPacketRSSI2
     radioNumber == SX12XX_Radio_1 ? LastPacketRSSI = rssi : LastPacketRSSI2 = rssi;
 
     // Update whatever SNRs we have
-    LastPacketSNRRaw = isLoRaModulation(modulation) ? static_cast<int8_t>(buf[4]) : 0;
+    LastPacketSNRRaw = RadioBandMod::isLoRa(modulation) ? static_cast<int8_t>(buf[4]) : 0;
 
 #if defined(DEBUG_RCVR_SIGNAL_STATS)
     // stat updates
