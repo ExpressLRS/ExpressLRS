@@ -232,7 +232,7 @@ bool isSupportedRFRate(uint8_t index)
     const expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(index);
 
     // Dual Band modes not supported for hardware with only a single LR1121
-    if (GPIO_PIN_NSS_2 == UNDEF_PIN  && RadioBandMod::isBDUAL(ModParams->radio_type))
+    if (GPIO_PIN_NSS_2 == UNDEF_PIN && RadioBandMod::isBDUAL(ModParams->radio_type))
     {
         return false;
     }
