@@ -2,7 +2,8 @@
 
 #ifndef UNIT_TEST
 #include "targets.h"
-#include <device.h>
+#include "device.h"
+
 
 #if defined(RADIO_SX127X)
 #include "SX127xDriver.h"
@@ -17,8 +18,6 @@
 #include <cstdint>
 #include "SX12xxDriverCommon.h"
 #endif // UNIT_TEST
-
-#define UID_LEN             6
 
 typedef enum : uint8_t
 {
@@ -135,7 +134,6 @@ typedef enum : uint8_t
 #define SNR_SCALE(snr) ((int8_t)((float)snr * RADIO_SNR_SCALE))
 #define SNR_DESCALE(snrScaled) (snrScaled / RADIO_SNR_SCALE)
 // Bound is any of the last 4 bytes nonzero (unbound is all zeroes)
-#define UID_IS_BOUND(uid) (uid[2] != 0 || uid[3] != 0 || uid[4] != 0 || uid[5] != 0)
 
 typedef struct expresslrs_rf_pref_params_s
 {
@@ -272,11 +270,6 @@ enum eAuxChannels : uint8_t
     CRSF_NUM_CHANNELS = 16
 };
 
-//ELRS SPECIFIC OTA CRC
-//Koopman formatting https://users.ece.cmu.edu/~koopman/crc/
-#define ELRS_CRC_POLY 0x07 // 0x83
-#define ELRS_CRC14_POLY 0x2E57 // 0x372B
-
 #ifndef UNIT_TEST
 #if defined(RADIO_SX127X)
 #define RATE_MAX 6
@@ -307,7 +300,6 @@ uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e const enumval);
 uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv);
 uint8_t enumRatetoIndex(expresslrs_RFrates_e const eRate);
 
-extern uint8_t UID[UID_LEN];
 extern bool connectionHasModelMatch;
 extern bool teamraceHasModelMatch;
 extern bool InBindingMode;
@@ -328,9 +320,7 @@ extern bool crsfBatterySensorDetected;
 extern bool crsfBaroSensorDetected;
 
 void ChannelDataReset();
-uint32_t uidMacSeedGet();
 bool isDualRadio();
-void EnterBindingModeSafely(); // defined in rx_main/tx_main
 
 #if defined(RADIO_LR1121)
 bool isSupportedRFRate(uint8_t index);

@@ -4,7 +4,6 @@
 #include "devGsensor.h"
 #include <functional>
 
-#include "handset.h"
 #include "gsensor.h"
 #include "POWERMGNT.h"
 #include "config.h"
@@ -47,7 +46,7 @@ static int timeout()
         //When system is idle, set power to minimum
         if(config.GetMotionMode() == 1)
         {
-            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !handset->IsArmed())
+            if((system_quiet_state == GSENSOR_SYSTEM_STATE_QUIET) && (system_quiet_pre_state == GSENSOR_SYSTEM_STATE_MOVING) && !isArmed)
             {
                 POWERMGNT::setPower(MinPower);
             }

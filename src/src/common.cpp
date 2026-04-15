@@ -155,7 +155,6 @@ uint8_t ICACHE_RAM_ATTR enumRatetoIndex(expresslrs_RFrates_e const eRate)
 }
 
 // Connection state information
-uint8_t UID[UID_LEN] = {0};  // "bind phrase" ID
 bool connectionHasModelMatch = false;
 bool teamraceHasModelMatch = true; // true if isTx or teamrace disabled or (enabled and channel in correct position)
 bool InBindingMode = false;
@@ -211,13 +210,6 @@ uint8_t TLMBurstMaxForRateRatio(uint16_t const rateHz, uint8_t const ratioDiv)
     //DBGLN("TLMburst: %d", retVal);
 
     return retVal;
-}
-
-uint32_t uidMacSeedGet()
-{
-    const uint32_t macSeed = ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
-                             ((uint32_t)UID[4] << 8) + (UID[5]^OTA_VERSION_ID);
-    return macSeed;
 }
 
 bool ICACHE_RAM_ATTR isDualRadio()

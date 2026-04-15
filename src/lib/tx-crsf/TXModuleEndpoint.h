@@ -1,6 +1,6 @@
 #ifndef TX_MODULE_ENDPOINT_H
 #define TX_MODULE_ENDPOINT_H
-#include "CRSFEndpoint.h"
+#include "RxTxEndpoint.h"
 
 enum warningFlags
 {
@@ -17,9 +17,9 @@ enum warningFlags
     LUA_FLAG_CRITICAL_WARNING2,
 };
 
-class TXModuleEndpoint final : public CRSFEndpoint {
+class TXModuleEndpoint final : public RxTxEndpoint {
 public:
-    TXModuleEndpoint() : CRSFEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER) {}
+    TXModuleEndpoint() : RxTxEndpoint(CRSF_ADDRESS_CRSF_TRANSMITTER) {}
     ~TXModuleEndpoint() override = default;
 
     void begin();
@@ -50,9 +50,6 @@ protected:
     void sendELRSstatus(crsf_addr_e origin);
 
 private:
-    bool armCmd = false; // Arm command from handset either via ch5 or arm message
-    bool lastArmCmd = false;
-
     char luaBadGoodString[10] {};
     uint8_t luaWarningFlags = 0b00000000; //8 flag, 1 bit for each flag. set the bit to 1 to show specific warning. 3 MSB is for critical flag
 

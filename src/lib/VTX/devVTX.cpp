@@ -8,7 +8,6 @@
 #include "msp.h"
 
 #include "devButton.h"
-#include "handset.h"
 #include "msptypes.h"
 
 #define PITMODE_NOT_INITIALISED    -1
@@ -97,7 +96,7 @@ static void VtxConfigToMSPOut()
     // we broadcast this so both the FC the RX can process it if it has an SPI based VTX or there are Tramp/SA VTX's connected to the RX
     crsfRouter.AddMspMessage(&packet, CRSF_ADDRESS_BROADCAST, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
-    if (!handset->IsArmed()) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
+    if (!isArmed) // Do not send while armed.  There is no need to change the video frequency while armed.  It can also cause VRx modules to flash up their OSD menu e.g. Rapidfire.
     {
         MSP::sendPacket(&packet, BackpackOrLogStrm); // send to tx-backpack as MSP
     }

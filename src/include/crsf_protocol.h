@@ -30,8 +30,8 @@
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define CRSF_PAYLOAD_SIZE_MAX 62
-#define CRSF_FRAME_NOT_COUNTED_BYTES 2
+#define CRSF_FRAME_NOT_COUNTED_BYTES 2 // length of SYNC and LEN fields
+#define CRSF_PAYLOAD_SIZE_MAX (CRSF_MAX_PACKET_LEN - CRSF_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)

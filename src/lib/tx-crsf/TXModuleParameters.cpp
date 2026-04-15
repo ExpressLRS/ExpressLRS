@@ -322,7 +322,6 @@ extern bool RxWiFiReadyToSend;
 extern bool BackpackTelemReadyToSend;
 extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
-extern unsigned long rebootTime;
 extern void setWifiUpdateMode();
 
 void TXModuleEndpoint::supressCriticalErrors()
@@ -383,7 +382,7 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 
   setWarningFlag(LUA_FLAG_MODEL_MATCH, connectionState == connected && connectionHasModelMatch == false);
   setWarningFlag(LUA_FLAG_CONNECTED, connectionState == connected);
-  setWarningFlag(LUA_FLAG_ISARMED, handset->IsArmed());
+  setWarningFlag(LUA_FLAG_ISARMED, isArmed);
 
   params->pktsBad = CRSFHandset::BadPktsCountResult;
   params->pktsGood = htobe16(CRSFHandset::GoodPktsCountResult);
@@ -514,7 +513,7 @@ void TXModuleEndpoint::handleWifiBle(propertiesCommon *item, uint8_t arg)
       sendCommandResponse(cmd, lcsIdle, STR_EMPTYSPACE);
       if (connectionState == targetState)
       {
-        rebootTime = millis() + 400;
+        scheduleRebootTime(400);
       }
       break;
 
@@ -867,8 +866,8 @@ void TXModuleEndpoint::registerParameters()
           mspPacket_t msp;
           msp.reset();
           msp.makeCommand();
-          msp.function = MSP_SET_RX_CONFIG;
-          msp.addByte(MSP_ELRS_MODEL_ID);
+          msp.function = MSP_ELRS_RXTX_CONFIG;
+          msp.addByte((uint8_t)MSP_ELRS_RXTX_CONFIG_SUBCMD::MODEL_ID);
           msp.addByte(newModelMatch ? modelId : 0xff);
           crsfRouter.AddMspMessage(&msp, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_ADDRESS_CRSF_TRANSMITTER);
         }

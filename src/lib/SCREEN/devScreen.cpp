@@ -11,7 +11,7 @@
 #include "TFT/tftdisplay.h"
 
 #include "devButton.h"
-#include "handset.h"
+#include "OTA.h"
 
 FiniteStateMachine state_machine(entry_fsm);
 
@@ -57,13 +57,13 @@ static int handle(void)
     {
         jumpToWifiRunning();
     }
-    
+
     if (state_machine.getParentState() != STATE_JOYSTICK && connectionState == bleJoystick)
     {
         jumpToBleRunning();
     }
 
-    if (!handset->IsArmed())
+    if (isArmed)
     {
         int key;
         bool isLongPressed;

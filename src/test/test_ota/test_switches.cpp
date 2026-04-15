@@ -29,8 +29,6 @@ public:
 CRSFEndpoint *crsfEndpoint = new MockEndpoint();
 
 uint32_t ChannelData[CRSF_NUM_CHANNELS];      // Current state of channels, CRSF format
-uint8_t UID[6] = {1,2,3,4,5,6};
-elrsLinkStatistics_t linkStats;
 
 void test_crsf_endpoints()
 {

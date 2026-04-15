@@ -69,7 +69,7 @@ void test_encapsulated_msp_send(void)
     TEST_ASSERT_EQUAL(0x5E, data[13]);                                   // crsf crc
 }
 
-void test_encapsulated_msp_send_too_long(void)
+void test_encapsulated_msp_send_too_long_common(size_t count, bool shouldPass)
 {
     // TEST CASE:
     // GIVEN the CRSF class has been instantiated using a mock UART
@@ -83,21 +83,32 @@ void test_encapsulated_msp_send_too_long(void)
     CRSFRouter router;
     router.addConnector(&connector);
 
-    // Build an MSP packet with a payload that is too long to send (>4 bytes)
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
-    packet.flags = 0;
     packet.function = 0x01;
-    packet.addByte(0x01);
-    packet.addByte(0x02);
-    packet.addByte(0x03);
-    packet.addByte(0x04);
-    packet.addByte(0x05);
-
+    for (unsigned item=1; item<=count; ++item)
+        packet.addByte(item);
     // Ask the CRSF class to send the encapsulated packet to the stream
     router.AddMspMessage(&packet, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_CRSF_TRANSMITTER);
 
     // Assert that nothing was sent to the stream
-    TEST_ASSERT_EQUAL(0, connector.data.size());
+    if (shouldPass)
+    {
+        TEST_ASSERT_NOT_EQUAL(0, connector.data.size());
+    }
+    else
+    {
+        TEST_ASSERT_EQUAL(0, connector.data.size());
+    }
+}
+
+void test_encapsulated_msp_send_not_too_long(void)
+{
+    test_encapsulated_msp_send_too_long_common(54, true);
+}
+
+void test_encapsulated_msp_send_too_long(void)
+{
+    test_encapsulated_msp_send_too_long_common(55, false);
 }

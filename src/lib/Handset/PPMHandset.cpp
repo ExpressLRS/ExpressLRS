@@ -3,6 +3,7 @@
 #if defined(PLATFORM_ESP32) && defined(TARGET_TX)
 
 #include "PPMHandset.h"
+#include "OTA.h"
 #include "crsf_protocol.h"
 #include "logging.h"
 
@@ -66,14 +67,14 @@ void PPMHandset::handleInput()
 
         PerformChannelOverrides(localChannelData, numChannels);
 
-        SetArmed(numChannels < 5 || CRSF_to_BIT(localChannelData[4]));
+        isArmed = numChannels < 5 || CRSF_to_BIT(localChannelData[4]);
         if (channelCount > 0)
             RCDataReceived(localChannelData, numChannels);
     }
     else if (lastPPM && now - 1000 > lastPPM)
     {
         DBGLN("PPM signal lost, disarming");
-        SetArmed(false);
+        isArmed = false;
         if (disconnected)
         {
             disconnected();

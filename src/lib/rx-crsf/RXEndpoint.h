@@ -1,8 +1,8 @@
 #ifndef RX_ENDPOINT_H
 #define RX_ENDPOINT_H
-#include "CRSFEndpoint.h"
+#include "RxTxEndpoint.h"
 
-class RXEndpoint final : public CRSFEndpoint {
+class RXEndpoint final : public RxTxEndpoint {
 public:
     RXEndpoint();
     bool handleRaw(const crsf_header_t *message) override;
