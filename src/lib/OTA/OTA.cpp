@@ -8,12 +8,15 @@
 
 #include "OTA.h"
 #include "CRSFRouter.h"
+#if defined(UNIT_TEST) //
+extern uint8_t UID[6];
+#else
 #include "common.h"
-
+#endif
 #include <cassert>
 
-static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
-static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet stuct is invalid!");
+static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet struct is invalid!");
+static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet struct is invalid!");
 
 bool OtaIsFullRes;
 volatile uint8_t OtaNonce;
@@ -52,7 +55,9 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
 
+#if !defined(UNIT_TEST)
 #include "handset.h"            // need access to handset data for arming
+#endif
 
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;

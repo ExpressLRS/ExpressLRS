@@ -460,16 +460,18 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
 #endif
   hwTimer::updateInterval(interval);
 
-  FHSSusePrimaryFreqBand = !(ModParams->radio_type == RADIO_TYPE_LR1121_LORA_2G4) && !(ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4);
-  FHSSuseDualBand = ModParams->radio_type == RADIO_TYPE_LR1121_LORA_DUAL;
+#if defined(RADIO_LR1121)
+  FHSSusePrimaryFreqBand = !RadioBandMod::isB2G4(ModParams->radio_type);
+  FHSSuseDualBand = RadioBandMod::isBDUAL(ModParams->radio_type);
+#endif
 
   Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
-               , uidMacSeedGet(), OtaCrcInitializer, (ModParams->radio_type == RADIO_TYPE_SX128x_FLRC)
+               , uidMacSeedGet(), OtaCrcInitializer, ModParams->radio_type
 #endif
 #if defined(RADIO_LR1121)
-               , (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4), (uint8_t)UID[5], (uint8_t)UID[4]
+               , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
 #endif
                );
 
@@ -478,8 +480,7 @@ void SetRFLinkRate(uint8_t index) // Set speed of RF link
   {
     Radio.Config(ModParams->bw2, ModParams->sf2, ModParams->cr2, FHSSgetInitialGeminiFreq(),
                 ModParams->PreambleLen2, invertIQ, ModParams->PayloadLength,
-                (ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_900 || ModParams->radio_type == RADIO_TYPE_LR1121_GFSK_2G4),
-                (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
+                ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4], SX12XX_Radio_2);
   }
 #endif
 
