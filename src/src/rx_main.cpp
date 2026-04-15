@@ -1011,6 +1011,17 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     if ((otaSync->UID5 & ~MODELMATCH_MASK) != (UID[5] & ~MODELMATCH_MASK))
         return false;
 
+    // Check the any proposed packet rate switch and verify the hardware has a valid config
+    // and hardware frontend for it. Ignore the mode switch if not valid.
+    uint8_t proposedRateIdx;
+    expresslrs_RFrates_e proposedRateEnum = (expresslrs_RFrates_e)otaSync->rfRateEnum;
+    if (!enumRatetoIndex(proposedRateEnum, proposedRateIdx)
+        || !isSupportedRFRate(proposedRateIdx))
+    {
+        DBGLN("Unsupported rate %u", proposedRateEnum);
+        return false;
+    }
+
     LastSyncPacket = now;
 #if defined(DEBUG_RX_SCOREBOARD)
     DBGW('s');
@@ -1039,7 +1050,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     }
 
     // Will change the packet air rate in loop() if this changes
-    ExpressLRS_nextAirRateIndex = enumRatetoIndex((expresslrs_RFrates_e)otaSync->rfRateEnum);
+    ExpressLRS_nextAirRateIndex = proposedRateIdx;
     updateSwitchModePendingFromOta(otaSync->switchEncMode);
 
     // Update TLM ratio, should never be TLM_RATIO_STD/DISARMED, the TX calculates the correct value for the RX
@@ -1605,11 +1616,11 @@ static void cycleRfMode(unsigned long now)
     {
         RFmodeLastCycled = now;
         LastSyncPacket = now;           // reset this variable
+        // Display the current air rate to the user as an indicator something is happening
         SendLinkStatstoFCForcedSends = 2;
         SetRFLinkRate(scanIndex % RATE_MAX, false); // switch between rates
         LQCalc.reset100();
         LQCalcDVDA.reset100();
-        // Display the current air rate to the user as an indicator something is happening
         scanIndex++;
         Radio.RXnb();
         DBGLN("%u", ExpressLRS_currAirRate_Modparams->interval);
@@ -1651,7 +1662,7 @@ static void EnterBindingMode()
 
     // Start attempting to bind
     // Lock the RF rate and freq while binding
-    SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
+    SetRFLinkRate(enumRatetoIndexSafe(RATE_BINDING), true);
 
     // If the Radio Params (including InvertIQ) parameter changed, need to restart RX to take effect
     Radio.RXnb();
@@ -1713,11 +1724,11 @@ static void updateBindingMode(unsigned long now)
         BindingRateChangeMs = now;
         if (ExpressLRS_currAirRate_Modparams->enum_rate == RATE_DUALBAND_BINDING)
         {
-            SetRFLinkRate(enumRatetoIndex(RATE_BINDING), true);
+            SetRFLinkRate(enumRatetoIndexSafe(RATE_BINDING), true);
         }
         else
         {
-            SetRFLinkRate(enumRatetoIndex(RATE_DUALBAND_BINDING), true);
+            SetRFLinkRate(enumRatetoIndexSafe(RATE_DUALBAND_BINDING), true);
         }
 
         Radio.RXnb();
@@ -2069,11 +2080,6 @@ void loop()
     if ((connectionState != disconnected) && (ExpressLRS_currAirRate_Modparams->index != ExpressLRS_nextAirRateIndex)) // forced change
     {
         DBGLN("Req air rate change %u->%u", ExpressLRS_currAirRate_Modparams->index, ExpressLRS_nextAirRateIndex);
-        if (!isSupportedRFRate(ExpressLRS_nextAirRateIndex))
-        {
-            DBGLN("Mode %u not supported, ignoring", ExpressLRS_nextAirRateIndex);
-            ExpressLRS_nextAirRateIndex = ExpressLRS_currAirRate_Modparams->index;
-        }
         LostConnection(true);
         LastSyncPacket = now;           // reset this variable to stop rf mode switching and add extra time
         RFmodeLastCycled = now;         // reset this variable to stop rf mode switching and add extra time
