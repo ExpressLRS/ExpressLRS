@@ -85,7 +85,7 @@ uint16_t secondaryBandCount;
 
 constexpr uint8_t VERSION_DOMAIN_MAXLEN = 26 + 1;   // max. number of characters (plus '\0') the Lua script can display
                                                     // on color LCD radios w/o being overwritten by the commit info
-char version_domain[VERSION_DOMAIN_MAXLEN];
+char version_domain[VERSION_DOMAIN_MAXLEN] {};
 
 
 void FHSSrandomiseFHSSsequence(const uint32_t seed)
@@ -193,7 +193,7 @@ void addDomainInfo(char *version_domain, uint8_t maxlen)
     {
         strlcpy(version_domain, version, 21);
         strlcat(version_domain, " ", maxlen);
-    } 
+    }
     else
     {
         strlcpy(version_domain, version, 18);

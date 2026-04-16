@@ -4,6 +4,7 @@
 #include "elrs_eeprom.h"
 #include "options.h"
 #include "common.h"
+#include "OTA.h"
 
 #if defined(PLATFORM_ESP32)
 #include <nvs_flash.h>
@@ -17,6 +18,15 @@
 
 #define TX_CONFIG_VERSION   8U
 #define RX_CONFIG_VERSION   11U
+
+class BindphraseConfigurable
+{
+public:
+    virtual ~BindphraseConfigurable() = default;
+
+    virtual void SetUID(uint8_t uid[UID_LEN]) = 0;
+    void SetBindPhrase(uint8_t *phrase, size_t phraseLen);
+};
 
 #if defined(TARGET_TX)
 
@@ -114,10 +124,11 @@ typedef struct {
                                         // FUTURE: Custom button actions
 } tx_config_t;
 
-class TxConfig
+class TxConfig : public BindphraseConfigurable
 {
 public:
     TxConfig();
+    ~TxConfig() override = default;
     void Load();
     uint32_t Commit();
 
@@ -176,6 +187,7 @@ public:
     void SetBackpackTlmMode(uint8_t mode);
     void SetPTRStartChannel(uint8_t ptrStartChannel);
     void SetPTREnableChannel(uint8_t ptrEnableChannel);
+    void SetUID(uint8_t uid[UID_LEN]) override;
 
     // State setters
     bool SetModelId(uint8_t modelId);
@@ -256,10 +268,11 @@ typedef struct __attribute__((packed)) {
     uint8_t     sourceSysId;
 } rx_config_t;
 
-class RxConfig
+class RxConfig : public BindphraseConfigurable
 {
 public:
     RxConfig();
+    ~RxConfig() override = default;
 
     void Load();
     uint32_t Commit();
@@ -292,7 +305,7 @@ public:
     bool IsOnLoan() const;
 
     // Setters
-    void SetUID(uint8_t* uid);
+    void SetUID(uint8_t uid[UID_LEN]) override;
     void SetPowerOnCounter(uint8_t powerOnCounter);
     void SetModelId(uint8_t modelId);
     void SetPower(uint8_t power);

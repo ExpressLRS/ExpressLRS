@@ -85,7 +85,7 @@ static int start()
 static int event()
 {
 #if defined(TARGET_TX)
-    if (handset->IsArmed())
+    if (isArmed)
     {
         return DURATION_NEVER;
     }

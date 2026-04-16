@@ -14,3 +14,4 @@
 #include "deferred.h"
 
 void setupTargetCommon();
+void checkRebootTime(unsigned long now);

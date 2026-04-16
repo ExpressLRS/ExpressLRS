@@ -1,6 +1,7 @@
 #include "CRSFParser.h"
-
 #include "CRSFRouter.h"
+
+#include "crsf_protocol.h"
 
 void CRSFParser::processBytes(CRSFConnector *origin, const uint8_t *inputBytes, const uint16_t size, const std::function<void(const crsf_header_t *)>& foundMessage)
 {

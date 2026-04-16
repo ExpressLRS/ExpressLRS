@@ -7,14 +7,14 @@
  */
 
 #include "OTA.h"
-#include "CRSFRouter.h"
-#include "common.h"
-
 #include <cassert>
 
-static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet stuct is invalid!");
-static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet stuct is invalid!");
+static_assert(sizeof(OTA_Packet4_s) == OTA4_PACKET_SIZE, "OTA4 packet struct is invalid!");
+static_assert(sizeof(OTA_Packet8_s) == OTA8_PACKET_SIZE, "OTA8 packet struct is invalid!");
 
+uint8_t UID[UID_LEN] {};  // "bind phrase" ID
+elrsLinkStatistics_t linkStats {};
+bool isArmed = false;       // global arming status for other functions
 bool OtaIsFullRes;
 volatile uint8_t OtaNonce;
 uint16_t OtaCrcInitializer;
@@ -38,6 +38,17 @@ void OtaUpdateCrcInitFromUid()
     OtaCrcInitializer ^= (uint16_t)OTA_VERSION_ID << 8;
 }
 
+uint32_t OtaGetUidSeed()
+{
+    return ((uint32_t)UID[2] << 24) + ((uint32_t)UID[3] << 16) +
+           ((uint32_t)UID[4] << 8) + (UID[5]^OTA_VERSION_ID);
+}
+
+bool OtaUidIsBound(const uint8_t uid[UID_LEN])
+{
+    return (uid[2] != 0 || uid[3] != 0 || uid[4] != 0 || uid[5] != 0);
+}
+
 static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const nonce)
 {
     // Returns the sequence (0 to 7, then 0 to 7 rotated left by 1):
@@ -52,8 +63,6 @@ static inline uint8_t ICACHE_RAM_ATTR HybridWideNonceToSwitchIndex(uint8_t const
 
 #if defined(TARGET_TX) || defined(UNIT_TEST)
 
-#include "handset.h"            // need access to handset data for arming
-
 // Current ChannelData generator function being used by TX
 PackChannelData_t OtaPackChannelData;
 #if defined(DEBUG_RCVR_LINKSTATS)
@@ -65,8 +74,8 @@ typedef uint32_t (*Decimate11to10_fn)(uint32_t ch11bit);
 
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_Limit(uint32_t ch11bit)
 {
-    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_MIN/MAX
-    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX));
+    // Limit 10-bit result to the range CRSF_CHANNEL_VALUE_STD_MIN/MAX
+    return CRSF_to_UINT10(constrain(ch11bit, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX));
 }
 
 static uint32_t ICACHE_RAM_ATTR Decimate11to10_Div2(uint32_t ch11bit)
@@ -121,7 +130,7 @@ static void ICACHE_RAM_ATTR PackChannelDataHybridCommon(OTA_Packet4_s * const ot
     #if defined(UNIT_TEST)
     ota4->rc.isArmed = CRSF_to_BIT(channelData[4]);
     #else
-    ota4->rc.isArmed = handset->IsArmed();
+    ota4->rc.isArmed = isArmed;
     #endif
 #endif /* !DEBUG_RCVR_LINKSTATS */
 }
@@ -225,7 +234,7 @@ static void ICACHE_RAM_ATTR GenerateChannelData8ch12ch(OTA_Packet8_s * const ota
     #if defined(UNIT_TEST)
     ota8->rc.isArmed = CRSF_to_BIT(channelData[4]);
     #else
-    ota8->rc.isArmed = handset->IsArmed();
+    ota8->rc.isArmed = isArmed;
     #endif
 #if defined(DEBUG_RCVR_LINKSTATS)
     // Incremental packet counter for verification on the RX side, 32 bits shoved into CH1-CH4
@@ -284,8 +293,6 @@ static void ICACHE_RAM_ATTR GenerateChannelData12ch(OTA_Packet_s * const otaPktP
 
 
 #if TARGET_RX || defined(UNIT_TEST)
-
-bool isArmed;       // global arming status for other functions
 
 // Current ChannelData unpacker function being used by RX
 UnpackChannelData_t OtaUnpackChannelData;

@@ -262,6 +262,8 @@ void test_crc16_flip5(void)
 
 void test_crc8(void)
 {
+    const uint8_t ELRS_CRC_POLY = 0x07; // 0x83
+
     // Size of a CRSF packet
     uint8_t bytes[11];
     for (int i = 0; i < sizeof(bytes); i++)

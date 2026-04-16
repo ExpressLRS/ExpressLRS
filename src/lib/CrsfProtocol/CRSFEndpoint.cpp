@@ -1,6 +1,5 @@
+#include "CRSFEndpoint.h"
 #include "CRSFRouter.h"
-
-#include "CRSFParameters.h"
 
 #include "logging.h"
 #include "options.h"

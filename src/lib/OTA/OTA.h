@@ -8,9 +8,7 @@
 #include "telemetry_protocol.h"
 #include "FIFO.h"
 
-#if TARGET_RX
-extern bool isArmed;
-#endif
+#define UID_LEN             6
 
 #define OTA4_PACKET_SIZE     8U
 #define OTA4_CRC_CALC_LEN    offsetof(OTA_Packet4_s, crcLow)
@@ -167,14 +165,20 @@ typedef struct {
     };
 } PACKED OTA_Packet_s;
 
+enum OtaSwitchMode_e { smWideOr8ch = 0, smHybridOr16ch = 1, sm12ch = 2 };
+
+extern uint8_t UID[UID_LEN];
+extern elrsLinkStatistics_t linkStats;
+extern bool isArmed;
 extern bool OtaIsFullRes;
 extern volatile uint8_t OtaNonce;
 extern uint16_t OtaCrcInitializer;
-void OtaUpdateCrcInitFromUid();
-
-enum OtaSwitchMode_e { smWideOr8ch = 0, smHybridOr16ch = 1, sm12ch = 2 };
-void OtaUpdateSerializers(OtaSwitchMode_e const mode, uint8_t packetSize);
 extern OtaSwitchMode_e OtaSwitchModeCurrent;
+
+void OtaUpdateCrcInitFromUid();
+uint32_t OtaGetUidSeed();
+void OtaUpdateSerializers(OtaSwitchMode_e const mode, uint8_t packetSize);
+bool OtaUidIsBound(const uint8_t uid[UID_LEN]);
 
 // CRC
 typedef bool (*ValidatePacketCrc_t)(OTA_Packet_s * const otaPktPtr);
@@ -182,7 +186,6 @@ typedef void (*GeneratePacketCrc_t)(OTA_Packet_s * const otaPktPtr);
 extern ValidatePacketCrc_t OtaValidatePacketCrc;
 extern GeneratePacketCrc_t OtaGeneratePacketCrc;
 // Value is implicit leading 1, comment is Koopman formatting (implicit trailing 1) https://users.ece.cmu.edu/~koopman/crc/
-#define ELRS_CRC_POLY 0x07 // 0x83
 #define ELRS_CRC14_POLY 0x2E57 // 0x372b
 #define ELRS_CRC16_POLY 0x3D65 // 0x9eb2
 

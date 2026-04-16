@@ -1,7 +1,7 @@
 
 #include <dynpower.h>
 
-#include "CRSFRouter.h"
+#include "OTA.h"
 #include "POWERMGNT.h"
 #include "config.h"
 #include "logging.h"
@@ -106,8 +106,7 @@ void DynamicPower_Update(uint32_t now)
   // =============  DYNAMIC_POWER_BOOST: Switch-triggered power boost up ==============
   // Or if telemetry is lost while armed (done up here because dynpower_updated is only updated on telemetry)
   uint8_t boostChannel = config.GetBoostChannel();
-  bool armed = handset->IsArmed();
-  if ((connectionState == disconnected && armed) ||
+  if ((connectionState == disconnected && isArmed) ||
     (boostChannel && (CRSF_to_BIT(ChannelData[AUX9 + boostChannel - 1]) == 0)))
   {
     DynamicPower_SetToConfigPower();
@@ -122,7 +121,7 @@ void DynamicPower_Update(uint32_t now)
     // If armed and missing telemetry, raise the power, but only after the first LinkStats is missed (which come
     // at most every 512ms). This delays the first increase, then will bump it once for each missed TLM after that
     // state == connected is not used: unplugging an RX will be connected and will boost power to max before disconnect
-    if (armed && (powerHeadroom > 0))
+    if (isArmed && (powerHeadroom > 0))
     {
       uint32_t linkstatsInterval = ExpressLRS_currTlmDenom * ExpressLRS_currAirRate_Modparams->interval / (1000U / 2U);
       linkstatsInterval = std::max(linkstatsInterval, (uint32_t)512U);

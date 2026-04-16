@@ -1,11 +1,14 @@
 #include "TXModuleEndpoint.h"
 
 #include "rxtx_intf.h"
+#include "CRSFRouter.h"
 #include "CRSFHandset.h"
 #include "logging.h"
 
 #include "FHSS.h"
 #include "device.h"
+#include "msp.h"
+#include "msptypes.h"
 #include "config.h"
 
 #if defined(PLATFORM_ESP32)
@@ -41,6 +44,11 @@ void TXModuleEndpoint::handleMessage(const crsf_header_t *message)
     const crsf_frame_type_e packetType = message->type;
 
     const auto extMessage = (crsf_ext_header_t *)message;
+    if (handleRxTxMessage(message))
+    {
+        return;
+    }
+
     // Enter Binding Mode
     if (packetType == CRSF_FRAMETYPE_COMMAND
         && extMessage->frame_size >= 6 // official CRSF has 7 bytes with two CRCs
@@ -125,6 +133,7 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     //      1      |   x   | Arm using CH5, armed/not armed depending on CH5 value
     //
 
+    bool armCmd;
     if (message->frame_size == CRSF_FRAME_SIZE(sizeof(crsf_channels_t)))
     {
         armCmd = CRSF_to_BIT(localChannelData[AUX1]);       // no status byte present, us CH5 to arm
@@ -143,10 +152,9 @@ void TXModuleEndpoint::RcPacketToChannelsData(const crsf_header_t *message) // d
     }
 
     // monitoring arming state
-    if (lastArmCmd != armCmd)
+    if (isArmed != armCmd)
     {
-        handset->SetArmed(armCmd);
-        lastArmCmd = armCmd;
+        isArmed = armCmd;
 #if defined(PLATFORM_ESP32)
         devicesTriggerEvent(EVENT_ARM_FLAG_CHANGED);
 #endif

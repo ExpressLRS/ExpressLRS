@@ -1,8 +1,7 @@
 #include "CRSFRouter.h"
 
+#include "OTA.h"
 #include "msptypes.h"
-
-elrsLinkStatistics_t linkStats {};
 
 void CRSFRouter::addConnector(CRSFConnector *connector)
 {
@@ -139,18 +138,18 @@ void CRSFRouter::SetMspV2Request(uint8_t *frame, const uint16_t function, const 
 
 void CRSFRouter::AddMspMessage(const mspPacket_t *packet, const crsf_addr_e destination, const crsf_addr_e origin)
 {
-    if (packet->payloadSize > ENCAPSULATED_MSP_MAX_PAYLOAD_SIZE)
+    // This allows up to 54 bytes of payload in addition to the CRSF header/CRC and MSP header/CRC
+    const uint8_t totalBufferLen = CRSF_FRAME_NOT_COUNTED_BYTES + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + ENCAPSULATED_MSP_HEADER_CRC_LEN + packet->payloadSize;
+    if (totalBufferLen > CRSF_MAX_PACKET_LEN)
     {
         return;
     }
 
-    const uint8_t totalBufferLen = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES;
-    uint8_t outBuffer[ENCAPSULATED_MSP_MAX_FRAME_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC + CRSF_FRAME_NOT_COUNTED_BYTES];
-
     // CRSF extended frame header
+    uint8_t outBuffer[totalBufferLen];
     outBuffer[0] = CRSF_SYNC_BYTE;                                                                         // address
     outBuffer[1] = packet->payloadSize + ENCAPSULATED_MSP_HEADER_CRC_LEN + CRSF_FRAME_LENGTH_EXT_TYPE_CRC; // length
-    outBuffer[2] = CRSF_FRAMETYPE_MSP_WRITE;                                                               // packet type
+    outBuffer[2] = (packet->type == MSP_PACKET_RESPONSE) ? CRSF_FRAMETYPE_MSP_RESP : CRSF_FRAMETYPE_MSP_WRITE;  // packet type
     outBuffer[3] = destination;                                                                            // destination
     outBuffer[4] = origin;                                                                                 // origin
 

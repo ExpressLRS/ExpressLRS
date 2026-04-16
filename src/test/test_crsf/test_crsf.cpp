@@ -95,6 +95,10 @@ void test_device_info(void)
     TEST_ASSERT_EQUAL(test_crc.calc(connector.data.data() + 2, DEVICE_INFORMATION_LENGTH-3), connector.data.data()[DEVICE_INFORMATION_LENGTH - 1]);
 }
 
+// Unity setup/teardown
+void setUp() {}
+void tearDown() {}
+
 int main(int argc, char **argv)
 {
     connector.addDevice(CRSF_ADDRESS_FLIGHT_CONTROLLER); // our connector sends to the FC

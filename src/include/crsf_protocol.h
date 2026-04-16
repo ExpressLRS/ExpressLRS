@@ -8,28 +8,30 @@
 
 #define CRSF_CRC_POLY 0xd5
 
-#define CHANNEL_VALUE_FS_US_MIN         476  // stretch failsafe limit - changing this requires edits in getPwmFormData()
-#define CHANNEL_VALUE_FS_US_ELIMITS_MIN 880  // ELimits failsafe min
-#define CHANNEL_VALUE_FS_US_MID         1500 // center
-#define CHANNEL_VALUE_FS_US_ELIMITS_MAX 2120 // Elimits failsafe max
-#define CHANNEL_VALUE_FS_US_MAX         2523 // stretch failsafe limit
+#define US_CHANNEL_VALUE_MIN            476     // stretch limit - changing this requires edits in getPwmFormData()
+#define US_CHANNEL_VALUE_EXT_MIN        880     // E.Limits min
+#define US_CHANNEL_VALUE_STD_MIN        988     // standard min
+#define US_CHANNEL_VALUE_CENTER         1500    // center
+#define US_CHANNEL_VALUE_STD_MAX        2012    // standard max
+#define US_CHANNEL_VALUE_EXT_MAX        2120    // E.limits max
+#define US_CHANNEL_VALUE_MAX            2523    // stretch limit
 
-#define CRSF_CHANNEL_VALUE_EXT_MIN 0    // 880us with E.Limits on (-121.1%)
-#define CRSF_CHANNEL_VALUE_MIN  172 // 987us - actual CRSF min is 0 with E.Limits on
-#define CRSF_CHANNEL_VALUE_1000 191
-#define CRSF_CHANNEL_VALUE_MID  992
-#define CRSF_CHANNEL_VALUE_2000 1792
-#define CRSF_CHANNEL_VALUE_MAX  1811 // 2012us - actual CRSF max is 1984 with E.Limits on
-#define CRSF_CHANNEL_VALUE_EXT_MAX 1984 // 2120us with E.Limits on (+121.1%)
-#define CRSF_CHANNEL_VALUE_UNSET 0xffff // used internally to indicate no channel value has been received
+#define CRSF_CHANNEL_VALUE_EXT_MIN      0       // 880us  -121.1% (with E.Limits on)
+#define CRSF_CHANNEL_VALUE_STD_MIN      172     // 988us  -100% (actual CRSF min is 0 with E.Limits on)
+#define CRSF_CHANNEL_VALUE_1000         191     // 1000us
+#define CRSF_CHANNEL_VALUE_MID          992     // 1500us center
+#define CRSF_CHANNEL_VALUE_2000         1792    // 2000us
+#define CRSF_CHANNEL_VALUE_STD_MAX      1811    // 2012us +100% (actual CRSF max is 1984 with E.Limits on)
+#define CRSF_CHANNEL_VALUE_EXT_MAX      1984    // 2120us +121.1% (with E.Limits on)
+#define CRSF_CHANNEL_VALUE_UNSET        0xffff  // used internally to indicate no channel value has been received
 
 #define CRSF_MIN_PACKET_LEN 4
 #define CRSF_MAX_PACKET_LEN 64
 
 #define CRSF_SYNC_BYTE 0xC8
 
-#define CRSF_PAYLOAD_SIZE_MAX 62
-#define CRSF_FRAME_NOT_COUNTED_BYTES 2
+#define CRSF_FRAME_NOT_COUNTED_BYTES 2 // length of SYNC and LEN fields
+#define CRSF_PAYLOAD_SIZE_MAX (CRSF_MAX_PACKET_LEN - CRSF_FRAME_NOT_COUNTED_BYTES)
 #define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2) // See crsf_header_t.frame_size
 #define CRSF_EXT_FRAME_SIZE(payload_size) (CRSF_FRAME_SIZE(payload_size) + 2)
 #define CRSF_FRAME_SIZE_MAX (CRSF_PAYLOAD_SIZE_MAX + CRSF_FRAME_NOT_COUNTED_BYTES)
@@ -404,22 +406,22 @@ static uint16_t ICACHE_RAM_ATTR fmap(uint16_t x, uint16_t in_min, uint16_t in_ma
     return result < 0 ? 0 : (result > 65535 ? 65535 : result);
 }
 
-// Scale a -100& to +100% crossfire value to 988-2012 (Taranis channel uS)
+// Scale a -100% to +100% crossfire value to 988-2012 (Taranis channel uS)
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_US(uint16_t val)
 {
-    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 988, 2012);
+    return fmap(val, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, US_CHANNEL_VALUE_STD_MIN, US_CHANNEL_VALUE_STD_MAX);
 }
 
-// Scale down a 10-bit value to a -100& to +100% crossfire value
+// Scale down a 10-bit value to a -100% to +100% crossfire value
 static inline uint16_t ICACHE_RAM_ATTR UINT10_to_CRSF(uint16_t val)
 {
-    return fmap(val, 0, 1023, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX);
+    return fmap(val, 0, 1023, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX);
 }
 
-// Scale up a -100& to +100% crossfire value to 10-bit
+// Scale up a -100% to +100% crossfire value to 10-bit
 static inline uint16_t ICACHE_RAM_ATTR CRSF_to_UINT10(uint16_t val)
 {
-    return fmap(val, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, 0, 1023);
+    return fmap(val, CRSF_CHANNEL_VALUE_STD_MIN, CRSF_CHANNEL_VALUE_STD_MAX, 0, 1023);
 }
 
 // Convert 0-max to the CRSF values for 1000-2000
@@ -446,7 +448,7 @@ static inline uint8_t ICACHE_RAM_ATTR CRSF_to_SWITCH3b(uint16_t ch)
     // with a special value 7 indicating the middle so it works
     // with switches with a middle position as well as 6-position
     const uint16_t CHANNEL_BIN_COUNT = 6;
-    const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN) / CHANNEL_BIN_COUNT;
+    const uint16_t CHANNEL_BIN_SIZE = (CRSF_CHANNEL_VALUE_STD_MAX - CRSF_CHANNEL_VALUE_STD_MIN) / CHANNEL_BIN_COUNT;
     // If channel is within 1/4 a BIN of being in the middle use special value 7
     if (ch < (CRSF_CHANNEL_VALUE_MID-CHANNEL_BIN_SIZE/4)
         || ch > (CRSF_CHANNEL_VALUE_MID+CHANNEL_BIN_SIZE/4))

@@ -1,10 +1,8 @@
 #ifndef CRSF_PARSER_H
 #define CRSF_PARSER_H
 
-#include <targets.h>
 #include <functional>
 
-#include "crsf_protocol.h"
 #include "CRSFConnector.h"
 
 class CRSFParser {

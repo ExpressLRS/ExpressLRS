@@ -106,6 +106,7 @@ void test_msp_send(void)
 }
 
 extern void test_encapsulated_msp_send(void);
+extern void test_encapsulated_msp_send_not_too_long(void);
 extern void test_encapsulated_msp_send_too_long(void);
 
 // Unity setup/teardown
@@ -119,6 +120,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_msp_send);
 
     RUN_TEST(test_encapsulated_msp_send);
+    RUN_TEST(test_encapsulated_msp_send_not_too_long);
     RUN_TEST(test_encapsulated_msp_send_too_long);
 
     UNITY_END();

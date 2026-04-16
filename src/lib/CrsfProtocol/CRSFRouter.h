@@ -146,6 +146,5 @@ private:
 
 // The global instance of the endpoint
 extern CRSFRouter crsfRouter;
-extern elrsLinkStatistics_t linkStats;
 
 #endif //CRSF_ROUTER_H
