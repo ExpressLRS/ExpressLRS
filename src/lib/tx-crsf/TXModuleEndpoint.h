@@ -31,11 +31,13 @@ public:
     void updateFolderNames();
     void registerParameters() override;
     void updateParameters() override;
+    bool writeParameterValueForWeb(uint8_t id, int32_t value);
+    bool getSelectionValueForWeb(uint8_t id, int32_t &value) const;
 
     uint8_t modelId = 0; // The model ID as received from the Transmitter
 
     // Config change helpers
-    void SetPacketRateIdx(uint8_t idx, bool forceChange);
+    void SetPacketRateIdx(uint8_t idx, bool forceChange, bool adjustForBaud = true, bool deferApply = true);
     void SetSwitchMode(uint8_t idx);
     void SetAntennaMode(uint8_t idx);
     void SetTlmRatio(uint8_t idx);

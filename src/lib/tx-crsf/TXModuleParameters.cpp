@@ -51,10 +51,10 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
-static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
-static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
-static char modelMatchUnit[] = " (ID: 00)";
-static char tlmBandwidth[] = " (xxxxxbps)";
+static char pwrFolderDynamicName[64] = "TX Power (1000 Dynamic)";
+static char vtxFolderDynamicName[64] = "VTX Admin (OFF:C:1 Aux11 )";
+static char modelMatchUnit[16] = " (ID: 00)";
+static char tlmBandwidth[24] = " (xxxxxbps)";
 static constexpr char folderNameSeparator[2] = {' ',':'};
 static constexpr char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
 static constexpr char tlmRatiosMav[] = ";;;;;;;;1:2;";
@@ -324,6 +324,9 @@ extern bool TxBackpackWiFiReadyToSend;
 extern bool VRxBackpackWiFiReadyToSend;
 extern void setWifiUpdateMode();
 
+static bool mapPacketRateCompactIndexToRawRate(const uint8_t compactIndex, uint8_t &rawRate);
+static bool mapPacketRateRawRateToCompactIndex(const uint8_t rawRate, uint8_t &compactIndex);
+
 void TXModuleEndpoint::supressCriticalErrors()
 {
     // clear the critical error bits of the warning flags
@@ -395,8 +398,8 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 }
 
 void TXModuleEndpoint::updateModelID() {
-  itoa(modelId, modelMatchUnit+6, 10);
-  strcat(modelMatchUnit, ")");
+  // Keep the unit string stable as " (ID: NN)" across repeated refreshes.
+  snprintf(modelMatchUnit, sizeof(modelMatchUnit), " (ID: %02u)", modelId);
 }
 
 void TXModuleEndpoint::updateTlmBandwidth()
@@ -405,11 +408,9 @@ void TXModuleEndpoint::updateTlmBandwidth()
   // TLM_RATIO_STD / TLM_RATIO_DISARMED
   if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
   {
-    // For Standard ratio, display the ratio instead of bps
-    strcpy(tlmBandwidth, " (1:");
+    // For Standard ratio, display the ratio instead of bps.
     const uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    itoa(ratioDiv, &tlmBandwidth[4], 10);
-    strcat(tlmBandwidth, ")");
+    snprintf(tlmBandwidth, sizeof(tlmBandwidth), " (1:%u)", ratioDiv);
   }
 
   // TLM_RATIO_NO_TLM
@@ -421,8 +422,6 @@ void TXModuleEndpoint::updateTlmBandwidth()
   // All normal ratios
   else
   {
-    tlmBandwidth[0] = ' ';
-
     const uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     const uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     const uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
@@ -437,8 +436,7 @@ void TXModuleEndpoint::updateTlmBandwidth()
       bandwidthValue += 8U * (ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
     }
 
-    utoa(bandwidthValue, &tlmBandwidth[2], 10);
-    strcat(tlmBandwidth, "bps)");
+    snprintf(tlmBandwidth, sizeof(tlmBandwidth), " (%lubps)", (unsigned long)bandwidthValue);
   }
 }
 
@@ -629,12 +627,12 @@ static void updateFolderName_VtxAdmin()
   }
 }
 
-void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
+void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange, bool adjustForBaud, bool deferApply)
 {
   if (idx >= RATE_MAX)
     return;
 
-  uint8_t actualRate = adjustPacketRateForBaud(idx);
+  uint8_t actualRate = adjustForBaud ? adjustPacketRateForBaud(idx) : idx;
   // No change, don't do anything
   if (actualRate == ExpressLRS_currAirRate_Modparams->index)
     return;
@@ -651,21 +649,118 @@ void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
   if (forceChange || (newSwitchMode == OtaSwitchModeCurrent) || (isDisconnected && !isMavlinkMode))
   {
-    // This must be deferred because this can be called from any thread.
-    // Deferring it forces it to run in the main loop, which otherwise
-    // would cause a race condition with the syncspam needing to get out
-    // before the rate change
-    deferExecutionMillis(10, [actualRate, newSwitchMode, newAntennaMode]() {
+    auto applyRate = [actualRate, newSwitchMode, newAntennaMode]() {
       config.SetRate(actualRate);
       config.SetSwitchMode(newSwitchMode);
       config.SetAntennaMode(newAntennaMode);
       SetSyncSpam();
-    });
-    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, actualRate != idx);
+    };
+
+    if (deferApply)
+    {
+      // This must be deferred because this can be called from any thread.
+      // Deferring it forces it to run in the main loop, which otherwise
+      // would cause a race condition with the syncspam needing to get out
+      // before the rate change
+      deferExecutionMillis(10, applyRate);
+    }
+    else
+    {
+      applyRate();
+    }
+
+    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, adjustForBaud && (actualRate != idx));
     // No need to set OtaSerializers, the rate is changing so all of that will be reconfigured
   } else {
     setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
   }
+}
+
+bool TXModuleEndpoint::writeParameterValueForWeb(uint8_t id, int32_t value)
+{
+  const propertiesCommon *parameter = getParameterById(id);
+  if (parameter == nullptr)
+  {
+    return false;
+  }
+
+  if (parameter == (const propertiesCommon *)&luaAirRate)
+  {
+    uint8_t selectedRate = 0;
+    if (!mapPacketRateCompactIndexToRawRate((uint8_t)value, selectedRate))
+    {
+      return false;
+    }
+    SetPacketRateIdx(selectedRate, true, true, false);
+    return true;
+  }
+
+  if (parameter == (const propertiesCommon *)&luaSwitch)
+  {
+    if (config.GetLinkMode() == TX_MAVLINK_MODE)
+    {
+      return false;
+    }
+
+    const uint8_t runtimeRate = adjustPacketRateForBaud(config.GetRate());
+    const uint8_t payloadSize = get_elrs_airRateConfig(runtimeRate)->PayloadLength;
+    const uint8_t effectiveSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)value, payloadSize);
+
+    config.SetSwitchMode(effectiveSwitchMode);
+
+    // Keep runtime serializer aligned with the just-saved mode to avoid
+    // transmitting stale switch encoding after WebUI changes.
+    OtaUpdateSerializers((OtaSwitchMode_e)effectiveSwitchMode, payloadSize);
+    SetSyncSpam();
+
+    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, false);
+    return true;
+  }
+
+  if (parameter == (const propertiesCommon *)&luaLinkMode)
+  {
+    if (value < TX_NORMAL_MODE || value > TX_MAVLINK_MODE)
+    {
+      return false;
+    }
+
+    const uint8_t newLinkMode = (uint8_t)value;
+    config.SetLinkMode(newLinkMode);
+
+    // Keep runtime serializer aligned with link-mode side effects.
+    const uint8_t runtimeRate = adjustPacketRateForBaud(config.GetRate());
+    const uint8_t payloadSize = get_elrs_airRateConfig(runtimeRate)->PayloadLength;
+    OtaUpdateSerializers((OtaSwitchMode_e)config.GetSwitchMode(), payloadSize);
+    SetSyncSpam();
+
+    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, false);
+    return true;
+  }
+
+  return writeParameterValueById(id, value);
+}
+
+bool TXModuleEndpoint::getSelectionValueForWeb(uint8_t id, int32_t &value) const
+{
+  const propertiesCommon *parameter = getParameterById(id);
+  if (parameter == nullptr)
+  {
+    return false;
+  }
+
+  if (parameter == (const propertiesCommon *)&luaAirRate)
+  {
+    uint8_t compactIndex = 0;
+    const uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+    if (!mapPacketRateRawRateToCompactIndex(currentRate, compactIndex))
+    {
+      return false;
+    }
+    value = compactIndex;
+    return true;
+  }
+
+  return false;
 }
 
 void TXModuleEndpoint::SetSwitchMode(uint8_t idx)
@@ -776,6 +871,72 @@ static void recalculatePacketRateOptions(int minInterval)
         luastrPacketRates[lastPos] = '\0';
     }
 }
+
+  static bool mapPacketRateCompactIndexToRawRate(const uint8_t compactIndex, uint8_t &rawRate)
+  {
+    uint8_t currentCompactIndex = 0;
+    const int minInterval = handset->getMinPacketInterval();
+
+    for (int i = 0; i < RATE_MAX; i++)
+    {
+      uint8_t rate = RATE_MAX - 1 - i;
+      const auto rateModParams = get_elrs_airRateConfig(rate);
+      bool rateAllowed = (rateModParams->interval * rateModParams->numOfSends) >= minInterval;
+
+  #if defined(RADIO_LR1121)
+      rateAllowed &= isSupportedRFRate(rate);
+      rateAllowed &= RadioBandMod::isSameBand(rateModParams->radio_type, currentRfBand);
+  #endif
+
+      if (!rateAllowed)
+      {
+        continue;
+      }
+
+      if (currentCompactIndex == compactIndex)
+      {
+        rawRate = rate;
+        return true;
+      }
+
+      currentCompactIndex++;
+    }
+
+    return false;
+  }
+
+  static bool mapPacketRateRawRateToCompactIndex(const uint8_t rawRate, uint8_t &compactIndex)
+  {
+    uint8_t currentCompactIndex = 0;
+    const int minInterval = handset->getMinPacketInterval();
+
+    for (int i = 0; i < RATE_MAX; i++)
+    {
+      uint8_t rate = RATE_MAX - 1 - i;
+      const auto rateModParams = get_elrs_airRateConfig(rate);
+      bool rateAllowed = (rateModParams->interval * rateModParams->numOfSends) >= minInterval;
+
+  #if defined(RADIO_LR1121)
+      rateAllowed &= isSupportedRFRate(rate);
+      rateAllowed &= RadioBandMod::isSameBand(rateModParams->radio_type, currentRfBand);
+  #endif
+
+      if (!rateAllowed)
+      {
+        continue;
+      }
+
+      if (rate == rawRate)
+      {
+        compactIndex = currentCompactIndex;
+        return true;
+      }
+
+      currentCompactIndex++;
+    }
+
+    return false;
+  }
 
 void TXModuleEndpoint::registerParameters()
 {
@@ -985,7 +1146,8 @@ void TXModuleEndpoint::registerParameters()
 void TXModuleEndpoint::updateParameters()
 {
   bool isMavlinkMode = config.GetLinkMode() == TX_MAVLINK_MODE;
-  uint8_t currentRate = adjustPacketRateForBaud(config.GetRate());
+  const uint8_t configuredRate = config.GetRate();
+  uint8_t currentRate = adjustPacketRateForBaud(configuredRate);
 #if defined(RADIO_LR1121)
   // calculate currentRfBand from current packet-rate
   currentRfBand = RadioBandMod::getBand(get_elrs_airRateConfig(currentRate)->radio_type);
@@ -999,14 +1161,17 @@ void TXModuleEndpoint::updateParameters()
 
   luaAntenna.options = RadioBandMod::isBDUAL(get_elrs_airRateConfig(config.GetRate())->radio_type) ? antennamodeOptsDualBand : antennamodeOpts;
 
-  setTextSelectionValue(&luaSwitch, config.GetSwitchMode());
+  const uint8_t switchPayloadSize = get_elrs_airRateConfig(configuredRate)->PayloadLength;
+  const bool isFullResForCurrentRate = (switchPayloadSize == OTA8_PACKET_SIZE);
+  uint8_t effectiveSwitchMode = adjustSwitchModeForAirRate((OtaSwitchMode_e)config.GetSwitchMode(), switchPayloadSize);
+  setTextSelectionValue(&luaSwitch, effectiveSwitchMode);
   if (isMavlinkMode)
   {
-    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8chMav : switchmodeOpts4chMav;
+    luaSwitch.options = isFullResForCurrentRate ? switchmodeOpts8chMav : switchmodeOpts4chMav;
   }
   else
   {
-    luaSwitch.options = OtaIsFullRes ? switchmodeOpts8ch : switchmodeOpts4ch;
+    luaSwitch.options = isFullResForCurrentRate ? switchmodeOpts8ch : switchmodeOpts4ch;
   }
 
   if (isDualRadio())

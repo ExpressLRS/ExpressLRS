@@ -59,6 +59,25 @@ public:
      */
     virtual void updateParameters() {}
 
+    /**
+     * Enumerates all registered CRSF parameters except the synthetic root folder.
+     *
+     * @param cb Callback receiving (parameter id, parameter definition pointer)
+     */
+    void forEachParameter(const std::function<void(uint8_t, const propertiesCommon *)> &cb) const;
+
+    /**
+     * Returns a parameter definition pointer by ID, or nullptr if not found.
+     */
+    const propertiesCommon *getParameterById(uint8_t id) const;
+
+    /**
+     * Writes a numeric value to a writable parameter by ID using its registered callback.
+     *
+     * @return true if callback was invoked successfully.
+     */
+    bool writeParameterValueById(uint8_t id, int32_t value);
+
 protected:
     /**
      * Invoked when a device ping message is received from the CRSF network.

@@ -3,6 +3,11 @@
 
 extern RXEndpoint crsfReceiver;
 
+CRSFEndpoint *GetRxLuaEndpoint()
+{
+  return &crsfReceiver;
+}
+
 static int event()
 {
     crsfReceiver.updateParameters();
