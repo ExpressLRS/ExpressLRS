@@ -168,6 +168,10 @@ class ButtonsPanel extends LitElement {
         return this.currentButtonActionsJson === this.loadedButtonActionsJson;
     }
 
+    checkChanged() {
+        return !this._isSaveDisabled()
+    }
+
     _initializeButtonActions() {
         if (this.buttonActionsInitialized || !elrsState.config['button-actions']) {
             return;

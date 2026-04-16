@@ -201,4 +201,8 @@ export class HardwareLayout extends LitElement {
         if (this.loadedHardwareJson === null) return true
         return this.currentHardwareJson === this.loadedHardwareJson
     }
+
+    checkChanged() {
+        return !this._isSaveDisabled()
+    }
 }
