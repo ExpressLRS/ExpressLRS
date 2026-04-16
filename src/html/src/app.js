@@ -6,6 +6,7 @@ import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
 import {cuteAlert} from "./utils/feedback.js";
+import './pages/model-settings-configurator.js'
 
 @customElement('elrs-app')
 export class App extends LitElement {
@@ -51,6 +52,7 @@ export class App extends LitElement {
                             ${elrsState.config['button-actions'] && elrsState.config['button-actions'].length !== 0 ? html`
                                 <li><a id="menu-buttons" href="#buttons"><span class="mui--align-middle icon--symbols icon--symbols-buttons"></span>Buttons</a></li>
                             ` : ''}
+                                                        <li><a id="menu-model-settings" href="#model-settings"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Model Settings</a></li>
                             <li><a id="menu-models" href="#models"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Import/Export</a></li>
                             <!-- /FEATURE:IS_TX -->
                             <!-- FEATURE:NOT IS_TX -->
@@ -169,6 +171,8 @@ export class App extends LitElement {
                 return '<hardware-layout></hardware-layout>'
             case 'cw':
                 return '<continuous-wave></continuous-wave>'
+                        case 'model-settings':
+                            return '<model-settings-configurator></model-settings-configurator>'
             case 'models':
                 return '<models-panel></models-panel>'
             case 'lr1121':
@@ -193,6 +197,7 @@ export class App extends LitElement {
             imports.push(import('./pages/tx-options-panel.js'))
             // FEATURE:NOT IS_8285
             imports.push(import('./pages/models-panel.js'))
+            imports.push(import('./pages/model-settings-configurator.js'))
             // /FEATURE:NOT IS_8285
             imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
