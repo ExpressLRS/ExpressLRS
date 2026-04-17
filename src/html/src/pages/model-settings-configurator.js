@@ -112,6 +112,13 @@ class ModelSettingsConfigurator extends LitElement {
                                 @change=${(e) => this._onModelIdChange(e)}
                             />
                         </div>
+                        <button
+                            class="mui-btn mui-btn--small mui-btn--primary"
+                            ?disabled=${this.loading || this.saving}
+                            @click=${() => this.readConfig(true)}
+                        >
+                            Refresh
+                        </button>
                     </div>
                     ${(this.loading || this.saving)
                         ? html`<span>${this.saving ? 'Saving...' : 'Loading...'}</span>`
