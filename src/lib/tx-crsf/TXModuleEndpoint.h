@@ -62,5 +62,6 @@ private:
 };
 
 extern TXModuleEndpoint crsfTransmitter;
+void ModelUpdateReq();
 
 #endif //TX_MODULE_ENDPOINT_H

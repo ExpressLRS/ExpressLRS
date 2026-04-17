@@ -1,5 +1,5 @@
 #include "targets.h"
-#if !defined(UNIT_TEST)
+#if !defined(UNIT_TEST) && defined(TARGET_RX)
 #include "RXEndpoint.h"
 #include "FHSS.h"
 #include "POWERMGNT.h"
