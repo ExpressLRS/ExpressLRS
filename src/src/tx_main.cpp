@@ -45,6 +45,7 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxConfig config;
 Stream *TxUSB;
+Crc2Byte ota_crc;
 
 // Variables / constants for Airport //
 FIFO<AP_MAX_BUF_LEN> apInputBuffer;

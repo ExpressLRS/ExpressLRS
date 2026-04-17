@@ -14,6 +14,7 @@
 #include "msp.h"
 #include "msptypes.h"
 #include "options.h"
+#include "OTA_Legacy.h"
 
 #include "rx-serial/SerialIO.h"
 #include "rx-serial/SerialNOOP.h"
@@ -133,13 +134,13 @@ SerialIO *serialIO = nullptr;
 
 StubbornSender DataDlSender;
 uint8_t DataDlBuffer[CRSF_MAX_PACKET_LEN];
-static uint8_t telemetryBurstCount;
-static uint8_t telemetryBurstMax;
+uint8_t telemetryBurstCount;
+uint8_t telemetryBurstMax;
 
 StubbornReceiver DataUlReceiver;
 uint8_t DataUlBuffer[ELRS_DATA_UL_BUFFER];
 
-static uint8_t NextTelemetryType = PACKET_TYPE_LINKSTATS;
+uint8_t NextTelemetryType = PACKET_TYPE_LINKSTATS;
 static bool telemBurstValid;
 /// PFD Filters ////////////////
 LPF LPF_Offset(2);
@@ -165,7 +166,7 @@ bool doStartTimer = false;
 
 ///////////////////////////////////////////////
 
-static bool alreadyTLMresp = false;
+bool alreadyTLMresp = false;
 
 //////////////////////////////////////////////////////////////
 
@@ -322,7 +323,7 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, FHSSgetInitialFreq(),
                  ModParams->PreambleLen, invertIQ, ModParams->PayloadLength
 #if defined(RADIO_SX128X)
-                 , OtaGetUidSeed(), OtaCrcInitializer, ModParams->radio_type
+                 , !ota_isLegacy ? OtaGetUidSeed() : OtaGetUidSeed_v3(), !ota_isLegacy ? OtaCrcInitializer : OtaCrcInitializer_v3, ModParams->radio_type
 #endif
 #if defined(RADIO_LR1121)
                  , ModParams->radio_type, (uint8_t)UID[5], (uint8_t)UID[4]
@@ -358,11 +359,19 @@ void SetRFLinkRate(uint8_t index, bool bindMode) // Set speed of RF link
     ExpressLRS_nextAirRateIndex = index; // presumably we just handled this
     telemBurstValid = false;
 
+    ota_resetPktVersionCounters();
+
     LbtEnableIfRequired();
 }
 
 static void ICACHE_RAM_ATTR HandleFHSS()
 {
+    if (ota_isLegacySyncHoldActive())
+    {
+        // During initial V3 lock acquisition we intentionally remain on sync channel.
+        return;
+    }
+
     uint8_t modresultFHSS = OtaNonce % ExpressLRS_currAirRate_Modparams->FHSShopInterval;
 
     if ((ExpressLRS_currAirRate_Modparams->FHSShopInterval == 0) || InBindingMode || (modresultFHSS != 0) || (connectionState == disconnected))
@@ -777,7 +786,7 @@ void ICACHE_RAM_ATTR HWtimerCallbackTock()
     OtaNonce++;
     HandleFHSS();
     updateDiversity();
-    bool tlmSent = HandleSendDataDl();
+    bool tlmSent = !ota_isLegacy ? HandleSendDataDl() : HandleSendTelemetryResponse_v3();
     updatePhaseLock();
 
     #if defined(DEBUG_RX_SCOREBOARD)
@@ -1073,7 +1082,7 @@ static bool ICACHE_RAM_ATTR ProcessRfPacket_SYNC(uint32_t const now, OTA_Sync_s 
     return false;
 }
 
-bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
+bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status, bool skip_crc)
 {
     if (status != SX12xxDriverCommon::SX12XX_RX_OK)
     {
@@ -1088,13 +1097,16 @@ bool ICACHE_RAM_ATTR ProcessRFPacket(SX12xxDriverCommon::rx_status const status)
     OTA_Packet_s * const otaPktPtr = (OTA_Packet_s * const)Radio.RXdataBuffer;
     OTA_Packet_s * const otaPktPtrSecond = (OTA_Packet_s * const)Radio.RXdataBufferSecond;
 
-    if (!OtaValidatePacketCrc(otaPktPtr))
+    if (skip_crc == false)
     {
-        DBGVLN("CRC error");
-        #if defined(DEBUG_RX_SCOREBOARD)
-            lastPacketCrcError = true;
-        #endif
-        return false;
+        if (!OtaValidatePacketCrc(otaPktPtr))
+        {
+            DBGVLN("CRC error");
+            #if defined(DEBUG_RX_SCOREBOARD)
+                lastPacketCrcError = true;
+            #endif
+            return false;
+        }
     }
 
     // The extEvent defines where TOCK timer ISR is to be synced to, i.e. where the packet period begins.
@@ -1184,7 +1196,15 @@ bool ICACHE_RAM_ATTR RXdoneISR(SX12xxDriverCommon::rx_status const status)
         return false; // Already received a packet, do not run ProcessRFPacket() again.
     }
 
-    if (ProcessRFPacket(status))
+    bool success = ProcessRFPacket(status, false);
+    if (!success) {
+        success = ProcessRFPacket_v3(status);
+    }
+    else {
+        ota_cntNewVersionPkts(); // we are more sure that this is a v4 packet
+    }
+
+    if (success)
     {
         if (doStartTimer)
         {
@@ -1539,6 +1559,7 @@ static void setupBindingFromConfig()
         UID[0], UID[1], UID[2], UID[3], UID[4], UID[5], config.GetModelId());
 
     OtaUpdateCrcInitFromUid();
+    OtaUpdateCrcInitFromUid_v3();
 }
 
 static void setupRadio()
@@ -1596,6 +1617,12 @@ static void updateTelemetryBurst()
  */
 static void cycleRfMode(unsigned long now)
 {
+    if (ota_isLegacySyncHoldActive())
+    {
+        // Hold state: do not scan packet rates while waiting for legacy sync lock.
+        return;
+    }
+
     if (connectionState == connected || connectionState == wifiUpdate || InBindingMode)
         return;
 
@@ -1645,6 +1672,7 @@ static void EnterBindingMode()
 
     // Binding uses 50Hz, and InvertIQ
     OtaCrcInitializer = OTA_VERSION_ID;
+    OtaCrcInitializer_v3 = OTA_VERSION_ID - 1;
     OtaNonce = 0;
     InBindingMode = true;
 
@@ -1675,7 +1703,8 @@ static void ExitBindingMode()
     config.Commit();
 
     OtaUpdateCrcInitFromUid();
-    FHSSrandomiseFHSSsequence(OtaGetUidSeed());
+    OtaUpdateCrcInitFromUid_v3();
+    FHSSrandomiseFHSSsequence(!ota_isLegacy ? OtaGetUidSeed() : OtaGetUidSeed_v3());
 
     webserverPreventAutoStart = true;
 

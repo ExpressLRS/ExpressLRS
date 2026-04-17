@@ -21,7 +21,7 @@ uint16_t OtaCrcInitializer;
 OtaSwitchMode_e OtaSwitchModeCurrent;
 
 // CRC
-static Crc2Byte ota_crc;
+extern Crc2Byte ota_crc;
 ValidatePacketCrc_t OtaValidatePacketCrc;
 GeneratePacketCrc_t OtaGeneratePacketCrc;
 
@@ -478,6 +478,10 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcFull(OTA_Packet_s * const otaPktPtr)
 
 bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
 {
+    // Save complete byte 0 (type + crcHigh bits). This function temporarily rewrites
+    // crcHigh for CRC calculation, and other validation paths may inspect the same
+    // packet buffer afterwards.
+    uint8_t const preserveByte0 = *((uint8_t *)otaPktPtr);
     uint16_t const inCRC = ((uint16_t)otaPktPtr->std.crcHigh << 8) + otaPktPtr->std.crcLow;
 
     // Zero the crcHigh bits, as the CRC is calculated before it is ORed in
@@ -486,6 +490,9 @@ bool ICACHE_RAM_ATTR ValidatePacketCrcStd(OTA_Packet_s * const otaPktPtr)
     uint16_t nonceValidator = (otaPktPtr->std.type == PACKET_TYPE_SYNC) ? 0 : OtaNonce;
     uint16_t const calculatedCRC =
         ota_crc.calc((uint8_t*)otaPktPtr, OTA4_CRC_CALC_LEN, OtaCrcInitializer ^ nonceValidator);
+
+    // Restore byte 0 to prevent side effects for any fallback validators.
+    *((uint8_t *)otaPktPtr) = preserveByte0;
 
     return inCRC == calculatedCRC;
 }
