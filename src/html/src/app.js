@@ -52,7 +52,7 @@ export class App extends LitElement {
                                 <li><a id="menu-buttons" href="#buttons"><span class="mui--align-middle icon--symbols icon--symbols-buttons"></span>Buttons</a></li>
                             ` : ''}
                             <!-- FEATURE:NOT IS_8285 -->
-                            <li><a id="menu-model-settings" href="#model-settings"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Model Settings</a></li>
+                            <li><a id="menu-model-settings" href="#model-settings"><span class="mui--align-middle icon--symbols icon--symbols--model-settings"></span>Model Settings</a></li>
                             <li><a id="menu-models" href="#models"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Import/Export</a></li>
                             <!-- /FEATURE:NOT IS_8285 -->
                             <!-- /FEATURE:IS_TX -->
