@@ -63,7 +63,7 @@ static int handle(void)
         jumpToBleRunning();
     }
 
-    if (isArmed)
+    if (!isArmed)
     {
         int key;
         bool isLongPressed;
