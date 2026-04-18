@@ -28,7 +28,7 @@ public:
     void handleMessage(const crsf_header_t *message) override;
     void RcPacketToChannelsData(const crsf_header_t *message);
 
-    void updateFolderNames();
+    void updateFolderNamesAndVisibility();
     void registerParameters() override;
     void updateParameters() override;
 

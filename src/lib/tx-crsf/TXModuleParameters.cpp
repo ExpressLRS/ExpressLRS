@@ -467,6 +467,8 @@ void TXModuleEndpoint::updateVtxAdminOpts()
   LUA_FIELD_VISIBLE(luaVtxChannel, isVtxAdminEnabled);
   LUA_FIELD_VISIBLE(luaVtxPwr, isVtxAdminEnabled);
   LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled);
+  // Pit mode can only be sent as part of the power byte
+  LUA_FIELD_VISIBLE(luaVtxPit, isVtxAdminEnabled && config.GetVtxPower() != 0);
   // Can't toggle a COMMAND type, the lua will not refresh commands
   //LUA_FIELD_VISIBLE(luaVtxSend, isVtxAdminEnabled);
 }
@@ -735,14 +737,13 @@ void TXModuleEndpoint::SetDynamicPower(uint8_t idx)
 }
 
 /***
- * @brief: Update the dynamic strings used for folder names and labels
+ * @brief: Update the dynamic strings used for folder names, as well as labels and item visibility
  ***/
-void TXModuleEndpoint::updateFolderNames()
+void TXModuleEndpoint::updateFolderNamesAndVisibility()
 {
   updateFolderName_TxPower();
   updateFolderName_VtxAdmin();
 
-  // These aren't folder names, just string labels slapped in the units field generally
   updateTlmBandwidth();
   updateBackpackOpts();
   updateVtxAdminOpts();
@@ -1076,8 +1077,6 @@ void TXModuleEndpoint::updateParameters()
   setTextSelectionValue(&luaVtxBand, config.GetVtxBand());
   setUint8Value(&luaVtxChannel, config.GetVtxChannel() + 1);
   setTextSelectionValue(&luaVtxPwr, config.GetVtxPower());
-  // Pit mode can only be sent as part of the power byte
-  LUA_FIELD_VISIBLE(luaVtxPit, config.GetVtxPower() != 0);
   setTextSelectionValue(&luaVtxPit, config.GetVtxPitmode());
   if (OPT_USE_TX_BACKPACK)
   {
@@ -1090,5 +1089,5 @@ void TXModuleEndpoint::updateParameters()
     setTextSelectionValue(&luaBackpackTelemetry, config.GetBackpackDisable() ? 0 : config.GetBackpackTlmMode());
     setStringValue(&luaBackpackVersion, backpackVersion);
   }
-  updateFolderNames();
+  updateFolderNamesAndVisibility();
 }
