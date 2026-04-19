@@ -93,10 +93,6 @@ device_affinity_t ui_devices[] = {
   {&Thermal_device, 0},
 #endif
 };
-CRSFEndpoint *GetLuaRxEndpoint()
-{
-    return &crsfReceiver;
-}
 
 uint8_t antenna = 0;    // which antenna is currently in use
 uint8_t geminiMode = 0;

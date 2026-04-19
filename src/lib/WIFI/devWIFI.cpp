@@ -1149,7 +1149,9 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
-  server.on("/lua-parameters", HTTP_GET, HandleGetLuaParameters);
+  #if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
+    server.on("/lua-parameters", HTTP_GET, HandleGetLuaParameters);
+  #endif
   server.on("/access", WebUpdateAccessPoint);
   server.on("/firmware.bin", WebUpdateGetFirmware);
 
@@ -1181,7 +1183,7 @@ static void startServices()
     server.addHandler(handler);
   #endif
 
-  #if defined(TARGET_TX) || defined(TARGET_RX)
+  #if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
     server.addHandler(new AsyncCallbackJsonWebHandler("/lua-parameters/save", HandleSaveLuaParameters));
   #endif
 

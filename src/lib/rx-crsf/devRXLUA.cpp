@@ -1,6 +1,8 @@
 #include "RXEndpoint.h"
 #include "device.h"
 
+extern RXEndpoint crsfReceiver;
+
 static int event()
 {
     crsfReceiver.updateParameters();

@@ -16,6 +16,4 @@ private:
     void luaparamSetFailsafe(propertiesCommon *item, uint8_t arg);
 };
 
-extern RXEndpoint crsfReceiver;
-
 #endif //RX_ENDPOINT_H

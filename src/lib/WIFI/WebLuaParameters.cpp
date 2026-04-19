@@ -6,10 +6,8 @@
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
 
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
 #include "TXModuleEndpoint.h"
-#else
-#include "RXEndpoint.h"
 #endif
 
 /**
@@ -144,18 +142,14 @@ static float decodeWithPrecision(const int32_t rawValue, const uint8_t precision
 
 void HandleGetLuaParameters(AsyncWebServerRequest *request)
 {
-#if defined(TARGET_TX)
+#if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
   CRSFEndpoint *endpoint = &crsfTransmitter;
   const char *endpointName = "tx";
-#elif defined(TARGET_RX)
-  CRSFEndpoint *endpoint = &crsfReceiver;
-  const char *endpointName = "rx";
 #else
   request->send(501, "application/json", "{\"error\":\"/lua-parameters is unavailable on this firmware target\"}");
   return;
 #endif
 
-#if defined(TARGET_TX)
   if (request->hasArg("modelId"))
   {
     long requestedModelId = request->arg("modelId").toInt();
@@ -173,18 +167,15 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
       ModelUpdateReq();
     }
   }
-#endif
 
   endpoint->updateParameters();
 
   auto *response = new AsyncJsonResponse();
   JsonObject root = response->getRoot().to<JsonObject>();
   root["endpoint"] = endpointName;
-  root["source"] = (strcmp(endpointName, "tx") == 0) ? "tx-lua" : "rx-lua";
+  root["source"] = "tx-lua";
   root["format"] = "crsf-parameter-parsed";
-#if defined(TARGET_TX)
   root["modelId"] = crsfTransmitter.modelId;
-#endif
 
   JsonArray params = root["parameters"].to<JsonArray>();
 
@@ -206,9 +197,7 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
       const selectionParameter *sel = reinterpret_cast<const selectionParameter *>(p);
       int32_t webValue = sel->value;
       bool mappedForWeb = false;
-#if defined(TARGET_TX)
       mappedForWeb = crsfTransmitter.getSelectionValueForWeb(id, webValue);
-#endif
       param["value"] = webValue;
       param["web-compact-index"] = mappedForWeb;
       param["units"] = sel->units ? sel->units : "";
@@ -319,10 +308,7 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
 
 void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
 {
-#if defined(TARGET_RX)
-  CRSFEndpoint *endpoint = &crsfReceiver;
-#elif defined(TARGET_TX)
-#elif !defined(TARGET_TX)
+#if !(defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY)
   request->send(501, "application/json", "{\"error\":\"/lua-parameters/save is unavailable on this firmware target\"}");
   return;
 #endif
@@ -336,7 +322,6 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
   JsonObject obj = json.as<JsonObject>();
   
   // Extract and validate modelId if present
-#if defined(TARGET_TX)
   JsonVariant modelIdVariant = obj["modelId"];
   if (!modelIdVariant.isNull())
   {
@@ -347,7 +332,6 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
       ModelUpdateReq();
     }
   }
-#endif
 
   // Process parameter changes
   JsonVariant changesVariant = obj["changes"];
@@ -381,12 +365,7 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
     uint8_t id = idVariant;
     int32_t value = valueVariant;
 
-    const propertiesCommon *parameter = nullptr;
-#if defined(TARGET_TX)
-    parameter = crsfTransmitter.getParameterById(id);
-#else
-    parameter = endpoint->getParameterById(id);
-#endif
+    const propertiesCommon *parameter = crsfTransmitter.getParameterById(id);
     if (!parameter)
     {
       skipped++;
@@ -414,11 +393,7 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
 
     // Write parameter value using appropriate method
     bool appliedChange = false;
-#if defined(TARGET_TX)
     appliedChange = crsfTransmitter.writeParameterValueForWeb(id, value);
-#else
-    appliedChange = endpoint->writeParameterValueById(id, value);
-#endif
 
     if (appliedChange)
     {
