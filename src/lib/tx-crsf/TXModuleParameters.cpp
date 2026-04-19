@@ -98,6 +98,8 @@ static selectionParameter luaTlmRate = {
     tlmBandwidth
 };
 
+static void recalculatePacketRateOptions(int minInterval);
+
 //----------------------------POWER------------------
 static folderParameter luaPowerFolder = {
     {"TX Power", CRSF_FOLDER},pwrFolderDynamicName
