@@ -22,7 +22,7 @@ class ModelSettingsConfigurator extends LitElement {
         this.readConfig(false)
     }
 
-    async readConfig(applyModelId = false) {
+    async readConfig(applyModelId = false, retryLeft = 1) {
         const requestSeq = ++this.readRequestSeq
         this.loading = true
         this.configData = null
@@ -49,6 +49,12 @@ class ModelSettingsConfigurator extends LitElement {
             this.valueDrafts = this._buildDrafts(nextConfigData)
         } catch (e) {
             if (requestSeq !== this.readRequestSeq) {
+                return
+            }
+            // Some targets may briefly fail the first Lua fetch during startup.
+            // Retry once before showing an error dialog.
+            if (retryLeft > 0) {
+                await this.readConfig(applyModelId, retryLeft - 1)
                 return
             }
             await errorAlert('Load Failed', `Failed to load configuration: ${e.message}`)
@@ -194,6 +200,7 @@ class ModelSettingsConfigurator extends LitElement {
         if (param.type === 'selection') {
             const options = Array.isArray(param.options) ? param.options : []
             const selectedRaw = draft !== undefined ? Number(draft) : Number(param.value ?? 0)
+            const useCompactIndex = Boolean(param['web-compact-index'])
             const visibleOptions = options
                 .map((label, rawIndex) => ({label, rawIndex}))
                 .filter((opt) => {
@@ -201,17 +208,25 @@ class ModelSettingsConfigurator extends LitElement {
                     return label.length > 0 && label !== '(reserved)'
                 })
 
-            // Keep the backend raw index semantics while hiding blank UI options.
-            const hasSelected = visibleOptions.some((opt) => opt.rawIndex === selectedRaw)
+            const optionsForRender = useCompactIndex
+                ? visibleOptions.map((opt, compactIndex) => ({...opt, compactIndex}))
+                : visibleOptions
+
+            // Keep backend selection semantics aligned with the provided index mode.
+            const hasSelected = useCompactIndex
+                ? optionsForRender.some((opt) => opt.compactIndex === selectedRaw)
+                : optionsForRender.some((opt) => opt.rawIndex === selectedRaw)
             const effectiveSelectedRaw = hasSelected
                 ? selectedRaw
-                : (visibleOptions[0]?.rawIndex ?? selectedRaw)
+                : (useCompactIndex
+                    ? (optionsForRender[0]?.compactIndex ?? selectedRaw)
+                    : (optionsForRender[0]?.rawIndex ?? selectedRaw))
 
             return html`
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="mui-select" style="margin: 0; flex: 1;">
                         <select style="font-size: 14px;" @change=${(e) => this._onParamChange(param, Number(e.target.value))}>
-                            ${visibleOptions.map((opt) => html`<option value=${opt.rawIndex} ?selected=${effectiveSelectedRaw === opt.rawIndex}>${opt.label}</option>`) }
+                            ${optionsForRender.map((opt) => html`<option value=${useCompactIndex ? opt.compactIndex : opt.rawIndex} ?selected=${effectiveSelectedRaw === (useCompactIndex ? opt.compactIndex : opt.rawIndex)}>${opt.label}</option>`) }
                         </select>
                     </div>
                     ${param.units ? html`<span style="font-size: 14px; color: #000;">${param.units}</span>` : ''}

@@ -18,7 +18,7 @@
  * - Converts 0xC1 (down arrow) to " Down"
  * - Replaces empty entries with "(reserved)"
  */
-static void appendSelectionOptions(const char *options, JsonArray outArray)
+static void appendSelectionOptions(const char *options, JsonArray outArray, const bool keepReservedSlots = true)
 {
   static constexpr const char *RESERVED_OPTION_LABEL = "(reserved)";
 
@@ -73,7 +73,10 @@ static void appendSelectionOptions(const char *options, JsonArray outArray)
 
       if (displayEntry[0] == '\0')
       {
-        outArray.add(RESERVED_OPTION_LABEL);
+        if (keepReservedSlots)
+        {
+          outArray.add(RESERVED_OPTION_LABEL);
+        }
       }
       else
       {
@@ -82,7 +85,10 @@ static void appendSelectionOptions(const char *options, JsonArray outArray)
     }
     else
     {
-      outArray.add(RESERVED_OPTION_LABEL);
+      if (keepReservedSlots)
+      {
+        outArray.add(RESERVED_OPTION_LABEL);
+      }
     }
 
     cursor = end;
@@ -199,13 +205,17 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
     {
       const selectionParameter *sel = reinterpret_cast<const selectionParameter *>(p);
       int32_t webValue = sel->value;
+      bool mappedForWeb = false;
 #if defined(TARGET_TX)
-      crsfTransmitter.getSelectionValueForWeb(id, webValue);
+      mappedForWeb = crsfTransmitter.getSelectionValueForWeb(id, webValue);
 #endif
       param["value"] = webValue;
+      param["web-compact-index"] = mappedForWeb;
       param["units"] = sel->units ? sel->units : "";
       JsonArray optionsArray = param["options"].to<JsonArray>();
-      appendSelectionOptions(sel->options, optionsArray);
+      // When value is mapped to a compact index for Web (e.g. Packet Rate on TX),
+      // emit options without reserved placeholders so indices stay aligned.
+      appendSelectionOptions(sel->options, optionsArray, !mappedForWeb);
 
       char selected[64] = {};
       findSelectionLabel(sel, selected, sel->value);
