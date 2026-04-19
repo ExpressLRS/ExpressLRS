@@ -130,6 +130,9 @@ class ModelSettingsConfigurator extends LitElement {
                         ? html`<span>${this.saving ? 'Saving...' : 'Loading...'}</span>`
                         : ''}
                 </div>
+                <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                    <p style="margin: 4px 0;">💡 If you are using Lua, please exit and re-enter after modifying parameters to display the settings correctly.</p>
+                </div>
             </div>
             ${this.configData ? this._renderConfigData() : ''}
         `
