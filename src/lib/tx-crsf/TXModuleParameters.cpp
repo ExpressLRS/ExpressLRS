@@ -687,10 +687,21 @@ bool TXModuleEndpoint::writeParameterValueForWeb(uint8_t id, int32_t value)
 #if defined(RADIO_LR1121)
   if (parameter == (const propertiesCommon *)&luaRFBand)
   {
-    if (value != currentRfBand)
+    if (value < RadioBandMod::B900 || value > RadioBandMod::BDUAL)
+    {
+      return false;
+    }
+
+    if (value == RadioBandMod::BDUAL && GPIO_PIN_NSS_2 == UNDEF_PIN)
+    {
+      return false;
+    }
+
+    const auto requestedBand = static_cast<RadioBandMod::Band>(value);
+    if (requestedBand != currentRfBand)
     {
       // Choose the fastest supported packet rate in this RF band.
-      currentRfBand = RadioBandMod::getBand(value);
+      currentRfBand = requestedBand;
       for (int i=0; i < RATE_MAX ; i++)
       {
         if (isSupportedRFRate(i) && RadioBandMod::isSameBand(currentRfBand, get_elrs_airRateConfig(i)->radio_type))
@@ -701,6 +712,8 @@ bool TXModuleEndpoint::writeParameterValueForWeb(uint8_t id, int32_t value)
       }
       recalculatePacketRateOptions(handset->getMinPacketInterval());
     }
+
+    setWarningFlag(LUA_FLAG_ERROR_CONNECTED, false);
     return true;
   }
 #endif
@@ -1170,14 +1183,8 @@ void TXModuleEndpoint::updateParameters()
   const uint8_t configuredRate = config.GetRate();
   uint8_t currentRate = adjustPacketRateForBaud(configuredRate);
 #if defined(RADIO_LR1121)
-  // Only initialize currentRfBand from packet-rate on first call
-  // Afterwards, keep the user-selected RF Band to avoid overwriting Web changes
-  static bool rfBandInitialized = false;
-  if (!rfBandInitialized)
-  {
-    currentRfBand = RadioBandMod::getBand(get_elrs_airRateConfig(currentRate)->radio_type);
-    rfBandInitialized = true;
-  }
+  // Keep RF Band aligned with the currently configured packet-rate.
+  currentRfBand = RadioBandMod::getBand(get_elrs_airRateConfig(currentRate)->radio_type);
   setTextSelectionValue(&luaRFBand, currentRfBand);
 #endif
   recalculatePacketRateOptions(handset->getMinPacketInterval());
