@@ -10,6 +10,9 @@ SX1280Driver *SX1280Driver::instance = NULL;
 
 RFAMP_hal RFAMP;
 
+constexpr uint8_t SX1280_TX_BUFFER_BASE = 0x00;
+constexpr uint8_t SX1280_RX_BUFFER_BASE = 0x80;
+
 //DEBUG_SX1280_OTA_TIMING
 
 /* Steps for startup
@@ -177,6 +180,7 @@ void SX1280Driver::Config(uint8_t bw, uint8_t sf, uint8_t cr, uint32_t regfreq,
     uint16_t dio1Mask = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE;
     uint16_t irqMask  = SX1280_IRQ_TX_DONE | SX1280_IRQ_RX_DONE | SX1280_IRQ_SYNCWORD_VALID | SX1280_IRQ_SYNCWORD_ERROR | SX1280_IRQ_CRC_ERROR;
     SetDioIrqParams(irqMask, dio1Mask);
+    SetFIFOaddr(SX1280_TX_BUFFER_BASE, SX1280_RX_BUFFER_BASE);
 }
 
 /***
@@ -490,12 +494,12 @@ void ICACHE_RAM_ATTR SX1280Driver::TXnb(uint8_t * data, bool sendGeminiBuffer, u
     RFAMP.TXenable(radioNumber); // do first to allow PA stablise
     if (sendGeminiBuffer)
     {
-        hal.WriteBuffer(0x00, data, PayloadLength, SX12XX_Radio_1);
-        hal.WriteBuffer(0x00, dataGemini, PayloadLength, SX12XX_Radio_2);
+        hal.WriteBuffer(SX1280_TX_BUFFER_BASE, data, PayloadLength, SX12XX_Radio_1);
+        hal.WriteBuffer(SX1280_TX_BUFFER_BASE, dataGemini, PayloadLength, SX12XX_Radio_2);
     }
     else
     {
-        hal.WriteBuffer(0x00, data, PayloadLength, radioNumber);
+        hal.WriteBuffer(SX1280_TX_BUFFER_BASE, data, PayloadLength, radioNumber);
     }
 
     instance->SetMode(SX1280_MODE_TX, radioNumber);
