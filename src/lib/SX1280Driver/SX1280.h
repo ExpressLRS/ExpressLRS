@@ -38,9 +38,7 @@ public:
     uint16_t GetIrqStatus(SX12XX_Radio_Number_t radioNumber);
     void ClearIrqStatus(uint16_t irqMask, SX12XX_Radio_Number_t radioNumber);
 
-    void GetStatus(SX12XX_Radio_Number_t radioNumber);
-
-    uint8_t GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber);
+    bool GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber, uint8_t *rxBufferAddr);
     int8_t GetRssiInst(SX12XX_Radio_Number_t radioNumber);
     void GetLastPacketStats();
     void CheckForSecondPacket();
