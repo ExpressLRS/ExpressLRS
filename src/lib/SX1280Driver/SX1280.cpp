@@ -521,7 +521,11 @@ bool ICACHE_RAM_ATTR SX1280Driver::RXnbISR(uint16_t irqStatus, SX12XX_Radio_Numb
     }
     if (fail == SX12XX_RX_OK)
     {
-        uint8_t const FIFOaddr = GetRxBufferAddr(radioNumber);
+        uint8_t FIFOaddr = 0;
+        if (!GetRxBufferAddr(radioNumber, &FIFOaddr))
+        {
+            return false;
+        }
         hal.ReadBuffer(FIFOaddr, RXdataBuffer, PayloadLength, radioNumber);
     }
 
@@ -534,18 +538,14 @@ void ICACHE_RAM_ATTR SX1280Driver::RXnb()
     SetMode(SX1280_MODE_RX_CONT, SX12XX_Radio_All);
 }
 
-uint8_t ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber)
+bool ICACHE_RAM_ATTR SX1280Driver::GetRxBufferAddr(SX12XX_Radio_Number_t radioNumber, uint8_t *rxBufferAddr)
 {
     WORD_ALIGNED_ATTR uint8_t status[2] = {0};
-    hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2, radioNumber);
-    return status[1];
-}
+    uint8_t const chipStatus = hal.ReadCommand(SX1280_RADIO_GET_RXBUFFERSTATUS, status, 2, radioNumber);
 
-void ICACHE_RAM_ATTR SX1280Driver::GetStatus(SX12XX_Radio_Number_t radioNumber)
-{
-    uint8_t status = 0;
-    hal.ReadCommand(SX1280_RADIO_GET_STATUS, (uint8_t *)&status, 1, radioNumber);
-    DBGLN("Status: %x, %x, %x", (0b11100000 & status) >> 5, (0b00011100 & status) >> 2, 0b00000001 & status);
+    *rxBufferAddr = status[1];
+
+    return chipStatus == (SX1280_STATUS_CIRCUIT_MODE_RX | SX1280_STATUS_COMMAND_DATA_AVAILABLE);
 }
 
 bool ICACHE_RAM_ATTR SX1280Driver::GetFrequencyErrorbool(SX12XX_Radio_Number_t radioNumber)
@@ -593,9 +593,12 @@ void ICACHE_RAM_ATTR SX1280Driver::CheckForSecondPacket()
             }
             if (second_rx_fail == SX12XX_RX_OK)
             {
-                uint8_t const FIFOaddr = GetRxBufferAddr(radio[secondRadioIdx]);
-                hal.ReadBuffer (FIFOaddr, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
-                hasSecondRadioGotData = true;
+                uint8_t FIFOaddr = 0;
+                if (GetRxBufferAddr(radio[secondRadioIdx], &FIFOaddr))
+                {
+                    hal.ReadBuffer(FIFOaddr, RXdataBufferSecond, PayloadLength, radio[secondRadioIdx]);
+                    hasSecondRadioGotData = true;
+                }
             }
         }
     }
