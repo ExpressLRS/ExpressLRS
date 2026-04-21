@@ -713,16 +713,6 @@ void ICACHE_RAM_ATTR timerCallback()
 static void UARTdisconnected()
 {
   hwTimer::stop();
-  // Long-press exiting Lua can drop CRSF without sending command cancel.
-  // If WiFi mode is active, schedule the same reboot path used by cancel.
-  if (connectionState == wifiUpdate)
-  {
-    if (config.IsModified())
-    {
-      config.Commit();
-    }
-    scheduleRebootTime(400);
-  }
   setConnectionState(noCrossfire);
   // Since not going from connected -> disconnected, set LQ=0 to make sure the handset knows we stopped TXing when it comes back
   linkStats.uplink_Link_quality = 0;

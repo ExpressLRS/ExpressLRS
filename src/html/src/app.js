@@ -51,10 +51,8 @@ export class App extends LitElement {
                             ${elrsState.config['button-actions'] && elrsState.config['button-actions'].length !== 0 ? html`
                                 <li><a id="menu-buttons" href="#buttons"><span class="mui--align-middle icon--symbols icon--symbols-buttons"></span>Buttons</a></li>
                             ` : ''}
-                            <!-- FEATURE:NOT IS_8285 -->
                             <li><a id="menu-model-settings" href="#model-settings"><span class="mui--align-middle icon--symbols icon--symbols--model-settings"></span>Model Settings</a></li>
                             <li><a id="menu-models" href="#models"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Import/Export</a></li>
-                            <!-- /FEATURE:NOT IS_8285 -->
                             <!-- /FEATURE:IS_TX -->
                             <!-- FEATURE:NOT IS_TX -->
                             ${elrsState.config.pwm !== undefined ? html`
@@ -173,7 +171,7 @@ export class App extends LitElement {
             case 'cw':
                 return '<continuous-wave></continuous-wave>'
             case 'model-settings':
-                return FEATURES.IS_TX && !FEATURES.IS_8285 ? '<model-settings-configurator></model-settings-configurator>' : ''
+                return FEATURES.IS_TX ? '<model-settings-configurator></model-settings-configurator>' : ''
             case 'models':
                 return '<models-panel></models-panel>'
             case 'lr1121':
@@ -185,7 +183,6 @@ export class App extends LitElement {
 
     generalGroupLoaded = false
     advancedGroupLoaded = false
-    modelSettingsLoaded = false
 
     async loadGeneralGroup() {
         if (this.generalGroupLoaded) return
@@ -197,9 +194,8 @@ export class App extends LitElement {
             ]
             // FEATURE:IS_TX
             imports.push(import('./pages/tx-options-panel.js'))
-            // FEATURE:NOT IS_8285
+            imports.push(import('./pages/model-settings-configurator.js'))
             imports.push(import('./pages/models-panel.js'))
-            // /FEATURE:NOT IS_8285
             imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
@@ -210,15 +206,6 @@ export class App extends LitElement {
             await Promise.all(imports)
         } finally {
             this.generalGroupLoaded = true
-        }
-    }
-
-    async loadModelSettingsPage() {
-        if (this.modelSettingsLoaded) return
-        try {
-            await import('./pages/model-settings-configurator.js')
-        } finally {
-            this.modelSettingsLoaded = true
         }
     }
 
@@ -239,11 +226,9 @@ export class App extends LitElement {
     }
 
     async ensureLoadedForRoute(route) {
-        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
+        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'model-settings', 'models']
         const advancedRoutes = ['hardware', 'cw', 'lr1121']
-        if (route === 'model-settings') {
-            await this.loadModelSettingsPage()
-        } else if (generalRoutes.includes(route)) {
+        if (generalRoutes.includes(route)) {
             await this.loadGeneralGroup()
         } else if (advancedRoutes.includes(route)) {
             await this.loadAdvancedGroup()

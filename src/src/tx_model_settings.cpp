@@ -1,21 +1,15 @@
-#include "WebLuaParameters.h"
-#include "CRSFEndpoint.h"
-#include "CRSFParameters.h"
-#include "device.h"
-#include "config.h"
+#include <algorithm>
+
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
+#include <ESPAsyncWebServer.h>
 
-#if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
+#include "CRSFEndpoint.h"
+#include "CRSFParameters.h"
 #include "TXModuleEndpoint.h"
-#endif
+#include "config.h"
+#include "device.h"
 
-/**
- * Converts Lua-specific selection option bytes and handles display formatting.
- * - Converts 0xC0 (up arrow) to " Up"
- * - Converts 0xC1 (down arrow) to " Down"
- * - Replaces empty entries with "(reserved)"
- */
 static void appendSelectionOptions(const char *options, JsonArray outArray, const bool keepReservedSlots = true)
 {
   static constexpr const char *RESERVED_OPTION_LABEL = "(reserved)";
@@ -40,7 +34,6 @@ static void appendSelectionOptions(const char *options, JsonArray outArray, cons
       char entry[64] = {};
       strlcpy(entry, cursor, std::min(len + 1, sizeof(entry)));
 
-      // Convert Lua-only symbol bytes (0xC0/0xC1) to Web-readable text.
       char displayEntry[96] = {};
       size_t out = 0;
       for (size_t in = 0; entry[in] != '\0' && out + 1 < sizeof(displayEntry); ++in)
@@ -48,14 +41,12 @@ static void appendSelectionOptions(const char *options, JsonArray outArray, cons
         const uint8_t ch = (uint8_t)entry[in];
         if (ch == 0xC0)
         {
-          // Up arrow
           displayEntry[out++] = ' ';
           displayEntry[out++] = 'U';
           displayEntry[out++] = 'p';
         }
         else if (ch == 0xC1)
         {
-          // Down arrow
           displayEntry[out++] = ' ';
           displayEntry[out++] = 'D';
           displayEntry[out++] = 'o';
@@ -81,12 +72,9 @@ static void appendSelectionOptions(const char *options, JsonArray outArray, cons
         outArray.add(displayEntry);
       }
     }
-    else
+    else if (keepReservedSlots)
     {
-      if (keepReservedSlots)
-      {
-        outArray.add(RESERVED_OPTION_LABEL);
-      }
+      outArray.add(RESERVED_OPTION_LABEL);
     }
 
     cursor = end;
@@ -140,15 +128,10 @@ static float decodeWithPrecision(const int32_t rawValue, const uint8_t precision
   return rawValue / scale;
 }
 
-void HandleGetLuaParameters(AsyncWebServerRequest *request)
+static void HandleGetLuaParameters(AsyncWebServerRequest *request)
 {
-#if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
   CRSFEndpoint *endpoint = &crsfTransmitter;
   const char *endpointName = "tx";
-#else
-  request->send(501, "application/json", "{\"error\":\"/lua-parameters is unavailable on this firmware target\"}");
-  return;
-#endif
 
   if (request->hasArg("modelId"))
   {
@@ -196,14 +179,11 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
     {
       const selectionParameter *sel = reinterpret_cast<const selectionParameter *>(p);
       int32_t webValue = sel->value;
-      bool mappedForWeb = false;
-      mappedForWeb = crsfTransmitter.getSelectionValueForWeb(id, webValue);
+      const bool mappedForWeb = crsfTransmitter.getSelectionValueForWeb(id, webValue);
       param["value"] = webValue;
       param["web-compact-index"] = mappedForWeb;
       param["units"] = sel->units ? sel->units : "";
       JsonArray optionsArray = param["options"].to<JsonArray>();
-      // When value is mapped to a compact index for Web (e.g. Packet Rate on TX),
-      // emit options without reserved placeholders so indices stay aligned.
       appendSelectionOptions(sel->options, optionsArray, !mappedForWeb);
 
       char selected[64] = {};
@@ -306,13 +286,8 @@ void HandleGetLuaParameters(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
+static void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
 {
-#if !(defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY)
-  request->send(501, "application/json", "{\"error\":\"/lua-parameters/save is unavailable on this firmware target\"}");
-  return;
-#endif
-
   if (!json.is<JsonObject>())
   {
     request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
@@ -320,8 +295,7 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
   }
 
   JsonObject obj = json.as<JsonObject>();
-  
-  // Extract and validate modelId if present
+
   JsonVariant modelIdVariant = obj["modelId"];
   if (!modelIdVariant.isNull())
   {
@@ -333,7 +307,6 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
     }
   }
 
-  // Process parameter changes
   JsonVariant changesVariant = obj["changes"];
   if (!changesVariant.is<JsonArray>())
   {
@@ -391,11 +364,7 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
       value = (int32_t)(in * scale);
     }
 
-    // Write parameter value using appropriate method
-    bool appliedChange = false;
-    appliedChange = crsfTransmitter.writeParameterValueForWeb(id, value);
-
-    if (appliedChange)
+    if (crsfTransmitter.writeParameterValueForWeb(id, value))
     {
       applied++;
     }
@@ -405,14 +374,12 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
     }
   }
 
-  // Commit changes if any were made
-  uint32_t changeFlags = config.Commit();
+  const uint32_t changeFlags = config.Commit();
   if (changeFlags != 0)
   {
     devicesTriggerEvent(changeFlags);
   }
 
-  // Send response
   auto *response = new AsyncJsonResponse();
   JsonObject root = response->getRoot().to<JsonObject>();
   root["status"] = "ok";
@@ -421,4 +388,10 @@ void HandleSaveLuaParameters(AsyncWebServerRequest *request, JsonVariant &json)
   root["changeFlags"] = changeFlags;
   response->setLength();
   request->send(response);
+}
+
+void registerTxLuaParameterHandlers(AsyncWebServer &server)
+{
+  server.on("/lua-parameters", HTTP_GET, HandleGetLuaParameters);
+  server.addHandler(new AsyncCallbackJsonWebHandler("/lua-parameters/save", HandleSaveLuaParameters));
 }

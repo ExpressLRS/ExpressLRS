@@ -51,10 +51,10 @@ char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #else
 char strPowerLevels[] = "10;25;50;100;250;500;1000;2000;MatchTX ";
 #endif
-static char pwrFolderDynamicName[64] = "TX Power (1000 Dynamic)";
-static char vtxFolderDynamicName[64] = "VTX Admin (OFF:C:1 Aux11 )";
-static char modelMatchUnit[16] = " (ID: 00)";
-static char tlmBandwidth[24] = " (xxxxxbps)";
+static char pwrFolderDynamicName[] = "TX Power (1000 Dynamic)";
+static char vtxFolderDynamicName[] = "VTX Admin (OFF:C:1 Aux11 )";
+static char modelMatchUnit[] = " (ID: 00)";
+static char tlmBandwidth[] = " (xxxxxbps)";
 static constexpr char folderNameSeparator[2] = {' ',':'};
 static constexpr char tlmRatios[] = "Std;Off;1:128;1:64;1:32;1:16;1:8;1:4;1:2;Race";
 static constexpr char tlmRatiosMav[] = ";;;;;;;;1:2;";
@@ -400,8 +400,10 @@ void TXModuleEndpoint::sendELRSstatus(const crsf_addr_e origin)
 }
 
 void TXModuleEndpoint::updateModelID() {
-  // Keep the unit string stable as " (ID: NN)" across repeated refreshes.
-  snprintf(modelMatchUnit, sizeof(modelMatchUnit), " (ID: %02u)", modelId);
+  modelMatchUnit[6] = '0' + modelId / 10;
+  modelMatchUnit[7] = '0' + modelId % 10;
+  modelMatchUnit[8] = ')';
+  modelMatchUnit[9] = '\0';
 }
 
 void TXModuleEndpoint::updateTlmBandwidth()
@@ -410,9 +412,11 @@ void TXModuleEndpoint::updateTlmBandwidth()
   // TLM_RATIO_STD / TLM_RATIO_DISARMED
   if (eRatio == TLM_RATIO_STD || eRatio == TLM_RATIO_DISARMED)
   {
-    // For Standard ratio, display the ratio instead of bps.
+    // For Standard ratio, display the ratio instead of bps
+    strcpy(tlmBandwidth, " (1:");
     const uint8_t ratioDiv = TLMratioEnumToValue(ExpressLRS_currAirRate_Modparams->TLMinterval);
-    snprintf(tlmBandwidth, sizeof(tlmBandwidth), " (1:%u)", ratioDiv);
+    itoa(ratioDiv, &tlmBandwidth[4], 10);
+    strcat(tlmBandwidth, ")");
   }
 
   // TLM_RATIO_NO_TLM
@@ -424,6 +428,8 @@ void TXModuleEndpoint::updateTlmBandwidth()
   // All normal ratios
   else
   {
+    tlmBandwidth[0] = ' ';
+
     const uint16_t hz = 1000000 / ExpressLRS_currAirRate_Modparams->interval;
     const uint8_t ratiodiv = TLMratioEnumToValue(eRatio);
     const uint8_t burst = TLMBurstMaxForRateRatio(hz, ratiodiv);
@@ -438,7 +444,8 @@ void TXModuleEndpoint::updateTlmBandwidth()
       bandwidthValue += 8U * (ELRS8_DATA_DL_BYTES_PER_CALL - sizeof(OTA_LinkStats_s));
     }
 
-    snprintf(tlmBandwidth, sizeof(tlmBandwidth), " (%lubps)", (unsigned long)bandwidthValue);
+    utoa(bandwidthValue, &tlmBandwidth[2], 10);
+    strcat(tlmBandwidth, "bps)");
   }
 }
 

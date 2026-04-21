@@ -42,19 +42,14 @@
 #include "WebContent.h"
 
 #include "config.h"
-#include "CRSFEndpoint.h"
-#include "CRSFParameters.h"
-#include "WebLuaParameters.h"
-
-#if defined(TARGET_TX)
-#include "TXModuleEndpoint.h"
-#endif
 
 #if defined(RADIO_LR1121)
 #include "lr1121.h"
 #endif
 
 #if defined(TARGET_TX)
+void registerTxLuaParameterHandlers(AsyncWebServer &server);
+
 #include "wifiJoystick.h"
 
 extern void setButtonColors(uint8_t b1, uint8_t b2);
@@ -295,43 +290,6 @@ static int8_t wifi_GetClientRssi()
 
   return 0;
 }
-
-static const char *crsfTypeName(const uint8_t dataType)
-{
-  switch (dataType)
-  {
-    case CRSF_UINT8: return "uint8";
-    case CRSF_INT8: return "int8";
-    case CRSF_UINT16: return "uint16";
-    case CRSF_INT16: return "int16";
-    case CRSF_UINT32: return "uint32";
-    case CRSF_INT32: return "int32";
-    case CRSF_UINT64: return "uint64";
-    case CRSF_INT64: return "int64";
-    case CRSF_FLOAT: return "float";
-    case CRSF_TEXT_SELECTION: return "selection";
-    case CRSF_STRING: return "string";
-    case CRSF_FOLDER: return "folder";
-    case CRSF_INFO: return "info";
-    case CRSF_COMMAND: return "command";
-    case CRSF_VTX: return "vtx";
-    default: return "unknown";
-  }
-}
-
-static float decodeWithPrecision(const int32_t rawValue, const uint8_t precision)
-{
-  float scale = 1.0f;
-  for (uint8_t i = 0; i < precision; i++)
-  {
-    scale *= 10.0f;
-  }
-  return rawValue / scale;
-}
-
-
-
-
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
@@ -1149,9 +1107,6 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/config", HTTP_GET, GetConfiguration);
-  #if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
-    server.on("/lua-parameters", HTTP_GET, HandleGetLuaParameters);
-  #endif
   server.on("/access", WebUpdateAccessPoint);
   server.on("/firmware.bin", WebUpdateGetFirmware);
 
@@ -1181,10 +1136,7 @@ static void startServices()
     auto *handler = new AsyncCallbackJsonWebHandler("/import", ImportConfiguration);
     handler->setMaxContentLength(32768);
     server.addHandler(handler);
-  #endif
-
-  #if defined(TARGET_TX) && WEB_LUA_PARAMETERS_TX_ONLY
-    server.addHandler(new AsyncCallbackJsonWebHandler("/lua-parameters/save", HandleSaveLuaParameters));
+    registerTxLuaParameterHandlers(server);
   #endif
 
   #if defined(RADIO_LR1121)
