@@ -636,12 +636,12 @@ static void updateFolderName_VtxAdmin()
   }
 }
 
-void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange, bool adjustForBaud, bool deferApply)
+void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange)
 {
   if (idx >= RATE_MAX)
     return;
 
-  uint8_t actualRate = adjustForBaud ? adjustPacketRateForBaud(idx) : idx;
+  uint8_t actualRate = adjustPacketRateForBaud(idx);
   // No change, don't do anything
   if (actualRate == ExpressLRS_currAirRate_Modparams->index)
     return;
@@ -665,20 +665,13 @@ void TXModuleEndpoint::SetPacketRateIdx(uint8_t idx, bool forceChange, bool adju
       SetSyncSpam();
     };
 
-    if (deferApply)
-    {
-      // This must be deferred because this can be called from any thread.
-      // Deferring it forces it to run in the main loop, which otherwise
-      // would cause a race condition with the syncspam needing to get out
-      // before the rate change
-      deferExecutionMillis(10, applyRate);
-    }
-    else
-    {
-      applyRate();
-    }
+    // This must be deferred because this can be called from any thread.
+    // Deferring it forces it to run in the main loop, which otherwise
+    // would cause a race condition with the syncspam needing to get out
+    // before the rate change
+    deferExecutionMillis(10, applyRate);
 
-    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, adjustForBaud && (actualRate != idx));
+    setWarningFlag(LUA_FLAG_ERROR_BAUDRATE, actualRate != idx);
     // No need to set OtaSerializers, the rate is changing so all of that will be reconfigured
   } else {
     setWarningFlag(LUA_FLAG_ERROR_CONNECTED, true);
@@ -715,7 +708,7 @@ bool TXModuleEndpoint::writeParameterValueForWeb(uint8_t id, int32_t value)
       {
         if (isSupportedRFRate(i) && RadioBandMod::isSameBand(currentRfBand, get_elrs_airRateConfig(i)->radio_type))
         {
-          SetPacketRateIdx(i, true, true, false);
+          SetPacketRateIdx(i, true);
           break;
         }
       }
@@ -734,7 +727,7 @@ bool TXModuleEndpoint::writeParameterValueForWeb(uint8_t id, int32_t value)
     {
       return false;
     }
-    SetPacketRateIdx(selectedRate, true, true, false);
+    SetPacketRateIdx(selectedRate, true);
     return true;
   }
 
