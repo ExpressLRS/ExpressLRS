@@ -31,6 +31,8 @@ public:
     void updateFolderNames();
     void registerParameters() override;
     void updateParameters() override;
+    bool writeParameterValueForWeb(uint8_t id, int32_t value);
+    bool getSelectionValueForWeb(uint8_t id, int32_t &value) const;
 
     uint8_t modelId = 0; // The model ID as received from the Transmitter
 
@@ -60,5 +62,6 @@ private:
 };
 
 extern TXModuleEndpoint crsfTransmitter;
+void ModelUpdateReq();
 
 #endif //TX_MODULE_ENDPOINT_H

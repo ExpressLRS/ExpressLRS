@@ -5,7 +5,7 @@ import {elrsState, formatBand} from './utils/state.js'
 import './components/elrs-footer.js'
 
 import './pages/info-panel.js'
-import {cuteAlert} from "./utils/feedback.js";
+import {cuteAlert, errorAlert} from "./utils/feedback.js";
 
 @customElement('elrs-app')
 export class App extends LitElement {
@@ -51,6 +51,7 @@ export class App extends LitElement {
                             ${elrsState.config['button-actions'] && elrsState.config['button-actions'].length !== 0 ? html`
                                 <li><a id="menu-buttons" href="#buttons"><span class="mui--align-middle icon--symbols icon--symbols-buttons"></span>Buttons</a></li>
                             ` : ''}
+                            <li><a id="menu-model-settings" href="#model-settings"><span class="mui--align-middle icon--symbols icon--symbols--model-settings"></span>Model Settings</a></li>
                             <li><a id="menu-models" href="#models"><span class="mui--align-middle icon--symbols icon--symbols--settings"></span>Import/Export</a></li>
                             <!-- /FEATURE:IS_TX -->
                             <!-- FEATURE:NOT IS_TX -->
@@ -169,6 +170,8 @@ export class App extends LitElement {
                 return '<hardware-layout></hardware-layout>'
             case 'cw':
                 return '<continuous-wave></continuous-wave>'
+            case 'model-settings':
+                return FEATURES.IS_TX ? '<model-settings-configurator></model-settings-configurator>' : ''
             case 'models':
                 return '<models-panel></models-panel>'
             case 'lr1121':
@@ -191,9 +194,8 @@ export class App extends LitElement {
             ]
             // FEATURE:IS_TX
             imports.push(import('./pages/tx-options-panel.js'))
-            // FEATURE:NOT IS_8285
+            imports.push(import('./pages/model-settings-configurator.js'))
             imports.push(import('./pages/models-panel.js'))
-            // /FEATURE:NOT IS_8285
             imports.push(import('./pages/buttons-panel.js'))
             // /FEATURE:IS_TX
             // FEATURE:NOT IS_TX
@@ -224,7 +226,7 @@ export class App extends LitElement {
     }
 
     async ensureLoadedForRoute(route) {
-        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'models']
+        const generalRoutes = ['binding', 'options', 'wifi', 'update', 'connections', 'serial', 'buttons', 'model-settings', 'models']
         const advancedRoutes = ['hardware', 'cw', 'lr1121']
         if (generalRoutes.includes(route)) {
             await this.loadGeneralGroup()
@@ -293,7 +295,19 @@ export class App extends LitElement {
             }
         }
 
-        await this.ensureLoadedForRoute(route)
+        try {
+            await this.ensureLoadedForRoute(route)
+        } catch (e) {
+            const message = e?.message || 'An unexpected error occurred while loading this page.'
+            await errorAlert('Page Load Failed', message)
+            if (this.currentRoute && this.currentRoute !== route) {
+                if (('#' + this.currentRoute) !== location.hash) {
+                    location.hash = '#' + this.currentRoute
+                }
+                this.setActiveMenu(this.currentRoute)
+            }
+            return
+        }
         this.setActiveMenu(route)
         try {
             mui.overlay('off')

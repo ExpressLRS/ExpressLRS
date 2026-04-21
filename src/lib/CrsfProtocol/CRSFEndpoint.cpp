@@ -13,6 +13,54 @@ static folderParameter paramRootFolder = {
     }
 };
 
+void CRSFEndpoint::forEachParameter(const std::function<void(uint8_t, const propertiesCommon *)> &cb) const
+{
+    if (!cb)
+    {
+        return;
+    }
+
+    for (uint8_t i = 1; i <= lastParameter; i++)
+    {
+        if (paramDefinitions[i] != nullptr)
+        {
+            cb(i, paramDefinitions[i]);
+        }
+    }
+}
+
+const propertiesCommon *CRSFEndpoint::getParameterById(const uint8_t id) const
+{
+    if (id == 0 || id >= MAX_CRSF_PARAMETERS)
+    {
+        return nullptr;
+    }
+    return paramDefinitions[id];
+}
+
+bool CRSFEndpoint::writeParameterValueById(const uint8_t id, const int32_t value)
+{
+    if (id == 0 || id >= MAX_CRSF_PARAMETERS)
+    {
+        return false;
+    }
+
+    auto *parameter = paramDefinitions[id];
+    if (parameter == nullptr || !paramCallbacks[id])
+    {
+        return false;
+    }
+
+    const uint8_t dataType = parameter->type & CRSF_FIELD_TYPE_MASK;
+    if (dataType == CRSF_FOLDER || dataType == CRSF_INFO || dataType == CRSF_COMMAND)
+    {
+        return false;
+    }
+
+    paramCallbacks[id](parameter, value);
+    return true;
+}
+
 void CRSFEndpoint::filterOptions(selectionParameter *parameter, const uint8_t min, const uint8_t max, char *allOptions)
 {
     // This function modifies the strPowerLevels in place and must not

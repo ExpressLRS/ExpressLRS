@@ -48,6 +48,8 @@
 #endif
 
 #if defined(TARGET_TX)
+void registerTxLuaParameterHandlers(AsyncWebServer &server);
+
 #include "wifiJoystick.h"
 
 extern void setButtonColors(uint8_t b1, uint8_t b2);
@@ -1134,6 +1136,7 @@ static void startServices()
     auto *handler = new AsyncCallbackJsonWebHandler("/import", ImportConfiguration);
     handler->setMaxContentLength(32768);
     server.addHandler(handler);
+    registerTxLuaParameterHandlers(server);
   #endif
 
   #if defined(RADIO_LR1121)
