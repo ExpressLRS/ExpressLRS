@@ -46,7 +46,9 @@ public:
 private:
     // constant used for no power change pending
     // must not be a valid power register value
-    static const uint8_t PWRPENDING_NONE = 0x7f;
+    static constexpr uint8_t PWRPENDING_NONE = 0x7f;
+    static constexpr uint8_t SX1280_TX_BUFFER_BASE = 0x00;
+    static constexpr uint8_t SX1280_RX_BUFFER_BASE = 0x80;
 
     SX1280_RadioOperatingModes_t currOpmode;
     uint8_t packet_mode;
